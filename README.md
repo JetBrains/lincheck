@@ -123,4 +123,6 @@ Q: get() {5};
 Also you may take a look to another examples of testing contained in `src/test/java` (for data structure from `src/main/java/com/devexperts/dxlab/lincheck/tests/custom`)
 
 ### Contacts
-Please feel free to contact us if you have any questions, comments or suggestions: dxlab@devexperts.com
+Please feel free to contact us if you have any questions, comments or suggestions: 
+
+![](dxlab-mail.png)
