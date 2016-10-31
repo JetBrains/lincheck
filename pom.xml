@@ -224,11 +224,11 @@
     <distributionManagement>
         <repository>
             <id>jrc</id>
-            <url>https://maven.in.devexperts.com/content/repositories/dxlib-incubator</url>
+            <url>https://maven.in.devexperts.com/content/repositories/jrc</url>
         </repository>
         <snapshotRepository>
             <id>jrc-snapshot</id>
-            <url>https://maven.in.devexperts.com/content/repositories/dxlib-incubator-snapshots</url>
+            <url>https://maven.in.devexperts.com/content/repositories/jrc-snapshot</url>
         </snapshotRepository>
     </distributionManagement>
 
