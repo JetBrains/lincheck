@@ -22,7 +22,8 @@ package com.devexperts.dxlab.lincheck.asm.templ;
  * #L%
  */
 
-import jdk.internal.org.objectweb.asm.*;
+import org.objectweb.asm.*;
+
 public class Generated5Dump implements Opcodes {
 
     public static byte[] dump (
