@@ -183,7 +183,7 @@
                         <artifactId>bintray-maven-plugin</artifactId>
                         <configuration>
                             <id>bintray-devexperts</id>
-                            <url>https://api.bintray.com/maven/devexperts/Maven/jagent</url>
+                            <url>https://api.bintray.com/maven/devexperts/Maven/lin-check</url>
                         </configuration>
                         <executions>
                             <execution>
