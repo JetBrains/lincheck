@@ -23,7 +23,7 @@
     <groupId>com.devexperts.lincheck</groupId>
     <artifactId>lincheck</artifactId>
     <packaging>jar</packaging>
-    <version>1.3-SNAPSHOT</version>
+    <version>1.4-SNAPSHOT</version>
 
     <name>lin-check</name>
     <description>Linearizability checker framework</description>
