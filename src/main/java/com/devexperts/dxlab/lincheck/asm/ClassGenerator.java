@@ -86,11 +86,8 @@ public class ClassGenerator implements Opcodes {
             throw new IllegalArgumentException("Count actor should be from 1 to 5 inclusive");
         }
 
-
-        Constructor<?>[] ctors = clz.getConstructors();
-        Constructor<?> ctor = ctors[1];
-        Generated o = (Generated) ctor.newInstance(test);
-        return o;
+        Constructor<?> ctor = clz.getConstructors()[0];
+        return (Generated) ctor.newInstance(test);
     }
 
     private static class DynamicClassLoader extends ClassLoader {
