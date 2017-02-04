@@ -14,15 +14,17 @@
   ~  GNU General Public License for more details.
   ~
   ~  You should have received a copy of the GNU General Public License
-  ~  along with this program.  If not, see <http://www.gnu.org/licenses />.
+  ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.devexperts.lincheck</groupId>
     <artifactId>lincheck</artifactId>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
     <version>1.5-SNAPSHOT</version>
 
     <name>lin-check</name>
@@ -41,6 +43,11 @@
         <license.licenseName>lgpl_v3</license.licenseName>
         <lastCopyrightYear>2016</lastCopyrightYear>
     </properties>
+
+    <modules>
+        <module>core</module>
+        <module>libtest</module>
+    </modules>
 
     <build>
         <!-- Define versions of all plugins -->
@@ -95,13 +102,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <compilerArgument>-XDignore.symbol.file</compilerArgument>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <skipTests>true</skipTests>
                 </configuration>
             </plugin>
             <plugin>
@@ -200,18 +200,12 @@
         </profile>
     </profiles>
 
-
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-all</artifactId>
-            <version>5.1</version>
         </dependency>
     </dependencies>
 
@@ -231,7 +225,6 @@
             <url>https://maven.in.devexperts.com/content/repositories/jrc-snapshot</url>
         </snapshotRepository>
     </distributionManagement>
-
 
 </project>
 
