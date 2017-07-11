@@ -1,4 +1,8 @@
 # Lin-check
+
+[ ![Download](https://api.bintray.com/packages/devexperts/Maven/lin-check/images/download.svg) ](https://bintray.com/devexperts/Maven/lin-check/_latestVersion)
+
+
 **Lin-check** is a testing framework to check that concurrent data structure is linearizable. The approach is based on linearization definition and tries to find non-linearizable execution with specified operations due to a lot of executions. The execution is represented as a list of actors for every test thread, where the actor is the operation with already counted parameters.
 
 # Usage example
