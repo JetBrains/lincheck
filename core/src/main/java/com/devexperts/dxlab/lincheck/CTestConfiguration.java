@@ -24,6 +24,7 @@ package com.devexperts.dxlab.lincheck;
 
 import com.devexperts.dxlab.lincheck.annotations.CTest;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,13 +43,23 @@ class CTestConfiguration {
         this.threadConfigurations = threadConfigurations;
     }
 
-    static List<CTestConfiguration> getFromTestClass(Class<?> testClass) {
+    static List<CTestConfiguration> getFromTestClass(Class<?> testClass, int nActors) {
         return Arrays.stream(testClass.getAnnotationsByType(CTest.class))
-            .map(cTestAnn -> new CTestConfiguration(cTestAnn.iterations(), cTestAnn.invocationsPerIteration(), createTestThreadConfigurations(cTestAnn)))
+            .map(cTestAnn -> new CTestConfiguration(cTestAnn.iterations(), cTestAnn.invocationsPerIteration(), createTestThreadConfigurations(cTestAnn, nActors)))
             .collect(Collectors.toList());
     }
 
-    private static List<TestThreadConfiguration> createTestThreadConfigurations(CTest cTestAnn) {
+    private static List<TestThreadConfiguration> createTestThreadConfigurations(CTest cTestAnn, int nActors) {
+        // Generate thread configuration if it isn't specified
+        if (cTestAnn.actorsPerThread().length == 0) {
+            List<TestThreadConfiguration> threadConfigurations = new ArrayList<>();
+            int nThread = Math.min(4, nActors);
+            for (int i = 0; i < nThread; i++) {
+                threadConfigurations.add(new TestThreadConfiguration(2, 4));
+            }
+            return threadConfigurations;
+        }
+        // Otherwise parse from configuration
         return Arrays.stream(cTestAnn.actorsPerThread())
             .map(conf -> {
                 String[] cs = conf.split(":");

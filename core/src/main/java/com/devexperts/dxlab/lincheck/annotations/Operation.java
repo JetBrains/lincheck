@@ -35,4 +35,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface Operation {
     String[] params() default {};
+    boolean runOnce() default false;
 }

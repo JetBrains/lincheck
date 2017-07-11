@@ -52,7 +52,7 @@ import org.junit.Test;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@CTest(iterations = 300, actorsPerThread = {"1:3", "1:3"})
+@CTest
 @Param(name = "key", gen = IntGen.class)
 @Param(name = "value", gen = IntGen.class)
 public class ConcurrentHashMapTest {

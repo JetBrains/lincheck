@@ -34,17 +34,23 @@ class ActorGenerator {
     private final Method method;
     private final List<ParameterGenerator<?>> parameterGenerators;
     private final List<Class<? extends Throwable>> handledExceptions;
+    private final boolean useOnce;
 
     ActorGenerator(Method method, List<ParameterGenerator<?>> parameterGenerators,
-        List<Class<? extends Throwable>> handledExceptions)
+        List<Class<? extends Throwable>> handledExceptions, boolean useOnce)
     {
         this.method = method;
         this.parameterGenerators = parameterGenerators;
         this.handledExceptions = handledExceptions;
+        this.useOnce = useOnce;
     }
 
     Actor generate() {
         return new Actor(method, parameterGenerators.stream()
             .map(ParameterGenerator::generate).collect(Collectors.toList()), handledExceptions);
+    }
+
+    public boolean useOnce() {
+        return useOnce;
     }
 }

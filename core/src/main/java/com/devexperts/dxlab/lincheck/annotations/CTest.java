@@ -32,9 +32,9 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Repeatable(CTest.CTests.class)
 public @interface CTest {
-    int iterations();
-    String[] actorsPerThread();
-    int invocationsPerIteration() default 10_000;
+    int iterations() default 1_000;
+    String[] actorsPerThread() default {};
+    int invocationsPerIteration() default 5_000;
 
     /**
      * Holder annotation for {@link CTest}.

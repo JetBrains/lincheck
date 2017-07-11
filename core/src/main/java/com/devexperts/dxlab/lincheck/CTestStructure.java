@@ -89,7 +89,7 @@ class CTestStructure {
                 HandleExceptionAsResult handleExceptionAsResultAnn = m.getAnnotation(HandleExceptionAsResult.class);
                 List<Class<? extends Throwable>> handledExceptions = handleExceptionAsResultAnn != null ?
                     Arrays.asList(handleExceptionAsResultAnn.value()) : Collections.emptyList();
-                actorGenerators.add(new ActorGenerator(m, gens, handledExceptions));
+                actorGenerators.add(new ActorGenerator(m, gens, handledExceptions, operationAnn.runOnce()));
             }
         }
         // Create CTest class configuration

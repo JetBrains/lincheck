@@ -52,8 +52,9 @@ public class LinChecker {
     private LinChecker(Object testInstance) {
         this.testInstance = testInstance;
         Class<?> testClass = testInstance.getClass();
-        this.testConfigurations = CTestConfiguration.getFromTestClass(testClass);
         this.testStructure = CTestStructure.getFromTestClass(testClass);
+        int nActors = testStructure.getActorGenerators().size();
+        this.testConfigurations = CTestConfiguration.getFromTestClass(testClass, nActors);
     }
 
     public static void check(Object testInstance) throws AssertionError {
@@ -73,18 +74,38 @@ public class LinChecker {
         });
     }
 
-    private List<Actor> generateActorsForThread(CTestConfiguration.TestThreadConfiguration threadCfg) {
-        int actorsInThread = threadCfg.minActors + random.nextInt(threadCfg.maxActors - threadCfg.minActors + 1);
-        return random.ints(actorsInThread, 0, testStructure.getActorGenerators().size()) // random indexes
-            .mapToObj(i -> testStructure.getActorGenerators().get(i)) // random actor generators
-            .map(ActorGenerator::generate) // generate actors
-            .collect(Collectors.toList()); // return as list
-    }
-
     private List<List<Actor>> generateActors(CTestConfiguration testConfiguration) {
-        return testConfiguration.getThreadConfigurations().stream()
-            .map(this::generateActorsForThread)
-            .collect(Collectors.toList());
+        class ThreadGenStatus {
+            int iThread, left;
+
+            ThreadGenStatus(int iThread, int nActors) {
+                this.iThread = iThread;
+                this.left = nActors;
+            }
+        }
+        // List of actors per thread, result of this method
+        List<List<Actor>> actorsPerThread = new ArrayList<>();
+        List<ThreadGenStatus> threadGenStatuses = new ArrayList<>();
+        for (int i = 0; i < testConfiguration.getThreadConfigurations().size(); i++) {
+            actorsPerThread.add(new ArrayList<>());
+            CTestConfiguration.TestThreadConfiguration threadCfg = testConfiguration.getThreadConfigurations().get(i);
+            int actorsInThread = threadCfg.minActors + random.nextInt(threadCfg.maxActors - threadCfg.minActors + 1);
+            threadGenStatuses.add(new ThreadGenStatus(i, actorsInThread));
+        }
+        List<ActorGenerator> availableActorGens = new ArrayList<>(testStructure.getActorGenerators());
+        Random r = new Random();
+        while (!threadGenStatuses.isEmpty() && !availableActorGens.isEmpty()) {
+            int iStatus = r.nextInt(threadGenStatuses.size());
+            ThreadGenStatus status = threadGenStatuses.get(iStatus);
+            int iActorGen = r.nextInt(availableActorGens.size());
+            ActorGenerator actorGen = availableActorGens.get(iActorGen);
+            actorsPerThread.get(status.iThread).add(actorGen.generate());
+            if (--status.left == 0)
+                threadGenStatuses.remove(iStatus);
+            if (actorGen.useOnce())
+                availableActorGens.remove(iActorGen);
+        }
+        return actorsPerThread.stream().filter(actors -> !actors.isEmpty()).collect(Collectors.toList());
     }
 
     private void printActorsPerThread(List<List<Actor>> actorsPerThread) {
@@ -122,14 +143,14 @@ public class LinChecker {
         // Fixed thread pool executor to run TestThreadExecution
         ExecutorService pool = Executors.newFixedThreadPool(testCfg.getThreads());
         try {
-            // Reusable phaser
-            final Phaser phaser = new Phaser(testCfg.getThreads());
             // Run iterations
             for (int iteration = 1; iteration <= testCfg.getIterations(); iteration++) {
                 System.out.println("= Iteration " + iteration + " / " + testCfg.getIterations() + " =");
                 // Generate actors and print them to console
                 List<List<Actor>> actorsPerThread = generateActors(testCfg);
                 printActorsPerThread(actorsPerThread);
+                // Reusable phaser
+                final Phaser phaser = new Phaser(actorsPerThread.size());
                 // Create TestThreadExecution's
                 List<TestThreadExecution> testThreadExecutions = actorsPerThread.stream()
                     .map(actors -> TestThreadExecutionGenerator.create(testInstance, phaser, actors, false))
@@ -156,7 +177,7 @@ public class LinChecker {
                     int maxWait = (int) ((float) invocation * MAX_WAIT / testCfg.getInvocationsPerIteration()) + 1;
                     for (int i = 0; i < testThreadExecutions.size(); i++) {
                         TestThreadExecution ex = testThreadExecutions.get(i);
-                        ex.waits = random.ints(actorsPerThread.get(i).size() - 1, 0, maxWait).toArray();
+                        ex.waits = random.ints(actorsPerThread.get(i).size(), 0, maxWait).toArray();
                     }
                     // Run multithreaded test and get operation results for each thread
                     List<List<Result>> results = pool.invokeAll(testThreadExecutions).stream() // get futures

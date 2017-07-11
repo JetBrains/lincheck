@@ -49,6 +49,11 @@ The artifacts are available in [Bintray](https://bintray.com/devexperts/Maven/li
 #Operation
 The base entity in **lin-check** is operation. It is defined via public method (should be annotated with **@Operation** annotation) and generators for every method parameter. Further operations are used to create actors and execute them concurrently.
 
+# Operation restrictions
+Some restrictions can be applied for operation and should be specified via **@Operation** parameters:
+
+* **runOnce** - set this parameter to *true* if you want this operation to be called at most once during the test invocation. Default value: *false*. 
+
 # Parameter generators
 To generate parameters for operation the `ParameterGenerator` implementation is used. Each parameter should have the generator.
 
