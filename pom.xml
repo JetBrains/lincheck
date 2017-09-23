@@ -23,7 +23,7 @@
     <groupId>com.devexperts.lincheck</groupId>
     <artifactId>lincheck-all</artifactId>
     <packaging>pom</packaging>
-    <version>1.9</version>
+    <version>1.10-SNAPSHOT</version>
 
     <name>lin-check</name>
     <description>Linearizability checker framework</description>
@@ -217,7 +217,7 @@
     <scm>
         <connection>scm:git:https://stash.in.devexperts.com/scm/dxlab/lin-check.git</connection>
         <developerConnection>scm:git:ssh://git@stash.in.devexperts.com:7999/dxlab/lin-check.git</developerConnection>
-        <tag>lincheck-all-1.9</tag>
+        <tag>lincheck-1.0</tag>
     </scm>
 
     <distributionManagement>
