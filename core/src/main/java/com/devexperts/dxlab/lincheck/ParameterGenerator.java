@@ -26,7 +26,7 @@ import com.devexperts.dxlab.lincheck.annotations.Operation;
 
 /**
  * The implementation of this interface is used to generate parameters
- * for {@link Operation operations}.
+ * for {@link Operation operation}.
   */
 public interface ParameterGenerator<T> {
     T generate();

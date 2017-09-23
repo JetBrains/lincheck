@@ -41,19 +41,18 @@ package com.devexperts.dxlab.lincheck.tests.juc.hash_map;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.ReadOnly;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@CTest(iterations = 300, actorsPerThread = {"1:3", "1:3"})
-@CTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3"})
+@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
 @Param(name = "key", gen = IntGen.class)
 @Param(name = "value", gen = IntGen.class)
 public class HashMapTest {
@@ -69,7 +68,6 @@ public class HashMapTest {
         return m.put(key, value);
     }
 
-    @ReadOnly
     @Operation
     public Integer get(@Param(name = "key") Integer key) {
         return m.get(key);
@@ -77,7 +75,7 @@ public class HashMapTest {
 
     @Test(expected = AssertionError.class)
     public void test() throws Exception {
-        LinChecker.check(this);
+        LinChecker.check(HashMapTest.class);
     }
 }
 

@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck;
+package com.devexperts.dxlab.lincheck.stress;
 
 /*
  * #%L
@@ -22,6 +22,9 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
+import com.devexperts.dxlab.lincheck.Actor;
+import com.devexperts.dxlab.lincheck.Result;
+import com.devexperts.dxlab.lincheck.Utils;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
@@ -83,7 +86,7 @@ class TestThreadExecutionGenerator {
      * @param actors the actors to be executed in the test.
      * @return {@link TestThreadExecution} instance with specified {@link TestThreadExecution#call()} implementation.
      */
-    static TestThreadExecution create(Object testInstance, Phaser phaser, List<Actor> actors, boolean waitsEnabled) {
+    public static TestThreadExecution create(Object testInstance, Phaser phaser, List<Actor> actors, boolean waitsEnabled) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
@@ -157,7 +160,7 @@ class TestThreadExecutionGenerator {
                 end = mv.newLabel();
                 handler = mv.newLabel();
                 handlerEnd = mv.newLabel();
-                for (Class<? extends Throwable> ec : actor.getHandledExceptions())
+                for (Class<? extends Throwable> ec : actor.handledExceptions)
                     mv.visitTryCatchBlock(start, end, handler, Type.getType(ec).getInternalName());
                 mv.visitLabel(start);
             }
@@ -169,15 +172,15 @@ class TestThreadExecutionGenerator {
             mv.getField(TEST_THREAD_EXECUTION_TYPE, "testInstance", OBJECT_TYPE);
             mv.checkCast(testType);
             // Load arguments for operation
-            for (int j = 0; j < actor.getArguments().size(); j++) {
-                pushArgumentOnStack(mv, objArgs, actor.getArguments().get(j), actor.getMethod().getParameterTypes()[j]);
+            for (int j = 0; j < actor.arguments.length; j++) {
+                pushArgumentOnStack(mv, objArgs, actor.arguments[j], actor.method.getParameterTypes()[j]);
             }
             // Invoke operation
-            Method actorMethod = Method.getMethod(actor.getMethod());
+            Method actorMethod = Method.getMethod(actor.method);
             mv.invokeVirtual(testType, actorMethod);
             // Create result
             mv.box(actorMethod.getReturnType()); // box if needed
-            if (actor.getMethod().getReturnType() == void.class) {
+            if (actor.method.getReturnType() == void.class) {
                 mv.pop();
                 mv.invokeStatic(RESULT_TYPE, RESULT_CREATE_VOID_RESULT);
             } else {
@@ -196,7 +199,7 @@ class TestThreadExecutionGenerator {
             // Increment number of current operation
             mv.iinc(iLocal, 1);
         }
-        // Return results as list
+        // Return results
         mv.loadThis();
         mv.loadLocal(resLocal);
         mv.returnValue();

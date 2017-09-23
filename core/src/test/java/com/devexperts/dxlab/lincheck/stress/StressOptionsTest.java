@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck;
+package com.devexperts.dxlab.lincheck.stress;
 
 /*
  * #%L
@@ -22,47 +22,37 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
+import com.devexperts.dxlab.lincheck.LinChecker;
+import com.devexperts.dxlab.lincheck.Options;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.execution.RandomExecutionGenerator;
+import com.devexperts.dxlab.lincheck.verifier.LinearizabilityVerifier;
 import org.junit.Test;
 
-@StressCTest(actorsPerThread = {"3:5", "3:5", "3:5"}, iterations = 100, invocationsPerIteration = 10)
-public class RunOnceTest {
-    private A a;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class StressOptionsTest {
+    private AtomicInteger i;
 
     @Reset
     public void reload() {
-        a = new A();
+        i = new AtomicInteger();
     }
 
-    @Operation(runOnce = true)
-    public void a() {
-        a.a();
-    }
-
-    @Operation(runOnce = true)
-    public void b() {
-        a.b();
+    @Operation()
+    public int incAndGet() {
+        return i.incrementAndGet();
     }
 
     @Test
     public void test() {
-        LinChecker.check(RunOnceTest.class);
-    }
-
-    class A {
-        private boolean a, b;
-        synchronized void a() {
-            if (a)
-                throw new AssertionError();
-            a = true;
-        }
-
-        synchronized void b() {
-            if (b)
-                throw new AssertionError();
-            b = true;
-        }
+        Options opts = new StressOptions()
+            .iterations(10)
+            .invocationsPerIteration(200)
+            .executionGenerator(RandomExecutionGenerator.class)
+            .verifier(LinearizabilityVerifier.class)
+            .addThread(3,5, 2);
+        LinChecker.check(StressOptionsTest.class, opts);
     }
 }

@@ -22,47 +22,47 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
+import com.devexperts.dxlab.lincheck.annotations.OpGroupConfig;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
+import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.junit.Test;
 
-@StressCTest(actorsPerThread = {"3:5", "3:5", "3:5"}, iterations = 100, invocationsPerIteration = 10)
-public class RunOnceTest {
-    private A a;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@OpGroupConfig(name = "producer", nonParallel = true)
+@OpGroupConfig(name = "consumer", nonParallel = true)
+@StressCTest
+public class NonParallelOpGroupTest {
+    private SpscLinkedAtomicQueue<Integer> queue;
+    private AtomicInteger i;
 
     @Reset
-    public void reload() {
-        a = new A();
+    public void reset() {
+        queue = new SpscLinkedAtomicQueue<>();
+        i = new AtomicInteger();
     }
 
-    @Operation(runOnce = true)
-    public void a() {
-        a.a();
+    @Operation(group = "producer")
+    public void offer(@Param(gen = IntGen.class) Integer x) {
+        queue.offer(x);
     }
 
-    @Operation(runOnce = true)
-    public void b() {
-        a.b();
+    @Operation(group = "consumer")
+    public Integer poll() {
+        return queue.poll();
+    }
+
+    @Operation
+    public int incAndGet() {
+        return i.incrementAndGet();
     }
 
     @Test
     public void test() {
-        LinChecker.check(RunOnceTest.class);
-    }
-
-    class A {
-        private boolean a, b;
-        synchronized void a() {
-            if (a)
-                throw new AssertionError();
-            a = true;
-        }
-
-        synchronized void b() {
-            if (b)
-                throw new AssertionError();
-            b = true;
-        }
+        LinChecker.check(NonParallelOpGroupTest.class);
     }
 }

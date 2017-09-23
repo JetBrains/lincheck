@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck.generators;
+package com.devexperts.dxlab.lincheck.paramgen;
 
 /*
  * #%L
@@ -24,15 +24,14 @@ package com.devexperts.dxlab.lincheck.generators;
 
 import com.devexperts.dxlab.lincheck.ParameterGenerator;
 
-public class ByteGen implements ParameterGenerator<Byte> {
+public class LongGen implements ParameterGenerator<Long> {
     private final IntGen intGen;
 
-    public ByteGen(String configuration) {
+    public LongGen(String configuration) {
         intGen = new IntGen(configuration);
-        intGen.checkRange(Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
     }
 
-    public Byte generate() {
-        return (byte) (int) intGen.generate();
+    public Long generate() {
+        return (long) intGen.generate();
     }
 }

@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck.annotations;
+package com.devexperts.dxlab.lincheck.stress;
 
 /*
  * #%L
@@ -22,26 +22,25 @@ package com.devexperts.dxlab.lincheck.annotations;
  * #L%
  */
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.devexperts.dxlab.lincheck.Options;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@Repeatable(CTest.CTests.class)
-public @interface CTest {
-    int iterations() default 1_000;
-    String[] actorsPerThread() default {};
-    int invocationsPerIteration() default 5_000;
+/**
+ * todo
+ */
+public class StressOptions extends Options<StressOptions, StressCTestConfiguration> {
+    protected int invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS;
 
     /**
-     * Holder annotation for {@link CTest}.
+     * Run one test scenario {@code invocations} times.
      */
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.TYPE)
-    @interface CTests {
-        CTest[] value();
+    public StressOptions invocationsPerIteration(int invocations) {
+        this.invocationsPerIteration = invocations;
+        return this;
+    }
+
+    @Override
+    public StressCTestConfiguration createTestConfigurations() {
+        return new StressCTestConfiguration(iterations, threadConfigurations,
+            executionGenerator, verifier, invocationsPerIteration);
     }
 }

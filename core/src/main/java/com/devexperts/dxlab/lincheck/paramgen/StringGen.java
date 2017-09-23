@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck.generators;
+package com.devexperts.dxlab.lincheck.paramgen;
 
 /*
  * #%L
@@ -30,7 +30,7 @@ public class StringGen implements ParameterGenerator<String> {
     private static final int DEFAULT_MAX_WORD_LENGTH = 15;
     private static final String DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ ";
 
-    private final Random random = new Random();
+    private final Random random = new Random(0);
     private final int maxWordLength;
     private final String alphabet;
 

@@ -30,6 +30,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Use this annotation to specify parameter generators.
+ * See README of this projects for more details and examples.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.PARAMETER, ElementType.TYPE})
 @Repeatable(Param.Params.class)

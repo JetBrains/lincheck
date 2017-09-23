@@ -41,20 +41,19 @@ package com.devexperts.dxlab.lincheck.tests.juc.blocking_queue;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.HandleExceptionAsResult;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.ReadOnly;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import org.junit.Test;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-@CTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
 public class BlockingQueueTest1 {
     private BlockingQueue<Integer> q;
 
@@ -68,7 +67,6 @@ public class BlockingQueueTest1 {
         return q.add(value);
     }
 
-    @ReadOnly
     @Operation
     @HandleExceptionAsResult(NoSuchElementException.class)
     public Integer element() {
@@ -89,7 +87,7 @@ public class BlockingQueueTest1 {
 
     @Test
     public void test() {
-        LinChecker.check(this);
+        LinChecker.check(BlockingQueueTest1.class);
     }
 }
 

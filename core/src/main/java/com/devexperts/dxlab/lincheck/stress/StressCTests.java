@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck.annotations;
+package com.devexperts.dxlab.lincheck.stress;
 
 /*
  * #%L
@@ -22,13 +22,17 @@ package com.devexperts.dxlab.lincheck.annotations;
  * #L%
  */
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Method for reset test state
- * should be marked with this annotation.
+ * Holder annotation for {@link StressCTest}.
+ * Not a public API.
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Reset {
+@Target(ElementType.TYPE)
+public @interface StressCTests {
+    StressCTest[] value();
 }

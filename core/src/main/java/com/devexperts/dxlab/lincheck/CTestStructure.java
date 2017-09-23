@@ -22,11 +22,12 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
-import com.devexperts.dxlab.lincheck.annotations.CTest;
 import com.devexperts.dxlab.lincheck.annotations.HandleExceptionAsResult;
+import com.devexperts.dxlab.lincheck.annotations.OpGroupConfig;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -40,20 +41,22 @@ import java.util.Objects;
 
 /**
  * Contains information about operations (see {@link Operation}) and reset method (see {@link Reset}).
- * Several {@link CTest tests} can refer to one structure
- * (i.e. one test class could have several {@link CTest} annotations)
+ * Several {@link StressCTest tests} can refer to one structure
+ * (i.e. one test class could have several {@link StressCTest} annotations)
  */
-class CTestStructure {
-    private final List<ActorGenerator> actorGenerators;
-    private final Method resetMethod;
+public class CTestStructure {
+    public final List<ActorGenerator> actorGenerators;
+    public final List<OperationGroup> operationGroups;
+    public final Method resetMethod;
 
-    private CTestStructure(List<ActorGenerator> actorGenerators, Method resetMethod) {
+    private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups, Method resetMethod) {
         this.actorGenerators = actorGenerators;
+        this.operationGroups = operationGroups;
         this.resetMethod = resetMethod;
     }
 
-    static CTestStructure getFromTestClass(Class<?> testClass) {
-        // Read named parameter generators (declared for class)
+    public static CTestStructure getFromTestClass(Class<?> testClass) {
+        // Read named parameter paramgen (declared for class)
         Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
         for (Param paramAnn : testClass.getAnnotationsByType(Param.class)) {
             if (paramAnn.name().isEmpty()) {
@@ -61,7 +64,13 @@ class CTestStructure {
             }
             namedGens.put(paramAnn.name(), createGenerator(paramAnn));
         }
-        // Create actor generators
+        // Read group configurations
+        Map<String, OperationGroup> groupConfigs = new HashMap<>();
+        for (OpGroupConfig opGroupConfigAnn: testClass.getAnnotationsByType(OpGroupConfig.class)) {
+            groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
+                opGroupConfigAnn.nonParallel()));
+        }
+        // Create actor paramgen
         List<ActorGenerator> actorGenerators = new ArrayList<>();
         Method resetMethod = null;
         for (Method m : testClass.getDeclaredMethods()) {
@@ -76,10 +85,10 @@ class CTestStructure {
                 Operation operationAnn = m.getAnnotation(Operation.class);
                 // Check that params() in @Operation is empty or has the same size as the method
                 if (operationAnn.params().length > 0 && operationAnn.params().length != m.getParameterCount()) {
-                    throw new IllegalArgumentException("Invalid count of generators for " + m.toString()
+                    throw new IllegalArgumentException("Invalid count of paramgen for " + m.toString()
                         + " method in @Operation");
                 }
-                // Construct list of parameter generators
+                // Construct list of parameter paramgen
                 final List<ParameterGenerator<?>> gens = new ArrayList<>();
                 for (int i = 0; i < m.getParameterCount(); i++) {
                     String nameInOperation = operationAnn.params().length > 0 ? operationAnn.params()[i] : null;
@@ -89,11 +98,20 @@ class CTestStructure {
                 HandleExceptionAsResult handleExceptionAsResultAnn = m.getAnnotation(HandleExceptionAsResult.class);
                 List<Class<? extends Throwable>> handledExceptions = handleExceptionAsResultAnn != null ?
                     Arrays.asList(handleExceptionAsResultAnn.value()) : Collections.emptyList();
-                actorGenerators.add(new ActorGenerator(m, gens, handledExceptions, operationAnn.runOnce()));
+                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, operationAnn.runOnce());
+                actorGenerators.add(actorGenerator);
+                // Get list of groups and add this operation to specified ones
+                String opGroup = operationAnn.group();
+                if (!opGroup.isEmpty()) {
+                    OperationGroup operationGroup = groupConfigs.get(opGroup);
+                    if (operationGroup == null)
+                        throw new IllegalStateException("Operation group " + opGroup + " is not configured");
+                    operationGroup.actors.add(actorGenerator);
+                }
             }
         }
-        // Create CTest class configuration
-        return new CTestStructure(actorGenerators, resetMethod);
+        // Create StressCTest class configuration
+        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), resetMethod);
     }
 
     private static ParameterGenerator<?> getOrCreateGenerator(Method m, Parameter p, String nameInOperation,
@@ -136,11 +154,24 @@ class CTestStructure {
         return Objects.requireNonNull(namedGens.get(name), "Unknown generator name: \"" + name + "\"");
     }
 
-    List<ActorGenerator> getActorGenerators() {
-        return actorGenerators;
-    }
+    public static class OperationGroup {
+        public final String name;
+        public final boolean nonParallel;
+        public final List<ActorGenerator> actors;
 
-    Method getResetMethod() {
-        return resetMethod;
+        public OperationGroup(String name, boolean nonParallel) {
+            this.name = name;
+            this.nonParallel = nonParallel;
+            this.actors = new ArrayList<>();
+        }
+
+        @Override
+        public String toString() {
+            return "OperationGroup{" +
+                "name='" + name + '\'' +
+                ", nonParallel=" + nonParallel +
+                ", actors=" + actors +
+                '}';
+        }
     }
 }

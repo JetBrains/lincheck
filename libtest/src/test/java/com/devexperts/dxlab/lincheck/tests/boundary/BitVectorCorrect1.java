@@ -42,7 +42,8 @@ package com.devexperts.dxlab.lincheck.tests.boundary;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
 import com.devexperts.dxlab.lincheck.annotations.*;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import org.cliffc.high_scale_lib.NonBlockingSetInt;
 import org.junit.Test;
 
@@ -50,7 +51,7 @@ import java.util.Set;
 
 import static org.junit.Assert.assertTrue;
 
-@CTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
 @Param(name = "key", gen = IntGen.class, conf = "1:10")
 public class BitVectorCorrect1 {
     private Set<Integer> q;
@@ -72,6 +73,6 @@ public class BitVectorCorrect1 {
 
     @Test
     public void test() {
-        LinChecker.check(this);
+        LinChecker.check(BitVectorCorrect1.class);
     }
 }

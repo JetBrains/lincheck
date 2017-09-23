@@ -41,18 +41,18 @@ package com.devexperts.dxlab.lincheck.tests.boundary;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.HandleExceptionAsResult;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.junit.Test;
 
 import java.util.Map;
 
-@CTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
 @Param(name = "key", gen = IntGen.class)
 @Param(name = "value", gen = IntGen.class)
 public class MapCorrect1 {
@@ -81,6 +81,6 @@ public class MapCorrect1 {
 
     @Test
     public void test() {
-        LinChecker.check(new MapCorrect1());
+        LinChecker.check(MapCorrect1.class);
     }
 }

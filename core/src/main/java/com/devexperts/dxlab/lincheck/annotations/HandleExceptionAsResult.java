@@ -27,10 +27,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Use this annotation if you want to handle
+ * specified exceptions as a result of operation invocation.
+ * Should be used on operation method (with {@link Operation} annotation).
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface HandleExceptionAsResult {
-
     Class<? extends Throwable>[] value();
-
 }

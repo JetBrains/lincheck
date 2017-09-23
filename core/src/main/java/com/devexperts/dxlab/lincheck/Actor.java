@@ -22,51 +22,33 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
-import com.devexperts.dxlab.lincheck.annotations.ReadOnly;
+import com.devexperts.dxlab.lincheck.annotations.Operation;
 
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.StringJoiner;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- * The actor entity describe the operation with it's parameter
- * which is executed in the test. To test the linearizability
- * the actors permutations are considered.
+ * The actor entity describe the operation with its parameters
+ * which is executed during the testing.
+ *
+ * @see Operation
  */
-class Actor {
-    private final Method method;
-    private final boolean readOnly;
-    private final List<Object> arguments;
-    private final List<Class<? extends Throwable>> handledExceptions;
+public class Actor {
+    public final Method method;
+    public final Object[] arguments;
+    public final List<Class<? extends Throwable>> handledExceptions;
 
-    Actor(Method method, List<Object> arguments, List<Class<? extends Throwable>> handledExceptions) {
+    public Actor(Method method, List<Object> arguments, List<Class<? extends Throwable>> handledExceptions) {
         this.method = method;
-        this.readOnly = method.isAnnotationPresent(ReadOnly.class);
-        this.arguments = arguments;
+        this.arguments = arguments.toArray();
         this.handledExceptions = handledExceptions;
     }
 
     @Override
     public String toString() {
-        return method.getName() + "(" + arguments.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")"
-            + (readOnly ? "[r]" : "[w]");
-    }
-
-    public Method getMethod() {
-        return method;
-    }
-
-    public boolean isReadOnly() {
-        return readOnly;
-    }
-
-    public List<Object> getArguments() {
-        return arguments;
-    }
-
-    public List<Class<? extends Throwable>> getHandledExceptions() {
-        return handledExceptions;
+        return method.getName() + "(" + Stream.of(arguments).map(Object::toString).collect(Collectors.joining(", ")) + ")";
     }
 
     public boolean handlesExceptions() {

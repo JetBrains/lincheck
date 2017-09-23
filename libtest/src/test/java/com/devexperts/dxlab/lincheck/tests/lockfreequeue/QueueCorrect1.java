@@ -42,16 +42,16 @@ package com.devexperts.dxlab.lincheck.tests.lockfreequeue;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
 import com.devexperts.dxlab.lincheck.annotations.*;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.github.lock.free.queue.LockFreeQueue;
-import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 
 /**
  * https://github.com/yaitskov/lock-free-queue
  */
-@CTest(iterations = 100, actorsPerThread = {"1:2", "1:2"})
+@StressCTest(iterations = 100, actorsPerThread = {"1:2", "1:2"})
 public class QueueCorrect1 {
     private LockFreeQueue<Integer> q;
 
@@ -72,6 +72,6 @@ public class QueueCorrect1 {
 
     //    @Test TODO is it really correct?
     public void test() {
-        LinChecker.check(this);
+        LinChecker.check(QueueCorrect1.class);
     }
 }

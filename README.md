@@ -51,7 +51,7 @@ public class ConcurrentHashMapLinearizabilityTest {
 The artifacts are available in [Bintray](https://bintray.com/devexperts/Maven/lin-check). For Maven, use `com.devexperts.lincheck:core:<version>` artifact for your tests.
 
 #Operation
-The base entity in **lin-check** is operation. It is defined via public method (should be annotated with **@Operation** annotation) and generators for every method parameter. Further operations are used to create actors and execute them concurrently.
+The base entity in **lin-check** is operation. It is defined via public method (should be annotated with **@Operation** annotation) and paramgen for every method parameter. Further operations are used to create actors and execute them concurrently.
 
 # Operation restrictions
 Some restrictions can be applied for operation and should be specified via **@Operation** parameters:

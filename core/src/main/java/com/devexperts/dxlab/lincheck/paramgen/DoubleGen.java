@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck.generators;
+package com.devexperts.dxlab.lincheck.paramgen;
 
 /*
  * #%L
@@ -31,7 +31,7 @@ public class DoubleGen implements ParameterGenerator<Double> {
     private static final float DEFAULT_END = 10;
     private static final float DEFAULT_STEP = 0.1f;
 
-    private final Random random = new Random();
+    private final Random random = new Random(0);
     private final double begin;
     private final double end;
     private final double step;

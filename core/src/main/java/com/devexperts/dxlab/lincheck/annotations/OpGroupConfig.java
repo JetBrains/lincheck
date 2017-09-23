@@ -22,13 +22,30 @@ package com.devexperts.dxlab.lincheck.annotations;
  * #L%
  */
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Method for reset test state
- * should be marked with this annotation.
+ * Set some restrictions to the group with specified name.
+ * These restrictions are used during execution scenario generation.
+ *
+ * Now the following restrictions are available:
+ * <ul>
+ *     <li>{@code nonParallel} - set it to {@code true} for executing
+ *     all actors in this group from one thread. This restriction allows
+ *     to test single-reader and/or single-writer data structures and
+ *     similar solutions.
+ *     </li>
+ * </ul>
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Reset {
+@Target(ElementType.TYPE)
+@Repeatable(OpGroupConfigs.class)
+public @interface OpGroupConfig {
+    String name() default "";
+    boolean nonParallel() default false;
 }
+

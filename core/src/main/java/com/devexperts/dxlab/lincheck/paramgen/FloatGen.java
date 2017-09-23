@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck.annotations;
+package com.devexperts.dxlab.lincheck.paramgen;
 
 /*
  * #%L
@@ -22,13 +22,16 @@ package com.devexperts.dxlab.lincheck.annotations;
  * #L%
  */
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import com.devexperts.dxlab.lincheck.ParameterGenerator;
 
-/**
- * Method for reset test state
- * should be marked with this annotation.
- */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Reset {
+public class FloatGen implements ParameterGenerator<Float> {
+    private final DoubleGen doubleGen;
+
+    public FloatGen(String configuration) {
+        doubleGen = new DoubleGen(configuration);
+    }
+
+    public Float generate() {
+        return (float) (double) doubleGen.generate();
+    }
 }

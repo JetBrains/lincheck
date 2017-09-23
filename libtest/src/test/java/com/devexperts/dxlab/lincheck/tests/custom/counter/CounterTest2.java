@@ -41,7 +41,7 @@ package com.devexperts.dxlab.lincheck.tests.custom.counter;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
 import tests.custom.counter.Counter;
@@ -50,7 +50,7 @@ import org.junit.Test;
 
 import static junit.framework.TestCase.assertTrue;
 
-@CTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
 public class CounterTest2 {
     private Counter counter;
 
@@ -66,6 +66,6 @@ public class CounterTest2 {
 
     @Test
     public void test() {
-        LinChecker.check(new CounterTest2());
+        LinChecker.check(CounterTest2.class);
     }
 }

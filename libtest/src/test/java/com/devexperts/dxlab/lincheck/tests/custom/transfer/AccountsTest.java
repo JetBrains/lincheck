@@ -41,12 +41,12 @@ package com.devexperts.dxlab.lincheck.tests.custom.transfer;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.ReadOnly;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -59,10 +59,11 @@ import tests.custom.transfer.AccountsWrong4;
 import java.util.Arrays;
 import java.util.List;
 
-@CTest(iterations = 500, actorsPerThread = {"2:5", "2:5"})
+@StressCTest(iterations = 500, actorsPerThread = {"2:5", "2:5"})
 @Param(name = "id", gen = IntGen.class, conf = "1:2")
 @Param(name = "amount", gen = IntGen.class)
 @RunWith(Parameterized.class)
+@Ignore
 public class AccountsTest {
     private final Class<? extends Accounts> accountsClass;
     private Accounts acc;
@@ -86,7 +87,6 @@ public class AccountsTest {
         acc = accountsClass.newInstance();
     }
 
-    @ReadOnly
     @Operation(params = {"id"})
     public int getAmount(int key) {
         return acc.getAmount(key);
@@ -104,6 +104,6 @@ public class AccountsTest {
 
     @Test(expected = AssertionError.class)
     public void test() throws Exception {
-        LinChecker.check(this);
+        LinChecker.check(AccountsTest.class);
     }
 }

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.devexperts.dxlab.lincheck.tests.custom.counter;
+package com.devexperts.dxlab.lincheck.tests.juc.hash_map;
 
 /*
  * #%L
@@ -41,35 +41,42 @@ package com.devexperts.dxlab.lincheck.tests.custom.counter;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.annotations.HandleExceptionAsResult;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
+import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import tests.custom.counter.CounterGet;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import org.junit.Test;
 
-import static junit.framework.TestCase.assertTrue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
-public class CounterGetTest {
-    private CounterGet counter;
+@StressCTest
+@Param(name = "key", gen = IntGen.class, conf = "1:3")
+@Param(name = "value", gen = IntGen.class)
+public class CHMTest {
+    private Map<Integer, Integer> m;
 
     @Reset
     public void reload() {
-        counter = new CounterGet();
+        m = new ConcurrentHashMap<>();
+    }
+
+    @Operation(params = {"key", "value"})
+    @HandleExceptionAsResult(NullPointerException.class)
+    public int put(Integer key, Integer value) {
+        return m.put(key, value);
     }
 
     @Operation
-    public int incAndGet() {
-        return counter.incrementAndGet();
-    }
-
-    @Operation
-    public int get() {
-        return counter.get();
+    @HandleExceptionAsResult(NullPointerException.class)
+    public int get(@Param(name = "key") Integer key) {
+        return m.get(key);
     }
 
     @Test
-    public void test() {
-        LinChecker.check(CounterGetTest.class);
+    public void test() throws Exception {
+        LinChecker.check(CHMTest.class);
     }
 }

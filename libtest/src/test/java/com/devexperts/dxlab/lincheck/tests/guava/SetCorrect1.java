@@ -41,11 +41,11 @@ package com.devexperts.dxlab.lincheck.tests.guava;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -54,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.Assert.assertTrue;
 
-@CTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
 @Param(name = "key", gen = IntGen.class)
 public class SetCorrect1 {
     private Set<Integer> q;
@@ -76,6 +76,6 @@ public class SetCorrect1 {
 
     @Test
     public void test() throws Exception {
-        LinChecker.check(this);
+        LinChecker.check(SetCorrect1.class);
     }
 }

@@ -41,18 +41,17 @@ package com.devexperts.dxlab.lincheck.tests.romix;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.ReadOnly;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import org.junit.Test;
 import romix.scala.collection.concurrent.TrieMap;
 
 import java.util.Map;
 
-@CTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
 @Param(name = "key", gen = IntGen.class)
 @Param(name = "value", gen = IntGen.class)
 public class TrieCorrect1 {
@@ -68,7 +67,6 @@ public class TrieCorrect1 {
         return m.put(key, value);
     }
 
-    @ReadOnly
     @Operation(params = {"key"})
     public Integer get(Integer key) {
         return m.get(key);
@@ -76,7 +74,7 @@ public class TrieCorrect1 {
 
     @Test
     public void test() {
-        LinChecker.check(this);
+        LinChecker.check(TrieCorrect1.class);
     }
 }
 

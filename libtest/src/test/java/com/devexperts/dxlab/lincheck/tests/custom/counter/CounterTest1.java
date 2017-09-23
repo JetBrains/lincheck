@@ -42,13 +42,14 @@ package com.devexperts.dxlab.lincheck.tests.custom.counter;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
 import com.devexperts.dxlab.lincheck.annotations.*;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import tests.custom.counter.Counter;
 import tests.custom.counter.CounterWrong0;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertTrue;
 
-@CTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 public class CounterTest1 {
     private Counter counter;
 
@@ -62,8 +63,8 @@ public class CounterTest1 {
         return counter.incrementAndGet();
     }
 
-    @Test(expected = AssertionError.class)
+    @Test
     public void test() {
-        LinChecker.check(new CounterTest1());
+        LinChecker.check(CounterTest1.class);
     }
 }

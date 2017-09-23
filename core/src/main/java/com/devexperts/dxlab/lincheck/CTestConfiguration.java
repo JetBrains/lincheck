@@ -22,79 +22,73 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.execution.ExecutionGenerator;
+import com.devexperts.dxlab.lincheck.execution.RandomExecutionGenerator;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTestConfiguration;
+import com.devexperts.dxlab.lincheck.verifier.LinearizabilityVerifier;
+import com.devexperts.dxlab.lincheck.verifier.Verifier;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Test configuration which is passed via {@link CTest} annotation.
+ * Configuration of an abstract concurrent test.
+ * Should be overridden for every strategy.
  */
-class CTestConfiguration {
-    private final int iterations;
-    private final int invocationsPerIteration;
-    private final List<TestThreadConfiguration> threadConfigurations;
+public abstract class CTestConfiguration {
+    public static final int DEFAULT_ITERATIONS = 200;
+    public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR =
+        RandomExecutionGenerator.class;
+    public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
 
-    private CTestConfiguration(int iterations, int invocationsPerIteration, List<TestThreadConfiguration> threadConfigurations) {
+    public final int iterations;
+    public final List<TestThreadConfiguration> threadConfigurations;
+    public final Class<? extends ExecutionGenerator> generatorClass;
+    public final Class<? extends Verifier> verifierClass;
+
+    protected CTestConfiguration(int iterations, List<TestThreadConfiguration> threadConfigurations,
+        Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass)
+    {
         this.iterations = iterations;
-        this.invocationsPerIteration = invocationsPerIteration;
-        this.threadConfigurations = threadConfigurations;
-    }
-
-    static List<CTestConfiguration> getFromTestClass(Class<?> testClass, int nActors) {
-        return Arrays.stream(testClass.getAnnotationsByType(CTest.class))
-            .map(cTestAnn -> new CTestConfiguration(cTestAnn.iterations(), cTestAnn.invocationsPerIteration(), createTestThreadConfigurations(cTestAnn, nActors)))
-            .collect(Collectors.toList());
-    }
-
-    private static List<TestThreadConfiguration> createTestThreadConfigurations(CTest cTestAnn, int nActors) {
-        // Generate thread configuration if it isn't specified
-        if (cTestAnn.actorsPerThread().length == 0) {
-            List<TestThreadConfiguration> threadConfigurations = new ArrayList<>();
-            int nThread = Math.min(4, nActors);
-            for (int i = 0; i < nThread; i++) {
-                threadConfigurations.add(new TestThreadConfiguration(2, 4));
-            }
-            return threadConfigurations;
+        this.generatorClass = generatorClass;
+        this.verifierClass = verifierClass;
+        if (!threadConfigurations.isEmpty()) {
+            this.threadConfigurations = threadConfigurations;
+        } else {
+            this.threadConfigurations = defaultTestThreadConfigurations();
         }
-        // Otherwise parse from configuration
-        return Arrays.stream(cTestAnn.actorsPerThread())
+    }
+
+    private static List<TestThreadConfiguration> createTestThreadConfigurations(String[] actorsPerThreadDesc) {
+        return Arrays.stream(actorsPerThreadDesc)
             .map(conf -> {
                 String[] cs = conf.split(":");
                 if (cs.length != 2) {
                     throw new IllegalArgumentException(
-                        "Thread configuration in @CTest should be in \"<min>:<max>\" format");
+                        "Thread configuration in @StressCTest should be in \"<min>:<max>\" format");
                 }
                 return new TestThreadConfiguration(Integer.parseInt(cs[0]), Integer.parseInt(cs[1]));
-            })
-            .collect(Collectors.toList());
+            }).collect(Collectors.toList());
     }
 
-    int getIterations() {
-        return iterations;
+    static List<StressCTestConfiguration> createFromTestClass(Class<?> testClass) {
+        return Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))
+            .map(stressTestAnn -> new StressCTestConfiguration(stressTestAnn.iterations(),
+                createTestThreadConfigurations(stressTestAnn.actorsPerThread()), stressTestAnn.generator(),
+                stressTestAnn.verifier(), stressTestAnn.invocationsPerIteration())
+            ).collect(Collectors.toList());
     }
 
-    int getThreads() {
+    private List<TestThreadConfiguration> defaultTestThreadConfigurations() {
+        return Arrays.asList(
+            new TestThreadConfiguration(3, 5),
+            new TestThreadConfiguration(3, 5)
+        );
+    }
+
+    public int getThreads() {
         return threadConfigurations.size();
-    }
-
-    int getInvocationsPerIteration() {
-        return invocationsPerIteration;
-    }
-
-    List<TestThreadConfiguration> getThreadConfigurations() {
-        return threadConfigurations;
-    }
-
-    static class TestThreadConfiguration {
-        final int minActors;
-        final int maxActors;
-
-        private TestThreadConfiguration(int minActors, int maxActors) {
-            this.minActors = minActors;
-            this.maxActors = maxActors;
-        }
     }
 }

@@ -27,16 +27,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * The instances of this class are used to generate {@link Actor actors}
+ * Implementations of this class generate {@link Actor actors}
  * using {@link ParameterGenerator parameter generators}.
  */
-class ActorGenerator {
+public class ActorGenerator {
     private final Method method;
     private final List<ParameterGenerator<?>> parameterGenerators;
     private final List<Class<? extends Throwable>> handledExceptions;
     private final boolean useOnce;
 
-    ActorGenerator(Method method, List<ParameterGenerator<?>> parameterGenerators,
+    public ActorGenerator(Method method, List<ParameterGenerator<?>> parameterGenerators,
         List<Class<? extends Throwable>> handledExceptions, boolean useOnce)
     {
         this.method = method;
@@ -45,12 +45,17 @@ class ActorGenerator {
         this.useOnce = useOnce;
     }
 
-    Actor generate() {
+    public Actor generate() {
         return new Actor(method, parameterGenerators.stream()
             .map(ParameterGenerator::generate).collect(Collectors.toList()), handledExceptions);
     }
 
     public boolean useOnce() {
         return useOnce;
+    }
+
+    @Override
+    public String toString() {
+        return method.toString();
     }
 }

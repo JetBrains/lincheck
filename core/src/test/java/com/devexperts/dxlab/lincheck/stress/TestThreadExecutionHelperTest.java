@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck;
+package com.devexperts.dxlab.lincheck.stress;
 
 /*
  * #%L
@@ -22,6 +22,10 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
+import com.devexperts.dxlab.lincheck.Actor;
+import com.devexperts.dxlab.lincheck.Result;
+import com.devexperts.dxlab.lincheck.stress.TestThreadExecution;
+import com.devexperts.dxlab.lincheck.stress.TestThreadExecutionGenerator;
 import org.junit.Assert;
 import org.junit.Test;
 

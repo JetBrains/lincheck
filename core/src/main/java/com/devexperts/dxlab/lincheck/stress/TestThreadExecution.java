@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck;
+package com.devexperts.dxlab.lincheck.stress;
 
 /*
  * #%L
@@ -22,6 +22,8 @@ package com.devexperts.dxlab.lincheck;
  * #L%
  */
 
+import com.devexperts.dxlab.lincheck.Result;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.Phaser;
 
@@ -41,7 +43,7 @@ public abstract class TestThreadExecution implements Callable<Result[]> {
     // It is better to return List<Result>,
     // but such implementation requires to have a synthetic
     // method to support generics and the byte-code generation
-    // is more bug-prone as well. If you need to use
+    // is more bug-prone. If you need to use
     // List<Result>, see Arrays.asList(..) method.
     public abstract Result[] call();
 }

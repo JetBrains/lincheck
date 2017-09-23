@@ -42,7 +42,8 @@ package com.devexperts.dxlab.lincheck.tests.custom.queue;
 
 import com.devexperts.dxlab.lincheck.LinChecker;
 import com.devexperts.dxlab.lincheck.annotations.*;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import tests.custom.queue.Queue;
 import tests.custom.queue.QueueEmptyException;
 import tests.custom.queue.QueueFullException;
@@ -50,7 +51,7 @@ import tests.custom.queue.QueueWrong1;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
-@CTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
 public class WrapperQueueWrong1 {
     private Queue queue;
 
@@ -73,6 +74,6 @@ public class WrapperQueueWrong1 {
 
     @Test(expected = AssertionError.class)
     public void test() {
-        LinChecker.check(new WrapperQueueWrong1());
+        LinChecker.check(WrapperQueueWrong1.class);
     }
 }

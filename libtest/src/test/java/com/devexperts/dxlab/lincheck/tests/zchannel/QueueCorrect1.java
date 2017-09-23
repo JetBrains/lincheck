@@ -41,18 +41,17 @@ package com.devexperts.dxlab.lincheck.tests.zchannel;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.CTest;
+import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.annotations.Reset;
-import com.devexperts.dxlab.lincheck.generators.IntGen;
-import org.junit.Test;
+import com.devexperts.dxlab.lincheck.paramgen.IntGen;
 import z.channel.GenericMPMCQueue;
 
 /**
  * http://landz.github.io/
  */
-@CTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
 public class QueueCorrect1 {
     private GenericMPMCQueue<Integer> q;
 
@@ -73,6 +72,6 @@ public class QueueCorrect1 {
 
 //    @Test TODO is it really correct?
     public void test() throws Exception {
-        LinChecker.check(this);
+        LinChecker.check(QueueCorrect1.class);
     }
 }

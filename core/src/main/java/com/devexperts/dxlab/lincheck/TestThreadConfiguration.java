@@ -1,4 +1,4 @@
-package com.devexperts.dxlab.lincheck.generators;
+package com.devexperts.dxlab.lincheck;
 
 /*
  * #%L
@@ -22,17 +22,16 @@ package com.devexperts.dxlab.lincheck.generators;
  * #L%
  */
 
-import com.devexperts.dxlab.lincheck.ParameterGenerator;
+/**
+ * Determines minimum and maximum actors in the specified thread
+ * for execution generation.
+ */
+public class TestThreadConfiguration {
+    public final int minActors;
+    public final int maxActors;
 
-public class ShortGen implements ParameterGenerator<Short> {
-    private final IntGen intGen;
-
-    public ShortGen(String configuration) {
-        intGen = new IntGen(configuration);
-        intGen.checkRange(Short.MIN_VALUE, Short.MAX_VALUE, "short");
-    }
-
-    public Short generate() {
-        return (short) (int) intGen.generate();
+    public TestThreadConfiguration(int minActors, int maxActors) {
+        this.minActors = minActors;
+        this.maxActors = maxActors;
     }
 }

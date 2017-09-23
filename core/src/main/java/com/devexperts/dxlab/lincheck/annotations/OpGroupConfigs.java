@@ -22,12 +22,17 @@ package com.devexperts.dxlab.lincheck.annotations;
  * #L%
  */
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * It marks the method ReadOnly
- * Test case should have at least one non read-only operation
+ * Holder annotation for {@link OpGroupConfig}.
+ * Not a public API.
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ReadOnly {}
+@Target(ElementType.TYPE)
+public @interface OpGroupConfigs {
+    OpGroupConfig[] value();
+}

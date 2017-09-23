@@ -28,12 +28,23 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for test method
- * Params binds the arguments of the method with the values declared in {@link Param}
+ * Mark your method with this annotation to use it in concurrent testing as an operation.
+ * <p>
+ * Here are several parameters:
+ * <ul>
+ *     <li> {@code params} - binds by name arguments of the operation
+ *          with {@link Param} definitions on the test class
+ *     </li>
+ *     <li> {@code runOnce} - set it to {@code true} if you want this operation
+ *     to be called at most once during the test invocation; {@code false} by default.
+ *     </li>
+ * </ul>
+ * See also {@link HandleExceptionAsResult}
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Operation {
     String[] params() default {};
     boolean runOnce() default false;
+    String group() default "";
 }
