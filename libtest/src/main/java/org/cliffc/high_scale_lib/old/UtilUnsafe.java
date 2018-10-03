@@ -4,7 +4,7 @@ package org.cliffc.high_scale_lib.old;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as

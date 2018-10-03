@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.lockfreequeue;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,24 +41,18 @@ package com.devexperts.dxlab.lincheck.tests.lockfreequeue;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.*;
+import com.devexperts.dxlab.lincheck.annotations.Operation;
+import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import com.github.lock.free.queue.LockFreeQueue;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * https://github.com/yaitskov/lock-free-queue
  */
-@StressCTest(iterations = 100, actorsPerThread = {"1:2", "1:2"})
+@StressCTest
 public class QueueCorrect1 {
-    private LockFreeQueue<Integer> q;
-
-    @Reset
-    public void reload() {
-        q = new LockFreeQueue<>();
-    }
+    private LockFreeQueue<Integer> q = new LockFreeQueue<>();
 
     @Operation
     public void add(@Param(gen = IntGen.class) int value) {

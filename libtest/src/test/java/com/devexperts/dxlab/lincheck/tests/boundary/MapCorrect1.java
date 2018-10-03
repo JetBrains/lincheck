@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.boundary;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,27 +41,20 @@ package com.devexperts.dxlab.lincheck.tests.boundary;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
-import com.devexperts.dxlab.lincheck.annotations.HandleExceptionAsResult;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.Reset;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.junit.Test;
 
 import java.util.Map;
 
-@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 @Param(name = "key", gen = IntGen.class)
 @Param(name = "value", gen = IntGen.class)
 public class MapCorrect1 {
-    private Map<Integer, Integer> map;
-
-    @Reset
-    public void reload() {
-        map = new NonBlockingHashMap<>();
-    }
+    private Map<Integer, Integer> map = new NonBlockingHashMap<>();
 
     @Operation
     public Integer put(Integer key, Integer value) {
@@ -73,8 +66,7 @@ public class MapCorrect1 {
         return map.get(key);
     }
 
-    @Operation
-    @HandleExceptionAsResult(NullPointerException.class)
+    @Operation(handleExceptionsAsResult = NullPointerException.class)
     public int putIfAbsent(int key, int value) {
         return map.putIfAbsent(key, value);
     }

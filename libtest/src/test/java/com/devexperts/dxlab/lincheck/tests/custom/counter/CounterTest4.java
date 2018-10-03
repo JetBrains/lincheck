@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.custom.counter;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,22 +41,15 @@ package com.devexperts.dxlab.lincheck.tests.custom.counter;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.*;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.annotations.Operation;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
+import org.junit.Test;
 import tests.custom.counter.Counter;
 import tests.custom.counter.CounterWrong2;
-import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-
-@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 public class CounterTest4 {
-    private Counter counter;
-
-    @Reset
-    public void reload() {
-        counter = new CounterWrong2();
-    }
+    private Counter counter = new CounterWrong2();
 
     @Operation
     public int incAndGet() {

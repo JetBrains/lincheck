@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.juc.hash_map;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,27 +41,20 @@ package com.devexperts.dxlab.lincheck.tests.juc.hash_map;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.Reset;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3"})
-@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 @Param(name = "key", gen = IntGen.class)
 @Param(name = "value", gen = IntGen.class)
 public class HashMapTest {
-    private Map<Integer, Integer> m;
-
-    @Reset
-    public void reload() {
-        m = new HashMap<>();
-    }
+    private Map<Integer, Integer> m = new HashMap<>();
 
     @Operation(params = {"key", "value"})
     public Integer put(Integer key, Integer value) {

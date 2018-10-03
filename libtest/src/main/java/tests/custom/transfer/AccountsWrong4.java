@@ -22,7 +22,7 @@ package tests.custom.transfer;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -48,17 +48,13 @@ public class AccountsWrong4 implements Accounts {
     Map<Integer, Integer> data;
 
     public AccountsWrong4() {
-        data = new HashMap<>();
+        data = new HashMap<>(1);
     }
 
-    // This operation is not synchronized with other
+    // This operation is not synchronized with others
     @Override
     public Integer getAmount(int id) {
-        if (data.containsKey(id)) {
-            return data.get(id);
-        } else {
-            return 0;
-        }
+        return data.getOrDefault(id, 0);
     }
 
     @Override

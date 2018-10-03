@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.guava;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,24 +41,18 @@ package com.devexperts.dxlab.lincheck.tests.guava;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.Reset;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import com.google.common.collect.ConcurrentHashMultiset;
 import org.junit.Test;
 
-@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 @Param(name = "value", gen = IntGen.class)
 @Param(name = "count", gen = IntGen.class, conf = "1:10")
 public class MultisetCorrect1 {
-    private ConcurrentHashMultiset<Integer> q;
-
-    @Reset
-    public void reload() {
-        q = ConcurrentHashMultiset.create();
-    }
+    private ConcurrentHashMultiset<Integer> q = ConcurrentHashMultiset.create();
 
     @Operation(params = {"value", "count"})
     public int add(int value, int count) {
@@ -71,7 +65,7 @@ public class MultisetCorrect1 {
     }
 
     @Test
-    public void test() throws Exception {
+    public void test()  {
         LinChecker.check(MultisetCorrect1.class);
     }
 }

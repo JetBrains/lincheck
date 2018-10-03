@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.zchannel;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,24 +41,18 @@ package com.devexperts.dxlab.lincheck.tests.zchannel;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.Reset;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import z.channel.GenericMPMCQueue;
 
 /**
  * http://landz.github.io/
  */
-@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 public class QueueCorrect2 {
-    private GenericMPMCQueue<Integer> q;
-
-    @Reset
-    public void reload() {
-        q = new GenericMPMCQueue<>(16);
-    }
+    private GenericMPMCQueue<Integer> q = new GenericMPMCQueue<>(16);
 
     @Operation
     public boolean offer(@Param(gen = IntGen.class) int value) {

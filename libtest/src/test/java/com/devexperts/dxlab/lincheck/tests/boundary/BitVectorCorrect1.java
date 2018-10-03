@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.boundary;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,25 +41,19 @@ package com.devexperts.dxlab.lincheck.tests.boundary;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.*;
+import com.devexperts.dxlab.lincheck.annotations.Operation;
+import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.cliffc.high_scale_lib.NonBlockingSetInt;
 import org.junit.Test;
 
 import java.util.Set;
 
-import static org.junit.Assert.assertTrue;
-
-@StressCTest(iterations = 300, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 @Param(name = "key", gen = IntGen.class, conf = "1:10")
 public class BitVectorCorrect1 {
-    private Set<Integer> q;
-
-    @Reset
-    public void reload() {
-        q = new NonBlockingSetInt();
-    }
+    private Set<Integer> q = new NonBlockingSetInt();
 
     @Operation(params = {"key"})
     public boolean add(int key) {

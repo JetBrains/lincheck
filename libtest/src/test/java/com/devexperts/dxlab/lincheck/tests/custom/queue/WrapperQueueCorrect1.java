@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.custom.queue;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,34 +41,25 @@ package com.devexperts.dxlab.lincheck.tests.custom.queue;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.annotations.*;
+import com.devexperts.dxlab.lincheck.annotations.Operation;
+import com.devexperts.dxlab.lincheck.annotations.Param;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 import tests.custom.queue.Queue;
 import tests.custom.queue.QueueEmptyException;
-import tests.custom.queue.QueueFullException;
 import tests.custom.queue.QueueSynchronized;
 
-import static org.junit.Assert.assertTrue;
-
-@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 public class WrapperQueueCorrect1 {
-    private Queue queue;
+    private Queue queue = new QueueSynchronized(10);;
 
-    @Reset
-    public void reload() {
-        queue = new QueueSynchronized(10);
-    }
-
-    @Operation
-    @HandleExceptionAsResult(QueueFullException.class)
+    @Operation(handleExceptionsAsResult = QueueEmptyException.class)
     public void put(@Param(gen = IntGen.class)int args) throws Exception {
         queue.put(args);
     }
 
-    @Operation
-    @HandleExceptionAsResult(QueueEmptyException.class)
+    @Operation(handleExceptionsAsResult = QueueEmptyException.class)
     public int get() throws Exception {
         return queue.get();
     }

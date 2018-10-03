@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.juc.blocking_queue;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,46 +41,36 @@ package com.devexperts.dxlab.lincheck.tests.juc.blocking_queue;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
-import com.devexperts.dxlab.lincheck.annotations.HandleExceptionAsResult;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.Reset;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 public class BlockingQueueTest1 {
-    private BlockingQueue<Integer> q;
-
-    @Reset
-    public void reload() {
-        q = new ArrayBlockingQueue<>(10);
-    }
+    private BlockingQueue<Integer> q = new ArrayBlockingQueue<>(10);
 
     @Operation
     public boolean add(@Param(gen = IntGen.class) Integer value) {
         return q.add(value);
     }
 
-    @Operation
-    @HandleExceptionAsResult(NoSuchElementException.class)
+    @Operation(handleExceptionsAsResult = NoSuchElementException.class)
     public Integer element() {
         return q.element();
     }
 
-    @Operation
-    @HandleExceptionAsResult(NoSuchElementException.class)
+    @Operation(handleExceptionsAsResult = NoSuchElementException.class)
     public Integer remove() {
         return q.remove();
     }
 
-    @Operation
-    @HandleExceptionAsResult(NoSuchElementException.class)
+    @Operation(handleExceptionsAsResult = NoSuchElementException.class)
     public Integer poll() {
         return q.poll();
     }

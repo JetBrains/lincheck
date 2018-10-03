@@ -22,7 +22,7 @@ package com.devexperts.dxlab.lincheck.tests.guava;
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2017 Devexperts, LLC
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,28 +41,20 @@ package com.devexperts.dxlab.lincheck.tests.guava;
  */
 
 import com.devexperts.dxlab.lincheck.LinChecker;
-import com.devexperts.dxlab.lincheck.stress.StressCTest;
 import com.devexperts.dxlab.lincheck.annotations.Operation;
 import com.devexperts.dxlab.lincheck.annotations.Param;
-import com.devexperts.dxlab.lincheck.annotations.Reset;
 import com.devexperts.dxlab.lincheck.paramgen.IntGen;
+import com.devexperts.dxlab.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertTrue;
-
-@StressCTest(iterations = 100, actorsPerThread = {"1:3", "1:3", "1:3"})
+@StressCTest
 @Param(name = "key", gen = IntGen.class)
 public class SetCorrect1 {
-    private Set<Integer> q;
-
-    @Reset
-    public void reload() {
-        q = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
-    }
+    private Set<Integer> q = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());;
 
     @Operation(params = {"key"})
     public boolean add(Integer params) {
