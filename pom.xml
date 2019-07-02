@@ -1,37 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  ~  Lincheck - Linearizability checker
-  ~  Copyright (C) 2015 Devexperts LLC
-  ~
-  ~  This program is free software: you can redistribute it and/or modify
-  ~  it under the terms of the GNU General Public License as published by
-  ~  the Free Software Foundation, either version 3 of the License, or
-  ~  (at your option) any later version.
-  ~
-  ~  This program is distributed in the hope that it will be useful,
-  ~  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~  GNU General Public License for more details.
-  ~
-  ~  You should have received a copy of the GNU General Public License
-  ~  along with this program.  If not, see <http://www.gnu.org/licenses />.
-  -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.devexperts.lincheck</groupId>
+    <groupId>org.jetbrains.kotlinx</groupId>
     <artifactId>lincheck-all</artifactId>
     <packaging>pom</packaging>
     <version>2.1-SNAPSHOT</version>
 
     <name>lin-check (all)</name>
-    <description>Linearizability checker framework</description>
+    <description>Framework for testing concurrent data structures</description>
 
-    <inceptionYear>2015</inceptionYear>
+    <inceptionYear>2019</inceptionYear>
     <organization>
-        <name>Devexperts, LLC</name>
-        <url>http://www.devexperts.com/</url>
+        <name>JetBrains s.r.o.</name>
+        <url>https://www.jetbrains.com</url>
     </organization>
 
     <properties>
@@ -39,8 +22,9 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <license.licenseName>lgpl_v3</license.licenseName>
-        <lastCopyrightYear>2018</lastCopyrightYear>
-        <kotlin.version>1.2.70</kotlin.version>
+        <license.addJavaLicenseAfterPackage>false</license.addJavaLicenseAfterPackage>
+        <lastCopyrightYear>2019</lastCopyrightYear>
+        <kotlin.version>1.3.30</kotlin.version>
         <dokka.version>0.9.17</dokka.version>
         <deploy.skip>false</deploy.skip>
     </properties>
@@ -83,11 +67,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>2.8.2</version>
-                </plugin>
-                <plugin>
-                    <groupId>com.devexperts.bintray</groupId>
-                    <artifactId>bintray-maven-plugin</artifactId>
-                    <version>1.3</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jetbrains.kotlin</groupId>
@@ -165,7 +144,8 @@
                     <archive>
                         <manifestEntries>
                             <Copyright>
-                                Copyright (C) ${project.inceptionYear} - ${lastCopyrightYear} Devexperts, LLC
+                                Copyright (C) 2015 - 2019 Devexperts, LLC
+                                Copyright (C) ${project.inceptionYear} - ${lastCopyrightYear} JetBrains, s.r.o.
                             </Copyright>
                         </manifestEntries>
                     </archive>
@@ -250,23 +230,6 @@
                         </executions>
                     </plugin>
                     <plugin>
-                        <groupId>com.devexperts.bintray</groupId>
-                        <artifactId>bintray-maven-plugin</artifactId>
-                        <configuration>
-                            <id>bintray-devexperts</id>
-                            <url>https://api.bintray.com/maven/devexperts/Maven/lin-check</url>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>bintray-deploy</id>
-                                <goals>
-                                    <goal>deploy</goal>
-                                    <goal>publish</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <configuration>
@@ -290,11 +253,6 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-reflect</artifactId>
-            <version>${kotlin.version}</version>
-        </dependency>
     </dependencies>
 
     <repositories>
@@ -306,11 +264,6 @@
     </repositories>
     <pluginRepositories>
         <pluginRepository>
-            <id>bintray-devexperts-Maven</id>
-            <name>bintray-plugins</name>
-            <url>https://dl.bintray.com/devexperts/Maven</url>
-        </pluginRepository>
-        <pluginRepository>
             <id>jcenter</id>
             <name>JCenter</name>
             <url>https://jcenter.bintray.com/</url>
@@ -318,20 +271,17 @@
     </pluginRepositories>
 
     <scm>
-        <connection>scm:git:https://stash.in.devexperts.com/scm/dxlab/lin-check.git</connection>
-        <developerConnection>scm:git:ssh://git@stash.in.devexperts.com:7999/dxlab/lin-check.git</developerConnection>
-      <tag>HEAD</tag>
-  </scm>
+        <connection>scm:git:https://github.com/Kotlin/kotlinx.lincheck.git</connection>
+        <developerConnection>scm:git:git@github.com:Kotlin/kotlinx.lincheck.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
 
     <distributionManagement>
         <repository>
-            <id>jrc</id>
-            <url>https://maven.in.devexperts.com/content/repositories/jrc</url>
+            <id>bintray-kotlin-kotlinx</id>
+            <name>kotlin-kotlinx</name>
+            <url>https://api.bintray.com/maven/kotlin/kotlinx/kotlinx.lincheck/</url>
         </repository>
-        <snapshotRepository>
-            <id>jrc-snapshot</id>
-            <url>https://maven.in.devexperts.com/content/repositories/jrc-snapshot</url>
-        </snapshotRepository>
     </distributionManagement>
 
 </project>
