@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
 @StressCTest(actorsPerThread = 50)
-public class ConcurrentHashMapTest {
+public class ConcurrentHashMapTest extends VerifierState {
     private ConcurrentHashMap<Integer, Integer> map = new ConcurrentHashMap<>();
 
     @Operation
@@ -54,15 +54,7 @@ public class ConcurrentHashMapTest {
 
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ConcurrentHashMapTest that = (ConcurrentHashMapTest) o;
-        return map.equals(that.map);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(map);
+    public Object generateState() {
+        return map;
     }
 }
