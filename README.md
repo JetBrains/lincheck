@@ -1,6 +1,9 @@
-# kotlinx.lincheck
+# kotlinx-lincheck
 
-[ ![Download](https://api.bintray.com/packages/kotlin/kotlinx/kotlinx.lincheck/images/download.svg) ](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck/_latestVersion)
+[![JetBrains incubator project](https://jb.gg/badges/incubator.svg)](https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![Download](https://api.bintray.com/packages/kotlin/kotlinx/kotlinx.lincheck/images/download.svg) ](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck/_latestVersion)
+[![Build Status](https://travis-ci.org/Kotlin/kotlinx-lincheck.svg?branch=master)](https://travis-ci.org/Kotlin/kotlinx-lincheck)
 
 **Lincheck** is a framework for testing concurrent data structure for correctness. In order to use the framework, operations to be executed concurrently should be specified with the necessary information for an execution scenario generation. With the help of this specification, **lincheck** generates different scenarios, executes them in concurrent environment several times and then checks that the execution results are correct (usually, linearizable, but different relaxed contracts can be used as well).
 
@@ -10,7 +13,7 @@ The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotl
  *  [Lock-free algorithms testing](http://nkoval.info/talks/#lock_free_algorithms_testing) by Nikita Koval
 
 
-This is a fork of [Lin-Check framework by Devexperts](https://github.com/Devexperts/lincheck); the last one is no longer being developed.
+This is a fork of [Lin-Check framework by Devexperts](https://github.com/Devexperts/lin-check); the last one is no longer being developed.
 
 
 Table of contents
