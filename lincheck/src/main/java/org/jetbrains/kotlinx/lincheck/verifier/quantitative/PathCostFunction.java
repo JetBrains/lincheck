@@ -30,6 +30,17 @@ package org.jetbrains.kotlinx.lincheck.verifier.quantitative;
  */
 public enum PathCostFunction {
     /**
+     * Non-relaxed cost strategy checks that the transition cost equals zero.
+     */
+    NON_RELAXED {
+        IterativePathCostFunctionCounter nonRelaxedPathCostFunctionCounter = null;
+
+        @Override
+        public IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor) {
+            return NON_RELAXED_PATH_COST_FUNCTION_COUNTER_SINGLETON;
+        }
+    },
+    /**
      * Maximal cost strategy checks that the maximal transition cost
      * is less than the relaxation factor, ignores predicates.
      * <p>
@@ -38,7 +49,7 @@ public enum PathCostFunction {
      */
     MAX {
         @Override
-        IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor) {
+        public IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor) {
             return new MaxIterativePathCostFunctionCounter(relaxationFactor);
         }
     },
@@ -51,7 +62,7 @@ public enum PathCostFunction {
      */
     PHI_INTERVAL {
         @Override
-        IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor) {
+        public IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor) {
             return new PhiIntervalPathCostFunction(relaxationFactor);
         }
     },
@@ -64,14 +75,23 @@ public enum PathCostFunction {
      */
     PHI_INTERVAL_RESTRICTED_MAX {
         @Override
-        IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor) {
+        public IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor) {
             return new PhiIntervalRestrictedMaxPathCostFunction(relaxationFactor);
         }
     };
 
-    abstract IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor);
+    public abstract IterativePathCostFunctionCounter createIterativePathCostFunctionCounter(int relaxationFactor);
 
-    private class MaxIterativePathCostFunctionCounter implements IterativePathCostFunctionCounter {
+    private static class NonRelaxedPathCostFunctionCounter implements IterativePathCostFunctionCounter {
+        @Override
+        public IterativePathCostFunctionCounter next(int cost, boolean predicate) {
+            if (cost != 0) throw new IllegalArgumentException("All costs should be zero");
+            return this;
+        }
+    }
+    private static final NonRelaxedPathCostFunctionCounter NON_RELAXED_PATH_COST_FUNCTION_COUNTER_SINGLETON = new NonRelaxedPathCostFunctionCounter();
+
+    private static class MaxIterativePathCostFunctionCounter implements IterativePathCostFunctionCounter {
         private final int relaxationFactor;
 
         MaxIterativePathCostFunctionCounter(int relaxationFactor) {
@@ -79,12 +99,12 @@ public enum PathCostFunction {
         }
 
         @Override
-        public IterativePathCostFunctionCounter next(CostWithNextCostCounter costWithNextCostCounter) {
-            return costWithNextCostCounter.cost < relaxationFactor ? this : null;
+        public IterativePathCostFunctionCounter next(int cost, boolean predicate) {
+            return cost < relaxationFactor ? this : null;
         }
     }
 
-    private class PhiIntervalPathCostFunction implements IterativePathCostFunctionCounter {
+    private static class PhiIntervalPathCostFunction implements IterativePathCostFunctionCounter {
         private final int relaxationFactor;
         private final int predicateSatisfactionCount;
         private final PhiIntervalPathCostFunction[] cache;
@@ -101,8 +121,8 @@ public enum PathCostFunction {
         }
 
         @Override
-        public IterativePathCostFunctionCounter next(CostWithNextCostCounter costWithNextCostCounter) {
-            int newPredicateSatisfactionCount = costWithNextCostCounter.predicate ? predicateSatisfactionCount + 1 : 0;
+        public IterativePathCostFunctionCounter next(int cost, boolean predicate) {
+            int newPredicateSatisfactionCount = predicate ? predicateSatisfactionCount + 1 : 0;
             // Check that the transition is possible
             if (newPredicateSatisfactionCount >= relaxationFactor)
                 return null;
@@ -114,7 +134,7 @@ public enum PathCostFunction {
         }
     }
 
-    private class PhiIntervalRestrictedMaxPathCostFunction implements IterativePathCostFunctionCounter {
+    private static class PhiIntervalRestrictedMaxPathCostFunction implements IterativePathCostFunctionCounter {
         final int relaxationFactor;
         final int predicateSatisfactionCount;
         private final PhiIntervalRestrictedMaxPathCostFunction[] cache;
@@ -130,11 +150,11 @@ public enum PathCostFunction {
         }
 
         @Override
-        public PhiIntervalRestrictedMaxPathCostFunction next(CostWithNextCostCounter costWithNextCostCounter) {
+        public PhiIntervalRestrictedMaxPathCostFunction next(int cost, boolean predicate) {
             // Check that the transition is possible
-            if (predicateSatisfactionCount + costWithNextCostCounter.cost >= relaxationFactor)
+            if (predicateSatisfactionCount + cost >= relaxationFactor)
                 return null;
-            int newPredicateSatisfactionCount = costWithNextCostCounter.predicate ? predicateSatisfactionCount + 1 : 0;
+            int newPredicateSatisfactionCount = predicate ? predicateSatisfactionCount + 1 : 0;
             // Get cached function counter
             PhiIntervalRestrictedMaxPathCostFunction res = cache[newPredicateSatisfactionCount];
             if (res == null)

@@ -21,24 +21,23 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.Result
-import org.jetbrains.kotlinx.lincheck.Result.Type.VOID
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.CostWithNextCostCounter
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction.MAX
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifierConf
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxed
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier
 import org.junit.Test
 import java.lang.AssertionError
 
 private const val K = 2
 
-@StressCTest(verifier = QuantitativeRelaxationVerifier::class)
+@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
 @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX, costCounter = KStackRelaxedPushTest.CostCounter::class)
 class KStackRelaxedPushTest {
     private val s = KStackSimulation<Int>(k = K)
@@ -64,6 +63,7 @@ class KStackRelaxedPushTest {
         }
 
         fun popOrNull(result: Result): CostCounter? {
+            result as ValueResult
             if (s.isEmpty()) {
                 return if (result.value == null) CostCounter(k) else null
             }
@@ -75,10 +75,11 @@ class KStackRelaxedPushTest {
     }
 }
 
-@StressCTest(actorsPerThread = 10, verifier = QuantitativeRelaxationVerifier::class)
+@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class, threads = 2, actorsPerThread = 6, invocationsPerIteration = 1000, iterations = 100)
+@LogLevel(LoggingLevel.DEBUG)
 @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX, costCounter = KStackRelaxedPopIncorrectTest.CostCounter::class)
 class KStackRelaxedPopIncorrectTest {
-    private val s = KStackSimulation<Int>(k = K + 1)
+    private val s = KStackSimulation<Int>(k = K + 3)
 
     @Operation
     fun put(@Param(gen = IntGen::class) value: Int) = s.push(value)
@@ -93,13 +94,14 @@ class KStackRelaxedPopIncorrectTest {
     // Should have '(k: Int)' constructor
     data class CostCounter @JvmOverloads constructor(private val k: Int, private val s: List<Int> = emptyList()) {
         fun put(value: Int, result: Result): CostCounter {
-            check(result.type == VOID)
+            check(result is VoidResult)
             val sNew = ArrayList(s)
             sNew.add(0, value)
             return CostCounter(k, sNew)
         }
 
         fun popOrNull(result: Result): List<CostWithNextCostCounter<CostCounter>> {
+            result as ValueResult
             if (result.value == null) {
                 return if (s.isEmpty())
                     listOf(CostWithNextCostCounter(this, 0, false))
@@ -114,7 +116,7 @@ class KStackRelaxedPopIncorrectTest {
     }
 }
 
-@StressCTest(verifier = QuantitativeRelaxationVerifier::class)
+@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
 @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX, costCounter = KStackRelaxedPushAndPopTest.CostCounter::class)
 class KStackRelaxedPushAndPopTest {
     private val s = KStackSimulation<Int>(k = K)
@@ -141,6 +143,7 @@ class KStackRelaxedPushAndPopTest {
         }
 
         fun popOrNull(result: Result): List<CostWithNextCostCounter<CostCounter>> {
+            result as ValueResult
             if (result.value == null) {
                 return if (s.isEmpty())
                     listOf(CostWithNextCostCounter(this, 0, false))

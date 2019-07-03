@@ -1,8 +1,6 @@
-package org.jetbrains.kotlinx.lincheck.verifier.quantitative;
-
-/*
+/*-
  * #%L
- * Lincheck
+ * lincheck
  * %%
  * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
@@ -22,16 +20,38 @@ package org.jetbrains.kotlinx.lincheck.verifier.quantitative;
  * #L%
  */
 
-/**
- * Implementation of this interface counts path cost incrementally.
- */
-interface IterativePathCostFunctionCounter {
-    
-    /**
-     * Returns next path cost counter with the required information for incremental counting
-     * if the transition is possible, {@code null} if the transition is not satisfied.
-     *
-     * @param costWithNextCostCounter describes the transition
-     */
-    IterativePathCostFunctionCounter next(CostWithNextCostCounter<?> costWithNextCostCounter);
+package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative
+
+import java.util.*
+
+class KRelaxedPopStack<T>(private val k: Int) {
+
+    private val list = LinkedList<T>()
+
+    private val random = Random()
+
+    @Synchronized
+    fun push(value: T) {
+        list.push(value)
+    }
+
+    @Synchronized
+    fun push1(value: T) {
+        list.push(value)
+    }
+
+    @Synchronized
+    fun push2(value: T) {
+        list.push(value)
+    }
+
+    @Synchronized
+    fun pop(): T? {
+        if (list.isEmpty()) {
+            return null
+        }
+        val index = random.nextInt(k + 1).coerceAtMost(list.size - 1)
+        return list.removeAt(index)
+    }
+
 }

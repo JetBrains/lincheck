@@ -28,9 +28,9 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
+import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.DEFAULT_LOG_LEVEL;
 
 
@@ -101,10 +101,21 @@ public class LinChecker {
         // Run iterations
         for (int iteration = 1; iteration <= testCfg.iterations; iteration++) {
             ExecutionScenario scenario = exGen.nextExecution();
+            // Check correctness of the generated scenario
+            validateScenario(testCfg, scenario);
             reporter.logIteration(iteration, testCfg.iterations, scenario);
             Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testClass);
             Strategy strategy = Strategy.createStrategy(testCfg, testClass, scenario, verifier, reporter);
             strategy.run();
+        }
+    }
+
+    private void validateScenario(CTestConfiguration testCfg, ExecutionScenario scenario) {
+        if (testCfg.hasTestClassSuspendableActors) {
+            if (scenario.initExecution.stream().anyMatch(actor -> isSuspendable(actor.getMethod())))
+                throw new IllegalArgumentException("Generated execution scenario for the test class with suspendable methods contains suspendable actors in initial part");
+            if (scenario.postExecution.size() > 0)
+                throw new IllegalArgumentException("Generated execution scenario for the test class with suspendable methods has non-empty post part");
         }
     }
 

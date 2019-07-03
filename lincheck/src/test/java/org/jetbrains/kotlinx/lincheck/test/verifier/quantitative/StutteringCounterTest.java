@@ -22,24 +22,18 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.Result;
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
+import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.CostWithNextCostCounter;
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifier;
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifierConf;
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxed;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.util.Collections;
-import java.util.List;
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.*;
+import org.junit.*;
+import java.util.*;
 
 import static org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction.PHI_INTERVAL;
 
+@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier.class)
 @Ignore
-@StressCTest(verifier = QuantitativeRelaxationVerifier.class)
 @QuantitativeRelaxationVerifierConf(factor = 3, pathCostFunc = PHI_INTERVAL,
     costCounter = StutteringCounterTest.CostCounter.class)
 public class StutteringCounterTest {
@@ -56,7 +50,7 @@ public class StutteringCounterTest {
         LinChecker.check(StutteringCounterTest.class);
     }
 
-    // Predicate: counter is not incremented
+    // Predicate: completedOrSuspendedThreads is not incremented
     public static class CostCounter {
         private final int k;
         private final int value;
@@ -71,12 +65,12 @@ public class StutteringCounterTest {
         }
 
         public List<CostWithNextCostCounter<CostCounter>> incAndGet(Result result) {
-            if (result.getValue().equals(value)) {
-                // The counter is not incremented
+            if (((ValueResult)result).getValue().equals(value)) {
+                // The completedOrSuspendedThreads is not incremented
                 return Collections.singletonList(
                     new CostWithNextCostCounter<>(new CostCounter(k, value), true));
-            } else if (result.getValue().equals(value + 1)) {
-                // The counter is incremented
+            } else if (((ValueResult)result).getValue().equals(value + 1)) {
+                // The completedOrSuspendedThreads is incremented
                 return Collections.singletonList(
                     new CostWithNextCostCounter<>(new CostCounter(k, value + 1), false));
             } else {

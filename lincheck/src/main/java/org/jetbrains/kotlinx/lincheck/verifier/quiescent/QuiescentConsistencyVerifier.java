@@ -65,7 +65,7 @@ public class QuiescentConsistencyVerifier extends CachedVerifier {
     }
 
     private static boolean isQuiescentConsistent(Actor actor) {
-        return actor.method.isAnnotationPresent(QuiescentConsistent.class);
+        return actor.getMethod().isAnnotationPresent(QuiescentConsistent.class);
     }
 
     @Override

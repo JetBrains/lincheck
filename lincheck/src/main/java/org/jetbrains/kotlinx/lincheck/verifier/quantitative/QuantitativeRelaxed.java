@@ -29,7 +29,7 @@ import java.lang.annotation.Target;
 
 /**
  * This annotation indicates that the method it is presented on is relaxed
- * in accordance with a contract for {@link QuantitativeRelaxationVerifier}.
+ * in accordance with a contract for {@link QuantitativelyRelaxedLinearizabilityVerifier}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

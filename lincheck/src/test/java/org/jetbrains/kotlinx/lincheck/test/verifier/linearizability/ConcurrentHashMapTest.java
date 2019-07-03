@@ -22,18 +22,18 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability;
 * #L%
 */
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.annotations.Param;
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
+import org.jetbrains.kotlinx.lincheck.paramgen.*;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
 import org.junit.Test;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
-@StressCTest(actorsPerThread = 50)
+@StressCTest(actorsPerThread = 10, threads = 2, invocationsPerIteration = 1000, iterations = 100, actorsBefore = 10, actorsAfter = 10)
 public class ConcurrentHashMapTest extends VerifierState {
     private ConcurrentHashMap<Integer, Integer> map = new ConcurrentHashMap<>();
 
@@ -48,13 +48,10 @@ public class ConcurrentHashMapTest extends VerifierState {
     }
 
     @Test
-    public void test() {
-        LinChecker.check(ConcurrentHashMapTest.class);
-    }
-
+    public void test() { LinChecker.check(ConcurrentHashMapTest.class); }
 
     @Override
-    public Object generateState() {
+    protected Object extractState() {
         return map;
     }
 }

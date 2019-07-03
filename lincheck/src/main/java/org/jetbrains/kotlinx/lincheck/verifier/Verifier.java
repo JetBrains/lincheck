@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
 
 /**
  * Implementation of this interface verifies that execution is correct with respect to the algorithm contract.
- * By default, {@link LinearizabilityVerifier} is used.
+ * By default, it checks for linearizability (see {@link LinearizabilityVerifier}).
  * <p>
  * IMPORTANT!
  * All implementations should have {@code (ExecutionScenario scenario, Class<?> testClass)} constructor.

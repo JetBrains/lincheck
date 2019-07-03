@@ -43,11 +43,11 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
     @Override
     public ExecutionScenario nextExecution() {
         // Create init execution part
-        List<ActorGenerator> notUseOnce = testStructure.actorGenerators.stream()
-            .filter(ag -> !ag.useOnce()).collect(Collectors.toList());
+        List<ActorGenerator> validActorGeneratorsForInit = testStructure.actorGenerators.stream()
+            .filter(ag -> !ag.useOnce() && !ag.isSuspendable()).collect(Collectors.toList());
         List<Actor> initExecution = new ArrayList<>();
-        for (int i = 0; i < testConfiguration.actorsBefore && !notUseOnce.isEmpty(); i++) {
-            ActorGenerator ag = notUseOnce.get(random.nextInt(notUseOnce.size()));
+        for (int i = 0; i < testConfiguration.actorsBefore && !validActorGeneratorsForInit.isEmpty(); i++) {
+            ActorGenerator ag = validActorGeneratorsForInit.get(random.nextInt(validActorGeneratorsForInit.size()));
             initExecution.add(ag.generate());
         }
         // Create parallel execution part

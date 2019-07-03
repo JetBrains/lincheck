@@ -22,15 +22,12 @@ package org.jetbrains.kotlinx.lincheck.verifier.quantitative;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.Result;
+import org.jetbrains.kotlinx.lincheck.*;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
- * Configuration for {@link QuantitativeRelaxationVerifier}
+ * Configuration for {@link QuantitativelyRelaxedLinearizabilityVerifier}
  * which should be added to a test class.
  */
 @Retention(RetentionPolicy.RUNTIME)

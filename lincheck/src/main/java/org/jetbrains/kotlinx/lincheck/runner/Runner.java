@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import com.devexperts.jagent.ClassInfo;
 import org.objectweb.asm.ClassVisitor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
@@ -40,6 +41,7 @@ public abstract class Runner {
     protected final ExecutionScenario scenario;
     protected final Class<?> testClass;
     public final ExecutionClassLoader classLoader;
+    protected final AtomicInteger completedOrSuspendedThreads = new AtomicInteger(0);
 
     protected Runner(ExecutionScenario scenario, Strategy strategy, Class<?> testClass) {
         this.scenario = scenario;
@@ -100,4 +102,11 @@ public abstract class Runner {
      * Closes used for this runner resources.
      */
     public void close() {}
+
+    /**
+     * @return whether all scenario threads are completed or suspended
+     */
+    public boolean isParallelExecutionCompleted() {
+        return completedOrSuspendedThreads.get() == scenario.getThreads();
+    }
 }

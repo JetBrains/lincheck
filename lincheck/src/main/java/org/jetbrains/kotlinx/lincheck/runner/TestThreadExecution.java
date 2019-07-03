@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.runner;
  */
 
 import org.jetbrains.kotlinx.lincheck.Result;
-
 import java.util.concurrent.Callable;
 
 /**

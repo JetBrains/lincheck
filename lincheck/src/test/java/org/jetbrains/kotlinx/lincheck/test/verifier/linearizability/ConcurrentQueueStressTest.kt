@@ -2,7 +2,7 @@
  * #%L
  * Lincheck
  * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
+ * Copyright (C) 2019 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,47 +19,37 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-
-package org.jetbrains.kotlinx.lincheck.test.verifier.serializability
+package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.SerializabilityVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
+import java.util.concurrent.ConcurrentLinkedQueue
 
+@Param(name = "value", gen = IntGen::class, conf = "1:5")
+@StressCTest(verifier = LinearizabilityVerifier::class, iterations = 10, invocationsPerIteration = 1000, actorsBefore = 10, actorsAfter = 10, actorsPerThread = 5, threads = 3)
+class ConcurrentQueueStressTest : VerifierState() {
 
-@StressCTest(actorsBefore = 2,
-             threads = 2, actorsPerThread = 4,
-             actorsAfter = 2,
-             verifier = SerializabilityVerifier::class)
-class SerializableQueueSimulationTest {
-    val q = SerializableQueueSimulation<Int>()
-
-    @Operation
-    fun push(@Param(gen = IntGen::class) item: Int) = q.push(item)
+    val queue = ConcurrentLinkedQueue<Int>()
 
     @Operation
-    fun pop(): Int? = q.pop()
+    fun add(e: Int) = queue.add(e)
+
+    @Operation
+    fun offer(e: Int) = queue.offer(e)
+
+    @Operation
+    fun peek() = queue.peek()
+
+    @Operation
+    fun poll() = queue.poll()
 
     @Test
-    fun test() = LinChecker.check(SerializableQueueSimulationTest::class.java)
+    fun test() = LinChecker.check(ConcurrentQueueStressTest::class.java)
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as SerializableQueueSimulationTest
-
-        if (q != other.q) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return q.hashCode()
-    }
-
-
+    override fun extractState() = queue.toList()
 }

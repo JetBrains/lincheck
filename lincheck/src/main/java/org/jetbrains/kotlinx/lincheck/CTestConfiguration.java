@@ -28,8 +28,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
 
 import java.util.Arrays;
 import java.util.List;
@@ -47,7 +48,7 @@ public abstract class CTestConfiguration {
     public static final int DEFAULT_ACTORS_BEFORE = 5;
     public static final int DEFAULT_ACTORS_AFTER = 5;
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
-    public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
+    public static final Class<? extends Verifier> DEFAULT_VERIFIER = QuantitativelyRelaxedLinearizabilityVerifier.class;
 
     public final int iterations;
     public final int threads;
@@ -56,6 +57,7 @@ public abstract class CTestConfiguration {
     public final int actorsAfter;
     public final Class<? extends ExecutionGenerator> generatorClass;
     public final Class<? extends Verifier> verifierClass;
+    public boolean hasTestClassSuspendableActors;
 
     protected CTestConfiguration(int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
         Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass)
@@ -70,14 +72,26 @@ public abstract class CTestConfiguration {
     }
 
     static List<CTestConfiguration> createFromTestClass(Class<?> testClass) {
+        boolean hasTestClassSuspendableActors = Arrays.stream(testClass.getDeclaredMethods()).anyMatch(m -> m.isAnnotationPresent(Operation.class) &&
+                m.getParameterTypes().length > 0 && m.getParameterTypes()[m.getParameterTypes().length - 1].isAssignableFrom(kotlin.coroutines.Continuation.class));
         Stream<StressCTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))
-            .map(ann -> new StressCTestConfiguration(ann.iterations(),
-                ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true));
+            .map(ann -> {
+                if (hasTestClassSuspendableActors && ann.actorsAfter() > 0) {
+                    throw new IllegalArgumentException("Post execution part is not allowed for test classes with suspendable operations");
+                }
+                return new StressCTestConfiguration(ann.iterations(),
+                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
+                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true);
+            });
         Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
-            .map(ann -> new RandomSwitchCTestConfiguration(ann.iterations(),
-                ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                ann.generator(), ann.verifier(), ann.invocationsPerIteration()));
+            .map(ann -> {
+                if (hasTestClassSuspendableActors && ann.actorsAfter() > 0) {
+                    throw new IllegalArgumentException("Post execution part is not allowed for test classes with suspendable operations");
+                }
+                return new RandomSwitchCTestConfiguration(ann.iterations(),
+                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
+                        ann.generator(), ann.verifier(), ann.invocationsPerIteration());
+            });
         return Stream.concat(stressConfigurations, randomSwitchConfigurations).collect(Collectors.toList());
     }
 }
