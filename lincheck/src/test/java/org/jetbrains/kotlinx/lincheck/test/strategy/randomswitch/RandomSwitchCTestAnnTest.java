@@ -25,14 +25,14 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.randomswitch;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-@RandomSwitchCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
-    generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
+@StressCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
+        generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
 public class RandomSwitchCTestAnnTest {
     private AtomicInteger i = new AtomicInteger();
 

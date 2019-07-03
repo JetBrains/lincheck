@@ -5,7 +5,7 @@
 [![Download](https://api.bintray.com/packages/kotlin/kotlinx/kotlinx.lincheck/images/download.svg) ](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck/_latestVersion)
 [![Build Status](https://travis-ci.org/Kotlin/kotlinx-lincheck.svg?branch=master)](https://travis-ci.org/Kotlin/kotlinx-lincheck)
 
-**Lincheck** is a framework for testing concurrent data structure for correctness. In order to use the framework, operations to be executed concurrently should be specified with the necessary information for an execution scenario generation. With the help of this specification, **lincheck** generates different scenarios, executes them in concurrent environment several times and then checks that the execution results are correct (usually, linearizable, but different relaxed contracts can be used as well).
+**Lincheck** is a framework for testing concurrent data structures for correctness. In order to use the framework, operations to be executed concurrently should be specified with the necessary information for an execution scenario generation. With the help of this specification, **lincheck** generates different scenarios, executes them in concurrent environment several times and then checks that the execution results are correct (usually, linearizable, but different relaxed contracts can be used as well).
 
 The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck) and JCenter. For Maven and Gradle use `org.jetbrains.kotlinx:lincheck:<version>` artifact in for your tests.
 
@@ -34,6 +34,7 @@ Table of contents
       * [Serializability](#serializability)
       * [Quiescent consistency](#quiescent-consistency)
       * [Quantitative relaxation](#quantitative-relaxation)
+   * [Blocking data structures](#blocking-data-structures)   
    * [Configuration via options](#configuration-via-options)
    * [Sample](#sample)
    * [Contacts](#contacts)
@@ -177,26 +178,61 @@ In order to use this strategy, just `@StressCTest` annotation should be added to
 Once the generated scenario is executed using the specified strategy, it is needed to verify the operation results for correctness. By default **lincheck** checks the result for linearizability, which is de-facto a standard type of correctness. However, there are also verifiers for some relaxed contracts, which should be set via `@..CTest(verifier = ..Verifier.class)` option.
 
 ## Linearizability
-Linearizability is a de-facto standard correctness contract for thread-safe algorithms. It means that an execution is equivalent to some operations sequence which produces the same results and does not avoid happens-before order. The `LinearizabilityVerifier` is used by default to check for this correctness type. 
+Linearizability is a de-facto standard correctness contract for thread-safe algorithms. Roughly, it says that an execution
+is correct if there exists an equivalent sequential execution which produces the same results and does not violate 
+the happens-before ordering of the initial one. By default, **lincheck** tests data structures for linearizability using `LinearizabilityVerifier`. 
 
-The verifier lazily constructs a transition graph, where states are test instances and edges are operations. Then it tries to find a path which does not violate the happens-before order and produces same results on operations. In order not to have state duplicates, it is better to implements `equals(..)` and `hashCode()` methods.
+Essentially, `LinearizabilityVerifier` lazily constructs a transition graph (aka LTS), where states are test instances and edges are operations. Using this transition graph, it tries to find a path which produces same results on operations and does not violate the happens-before order. 
+
+### States equivalency
+
+In order not to have state duplicates, equivalency relation between test instance states should be defined with `equals()` and `hashCode()` implementations. For that, a test class should extend `VerifierState` class and override `extractState()` function. `VerifierState` lazily gets the state of the test instance calling the function, caches the extracted state representation, and uses it for `equals()` and `hashCode()`.
+
+### Test example
+
+```java
+@StressCTest(verifier = LinearizabilityVerifier.class)
+public class ConcurrentQueueTest extends VerifierState {
+  private Queue<Integer> q = new ConcurrentLinkedQueue<>();
+  
+  @Operation
+  public Integer poll() {
+    return q.poll();
+  }
+  
+  @Operation
+  public boolean offer(Integer val) {
+    return q.offer(val);
+  }
+  
+  @Override
+  protected Object extractState() {
+    return q;
+  }
+}
+```
 
 ## Serializability
-Serializability is one of the base contracts, which ensures that an execution is equivalent to one that invokes operations in any serial order. The `SerializabilityVerifier` is used for this contract. 
+Serializability is one of the base contracts, which ensures that an execution is equivalent to the one that invokes operations in any serial order. The `SerializabilityVerifier` is used for this contract. 
 
-Alike linearizability verification, it also constructs a transition graph and expects `equals(..)` and `hashCode()` methods overrides.
+Alike linearizability verification, it also constructs a transition graph 
+and expects `extractState()` function override.
 
 ## Quiescent consistency
 Quiescent consistency is a stronger guarantee than serializability but still relaxed comparing to linearizability. It ensures that an execution is equivalent to some operations sequence which produces the same results and does not reorder operation between quiescent points. Quiescent point is a cut where all operations before the cut are happens-before all operations after it. In order to check for this consistency, use `QuiescentConsistencyVerifier` and mark all quiescent consistent operations with `@QuiescentConsistent` annotation, all other operations are automatically linearizable. 
 
-Alike linearizability verification, it also constructs a transition graph and expects `equals(..)` and `hashCode()` methods overrides.
+Alike linearizability verification, it also constructs a transition graph 
+and expects `extractState()` function override.
+
+### Test example
 
 ```java
 @StressCTest(verifier = QuiescentConsistencyVerifier.class)
-public class QuiescentQueueTest {
+public class QuiescentQueueTest extends VerifierState {
   private QuiescentQueue<Integer> q = new QuiescentQueue<>();
 
   // Only this operation is quiescent consistent
+  @Operation
   @QuiescentConsistent 
   public Integer poll() {
     return q.poll();
@@ -212,7 +248,7 @@ public class QuiescentQueueTest {
     LinChecker.check(QuiescentQueueTest.class);
   }
   
-  // equals(..) and hashCode() here
+  // extractState() here
 }
 ```
 
@@ -232,7 +268,9 @@ The last thing to do is to provide the relaxation factor, the cost counter class
 
 Here is an example for k-stack with relaxed `pop()` operation and normal `push` one:
 
-```
+### Test example
+
+```kotlin
 @StressCTest(verifier = QuantitativeRelaxationVerifier::class)
 @QuantitativeRelaxationVerifierConf(
   factor = K, 
@@ -282,10 +320,94 @@ class KRelaxedPopStackTest {
 }
 ```
 
+# Blocking data structures
 
+**Lincheck** supports blocking operations implemented with `suspend` functions from Kotlin language. The examples of such data structures from the Kotlin Coroutines library are mutexes, semaphores, and channels; see the [corresponding guide](https://kotlinlang.org/docs/reference/coroutines/coroutines-guide.html) to understand what these data structures are.
 
+Most of such blocking algorithms can be formally described via the *dual data structures* formalism (see the paper below). In this formalism, each blocking operation is divided into two parts: the *request* (before suspension point) and the *follow-up* (after resumption); both these parts have their own linearization points, so they may be treated as separate operations within happens-before order. Splitting blocking operations into those parts allows to verify a dual data structure for contracts described above in the way similar to plain data structures. 
 
+### Example with a rendezvous channel
 
+For example, consider a [rendezvous channel](https://kotlinlang.org/docs/reference/coroutines/channels.html). 
+There are two types of processes, producers and consumers, which perform `send` and `receive` operations respectively.
+In order for a producer to `send` an element, it has to perform a rendezvous
+exchange with a consumer, the last one gets the sent element.
+
+```
+class Channel<T> {
+  suspend fun send(e: T)
+  suspend fun receive(): T
+}
+```
+  
+Having the execution results below, where the first thread completes sending *42* to the channel, and the second one receives *42* from it, we have to construct a sequentional execution which produces the same results. 
+
+```
+    val c = Channel<Int>()
+-----------------------------
+c.send(42): void || c.receive(): 42
+```
+
+By splitting `receive` operation into two parts, we can construct a sequential execution as follows:
+
+1. register `receive()`-s request into the internal waiting queue of the channel;
+2. `send(42)` peforms a rendezvous with the already registered `receive()` and passes `42` to it;
+3. the `receive()` resumes and returns *42*.
+
+Similarly, we could split the `send(42)` operation into two parts.
+ 
+### States equivalency
+
+Equivalency relation among LTS states is defined by equivalency of the following properties: 
+1. list of registered requests;
+2. information about resumed operations;
+3. externally observable state of the test instance.
+
+**Lincheck** maintains both lists of registered requests and sets of resumed ones internally, while the externally observable state should be defined by the user.   
+
+The externally observable state is defined in the same way as for plain data structures, with `equals()` and `hashCode()` implementations. 
+For that, tests should extend `VerifierState` class and override `extractState()` function; 
+the resulting state may include information of waiting requests as well, e.g. waiting `send` operation requests on channels.
+
+In case of [buffered channels](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.channels/-channel/index.html),
+the externally observable state can be represented  with both elements from the buffer and waiting `send` operations as follows:
+
+```kotlin
+override fun extractState(): Any {
+    val elements = mutableListOf<Int>()
+    while (!ch.isEmpty) elements.add(ch.poll()!!)
+    return elements
+ }
+```
+
+### Test example
+Here is an example of a test for buffered channels. All the suspendable operations should be marked with a `suspend` modifier.
+ 
+
+```kotlin
+@Param(name = "value", gen = IntGen::class, conf = "1:5")
+@StressCTest(verifier = LinearizabilityVerifier::class, actorsAfter = 0)
+class ChanelLinearizabilityTest : VerifierState() {
+    val ch = Channel<Int>(capacity = 3) 
+
+    @Operation
+    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+
+    @Operation
+    suspend fun receive() = ch.receive()
+
+    @Operation
+    fun close() = ch.close()
+
+    // state = elements in the channel + closed flag
+    override fun extractState(): Any {
+        val elements = mutableListOf<Int>()
+        while (!ch.isEmpty) elements.add(ch.poll()!!)
+        val closed = ch.isClosedForSend
+        return elements to closed
+    }
+}
+```
 
 # Configuration via options
 Instead of using `@..CTest` annotations for specifying the execution strategy and other parameters, it is possible to use `LinChecker.check(Class<?>, Options)` method and provide options for it. Every execution strategy has its own Options class (e.g., `StressOptions` for stress strategy) which should be used for it. See an example with stress strategy:
@@ -306,19 +428,16 @@ public class MyConcurrentTest {
 ```
 
 
-
-
-
 # Sample
 Here is a test for a not thread-safe `HashMap` with its result. It uses the default configuration and tests `put` and `get` operations only:
 
 **Test class**
 
-```
+```java
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
 @StressCTest
-public class HashMapLinearizabilityTest {
-    private HashMap<Integer, Integer> map = new HashMap<>();;
+public class HashMapLinearizabilityTest extends VerifierState {
+    private HashMap<Integer, Integer> map = new HashMap<>();
 
     @Operation
     public Integer put(@Param(name = "key") int key, int value) {
@@ -335,9 +454,10 @@ public class HashMapLinearizabilityTest {
         LinChecker.check(HashMapLinearizabilityTest.class);
     }
     
-    // 'map' field is included in equals and hashCode 
-    @Override public boolean equals(Object o) { ... }
-    @Override public int hashCode() { ... }
+    @Override
+    protected Object extractState() {
+        return map;
+    }
 }
 ```
 

@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.verifier.quantitative;
 
 
 /**
- * This class is used to define possible transitions in {@link QuantitativeRelaxationVerifier}.
+ * This class is used to define possible transitions in {@link QuantitativelyRelaxedLinearizabilityVerifier}.
  *
  * @param <COST_COUNTER> cost counter class for the testing data structure.
  *                       It have to be defined for cleaner code.
@@ -33,18 +33,18 @@ public class CostWithNextCostCounter<COST_COUNTER> {
     /**
      * Instance of the next cost counter instance.
      */
-    COST_COUNTER nextCostCounter;
+    public COST_COUNTER nextCostCounter;
 
     /**
      * The transition cost.
      */
-    int cost;
+    public int cost;
 
     /**
      * It is {@code true} if the transition predicate is satisfied.
      * By default {@code cost != 0} predicate is used.
      */
-    boolean predicate;
+    public boolean predicate;
 
     /**
      * Create new cost counter transition with the specified state and cost.

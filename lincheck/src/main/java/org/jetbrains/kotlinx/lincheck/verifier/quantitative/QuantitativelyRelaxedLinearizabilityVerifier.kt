@@ -19,40 +19,47 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.verifier.linearizability
+package org.jetbrains.kotlinx.lincheck.verifier.quantitative
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.verifier.AbstractLTSVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityContext
 
 /**
- * This verifier checks that the specified results could happen if the testing operations are linearizable.
- * For that, it tries to find a possible sequential execution where transitions do not violate both
- * LTS (see [LTS]) transitions and the happens-before order. Essentially, it tries to execute the next actor
- * in each thread and goes deeper until all actors are executed.
+ * This verifier checks for quantitative relaxation contracts, which are introduced
+ * in the "Quantitative relaxation of concurrent data structures" paper by Henzinger et al.
  *
- * This verifier is based on [AbstractLTSVerifier] and caches the already processed results
- * for performance improvement (see [CachedVerifier]).
+ * Requires [QuantitativeRelaxationVerifierConf] annotation on the testing class.
  */
-class LinearizabilityVerifier(
+class QuantitativelyRelaxedLinearizabilityVerifier(
     scenario: ExecutionScenario,
     testClass: Class<*>
 ) : AbstractLTSVerifier<LTS.State>(scenario, testClass) {
-    private val relaxationFactor = 0
-    private val pathCostFunc = PathCostFunction.NON_RELAXED
-    private val lts: LTS = LTS(
-        testClass = testClass,
-        isQuantitativelyRelaxed = false,
-        relaxationFactor = 0
-    )
+    private val relaxationFactor: Int
+    private val pathCostFunc: PathCostFunction
+    private val lts: LTS
+    private val costCounter: Class<*> // cost counter?
+
+    init {
+        val conf = testClass.getAnnotation(QuantitativeRelaxationVerifierConf::class.java)
+        checkNotNull(conf) { "QuantitativeRelaxationVerifierConf is not specified for the test class. " +
+                "QuantitativelyRelaxedLinearizabilityVerifier can not be initialised." }
+        relaxationFactor = conf.factor
+        pathCostFunc = conf.pathCostFunc
+        costCounter = conf.costCounter.java
+        lts = LTS(
+            testClass = costCounter,
+            isQuantitativelyRelaxed = true,
+            relaxationFactor = relaxationFactor
+        )
+    }
 
     override fun createInitialContext(results: ExecutionResult): VerifierContext<LTS.State> =
         QuantitativelyRelaxedLinearizabilityContext(scenario, lts.initialState, results, relaxationFactor, pathCostFunc)
 }
+
 
 
 

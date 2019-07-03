@@ -21,21 +21,28 @@
  */
 package org.jetbrains.kotlinx.lincheck.verifier
 
+/**
+ * Abstract class for lincheck tests that defines the test instance state,
+ * that is part of the equivalency relation among [LTS] states.
+ *
+ * [VerifierState] lazily counts the test instance state, caches it, and uses in `equals` and `hashCode` methods.
+ */
 abstract class VerifierState {
     private var _state: Any? = null
-    private val state: Any get() {
-        if (_state === null) {
-            _state = generateState()
+    private val state: Any
+        get() {
+            if (_state === null) {
+                _state = extractState()
+            }
+            return _state!!
         }
-        return _state!!
-    }
 
     /**
      * Note that this method is called *at once* and
      * it is fine if the whole data structure is broken
      * after its invocation.
      */
-    abstract fun generateState(): Any
+    protected abstract fun extractState(): Any
 
     override fun equals(other: Any?) = this.state == (other as VerifierState).state
     override fun hashCode() = this.state.hashCode()

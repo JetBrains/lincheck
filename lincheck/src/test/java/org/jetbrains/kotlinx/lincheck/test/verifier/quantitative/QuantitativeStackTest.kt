@@ -23,20 +23,21 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.ValueResult
+import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
-import org.jetbrains.kotlinx.lincheck.test.verifier.quasi.KRelaxedPopStack
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.*
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.*
 import org.junit.Test
 
-@StressCTest(threads = 2, actorsPerThread = 10, actorsBefore = 5, actorsAfter = 5,  invocationsPerIteration = 1000, iterations = 10, verifier = QuantitativeRelaxationVerifier::class)
+@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
 @QuantitativeRelaxationVerifierConf(
-        factor = 3,
-        pathCostFunc = PathCostFunction.MAX,
-        costCounter = QuantitativeStackTest.CostCounter::class
+    factor = 3,
+    pathCostFunc = PathCostFunction.MAX,
+    costCounter = QuantitativeStackTest.CostCounter::class
 )
 @Param(name = "push", gen = IntGen::class, conf = "1:20")
 class QuantitativeStackTest {
@@ -60,43 +61,44 @@ class QuantitativeStackTest {
 
     // Should have '(k: Int)' constructor
     data class CostCounter @JvmOverloads constructor(
-            private val k: Int,
-            private val s: List<Int> = emptyList()
+        private val k: Int,
+        private val s: List<Int> = emptyList()
     ) {
         fun push(value: Int, result: Result): CostCounter {
-            check(result.type == Result.Type.VOID)
+            check(result is VoidResult)
             val sNew = ArrayList(s)
             sNew.add(0, value)
             return CostCounter(k, sNew)
         }
 
         fun push1(value: Int, result: Result): CostCounter {
-            check(result.type == Result.Type.VOID)
+            check(result is VoidResult)
             val sNew = ArrayList(s)
             sNew.add(0, value)
             return CostCounter(k, sNew)
         }
 
         fun push2(value: Int, result: Result): CostCounter {
-            check(result.type == Result.Type.VOID)
+            check(result is VoidResult)
             val sNew = ArrayList(s)
             sNew.add(0, value)
             return CostCounter(k, sNew)
         }
 
         fun pop(result: Result): List<CostWithNextCostCounter<CostCounter>> {
+            result as ValueResult
             if (result.value == null) {
                 return if (s.isEmpty())
                     listOf(CostWithNextCostCounter(this, 0))
                 else emptyList()
             }
             return (0..(k - 1).coerceAtMost(s.size - 1))
-                    .filter { i -> s[i] == result.value }
-                    .map { i ->
-                        val sNew = ArrayList(s)
-                        sNew.removeAt(i)
-                        CostWithNextCostCounter(CostCounter(k, sNew), i)
-                    }
+                .filter { i -> s[i] == result.value }
+                .map { i ->
+                    val sNew = ArrayList(s)
+                    sNew.removeAt(i)
+                    CostWithNextCostCounter(CostCounter(k, sNew), i)
+                }
         }
     }
 }

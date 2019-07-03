@@ -33,8 +33,9 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+
 public class StressOptionsTest {
-    private AtomicInteger i = new AtomicInteger();;
+    private AtomicInteger i = new AtomicInteger();
 
     @Operation()
     public int incAndGet() {

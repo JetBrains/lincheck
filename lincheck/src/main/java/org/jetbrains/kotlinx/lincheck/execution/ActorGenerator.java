@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck.execution;
  */
 
 import org.jetbrains.kotlinx.lincheck.Actor;
+
+import org.jetbrains.kotlinx.lincheck.ActorKt;
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
 
 import java.lang.reflect.Method;
@@ -49,12 +51,16 @@ public class ActorGenerator {
     }
 
     public Actor generate() {
-        return new Actor(method, parameterGenerators.stream()
-            .map(ParameterGenerator::generate).collect(Collectors.toList()), handledExceptions);
+        List<Object> parameters = parameterGenerators.stream().map(ParameterGenerator::generate).collect(Collectors.toList());
+        return new Actor(method, parameters, handledExceptions);
     }
 
     public boolean useOnce() {
         return useOnce;
+    }
+
+    public boolean isSuspendable() {
+        return ActorKt.isSuspendable(method);
     }
 
     @Override

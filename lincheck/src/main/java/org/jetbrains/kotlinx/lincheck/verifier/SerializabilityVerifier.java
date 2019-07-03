@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.verifier.serializability;
+package org.jetbrains.kotlinx.lincheck.verifier;
 
 /*
  * #%L
@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.verifier.serializability;
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
-import org.jetbrains.kotlinx.lincheck.verifier.CachedVerifier;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 
 import java.util.ArrayList;
@@ -34,7 +33,7 @@ import java.util.stream.Collectors;
 
 /**
  * This verifier checks that the specified results could be happen in serializable execution.
- * It just tries to find any operatons sequence which execution produces the same results.
+ * It just tries to find any operations sequence which execution produces the same results.
  */
 public class SerializabilityVerifier extends CachedVerifier {
     private final LinearizabilityVerifier linearizabilityVerifier;

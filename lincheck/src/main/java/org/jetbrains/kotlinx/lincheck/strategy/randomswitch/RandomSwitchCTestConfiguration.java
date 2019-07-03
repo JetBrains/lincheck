@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
  */
 public class RandomSwitchCTestConfiguration extends CTestConfiguration {
     public static final int DEFAULT_INVOCATIONS = 1_000;
-
     public final int invocationsPerIteration;
 
     public RandomSwitchCTestConfiguration(int iterations, int threads, int actorsPerThread, int actorsBefore,

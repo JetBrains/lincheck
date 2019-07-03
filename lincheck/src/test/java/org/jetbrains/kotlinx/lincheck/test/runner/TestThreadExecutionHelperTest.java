@@ -22,8 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.runner;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.Actor;
-import org.jetbrains.kotlinx.lincheck.Result;
+import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution;
@@ -67,14 +66,14 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("element"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("peek"), Collections.emptyList(), Collections.emptyList())
-            ), false);
+            ), Collections.emptyList(), false, false);
         ex.testInstance = new ArrayDeque<>();
         Assert.assertArrayEquals(new Result[] {
-            Result.createValueResult(true),
-            Result.createValueResult(true),
-            Result.createValueResult(1),
-            Result.createValueResult(2),
-            Result.createValueResult(2)
+            new ValueResult(true),
+            new ValueResult(true),
+            new ValueResult(1),
+            new ValueResult(2),
+            new ValueResult(2)
         }, ex.call());
     }
 
@@ -86,7 +85,7 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("add", Object.class), Arrays.asList(2), Collections.emptyList())
-            ), false);
+            ),  Collections.emptyList(), false, false);
         ex.testInstance = new ArrayDeque<>();
         ex.call();
     }
@@ -99,13 +98,13 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Arrays.asList(NoSuchElementException.class)),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Arrays.asList(Exception.class, NoSuchElementException.class))
-            ), false);
+            ), Collections.emptyList(), false, false);
         ex.testInstance = new ArrayDeque<>();
         Assert.assertArrayEquals(new Result[] {
-            Result.createVoidResult(),
-            Result.createValueResult(1),
-            Result.createExceptionResult(NoSuchElementException.class),
-            Result.createExceptionResult(NoSuchElementException.class)
+            VoidResult.INSTANCE,
+            new ValueResult(1),
+            new ExceptionResult(NoSuchElementException.class),
+            new ExceptionResult(NoSuchElementException.class)
         }, ex.call());
     }
 
@@ -116,13 +115,13 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("add", Object.class), Arrays.asList(1), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Arrays.asList(NoSuchElementException.class))
-            ), true);
+            ), Collections.emptyList(), true, false);
         ex.testInstance = new ArrayDeque<>();
         ex.waits = new int[] {15, 100};
         Assert.assertArrayEquals(new Result[] {
-            Result.createValueResult(true),
-            Result.createValueResult(1),
-            Result.createExceptionResult(NoSuchElementException.class)
+            new ValueResult(true),
+            new ValueResult(1),
+            new ExceptionResult(NoSuchElementException.class)
         }, ex.call());
     }
 }

@@ -22,10 +22,8 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.quiescent
  * #L%
  */
 
-import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.loop
-import kotlinx.atomicfu.update
-import kotlinx.atomicfu.updateAndGet
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
 
 private typealias Core<E> = LockFreeMPSCQueueCore<E>
@@ -34,20 +32,22 @@ private typealias Core<E> = LockFreeMPSCQueueCore<E>
  * Lock-free Multiply-Producer Single-Consumer Queue from kotlinx.coroutines project.
  */
 class LockFreeMPSCQueue<E : Any> {
-    private val _cur = atomic(Core<E>(LockFreeMPSCQueueCore.INITIAL_CAPACITY))
+    private val _cur = AtomicReference(Core<E>(LockFreeMPSCQueueCore.INITIAL_CAPACITY))
 
     // Note: it is not atomic w.r.t. remove operation (remove can transiently fail when isEmpty is false)
-    val isEmpty: Boolean get() = _cur.value.isEmpty
+    val isEmpty: Boolean get() = _cur.get().isEmpty
 
     fun close() {
-        _cur.loop { cur ->
+        while (true) {
+            val cur = _cur.get()
             if (cur.close()) return // closed this copy
             _cur.compareAndSet(cur, cur.next()) // move to next
         }
     }
 
     fun addLast(element: E): Boolean {
-        _cur.loop { cur ->
+        while (true) {
+            val cur = _cur.get()
             when (cur.addLast(element)) {
                 LockFreeMPSCQueueCore.ADD_SUCCESS -> return true
                 LockFreeMPSCQueueCore.ADD_CLOSED -> return false
@@ -58,7 +58,8 @@ class LockFreeMPSCQueue<E : Any> {
 
     @Suppress("UNCHECKED_CAST")
     fun removeFirstOrNull(): E? {
-        _cur.loop { cur ->
+        while (true) {
+            val cur = _cur.get()
             val result = cur.removeFirstOrNull()
             if (result !== LockFreeMPSCQueueCore.REMOVE_FROZEN) return result as E?
             _cur.compareAndSet(cur, cur.next())
@@ -75,8 +76,8 @@ class LockFreeMPSCQueue<E : Any> {
  */
 internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {
     private val mask = capacity - 1
-    private val _next = atomic<Core<E>?>(null)
-    private val _state = atomic(0L)
+    private val _next = AtomicReference<Core<E>?>(null)
+    private val _state = AtomicLong(0L)
     private val array = AtomicReferenceArray<Any?>(capacity);
 
     init {
@@ -85,20 +86,22 @@ internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {
     }
 
     // Note: it is not atomic w.r.t. remove operation (remove can transiently fail when isEmpty is false)
-    val isEmpty: Boolean get() = _state.value.withState { head, tail -> head == tail }
+    val isEmpty: Boolean get() = _state.get().withState { head, tail -> head == tail }
 
     fun close(): Boolean {
-        _state.update { state ->
+        while (true) {
+            val state = _state.get()
             if (state and CLOSED_MASK != 0L) return true // ok - already closed
             if (state and FROZEN_MASK != 0L) return false // frozen -- try next
-            state or CLOSED_MASK // try set closed bit
+            val upd = state or CLOSED_MASK // try set closed bit
+            if (_state.compareAndSet(state, upd)) return true
         }
-        return true
     }
 
     // ADD_CLOSED | ADD_FROZEN | ADD_SUCCESS
     fun addLast(element: E): Int {
-        _state.loop { state ->
+        while (true) {
+            val state = _state.get()
             if (state and (FROZEN_MASK or CLOSED_MASK) != 0L) return state.addFailReason() // cannot add
             state.withState { head, tail ->
                 // there could be one REMOVE element beyond head that we cannot stump up,
@@ -111,7 +114,7 @@ internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {
                     // could have been frozen & copied before this item was set -- correct it by filling placeholder
                     var cur = this
                     while(true) {
-                        if (cur._state.value and FROZEN_MASK == 0L) break // all fine -- not frozen yet
+                        if (cur._state.get() and FROZEN_MASK == 0L) break // all fine -- not frozen yet
                         cur = cur.next().fillPlaceholder(tail, element) ?: break
                     }
                     return ADD_SUCCESS // added successfully
@@ -132,7 +135,8 @@ internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {
     // SINGLE CONSUMER
     // REMOVE_FROZEN | null (EMPTY) | E (SUCCESS)
     fun removeFirstOrNull(): Any? {
-        _state.loop { state ->
+        while (true) {
+            val state = _state.get()
             if (state and FROZEN_MASK != 0L) return REMOVE_FROZEN // frozen -- cannot modify
             state.withState { head, tail ->
                 if ((tail and mask) == (head and mask)) return null // empty
@@ -160,7 +164,8 @@ internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {
     }
 
     private fun removeSlowPath(oldHead: Int, newHead: Int): Core<E>? {
-        _state.loop { state ->
+        while (true) {
+            val state = _state.get()
             state.withState { head, _ ->
                 check(head == oldHead) { "This queue can have only one consumer" }
                 if (state and FROZEN_MASK != 0L) {
@@ -180,13 +185,14 @@ internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {
     fun next(): LockFreeMPSCQueueCore<E> = allocateOrGetNextCopy(markFrozen())
 
     private fun markFrozen(): Long =
-            _state.updateAndGet { state ->
-                if (state and FROZEN_MASK != 0L) return state // already marked
-                state or FROZEN_MASK
-            }
+        _state.updateAndGet { state ->
+            if (state and FROZEN_MASK != 0L) return@updateAndGet state // already marked
+            state or FROZEN_MASK
+        }
 
     private fun allocateOrGetNextCopy(state: Long): Core<E> {
-        _next.loop { next ->
+        while (true) {
+            val next = _next.get()
             if (next != null) return next // already allocated & copied
             _next.compareAndSet(null, allocateNextCopy(state))
         }
@@ -201,7 +207,7 @@ internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {
                 next.array[index and next.mask] = array[index and mask] ?: PLACEHOLDER
                 index++
             }
-            next._state.value = state wo FROZEN_MASK
+            next._state.set(state wo FROZEN_MASK)
         }
         return next
     }

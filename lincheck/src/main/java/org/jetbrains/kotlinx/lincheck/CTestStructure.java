@@ -26,14 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator;
-import org.jetbrains.kotlinx.lincheck.paramgen.ByteGen;
-import org.jetbrains.kotlinx.lincheck.paramgen.DoubleGen;
-import org.jetbrains.kotlinx.lincheck.paramgen.FloatGen;
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
-import org.jetbrains.kotlinx.lincheck.paramgen.LongGen;
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
-import org.jetbrains.kotlinx.lincheck.paramgen.ShortGen;
-import org.jetbrains.kotlinx.lincheck.paramgen.StringGen;
+import org.jetbrains.kotlinx.lincheck.paramgen.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 
 import java.lang.reflect.Method;
@@ -44,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 
 /**
  * Contains information about the provided operations (see {@link Operation}).
@@ -83,6 +77,7 @@ public class CTestStructure {
             // Operation
             if (m.isAnnotationPresent(Operation.class)) {
                 Operation operationAnn = m.getAnnotation(Operation.class);
+                boolean isSuspendableMethod = isSuspendable(m);
                 // Check that params() in @Operation is empty or has the same size as the method
                 if (operationAnn.params().length > 0 && operationAnn.params().length != m.getParameterCount()) {
                     throw new IllegalArgumentException("Invalid count of paramgen for " + m.toString()
@@ -90,7 +85,8 @@ public class CTestStructure {
                 }
                 // Construct list of parameter paramgen
                 final List<ParameterGenerator<?>> gens = new ArrayList<>();
-                for (int i = 0; i < m.getParameterCount(); i++) {
+                int nParameters = m.getParameterCount() - (isSuspendableMethod ? 1 : 0);
+                for (int i = 0; i < nParameters; i++) {
                     String nameInOperation = operationAnn.params().length > 0 ? operationAnn.params()[i] : null;
                     gens.add(getOrCreateGenerator(m, m.getParameters()[i], nameInOperation, namedGens));
                 }

@@ -23,23 +23,24 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.ValueResult
+import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.*
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.CostWithNextCostCounter
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction.*
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifierConf
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxed
 import org.junit.Test
 
-@StressCTest(threads = 2, actorsPerThread = 10, actorsBefore = 5, actorsAfter = 5,  invocationsPerIteration = 10, iterations = 1000, verifier = QuantitativeRelaxationVerifier::class)
+@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class, threads = 2, actorsPerThread = 2, actorsAfter = 0, actorsBefore = 0)
 @QuantitativeRelaxationVerifierConf(
-        factor = 2,
-        pathCostFunc = PHI_INTERVAL_RESTRICTED_MAX,
-        costCounter = KPriorityQueueTest.CostCounter::class
+    factor = 2,
+    pathCostFunc = PHI_INTERVAL_RESTRICTED_MAX,
+    costCounter = KPriorityQueueTest.CostCounter::class
 )
 @Param(name = "push-value", gen = IntGen::class, conf = "1:20")
 class KPriorityQueueTest {
@@ -56,11 +57,11 @@ class KPriorityQueueTest {
     fun test() = LinChecker.check(KPriorityQueueTest::class.java)
 
     data class CostCounter @JvmOverloads constructor(
-            private val k: Int,
-            private val pq: List<Int> = emptyList()
+        private val k: Int,
+        private val pq: List<Int> = emptyList()
     ) {
         fun push(value: Int, result: Result): CostCounter {
-            check(result.type == Result.Type.VOID)
+            check(result is VoidResult)
             val pqNew = ArrayList(pq)
             pqNew.add(0, value)
             pqNew.sort()
@@ -68,9 +69,10 @@ class KPriorityQueueTest {
         }
 
         fun poll(result: Result): List<CostWithNextCostCounter<CostCounter>> {
+            result as ValueResult
             if (pq.isEmpty()) {
                 return if (result.value == null) listOf(CostWithNextCostCounter(this, 0, false))
-                       else emptyList()
+                else emptyList()
             } else {
                 val edges: MutableList<CostWithNextCostCounter<CostCounter>> = mutableListOf()
                 val predicate = result.value != pq[0]

@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.Options;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchOptions;
+
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
 
@@ -48,6 +49,8 @@ public class RandomSwitchOptionsTest {
             .executionGenerator(RandomExecutionGenerator.class)
             .threads(2)
             .actorsPerThread(4)
+                .actorsAfter(0)
+                .actorsBefore(0)
             .verifier(LinearizabilityVerifier.class);
         LinChecker.check(RandomSwitchOptionsTest.class, opts);
     }

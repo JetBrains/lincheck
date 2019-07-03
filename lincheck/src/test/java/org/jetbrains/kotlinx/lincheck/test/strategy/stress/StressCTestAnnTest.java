@@ -32,7 +32,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @StressCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
-    generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
+        generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
 public class StressCTestAnnTest {
     private AtomicInteger i = new AtomicInteger();
 

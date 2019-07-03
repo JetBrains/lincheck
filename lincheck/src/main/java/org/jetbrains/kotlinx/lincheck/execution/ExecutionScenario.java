@@ -25,7 +25,10 @@ package org.jetbrains.kotlinx.lincheck.execution;
 import org.jetbrains.kotlinx.lincheck.Actor;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.*;
+
+import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 
 /**
  * This class represents an execution scenario, which
@@ -37,6 +40,9 @@ public class ExecutionScenario {
      * The initial sequential part of the execution.
      * It helps to produce different initial states
      * before the parallel part.
+     *
+     * The initial execution part should contain only non-suspendable actors;
+     * otherwise, the single initial execution thread will suspend with no chance to be resumed.
      */
     public final List<Actor> initExecution;
     /**
@@ -46,7 +52,10 @@ public class ExecutionScenario {
     public final List<List<Actor>> parallelExecution;
     /**
      * The last sequential part is used to test that
-     * the data structure is in a correct state.
+     * the data structure is in some correct state.
+     *
+     * If this execution scenario contains suspendable actors, the post part should be empty;
+     * if not, an actor could resume a previously suspended one from the parallel execution part.
      */
     public final List<Actor> postExecution;
 
@@ -57,10 +66,16 @@ public class ExecutionScenario {
     }
 
     /**
-     * Returns the number of threads used in
-     * the parallel part of this execution.
+     * Returns the number of threads used in the parallel part of this execution.
      */
     public int getThreads() {
         return parallelExecution.size();
+    }
+
+    /**
+     * Returns `true` if there is at least one suspendable actor in the generated scenario
+     */
+    public boolean hasSuspendableActors() {
+        return Stream.concat(parallelExecution.stream().flatMap(Collection::stream), postExecution.stream()).anyMatch(actor -> isSuspendable(actor.getMethod()));
     }
 }
