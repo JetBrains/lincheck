@@ -33,7 +33,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Phaser;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This strategy
@@ -46,6 +46,7 @@ public class StressStrategy extends Strategy {
     private final Runner runner;
 
     private final List<int[]> waits;
+    private final AtomicInteger uninitializedThreads = new AtomicInteger(0); // for threads synchronization
 
     public StressStrategy(Class<?> testClass, ExecutionScenario scenario,
         Verifier verifier, StressCTestConfiguration testCfg, Reporter reporter)
@@ -60,12 +61,12 @@ public class StressStrategy extends Strategy {
             }
         }
         // Create runner
-        Phaser phaser = new Phaser(testCfg.threads);
         runner = new ParallelThreadsRunner(scenario, this, testClass, null) {
             @Override
             public void onStart(int iThread) {
                 super.onStart(iThread);
-                phaser.arriveAndAwaitAdvance();
+                uninitializedThreads.decrementAndGet(); // this thread has finished initialization
+                while (uninitializedThreads.get() != 0) {} // wait for other threads to start
             }
         };
     }
@@ -84,6 +85,7 @@ public class StressStrategy extends Strategy {
                         }
                     }
                 }
+                uninitializedThreads.set(scenario.parallelExecution.size()); // reinit synchronization
                 verifyResults(runner.run());
             }
         } finally {
