@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import java.io.PrintStream
 
-
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = synchronized(this) {
         if (logLevel > LoggingLevel.INFO) return
@@ -46,16 +45,13 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
 
     fun logIncorrectResults(scenario: ExecutionScenario, results: ExecutionResult) = synchronized(this) {
         out.println("= Invalid execution results: =")
-        if (logLevel > LoggingLevel.INFO) { // scenario was not logged before
-            logExecutionScenario(scenario)
-            out.println()
-        }
-        out.println("Execution results (init part):")
-        out.println(results.initResults)
-        out.println("Execution results (parallel part):")
-        out.println(printInColumns(results.parallelResults))
-        out.println("Execution results (post part):")
-        out.println(results.postResults)
+        out.println("Init part:")
+        out.println(uniteActorsAndResults(scenario.initExecution, results.initResults))
+        out.println("Parallel part:")
+        val parallelExecutionData = uniteParallelActorsAndResults(scenario.parallelExecution, results.parallelResults)
+        out.println(printInColumns(parallelExecutionData))
+        out.println("Post part:")
+        out.println(uniteActorsAndResults(scenario.postExecution, results.postResults))
     }
 
     inline fun log(logLevel: LoggingLevel, crossinline msg: () -> String) {
@@ -84,4 +80,35 @@ private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columndWidths[columnIndex]) } }
             .map { rowCells -> rowCells.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
             .joinToString(separator = "\n")
+}
+
+private class ActorWithResult(val actorRepresentation: String, val spaces: Int, val resultRepresentation: String) {
+    override fun toString(): String = actorRepresentation + ":" + " ".repeat(spaces) + resultRepresentation
+}
+
+private fun uniteActorsAndResults(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
+    require(actors.size == results.size) {
+        "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
+    }
+
+    val actorRepresentations = actors.map { it.toString() }
+    val resultRepresentations = results.map { it.toString() }
+
+    val maxActorLength = actorRepresentations.map { it.length }.max()!!
+
+    return actorRepresentations.mapIndexed { id, actorRepr ->
+        val spaces = 1 + maxActorLength - actorRepr.length
+        ActorWithResult(actorRepr, spaces, resultRepresentations[id])
+    }
+}
+
+private fun uniteParallelActorsAndResults(
+        actors: List<List<Actor>>,
+        results: List<List<Result>>
+): List<List<ActorWithResult>> {
+    require(actors.size == results.size) {
+        "Different numbers of threads and matching results found (${actors.size} != ${results.size})"
+    }
+
+    return actors.mapIndexed { id, threadActors -> uniteActorsAndResults(threadActors, results[id]) }
 }

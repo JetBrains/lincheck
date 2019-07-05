@@ -93,7 +93,7 @@ public class Result {
         switch (type) {
         case VOID: return "void";
         case VALUE: return "" + value;
-        case EXCEPTION: return "exception=" + tClazz.getName();
+        case EXCEPTION: return "ex=" + tClazz.getSimpleName();
         default: throw new IllegalStateException("Unknown result type: " + type);
         }
     }
