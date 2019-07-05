@@ -346,25 +346,14 @@ public class HashMapLinearizabilityTest {
 
 ```
 = Invalid execution results: =
-Execution scenario (init part):
-[get(4), get(9), get(5), get(8), get(3)]
-Execution scenario (parallel part):
-| put(1, 4) | get(4)    |
-| get(3)    | put(3, 6) |
-| get(4)    | put(6, 1) |
-| put(6, 4) | get(8)    |
-| get(8)    | put(3, 0) |
-Execution scenario (post part):
-[get(3), get(6), get(4), put(9, -10), put(6, 10)]
-
-Execution results (init part):
-[null, null, null, null, null]
-Execution results (parallel part):
-| null | null |
-| null | null |
-| null | null |
-| 1    | null |
-| null | null |
-Execution results (post part):
-[0, 4, null, null, 4]
+Init part:
+[put(1, 2): null, put(4, 6): null, get(5): null, put(3, -6): null, put(1, -8): 2]
+Parallel part:
+| get(4):     6    | put(2, 1):  null |
+| get(2):     null | put(5, 4):  null |
+| put(5, -8): null | get(3):     -6   |
+| get(3):     -6   | get(4):     6    |
+| put(3, 5):  -6   | put(1, -4): -8   |
+Post part:
+[put(5, -8): 4, put(5, -2): -8, get(1): -4, put(2, -8): 1, get(1): -4]
 ```
