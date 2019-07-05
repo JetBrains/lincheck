@@ -29,7 +29,13 @@ public class LongGen implements ParameterGenerator<Long> {
         intGen = new IntGen(configuration);
     }
 
+    @Override
     public Long generate() {
         return (long) intGen.generate();
+    }
+
+    @Override
+    public void reset() {
+        intGen.reset();
     }
 }

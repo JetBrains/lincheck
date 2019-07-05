@@ -29,12 +29,18 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
  * for {@link Operation operation}.
   */
 public interface ParameterGenerator<T> {
+    String UNIQUE_MODIFIER = "unique";
+
     T generate();
+    default void reset() {}
 
     final class Dummy implements ParameterGenerator<Object> {
         @Override
         public Object generate() {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public void reset() { throw new UnsupportedOperationException(); }
     }
 }

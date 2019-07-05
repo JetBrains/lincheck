@@ -27,10 +27,15 @@ public class ByteGen implements ParameterGenerator<Byte> {
 
     public ByteGen(String configuration) {
         intGen = new IntGen(configuration);
-        intGen.checkRange(Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
+        intGen.checkRange((int) Byte.MIN_VALUE, (int) Byte.MAX_VALUE, "byte");
     }
 
     public Byte generate() {
         return (byte) (int) intGen.generate();
+    }
+
+    @Override
+    public void reset() {
+        intGen.reset();
     }
 }

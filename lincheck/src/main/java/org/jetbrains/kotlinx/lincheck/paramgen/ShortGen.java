@@ -30,7 +30,13 @@ public class ShortGen implements ParameterGenerator<Short> {
         intGen.checkRange(Short.MIN_VALUE, Short.MAX_VALUE, "short");
     }
 
+    @Override
     public Short generate() {
         return (short) (int) intGen.generate();
+    }
+
+    @Override
+    public void reset() {
+        intGen.reset();
     }
 }
