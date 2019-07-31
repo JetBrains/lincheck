@@ -85,15 +85,10 @@ internal fun executeActor(
     result: Result?
 ): Result {
     try {
-        val m = if (result != null) {
-            methodsCache
-                .computeIfAbsent(testInstance.javaClass.classLoader) { hashMapOf() }
-                .computeIfAbsent(actor) {
-                    val parameterTypes = actor.method.parameterTypes + Result::class.java
-                    testInstance.javaClass.getMethod(actor.method.name, *parameterTypes)
-                }
-        } else
-            actor.method
+        val m = if (result == null)
+            getMethod(testInstance, actor)
+        else
+            getRelaxedMethod(testInstance, actor)
         val args = when {
             actor.isSuspendable && result != null -> actor.arguments + result + completion
             actor.isSuspendable -> actor.arguments + completion
@@ -120,6 +115,19 @@ internal fun executeActor(
 }
 
 private val methodsCache = WeakHashMap<ClassLoader, HashMap<Actor, Method>>()
+private val relaxedMethodsCache = WeakHashMap<ClassLoader, HashMap<Actor, Method>>()
+
+private fun getMethod(testInstance: Any, actor: Actor): Method = methodsCache
+    .computeIfAbsent(testInstance.javaClass.classLoader) { hashMapOf() }
+    .computeIfAbsent(actor) {
+        testInstance.javaClass.getMethod(actor.method.name, *actor.method.parameterTypes)
+    }
+
+private fun getRelaxedMethod(testInstance: Any, actor: Actor): Method = relaxedMethodsCache
+    .computeIfAbsent(testInstance.javaClass.classLoader) { hashMapOf() }
+    .computeIfAbsent(actor) {
+        testInstance.javaClass.getMethod(actor.method.name, *(actor.method.parameterTypes + Result::class.java))
+    }
 
 /**
  * Creates [Result] of corresponding type from any given value.
