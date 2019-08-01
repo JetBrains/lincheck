@@ -28,11 +28,15 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @OpGroupConfig(name = "push_remove", nonParallel = true)
 @StressCTest
-public class ResultAsParameterTest {
+public class ResultAsParameterTest extends VerifierState {
     private Stack stack = new Stack();
     private Node lastPushNode = null;
 
@@ -57,6 +61,14 @@ public class ResultAsParameterTest {
     @Test
     public void test() {
         LinChecker.check(ResultAsParameterTest.class);
+    }
+
+    @Override
+    protected Object extractState() {
+        List<Integer> elements = new ArrayList<>();
+        int e;
+        while ((e = stack.pop()) != -1) elements.add(e);
+        return elements;
     }
 }
 

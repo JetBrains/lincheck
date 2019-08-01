@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
 
@@ -33,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @StressCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
         generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
-public class RandomSwitchCTestAnnTest {
+public class RandomSwitchCTestAnnTest extends VerifierState {
     private AtomicInteger i = new AtomicInteger();
 
     @Operation()
@@ -44,5 +45,10 @@ public class RandomSwitchCTestAnnTest {
     @Test
     public void test() {
         LinChecker.check(RandomSwitchCTestAnnTest.class);
+    }
+
+    @Override
+    protected Object extractState() {
+        return i.get();
     }
 }

@@ -60,6 +60,4 @@ class SerializableQueueSimulationTest {
     override fun hashCode(): Int {
         return q.hashCode()
     }
-
-
 }

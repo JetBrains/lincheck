@@ -25,11 +25,12 @@ package org.jetbrains.kotlinx.lincheck.tests.custom.counter;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.junit.Test;
 import tests.custom.counter.CounterGet;
 
 @StressCTest
-public class CounterGetTest {
+public class CounterGetTest extends VerifierState {
     private CounterGet counter = new CounterGet();;
 
     @Operation
@@ -45,5 +46,10 @@ public class CounterGetTest {
     @Test
     public void test() {
         LinChecker.check(CounterGetTest.class);
+    }
+
+    @Override
+    protected Object extractState() {
+        return counter.get();
     }
 }

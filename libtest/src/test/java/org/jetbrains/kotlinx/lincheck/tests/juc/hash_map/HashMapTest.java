@@ -22,11 +22,13 @@ package org.jetbrains.kotlinx.lincheck.tests.juc.hash_map;
  * #L%
  */
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -35,7 +37,7 @@ import java.util.Map;
 @StressCTest
 @Param(name = "key", gen = IntGen.class)
 @Param(name = "value", gen = IntGen.class)
-public class HashMapTest {
+public class HashMapTest extends VerifierState {
     private Map<Integer, Integer> m = new HashMap<>();
 
     @Operation(params = {"key", "value"})
@@ -51,6 +53,11 @@ public class HashMapTest {
     @Test(expected = AssertionError.class)
     public void test() throws Exception {
         LinChecker.check(HashMapTest.class);
+    }
+
+    @Override
+    protected Object extractState() {
+        return m;
     }
 }
 

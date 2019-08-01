@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 
-@StressCTest(threads = 3, iterations = 100, invocationsPerIteration = 10)
+@StressCTest(threads = 3, iterations = 100, invocationsPerIteration = 10, requireStateEquivalenceImplCheck = false)
 public class RunOnceTest {
     private A a = new A();;
 

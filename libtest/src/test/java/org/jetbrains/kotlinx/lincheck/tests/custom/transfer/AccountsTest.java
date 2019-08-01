@@ -58,7 +58,7 @@ public class AccountsTest {
         AccountsTest.accountCreator = accountCreator;
     }
 
-    @StressCTest(threads = 3)
+    @StressCTest(threads = 3, requireStateEquivalenceImplCheck = false)
     @Param(name = "id", gen = IntGen.class, conf = "1:4")
     @Param(name = "amount", gen = IntGen.class)
     public static class AccountsLinearizabilityTest {

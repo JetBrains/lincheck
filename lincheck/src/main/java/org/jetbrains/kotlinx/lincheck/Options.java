@@ -41,6 +41,7 @@ public abstract class Options<OPT extends Options, CTEST extends CTestConfigurat
     protected int actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER;
     protected Class<? extends ExecutionGenerator> executionGenerator = CTestConfiguration.DEFAULT_EXECUTION_GENERATOR;
     protected Class<? extends Verifier> verifier = CTestConfiguration.DEFAULT_VERIFIER;
+    protected boolean requireStateEquivalenceImplementationCheck = true;
 
     /**
      * Number of different test scenarios to be executed
@@ -115,6 +116,16 @@ public abstract class Options<OPT extends Options, CTEST extends CTestConfigurat
      */
     public OPT verifier(Class<? extends Verifier> verifier) {
         this.verifier = verifier;
+        return (OPT) this;
+    }
+
+    /**
+     * Require correctness check of test instance state equivalency relation defined by the user.
+     * It checks whether two new instances of a test class are equal.
+     * If the check fails [{@link IllegalStateException}] is thrown.
+     */
+    public OPT requireStateEquivalenceImplCheck(boolean require) {
+        this.requireStateEquivalenceImplementationCheck = require;
         return (OPT) this;
     }
 

@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.quiescent.QuiescentConsistencyVer
 import org.jetbrains.kotlinx.lincheck.verifier.quiescent.QuiescentConsistent;
 import org.junit.Test;
 
-@StressCTest(verifier = QuiescentConsistencyVerifier.class)
+@StressCTest(verifier = QuiescentConsistencyVerifier.class, requireStateEquivalenceImplCheck = false)
 @OpGroupConfig(name = "consumer", nonParallel = true)
 public class LockFreeMPSCQueueTest {
     private LockFreeMPSCQueue<Integer> q = new LockFreeMPSCQueue<>();

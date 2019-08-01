@@ -30,5 +30,5 @@ class ConcurrentDequeStressTest : VerifierState() {
     @Test(expected = AssertionError::class)
     fun test() = LinChecker.check(ConcurrentDequeStressTest::class.java)
 
-    override fun extractState() = deque
+    override fun extractState() = deque.toList()
 }

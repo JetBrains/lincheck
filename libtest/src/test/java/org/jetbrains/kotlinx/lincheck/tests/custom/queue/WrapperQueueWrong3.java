@@ -32,7 +32,7 @@ import tests.custom.queue.Queue;
 import tests.custom.queue.QueueEmptyException;
 import tests.custom.queue.QueueWrong3;
 
-@StressCTest
+@StressCTest(requireStateEquivalenceImplCheck = false)
 public class WrapperQueueWrong3 {
     private Queue queue = new QueueWrong3(10);
 

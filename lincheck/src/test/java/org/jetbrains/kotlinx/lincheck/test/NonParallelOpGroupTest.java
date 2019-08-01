@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @OpGroupConfig(name = "producer", nonParallel = true)
 @OpGroupConfig(name = "consumer", nonParallel = true)
-@StressCTest
+@StressCTest(requireStateEquivalenceImplCheck = false)
 @LogLevel(LoggingLevel.DEBUG)
 public class NonParallelOpGroupTest {
     private SpscLinkedAtomicQueue<Integer> queue = new SpscLinkedAtomicQueue<>();

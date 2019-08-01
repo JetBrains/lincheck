@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-@StressCTest(iterations = 1)
+@StressCTest(iterations = 1, requireStateEquivalenceImplCheck = false)
 public class ExceptionAsResultTest {
     @Operation(handleExceptionsAsResult = NullPointerException.class)
     public void npeIsOk() {
