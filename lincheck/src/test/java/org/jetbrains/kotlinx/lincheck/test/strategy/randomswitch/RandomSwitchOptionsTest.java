@@ -49,8 +49,6 @@ public class RandomSwitchOptionsTest {
             .executionGenerator(RandomExecutionGenerator.class)
             .threads(2)
             .actorsPerThread(4)
-                .actorsAfter(0)
-                .actorsBefore(0)
             .verifier(LinearizabilityVerifier.class);
         LinChecker.check(RandomSwitchOptionsTest.class, opts);
     }
