@@ -13,7 +13,7 @@ import org.junit.Test
 import java.lang.IllegalStateException
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-@StressCTest(actorsPerThread = 10, threads = 2, invocationsPerIteration = 10000, iterations = 100, actorsBefore = 10, actorsAfter = 0)
+@StressCTest(actorsPerThread = 10, threads = 2, invocationsPerIteration = 10000, iterations = 100, actorsBefore = 10, actorsAfter = 0, requireStateEquivalenceImplCheck = false)
 class MutexStressTest : VerifierState() {
     val mutex = Mutex(true)
 

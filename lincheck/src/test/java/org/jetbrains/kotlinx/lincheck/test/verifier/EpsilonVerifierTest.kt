@@ -26,10 +26,11 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 @StressCTest(verifier = EpsilonVerifier::class)
-class EpsilonVerifierTest {
+class EpsilonVerifierTest : VerifierState() {
     private var i = 0
 
     @Operation
@@ -37,4 +38,6 @@ class EpsilonVerifierTest {
 
     @Test
     fun test() = LinChecker.check(EpsilonVerifierTest::class.java)
+
+    override fun extractState() = i
 }

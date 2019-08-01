@@ -22,15 +22,15 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 
 import java.util.Arrays;
 import java.util.List;
@@ -48,7 +48,7 @@ public abstract class CTestConfiguration {
     public static final int DEFAULT_ACTORS_BEFORE = 5;
     public static final int DEFAULT_ACTORS_AFTER = 5;
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
-    public static final Class<? extends Verifier> DEFAULT_VERIFIER = QuantitativelyRelaxedLinearizabilityVerifier.class;
+    public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
 
     public final int iterations;
     public final int threads;
@@ -58,9 +58,10 @@ public abstract class CTestConfiguration {
     public final Class<? extends ExecutionGenerator> generatorClass;
     public final Class<? extends Verifier> verifierClass;
     public boolean hasTestClassSuspendableActors;
+    public final boolean requireStateEquivalenceImplCheck;
 
     protected CTestConfiguration(int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
-        Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass)
+        Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass, boolean requireStateEquivalenceImplCheck)
     {
         this.iterations = iterations;
         this.threads = threads;
@@ -69,6 +70,7 @@ public abstract class CTestConfiguration {
         this.actorsAfter = actorsAfter;
         this.generatorClass = generatorClass;
         this.verifierClass = verifierClass;
+        this.requireStateEquivalenceImplCheck = requireStateEquivalenceImplCheck;
     }
 
     static List<CTestConfiguration> createFromTestClass(Class<?> testClass) {
@@ -81,7 +83,7 @@ public abstract class CTestConfiguration {
                 }
                 return new StressCTestConfiguration(ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true);
+                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true, ann.requireStateEquivalenceImplCheck());
             });
         Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
             .map(ann -> {
@@ -90,7 +92,7 @@ public abstract class CTestConfiguration {
                 }
                 return new RandomSwitchCTestConfiguration(ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                        ann.generator(), ann.verifier(), ann.invocationsPerIteration());
+                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), ann.requireStateEquivalenceImplCheck());
             });
         return Stream.concat(stressConfigurations, randomSwitchConfigurations).collect(Collectors.toList());
     }

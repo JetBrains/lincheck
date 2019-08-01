@@ -50,6 +50,6 @@ public class StressOptions extends Options<StressOptions, StressCTestConfigurati
     @Override
     public StressCTestConfiguration createTestConfigurations() {
         return new StressCTestConfiguration(iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-            executionGenerator, verifier, invocationsPerIteration, addWaits);
+            executionGenerator, verifier, invocationsPerIteration, addWaits, requireStateEquivalenceImplementationCheck);
     }
 }

@@ -6,7 +6,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.junit.Test
 
-@StressCTest
+@StressCTest(requireStateEquivalenceImplCheck = false)
 class DequeLinearizabilityTest {
     private val deque = LockFreeDeque<Int>();
 

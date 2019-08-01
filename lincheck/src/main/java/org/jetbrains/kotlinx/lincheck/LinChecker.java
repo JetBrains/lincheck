@@ -10,12 +10,12 @@ package org.jetbrains.kotlinx.lincheck;
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
@@ -23,15 +23,14 @@ package org.jetbrains.kotlinx.lincheck;
  */
 
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
+import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
-
-import java.util.*;
-
+import org.jetbrains.kotlinx.lincheck.verifier.*;
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifierConf;
 import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.DEFAULT_LOG_LEVEL;
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.createTestInstance;
+import java.util.*;
 
 
 /**
@@ -49,7 +48,7 @@ public class LinChecker {
         this.testStructure = CTestStructure.getFromTestClass(testClass);
         LoggingLevel logLevel;
         if (options != null) {
-            logLevel= options.logLevel;
+            logLevel = options.logLevel;
             this.testConfigurations = Collections.singletonList(options.createTestConfigurations());
         } else {
             logLevel = getLogLevelFromAnnotation();
@@ -97,6 +96,7 @@ public class LinChecker {
     }
 
     private void checkImpl(CTestConfiguration testCfg) throws AssertionError, Exception {
+        if (testCfg.requireStateEquivalenceImplCheck) checkStateEquivalenceImpl(testClass);
         ExecutionGenerator exGen = createExecutionGenerator(testCfg.generatorClass, testCfg);
         // Run iterations
         for (int iteration = 1; iteration <= testCfg.iterations; iteration++) {
@@ -110,6 +110,20 @@ public class LinChecker {
         }
     }
 
+    private void checkStateEquivalenceImpl(Class<?> testClass) {
+        if (!testClass.isAnnotationPresent(QuantitativeRelaxationVerifierConf.class)) {
+            Object i1 = createTestInstance(testClass);
+            Object i2 = createTestInstance(testClass);
+            if (i1.hashCode() != i2.hashCode() || !i1.equals(i2)) {
+                throw new IllegalStateException(
+                    "equals() and hashCode() methods for this test are not defined or defined incorrectly.\n" +
+                    "It is more convenient to make the test class extend `VerifierState` class and override `extractState()` function to define equals() and hashCode() methods.\n" +
+                    "This check may be suppressed by setting the requireStateEquivalenceImplementationCheck option to false."
+                );
+            }
+        }
+    }
+
     private void validateScenario(CTestConfiguration testCfg, ExecutionScenario scenario) {
         if (testCfg.hasTestClassSuspendableActors) {
             if (scenario.initExecution.stream().anyMatch(actor -> isSuspendable(actor.getMethod())))
@@ -120,17 +134,15 @@ public class LinChecker {
     }
 
     private Verifier createVerifier(Class<? extends Verifier> verifierClass, ExecutionScenario scenario,
-        Class<?> testClass) throws Exception
-    {
+                                    Class<?> testClass) throws Exception {
         return verifierClass.getConstructor(ExecutionScenario.class, Class.class)
-            .newInstance(scenario, testClass);
+                .newInstance(scenario, testClass);
     }
 
     private ExecutionGenerator createExecutionGenerator(Class<? extends ExecutionGenerator> generatorClass,
-        CTestConfiguration testConfiguration) throws Exception
-    {
+                                                        CTestConfiguration testConfiguration) throws Exception {
         return generatorClass.getConstructor(CTestConfiguration.class, CTestStructure.class)
-            .newInstance(testConfiguration, testStructure);
+                .newInstance(testConfiguration, testStructure);
     }
 
     private LoggingLevel getLogLevelFromAnnotation() {

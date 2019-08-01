@@ -101,6 +101,13 @@ public @interface RandomSwitchCTest {
     Class<? extends Verifier> verifier() default LinearizabilityVerifier.class;
 
     /**
+     * Require correctness check of test instance state equivalency relation, which is defined by the user.
+     * Essentially, it checks whether two new instances of the test class are equal.
+     * If the check fails. an [{@link IllegalStateException}] is thrown.
+     */
+    boolean requireStateEquivalenceImplCheck() default true;
+
+    /**
      * Holder annotation for {@link RandomSwitchCTest}.
      * Not a public API.
      */
