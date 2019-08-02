@@ -98,7 +98,7 @@ internal fun executeActor(
         val res = m.invoke(testInstance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLinCheckResult(res)
     } catch (invE: Throwable) {
-        val eClass = invE.cause!!::class.java
+        val eClass = (invE.cause ?: invE)::class.java
         for (ec in actor.handledExceptions) {
             if (ec.isAssignableFrom(eClass))
                 return ExceptionResult(eClass)
