@@ -58,7 +58,7 @@ object VoidResult : Result() {
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
  */
 data class ExceptionResult(val tClazz: Class<out Throwable>?) : Result() {
-    override fun toString() = if (wasSuspended) "(${tClazz?.javaClass?.simpleName}, wasSuspended)" else "${tClazz?.javaClass?.simpleName}"
+    override fun toString() = if (wasSuspended) "(${tClazz?.simpleName}, wasSuspended)" else "${tClazz?.simpleName}"
 }
 
 /**

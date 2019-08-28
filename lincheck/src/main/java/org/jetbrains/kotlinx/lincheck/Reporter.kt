@@ -31,27 +31,19 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
         if (logLevel > LoggingLevel.INFO) return
         out.println()
         out.println("= Iteration $iteration / $maxIterations =")
-        logExecutionScenario(scenario)
+        StringBuilder().run {
+            appendExecutionScenario(scenario)
+            out.println(this)
+        }
     }
 
-    private fun logExecutionScenario(scenario: ExecutionScenario) {
-        out.println("Execution scenario (init part):")
-        out.println(scenario.initExecution)
-        out.println("Execution scenario (parallel part):")
-        out.println(printInColumns(scenario.parallelExecution))
-        out.println("Execution scenario (post part):")
-        out.println(scenario.postExecution)
-    }
-
-    fun logIncorrectResults(scenario: ExecutionScenario, results: ExecutionResult) = synchronized(this) {
-        out.println("= Invalid execution results: =")
-        out.println("Init part:")
-        out.println(uniteActorsAndResults(scenario.initExecution, results.initResults))
-        out.println("Parallel part:")
-        val parallelExecutionData = uniteParallelActorsAndResults(scenario.parallelExecution, results.parallelResults)
-        out.println(printInColumns(parallelExecutionData))
-        out.println("Post part:")
-        out.println(uniteActorsAndResults(scenario.postExecution, results.postResults))
+    private fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
+        appendln("Execution scenario (init part):")
+        appendln(scenario.initExecution)
+        appendln("Execution scenario (parallel part):")
+        appendln(printInColumns(scenario.parallelExecution))
+        appendln("Execution scenario (post part):")
+        append(scenario.postExecution)
     }
 
     inline fun log(logLevel: LoggingLevel, crossinline msg: () -> String) {
@@ -62,7 +54,7 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
 
 @JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.ERROR
 enum class LoggingLevel {
-    DEBUG, INFO, WARN, ERROR
+    DEBUG, INFO, ERROR
 }
 
 private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
@@ -102,13 +94,20 @@ private fun uniteActorsAndResults(actors: List<Actor>, results: List<Result>): L
     }
 }
 
-private fun uniteParallelActorsAndResults(
-        actors: List<List<Actor>>,
-        results: List<List<Result>>
-): List<List<ActorWithResult>> {
+fun StringBuilder.appendIncorrectResults(scenario: ExecutionScenario, results: ExecutionResult) {
+    appendln("= Invalid execution results: =")
+    appendln("Init part:")
+    appendln(uniteActorsAndResults(scenario.initExecution, results.initResults))
+    appendln("Parallel part:")
+    val parallelExecutionData = uniteParallelActorsAndResults(scenario.parallelExecution, results.parallelResults)
+    appendln(printInColumns(parallelExecutionData))
+    appendln("Post part:")
+    append(uniteActorsAndResults(scenario.postExecution, results.postResults))
+}
+
+private fun uniteParallelActorsAndResults(actors: List<List<Actor>>, results: List<List<Result>>): List<List<ActorWithResult>> {
     require(actors.size == results.size) {
         "Different numbers of threads and matching results found (${actors.size} != ${results.size})"
     }
-
     return actors.mapIndexed { id, threadActors -> uniteActorsAndResults(threadActors, results[id]) }
 }

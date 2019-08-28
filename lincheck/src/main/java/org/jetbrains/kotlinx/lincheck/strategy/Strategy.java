@@ -34,6 +34,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import com.devexperts.jagent.ClassInfo;
 import org.objectweb.asm.ClassVisitor;
 
+import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectResults;
+
 /**
  * Implementation of this class describes how to run the generated execution.
  * <p>
@@ -54,8 +56,9 @@ public abstract class Strategy {
 
     protected void verifyResults(ExecutionResult results) {
         if (!verifier.verifyResults(results)) {
-            reporter.logIncorrectResults(scenario, results);
-            throw new AssertionError("Invalid interleaving found");
+            StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:\n");
+            appendIncorrectResults(msgBuilder, scenario, results);
+            throw new AssertionError(msgBuilder.toString());
         }
     }
 
