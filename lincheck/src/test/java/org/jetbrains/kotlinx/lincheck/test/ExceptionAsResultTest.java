@@ -28,9 +28,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
+
+import static org.junit.Assert.*;
 
 @StressCTest(iterations = 1, requireStateEquivalenceImplCheck = false)
 public class ExceptionAsResultTest {
+    private static final String MESSAGE = "iujdhfgilurtybfu";
+
     @Operation(handleExceptionsAsResult = NullPointerException.class)
     public void npeIsOk() {
         ((String) null).charAt(0);
@@ -38,11 +43,20 @@ public class ExceptionAsResultTest {
 
     @Operation(handleExceptionsAsResult = Exception.class)
     public void subclassExceptionIsOk() throws Exception {
-        throw new IOException();
+        if (ThreadLocalRandom.current().nextBoolean()) throw new IOException(MESSAGE);
+        else throw new IllegalStateException(MESSAGE);
     }
 
     @Test
     public void test() {
-        LinChecker.check(ExceptionAsResultTest.class);
+        try {
+            LinChecker.check(ExceptionAsResultTest.class);
+            fail("Should fail with AssertionError");
+        } catch (AssertionError e) {
+            String m = e.getMessage();
+            assertTrue(m.contains("IllegalStateException") || m.contains("IOException"));
+            assertFalse(m.contains(MESSAGE));
+        }
     }
 }
+
