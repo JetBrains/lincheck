@@ -58,7 +58,6 @@ public abstract class CTestConfiguration {
     public final int actorsAfter;
     public final Class<? extends ExecutionGenerator> generatorClass;
     public final Class<? extends Verifier> verifierClass;
-    public boolean hasTestClassSuspendableActors;
     public final boolean requireStateEquivalenceImplCheck;
     public final Boolean minimizeFailedScenario;
 
@@ -81,15 +80,10 @@ public abstract class CTestConfiguration {
         boolean hasTestClassSuspendableActors = Arrays.stream(testClass.getDeclaredMethods()).anyMatch(m -> m.isAnnotationPresent(Operation.class) &&
                 m.getParameterTypes().length > 0 && m.getParameterTypes()[m.getParameterTypes().length - 1].isAssignableFrom(kotlin.coroutines.Continuation.class));
         Stream<StressCTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))
-            .map(ann -> {
-                if (hasTestClassSuspendableActors && ann.actorsAfter() > 0) {
-                    throw new IllegalArgumentException("Post execution part is not allowed for test classes with suspendable operations");
-                }
-                return new StressCTestConfiguration(ann.iterations(),
-                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
-                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario());
-            });
+            .map(ann -> new StressCTestConfiguration(ann.iterations(),
+                    ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
+                    ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
+                    ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario()));
         Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
             .map(ann -> {
                 if (hasTestClassSuspendableActors && ann.actorsAfter() > 0) {

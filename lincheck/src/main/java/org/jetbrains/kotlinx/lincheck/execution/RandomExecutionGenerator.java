@@ -92,14 +92,19 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
             }
         }
         parallelExecution = parallelExecution.stream().filter(actors -> !actors.isEmpty()).collect(Collectors.toList());
-        // Create post execution part
-        List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
-        for (ThreadGen threadGen : tgs2)
-            leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
-        List<Actor> postExecution = new ArrayList<>();
-        for (int i = 0; i < testConfiguration.actorsAfter && !leftActorGenerators.isEmpty(); i++) {
-            ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
-            postExecution.add(agen.generate());
+        // Create post execution part if the parallel part does not have suspendable actors
+        List<Actor> postExecution;
+        if (parallelExecution.stream().noneMatch(actors -> actors.stream().anyMatch(Actor::isSuspendable))) {
+            postExecution = new ArrayList<>();
+            List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
+            for (ThreadGen threadGen : tgs2)
+                leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
+            for (int i = 0; i < testConfiguration.actorsAfter && !leftActorGenerators.isEmpty(); i++) {
+                ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
+                postExecution.add(agen.generate());
+            }
+        } else {
+            postExecution = Collections.emptyList();
         }
         return new ExecutionScenario(initExecution, parallelExecution, postExecution);
     }

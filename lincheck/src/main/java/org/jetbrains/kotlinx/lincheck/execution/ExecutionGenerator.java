@@ -45,8 +45,8 @@ public abstract class ExecutionGenerator {
      * Generates an execution scenario according to the parameters provided by the test configuration
      * and the restrictions from the test structure.
      *
-     * If the current test contains suspendable operations (see {@link CTestConfiguration#hasTestClassSuspendableActors}),
-     * the initial part of an execution should not contain suspendable actors and the post part should be empty.
+     * If the current test contains suspendable operations, the initial part of an execution
+     * should not contain suspendable actors and the post part should be empty.
      */
     public abstract ExecutionScenario nextExecution();
 }

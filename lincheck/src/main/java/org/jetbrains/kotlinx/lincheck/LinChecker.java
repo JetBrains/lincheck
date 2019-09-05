@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifierConf;
-import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.DEFAULT_LOG_LEVEL;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.createTestInstance;
 import java.util.*;
@@ -186,10 +185,10 @@ public class LinChecker {
     }
 
     private void validateScenario(CTestConfiguration testCfg, ExecutionScenario scenario) {
-        if (testCfg.hasTestClassSuspendableActors) {
-            if (scenario.initExecution.stream().anyMatch(actor -> isSuspendable(actor.getMethod())))
+        if (scenario.hasSuspendableActors()) {
+            if (scenario.initExecution.stream().anyMatch(Actor::isSuspendable))
                 throw new IllegalArgumentException("Generated execution scenario for the test class with suspendable methods contains suspendable actors in initial part");
-            if (scenario.postExecution.size() > 0)
+            if (scenario.parallelExecution.stream().anyMatch(actors -> actors.stream().anyMatch(Actor::isSuspendable)) && scenario.postExecution.size() > 0)
                 throw new IllegalArgumentException("Generated execution scenario for the test class with suspendable methods has non-empty post part");
         }
     }
