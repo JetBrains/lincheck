@@ -108,6 +108,14 @@ public @interface StressCTest {
     boolean requireStateEquivalenceImplCheck() default true;
 
     /**
+     * If this feature is enabled and an invalid interleaving has been found,
+     * *lincheck* tries to minimize the corresponding scenario in order to
+     * construct a smaller one so that the test fails on it as well.
+     * Enabled by default.
+     */
+    boolean minimizeFailedScenario() default true;
+
+    /**
      * Holder annotation for {@link StressCTest}.
      * Not a public API.
      */

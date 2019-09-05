@@ -49,6 +49,7 @@ public abstract class CTestConfiguration {
     public static final int DEFAULT_ACTORS_AFTER = 5;
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
+    public static final boolean DEFAULT_MINIMIZE_ERROR = true;
 
     public final int iterations;
     public final int threads;
@@ -59,9 +60,11 @@ public abstract class CTestConfiguration {
     public final Class<? extends Verifier> verifierClass;
     public boolean hasTestClassSuspendableActors;
     public final boolean requireStateEquivalenceImplCheck;
+    public final Boolean minimizeFailedScenario;
 
     protected CTestConfiguration(int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
-        Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass, boolean requireStateEquivalenceImplCheck)
+        Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
+        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario)
     {
         this.iterations = iterations;
         this.threads = threads;
@@ -71,6 +74,7 @@ public abstract class CTestConfiguration {
         this.generatorClass = generatorClass;
         this.verifierClass = verifierClass;
         this.requireStateEquivalenceImplCheck = requireStateEquivalenceImplCheck;
+        this.minimizeFailedScenario = minimizeFailedScenario;
     }
 
     static List<CTestConfiguration> createFromTestClass(Class<?> testClass) {
@@ -83,7 +87,8 @@ public abstract class CTestConfiguration {
                 }
                 return new StressCTestConfiguration(ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true, ann.requireStateEquivalenceImplCheck());
+                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
+                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario());
             });
         Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
             .map(ann -> {
@@ -92,7 +97,8 @@ public abstract class CTestConfiguration {
                 }
                 return new RandomSwitchCTestConfiguration(ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(), ann.requireStateEquivalenceImplCheck());
+                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(),
+                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario());
             });
         return Stream.concat(stressConfigurations, randomSwitchConfigurations).collect(Collectors.toList());
     }

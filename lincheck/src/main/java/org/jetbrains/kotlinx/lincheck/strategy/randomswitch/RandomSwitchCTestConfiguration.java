@@ -35,9 +35,10 @@ public class RandomSwitchCTestConfiguration extends CTestConfiguration {
 
     public RandomSwitchCTestConfiguration(int iterations, int threads, int actorsPerThread, int actorsBefore,
         int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        int invocationsPerIteration, boolean requireStateEquivalenceCheck)
+        int invocationsPerIteration, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario)
     {
-        super(iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass, requireStateEquivalenceCheck);
+        super(iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
+                requireStateEquivalenceCheck, minimizeFailedScenario);
         this.invocationsPerIteration = invocationsPerIteration;
     }
 }

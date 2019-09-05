@@ -102,12 +102,73 @@ public class LinChecker {
         for (int iteration = 1; iteration <= testCfg.iterations; iteration++) {
             ExecutionScenario scenario = exGen.nextExecution();
             // Check correctness of the generated scenario
-            validateScenario(testCfg, scenario);
             reporter.logIteration(iteration, testCfg.iterations, scenario);
-            Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testClass);
-            Strategy strategy = Strategy.createStrategy(testCfg, testClass, scenario, verifier, reporter);
-            strategy.run();
+            try {
+                runScenario(scenario, testCfg);
+            } catch (AssertionError e) {
+                if (!testCfg.minimizeFailedScenario) throw e;
+                minimizeScenario(scenario, testCfg, e);
+            }
         }
+    }
+
+    // Tries to minimize the specified failing scenario to make the error easier to understand.
+    // The algorithm is greedy: it tries to remove one actor from the scenario and checks
+    // whether a test with the modified one fails with error as well. If it fails,
+    // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
+    // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
+    // Thus, the algorithm works in the linear time of the total number of actors.
+    private void minimizeScenario(ExecutionScenario scenario, CTestConfiguration testCfg, AssertionError currentError) throws AssertionError, Exception {
+        reporter.logScenarioMinimization(scenario);
+        for (int i = 0; i < scenario.parallelExecution.size(); i++) {
+            for (int j = 0; j < scenario.parallelExecution.get(i).size(); j++) {
+                ExecutionScenario newScenario = copyScenario(scenario);
+                newScenario.parallelExecution.get(i).remove(j);
+                if (newScenario.parallelExecution.get(i).isEmpty())
+                    newScenario.parallelExecution.remove(i); // remove empty thread
+                minimizeNewScenarioAttempt(newScenario, testCfg);
+            }
+        }
+        for (int i = 0; i < scenario.initExecution.size(); i++) {
+            ExecutionScenario newScenario = copyScenario(scenario);
+            newScenario.initExecution.remove(i);
+            minimizeNewScenarioAttempt(newScenario, testCfg);
+        }
+        for (int i = 0; i < scenario.postExecution.size(); i++) {
+            ExecutionScenario newScenario = copyScenario(scenario);
+            newScenario.postExecution.remove(i);
+            minimizeNewScenarioAttempt(newScenario, testCfg);
+        }
+        throw currentError;
+    }
+
+    private void minimizeNewScenarioAttempt(ExecutionScenario newScenario, CTestConfiguration testCfg) throws AssertionError, Exception {
+        try {
+            runScenario(newScenario, testCfg);
+        } catch (IllegalArgumentException e) {
+            // Ignore incorrect scenarios
+        } catch (AssertionError e) {
+            // Scenario has been minimized! Try to minimize more!
+            minimizeScenario(newScenario, testCfg, e);
+            throw new IllegalStateException("Never reaches, the previous `minimizeScenario` call always throw an exception");
+        }
+    }
+
+    private ExecutionScenario copyScenario(ExecutionScenario scenario) {
+        List<Actor> initExecution = new ArrayList<>(scenario.initExecution);
+        List<List<Actor>> parallelExecution = new ArrayList<>();
+        for (int i = 0; i < scenario.parallelExecution.size(); i++) {
+            parallelExecution.add(new ArrayList<>(scenario.parallelExecution.get(i)));
+        }
+        List<Actor> postExecution = new ArrayList<>(scenario.postExecution);
+        return new ExecutionScenario(initExecution, parallelExecution, postExecution);
+    }
+
+    private void runScenario(ExecutionScenario scenario, CTestConfiguration testCfg) throws AssertionError, Exception {
+        validateScenario(testCfg, scenario);
+        Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testClass);
+        Strategy strategy = Strategy.createStrategy(testCfg, testClass, scenario, verifier, reporter);
+        strategy.run();
     }
 
     private void checkStateEquivalenceImpl(Class<?> testClass) {

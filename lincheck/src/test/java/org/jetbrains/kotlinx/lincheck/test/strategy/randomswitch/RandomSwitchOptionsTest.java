@@ -50,7 +50,8 @@ public class RandomSwitchOptionsTest {
             .threads(2)
             .actorsPerThread(4)
             .verifier(LinearizabilityVerifier.class)
-            .requireStateEquivalenceImplCheck(false);
+            .requireStateEquivalenceImplCheck(false)
+            .minimizeFailedScenario(false);
         LinChecker.check(RandomSwitchOptionsTest.class, opts);
     }
 }
