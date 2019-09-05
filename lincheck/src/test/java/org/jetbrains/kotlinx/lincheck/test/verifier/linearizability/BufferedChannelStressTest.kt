@@ -32,9 +32,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-@StressCTest(verifier = LinearizabilityVerifier::class, actorsAfter = 0)
-class BufferedChannelMixedStressTest : VerifierState() {
-
+@StressCTest(verifier = LinearizabilityVerifier::class)
+class BufferedChannelStressTest : VerifierState() {
     val ch = Channel<Int>(2)
 
     @Operation
@@ -50,12 +49,14 @@ class BufferedChannelMixedStressTest : VerifierState() {
     fun offer(@Param(name = "value") value: Int) = ch.offer(value)
 
     @Test
-    fun test() = LinChecker.check(BufferedChannelMixedStressTest::class.java)
+    fun test() = LinChecker.check(BufferedChannelStressTest::class.java)
 
     override fun extractState(): Any {
-        val elements = mutableListOf<Int>()
-        while (!ch.isEmpty) elements.add(ch.poll()!!)
-        val closed = ch.isClosedForSend || ch.isClosedForReceive
-        return elements to closed
+        val state = mutableListOf<Any>()
+        while (true) {
+            val x = poll() ?: break // no elements
+            state.add(x)
+        }
+        return state
     }
 }
