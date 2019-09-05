@@ -37,15 +37,6 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
         }
     }
 
-    private fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
-        appendln("Execution scenario (init part):")
-        appendln(scenario.initExecution)
-        appendln("Execution scenario (parallel part):")
-        appendln(printInColumns(scenario.parallelExecution))
-        appendln("Execution scenario (post part):")
-        append(scenario.postExecution)
-    }
-
     inline fun log(logLevel: LoggingLevel, crossinline msg: () -> String) {
         if (this.logLevel > logLevel) return
         out.println(msg())
@@ -65,11 +56,11 @@ private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
                 .map { groupedObjects[it] }
                 .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
     }
-    val columndWidths: List<Int> = (0 until nColumns).map { columnIndex ->
+    val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
         (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max()!!
     }
     return (0 until nRows)
-            .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columndWidths[columnIndex]) } }
+            .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
             .map { rowCells -> rowCells.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
             .joinToString(separator = "\n")
 }
@@ -82,32 +73,54 @@ private fun uniteActorsAndResults(actors: List<Actor>, results: List<Result>): L
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
-
-    val actorRepresentations = actors.map { it.toString() }
-    val resultRepresentations = results.map { it.toString() }
-
-    val maxActorLength = actorRepresentations.map { it.length }.max()!!
-
-    return actorRepresentations.mapIndexed { id, actorRepr ->
-        val spaces = 1 + maxActorLength - actorRepr.length
-        ActorWithResult(actorRepr, spaces, resultRepresentations[id])
-    }
-}
-
-fun StringBuilder.appendIncorrectResults(scenario: ExecutionScenario, results: ExecutionResult) {
-    appendln("= Invalid execution results: =")
-    appendln("Init part:")
-    appendln(uniteActorsAndResults(scenario.initExecution, results.initResults))
-    appendln("Parallel part:")
-    val parallelExecutionData = uniteParallelActorsAndResults(scenario.parallelExecution, results.parallelResults)
-    appendln(printInColumns(parallelExecutionData))
-    appendln("Post part:")
-    append(uniteActorsAndResults(scenario.postExecution, results.postResults))
+    return actors.indices.map { ActorWithResult("${actors[it]}", 1, "${results[it]}") }
 }
 
 private fun uniteParallelActorsAndResults(actors: List<List<Actor>>, results: List<List<Result>>): List<List<ActorWithResult>> {
     require(actors.size == results.size) {
         "Different numbers of threads and matching results found (${actors.size} != ${results.size})"
     }
-    return actors.mapIndexed { id, threadActors -> uniteActorsAndResults(threadActors, results[id]) }
+    return actors.mapIndexed { id, threadActors -> uniteActorsAndResultsAligned(threadActors, results[id]) }
+}
+
+private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
+    require(actors.size == results.size) {
+        "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
+    }
+    val actorRepresentations = actors.map { it.toString() }
+    val maxActorLength = actorRepresentations.map { it.length }.max()!!
+    return actorRepresentations.mapIndexed { id, actorRepr ->
+        val spaces = 1 + maxActorLength - actorRepr.length
+        ActorWithResult(actorRepr, spaces, "${results[id]}")
+    }
+}
+
+private fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
+    if (scenario.initExecution.isNotEmpty()) {
+        appendln("Execution scenario (init part):")
+        appendln(scenario.initExecution)
+    }
+    appendln("Execution scenario (parallel part):")
+    append(printInColumns(scenario.parallelExecution))
+    if (scenario.parallelExecution.isNotEmpty()) {
+        appendln()
+        appendln("Execution scenario (post part):")
+        append(scenario.postExecution)
+    }
+}
+
+fun StringBuilder.appendIncorrectResults(scenario: ExecutionScenario, results: ExecutionResult) {
+    appendln("= Invalid execution results: =")
+    if (scenario.initExecution.isNotEmpty()) {
+        appendln("Init part:")
+        appendln(uniteActorsAndResults(scenario.initExecution, results.initResults))
+    }
+    appendln("Parallel part:")
+    val parallelExecutionData = uniteParallelActorsAndResults(scenario.parallelExecution, results.parallelResults)
+    append(printInColumns(parallelExecutionData))
+    if (scenario.postExecution.isNotEmpty()) {
+        appendln()
+        appendln("Post part:")
+        append(uniteActorsAndResults(scenario.postExecution, results.postResults))
+    }
 }

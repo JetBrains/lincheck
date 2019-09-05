@@ -91,6 +91,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
                     it.remove();
             }
         }
+        parallelExecution = parallelExecution.stream().filter(actors -> !actors.isEmpty()).collect(Collectors.toList());
         // Create post execution part
         List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
         for (ThreadGen threadGen : tgs2)
