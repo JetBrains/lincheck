@@ -29,9 +29,15 @@ import java.io.PrintStream
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = synchronized(this) {
         if (logLevel > LoggingLevel.INFO) return
-        out.println()
-        out.println("= Iteration $iteration / $maxIterations =")
-        StringBuilder().run {
+        StringBuilder("\n= Iteration $iteration / $maxIterations =\n").run {
+            appendExecutionScenario(scenario)
+            out.println(this)
+        }
+    }
+
+    fun logScenarioMinimization(scenario: ExecutionScenario) {
+        if (logLevel > LoggingLevel.INFO) return
+        StringBuilder("\nInvalid interleaving found, trying to minimize the scenario below:\n").run {
             appendExecutionScenario(scenario)
             out.println(this)
         }
@@ -73,6 +79,7 @@ private fun uniteActorsAndResults(actors: List<Actor>, results: List<Result>): L
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
+    val actorRepresentations = actors.map { it.toString() }
     return actors.indices.map { ActorWithResult("${actors[it]}", 1, "${results[it]}") }
 }
 

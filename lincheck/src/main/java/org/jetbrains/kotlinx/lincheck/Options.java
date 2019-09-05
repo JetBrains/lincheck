@@ -42,6 +42,7 @@ public abstract class Options<OPT extends Options, CTEST extends CTestConfigurat
     protected Class<? extends ExecutionGenerator> executionGenerator = CTestConfiguration.DEFAULT_EXECUTION_GENERATOR;
     protected Class<? extends Verifier> verifier = CTestConfiguration.DEFAULT_VERIFIER;
     protected boolean requireStateEquivalenceImplementationCheck = true;
+    protected boolean minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR;
 
     /**
      * Number of different test scenarios to be executed
@@ -126,6 +127,17 @@ public abstract class Options<OPT extends Options, CTEST extends CTestConfigurat
      */
     public OPT requireStateEquivalenceImplCheck(boolean require) {
         this.requireStateEquivalenceImplementationCheck = require;
+        return (OPT) this;
+    }
+
+    /**
+     * If this feature is enabled and an invalid interleaving has been found,
+     * *lincheck* tries to minimize the corresponding scenario in order to
+     * construct a smaller one so that the test fails on it as well.
+     * Enabled by default.
+     */
+    public OPT minimizeFailedScenario(boolean minimizeFailedScenario) {
+        this.minimizeFailedScenario = minimizeFailedScenario;
         return (OPT) this;
     }
 

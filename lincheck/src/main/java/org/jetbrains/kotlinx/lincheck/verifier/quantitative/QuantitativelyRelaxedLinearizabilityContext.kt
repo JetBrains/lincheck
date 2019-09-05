@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.TransitionInfo
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.verifier.isRelaxed
+import java.lang.IndexOutOfBoundsException
 
 class QuantitativelyRelaxedLinearizabilityContext(
     scenario: ExecutionScenario,
