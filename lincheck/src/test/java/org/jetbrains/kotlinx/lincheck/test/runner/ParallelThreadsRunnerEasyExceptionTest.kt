@@ -110,7 +110,7 @@ class ParallelThreadsRunnerExceptionTest {
                     )
                 }
                 thread {
-                    operation(actor(resWithException), ValueResult(null))
+                    operation(actor(resWithException), VoidResult)
                 }
             }
         }
@@ -130,7 +130,7 @@ class ParallelThreadsRunnerExceptionTest {
                     )
                 }
                 thread {
-                    operation(actor(resSucc, 77), ValueResult(null))
+                    operation(actor(resSucc, 77), VoidResult)
                 }
             }
         }

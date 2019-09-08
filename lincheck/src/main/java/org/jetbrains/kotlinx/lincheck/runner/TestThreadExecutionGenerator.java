@@ -225,11 +225,13 @@ public class TestThreadExecutionGenerator {
                 mv.push(iThread);
                 mv.push(i);
                 mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
+                if (actor.getMethod().getReturnType() == void.class) {
+                    createVoidResult(mv);
+                }
             } else {
                 // Create result
                 if (actor.getMethod().getReturnType() == void.class) {
-                    mv.pop();
-                    mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
+                    createVoidResult(mv);
                 } else {
                     mv.invokeConstructor(VALUE_RESULT_TYPE, VALUE_RESULT_TYPE_CONSTRUCTOR);
                 }
@@ -273,6 +275,11 @@ public class TestThreadExecutionGenerator {
         mv.returnValue();
         mv.visitMaxs(1, 1);
         mv.visitEnd();
+    }
+
+    private static void createVoidResult(GeneratorAdapter mv) {
+        mv.pop();
+        mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
     }
 
     private static void storeExceptionResultFromThrowable(GeneratorAdapter mv, int resLocal, int iLocal) {

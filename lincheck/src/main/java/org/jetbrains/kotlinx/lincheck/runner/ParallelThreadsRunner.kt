@@ -167,7 +167,16 @@ open class ParallelThreadsRunner(
                 }
             }
         }
-        val postResults = scenario.postExecution.map { postActor -> executeActor(testInstance, postActor) }
+        val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
+        var postPartSuspended = false
+        val postResults = scenario.postExecution.map { postActor ->
+            // no actors are executed after suspension of a post part
+            if (postPartSuspended) NoResult
+            else {
+                // post part may contain suspendable actors if there aren't any in the parallel part, invoke with dummy continuation
+                executeActor(testInstance, postActor, dummyCompletion).also { postPartSuspended = it.wasSuspended }
+            }
+        }
         return ExecutionResult(initResults, parallelResults, postResults)
     }
 

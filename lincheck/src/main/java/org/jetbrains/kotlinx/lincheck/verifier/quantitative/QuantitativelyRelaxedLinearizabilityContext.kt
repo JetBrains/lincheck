@@ -68,7 +68,7 @@ class QuantitativelyRelaxedLinearizabilityContext(
      * The number of threads that expectedly suspended their execution.
      */
     private val suspendedThreads: Int
-        get() = (0..scenario.threads).count { t -> suspended[t] && expectedResults[t][executed[t]] is NoResult }
+        get() = (0..scenario.threads + 1).count { t -> suspended[t] && expectedResults[t][executed[t]] is NoResult }
 
     /**
      * Returns `true` if all threads are either completed or suspended their execution.
