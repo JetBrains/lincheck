@@ -27,29 +27,60 @@ import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
+import java.util.concurrent.CancellationException
 
 class BufferedChannelCustomTest : VerifierState() {
     val ch = Channel<Int>(3)
 
-    override fun extractState(): Any {
-        val elements = mutableListOf<Int>()
-        while (!ch.isEmpty) elements.add(ch.poll()!!)
-        val closed = ch.isClosedForSend || ch.isClosedForReceive
-        return elements to closed
+    override fun extractState(): Pair<Any, Boolean> {
+        val state = mutableListOf<Any>()
+        while (true) {
+            val x = poll() ?: break // no elements
+            state.add(x)
+            if (x is String) break // closed/cancelled
+        }
+        return state to isClosedForReceive()
     }
 
-    suspend fun send(value: Int) = ch.send(value)
+    suspend fun send(value: Int) = try {
+        ch.send(value)
+    } catch (e: NumberedCancellationException) {
+        e.testResult
+    }
 
-    suspend fun receive(): Int = ch.receive()
+    suspend fun receive() = try {
+        ch.receive()
+    } catch (e: NumberedCancellationException) {
+        e.testResult
+    }
 
-    fun poll() = ch.poll()
+    fun poll() = try {
+        ch.poll()
+    } catch (e: NumberedCancellationException) {
+        e.testResult
+    }
 
-    fun offer(value: Int) = ch.offer(value)
+    fun offer(value: Int) = try {
+        ch.offer(value)
+    } catch (e: NumberedCancellationException) {
+        e.testResult
+    }
+
+    fun cancel(token: Int) = ch.cancel(NumberedCancellationException(token))
+
+    fun isClosedForReceive() = ch.isClosedForReceive
+
+    fun isClosedForSend() = ch.isClosedForSend
+
+    private class NumberedCancellationException(number: Int): CancellationException() {
+        val testResult = "Cancelled($number)"
+    }
 
     private val r = BufferedChannelCustomTest::receive
     private val s = BufferedChannelCustomTest::send
     private val o = BufferedChannelCustomTest::offer
     private val p = BufferedChannelCustomTest::poll
+    private val c = BufferedChannelCustomTest::cancel
 
     @Test
     fun test1() {
@@ -88,5 +119,40 @@ class BufferedChannelCustomTest : VerifierState() {
                 }
             }
         }, true)
+    }
+
+    @Test
+    fun testSuspendablePostPart() {
+        verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
+            parallel {
+                thread {
+                    operation(actor(p), ValueResult(null))
+                }
+                thread {
+                    operation(actor(o, 1), ValueResult(true))
+                    operation(actor(o, 2), ValueResult(true))
+                }
+            }
+            post {
+                operation(actor(r), ValueResult(1))
+                operation(actor(r), ValueResult(2))
+                operation(actor(r), NoResult)
+            }
+        }, expected = true)
+    }
+
+    @Test
+    fun testVoidResult() {
+        verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
+            parallel {
+                thread {
+                    operation(actor(c, 5), VoidResult)
+                }
+                thread {
+                    operation(actor(r), ValueResult("Cancelled(5)"))
+                    operation(actor(s, 5), ValueResult("Cancelled(5)"))
+                }
+            }
+        }, expected = true)
     }
 }
