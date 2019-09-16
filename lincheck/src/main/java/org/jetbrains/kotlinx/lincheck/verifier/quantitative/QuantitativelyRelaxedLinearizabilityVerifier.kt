@@ -82,7 +82,7 @@ class QuantitativelyRelaxedLinearizabilityVerifier(
     }
 
     override fun createInitialContext(results: ExecutionResult): VerifierContext<LTS.State> =
-        QuantitativelyRelaxedLinearizabilityContext(scenario, lts.initialState, results, relaxationFactor, pathCostFunc)
+        QuantitativelyRelaxedLinearizabilityContext(scenario, results, lts.initialState,  pathCostFunc.createIterativePathCostFunctionCounter(relaxationFactor))
 }
 
 

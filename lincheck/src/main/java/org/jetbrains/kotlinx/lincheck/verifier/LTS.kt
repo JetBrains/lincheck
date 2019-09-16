@@ -132,16 +132,21 @@ class LTS(
                 resInfo
             }
             return if (isQuantitativelyRelaxed) resultWithTransitionInfo
-            else if (resultWithTransitionInfo!!.result == expectedResult ||
-                // Allow transition by a suspended request
-                // regardless whether the operation was suspended during test running or not,
-                // thus allowing elimination of interblocking operations in the implementation.
-                (isRequest && resultWithTransitionInfo.result is NoResult)
-            )
+            else if (transitionAllowed(isRequest, resultWithTransitionInfo!!, expectedResult))
                 resultWithTransitionInfo
             else
                 null
         }
+
+        private fun transitionAllowed(isRequest: Boolean, transitionInfo: TransitionInfo, expectedResult: Result) =
+            (transitionInfo.result == expectedResult) ||
+            // Allow transition with a suspended result
+            // regardless whether the operation was suspended during test running or not,
+            // thus allowing elimination of interblocking operations in the implementation.
+            (isRequest && transitionInfo.wasSuspended) ||
+            (transitionInfo.result is ValueResult && expectedResult is ValueResult && transitionInfo.result.value == expectedResult.value && !expectedResult.wasSuspended) ||
+            (transitionInfo.result is ExceptionResult && expectedResult is ExceptionResult && transitionInfo.result.tClazz == expectedResult.tClazz && !expectedResult.wasSuspended) ||
+            (expectedResult == VoidResult && transitionInfo.result == SuspendedVoidResult)
 
         /**
          * Counts or gets the existing relaxed transition from the current state
@@ -207,8 +212,8 @@ class LTS(
                 TransitionInfo(
                     nextState = stateInfo.state,
                     resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
-                    wasSuspended = result is NoResult,
-                    ticket = if (rf != null && result is NoResult) rf[operation.ticket] else operation.ticket,
+                    wasSuspended = result === Suspended,
+                    ticket = if (rf != null && result === Suspended) rf[operation.ticket] else operation.ticket,
                     rf = rf,
                     result = result
                 )
@@ -236,7 +241,7 @@ class LTS(
                     RelaxedTransitionInfo(
                         nextState = stateInfo.state,
                         resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
-                        wasSuspended = result is NoResult,
+                        wasSuspended = result === Suspended,
                         ticket = operation.ticket,
                         rf = rf,
                         result = result,
@@ -284,7 +289,7 @@ class LTS(
                 if (isQuantitativelyRelaxed) result else null
             )
         }
-        if (res is NoResult) {
+        if (res === Suspended) {
             // Operation suspended it's execution.
             suspendedOperations.add(this)
         } else {
@@ -574,16 +579,31 @@ abstract class VerifierContext<STATE>(
     /**
      * Current execution scenario.
      */
-    val scenario: ExecutionScenario,
+    protected val scenario: ExecutionScenario,
+    /**
+     * Expected execution results
+     */
+    protected val results: ExecutionResult,
     /**
      * LTS state of this context
      */
-    val state: STATE,
+    val state: State,
     /**
      * Number of executed actors in each thread. Note that initial and post parts
      * are represented as threads with ids `0` and `threads + 1` respectively.
      */
-    val executed: IntArray
+    protected val executed: IntArray = IntArray(scenario.threads + 2),
+    /**
+     * For every scenario thread stores whether it is suspended or not.
+     */
+    protected val suspended: BooleanArray = BooleanArray(scenario.threads + 2),
+    /**
+     * For every thread it stores a ticket assigned to the last executed actor by [LTS].
+     * A ticket is assigned from the range (0 .. threads) to an actor that suspends it's execution,
+     * after being resumed the actor is invoked with this ticket to complete it's execution.
+     * If an actor does not suspend, the assigned ticket equals `-1`.
+     */
+    protected val tickets: IntArray = IntArray(scenario.threads + 2) { -1 }
 ) {
     /**
      * Counts next possible states and the corresponding contexts if the specified thread is executed.
@@ -594,16 +614,6 @@ abstract class VerifierContext<STATE>(
      * Returns `true` if all actors in the specified thread are executed.
      */
     fun isCompleted(threadId: Int) = executed[threadId] == scenario[threadId].size
-
-    /**
-     * Returns the number of threads from the range [[tidFrom]..[tidTo]] (inclusively) which are completed.
-     */
-    private fun completedThreads(tidFrom: Int, tidTo: Int) = (tidFrom..tidTo).count { t -> isCompleted(t) }
-
-    /**
-     * Returns the number of completed scenario threads.
-     */
-    val completedThreads: Int get() = completedThreads(0, scenario.threads + 1)
 
     /**
      * Returns `true` if the initial part is completed.
@@ -618,6 +628,22 @@ abstract class VerifierContext<STATE>(
     /**
      * Returns `true` if all threads completed their execution.
      */
-    abstract val completed: Boolean
+    val completed: Boolean get() = completedThreads + suspendedThreads == scenario.threads + 2
+
+    /**
+     * The number of threads that expectedly suspended their execution.
+     */
+    private val suspendedThreads: Int
+        get() = (0..scenario.threads + 1).count { t -> suspended[t] && results[t][executed[t]] === Suspended }
+
+    /**
+     * Returns the number of threads from the range [[tidFrom]..[tidTo]] (inclusively) which are completed.
+     */
+    private fun completedThreads(tidFrom: Int, tidTo: Int) = (tidFrom..tidTo).count { t -> isCompleted(t) }
+
+    /**
+     * Returns the number of completed scenario threads.
+     */
+    private val completedThreads: Int get() = completedThreads(0, scenario.threads + 1)
 }
 

@@ -80,7 +80,7 @@ open class ParallelThreadsRunner(
             // otherwise it was already decremented before writing resWithCont
             resWithCont.get() ?: completedOrSuspendedThreads.decrementAndGet()
             // write method's final result
-            suspensionPointResults[threadId] = createLinCheckResult(result)
+            suspensionPointResults[threadId] = createLinCheckResult(result, wasSuspended = true)
         }
     }
 
@@ -123,20 +123,19 @@ open class ParallelThreadsRunner(
         val finalResult: Result
         val completion = completions[threadId][actorId]
         if (res === COROUTINE_SUSPENDED) {
-            suspensionPointResults[threadId].wasSuspended = true
             completedOrSuspendedThreads.incrementAndGet()
             // Thread was suspended -> if suspended method call has follow-up after this suspension point
             // then wait for result of this suspension point
             // and continuation written by resuming thread to be executed by this thread,
             // or final result written by the resuming thread
-            while (completion.resWithCont.get() === null && suspensionPointResults[threadId] is NoResult) {
+            while (completion.resWithCont.get() === null && suspensionPointResults[threadId] === NoResult) {
                 if (completedOrSuspendedThreads.get() == scenario.threads) {
                     // all threads were suspended or completed
                     suspensionPointResults[threadId] = NoResult
-                    return NoResult
+                    return Suspended
                 }
             }
-            if (suspensionPointResults[threadId] !is NoResult) {
+            if (suspensionPointResults[threadId] !== NoResult) {
                 // Result of the suspension point equals to the final method call result
                 // completion.resumeWith was called in the resuming thread, final result is written
                 finalResult = suspensionPointResults[threadId]
@@ -171,8 +170,9 @@ open class ParallelThreadsRunner(
         var postPartSuspended = false
         val postResults = scenario.postExecution.map { postActor ->
             // no actors are executed after suspension of a post part
-            if (postPartSuspended) NoResult
-            else {
+            if (postPartSuspended) {
+                NoResult
+            } else {
                 // post part may contain suspendable actors if there aren't any in the parallel part, invoke with dummy continuation
                 executeActor(testInstance, postActor, dummyCompletion).also { postPartSuspended = it.wasSuspended }
             }

@@ -133,22 +133,22 @@ private fun getRelaxedMethod(instance: Any, actor: Actor): Method = methodsCache
  * Failure values of [kotlin.Result] instances are represented as [ExceptionResult].
  */
 internal fun createLinCheckResult(res: Any?, wasSuspended: Boolean = false) = when {
-    (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is kotlin.Unit -> VoidResult.also { it.wasSuspended = wasSuspended }
-    res != null && res is Throwable -> ExceptionResult(res.javaClass).also { it.wasSuspended = wasSuspended }
-    res === COROUTINE_SUSPENDED -> NoResult.also { it.wasSuspended = true }
-    res is kotlin.Result<Any?> -> res.toLinCheckResult().also { it.wasSuspended = wasSuspended }
-    else -> ValueResult(res).also { it.wasSuspended = wasSuspended }
+    (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
+    res != null && res is Throwable -> ExceptionResult(res.javaClass, wasSuspended)
+    res === COROUTINE_SUSPENDED -> Suspended
+    res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
+    else -> ValueResult(res, wasSuspended)
 }
 
-private fun kotlin.Result<Any?>.toLinCheckResult() =
+private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
     if (isSuccess) {
         when (val value = getOrNull()) {
-            is Unit -> VoidResult
+            is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
             // Throwable was returned as a successful result
-            is Throwable -> ValueResult(value::class.java)
-            else -> ValueResult(value)
+            is Throwable -> ValueResult(value::class.java, wasSuspended)
+            else -> ValueResult(value, wasSuspended)
         }
-    } else ExceptionResult(exceptionOrNull()?.let { it::class.java })
+    } else ExceptionResult(exceptionOrNull()?.let { it::class.java }, wasSuspended)
 
 
 fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
