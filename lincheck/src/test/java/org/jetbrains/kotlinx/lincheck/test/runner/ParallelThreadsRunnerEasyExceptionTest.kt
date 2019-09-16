@@ -106,7 +106,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susWithoutException), ExceptionResult(SuspendResumeScenarios.TestException::class.java)
+                        actor(susWithoutException), ExceptionResult(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -126,7 +126,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susResumeThrow), ExceptionResult(SuspendResumeScenarios.TestException::class.java)
+                        actor(susResumeThrow), ExceptionResult(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -134,8 +134,7 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner =
-            ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
+        val runner = ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
         val results = runner.run()
         assertEquals(results, expectedResults)
     }

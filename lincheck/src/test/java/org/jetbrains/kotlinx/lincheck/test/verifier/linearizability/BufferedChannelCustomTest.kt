@@ -96,7 +96,7 @@ class BufferedChannelCustomTest : VerifierState() {
                     operation(actor(r), ValueResult(1))
                     operation(actor(r), ValueResult(2))
                     operation(actor(s,5), VoidResult)
-                    operation(actor(s,6), NoResult)
+                    operation(actor(s,6), Suspended)
                     operation(actor(r), NoResult)
                 }
             }
@@ -136,7 +136,7 @@ class BufferedChannelCustomTest : VerifierState() {
             post {
                 operation(actor(r), ValueResult(1))
                 operation(actor(r), ValueResult(2))
-                operation(actor(r), NoResult)
+                operation(actor(r), Suspended)
             }
         }, expected = true)
     }

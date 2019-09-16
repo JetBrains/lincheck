@@ -36,29 +36,38 @@ import kotlin.coroutines.Continuation
  * the execution thread was suspended without any chance to be resumed,
  * meaning that all other execution threads completed their execution or were suspended too.
  */
-public sealed class Result {
-    var wasSuspended: Boolean = false
+sealed class Result {
+    abstract val wasSuspended: Boolean
+    protected val wasSuspendedPrefix: String get() = (if (wasSuspended) "S + " else "")
 }
 
 /**
  * Type of result used if the actor invocation returns any value.
  */
-data class ValueResult(val value: Any?) : Result() {
-    override fun toString() = if (wasSuspended) "($value, wasSuspended)" else "$value"
+data class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
+    override fun toString() = wasSuspendedPrefix + "$value"
 }
 
 /**
  * Type of result used if the actor invocation does not return value.
  */
 object VoidResult : Result() {
-    override fun toString() = if (wasSuspended) "(void, wasSuspended)" else "void"
+    override val wasSuspended get() = false
+    override fun toString() = wasSuspendedPrefix + VOID
 }
+
+object SuspendedVoidResult : Result() {
+    override val wasSuspended get() = true
+    override fun toString() = wasSuspendedPrefix + VOID
+}
+
+private const val VOID = "void"
 
 /**
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
  */
-data class ExceptionResult(val tClazz: Class<out Throwable>?) : Result() {
-    override fun toString() = if (wasSuspended) "(${tClazz?.simpleName}, wasSuspended)" else "${tClazz?.simpleName}"
+data class ExceptionResult @JvmOverloads constructor(val tClazz: Class<out Throwable>?, override val wasSuspended: Boolean = false) : Result() {
+    override fun toString() = wasSuspendedPrefix + "${tClazz?.simpleName}"
 }
 
 /**
@@ -66,7 +75,13 @@ data class ExceptionResult(val tClazz: Class<out Throwable>?) : Result() {
  * though it can be resumed later
  */
 object NoResult : Result() {
-    override fun toString() = "suspended"
+    override val wasSuspended get() = false
+    override fun toString() = "-"
+}
+
+object Suspended : Result() {
+    override val wasSuspended get() = true
+    override fun toString() = "S"
 }
 
 /**
@@ -74,7 +89,7 @@ object NoResult : Result() {
  * Resuming thread writes result of the suspension point and continuation to be executed in the resumed thread into [contWithSuspensionPointRes].
  */
 internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, kotlin.Result<Any?>>) : Result() {
-    init { super.wasSuspended = true }
+    override val wasSuspended: Boolean get() = true
 
     lateinit var resumedActor: Actor
     lateinit var by: Actor

@@ -21,59 +21,23 @@
  */
 package org.jetbrains.kotlinx.lincheck.verifier.quantitative
 
-import org.jetbrains.kotlinx.lincheck.NoResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.LTS
-import org.jetbrains.kotlinx.lincheck.verifier.TransitionInfo
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.verifier.isRelaxed
-import java.lang.IndexOutOfBoundsException
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 
-class QuantitativelyRelaxedLinearizabilityContext(
-    scenario: ExecutionScenario,
-    state: LTS.State,
-    executed: IntArray,
-    private val expectedResults: ExecutionResult,
-    /**
-     * For every scenario thread stores whether it is suspended or not.
-     */
-    private val suspended: BooleanArray,
-    /**
-     * For every thread it stores a ticket assigned to the last executed actor by [LTS].
-     * A ticket is assigned from the range (0 .. threads) to an actor that suspends it's execution,
-     * after being resumed the actor is invoked with this ticket to complete it's execution.
-     * If an actor does not suspend, the assigned ticket equals `-1`.
-     */
-    private val tickets: IntArray,
-    /**
-     * Path cost counter
-     */
+class QuantitativelyRelaxedLinearizabilityContext : VerifierContext<LTS.State> {
     private val iterativePathCostFunctionCounter: IterativePathCostFunctionCounter
-) : VerifierContext<LTS.State>(scenario, state, executed) {
 
-    constructor (scenario: ExecutionScenario, state: LTS.State, results: ExecutionResult, relaxationFactor: Int, pathCostFunc: PathCostFunction)
-        : this(
-        scenario,
-        state,
-        executed = IntArray(scenario.threads + 2),
-        expectedResults = results,
-        suspended = BooleanArray(scenario.threads + 2),
-        tickets = IntArray(scenario.threads + 2) { -1 },
-        iterativePathCostFunctionCounter = pathCostFunc.createIterativePathCostFunctionCounter(relaxationFactor)
-    )
+    constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
+                iterativePathCostFunctionCounter: IterativePathCostFunctionCounter) : super(scenario, results, state) {
+        this.iterativePathCostFunctionCounter = iterativePathCostFunctionCounter
+    }
 
-    /**
-     * The number of threads that expectedly suspended their execution.
-     */
-    private val suspendedThreads: Int
-        get() = (0..scenario.threads + 1).count { t -> suspended[t] && expectedResults[t][executed[t]] is NoResult }
-
-    /**
-     * Returns `true` if all threads are either completed or suspended their execution.
-     */
-    override val completed: Boolean get() = completedThreads + suspendedThreads == scenario.threads + 2
+    constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
+                executed: IntArray, suspended: BooleanArray, tickets: IntArray,
+                iterativePathCostFunctionCounter: IterativePathCostFunctionCounter) : super(scenario, results, state, executed, suspended, tickets) {
+        this.iterativePathCostFunctionCounter = iterativePathCostFunctionCounter
+    }
 
     override fun nextContexts(threadId: Int): List<VerifierContext<LTS.State>> {
         // Check whether the specified thread is not suspended and there are unprocessed actors
@@ -90,7 +54,7 @@ class QuantitativelyRelaxedLinearizabilityContext(
         if (!legal) return emptyList()
         val actorId = executed[threadId]
         val actor = scenario[threadId][actorId]
-        val expectedResult = expectedResults[threadId][actorId]
+        val expectedResult = results[threadId][actorId]
         // Try to make transition by the next actor from the current thread,
         // passing the ticket corresponding to the current thread.
         return if (!actor.isRelaxed) {
@@ -144,9 +108,9 @@ class QuantitativelyRelaxedLinearizabilityContext(
             }
         }
         return QuantitativelyRelaxedLinearizabilityContext(
-            scenario,
+            scenario = scenario,
             state = nextState,
-            expectedResults = expectedResults,
+            results = results,
             executed = nextExecuted,
             suspended = nextSuspended,
             tickets = nextTickets,

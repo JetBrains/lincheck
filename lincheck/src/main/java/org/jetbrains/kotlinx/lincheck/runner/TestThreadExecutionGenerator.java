@@ -72,6 +72,9 @@ public class TestThreadExecutionGenerator {
     private static final Type VOID_RESULT_TYPE = Type.getType(VoidResult.class);
     private static final String VOID_RESULT_CLASS_NAME = VoidResult.class.getCanonicalName().replace('.', '/');
 
+    private static final Type SUSPENDED_VOID_RESULT_TYPE = Type.getType(SuspendedVoidResult.class);
+    private static final String SUSPENDED_RESULT_CLASS_NAME = SuspendedVoidResult.class.getCanonicalName().replace('.', '/');
+
     private static final String INSTANCE = "INSTANCE";
 
     private static final Type VALUE_RESULT_TYPE = Type.getType(ValueResult.class);
@@ -81,6 +84,8 @@ public class TestThreadExecutionGenerator {
     private static final Method EXCEPTION_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, new Type[] {CLASS_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = Type.getType(Result[].class);
+
+    private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", Type.BOOLEAN_TYPE, new Type[]{});
 
     private static final Type PARALLEL_THREADS_RUNNER_TYPE = Type.getType(ParallelThreadsRunner.class);
     private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, Type.INT_TYPE, Type.INT_TYPE });
@@ -226,12 +231,12 @@ public class TestThreadExecutionGenerator {
                 mv.push(i);
                 mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
                 if (actor.getMethod().getReturnType() == void.class) {
-                    createVoidResult(mv);
+                    createVoidResult(actor, mv);
                 }
             } else {
                 // Create result
                 if (actor.getMethod().getReturnType() == void.class) {
-                    createVoidResult(mv);
+                    createVoidResult(actor, mv);
                 } else {
                     mv.invokeConstructor(VALUE_RESULT_TYPE, VALUE_RESULT_TYPE_CONSTRUCTOR);
                 }
@@ -253,7 +258,7 @@ public class TestThreadExecutionGenerator {
             // Increment number of current operation
             mv.iinc(iLocal, 1);
             mv.visitJumpInsn(GOTO, launchNextActor);
-            // write NoResult(wasSuspended = true) if all threads were suspended or completed
+            // write NoResult if all threads were suspended or completed
             mv.visitLabel(returnNoResult);
             mv.loadLocal(resLocal);
             mv.push(i);
@@ -277,9 +282,19 @@ public class TestThreadExecutionGenerator {
         mv.visitEnd();
     }
 
-    private static void createVoidResult(GeneratorAdapter mv) {
-        mv.pop();
-        mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
+    private static void createVoidResult(Actor actor, GeneratorAdapter mv) {
+        if (actor.isSuspendable()) {
+            Label suspendedVoidResult = mv.newLabel();
+            mv.invokeVirtual(RESULT_TYPE, RESULT_WAS_SUSPENDED_GETTER_METHOD);
+            mv.push(true);
+            mv.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, suspendedVoidResult);
+            mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
+            mv.visitLabel(suspendedVoidResult);
+            mv.visitFieldInsn(GETSTATIC, SUSPENDED_RESULT_CLASS_NAME, INSTANCE, SUSPENDED_VOID_RESULT_TYPE.getDescriptor());
+        } else {
+            mv.pop();
+            mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
+        }
     }
 
     private static void storeExceptionResultFromThrowable(GeneratorAdapter mv, int resLocal, int iLocal) {
