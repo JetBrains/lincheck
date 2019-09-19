@@ -33,12 +33,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxe
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.*
 import org.junit.Test
 
-@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
-@QuantitativeRelaxationVerifierConf(
-    factor = 3,
-    pathCostFunc = PathCostFunction.MAX,
-    costCounter = QuantitativeStackTest.CostCounter::class
-)
+@StressCTest(sequentialSpecification = QuantitativeStackTest.CostCounter::class,
+             verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
 @Param(name = "push", gen = IntGen::class, conf = "1:20")
 class QuantitativeStackTest {
     private val s = KRelaxedPopStack<Int>(2)
@@ -59,8 +55,8 @@ class QuantitativeStackTest {
     @Test
     fun test() = LinChecker.check(QuantitativeStackTest::class.java)
 
-    // Should have '(k: Int)' constructor
-    data class CostCounter @JvmOverloads constructor(
+    @QuantitativeRelaxationVerifierConf(factor = 3, pathCostFunc = PathCostFunction.MAX)
+    data class CostCounter @JvmOverloads constructor( // Should have '(k: Int)' constructor
         private val k: Int,
         private val s: List<Int> = emptyList()
     ) {

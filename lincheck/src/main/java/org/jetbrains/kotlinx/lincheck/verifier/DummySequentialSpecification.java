@@ -1,10 +1,8 @@
-package org.jetbrains.kotlinx.lincheck.verifier.quantitative;
-
-/*
+/*-
  * #%L
  * Lincheck
  * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
+ * Copyright (C) 2019 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,25 +19,8 @@ package org.jetbrains.kotlinx.lincheck.verifier.quantitative;
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package org.jetbrains.kotlinx.lincheck.verifier;
 
-import org.jetbrains.kotlinx.lincheck.*;
-
-import java.lang.annotation.*;
-
-/**
- * Configuration for {@link QuantitativelyRelaxedLinearizabilityVerifier}
- * which should be added to a test class.
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface QuantitativeRelaxationVerifierConf {
-    /**
-     * Relaxation factor
-     */
-    int factor();
-
-    /**
-     * Path cost function
-     */
-    PathCostFunction pathCostFunc();
+public class DummySequentialSpecification {
+    private DummySequentialSpecification() {} // This dummy class should not be created
 }

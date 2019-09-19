@@ -26,9 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.LogLevel;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxationVerifierConf;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.DEFAULT_LOG_LEVEL;
-import static org.jetbrains.kotlinx.lincheck.UtilsKt.createTestInstance;
 import java.util.*;
 
 
@@ -48,7 +46,7 @@ public class LinChecker {
         LoggingLevel logLevel;
         if (options != null) {
             logLevel = options.logLevel;
-            this.testConfigurations = Collections.singletonList(options.createTestConfigurations());
+            this.testConfigurations = Collections.singletonList(options.createTestConfigurations(testClass));
         } else {
             logLevel = getLogLevelFromAnnotation();
             this.testConfigurations = CTestConfiguration.createFromTestClass(testClass);
@@ -95,7 +93,6 @@ public class LinChecker {
     }
 
     private void checkImpl(CTestConfiguration testCfg) throws AssertionError, Exception {
-        if (testCfg.requireStateEquivalenceImplCheck) checkStateEquivalenceImpl(testClass);
         ExecutionGenerator exGen = createExecutionGenerator(testCfg.generatorClass, testCfg);
         // Run iterations
         for (int iteration = 1; iteration <= testCfg.iterations; iteration++) {
@@ -165,23 +162,10 @@ public class LinChecker {
 
     private void runScenario(ExecutionScenario scenario, CTestConfiguration testCfg) throws AssertionError, Exception {
         validateScenario(testCfg, scenario);
-        Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testClass);
+        Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testCfg.sequentialSpecification);
+        if (testCfg.requireStateEquivalenceImplCheck) verifier.checkStateEquivalenceImplementation();
         Strategy strategy = Strategy.createStrategy(testCfg, testClass, scenario, verifier, reporter);
         strategy.run();
-    }
-
-    private void checkStateEquivalenceImpl(Class<?> testClass) {
-        if (!testClass.isAnnotationPresent(QuantitativeRelaxationVerifierConf.class)) {
-            Object i1 = createTestInstance(testClass);
-            Object i2 = createTestInstance(testClass);
-            if (i1.hashCode() != i2.hashCode() || !i1.equals(i2)) {
-                throw new IllegalStateException(
-                    "equals() and hashCode() methods for this test are not defined or defined incorrectly.\n" +
-                    "It is more convenient to make the test class extend `VerifierState` class and override `extractState()` function to define equals() and hashCode() methods.\n" +
-                    "This check may be suppressed by setting the requireStateEquivalenceImplementationCheck option to false."
-                );
-            }
-        }
     }
 
     private void validateScenario(CTestConfiguration testCfg, ExecutionScenario scenario) {
@@ -194,15 +178,13 @@ public class LinChecker {
     }
 
     private Verifier createVerifier(Class<? extends Verifier> verifierClass, ExecutionScenario scenario,
-                                    Class<?> testClass) throws Exception {
-        return verifierClass.getConstructor(ExecutionScenario.class, Class.class)
-                .newInstance(scenario, testClass);
+                                    Class<?> sequentialSpecification) throws Exception {
+        return verifierClass.getConstructor(ExecutionScenario.class, Class.class).newInstance(scenario, sequentialSpecification);
     }
 
     private ExecutionGenerator createExecutionGenerator(Class<? extends ExecutionGenerator> generatorClass,
                                                         CTestConfiguration testConfiguration) throws Exception {
-        return generatorClass.getConstructor(CTestConfiguration.class, CTestStructure.class)
-                .newInstance(testConfiguration, testStructure);
+        return generatorClass.getConstructor(CTestConfiguration.class, CTestStructure.class).newInstance(testConfiguration, testStructure);
     }
 
     private LoggingLevel getLogLevelFromAnnotation() {

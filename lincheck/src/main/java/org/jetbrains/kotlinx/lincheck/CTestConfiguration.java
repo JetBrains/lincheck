@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
@@ -36,6 +35,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 
 /**
  * Configuration of an abstract concurrent test.
@@ -51,6 +52,7 @@ public abstract class CTestConfiguration {
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
     public static final boolean DEFAULT_MINIMIZE_ERROR = true;
 
+    public final Class<?> testClass;
     public final int iterations;
     public final int threads;
     public final int actorsPerThread;
@@ -60,11 +62,13 @@ public abstract class CTestConfiguration {
     public final Class<? extends Verifier> verifierClass;
     public final boolean requireStateEquivalenceImplCheck;
     public final Boolean minimizeFailedScenario;
+    public final Class<?> sequentialSpecification;
 
-    protected CTestConfiguration(int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
+    protected CTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
         Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario)
+        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
     {
+        this.testClass = testClass;
         this.iterations = iterations;
         this.threads = threads;
         this.actorsPerThread = actorsPerThread;
@@ -74,26 +78,22 @@ public abstract class CTestConfiguration {
         this.verifierClass = verifierClass;
         this.requireStateEquivalenceImplCheck = requireStateEquivalenceImplCheck;
         this.minimizeFailedScenario = minimizeFailedScenario;
+        this.sequentialSpecification = sequentialSpecification;
     }
 
     static List<CTestConfiguration> createFromTestClass(Class<?> testClass) {
-        boolean hasTestClassSuspendableActors = Arrays.stream(testClass.getDeclaredMethods()).anyMatch(m -> m.isAnnotationPresent(Operation.class) &&
-                m.getParameterTypes().length > 0 && m.getParameterTypes()[m.getParameterTypes().length - 1].isAssignableFrom(kotlin.coroutines.Continuation.class));
         Stream<StressCTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))
-            .map(ann -> new StressCTestConfiguration(ann.iterations(),
+            .map(ann -> new StressCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
-                    ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario()));
+                    ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
+                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
         Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
-            .map(ann -> {
-                if (hasTestClassSuspendableActors && ann.actorsAfter() > 0) {
-                    throw new IllegalArgumentException("Post execution part is not allowed for test classes with suspendable operations");
-                }
-                return new RandomSwitchCTestConfiguration(ann.iterations(),
-                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                        ann.generator(), ann.verifier(), ann.invocationsPerIteration(),
-                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario());
-            });
+            .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
+                    ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
+                    ann.generator(), ann.verifier(), ann.invocationsPerIteration(),
+                    ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
+                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
         return Stream.concat(stressConfigurations, randomSwitchConfigurations).collect(Collectors.toList());
     }
 }

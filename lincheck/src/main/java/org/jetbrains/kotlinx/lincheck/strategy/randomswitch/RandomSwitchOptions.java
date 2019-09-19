@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
+
 /**
  * Options for {@link RandomSwitchStrategy random-switch} strategy.
  */
@@ -39,8 +41,9 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
     }
 
     @Override
-    public RandomSwitchCTestConfiguration createTestConfigurations() {
-        return new RandomSwitchCTestConfiguration(iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-            executionGenerator, verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario);
+    public RandomSwitchCTestConfiguration createTestConfigurations(Class<?> testClass) {
+        return new RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
+            executionGenerator, verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+            chooseSequentialSpecification(sequentialSpecification, testClass));
     }
 }

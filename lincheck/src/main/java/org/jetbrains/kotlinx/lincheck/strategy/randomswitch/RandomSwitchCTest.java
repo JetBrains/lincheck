@@ -27,8 +27,10 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
+import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
 
 import java.lang.annotation.*;
 
@@ -114,6 +116,17 @@ public @interface RandomSwitchCTest {
      * Enabled by default.
      */
     boolean minimizeFailedScenario() default true;
+
+    /**
+     * The specified class defines the sequential behavior of the testing data structure;
+     * it is used by {@link Verifier} to build a labeled transition system,
+     * and should have the same methods as the testing data structure.
+     * However, some verifiers require additional parameters for these methods,
+     * see {@link QuantitativelyRelaxedLinearizabilityVerifier} as an example.
+     *
+     * By default, the provided concurrent implementation is used in a sequential way.
+     */
+    Class<?> sequentialSpecification() default DummySequentialSpecification.class;
 
     /**
      * Holder annotation for {@link RandomSwitchCTest}.

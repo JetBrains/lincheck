@@ -42,7 +42,8 @@ import kotlin.math.max
  * the next possible transitions using [VerifierContext.nextContexts] function. This verifier
  * uses depth-first search to find a proper path.
  */
-abstract class AbstractLTSVerifier<STATE>(protected val scenario: ExecutionScenario, protected val testClass: Class<*>) : CachedVerifier() {
+abstract class AbstractLTSVerifier<STATE>(protected val scenario: ExecutionScenario, protected val sequentialSpecification: Class<*>) : CachedVerifier() {
+    abstract val lts: LTS
     abstract fun createInitialContext(results: ExecutionResult): VerifierContext<STATE>
 
     override fun verifyResultsImpl(results: ExecutionResult) = verify(createInitialContext(results))
@@ -59,6 +60,8 @@ abstract class AbstractLTSVerifier<STATE>(protected val scenario: ExecutionScena
         }
         return false
     }
+
+    override fun checkStateEquivalenceImplementation() = lts.checkStateEquivalenceImplementation()
 }
 
 typealias RemappingFunction = IntArray
@@ -90,7 +93,7 @@ typealias ResumedTickets = Set<Int>
  */
 
 class LTS(
-    private val testClass: Class<*>,
+    private val sequentialSpecification: Class<*>,
     private val isQuantitativelyRelaxed: Boolean,
     private val relaxationFactor: Int
 ) {
@@ -163,7 +166,7 @@ class LTS(
             ) -> T
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
-            val instance = if (isQuantitativelyRelaxed) costCounter!! else createTestInstance(testClass)
+            val instance = if (isQuantitativelyRelaxed) costCounter!! else sequentialSpecification.newInstance()
             val suspendedOperations = mutableListOf<Operation>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
             try {
@@ -190,7 +193,7 @@ class LTS(
                 else {
                     if (result is ValueResult && result.value != null) {
                         // Standalone instance of CostCounter is returned.
-                        check(result.value.javaClass == testClass) {
+                        check(result.value.javaClass == sequentialSpecification) {
                             "Non-relaxed ${operation.actor} should store transitions within CostCounter instances, but ${result.value} is found"
                         }
                         result.value
@@ -313,14 +316,27 @@ class LTS(
     }
 
     private fun createInitialState(): State {
-        val instance =
-            if (isQuantitativelyRelaxed) createCostCounterInstance(testClass, relaxationFactor) else createTestInstance(testClass)
+        val instance = createInitialStateInstance()
         return StateInfo(
             state = State(emptyList(), if (isQuantitativelyRelaxed) instance else null),
             instance = instance,
             suspendedOperations = emptyList(),
             resumedOperations = emptyList()
         ).intern(curOperation = null) { stateInfo, rf -> return@intern stateInfo.state }
+    }
+
+    private fun createInitialStateInstance() = if (isQuantitativelyRelaxed) createCostCounterInstance(sequentialSpecification, relaxationFactor)
+                                               else sequentialSpecification.newInstance()
+
+    fun checkStateEquivalenceImplementation() {
+        val i1 = createInitialStateInstance()
+        val i2 = createInitialStateInstance()
+        check(i1.hashCode() == i2.hashCode() && i1 == i2) {
+            "equals() and hashCode() methods for this test are not defined or defined incorrectly.\n" +
+            "It is more convenient to make the sequential specification  class extend `VerifierState` class " +
+            "and override the `extractState()` function to define both equals() and hashCode() methods.\n" +
+            "This check may be suppressed by setting the `requireStateEquivalenceImplementationCheck` option to false."
+        }
     }
 
     private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction {

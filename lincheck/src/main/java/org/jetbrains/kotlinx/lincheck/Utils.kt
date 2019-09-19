@@ -23,12 +23,12 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import java.lang.Exception
-import java.lang.reflect.*
+import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 import java.util.*
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
-import kotlin.collections.HashMap
 import kotlin.coroutines.Continuation
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 
 @Volatile
@@ -42,16 +42,9 @@ fun consumeCPU(tokens: Int) {
         consumedCPU += t
 }
 
-/**
- * Creates test class instance using empty arguments constructor.
- */
-fun createTestInstance(testClass: Class<*>): Any {
-    try {
-        return testClass.newInstance()
-    } catch (e: Throwable) {
-        throw IllegalStateException("Test class should have empty constructor", e)
-    }
-}
+fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
+    if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
+    else sequentialSpecificationByUser
 
 /**
  * Creates instance of cost counter class using the (int relaxationFactor) constructor.
@@ -76,26 +69,24 @@ internal fun executeActor(testInstance: Any, actor: Actor, completion: Continuat
     executeActor(testInstance, actor, completion, null)
 
 /**
- * Executes the specified actor on the test instance and returns its result.
+ * Executes the specified actor on the sequential specification instance and returns its result.
  */
 internal fun executeActor(
-    testInstance: Any,
+    specification: Any,
     actor: Actor,
     completion: Continuation<Any?>?,
     result: Result?
 ): Result {
     try {
-        val m = if (result == null)
-            getMethod(testInstance, actor)
-        else
-            getRelaxedMethod(testInstance, actor)
+        val m = if (result == null) getMethod(specification, actor)
+        else getRelaxedMethod(specification, actor)
         val args = when {
             actor.isSuspendable && result != null -> actor.arguments + result + completion
             actor.isSuspendable -> actor.arguments + completion
             result != null -> actor.arguments + result
             else -> actor.arguments
         }
-        val res = m.invoke(testInstance, *args.toTypedArray())
+        val res = m.invoke(specification, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLinCheckResult(res)
     } catch (invE: Throwable) {
         val eClass = (invE.cause ?: invE)::class.java
@@ -114,19 +105,18 @@ internal fun executeActor(
     }
 }
 
-private val methodsCache = WeakHashMap<ClassLoader, HashMap<Actor, Method>>()
-private val relaxedMethodsCache = WeakHashMap<ClassLoader, HashMap<Actor, Method>>()
+private val methodsCache = WeakHashMap<Class<*>, HashMap<Method, Method>>()
 
-private fun getMethod(testInstance: Any, actor: Actor): Method = methodsCache
-    .computeIfAbsent(testInstance.javaClass.classLoader) { hashMapOf() }
-    .computeIfAbsent(actor) {
-        testInstance.javaClass.getMethod(actor.method.name, *actor.method.parameterTypes)
+private fun getMethod(instance: Any, actor: Actor): Method = methodsCache
+    .computeIfAbsent(instance.javaClass) { hashMapOf() }
+    .computeIfAbsent(actor.method) {
+        instance.javaClass.getMethod(actor.method.name, *actor.method.parameterTypes)
     }
 
-private fun getRelaxedMethod(testInstance: Any, actor: Actor): Method = relaxedMethodsCache
-    .computeIfAbsent(testInstance.javaClass.classLoader) { hashMapOf() }
-    .computeIfAbsent(actor) {
-        testInstance.javaClass.getMethod(actor.method.name, *(actor.method.parameterTypes + Result::class.java))
+private fun getRelaxedMethod(instance: Any, actor: Actor): Method = methodsCache
+    .computeIfAbsent(instance.javaClass) { hashMapOf() }
+    .computeIfAbsent(actor.method) {
+        instance.javaClass.getMethod(actor.method.name, *(actor.method.parameterTypes + Result::class.java))
     }
 
 /**

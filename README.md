@@ -26,6 +26,7 @@ Table of contents
          * [Operation groups](#operation-groups)
       * [Parameter generators](#parameter-generators)
          * [Binding parameter and generator names](#binding-parameter-and-generator-names)
+      * [Sequential specification](#sequential-specification)
       * [Run test](#run-test)
    * [Execution strategies](#execution-strategies)
       * [Stress strategy](#stress-strategy)
@@ -132,6 +133,13 @@ Unfortunately, this feature is disabled in **javac** compiler by default. Use `-
 ```
 
 > However, some IDEs (such as IntelliJ IDEA) do not understand build system configuration as well as possible and running a test from these IDEs will not work. In order to solve this issue you can add `-parameters` option for **javac** compiler in your IDE configuration.
+
+## Sequential specification
+By default, **lincheck** sequentially uses the testing data structure to define the correct specification.
+However, it is sometimes better to define it explicitly, by writing a simple sequential implementation, and be sure that it is correct. 
+Thus, **lincheck** can test that the testing data structure is correct even without parallelism.
+This sequential specification class should have the same methods as the testing data structure; however, some verifiers require additional parameters for these methods, see *QuantitativelyRelaxedLinearizabilityVerifier* as an example.
+The specification class can be defined via `sequentialSpecification` parameter in both `Options` instances and the corresponding annotations.
 
 ## Run test
 In order to run a test, `LinChecker.check(...)` method should be executed with the provided test class as a parameter. Then **lincheck** looks at execution strategies to be used, which can be provided using annotations or options (see [Configuration via options](#configuration-via-options) for details), and runs a test with each of provided strategies. If an error is found, an `AssertionError` is thrown and the detailed error information is printed to the standard output. It is recommended to use **JUnit** or similar testing library to run `LinChecker.check(...)` method. 
@@ -271,12 +279,8 @@ Here is an example for k-stack with relaxed `pop()` operation and normal `push` 
 ### Test example
 
 ```kotlin
-@StressCTest(verifier = QuantitativeRelaxationVerifier::class)
-@QuantitativeRelaxationVerifierConf(
-  factor = K, 
-  pathCostFunc = MAX, 
-  costCounter = KRelaxedPopStackTest.CostCounter::class
-)
+@StressCTest(sequentialSpecification = KRelaxedPopStackTest.CostCounter::class,
+             verifier = QuantitativeRelaxationVerifier::class)
 class KRelaxedPopStackTest {
   private val s = KRelaxedPopStack<Int>(K)
 
@@ -290,7 +294,7 @@ class KRelaxedPopStackTest {
   @Test
   fun test() = LinChecker.check(KRelaxedPopStackTest::class.java)
 
-  // Should have '(k: Int)' constructor
+  @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX)
   data class CostCounter @JvmOverloads constructor(
     private val k: Int, 
     private val s: List<Int> = emptyList()

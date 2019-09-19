@@ -36,9 +36,9 @@ public class QuiescentConsistencyVerifier extends CachedVerifier {
     private final ExecutionScenario originalScenario;
     private final LinearizabilityVerifier linearizabilityVerifier;
 
-    public QuiescentConsistencyVerifier(ExecutionScenario scenario, Class<?> testClass) {
+    public QuiescentConsistencyVerifier(ExecutionScenario scenario, Class<?> sequentialSpecification) {
         this.originalScenario = scenario;
-        this.linearizabilityVerifier = new LinearizabilityVerifier(convertScenario(scenario), testClass);
+        this.linearizabilityVerifier = new LinearizabilityVerifier(convertScenario(scenario), sequentialSpecification);
     }
 
     private static ExecutionScenario convertScenario(ExecutionScenario scenario) {
@@ -75,5 +75,10 @@ public class QuiescentConsistencyVerifier extends CachedVerifier {
             convertAccordingToScenario(originalScenario.parallelExecution, results.parallelResults),
             results.postResults)
         );
+    }
+
+    @Override
+    public void checkStateEquivalenceImplementation() {
+        linearizabilityVerifier.checkStateEquivalenceImplementation();
     }
 }

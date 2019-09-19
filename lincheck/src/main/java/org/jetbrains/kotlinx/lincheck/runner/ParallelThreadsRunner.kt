@@ -104,7 +104,7 @@ open class ParallelThreadsRunner(
     private fun isThreadCompleted(threadId: Int, actorId: Int) = actorId == scenario.parallelExecution[threadId].size - 1
 
     private fun reset() {
-        testInstance = createTestInstance(testClass)
+        testInstance = testClass.newInstance()
         testThreadExecutions.forEach { ex -> ex.testInstance = testInstance }
         suspensionPointResults = MutableList(scenario.threads) { NoResult }
         completedOrSuspendedThreads.set(0)

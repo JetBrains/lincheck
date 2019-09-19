@@ -36,12 +36,9 @@ import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxati
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxed
 import org.junit.Test
 
-@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class, threads = 2, actorsPerThread = 2, actorsAfter = 0, actorsBefore = 0)
-@QuantitativeRelaxationVerifierConf(
-    factor = 2,
-    pathCostFunc = PHI_INTERVAL_RESTRICTED_MAX,
-    costCounter = KPriorityQueueTest.CostCounter::class
-)
+@StressCTest(sequentialSpecification = KPriorityQueueTest.CostCounter::class,
+             verifier = QuantitativelyRelaxedLinearizabilityVerifier::class,
+             threads = 2, actorsPerThread = 2, actorsAfter = 0, actorsBefore = 0)
 @Param(name = "push-value", gen = IntGen::class, conf = "1:20")
 class KPriorityQueueTest {
     private val pq = KPriorityQueueSimulation(2)
@@ -56,6 +53,7 @@ class KPriorityQueueTest {
     @Test
     fun test() = LinChecker.check(KPriorityQueueTest::class.java)
 
+    @QuantitativeRelaxationVerifierConf(factor = 2, pathCostFunc = PHI_INTERVAL_RESTRICTED_MAX)
     data class CostCounter @JvmOverloads constructor(
         private val k: Int,
         private val pq: List<Int> = emptyList()

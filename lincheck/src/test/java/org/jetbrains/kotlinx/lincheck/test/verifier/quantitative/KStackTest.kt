@@ -37,8 +37,7 @@ import java.lang.AssertionError
 
 private const val K = 2
 
-@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
-@QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX, costCounter = KStackRelaxedPushTest.CostCounter::class)
+@StressCTest(sequentialSpecification = KStackRelaxedPushTest.CostCounter::class, verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
 class KStackRelaxedPushTest {
     private val s = KStackSimulation<Int>(k = K)
 
@@ -52,8 +51,8 @@ class KStackRelaxedPushTest {
     @Test
     fun test() = LinChecker.check(KStackRelaxedPushTest::class.java)
 
-    // Should have '(k: Int)' constructor
-    data class CostCounter @JvmOverloads constructor(private val k: Int, private val s: List<Int> = emptyList()) {
+    @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX)
+    data class CostCounter @JvmOverloads constructor(private val k: Int, private val s: List<Int> = emptyList()) { // Should have '(k: Int)' constructor
         fun put(value: Int, result: Result): List<CostWithNextCostCounter<CostCounter>> {
             return (0..(k - 1).coerceAtMost(s.size)).map { i ->
                 val sNew = ArrayList(s)
@@ -75,9 +74,10 @@ class KStackRelaxedPushTest {
     }
 }
 
-@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class, threads = 2, actorsPerThread = 6, invocationsPerIteration = 1000, iterations = 100)
+@StressCTest(sequentialSpecification = KStackRelaxedPopIncorrectTest.CostCounter::class,
+             verifier = QuantitativelyRelaxedLinearizabilityVerifier::class,
+             threads = 2, actorsPerThread = 6, invocationsPerIteration = 1000, iterations = 100)
 @LogLevel(LoggingLevel.DEBUG)
-@QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX, costCounter = KStackRelaxedPopIncorrectTest.CostCounter::class)
 class KStackRelaxedPopIncorrectTest {
     private val s = KStackSimulation<Int>(k = K + 3)
 
@@ -91,8 +91,8 @@ class KStackRelaxedPopIncorrectTest {
     @Test(expected = AssertionError::class)
     fun test() = LinChecker.check(KStackRelaxedPopIncorrectTest::class.java)
 
-    // Should have '(k: Int)' constructor
-    data class CostCounter @JvmOverloads constructor(private val k: Int, private val s: List<Int> = emptyList()) {
+    @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX)
+    data class CostCounter @JvmOverloads constructor(private val k: Int, private val s: List<Int> = emptyList()) { // Should have '(k: Int)' constructor
         fun put(value: Int, result: Result): CostCounter {
             check(result is VoidResult)
             val sNew = ArrayList(s)
@@ -116,8 +116,7 @@ class KStackRelaxedPopIncorrectTest {
     }
 }
 
-@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
-@QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX, costCounter = KStackRelaxedPushAndPopTest.CostCounter::class)
+@StressCTest(sequentialSpecification = KStackRelaxedPushAndPopTest.CostCounter::class, verifier = QuantitativelyRelaxedLinearizabilityVerifier::class)
 class KStackRelaxedPushAndPopTest {
     private val s = KStackSimulation<Int>(k = K)
 
@@ -132,8 +131,8 @@ class KStackRelaxedPushAndPopTest {
     @Test
     fun test() = LinChecker.check(KStackRelaxedPushAndPopTest::class.java)
 
-    // Should have '(k: Int)' constructor
-    data class CostCounter @JvmOverloads constructor(private val k: Int, private val s: List<Int> = emptyList()) {
+    @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX)
+    data class CostCounter @JvmOverloads constructor(private val k: Int, private val s: List<Int> = emptyList()) { // Should have '(k: Int)' constructor
         fun put(value: Int, result: Result): List<CostWithNextCostCounter<CostCounter>> {
             return (0..(k - 1).coerceAtMost(s.size)).map { i ->
                 val sNew = ArrayList(s)
