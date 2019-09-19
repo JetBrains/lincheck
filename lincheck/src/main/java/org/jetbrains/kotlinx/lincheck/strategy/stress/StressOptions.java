@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
+
 /**
  * Options for {@link StressStrategy stress} strategy.
  */
@@ -48,8 +50,9 @@ public class StressOptions extends Options<StressOptions, StressCTestConfigurati
     }
 
     @Override
-    public StressCTestConfiguration createTestConfigurations() {
-        return new StressCTestConfiguration(iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator,
-                verifier, invocationsPerIteration, addWaits, requireStateEquivalenceImplementationCheck, minimizeFailedScenario);
+    public StressCTestConfiguration createTestConfigurations(Class<?> testClass) {
+        return new StressCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator,
+                verifier, invocationsPerIteration, addWaits, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+                chooseSequentialSpecification(sequentialSpecification, testClass));
     }
 }

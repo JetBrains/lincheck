@@ -38,8 +38,8 @@ import java.util.stream.Collectors;
 public class SerializabilityVerifier extends CachedVerifier {
     private final LinearizabilityVerifier linearizabilityVerifier;
 
-    public SerializabilityVerifier(ExecutionScenario scenario, Class<?> testClass) {
-        this.linearizabilityVerifier = new LinearizabilityVerifier(convertScenario(scenario), testClass);
+    public SerializabilityVerifier(ExecutionScenario scenario, Class<?> sequentialSpecification) {
+        this.linearizabilityVerifier = new LinearizabilityVerifier(convertScenario(scenario), sequentialSpecification);
     }
 
     private static <T> List<List<T>> convert(List<T> initPart, List<List<T>> parallelPart, List<T> postPart) {
@@ -68,5 +68,10 @@ public class SerializabilityVerifier extends CachedVerifier {
     @Override
     public boolean verifyResultsImpl(ExecutionResult results) {
         return linearizabilityVerifier.verifyResultsImpl(convertResult(results));
+    }
+
+    @Override
+    public void checkStateEquivalenceImplementation() {
+        linearizabilityVerifier.checkStateEquivalenceImplementation();
     }
 }

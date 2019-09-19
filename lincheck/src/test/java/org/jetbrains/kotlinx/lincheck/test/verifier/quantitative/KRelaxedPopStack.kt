@@ -25,9 +25,7 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative
 import java.util.*
 
 class KRelaxedPopStack<T>(private val k: Int) {
-
     private val list = LinkedList<T>()
-
     private val random = Random()
 
     @Synchronized

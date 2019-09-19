@@ -22,9 +22,11 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative;
  * #L%
  */
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.*;
 import org.junit.*;
@@ -32,10 +34,7 @@ import java.util.*;
 
 import static org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction.PHI_INTERVAL;
 
-@StressCTest(verifier = QuantitativelyRelaxedLinearizabilityVerifier.class)
-@Ignore
-@QuantitativeRelaxationVerifierConf(factor = 3, pathCostFunc = PHI_INTERVAL,
-    costCounter = StutteringCounterTest.CostCounter.class)
+@StressCTest(sequentialSpecification = StutteringCounterTest.CostCounter.class, verifier = QuantitativelyRelaxedLinearizabilityVerifier.class)
 public class StutteringCounterTest {
     private StutteringCounterSimulation counter = new StutteringCounterSimulation(3, 0.9f);
 
@@ -50,8 +49,9 @@ public class StutteringCounterTest {
         LinChecker.check(StutteringCounterTest.class);
     }
 
-    // Predicate: completedOrSuspendedThreads is not incremented
-    public static class CostCounter {
+    @QuantitativeRelaxationVerifierConf(factor = 3, pathCostFunc = PHI_INTERVAL)
+    public static class CostCounter extends VerifierState {
+        // Predicate: completedOrSuspendedThreads is not incremented
         private final int k;
         private final int value;
 
@@ -77,6 +77,12 @@ public class StutteringCounterTest {
                 // Only incremented or the same values are possible
                 return Collections.emptyList();
             }
+        }
+
+        @NotNull
+        @Override
+        protected Object extractState() {
+            return value;
         }
     }
 }

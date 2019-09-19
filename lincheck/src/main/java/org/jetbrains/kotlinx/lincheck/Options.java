@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
 
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.DEFAULT_LOG_LEVEL;
 
@@ -43,6 +44,7 @@ public abstract class Options<OPT extends Options, CTEST extends CTestConfigurat
     protected Class<? extends Verifier> verifier = CTestConfiguration.DEFAULT_VERIFIER;
     protected boolean requireStateEquivalenceImplementationCheck = true;
     protected boolean minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR;
+    protected Class<?> sequentialSpecification = null;
 
     /**
      * Number of different test scenarios to be executed
@@ -141,7 +143,7 @@ public abstract class Options<OPT extends Options, CTEST extends CTestConfigurat
         return (OPT) this;
     }
 
-    public abstract CTEST createTestConfigurations();
+    public abstract CTEST createTestConfigurations(Class<?> testClass);
 
     /**
      * Set logging level, {@link DEFAULT_LOG_LEVEL} is used by default.
@@ -150,4 +152,20 @@ public abstract class Options<OPT extends Options, CTEST extends CTestConfigurat
         this.logLevel = logLevel;
         return (OPT) this;
     }
+
+
+    /**
+     * The specified class defines the sequential behavior of the testing data structure;
+     * it is used by {@link Verifier} to build a labeled transition system,
+     * and should have the same methods as the testing data structure.
+     * However, some verifiers require additional parameters for these methods,
+     * see {@link QuantitativelyRelaxedLinearizabilityVerifier} as an example.
+     *
+     * By default, the provided concurrent implementation is used in a sequential way.
+     */
+    public OPT sequentialSpecification(Class<?> clazz) {
+        this.sequentialSpecification = clazz;
+        return (OPT) this;
+    }
+
 }

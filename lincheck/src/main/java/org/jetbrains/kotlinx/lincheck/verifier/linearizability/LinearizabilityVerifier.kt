@@ -40,12 +40,12 @@ import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxe
  */
 class LinearizabilityVerifier(
     scenario: ExecutionScenario,
-    testClass: Class<*>
-) : AbstractLTSVerifier<LTS.State>(scenario, testClass) {
+    sequentialSpecification: Class<*>
+) : AbstractLTSVerifier<LTS.State>(scenario, sequentialSpecification) {
     private val relaxationFactor = 0
     private val pathCostFunc = PathCostFunction.NON_RELAXED
-    private val lts: LTS = LTS(
-        testClass = testClass,
+    override val lts: LTS = LTS(
+        sequentialSpecification = sequentialSpecification,
         isQuantitativelyRelaxed = false,
         relaxationFactor = 0
     )

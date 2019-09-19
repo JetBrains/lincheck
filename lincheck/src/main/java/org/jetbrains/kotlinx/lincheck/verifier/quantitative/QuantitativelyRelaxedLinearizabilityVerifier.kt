@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.verifier.quantitative
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.verifier.AbstractLTSVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 
@@ -32,25 +33,49 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
  * in the "Quantitative relaxation of concurrent data structures" paper by Henzinger et al.
  *
  * Requires [QuantitativeRelaxationVerifierConf] annotation on the testing class.
+ *
+ * The cost counter class should be provided as the sequential specification
+ * (see {@link Options#sequentialSpecification(Class)}).
+ * This class should represent the current data structure state
+ * and has the same methods as testing operations,
+ * but with an additional {@link Result} parameter
+ * and another return type.
+ * If an operation is not relaxed this cost counter
+ * should check that the operation result is correct
+ * and return the next state (which is a cost counter too)
+ * or {@code null} in case the result is incorrect.
+ * Otherwise, if a corresponding operation is relaxed
+ * (annotated with {@link QuantitativeRelaxed}),
+ * the method should return a list of all possible next states
+ * with their transition cost. For this purpose,
+ * a special {@link CostWithNextCostCounter} class should be used.
+ * This class contains the next state and the transition cost
+ * with the predicate value, which are defined in accordance
+ * with the original paper. Thus, {@code List<CostWithNextCostCounter>}
+ * should be returned by these methods and an empty list should
+ * be returned in case no transitions are possible.
+ * In order to restrict the number of possible transitions,
+ * the relaxation factor should be used. It is provided via
+ * a constructor, so {@code Lin-Check} uses the
+ * {@code (int relaxationFactor)} constructor for the first
+ * instance creation.
  */
 class QuantitativelyRelaxedLinearizabilityVerifier(
     scenario: ExecutionScenario,
-    testClass: Class<*>
-) : AbstractLTSVerifier<LTS.State>(scenario, testClass) {
+    sequentialSpecification: Class<*>
+) : AbstractLTSVerifier<LTS.State>(scenario, sequentialSpecification) {
     private val relaxationFactor: Int
     private val pathCostFunc: PathCostFunction
-    private val lts: LTS
-    private val costCounter: Class<*> // cost counter?
+    override val lts: LTS
 
     init {
-        val conf = testClass.getAnnotation(QuantitativeRelaxationVerifierConf::class.java)
-        checkNotNull(conf) { "QuantitativeRelaxationVerifierConf is not specified for the test class. " +
-                "QuantitativelyRelaxedLinearizabilityVerifier can not be initialised." }
+        val conf = sequentialSpecification.getAnnotation(QuantitativeRelaxationVerifierConf::class.java)
+        checkNotNull(conf) { "QuantitativeRelaxationVerifierConf is not specified for the sequential specification " +
+                             "$sequentialSpecification, the verifier can not be initialised." }
         relaxationFactor = conf.factor
         pathCostFunc = conf.pathCostFunc
-        costCounter = conf.costCounter.java
         lts = LTS(
-            testClass = costCounter,
+            sequentialSpecification = sequentialSpecification,
             isQuantitativelyRelaxed = true,
             relaxationFactor = relaxationFactor
         )
