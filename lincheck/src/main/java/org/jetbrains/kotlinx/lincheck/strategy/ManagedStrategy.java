@@ -260,6 +260,20 @@ public abstract class ManagedStrategy extends Strategy {
      */
     public void startNewActor(int iThread) {}
 
+    /**
+     * This method is invoked by a test thread
+     * before a class initialization start
+     * @param iThread number of invoking thread
+     */
+    public void beforeClassInitialization(int iThread) {}
+
+    /**
+     * This method is invoked by a test thread
+     * after a class initialization end
+     * @param iThread number of invoking thread
+     */
+    public void afterClassInitialization(int iThread) {}
+
     // == UTILITY METHODS
 
     /**

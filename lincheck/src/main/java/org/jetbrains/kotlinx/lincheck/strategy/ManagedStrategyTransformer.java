@@ -48,8 +48,8 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Type[] NO_ARGS = new Type[]{};
 
     private static final Type OBJECT_TYPE = Type.getType(Object.class);
-    private static final Type TRANSFORMABLE_STRATEGY_HOLDER_TYPE = Type.getType(ManagedStrategyHolder.class);
-    private static final Type TRANSFORMABLE_STRATEGY_TYPE = Type.getType(ManagedStrategy.class);
+    private static final Type MANAGED_STRATEGY_HOLDER_TYPE = Type.getType(ManagedStrategyHolder.class);
+    private static final Type MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy.class);
 
     private static final Type UNSAFE_TYPE = Type.getType(Unsafe.class);
     private static final Type UNSAFE_LOADER_TYPE = Type.getType(UnsafeLoader.class);
@@ -67,6 +67,10 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Method AFTER_NOTIFY_METHOD = new Method("afterNotify", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE, OBJECT_TYPE, Type.BOOLEAN_TYPE});
     private static final Method BEFORE_PARK_METHOD = new Method("beforePark", Type.BOOLEAN_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE, Type.BOOLEAN_TYPE});
     private static final Method AFTER_UNPARK_METHOD = new Method("afterUnpark", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE, OBJECT_TYPE});
+    private static final Method BEFORE_CLASS_INITIALIZATION_METHOD = new Method("beforeClassInitialization", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+    private static final Method AFTER_CLASS_INITIALIZATION_METHOD = new Method("afterClassInitialization", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+
+
 
     private static final Method GET_UNSAFE_METHOD = new Method("getUnsafe", UNSAFE_TYPE, new Type[]{});
     private static final Method CLASS_FOR_NAME = new Method("forName", CLASS_TYPE, new Type[]{STRING_TYPE});
@@ -395,6 +399,56 @@ class ManagedStrategyTransformer extends ClassVisitor {
     }
 
     /**
+     * Adds beforeClassInitialization call before method and afterClassInitialization call after method
+     */
+    private class ClassInitializationTransformer extends ManagedStrategyMethodVisitor {
+        private final Label tryLabel = new Label();
+        private final Label catchLabel = new Label();
+
+        ClassInitializationTransformer(String methodName, GeneratorAdapter mv) {
+            super(methodName, mv);
+        }
+
+        @Override
+        public void visitCode() {
+            super.visitCode();
+
+            invokeBeforeClassInitialization();
+
+            mv.visitLabel(tryLabel);
+        }
+
+        @Override
+        public void visitMaxs(int maxStack, int maxLocals) {
+            mv.visitLabel(catchLabel);
+            invokeAfterClassInitialization();
+            mv.throwException();
+            mv.visitTryCatchBlock(tryLabel, catchLabel, catchLabel, null);
+
+            mv.visitMaxs(maxStack, maxLocals);
+        }
+
+        @Override
+        public void visitInsn(int opcode) {
+            switch (opcode) {
+                case ARETURN:
+                case DRETURN:
+                case FRETURN:
+                case IRETURN:
+                case LRETURN:
+                case RETURN:
+                    invokeAfterClassInitialization();
+                    break;
+                default:
+                    // do nothing
+            }
+
+            mv.visitInsn(opcode);
+
+        }
+    }
+
+    /**
      * Adds invocations of ManagedStrategy methods before wait and after notify calls
      */
     private class WaitNotifyTransformer extends ManagedStrategyMethodVisitor {
@@ -561,7 +615,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
             loadStrategy();
             loadCurrentThreadNumber();
             loadNewCodeLocation();
-            mv.invokeVirtual(TRANSFORMABLE_STRATEGY_TYPE, method);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, method);
         }
 
         // STACK: monitor
@@ -583,7 +637,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
             loadNewCodeLocation();
             mv.loadLocal(monitorLocal);
             mv.push(flag);
-            mv.invokeVirtual(TRANSFORMABLE_STRATEGY_TYPE, method);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, method);
         }
 
         // STACK: withTimeout
@@ -594,7 +648,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
             loadCurrentThreadNumber();
             loadNewCodeLocation();
             mv.loadLocal(withTimeoutLocal);
-            mv.invokeVirtual(TRANSFORMABLE_STRATEGY_TYPE, BEFORE_PARK_METHOD);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD);
         }
 
         // STACK: thread
@@ -605,7 +659,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
             loadCurrentThreadNumber();
             loadNewCodeLocation();
             mv.loadLocal(threadLocal);
-            mv.invokeVirtual(TRANSFORMABLE_STRATEGY_TYPE, AFTER_UNPARK_METHOD);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD);
         }
 
         // STACK: monitor
@@ -626,16 +680,29 @@ class ManagedStrategyTransformer extends ClassVisitor {
             loadCurrentThreadNumber();
             loadNewCodeLocation();
             mv.loadLocal(monitorLocal);
-            mv.invokeVirtual(TRANSFORMABLE_STRATEGY_TYPE, method);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, method);
         }
 
+        void invokeBeforeClassInitialization() {
+            loadStrategy();
+            loadCurrentThreadNumber();
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CLASS_INITIALIZATION_METHOD);
+        }
+
+        void invokeAfterClassInitialization() {
+            loadStrategy();
+            loadCurrentThreadNumber();
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_CLASS_INITIALIZATION_METHOD);
+        }
+
+
         void loadStrategy() {
-            mv.getStatic(TRANSFORMABLE_STRATEGY_HOLDER_TYPE, "strategy", TRANSFORMABLE_STRATEGY_TYPE);
+            mv.getStatic(MANAGED_STRATEGY_HOLDER_TYPE, "strategy", MANAGED_STRATEGY_TYPE);
         }
 
         void loadCurrentThreadNumber() {
             loadStrategy();
-            mv.invokeVirtual(TRANSFORMABLE_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD);
         }
 
         void loadNewCodeLocation() {

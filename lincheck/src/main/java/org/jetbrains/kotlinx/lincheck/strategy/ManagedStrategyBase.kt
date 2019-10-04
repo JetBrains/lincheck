@@ -29,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.IllegalStateException
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.IdentityHashMap
 
 
@@ -64,6 +63,8 @@ abstract class ManagedStrategyBase(
     protected var exception: Throwable? = null
     // is thread suspended
     protected val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
+    // number of clinit blocks enter and not leaved for each thread
+    protected val classInitializationLevel = IntArray(nThreads) { 0 }
 
     @Throws(Exception::class)
     abstract override fun run(): Unit
@@ -166,8 +167,17 @@ abstract class ManagedStrategyBase(
         isSuspended[iThread].set(false)
     }
 
+    override fun beforeClassInitialization(iThread: Int) {
+        classInitializationLevel[iThread]++
+    }
+
+    override fun afterClassInitialization(iThread: Int) {
+        classInitializationLevel[iThread]--
+    }
+
     protected fun newSuspensionPoint(iThread: Int, codeLocation: Int) {
         if (iThread == nThreads) return // can suspend only test threads
+        if (classInitializationLevel[iThread] == 0) return // can not suspend in static initialization blocks
 
         awaitTurn(iThread)
 
