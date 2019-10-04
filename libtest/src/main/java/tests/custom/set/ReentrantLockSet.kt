@@ -22,28 +22,21 @@
 package tests.custom.set
 
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class ReentrantLockSet {
     private val set = mutableSetOf<Int>()
     private val lock = ReentrantLock()
 
-    fun add(key: Int): Boolean = activeSynchronized {
+    fun add(key: Int): Boolean = lock.withLock {
         set.add(key)
     }
 
-    fun remove(key: Int): Boolean = activeSynchronized {
+    fun remove(key: Int): Boolean = lock.withLock {
         set.remove(key)
     }
 
-    fun contains(key: Int): Boolean = activeSynchronized {
+    fun contains(key: Int): Boolean = lock.withLock {
         set.contains(key)
-    }
-
-    private fun activeSynchronized(code: () -> Boolean): Boolean {
-        lock.lock()
-        val result = code()
-        lock.unlock()
-
-        return result
     }
 }

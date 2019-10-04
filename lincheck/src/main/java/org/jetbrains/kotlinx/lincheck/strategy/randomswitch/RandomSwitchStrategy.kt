@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.randomswitch
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
@@ -38,7 +37,7 @@ class RandomSwitchStrategy(
         verifier: Verifier,
         testCfg: RandomSwitchCTestConfiguration,
         reporter: Reporter
-) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, testCfg.guarantee < ConcurrentGuarantee.OBSTRUCTION_FREE) {
+) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, !testCfg.checkObstructionFreedom) {
    // maximum number of thread switches that managed strategy may use to search for incorrect execution
     private val maxInvocations = testCfg.invocationsPerIteration
     private var switchProbability = startSwitchProbability

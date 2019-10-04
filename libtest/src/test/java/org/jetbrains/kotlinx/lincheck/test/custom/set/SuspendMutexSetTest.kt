@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee
 import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTest
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.junit.Test
@@ -59,7 +58,7 @@ internal class SuspendMutexSetTestCorrect {
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-@RandomSearchCTest(guarantee = ConcurrentGuarantee.OBSTRUCTION_FREE, requireStateEquivalenceImplCheck = false)
+@RandomSearchCTest(checkObstructionFreedom = true, requireStateEquivalenceImplCheck = false)
 internal class SuspendMutexSetTestWrongGuarrantee {
     private val set = SuspendMutexSet()
 

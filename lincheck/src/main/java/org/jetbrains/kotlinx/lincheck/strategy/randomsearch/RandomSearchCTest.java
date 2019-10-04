@@ -99,9 +99,9 @@ public @interface RandomSearchCTest {
     Class<? extends Verifier> verifier() default LinearizabilityVerifier.class;
 
     /**
-     * Check the specified guarantee of the concurrent algorithm
+     * Check obstruction freedom of the concurrent algorithm
      */
-    ConcurrentGuarantee guarantee() default ConcurrentGuarantee.NONE;
+    boolean checkObstructionFreedom() default false;
 
     /**
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee

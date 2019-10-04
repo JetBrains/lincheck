@@ -25,8 +25,6 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTest
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.Test
 import tests.custom.set.ActiveLockSet

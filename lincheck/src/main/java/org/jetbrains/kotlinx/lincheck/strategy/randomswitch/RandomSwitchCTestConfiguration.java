@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 /**
@@ -32,18 +31,18 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 public class RandomSwitchCTestConfiguration extends CTestConfiguration {
     public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 10000;
 
-    public ConcurrentGuarantee guarantee;
+    public boolean checkObstructionFreedom;
     public final int maxRepetitions;
     public final int invocationsPerIteration;
 
     public RandomSwitchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
         int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        ConcurrentGuarantee guarantee, int maxRepetitions, int invocationsPerIteration,
+        boolean checkObstructionFreedom, int maxRepetitions, int invocationsPerIteration,
         boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);
-        this.guarantee = guarantee;
+        this.checkObstructionFreedom = checkObstructionFreedom;
         this.maxRepetitions = maxRepetitions;
         this.invocationsPerIteration = invocationsPerIteration;
     }

@@ -54,6 +54,7 @@ public abstract class CTestConfiguration {
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
     public static final boolean DEFAULT_MINIMIZE_ERROR = true;
+    public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
 
     public final Class<?> testClass;
     public final int iterations;
@@ -63,7 +64,6 @@ public abstract class CTestConfiguration {
     public final int actorsAfter;
     public final Class<? extends ExecutionGenerator> generatorClass;
     public final Class<? extends Verifier> verifierClass;
-    public boolean hasTestClassSuspendableActors;
     public final boolean requireStateEquivalenceImplCheck;
     public final Boolean minimizeFailedScenario;
     public final Class<?> sequentialSpecification;
@@ -97,7 +97,7 @@ public abstract class CTestConfiguration {
                 .map(ann -> new RandomSearchCTestConfiguration(testClass, ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                         ann.generator(), ann.verifier(),
-                        ann.guarantee(), ann.maxRepetitions(), ann.invocationsPerIteration(),
+                        ann.checkObstructionFreedom(), ann.maxRepetitions(), ann.invocationsPerIteration(),
                         ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                         chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 
@@ -105,7 +105,7 @@ public abstract class CTestConfiguration {
                 .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                         ann.generator(), ann.verifier(),
-                        ann.guarantee(), ann.maxRepetitions(), ann.invocationsPerIteration(),
+                        ann.checkObstructionFreedom(), ann.maxRepetitions(), ann.invocationsPerIteration(),
                         ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                         chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 

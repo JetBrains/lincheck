@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.randomsearch;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
 import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_MAX_REPETITIONS;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 import static org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
@@ -31,15 +32,15 @@ import static org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchC
  * Options for {@link RandomSearchStrategy random search} strategy.
  */
 public class RandomSearchOptions extends Options<RandomSearchOptions, RandomSearchCTestConfiguration> {
-    protected ConcurrentGuarantee guarantee = ConcurrentGuarantee.NONE;
+    protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int maxRepetitions = DEFAULT_MAX_REPETITIONS;
     protected int invocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION;
 
     /**
-     * Check the specified guarantee of the concurrent algorithm
+     * Check obstruction freedom of the concurrent algorithm
      */
-    public RandomSearchOptions guarantee(ConcurrentGuarantee guarantee) {
-        this.guarantee = guarantee;
+    public RandomSearchOptions checkObstructionFreedom(boolean guarantee) {
+        this.checkObstructionFreedom = checkObstructionFreedom;
         return this;
     }
 
@@ -62,7 +63,7 @@ public class RandomSearchOptions extends Options<RandomSearchOptions, RandomSear
     @Override
     public RandomSearchCTestConfiguration createTestConfigurations(Class<?> testClass) {
         return new RandomSearchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-            executionGenerator, verifier, guarantee, maxRepetitions, invocationsPerIteration,
+            executionGenerator, verifier, checkObstructionFreedom, maxRepetitions, invocationsPerIteration,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass));
     }

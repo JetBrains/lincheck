@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.annotation.*;
@@ -99,9 +98,9 @@ public @interface RandomSwitchCTest {
     Class<? extends Verifier> verifier() default LinearizabilityVerifier.class;
 
     /**
-     * Check the specified guarantee of the concurrent algorithm
+     * Check obstruction freedom of the concurrent algorithm
      */
-    ConcurrentGuarantee guarantee() default ConcurrentGuarantee.NONE;
+    boolean checkObstructionFreedom() default false;
 
     /**
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee

@@ -254,6 +254,12 @@ public abstract class ManagedStrategy extends Strategy {
      */
     public void beforeCoroutineResumed(int iThread) {}
 
+    /**
+     * This method is invoked before start of each actor.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     */
+    public void startNewActor(int iThread) {}
+
     // == UTILITY METHODS
 
     /**

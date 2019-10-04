@@ -25,7 +25,6 @@ package org.jetbrains.kotlinx.lincheck.tests.strategy.managed;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee;
 import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTest;
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
@@ -33,7 +32,7 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-@RandomSearchCTest(threads = 3, actorsPerThread = 3, iterations = 5, guarantee = ConcurrentGuarantee.OBSTRUCTION_FREE,
+@RandomSearchCTest(threads = 3, actorsPerThread = 3, iterations = 5, checkObstructionFreedom = true,
     generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class, invocationsPerIteration = 3)
 public class RandomSearchCTestAnnTest extends VerifierState {
     private AtomicInteger i = new AtomicInteger();

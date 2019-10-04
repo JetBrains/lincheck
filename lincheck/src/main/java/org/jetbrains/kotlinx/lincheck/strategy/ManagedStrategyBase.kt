@@ -407,7 +407,7 @@ abstract class ManagedStrategyBase(
         }
 
         override fun finishThread(iThread: Int) {
-            threadEvents.add(FinishEvent(iThread, parallelActors[iThread].size))
+            threadEvents.add(FinishEvent(iThread, Int.MAX_VALUE))
         }
 
         override fun passCodeLocation(iThread: Int, codeLocation: Int) {

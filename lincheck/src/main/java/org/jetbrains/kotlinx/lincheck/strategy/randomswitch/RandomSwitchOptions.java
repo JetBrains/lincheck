@@ -22,10 +22,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
 
 import org.jetbrains.kotlinx.lincheck.Options;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchStrategy;
 
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
 import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_MAX_REPETITIONS;
 import static org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
 
@@ -35,15 +33,15 @@ import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecificati
  * Options for {@link RandomSwitchStrategy random search} strategy.
  */
 public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwitchCTestConfiguration> {
-    protected ConcurrentGuarantee guarantee = ConcurrentGuarantee.NONE;
+    protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int maxRepetitions = DEFAULT_MAX_REPETITIONS;
     protected int invocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION;
 
     /**
-     * Check the specified guarantee of the concurrent algorithm
+     * Check obstruction freedom of the concurrent algorithm
      */
-    public RandomSwitchOptions guarantee(ConcurrentGuarantee guarantee) {
-        this.guarantee = guarantee;
+    public RandomSwitchOptions checkObstructionFreedom(boolean guarantee) {
+        this.checkObstructionFreedom = checkObstructionFreedom;
         return this;
     }
 
@@ -66,7 +64,7 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
     @Override
     public RandomSwitchCTestConfiguration createTestConfigurations(Class<?> testClass) {
         return new RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-            executionGenerator, verifier, guarantee, maxRepetitions, invocationsPerIteration,
+            executionGenerator, verifier, checkObstructionFreedom, maxRepetitions, invocationsPerIteration,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass));
     }
