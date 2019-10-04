@@ -48,15 +48,19 @@ public class TestThreadExecutionGenerator {
 
     private static final Type CLASS_TYPE = Type.getType(Class.class);
     private static final Type OBJECT_TYPE = Type.getType(Object.class);
+    private static final Type ACTOR_TYPE = Type.getType(Actor.class);
     private static final Method OBJECT_GET_CLASS = new Method("getClass", CLASS_TYPE, NO_ARGS);
     private static final Type OBJECT_ARRAY_TYPE = Type.getType(Object[].class);
+    private static final Type ACTOR_ARRAY_TYPE = Type.getType(Actor[].class);
     private static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
     private static final Type INT_ARRAY_TYPE = Type.getType(int[].class);
     private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, NO_ARGS);
+    private static final Method ACTOR_SET_INVOKED = new Method("setInvoked", Type.VOID_TYPE, NO_ARGS);
 
     private static final Type RUNNER_TYPE = Type.getType(Runner.class);
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+    private static final Method RUNNER_ON_EXCEPTION_METHOD = new Method("onException", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
@@ -114,6 +118,7 @@ public class TestThreadExecutionGenerator {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
             execution.objArgs = objArgs.toArray();
+            execution.actors = actors.toArray(new Actor[0]);
             return execution;
         } catch (InstantiationException | IllegalAccessException e) {
             throw new IllegalStateException("Cannot initialize generated execution class", e);
@@ -188,17 +193,33 @@ public class TestThreadExecutionGenerator {
                 mv.arrayLoad(Type.INT_TYPE);
                 mv.invokeStatic(UTILS_TYPE, UTILS_CONSUME_CPU);
             }
+
+            // Mark actor as invoked
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "actors", ACTOR_ARRAY_TYPE);
+            mv.push(i);
+            mv.arrayLoad(ACTOR_TYPE);
+            mv.invokeVirtual(ACTOR_TYPE, ACTOR_SET_INVOKED);
+
+            // Start of try-catch block for all exceptions
+            Label commonExceptionStart = mv.newLabel(),
+                    commonExceptionEnd = mv.newLabel(),
+                    commonExceptionHandler = mv.newLabel();
+            mv.visitTryCatchBlock(commonExceptionStart, commonExceptionEnd, commonExceptionHandler, null);
+            mv.visitLabel(commonExceptionStart);
+
             // Start of try-catch block for exceptions which this actor should handle
-            Label start, end = null, handler = null, handlerEnd = null;
+            Label handledExceptionStart, handledExceptionEnd = null, handledExceptionHandler = null;
+            Label actorEnd = mv.newLabel();
             if (actor.getHandlesExceptions()) {
-                start = mv.newLabel();
-                end = mv.newLabel();
-                handler = mv.newLabel();
-                handlerEnd = mv.newLabel();
+                handledExceptionStart = mv.newLabel();
+                handledExceptionEnd = mv.newLabel();
+                handledExceptionHandler = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(start, end, handler, Type.getType(ec).getInternalName());
-                mv.visitLabel(start);
+                    mv.visitTryCatchBlock(handledExceptionStart, handledExceptionEnd, handledExceptionHandler, Type.getType(ec).getInternalName());
+                mv.visitLabel(handledExceptionStart);
             }
+
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
             mv.push(i);
@@ -243,18 +264,37 @@ public class TestThreadExecutionGenerator {
             }
             // Store result to array
             mv.arrayStore(RESULT_TYPE);
-            // End of try-catch block
+            // End of try-catch block for handled exceptions
             if (actor.getHandlesExceptions()) {
-                mv.visitLabel(end);
-                mv.goTo(handlerEnd);
-                mv.visitLabel(handler);
+                mv.visitLabel(handledExceptionEnd);
+                mv.goTo(actorEnd);
+                mv.visitLabel(handledExceptionHandler);
                 if (scenarioContainsSuspendableActors) {
                     storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
                 } else {
                     storeExceptionResultFromThrowable(mv, resLocal, iLocal);
                 }
-                mv.visitLabel(handlerEnd);
             }
+
+            // End of try-catch block for all exceptions
+            mv.visitLabel(commonExceptionEnd);
+            mv.goTo(actorEnd);
+            mv.visitLabel(commonExceptionHandler);
+
+            // call onException method
+            mv.dup();
+            int eLocal = mv.newLocal(THROWABLE_TYPE);
+            mv.storeLocal(eLocal);
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.loadLocal(eLocal);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_EXCEPTION_METHOD);
+            // just throw the exception further
+            mv.throwException();
+
+            mv.visitLabel(actorEnd);
+
             // Increment number of current operation
             mv.iinc(iLocal, 1);
             mv.visitJumpInsn(GOTO, launchNextActor);

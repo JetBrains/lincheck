@@ -89,7 +89,7 @@ public class StressStrategy extends Strategy {
                 }
                 uninitializedThreads.set(scenario.parallelExecution.size()); // reinit synchronization
 
-                if (!verifyResults(runner.run())) {
+                if (!verifyResults(runner.run(), null)) {
                     report.setErrorInvocation(invocation + 1);
                     return report;
                 }

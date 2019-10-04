@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
+package org.jetbrains.kotlinx.lincheck.strategy.randomsearch;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
@@ -27,22 +27,22 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
 
 import java.lang.annotation.*;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
+import static org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
 
 /**
- * This annotation configures concurrent test using {@link RandomSwitchStrategy random-switch} strategy.
+ * This annotation configures concurrent test using {@link RandomSearchStrategy managed} strategy.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Repeatable(RandomSwitchCTest.RandomSwitchCTests.class)
+@Repeatable(RandomSearchCTest.RandomSearchCTests.class)
 @Inherited
-public @interface RandomSwitchCTest {
+public @interface RandomSearchCTest {
     /**
      * Number of different test scenarios to be executed
      */
@@ -132,20 +132,22 @@ public @interface RandomSwitchCTest {
      * The specified class defines the sequential behavior of the testing data structure;
      * it is used by {@link Verifier} to build a labeled transition system,
      * and should have the same methods as the testing data structure.
+     * However, some verifiers require additional parameters for these methods,
+     * see {@link QuantitativelyRelaxedLinearizabilityVerifier} as an example.
      *
      * By default, the provided concurrent implementation is used in a sequential way.
      */
     Class<?> sequentialSpecification() default DummySequentialSpecification.class;
 
     /**
-     * Holder annotation for {@link RandomSwitchCTest}.
+     * Holder annotation for {@link RandomSearchCTest}.
      * Not a public API.
      */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @Inherited
-    @interface RandomSwitchCTests {
-        RandomSwitchCTest[] value();
+    @interface RandomSearchCTests {
+        RandomSearchCTest[] value();
     }
 
 }

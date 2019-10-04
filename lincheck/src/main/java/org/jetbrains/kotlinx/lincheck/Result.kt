@@ -68,6 +68,16 @@ private const val VOID = "void"
  */
 data class ExceptionResult @JvmOverloads constructor(val tClazz: Class<out Throwable>?, override val wasSuspended: Boolean = false) : Result() {
     override fun toString() = wasSuspendedPrefix + "${tClazz?.simpleName}"
+
+    /**
+     * Check equals carefully because stored exceptions may be loaded by different loaders
+     */
+    override fun equals(other: Any?): Boolean {
+        if (other == null) return false
+        if (other !is ExceptionResult) return false
+        if (tClazz == other.tClazz) return true
+        return tClazz?.name?.equals(other.tClazz?.name) ?: false
+    }
 }
 
 /**

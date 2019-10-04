@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.Actor;
 import org.jetbrains.kotlinx.lincheck.ExecutionClassLoader;
 import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader;
@@ -43,12 +44,14 @@ public abstract class Runner {
     protected final Class<?> testClass;
     public final ExecutionClassLoader classLoader;
     protected final AtomicInteger completedOrSuspendedThreads = new AtomicInteger(0);
+    protected final Strategy strategy;
 
     protected Runner(ExecutionScenario scenario, Strategy strategy, Class<?> testClass) {
         this.scenario = scenario;
         classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
             new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
         this.testClass = loadClass(testClass.getTypeName());
+        this.strategy = strategy;
     }
 
     /**
@@ -98,6 +101,41 @@ public abstract class Runner {
      * @param iThread number of invoking thread
      */
     public void onFinish(int iThread) {}
+
+    /**
+     * This method is invoked by a test thread
+     * if an exception has been thrown.
+     * @param iThread number of invoking thread
+     */
+    public void onException(int iThread, Throwable e) {}
+
+    /**
+     * This method is invoked by a test thread
+     * if a coroutine was suspended
+     * @param iThread number of invoking thread
+     */
+    public void afterCoroutineSuspended(int iThread) {
+        throw new UnsupportedOperationException("Coroutines are not supported");
+    }
+
+    /**
+     * This method is invoked by a test thread
+     * if a coroutine was resumed
+     * @param iThread number of invoking thread
+     */
+    public void beforeCoroutineResumed(int iThread) {
+        throw new UnsupportedOperationException("Coroutines are not supported");
+    }
+
+    /**
+     * This method is invoked by a test thread
+     * if the current coroutine can be resumed
+     * @param iThread number of invoking thread
+     * @param iActor number of actor invoked
+     */
+    public boolean canResumeCoroutine(int iThread, int iActor) {
+        throw new UnsupportedOperationException("Coroutines are not supported");
+    }
 
     /**
      * Closes used for this runner resources.

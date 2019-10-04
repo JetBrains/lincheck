@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
+import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
@@ -48,6 +50,7 @@ public abstract class CTestConfiguration {
     public static final int DEFAULT_ACTORS_PER_THREAD = 5;
     public static final int DEFAULT_ACTORS_BEFORE = 5;
     public static final int DEFAULT_ACTORS_AFTER = 5;
+    public static final int DEFAULT_MAX_REPETITIONS = 20;
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
     public static final boolean DEFAULT_MINIMIZE_ERROR = true;
@@ -60,6 +63,7 @@ public abstract class CTestConfiguration {
     public final int actorsAfter;
     public final Class<? extends ExecutionGenerator> generatorClass;
     public final Class<? extends Verifier> verifierClass;
+    public boolean hasTestClassSuspendableActors;
     public final boolean requireStateEquivalenceImplCheck;
     public final Boolean minimizeFailedScenario;
     public final Class<?> sequentialSpecification;
@@ -88,12 +92,31 @@ public abstract class CTestConfiguration {
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                     chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+
+        Stream<RandomSearchCTestConfiguration> randomSearchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSearchCTest.class))
+                .map(ann -> new RandomSearchCTestConfiguration(testClass, ann.iterations(),
+                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
+                        ann.generator(), ann.verifier(),
+                        ann.guarantee(), ann.maxRepetitions(), ann.invocationsPerIteration(),
+                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
+                        chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+
         Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
-            .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
-                    ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                    ann.generator(), ann.verifier(), ann.invocationsPerIteration(),
-                    ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
-                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
-        return Stream.concat(stressConfigurations, randomSwitchConfigurations).collect(Collectors.toList());
+                .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
+                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
+                        ann.generator(), ann.verifier(),
+                        ann.guarantee(), ann.maxRepetitions(), ann.invocationsPerIteration(),
+                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
+                        chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+
+        List<CTestConfiguration> configurations = Stream.concat(
+                stressConfigurations,
+                Stream.concat(
+                        randomSwitchConfigurations,
+                        randomSearchConfigurations
+                )
+        ).collect(Collectors.toList());
+
+        return configurations;
     }
 }

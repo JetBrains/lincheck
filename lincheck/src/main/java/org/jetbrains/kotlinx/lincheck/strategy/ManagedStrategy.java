@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  * #L%
  */
 
+import com.devexperts.jagent.ClassInfo;
 import org.jetbrains.kotlinx.lincheck.Reporter;
 import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
@@ -32,11 +33,13 @@ import org.jetbrains.kotlinx.lincheck.util.Either;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import org.objectweb.asm.ClassVisitor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * This is an abstract class for all managed strategies.
- * This abstraction helps to choose a proper {@link Runner},
- * to transform byte-code in order to insert required for managing instructions,
- * and to hide class loading problems from the strategy algorithm.
+ * This is an abstract class for all strategies with transformers.
+ * This abstraction helps to transform byte-code in order to insert required for
+ * managing instructions and to hide class loading problems from the strategy algorithm.
  */
 public abstract class ManagedStrategy extends Strategy {
     /**
@@ -44,7 +47,7 @@ public abstract class ManagedStrategy extends Strategy {
      */
     protected final int nThreads;
 
-    private final Runner runner;
+    protected final Runner runner;
     private ManagedStrategyTransformer transformer;
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, Verifier verifier, Reporter reporter) {
@@ -59,8 +62,26 @@ public abstract class ManagedStrategy extends Strategy {
 
             @Override
             public void onFinish(int iThread) {
-                super.onFinish(iThread);
                 ManagedStrategy.this.onFinish(iThread);
+                super.onFinish(iThread);
+            }
+
+            @Override
+            public void onException(int iThread, Throwable e) {
+                ManagedStrategy.this.onException(iThread, e);
+                super.onException(iThread, e);
+            }
+
+            @Override
+            public void afterCoroutineSuspended(int iThread) {
+                super.afterCoroutineSuspended(iThread);
+                ManagedStrategy.this.afterCoroutineSuspended(iThread);
+            }
+
+            @Override
+            public void beforeCoroutineResumed(int iThread) {
+                ManagedStrategy.this.beforeCoroutineResumed(iThread);
+                super.beforeCoroutineResumed(iThread);
             }
         };
         ManagedStrategyHolder.setStrategy(runner.classLoader, this);
@@ -68,7 +89,14 @@ public abstract class ManagedStrategy extends Strategy {
 
     @Override
     public ClassVisitor createTransformer(ClassVisitor cv) {
-        return transformer = new ManagedStrategyTransformer(cv);
+        List<StackTraceElement> previousCodeLocations;
+        if (transformer == null) {
+            previousCodeLocations = new ArrayList<>();
+        } else {
+            previousCodeLocations = transformer.getCodeLocations();
+        }
+
+        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations);
     }
 
     @Override
@@ -123,6 +151,12 @@ public abstract class ManagedStrategy extends Strategy {
     public void onFinish(int iThread) {}
 
     /**
+     * This method is executed if an exception has been thrown.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     */
+    public void onException(int iThread, Throwable e) {}
+
+    /**
      * This method is executed before a shared variable read operation.
      * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
@@ -141,24 +175,33 @@ public abstract class ManagedStrategy extends Strategy {
      * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param monitor
+     * @return whether lock should be actually acquired
      */
-    public void beforeLockAcquire(int iThread, int codeLocation, Object monitor) {}
+    public boolean beforeLockAcquire(int iThread, int codeLocation, Object monitor) {
+        return true;
+    }
 
     /**
      *
      * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param monitor
+     * @return whether lock should be actually released
      */
-    public void afterLockRelease(int iThread, int codeLocation, Object monitor) {}
+    public boolean beforeLockRelease(int iThread, int codeLocation, Object monitor) {
+        return true;
+    }
 
     /**
      *
      * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param withTimeout {@code true} if is invoked with timeout, {@code false} otherwise.
+     * @return whether park should be executed
      */
-    public void beforePark(int iThread, int codeLocation, boolean withTimeout) {}
+    public boolean beforePark(int iThread, int codeLocation, boolean withTimeout) {
+        return true;
+    }
 
     /**
      *
@@ -174,8 +217,11 @@ public abstract class ManagedStrategy extends Strategy {
      * @param codeLocation the byte-code location identifier of this operation.
      * @param monitor
      * @param withTimeout {@code true} if is invoked with timeout, {@code false} otherwise.
+     * @return whether wait should be executed
      */
-    public void beforeWait(int iThread, int codeLocation, Object monitor, boolean withTimeout) {}
+    public boolean beforeWait(int iThread, int codeLocation, Object monitor, boolean withTimeout) {
+        return true;
+    }
 
     /**
      *
@@ -193,6 +239,20 @@ public abstract class ManagedStrategy extends Strategy {
      * @param iInterruptedThread
      */
     public void afterThreadInterrupt(int iThread, int codeLocation, int iInterruptedThread) {}
+
+    /**
+     * This method is invoked by a test thread
+     * if a coroutine was suspended
+     * @param iThread number of invoking thread
+     */
+    public void afterCoroutineSuspended(int iThread) {}
+
+    /**
+     * This method is invoked by a test thread
+     * if a coroutine was resumed
+     * @param iThread number of invoking thread
+     */
+    public void beforeCoroutineResumed(int iThread) {}
 
     // == UTILITY METHODS
 

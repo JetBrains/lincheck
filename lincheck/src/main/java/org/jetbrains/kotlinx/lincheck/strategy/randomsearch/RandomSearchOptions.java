@@ -19,22 +19,18 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
+package org.jetbrains.kotlinx.lincheck.strategy.randomsearch;
 
 import org.jetbrains.kotlinx.lincheck.Options;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchStrategy;
 
 import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_MAX_REPETITIONS;
-import static org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
-
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
+import static org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
 
 /**
- * Options for {@link RandomSwitchStrategy random search} strategy.
+ * Options for {@link RandomSearchStrategy random search} strategy.
  */
-public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwitchCTestConfiguration> {
+public class RandomSearchOptions extends Options<RandomSearchOptions, RandomSearchCTestConfiguration> {
     protected ConcurrentGuarantee guarantee = ConcurrentGuarantee.NONE;
     protected int maxRepetitions = DEFAULT_MAX_REPETITIONS;
     protected int invocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION;
@@ -42,7 +38,7 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
     /**
      * Check the specified guarantee of the concurrent algorithm
      */
-    public RandomSwitchOptions guarantee(ConcurrentGuarantee guarantee) {
+    public RandomSearchOptions guarantee(ConcurrentGuarantee guarantee) {
         this.guarantee = guarantee;
         return this;
     }
@@ -50,7 +46,7 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
     /**
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
      */
-    public RandomSwitchOptions maxRepetitions(int maxRepetitions) {
+    public RandomSearchOptions maxRepetitions(int maxRepetitions) {
         this.maxRepetitions = maxRepetitions;
         return this;
     }
@@ -58,14 +54,14 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
     /**
      * Maximum number of invocationsPerIteration that managed strategy may use to search for incorrect execution
      */
-    public RandomSwitchOptions invocationsPerIteration(int invocationsPerIteration) {
+    public RandomSearchOptions invocationsPerIteration(int invocationsPerIteration) {
         this.invocationsPerIteration = invocationsPerIteration;
         return this;
     }
 
     @Override
-    public RandomSwitchCTestConfiguration createTestConfigurations(Class<?> testClass) {
-        return new RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
+    public RandomSearchCTestConfiguration createTestConfigurations(Class<?> testClass) {
+        return new RandomSearchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
             executionGenerator, verifier, guarantee, maxRepetitions, invocationsPerIteration,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass));

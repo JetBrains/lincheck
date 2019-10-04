@@ -22,17 +22,27 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
+import com.devexperts.jagent.ClassInfo;
+import com.devexperts.jagent.ClassInfoCache;
+import com.devexperts.jagent.ClassInfoVisitor;
+import com.devexperts.jagent.Log;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.util.CheckClassAdapter;
+import sun.reflect.CallerSensitive;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URL;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * This transformer applies required for {@link Strategy} and {@link Runner}
@@ -44,6 +54,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private final Runner runner;
     // Cache for classloading and frames computing during the transformation
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
+
+    public static final String JAVA_UTIL_PACKAGE = "java/util/";
+    public static final String TRANSFORMED_PACKAGE = "org/jetbrains/kotlinx/lincheck/transformed/";
+    public static final String TRANSFORMED_POINTED_PACKAGE = TRANSFORMED_PACKAGE.replaceAll("/", ".");
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         this.strategy = strategy;
@@ -57,14 +71,25 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * @return result of checking class
      */
     private static boolean doNotTransform(String className) {
+        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE)) {
+            return false;
+        }
         return className == null ||
-            (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+            (
+                className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.equals("ManagedStrategyHolder")) ||
+                !className.startsWith("org.jetbrains.kotlinx.lincheck.tests.") &&
+                !className.equals("org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyHolder")
+            ) ||
+            (
+                className.startsWith("kotlin.") &&
+                !className.startsWith("kotlin.collections.")
+            ) ||
+            //className.startsWith("kotlin.coroutines.") ||
+            //className.startsWith("kotlinx.coroutines.") ||
             className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.");
-        // TODO let's transform java.util.concurrent
     }
 
     @Override
@@ -80,7 +105,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 return result;
             }
             try {
-                byte[] bytes = instrument(name);
+                byte[] bytes = instrument(originalPointedName(name));
                 result = defineClass(name, bytes, 0, bytes.length);
                 cache.put(name, result);
                 return result;
@@ -104,7 +129,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // Construct transformation pipeline:
         // apply the strategy's transformer at first,
         // then the runner's one.
-        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassWriter cw = new TransformationClassWriter(ClassWriter.COMPUTE_FRAMES, this);
         ClassVisitor cv = new CheckClassAdapter(cw, false); // for debug
         if (runner.needsTransformation()) {
             cv = runner.createTransformer(cv);
@@ -117,8 +142,23 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         return cw.toByteArray();
     }
 
-    @Override
-    public URL getResource(String name) {
-        return super.getResource(name);
+    /**
+     * Returns name of class the moment before it was transformed
+     */
+    static String originalName(String className) {
+        if (className.startsWith(TRANSFORMED_PACKAGE)) {
+            return className.substring(TRANSFORMED_PACKAGE.length());
+        }
+        return className;
+    }
+
+    /**
+     * Returns name of class the moment before it was transformed
+     */
+    private String originalPointedName(String className) {
+        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE)) {
+            return className.substring(TRANSFORMED_POINTED_PACKAGE.length());
+        }
+        return className;
     }
 }

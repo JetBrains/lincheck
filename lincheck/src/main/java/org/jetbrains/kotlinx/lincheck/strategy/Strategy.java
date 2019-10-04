@@ -25,9 +25,12 @@ package org.jetbrains.kotlinx.lincheck.strategy;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.ErrorType;
 import org.jetbrains.kotlinx.lincheck.Reporter;
+import org.jetbrains.kotlinx.lincheck.ThreadEvent;
 import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
+import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchStrategy;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchStrategy;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
@@ -36,7 +39,10 @@ import org.jetbrains.kotlinx.lincheck.util.Either;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import org.objectweb.asm.ClassVisitor;
 
+import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectExecution;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectResults;
+
+import java.util.List;
 
 /**
  * Implementation of this class describes how to run the generated execution.
@@ -48,8 +54,8 @@ import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectResults;
 public abstract class Strategy {
     protected final ExecutionScenario scenario;
     protected final Reporter reporter;
-    private final Verifier verifier;
-    protected TestReport report;
+    protected final Verifier verifier;
+    git
 
     protected Strategy(ExecutionScenario scenario, Verifier verifier, Reporter reporter) {
         this.scenario = scenario;
@@ -60,7 +66,7 @@ public abstract class Strategy {
     /**
      * Check whether results are correct.
      */
-    protected boolean verifyResults(Either<TestReport, ExecutionResult> outcome) {
+    protected boolean verifyResults(Either<TestReport, ExecutionResult> outcome, List<ThreadEvent> threadEvents) {
         if (outcome instanceof Either.Error) {
             report = ((Either.Error<TestReport>) outcome).getError();
             return false;
@@ -71,6 +77,10 @@ public abstract class Strategy {
         if (!verifier.verifyResults(results)) {
             StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:\n");
             appendIncorrectResults(msgBuilder, scenario, results);
+            if (threadEvents != null) {
+                msgBuilder.append(System.lineSeparator());
+                appendIncorrectExecution(msgBuilder, scenario, results, threadEvents);
+            }
             report = new TestReport(ErrorType.INCORRECT_RESULTS);
             report.setErrorDetails(msgBuilder.toString());
             return false;
@@ -88,6 +98,11 @@ public abstract class Strategy {
     }
 
     /**
+     * Check if Strategy allows resuming the coroutine.
+     */
+    public boolean canResumeCoroutine(int iThread) { return true; }
+
+    /**
      * Creates {@link Strategy} based on {@code testCfg} type.
      */
     public static Strategy createStrategy(CTestConfiguration testCfg, Class<?> testClass,
@@ -96,6 +111,9 @@ public abstract class Strategy {
         if (testCfg instanceof StressCTestConfiguration) {
             return new StressStrategy(testClass, scenario, verifier,
                 (StressCTestConfiguration) testCfg, reporter);
+        } else if (testCfg instanceof RandomSearchCTestConfiguration) {
+            return new RandomSearchStrategy(testClass, scenario, verifier,
+                    (RandomSearchCTestConfiguration) testCfg, reporter);
         } else if (testCfg instanceof RandomSwitchCTestConfiguration) {
             return new RandomSwitchStrategy(testClass, scenario, verifier,
                 (RandomSwitchCTestConfiguration) testCfg, reporter);

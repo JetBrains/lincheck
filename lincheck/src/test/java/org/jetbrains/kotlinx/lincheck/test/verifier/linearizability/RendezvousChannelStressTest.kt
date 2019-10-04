@@ -33,7 +33,7 @@ import org.junit.Test
 
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-@StressCTest(verifier = LinearizabilityVerifier::class, actorsAfter = 0)
+@StressCTest(verifier = LinearizabilityVerifier::class, actorsAfter = 0, actorsBefore = 0)
 class RendezvousChannelStressTest : VerifierState() {
 
     val ch = Channel<Int>()

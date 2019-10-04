@@ -23,7 +23,7 @@ package thesis_example;
  */
 
 public class CounterWrong2 implements Counter {
-    private int c;
+    private volatile int c;
 
     public CounterWrong2() {
         c = 0;
@@ -32,5 +32,10 @@ public class CounterWrong2 implements Counter {
     @Override
     public int incrementAndGet() {
         return ++c;
+    }
+
+    @Override
+    public int get() {
+        return c;
     }
 }

@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.Actor;
 import org.jetbrains.kotlinx.lincheck.Result;
 import java.util.concurrent.Callable;
 
@@ -36,6 +37,7 @@ public abstract class TestThreadExecution implements Callable<Result[]> {
     protected Runner runner;
     public Object testInstance;
     protected Object[] objArgs;
+    protected Actor[] actors;
     public int[] waits; // for StressStrategy
 
     // It is better to return List<Result>,

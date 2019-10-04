@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.tests;
+package org.jetbrains.kotlinx.lincheck.test;
 
 /*
  * #%L

@@ -34,4 +34,9 @@ public class CounterWrong1 implements Counter {
         c++;
         return c;
     }
+
+    @Override
+    public int get() {
+        return c;
+    }
 }

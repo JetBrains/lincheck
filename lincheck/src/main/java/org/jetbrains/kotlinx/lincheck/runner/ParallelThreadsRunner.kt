@@ -25,6 +25,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.createLinCheckResult
+import org.jetbrains.kotlinx.lincheck.executeActor
 import org.jetbrains.kotlinx.lincheck.util.Either
 import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
@@ -123,18 +125,21 @@ internal open class ParallelThreadsRunner(
         val finalResult: Result
         val completion = completions[threadId][actorId]
         if (res === COROUTINE_SUSPENDED) {
-            completedOrSuspendedThreads.incrementAndGet()
+            afterCoroutineSuspended(threadId)
             // Thread was suspended -> if suspended method call has follow-up after this suspension point
             // then wait for result of this suspension point
             // and continuation written by resuming thread to be executed by this thread,
             // or final result written by the resuming thread
-            while (completion.resWithCont.get() === null && suspensionPointResults[threadId] === NoResult) {
+            while (!canResumeCoroutine(threadId, actorId) || !strategy.canResumeCoroutine(threadId)) {
                 if (completedOrSuspendedThreads.get() == scenario.threads) {
                     // all threads were suspended or completed
                     suspensionPointResults[threadId] = NoResult
                     return Suspended
                 }
             }
+
+            beforeCoroutineResumed(threadId)
+
             if (suspensionPointResults[threadId] !== NoResult) {
                 // Result of the suspension point equals to the final method call result
                 // completion.resumeWith was called in the resuming thread, final result is written
@@ -152,6 +157,18 @@ internal open class ParallelThreadsRunner(
         if (isThreadCompleted(threadId, actorId)) completedOrSuspendedThreads.incrementAndGet()
         suspensionPointResults[threadId] = NoResult
         return finalResult
+    }
+
+    override fun afterCoroutineSuspended(iThread: Int) {
+        completedOrSuspendedThreads.incrementAndGet()
+    }
+
+    override fun beforeCoroutineResumed(iThread: Int) {}
+
+
+    override fun canResumeCoroutine(iThread: Int, iActor: Int): Boolean {
+        val completion = completions[iThread][iActor]
+        return completion.resWithCont.get() != null || suspensionPointResults[iThread] !== NoResult
     }
 
     override fun run(): Either<TestReport, ExecutionResult> {

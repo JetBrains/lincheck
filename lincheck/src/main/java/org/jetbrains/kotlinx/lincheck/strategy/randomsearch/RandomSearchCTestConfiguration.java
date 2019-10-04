@@ -19,27 +19,26 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
+package org.jetbrains.kotlinx.lincheck.strategy.randomsearch;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.ConcurrentGuarantee;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 /**
- * Configuration for {@link RandomSwitchStrategy random-switch} strategy.
+ * Configuration for {@link RandomSearchStrategy random search} strategy.
  */
-public class RandomSwitchCTestConfiguration extends CTestConfiguration {
+public class RandomSearchCTestConfiguration extends CTestConfiguration {
     public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 10000;
 
     public ConcurrentGuarantee guarantee;
     public final int maxRepetitions;
     public final int invocationsPerIteration;
 
-    public RandomSwitchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
-        int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        ConcurrentGuarantee guarantee, int maxRepetitions, int invocationsPerIteration,
-        boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
+    public RandomSearchCTestConfiguration(Class<?> testClass,int iterations, int threads, int actorsPerThread, int actorsBefore,
+         int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
+         ConcurrentGuarantee guarantee, int maxRepetitions, int invocationsPerIteration,
+         boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);

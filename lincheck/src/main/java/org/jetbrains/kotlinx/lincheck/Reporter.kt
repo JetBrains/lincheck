@@ -42,11 +42,6 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
             out.println(this)
         }
     }
-
-    inline fun log(logLevel: LoggingLevel, crossinline msg: () -> String) {
-        if (this.logLevel > logLevel) return
-        out.println(msg())
-    }
 }
 
 @JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.ERROR
@@ -54,7 +49,10 @@ enum class LoggingLevel {
     DEBUG, INFO, ERROR
 }
 
-private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
+private fun <T> printInColumns(
+        groupedObjects: List<List<T>>,
+        joinColumns: (List<String>) -> String = { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
+): String {
     val nRows = groupedObjects.map { it.size }.max()!!
     val nColumns = groupedObjects.size
     val rows = (0 until nRows).map { rowIndex ->
@@ -67,7 +65,7 @@ private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
     }
     return (0 until nRows)
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
-            .map { rowCells -> rowCells.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
+            .map { rowCells -> joinColumns(rowCells) }
             .joinToString(separator = "\n")
 }
 
@@ -79,7 +77,6 @@ private fun uniteActorsAndResults(actors: List<Actor>, results: List<Result>): L
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
-    val actorRepresentations = actors.map { it.toString() }
     return actors.indices.map { ActorWithResult("${actors[it]}", 1, "${results[it]}") }
 }
 
@@ -130,4 +127,120 @@ fun StringBuilder.appendIncorrectResults(scenario: ExecutionScenario, results: E
         appendln("Post part:")
         append(uniteActorsAndResults(scenario.postExecution, results.postResults))
     }
+}
+
+fun StringBuilder.appendIncorrectExecution(
+        scenario: ExecutionScenario,
+        results: ExecutionResult,
+        threadEvents: List<ThreadEvent>
+) {
+    val nThreads = scenario.threads
+    val lastStartedActor = IntArray(nThreads) { -1 }
+    val interestingActors = Array(nThreads) { mutableSetOf<Int>() }
+
+    for (event in threadEvents) {
+        if (event is SwitchEvent || event is SuspendSwitchEvent) {
+            interestingActors[event.iThread].add(event.iActor)
+        }
+    }
+
+    class ParallelExecutionRepresentation(val iThread: Int, val repr: Pair<String, String>)
+
+    fun splitToColumns(nThreads: Int, execution: List<ParallelExecutionRepresentation>): List<List<String>> {
+        val result = List(nThreads * 2) { mutableListOf<String>() }
+        for (message in execution) {
+            val firstColumn = 2 * message.iThread
+            val secondColumn = 2 * message.iThread + 1
+
+            result[firstColumn].add(message.repr.first)
+            result[secondColumn].add(message.repr.second)
+
+            val neededSize = result[firstColumn].size
+
+            for (i in result.indices)
+                if (result[i].size != neededSize)
+                    result[i].add("")
+        }
+
+        return result
+    }
+
+    fun shorten(stackTraceElementRepr: String): String {
+        var wasPoints = 0
+        for ((i, c) in stackTraceElementRepr.withIndex().reversed()) {
+            if (c == '.') {
+                wasPoints++
+                if (wasPoints == 3)
+                    return stackTraceElementRepr.drop(i + 1)
+            }
+        }
+
+        return stackTraceElementRepr
+    }
+
+    val execution = mutableListOf<ParallelExecutionRepresentation>()
+
+    for (event in threadEvents) {
+        val iThread = event.iThread
+        val iActor = event.iActor
+
+        if (lastStartedActor[iThread] < iActor) {
+            while (lastStartedActor[iThread] < iActor) {
+                val lastActor = lastStartedActor[iThread]
+
+                if (lastActor != -1 && lastActor in interestingActors[iThread])
+                    execution.add(ParallelExecutionRepresentation(iThread, "" to "* result: ${results.parallelResults[iThread][lastActor]}"))
+
+                val nextActor = ++lastStartedActor[iThread]
+
+                if (nextActor != scenario.parallelExecution[iThread].size) {
+                    // print actor
+                    // if is not interesting then print with the result in the same line
+                    if (nextActor !in interestingActors[iThread])
+                        execution.add(ParallelExecutionRepresentation(
+                                iThread,
+                                "${scenario.parallelExecution[iThread][nextActor]}" to "* result: ${results.parallelResults[iThread][nextActor]}"
+                        ))
+                    else
+                        execution.add(ParallelExecutionRepresentation(iThread, "${scenario.parallelExecution[iThread][nextActor]}" to "*"))
+                }
+            }
+        }
+        when (event) {
+            is SwitchEvent -> {
+                execution.add(ParallelExecutionRepresentation(iThread, "" to "switch at: ${shorten(event.info.toString())}"))
+                // print reason if any
+                if (event.reason.isNotEmpty())
+                    execution.add(ParallelExecutionRepresentation(iThread, "" to "reason: ${event.reason}"))
+            }
+            is SuspendSwitchEvent -> {
+                execution.add(ParallelExecutionRepresentation(iThread, "" to "switch"))
+                execution.add(ParallelExecutionRepresentation(iThread, "" to "reason: coroutine is suspended"))
+            }
+            is FinishEvent -> {
+                execution.add(ParallelExecutionRepresentation(iThread, "" to "thread is finished"))
+            }
+            is PassCodeLocationEvent -> {
+                if (iActor in interestingActors[iThread])
+                    execution.add(ParallelExecutionRepresentation(iThread, "" to "pass: ${shorten(event.info.toString())}"))
+            }
+        }
+    }
+
+    val executionData = splitToColumns(nThreads, execution)
+
+    appendln("Parallel part execution:")
+    appendln(printInColumns(executionData) {
+        val builder = StringBuilder()
+        for (i in it.indices) {
+            if (i % 2 == 0)
+                builder.append(if (i == 0) "| " else " | ")
+            else
+                builder.append(' ')
+            builder.append(it[i])
+        }
+        builder.append(" |")
+
+        builder.toString()
+    })
 }

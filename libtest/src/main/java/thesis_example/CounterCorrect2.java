@@ -36,4 +36,9 @@ public class CounterCorrect2 implements Counter {
     public synchronized int incrementAndGet() {
         return c.incrementAndGet();
     }
+
+    @Override
+    public int get() {
+        return c.get();
+    }
 }

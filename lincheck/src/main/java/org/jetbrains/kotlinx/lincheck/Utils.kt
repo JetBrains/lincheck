@@ -81,10 +81,12 @@ internal fun executeActor(
         val res = m.invoke(specification, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLinCheckResult(res)
     } catch (invE: Throwable) {
-        val eClass = (invE.cause ?: invE)::class.java
+        // load class with default ClassLoader
+        val eClass = Class.forName((invE.cause ?: invE)::class.java.name)
         for (ec in actor.handledExceptions) {
+            @Suppress("UNCHECKED_CAST")
             if (ec.isAssignableFrom(eClass))
-                return ExceptionResult(eClass)
+                return ExceptionResult(eClass as Class<out Throwable>?)
         }
         throw IllegalStateException("Invalid exception as a result", invE)
     } catch (e: Exception) {
