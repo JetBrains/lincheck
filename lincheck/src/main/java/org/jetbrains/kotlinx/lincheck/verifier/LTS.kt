@@ -23,46 +23,11 @@
 package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.*
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
-import java.lang.reflect.Method
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.coroutines.*
 import kotlin.math.max
-
-
-/**
- * An abstraction for verifiers which use the labeled transition system (LTS) under the hood.
- * The main idea of such verifiers is finding a path in LTS, which starts from the initial
- * LTS state (see [LTS.initialState]) and goes through all actors with the specified results.
- * To determine which transitions are possible from the current state, we store related
- * to the current path prefix information in the special [VerifierContext], which determines
- * the next possible transitions using [VerifierContext.nextContexts] function. This verifier
- * uses depth-first search to find a proper path.
- */
-abstract class AbstractLTSVerifier<STATE>(protected val scenario: ExecutionScenario, protected val sequentialSpecification: Class<*>) : CachedVerifier() {
-    abstract val lts: LTS
-    abstract fun createInitialContext(results: ExecutionResult): VerifierContext<STATE>
-
-    override fun verifyResultsImpl(results: ExecutionResult) = verify(createInitialContext(results))
-
-    private fun verify(context: VerifierContext<STATE>): Boolean {
-        // Check if a possible path is found.
-        if (context.completed) return true
-        // Traverse through next possible transitions using depth-first search (DFS). Note that
-        // initial and post parts are represented as threads with ids `0` and `threads + 1` respectively.
-        for (threadId in 0..scenario.threads + 1) {
-            for (c in context.nextContexts(threadId)) {
-                if (verify(c)) return true
-            }
-        }
-        return false
-    }
-
-    override fun checkStateEquivalenceImplementation() = lts.checkStateEquivalenceImplementation()
-}
 
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
@@ -76,27 +41,18 @@ typealias ResumedTickets = Set<Int>
  * In order not to construct the full LTS (which is impossible because it can be either infinite
  * or just too big to build), we construct it lazily during the requests and reuse it between runs.
  *
- * The current implementation of [LTS] supports two kinds of transitions: non-relaxed and relaxed.
- * A non-relaxed transition from the specified state by the specified operation
- * determines the possible result and the next state uniquely. Taking this into account,
- * we internally represent non-relaxed transitions as [[State] x [Actor] x [TransitionInfo]].
+ * An [LTS] transition from the specified state by the specified operation
+ * determines the possible result and the next state uniquely. Internally, we
+ * represent transitions as [[State] x [Actor] x [TransitionInfo]].
  *
- * On the contrary, a relaxed transition from the specified state by the specified operation may lead to
- * several possible results and corresponding next states. Relaxed transitions are internally
- * represented as [[State] x [Actor] x List<[RelaxedTransitionInfo]>].
- *
- * The current LTS implementation supports transitions by partial operations that may register their request and
+ * The current implementation supports transitions by partial operations that may register their request and
  * block it's execution waiting for some precondition to become true. Partial operations are presented in
  * "Nonblocking concurrent objects with condition synchronization" paper by Scherer III W., Scott M.
  *
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(
-    private val sequentialSpecification: Class<*>,
-    private val isQuantitativelyRelaxed: Boolean,
-    private val relaxationFactor: Int
-) {
+class LTS(private val sequentialSpecification: Class<*>) {
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
      * Equivalency relation among LTS states is defined by the [StateInfo] class.
@@ -107,72 +63,68 @@ class LTS(
 
     /**
      * [LTS] state is defined by the sequence of operations that lead to this state from the [initialState].
-     * Every state stores non-relaxed [transitions] and relaxed [relaxedTransitions]
-     * that are counted lazily during the requests.
+     * Every state stores possible transitions([transitionsByRequests] and [transitionsByFollowUps]) by actors which are computed lazily
+     * by the corresponding [next] requests ([nextByRequest] and [nextByFollowUp] respectively).
      */
-    inner class State(var seqToCreate: List<Operation>, private val costCounter: Any? = null) {
-        private val transitions = mutableMapOf<ActorWithTicket, TransitionInfo?>()
-        private val relaxedTransitions = mutableMapOf<Operation, List<RelaxedTransitionInfo>?>()
+    inner class State(val seqToCreate: List<ActorWithTicket>) {
+        private val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
+
+        private val transitionsByFollowUps by lazy { mutableMapOf<ActorWithTicket, TransitionInfo>() }
 
         /**
-         * Counts or gets the existing non-relaxed transition from the current state
-         * by the given [actor].
+         * Computes or gets the existing transition from the current state by the given [actor].
          */
-        fun next(actor: Actor, expectedResult: Result, requestTicket: Int): TransitionInfo? {
-            val isRequest = requestTicket == -1
-            val operation = Operation(actor, expectedResult, requestTicket, isRequest)
-            val key = ActorWithTicket(actor, requestTicket, isRequest)
-            val resultWithTransitionInfo = if (transitions.contains(key)) {
-                transitions[key]
-            } else {
-                val resInfo = generateNextState(operation) { result, instance, suspendedOperations, resumedOperations ->
-                    createTransition(operation, result, instance, suspendedOperations, resumedOperations)
+        fun next(actor: Actor, expectedResult: Result, ticket: Int) =
+           if (ticket == NO_TICKET) nextByRequest(actor, expectedResult) else nextByFollowUp(actor, ticket, expectedResult)
+
+        private fun nextByRequest(actor: Actor, expectedResult: Result): TransitionInfo? {
+            val transitionInfo = transitionsByRequests.computeIfAbsent(actor) {
+                generateNextState { instance, suspendedOperations, resumedTicketsWithResults ->
+                    val ticket = findFirstAvailableTicket(suspendedOperations, resumedTicketsWithResults)
+                    val requestOperation = ActorWithTicket(actor, ticket)
+                    // Invoke the given operation to count the next transition.
+                    val result = requestOperation.invoke(instance, suspendedOperations, resumedTicketsWithResults)
+                    createTransition(requestOperation, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
-                if (resInfo != null) transitions[key.also { it.ticket = resInfo.ticket }] = resInfo
-                resInfo
             }
-            return if (isQuantitativelyRelaxed) resultWithTransitionInfo
-            else if (transitionAllowed(isRequest, resultWithTransitionInfo!!, expectedResult))
-                resultWithTransitionInfo
-            else
-                null
+            return if (transitionInfo.isLegalByRequest(expectedResult)) transitionInfo else null
         }
 
-        private fun transitionAllowed(isRequest: Boolean, transitionInfo: TransitionInfo, expectedResult: Result) =
-            (transitionInfo.result == expectedResult) ||
+        private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
+            val transitionInfo = transitionsByFollowUps.computeIfAbsent(ActorWithTicket(actor, ticket)) { op ->
+                generateNextState { instance, suspendedOperations, resumedTicketsWithResults ->
+                    // Invoke the given operation to count the next transition.
+                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults)
+                    createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
+                }
+            }
+            if (transitionInfo.wasSuspended) error("Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported")
+            return if (transitionInfo.isLegalByFollowUp(expectedResult)) transitionInfo else null
+        }
+
+        private fun TransitionInfo.isLegalByRequest(expectedResult: Result) =
             // Allow transition with a suspended result
             // regardless whether the operation was suspended during test running or not,
             // thus allowing elimination of interblocking operations in the implementation.
-            (isRequest && transitionInfo.wasSuspended) ||
-            (transitionInfo.result is ValueResult && expectedResult is ValueResult && transitionInfo.result.value == expectedResult.value && !expectedResult.wasSuspended) ||
-            (transitionInfo.result is ExceptionResult && expectedResult is ExceptionResult && transitionInfo.result.tClazz == expectedResult.tClazz && !expectedResult.wasSuspended) ||
-            (expectedResult == VoidResult && transitionInfo.result == SuspendedVoidResult)
+            result == expectedResult || wasSuspended
 
-        /**
-         * Counts or gets the existing relaxed transition from the current state
-         * by the given [actor] and [expectedResult].
-         */
-        fun nextRelaxed(actor: Actor, expectedResult: Result, requestTicket: Int): List<RelaxedTransitionInfo>? {
-            val operation = Operation(actor, expectedResult, requestTicket, requestTicket == -1)
-            return relaxedTransitions.computeIfAbsent(operation) {
-                generateNextState(operation) { result, instance, suspendedOperations, resumedOperations ->
-                    createRelaxedTransitions(operation, result, suspendedOperations, resumedOperations)
-                }
-            }
-        }
+
+        private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result) =
+            (result == expectedResult) ||
+            (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value && !expectedResult.wasSuspended) ||
+            (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz && !expectedResult.wasSuspended) ||
+            (expectedResult == VoidResult && result == SuspendedVoidResult)
 
         private inline fun <T> generateNextState(
-            nextOperation: Operation,
             action: (
-                result: Result,
                 instance: Any,
-                suspendedOperations: List<Operation>,
-                resumedOperations: List<ResumptionInfo>
+                suspendedActorWithTickets: MutableList<ActorWithTicket>,
+                resumedTicketsWithResults: MutableMap<Int, ResumedResult>
             ) -> T
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
-            val instance = if (isQuantitativelyRelaxed) costCounter!! else sequentialSpecification.newInstance()
-            val suspendedOperations = mutableListOf<Operation>()
+            val instance = createInitialStateInstance()
+            val suspendedOperations = mutableListOf<ActorWithTicket>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
             try {
                 for (operation in seqToCreate) {
@@ -181,91 +133,41 @@ class LTS(
             } catch (e: Exception) {
                 throw  IllegalStateException(e)
             }
-            // Invoke the given operation to count the next transition.
-            val result = nextOperation.invoke(instance, suspendedOperations, resumedTicketsWithResults)
-            return action(result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
+            return action(instance, suspendedOperations, resumedTicketsWithResults)
         }
 
         private fun createTransition(
-            operation: Operation,
+            actorWithTicket: ActorWithTicket,
             result: Result,
             instance: Any,
-            suspendedOperations: List<Operation>,
+            suspendedActorWithTickets: List<ActorWithTicket>,
             resumedOperations: List<ResumptionInfo>
-        ): TransitionInfo? {
-            val costCounterOrTestInstance =
-                if (!isQuantitativelyRelaxed) instance
-                else {
-                    if (result is ValueResult && result.value != null) {
-                        // Standalone instance of CostCounter is returned.
-                        check(result.value.javaClass == sequentialSpecification) {
-                            "Non-relaxed ${operation.actor} should store transitions within CostCounter instances, but ${result.value} is found"
-                        }
-                        result.value
-                    } else {
-                        // The impossibility of this transition is already defined by CostCounter class.
-                        return null
-                    }
-                }
-            val stateInfo = StateInfo(this, costCounterOrTestInstance, suspendedOperations, resumedOperations)
-            return stateInfo.intern(curOperation = operation) { stateInfo, rf ->
+        ): TransitionInfo {
+            val stateInfo = StateInfo(this, instance, suspendedActorWithTickets, resumedOperations)
+            return stateInfo.intern(actorWithTicket) { nextStateInfo, rf ->
                 TransitionInfo(
-                    nextState = stateInfo.state,
+                    nextState = nextStateInfo.state,
                     resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
-                    wasSuspended = result === Suspended,
-                    ticket = if (rf != null && result === Suspended) rf[operation.ticket] else operation.ticket,
+                    ticket = if (rf != null && result === Suspended) rf[actorWithTicket.ticket] else actorWithTicket.ticket,
                     rf = rf,
                     result = result
                 )
             }
         }
 
-        private fun createRelaxedTransitions(
-            operation: Operation,
-            result: Result,
-            suspendedOperations: List<Operation>,
-            resumedOperations: List<ResumptionInfo>
-        ): List<RelaxedTransitionInfo>? {
-            val nextCostCounterInstances = if (result is ValueResult && result.value != null) {
-                // A list of CostWithNextCounter instances is returned.
-                check(result.value is List<*>) {
-                    "Relaxed ${operation.actor} should store transitions within a list of CostWithNextCostCounter, but ${result.value} is found"
-                }
-                result.value as List<CostWithNextCostCounter<*>>
-            } else {
-                return null
-            }
-            return nextCostCounterInstances.map { it ->
-                val stateInfo = StateInfo(this, it.nextCostCounter, suspendedOperations, resumedOperations)
-                stateInfo.intern(curOperation = operation) { stateInfo, rf ->
-                    RelaxedTransitionInfo(
-                        nextState = stateInfo.state,
-                        resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
-                        wasSuspended = result === Suspended,
-                        ticket = operation.ticket,
-                        rf = rf,
-                        result = result,
-                        cost = it.cost,
-                        predicate = it.predicate
-                    )
-                }
-            }
-        }
-
         private fun getResumedOperations(resumedTicketsWithResults: Map<Int, ResumedResult>): List<ResumptionInfo> {
             val resumedOperations = mutableListOf<ResumptionInfo>()
             resumedTicketsWithResults.forEach { resumedTicket, res ->
-                resumedOperations.add(ResumptionInfo(res.resumedActor, res.by!!).also { it.resumedActorTicket = resumedTicket })
+                resumedOperations.add(ResumptionInfo(res.resumedActor, res.by, resumedTicket))
             }
             // Ignore the order of resumption by sorting the list of resumptions.
             return resumedOperations.sortedBy { it.resumedActorTicket }
         }
-
     }
 
-    private fun Operation.invoke(
+    private fun ActorWithTicket.invoke(
         externalState: Any,
-        suspendedOperations: MutableList<Operation>,
+        suspendedActorWithTickets: MutableList<ActorWithTicket>,
         resumedTicketsWithResults: MutableMap<Int, ResumedResult>
     ): Result {
         val prevResumedTickets = mutableListOf<Int>().also { it.addAll(resumedTicketsWithResults.keys) }
@@ -281,21 +183,15 @@ class LTS(
             resumedTicketsWithResults.remove(ticket)
             createLinCheckResult(finalRes, wasSuspended = true)
         } else {
-            if (ticket == -1) ticket = findFirstAvailableTicket(suspendedOperations, resumedTicketsWithResults)
-            executeActor(
-                externalState,
-                actor,
-                Completion(ticket, actor, resumedTicketsWithResults),
-                if (isQuantitativelyRelaxed) result else null
-            )
+            executeActor(externalState, actor, Completion(ticket, actor, resumedTicketsWithResults))
         }
         if (res === Suspended) {
             // Operation suspended it's execution.
-            suspendedOperations.add(this)
+            suspendedActorWithTickets.add(this)
         } else {
             resumedTicketsWithResults.forEach { resumedTicket, res ->
                 if (!prevResumedTickets.contains(resumedTicket)) {
-                    suspendedOperations.removeIf { it.ticket == resumedTicket }
+                    suspendedActorWithTickets.removeIf { it.ticket == resumedTicket }
                     res.by = actor
                 }
             }
@@ -307,7 +203,7 @@ class LTS(
      * Creates and stores the new LTS state or gets the one if already exists.
      */
     private fun <T> StateInfo.intern(
-        curOperation: Operation?,
+        curOperation: ActorWithTicket?,
         block: (StateInfo, RemappingFunction?) -> T
     ): T {
         return if (stateInfos.containsKey(this)) {
@@ -315,23 +211,23 @@ class LTS(
             block(old, this.computeRemappingFunction(old))
         } else {
             val newSeqToCreate = if (curOperation != null) this.state.seqToCreate + curOperation else emptyList()
-            stateInfos[this] = this.also { it.state = State(newSeqToCreate, if (isQuantitativelyRelaxed) instance else null) }
+            stateInfos[this] = this.also { it.state = State(newSeqToCreate) }
             return block(stateInfos[this]!!, null)
         }
     }
 
     private fun createInitialState(): State {
         val instance = createInitialStateInstance()
+        val initialState = State(emptyList())
         return StateInfo(
-            state = State(emptyList(), if (isQuantitativelyRelaxed) instance else null),
+            state = initialState,
             instance = instance,
             suspendedOperations = emptyList(),
             resumedOperations = emptyList()
-        ).intern(curOperation = null) { stateInfo, rf -> return@intern stateInfo.state }
+        ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = if (isQuantitativelyRelaxed) createCostCounterInstance(sequentialSpecification, relaxationFactor)
-                                               else sequentialSpecification.newInstance()
+    private fun createInitialStateInstance() = sequentialSpecification.newInstance()
 
     fun checkStateEquivalenceImplementation() {
         val i1 = createInitialStateInstance()
@@ -345,7 +241,7 @@ class LTS(
     }
 
     private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction {
-        val rf = IntArray(maxTicket + 1) { -1 }
+        val rf = IntArray(maxTicket + 1) { NO_TICKET }
         // Remap tickets of suspended operations according the order of suspension.
         for (i in suspendedOperations.indices) {
             rf[suspendedOperations[i].ticket] = old.suspendedOperations[i].ticket
@@ -358,21 +254,23 @@ class LTS(
     }
 
 
-    private fun findFirstAvailableTicket(suspendedOperations: List<Operation>, resumedTicketsWithResults: MutableMap<Int, ResumedResult>): Int {
-        for (ticket in 0 until suspendedOperations.size + resumedTicketsWithResults.size) {
-            if (suspendedOperations.find { it.ticket == ticket } == null &&
+    private fun findFirstAvailableTicket(
+        suspendedActorWithTickets: List<ActorWithTicket>,
+        resumedTicketsWithResults: MutableMap<Int, ResumedResult>
+    ): Int {
+        for (ticket in 0 until suspendedActorWithTickets.size + resumedTicketsWithResults.size) {
+            if (suspendedActorWithTickets.find { it.ticket == ticket } == null &&
                 !resumedTicketsWithResults.contains(ticket)) {
                 return ticket
             }
         }
-        return suspendedOperations.size + resumedTicketsWithResults.size
+        return suspendedActorWithTickets.size + resumedTicketsWithResults.size
     }
 }
 
 /**
  * Defines equivalency relation among LTS states (see [LTS.State]).
- * Stores the [state], and additional information about this state:
- * corresponding test [instance], execution status of operations that were used to create the given [state].
+ * Stores information about the state: corresponding test [instance], execution status of operations that were used to create the given [state].
  *
  * The following state properties were chosen to define the state equivalency:
  *   1. The test instance corresponding to the given state with `hashCode` and `equals` defined by the user.
@@ -380,27 +278,23 @@ class LTS(
  *   3. The set of pairs of resumed and the corresponding resuming actors.
  */
 private class StateInfo(
-    var state: LTS.State,
+    var state: State,
     val instance: Any,
-    val suspendedOperations: List<Operation>,
+    val suspendedOperations: List<ActorWithTicket>,
     val resumedOperations: List<ResumptionInfo>
 ) {
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other == null || javaClass != other.javaClass) return false
-        val that = other as StateInfo
-        return instance == that.instance &&
-            suspendedOperations.map { it.actor } == that.suspendedOperations.map { it.actor } &&
-            resumedOperations == that.resumedOperations
+        if (other !is StateInfo) return false
+        return instance == other.instance &&
+            suspendedOperations.map { it.actor } == other.suspendedOperations.map { it.actor } &&
+            resumedOperations == other.resumedOperations
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(
-            instance,
-            suspendedOperations.map { it.actor },
-            resumedOperations
-        )
-    }
+    override fun hashCode() = Objects.hash(
+        instance,
+        suspendedOperations.map { it.actor },
+        resumedOperations
+    )
 
     val maxTicket: Int
         get() = max(
@@ -408,12 +302,6 @@ private class StateInfo(
             resumedOperations.maxBy { it.resumedActorTicket }?.resumedActorTicket ?: 0
         )
 }
-
-private val relaxedActors = IdentityHashMap<Method, Boolean>()
-val Actor.isRelaxed: Boolean
-    get() = relaxedActors.computeIfAbsent(this.method) {
-        this.method.isAnnotationPresent(QuantitativeRelaxed::class.java)
-    }
 
 /**
  * When suspended operation is resumed by another thread,
@@ -456,7 +344,7 @@ internal class Completion(
 
     override fun resumeWith(result: kotlin.Result<Any?>) {
         resumedTicketsWithResults[ticket] =
-            ResumedResult(null as Continuation<Any?>? to result).also { it.resumedActor = actor }
+            ResumedResult(null to result).also { it.resumedActor = actor }
     }
 }
 
@@ -495,26 +383,20 @@ internal class Completion(
  * 3. [receive_request(ticket):res] // `receive` completes it's execution
  * ```
  */
-data class Operation(
+data class ActorWithTicket(
     val actor: Actor,
-    val result: Result,
-    var ticket: Int,
-    val isRequest: Boolean
+    val ticket: Int
 )
 
-private data class ActorWithTicket(val actor: Actor, var ticket: Int, val isRequest: Boolean)
+internal const val NO_TICKET = -1
 
 private data class ResumptionInfo(
     val resumedActor: Actor,
-    val by: Actor
-) {
-    var resumedActorTicket = -1
-}
+    val by: Actor,
+    val resumedActorTicket: Int
+)
 
-/**
- * Describes non-relaxed transition.
- */
-open class TransitionInfo(
+class TransitionInfo(
     /**
      * The next LTS state.
      */
@@ -522,17 +404,13 @@ open class TransitionInfo(
     /**
      * The set of tickets corresponding to resumed operation requests which follow-ups are available to be invoked.
      */
-    val resumedTickets: ResumedTickets,
-    /**
-     * Whether the current transition was made by the suspended request.
-     */
-    val wasSuspended: Boolean,
+    val resumedTickets: ResumedTickets, // TODO inline class which contains either Int? or IntArray
     /**
      * The ticket assigned to the transition operation.
      *
      * If the executed operation was the `request` part that suspended it's execution,
      * the first available ticket is assigned.
-     * Otherwise, ticket equals `-1`.
+     * Otherwise, ticket is [NO_TICKET].
      */
     val ticket: Int,
     /**
@@ -541,109 +419,14 @@ open class TransitionInfo(
      * Stores correspondence between tickets assigned to operations on the current way to this state.
      * and previously assigned tickets.
      */
-    val rf: RemappingFunction?,
+    val rf: RemappingFunction?, // TODO inline class?
     /**
      * Transition result
      */
     val result: Result
-)
-
-/**
- * Describes relaxed transition.
- */
-class RelaxedTransitionInfo(
-    nextState: State,
-    resumedTickets: Set<Int>,
-    wasSuspended: Boolean,
-    ticket: Int,
-    rf: RemappingFunction?,
-    result: Result,
-    /**
-     * Transition cost
-     */
-    val cost: Int,
-    /**
-     * Transition predicate
-     */
-    val predicate: Boolean
-) : TransitionInfo(nextState, resumedTickets, wasSuspended, ticket, rf, result)
-
-
-/**
- *  Reflects the current path prefix information and stores the current LTS state
- *  (which essentially indicates the data structure state) for a single step of a legal path search
- *  in LTS-based verifiers. It counts next possible transitions via [nextContexts] function.
- */
-
-abstract class VerifierContext<STATE>(
-    /**
-     * Current execution scenario.
-     */
-    protected val scenario: ExecutionScenario,
-    /**
-     * Expected execution results
-     */
-    protected val results: ExecutionResult,
-    /**
-     * LTS state of this context
-     */
-    val state: State,
-    /**
-     * Number of executed actors in each thread. Note that initial and post parts
-     * are represented as threads with ids `0` and `threads + 1` respectively.
-     */
-    protected val executed: IntArray = IntArray(scenario.threads + 2),
-    /**
-     * For every scenario thread stores whether it is suspended or not.
-     */
-    protected val suspended: BooleanArray = BooleanArray(scenario.threads + 2),
-    /**
-     * For every thread it stores a ticket assigned to the last executed actor by [LTS].
-     * A ticket is assigned from the range (0 .. threads) to an actor that suspends it's execution,
-     * after being resumed the actor is invoked with this ticket to complete it's execution.
-     * If an actor does not suspend, the assigned ticket equals `-1`.
-     */
-    protected val tickets: IntArray = IntArray(scenario.threads + 2) { -1 }
 ) {
     /**
-     * Counts next possible states and the corresponding contexts if the specified thread is executed.
+     * Whether the current transition was made by the suspended request.
      */
-    abstract fun nextContexts(threadId: Int): List<VerifierContext<STATE>>
-
-    /**
-     * Returns `true` if all actors in the specified thread are executed.
-     */
-    fun isCompleted(threadId: Int) = executed[threadId] == scenario[threadId].size
-
-    /**
-     * Returns `true` if the initial part is completed.
-     */
-    val initCompleted: Boolean get() = isCompleted(0)
-
-    /**
-     * Returns `true` if all actors from the parallel scenario part are executed.
-     */
-    val parallelCompleted: Boolean get() = completedThreads(1, scenario.threads) == scenario.threads
-
-    /**
-     * Returns `true` if all threads completed their execution.
-     */
-    val completed: Boolean get() = completedThreads + suspendedThreads == scenario.threads + 2
-
-    /**
-     * The number of threads that expectedly suspended their execution.
-     */
-    private val suspendedThreads: Int
-        get() = (0..scenario.threads + 1).count { t -> suspended[t] && results[t][executed[t]] === Suspended }
-
-    /**
-     * Returns the number of threads from the range [[tidFrom]..[tidTo]] (inclusively) which are completed.
-     */
-    private fun completedThreads(tidFrom: Int, tidTo: Int) = (tidFrom..tidTo).count { t -> isCompleted(t) }
-
-    /**
-     * Returns the number of completed scenario threads.
-     */
-    private val completedThreads: Int get() = completedThreads(0, scenario.threads + 1)
+    val wasSuspended: Boolean get() = result === Suspended
 }
-

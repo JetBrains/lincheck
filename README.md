@@ -34,7 +34,6 @@ Table of contents
       * [Linearizability](#linearizability)
       * [Serializability](#serializability)
       * [Quiescent consistency](#quiescent-consistency)
-      * [Quantitative relaxation](#quantitative-relaxation)
    * [Blocking data structures](#blocking-data-structures)   
    * [Configuration via options](#configuration-via-options)
    * [Sample](#sample)
@@ -138,7 +137,7 @@ Unfortunately, this feature is disabled in **javac** compiler by default. Use `-
 By default, **lincheck** sequentially uses the testing data structure to define the correct specification.
 However, it is sometimes better to define it explicitly, by writing a simple sequential implementation, and be sure that it is correct. 
 Thus, **lincheck** can test that the testing data structure is correct even without parallelism.
-This sequential specification class should have the same methods as the testing data structure; however, some verifiers require additional parameters for these methods, see *QuantitativelyRelaxedLinearizabilityVerifier* as an example.
+This sequential specification class should have the same methods as the testing data structure.
 The specification class can be defined via `sequentialSpecification` parameter in both `Options` instances and the corresponding annotations.
 
 ## Run test
@@ -257,70 +256,6 @@ public class QuiescentQueueTest extends VerifierState {
   }
   
   // extractState() here
-}
-```
-
-
-## Quantitative relaxation
-One more trade-off contract is suggested by T. Henzinger et al., which relaxes a data structure semantics. Instead of allowing some reorderings, they suggest to allow "illegal" by the data structure specification results, but with a penalty. This penalty is called a transition cost and then is used to count a path cost, which should be less then a relaxation factor if an execution is correct.
-
-> Look at this paper for details: Henzinger, Thomas A., et al. "Quantitative relaxation of concurrent data structures." ACM SIGPLAN Notices. Vol. 48. No. 1. ACM, 2013.
-
-In order to describe the contract of a testing data structure, the transition costs, the path cost function and the relaxation factor should be specified. 
-
-At first, all relaxed operations should be annotated with `@QuantitativeRelaxed`. The current version of **lincheck** counts a path cost using all relaxed operations, but grouping is going to be introduced later.
-
-Then the special cost counter class have to be defined. This class represents a current data structure state and has the same methods as testing operations, but with an additional `Result` parameter and another return type. If an operation is not relaxed this cost counter should check that the operation result is correct and return the next state (which is a cost counter too) or `null` in case the result is incorrect. Otherwise, if a corresponding operation is relaxed (annotated with `@QuantitativeRelaxed`), the method should return a list of all possible next states with their transition cost. For this purpose, a special `CostWithNextCostCounter` class should be used. This class contains the next state and the transition cost with the predicate value, which are defined in accordance with the original paper. Thus, `List<CostWithNextCostCounter>` should be returned by these methods and an empty list should be returned in case no transitions are possible. In order to restrict the number of possible transitions, the relaxation factor should be used. It is provided via a constructor, so **lincheck** uses the `(int relaxationFactor)` constructor for the first instance creation.
-
-The last thing to do is to provide the relaxation factor, the cost counter class, and the path cost function to the verifier. For this purpose, the test class should have an `@QuantitativeRelaxationVerifierConf(...)` annotation, which is then used by `QuantitativeRelaxationVerifier`. As for the path cost function, `MAX`, `PHI_INTERVAL`, and `PHI_INTERVAL_RESTRICTED_MAX` are implemented in `PathCostFunction` class in accordance with the past cost functions in the original paper.
-
-Here is an example for k-stack with relaxed `pop()` operation and normal `push` one:
-
-### Test example
-
-```kotlin
-@StressCTest(sequentialSpecification = KRelaxedPopStackTest.CostCounter::class,
-             verifier = QuantitativeRelaxationVerifier::class)
-class KRelaxedPopStackTest {
-  private val s = KRelaxedPopStack<Int>(K)
-
-  @Operation
-  fun push(x: Int) = s.push(x)
-
-  @QuantitativeRelaxed
-  @Operation
-  fun pop(): Int? = s.pop()
-
-  @Test
-  fun test() = LinChecker.check(KRelaxedPopStackTest::class.java)
-
-  @QuantitativeRelaxationVerifierConf(factor = K, pathCostFunc = MAX)
-  data class CostCounter @JvmOverloads constructor(
-    private val k: Int, 
-    private val s: List<Int> = emptyList()
-  ) {  
-    fun push(value: Int, result: Result): CostCounter {
-       check(result.type == VOID)
-       val sNew = ArrayList(s)
-       sNew.add(0, value)
-       return CostCounter(k, sNew)
-    }
-
-    fun pop(result: Result): List<CostWithNextCostCounter<CostCounter>> {
-      if (result.value == null) {
-        return if (s.isEmpty())
-          listOf(CostWithNextCostCounter(this, 0))
-        else emptyList()
-      }
-      return (0..(k - 1).coerceAtMost(s.size - 1))
-        .filter { i -> s[i] == result.value }
-        .map { i ->
-          val sNew = ArrayList(s)
-          sNew.removeAt(i)
-          CostWithNextCostCounter(CostCounter(k, sNew), i)
-        }
-    }   
-  }
 }
 ```
 

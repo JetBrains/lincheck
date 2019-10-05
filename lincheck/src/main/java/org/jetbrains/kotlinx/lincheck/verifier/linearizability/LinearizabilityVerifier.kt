@@ -21,13 +21,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.AbstractLTSVerifier
-import org.jetbrains.kotlinx.lincheck.verifier.LTS
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityContext
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
  * This verifier checks that the specified results could happen if the testing operations are linearizable.
@@ -41,20 +37,69 @@ import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxe
 class LinearizabilityVerifier(
     scenario: ExecutionScenario,
     sequentialSpecification: Class<*>
-) : AbstractLTSVerifier<LTS.State>(scenario, sequentialSpecification) {
-    private val relaxationFactor = 0
-    private val pathCostFunc = PathCostFunction.NON_RELAXED
-    override val lts: LTS = LTS(
-        sequentialSpecification = sequentialSpecification,
-        isQuantitativelyRelaxed = false,
-        relaxationFactor = 0
-    )
+) : AbstractLTSVerifier(scenario, sequentialSpecification) {
+    override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
 
-    override fun createInitialContext(results: ExecutionResult): VerifierContext<LTS.State> =
-        QuantitativelyRelaxedLinearizabilityContext(scenario, results, lts.initialState,
-            PathCostFunction.NON_RELAXED.createIterativePathCostFunctionCounter(0))
+    override fun createInitialContext(results: ExecutionResult) =
+        LinearizabilityContext(scenario, results, lts.initialState)
 }
 
+class LinearizabilityContext : VerifierContext {
+    constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State) : super(scenario, results, state)
+    constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
+                executed: IntArray, suspended: BooleanArray, tickets: IntArray) : super(scenario, results, state, executed, suspended, tickets)
+
+    override fun nextContext(threadId: Int): LinearizabilityContext? {
+        // Check whether the specified thread is not suspended and there are unprocessed actors
+        if (isCompleted(threadId) || suspended[threadId]) return null
+        // Check whether an actorWithToken from the specified thread can be executed
+        // in accordance with the rule that all actors from init part should be
+        // executed at first, after that all actors from parallel part, and
+        // all actors from post part should be executed at last.
+        val legal = when (threadId) {
+            0 -> true // INIT: we already checked that there is an unprocessed actorWithToken
+            in 1..scenario.threads -> isCompleted(0) // PARALLEL
+            else -> initCompleted && parallelCompleted // POST
+        }
+        if (!legal) return null
+        val actorId = executed[threadId]
+        val actor = scenario[threadId][actorId]
+        val expectedResult = results[threadId][actorId]
+        // Try to make transition by the next actor from the current thread,
+        // passing the ticket corresponding to the current thread.
+        return state.next(actor, expectedResult, tickets[threadId])?.createContext(threadId)
+    }
+
+    private fun TransitionInfo.createContext(threadId: Int): LinearizabilityContext {
+        val nextExecuted = executed.copyOf()
+        val nextSuspended = suspended.copyOf()
+        val nextTickets = tickets.copyOf()
+        // update tickets
+        nextTickets[threadId] = if (wasSuspended) ticket else NO_TICKET
+        if (rf != null) { // remapping
+            nextTickets.forEachIndexed { tid, ticket ->
+                if (tid != threadId && ticket != NO_TICKET) nextTickets[tid] = rf[ticket]
+            }
+        }
+        // update "suspended" statuses
+        nextSuspended[threadId] = wasSuspended
+        for (tid in threads) {
+            if (nextTickets[tid] in resumedTickets) // note, that we have to use remapped tickets here!
+                nextSuspended[tid] = false
+        }
+        // mark this step as "executed" if the operation was not suspended
+        if (!wasSuspended) nextExecuted[threadId]++
+        // create new context
+        return LinearizabilityContext(
+            scenario = scenario,
+            state = nextState,
+            results = results,
+            executed = nextExecuted,
+            suspended = nextSuspended,
+            tickets = nextTickets
+        )
+    }
+}
 
 
 
