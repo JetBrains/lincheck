@@ -65,8 +65,6 @@ fun createCostCounterInstance(costCounter: Class<*>, relaxationFactor: Int): Any
 }
 
 internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
-internal fun executeActor(testInstance: Any, actor: Actor, completion: Continuation<Any?>?) =
-    executeActor(testInstance, actor, completion, null)
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.
@@ -74,18 +72,11 @@ internal fun executeActor(testInstance: Any, actor: Actor, completion: Continuat
 internal fun executeActor(
     specification: Any,
     actor: Actor,
-    completion: Continuation<Any?>?,
-    result: Result?
+    completion: Continuation<Any?>?
 ): Result {
     try {
-        val m = if (result == null) getMethod(specification, actor)
-        else getRelaxedMethod(specification, actor)
-        val args = when {
-            actor.isSuspendable && result != null -> actor.arguments + result + completion
-            actor.isSuspendable -> actor.arguments + completion
-            result != null -> actor.arguments + result
-            else -> actor.arguments
-        }
+        val m = getMethod(specification, actor)
+        val args = if (actor.isSuspendable) actor.arguments + completion else actor.arguments
         val res = m.invoke(specification, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLinCheckResult(res)
     } catch (invE: Throwable) {
@@ -111,12 +102,6 @@ private fun getMethod(instance: Any, actor: Actor): Method = methodsCache
     .computeIfAbsent(instance.javaClass) { hashMapOf() }
     .computeIfAbsent(actor.method) {
         instance.javaClass.getMethod(actor.method.name, *actor.method.parameterTypes)
-    }
-
-private fun getRelaxedMethod(instance: Any, actor: Actor): Method = methodsCache
-    .computeIfAbsent(instance.javaClass) { hashMapOf() }
-    .computeIfAbsent(actor.method) {
-        instance.javaClass.getMethod(actor.method.name, *(actor.method.parameterTypes + Result::class.java))
     }
 
 /**
