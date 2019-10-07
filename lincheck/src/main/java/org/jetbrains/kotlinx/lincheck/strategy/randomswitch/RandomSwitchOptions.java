@@ -40,7 +40,7 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
     /**
      * Check obstruction freedom of the concurrent algorithm
      */
-    public RandomSwitchOptions checkObstructionFreedom(boolean guarantee) {
+    public RandomSwitchOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
         this.checkObstructionFreedom = checkObstructionFreedom;
         return this;
     }

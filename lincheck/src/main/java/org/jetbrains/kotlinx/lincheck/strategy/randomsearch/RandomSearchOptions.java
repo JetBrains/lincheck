@@ -39,7 +39,7 @@ public class RandomSearchOptions extends Options<RandomSearchOptions, RandomSear
     /**
      * Check obstruction freedom of the concurrent algorithm
      */
-    public RandomSearchOptions checkObstructionFreedom(boolean guarantee) {
+    public RandomSearchOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
         this.checkObstructionFreedom = checkObstructionFreedom;
         return this;
     }

@@ -19,13 +19,16 @@ abstract class AbstractLincheckTest(val shouldFail: Boolean, val checkObstructio
         OptionsCreator.values().map {
             it.name to it.create(checkObstructionFreedom)
         }.forEach {
-            if (!checkObstructionFreedom || it !is StressOptions) {
+            if (!checkObstructionFreedom || it.second !is StressOptions) {
                 var failed = false
                 println(it.first)
                 val options = it.second
                 try {
                     LinChecker.check(this.javaClass, options)
                 } catch (e: AssertionError) {
+                    if (!shouldFail) throw e
+                    failed = true
+                } catch (e: IllegalStateException) {
                     if (!shouldFail) throw e
                     failed = true
                 }
