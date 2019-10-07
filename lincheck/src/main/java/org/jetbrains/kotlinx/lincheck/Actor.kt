@@ -35,30 +35,7 @@ data class Actor(
     val arguments: List<Any?>,
     val handledExceptions: List<Class<out Throwable>>
 ) {
-    val wasInvoked: Boolean
-        get() = wasInvokedInner
-
-    private var wasInvokedInner = false
-
     override fun toString() = method.name + arguments.joinToString(prefix = "(", postfix = ")", separator = ",") { it.toString() }
-
-    /**
-     * Marks actor as invoked
-     */
-    fun setInvoked() {
-        if (wasInvokedInner) {
-            throw IllegalStateException("Same actor was invoked twice during the same invocation")
-        }
-
-        wasInvokedInner = true
-    }
-
-    /**
-     * Resets actor
-     */
-    fun reset() {
-        wasInvokedInner = false
-    }
 
     val handlesExceptions = handledExceptions.isNotEmpty()
 

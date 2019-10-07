@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import org.jetbrains.kotlinx.lincheck.Actor;
 import org.jetbrains.kotlinx.lincheck.Result;
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
+
 import java.util.concurrent.Callable;
 
 /**
@@ -35,6 +37,7 @@ import java.util.concurrent.Callable;
 public abstract class TestThreadExecution implements Callable<Result[]> {
     // The following fields are assigned in TestThreadExecutionGenerator
     protected Runner runner;
+    protected Strategy strategy;
     public Object testInstance;
     protected Object[] objArgs;
     protected Actor[] actors;

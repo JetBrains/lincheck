@@ -102,6 +102,8 @@ public abstract class Strategy {
      */
     public boolean canResumeCoroutine(int iThread) { return true; }
 
+    public void onActorStart(int iThread) {}
+
     /**
      * Creates {@link Strategy} based on {@code testCfg} type.
      */

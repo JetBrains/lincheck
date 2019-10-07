@@ -33,7 +33,7 @@ import org.junit.Test
 
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-@StressCTest(verifier = LinearizabilityVerifier::class, actorsAfter = 0, actorsBefore = 0)
+@StressCTest(verifier = LinearizabilityVerifier::class, actorsAfter = 0)
 class RendezvousChannelStressTest : VerifierState() {
 
     val ch = Channel<Int>()
@@ -46,6 +46,12 @@ class RendezvousChannelStressTest : VerifierState() {
 
     @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
     suspend fun receiveOrNull() = ch.receiveOrNull()?.plus(100)
+
+    @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
+    fun poll() = ch.poll()
+
+    @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
+    fun offer(@Param(name = "value") value: Int) = ch.offer(value)
 
     @Operation
     fun close() = ch.close()

@@ -210,12 +210,12 @@ fun StringBuilder.appendIncorrectExecution(
             is SwitchEvent -> {
                 execution.add(ParallelExecutionRepresentation(iThread, "" to "switch at: ${shorten(event.info.toString())}"))
                 // print reason if any
-                if (event.reason.isNotEmpty())
+                if (event.reason.toString().isNotEmpty())
                     execution.add(ParallelExecutionRepresentation(iThread, "" to "reason: ${event.reason}"))
             }
             is SuspendSwitchEvent -> {
                 execution.add(ParallelExecutionRepresentation(iThread, "" to "switch"))
-                execution.add(ParallelExecutionRepresentation(iThread, "" to "reason: coroutine is suspended"))
+                execution.add(ParallelExecutionRepresentation(iThread, "" to "reason: ${event.reason}"))
             }
             is FinishEvent -> {
                 execution.add(ParallelExecutionRepresentation(iThread, "" to "thread is finished"))

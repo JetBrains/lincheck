@@ -56,7 +56,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private val testThreadExecutions = List(scenario.threads) { t ->
-        TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], false, scenario.hasSuspendableActors())
+        TestThreadExecutionGenerator.create(this, strategy, t, scenario.parallelExecution[t], completions[t], false, scenario.hasSuspendableActors())
             .also { if (waits != null) it.waits = waits[t] }
     }
 

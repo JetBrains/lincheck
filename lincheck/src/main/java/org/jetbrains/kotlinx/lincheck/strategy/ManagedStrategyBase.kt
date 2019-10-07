@@ -63,8 +63,10 @@ abstract class ManagedStrategyBase(
     protected var exception: Throwable? = null
     // is thread suspended
     protected val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
-    // number of clinit blocks enter and not leaved for each thread
+    // number of clinit blocks entered and not leaved for each thread
     protected val classInitializationLevel = IntArray(nThreads) { 0 }
+    // current actor id for each thread
+    protected val currentActorId = IntArray(nThreads)
 
     @Throws(Exception::class)
     abstract override fun run(): Unit
@@ -105,7 +107,7 @@ abstract class ManagedStrategyBase(
         awaitTurn(iThread)
         if (!monitorTracker.canAcquireMonitor(monitor)) {
             monitorTracker.awaitAcquiringMonitor(iThread, monitor)
-            switchCurrentThread(iThread, codeLocation, "lock is already acquired")
+            switchCurrentThread(iThread, codeLocation, SwitchReason.LOCK_WAIT)
         }
 
         monitorTracker.acquireMonitor(iThread, monitor)
@@ -136,7 +138,7 @@ abstract class ManagedStrategyBase(
 
         awaitTurn(iThread)
         monitorTracker.waitMonitor(iThread, monitor)
-        switchCurrentThread(iThread, codeLocation, "wait on monitor")
+        switchCurrentThread(iThread, codeLocation, SwitchReason.MONITOR_WAIT)
 
         return false
     }
@@ -153,7 +155,7 @@ abstract class ManagedStrategyBase(
     override fun afterCoroutineSuspended(iThread: Int) {
         check(currentThread == iThread)
         isSuspended[iThread].set(true)
-        if (runner.canResumeCoroutine(iThread, getCurrentActorId(iThread))) {
+        if (runner.canResumeCoroutine(iThread, currentActorId[iThread])) {
             newSuspensionPoint(iThread, -1)
         } else {
             // Currently a suspension point does not supposed to violate obstruction-freedom
@@ -191,7 +193,7 @@ abstract class ManagedStrategyBase(
         val shouldSwitch = isLoop or shouldSwitch(iThread)
 
         if (shouldSwitch) {
-            val reason = if (isLoop) "active lock detected" else ""
+            val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(iThread, codeLocation, reason)
         }
 
@@ -220,7 +222,7 @@ abstract class ManagedStrategyBase(
     /**
      * Regular switch on another thread
      */
-    protected fun switchCurrentThread(iThread: Int, codeLocation: Int, reason: String = "") {
+    protected fun switchCurrentThread(iThread: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH) {
         eventLogger.newSwitch(iThread, codeLocation, reason)
         onNewSwitch()
         doSwitchCurrentThread(iThread)
@@ -272,7 +274,7 @@ abstract class ManagedStrategyBase(
         var canResume = !finished[iThread].get() && monitorTracker.canResume(iThread)
 
         if (isSuspended[iThread].get())
-            canResume = canResume && runner.canResumeCoroutine(iThread, getCurrentActorId(iThread))
+            canResume = canResume && runner.canResumeCoroutine(iThread, currentActorId[iThread])
 
         return canResume
     }
@@ -326,6 +328,7 @@ abstract class ManagedStrategyBase(
         executionRandomCopy = executionRandom.copy()
         // start from random thread
         currentThread = executionRandom.nextInt(nThreads)
+        currentActorId.fill(-1)
         loopDetector.reset()
         exception = null
     }
@@ -334,17 +337,8 @@ abstract class ManagedStrategyBase(
         executionRandom = executionRandomCopy;
     }
 
-    /**
-     * Returns number of current executing actor
-     */
-    protected fun getCurrentActorId(iThread: Int): Int {
-        // can use binary search here, but for small number of actors (usual case) this code would perform better
-
-        for ((i, actor) in parallelActors[iThread].withIndex().reversed())
-            if (actor.wasInvoked)
-                return i
-
-        return -1
+    override fun onActorStart(iThread: Int) {
+        currentActorId[iThread]++
     }
 
     /**
@@ -376,7 +370,7 @@ abstract class ManagedStrategyBase(
      * Logs thread events such as thread switches and passed codeLocations
      */
     protected interface ThreadEventLogger {
-        fun newSwitch(iThread: Int, codeLocation: Int, reason: String)
+        fun newSwitch(iThread: Int, codeLocation: Int, reason: SwitchReason)
         fun finishThread(iThread: Int)
         fun passCodeLocation(iThread: Int, codeLocation: Int)
 
@@ -387,7 +381,7 @@ abstract class ManagedStrategyBase(
      * Just ignores every event
      */
     protected object DummyEventLogger : ThreadEventLogger {
-        override fun newSwitch(iThread: Int, codeLocation: Int, reason: String) {
+        override fun newSwitch(iThread: Int, codeLocation: Int, reason: SwitchReason) {
             // ignore
         }
 
@@ -408,10 +402,10 @@ abstract class ManagedStrategyBase(
     protected inner class SimpleEventLogger : ThreadEventLogger {
         private val threadEvents = mutableListOf<ThreadEvent>()
 
-        override fun newSwitch(iThread: Int, codeLocation: Int, reason: String) {
-            val actorId = getCurrentActorId(iThread)
+        override fun newSwitch(iThread: Int, codeLocation: Int, reason: SwitchReason) {
+            val actorId = currentActorId[iThread]
             if (codeLocation != -1)
-                threadEvents.add(SwitchEvent(iThread, actorId, getLocationDescription(codeLocation)))
+                threadEvents.add(SwitchEvent(iThread, actorId, getLocationDescription(codeLocation), reason))
             else
                 threadEvents.add(SuspendSwitchEvent(iThread, actorId))
         }
@@ -421,7 +415,7 @@ abstract class ManagedStrategyBase(
         }
 
         override fun passCodeLocation(iThread: Int, codeLocation: Int) {
-            threadEvents.add(PassCodeLocationEvent(iThread, getCurrentActorId(iThread), getLocationDescription(codeLocation)))
+            threadEvents.add(PassCodeLocationEvent(iThread, currentActorId[iThread], getLocationDescription(codeLocation)))
         }
 
         override fun threadEvents(): List<ThreadEvent> = threadEvents

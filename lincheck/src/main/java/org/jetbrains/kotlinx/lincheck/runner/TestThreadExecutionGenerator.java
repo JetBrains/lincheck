@@ -25,6 +25,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
@@ -55,12 +56,14 @@ public class TestThreadExecutionGenerator {
     private static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
     private static final Type INT_ARRAY_TYPE = Type.getType(int[].class);
     private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, NO_ARGS);
-    private static final Method ACTOR_SET_INVOKED = new Method("setInvoked", Type.VOID_TYPE, NO_ARGS);
 
     private static final Type RUNNER_TYPE = Type.getType(Runner.class);
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
     private static final Method RUNNER_ON_EXCEPTION_METHOD = new Method("onException", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
+
+    private static final Type STRATEGY_TYPE = Type.getType(Strategy.class);
+    private static final Method STRATEGY_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
@@ -108,7 +111,7 @@ public class TestThreadExecutionGenerator {
     /**
      * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#call()} implementation.
      */
-    public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions, boolean waitsEnabled, boolean scenarioContainsSuspendableActors) {
+    public static TestThreadExecution create(Runner runner, Strategy strategy, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions, boolean waitsEnabled, boolean scenarioContainsSuspendableActors) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
@@ -117,6 +120,7 @@ public class TestThreadExecutionGenerator {
         try {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
+            execution.strategy = strategy;
             execution.objArgs = objArgs.toArray();
             execution.actors = actors.toArray(new Actor[0]);
             return execution;
@@ -194,13 +198,6 @@ public class TestThreadExecutionGenerator {
                 mv.invokeStatic(UTILS_TYPE, UTILS_CONSUME_CPU);
             }
 
-            // Mark actor as invoked
-            mv.loadThis();
-            mv.getField(TEST_THREAD_EXECUTION_TYPE, "actors", ACTOR_ARRAY_TYPE);
-            mv.push(i);
-            mv.arrayLoad(ACTOR_TYPE);
-            mv.invokeVirtual(ACTOR_TYPE, ACTOR_SET_INVOKED);
-
             // Start of try-catch block for all exceptions
             Label commonExceptionStart = mv.newLabel(),
                     commonExceptionEnd = mv.newLabel(),
@@ -219,6 +216,12 @@ public class TestThreadExecutionGenerator {
                     mv.visitTryCatchBlock(handledExceptionStart, handledExceptionEnd, handledExceptionHandler, Type.getType(ec).getInternalName());
                 mv.visitLabel(handledExceptionStart);
             }
+
+            // onActorStart call
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "strategy", STRATEGY_TYPE);
+            mv.push(iThread);
+            mv.invokeVirtual(STRATEGY_TYPE, STRATEGY_ON_ACTOR_START);
 
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
