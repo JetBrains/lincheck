@@ -38,14 +38,7 @@ public abstract class CachedVerifier implements Verifier {
 
     @Override
     public final boolean verifyResults(ExecutionResult results) {
-        if (previousResults.containsKey(results)) {
-            return previousResults.get(results);
-        }
-
-        boolean isCorrect = verifyResultsImpl(results);
-        previousResults.put(results, isCorrect);
-
-        return isCorrect;
+        return previousResults.computeIfAbsent(results, this::verifyResultsImpl);
     }
 
     public abstract boolean verifyResultsImpl(ExecutionResult results);
