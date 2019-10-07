@@ -8,6 +8,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.AssertionError
+import java.lang.IllegalStateException
 
 /**
  * An abstraction for testing all lincheck strategies
@@ -19,13 +20,17 @@ abstract class AbstractLincheckTest(val shouldFail: Boolean, val checkObstructio
             it.name to it.create(checkObstructionFreedom)
         }.forEach {
             if (!checkObstructionFreedom || it !is StressOptions) {
+                var failed = false
                 println(it.first)
                 val options = it.second
                 try {
                     LinChecker.check(this.javaClass, options)
                 } catch (e: AssertionError) {
                     if (!shouldFail) throw e
+                    failed = true
                 }
+
+                if (!failed && shouldFail) throw IllegalStateException("Assertion should have been thrown, but have not")
             }
         }
     }

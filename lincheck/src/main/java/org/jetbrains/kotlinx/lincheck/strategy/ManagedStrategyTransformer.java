@@ -117,7 +117,6 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
         MethodVisitor mv = super.visitMethod(access, mname, desc, signature, exceptions);
         mv = new JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions);
-        mv = new SharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
         mv = new IndirectSharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
         mv = new SynchronizedLockTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
 
@@ -126,9 +125,16 @@ class ManagedStrategyTransformer extends ClassVisitor {
             mv = new SynchronizedLockAddingTransformer(mname, new GeneratorAdapter(mv, access, mname, desc), className, access, classVersion);
         }
 
+        if ("<clinit>".equals(mname)) {
+            mv = new ClassInitializationTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+        }
+
         mv = new WaitNotifyTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
         mv = new ParkUnparkTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
         mv = new UnsafeTransformer(new GeneratorAdapter(mv, access, mname, desc));
+        // SharedVariableAccessMethodTransformer should be an earlier visitor than ClassInitializationTransformer
+        // not to have suspension points before 'beforeClassInitialization' call in <clinit> block.
+        mv = new SharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
         mv = new TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions);
         return mv;
     }
@@ -402,30 +408,14 @@ class ManagedStrategyTransformer extends ClassVisitor {
      * Adds beforeClassInitialization call before method and afterClassInitialization call after method
      */
     private class ClassInitializationTransformer extends ManagedStrategyMethodVisitor {
-        private final Label tryLabel = new Label();
-        private final Label catchLabel = new Label();
-
         ClassInitializationTransformer(String methodName, GeneratorAdapter mv) {
             super(methodName, mv);
         }
 
         @Override
         public void visitCode() {
-            super.visitCode();
-
             invokeBeforeClassInitialization();
-
-            mv.visitLabel(tryLabel);
-        }
-
-        @Override
-        public void visitMaxs(int maxStack, int maxLocals) {
-            mv.visitLabel(catchLabel);
-            invokeAfterClassInitialization();
-            mv.throwException();
-            mv.visitTryCatchBlock(tryLabel, catchLabel, catchLabel, null);
-
-            mv.visitMaxs(maxStack, maxLocals);
+            super.visitCode();
         }
 
         @Override

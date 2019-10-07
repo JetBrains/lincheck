@@ -170,16 +170,18 @@ abstract class ManagedStrategyBase(
     }
 
     override fun beforeClassInitialization(iThread: Int) {
-        classInitializationLevel[iThread]++
+        if (iThread < nThreads)
+            classInitializationLevel[iThread]++
     }
 
     override fun afterClassInitialization(iThread: Int) {
-        classInitializationLevel[iThread]--
+        if (iThread < nThreads)
+            classInitializationLevel[iThread]--
     }
 
     protected fun newSuspensionPoint(iThread: Int, codeLocation: Int) {
         if (iThread == nThreads) return // can suspend only test threads
-        if (classInitializationLevel[iThread] == 0) return // can not suspend in static initialization blocks
+        if (classInitializationLevel[iThread] != 0) return // can not suspend in static initialization blocks
 
         awaitTurn(iThread)
 
@@ -411,7 +413,7 @@ abstract class ManagedStrategyBase(
         }
 
         override fun finishThread(iThread: Int) {
-            threadEvents.add(FinishEvent(iThread, Int.MAX_VALUE))
+            threadEvents.add(FinishEvent(iThread, parallelActors[iThread].size))
         }
 
         override fun passCodeLocation(iThread: Int, codeLocation: Int) {
