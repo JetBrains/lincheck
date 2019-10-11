@@ -456,7 +456,7 @@ abstract class ManagedStrategyBase(
 
         fun waitMonitor(iThread: Int, monitor: Any) {
             // TODO: support timeouts for wait
-            // they can break reproducability of an execution and thus were not added now.
+            // they can break reproducability of an execution and thus was not added now.
             // TODO: can add spurious wakeups
             check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
             releaseMonitor(monitor)
