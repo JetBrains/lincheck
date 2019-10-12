@@ -626,7 +626,6 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
             mv.visitLabel(afterPark);
 
-
             if (isUnpark) {
                 mv.loadLocal(threadLocal);
                 invokeAfterUnpark();
@@ -654,10 +653,24 @@ class ManagedStrategyTransformer extends ClassVisitor {
         }
 
         @Override
-        public void visitTypeInsn(final int opcode, final String type) {
-            mv.visitTypeInsn(opcode, type);
+        public void visitIntInsn(final int opcode, final int operand) {
+            mv.visitIntInsn(opcode, operand);
+
+            if (opcode == NEWARRAY) {
+                mv.dup();
+                invokeOnNewLocalObject();
+            }
         }
 
+        @Override
+        public void visitTypeInsn(final int opcode, final String type) {
+            mv.visitTypeInsn(opcode, type);
+
+            if (opcode == ANEWARRAY) {
+                mv.dup();
+                invokeOnNewLocalObject();
+            }
+        }
 
         @Override
         public void visitFieldInsn(int opcode, String owner, String name, String desc) {
