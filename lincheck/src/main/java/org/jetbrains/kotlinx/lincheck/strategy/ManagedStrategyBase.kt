@@ -31,15 +31,13 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.IdentityHashMap
 
-
-// TODO do we need to split ManagedStrategyBase and ManagedStrategy?
 abstract class ManagedStrategyBase(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         verifier: Verifier,
         reporter: Reporter,
         maxRepetitions: Int,
-        protected val canHaveLocks: Boolean
+        protected val requireObstructionFreedom: Boolean
 ) : ManagedStrategy(testClass, scenario, verifier, reporter) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
 
@@ -100,7 +98,7 @@ abstract class ManagedStrategyBase(
     override fun beforeLockAcquire(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (iThread == nThreads) return true
 
-        assert(canHaveLocks) { "At least obstruction freedom required but a lock found" }
+        checkCanHaveObstruction { "At least obstruction freedom required but a lock found" }
 
         newSuspensionPoint(iThread, codeLocation)
 
@@ -132,9 +130,11 @@ abstract class ManagedStrategyBase(
     override fun beforeWait(iThread: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
         if (iThread == nThreads) return true
 
-        assert(canHaveLocks) { "At least obstruction freedom required but a waiting on monitor found" }
+        checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
 
         newSuspensionPoint(iThread, codeLocation)
+
+        if (withTimeout) return false // timeout occur instantly
 
         awaitTurn(iThread)
         monitorTracker.waitMonitor(iThread, monitor)
@@ -159,7 +159,7 @@ abstract class ManagedStrategyBase(
             newSuspensionPoint(iThread, -1)
         } else {
             // Currently a suspension point does not supposed to violate obstruction-freedom
-            // assert(canHaveLocks) { "At least obstruction freedom required but a loop found" }
+            // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
             switchCurrentThread(iThread, -1)
         }
     }
@@ -188,7 +188,7 @@ abstract class ManagedStrategyBase(
         var isLoop = false
 
         if (loopDetector.newOperation(iThread, codeLocation)) {
-            assert(canHaveLocks) { "At least obstruction freedom required but an active lock found" }
+            checkCanHaveObstruction { "At least obstruction freedom required but an active lock found" }
             isLoop = true
         }
 
@@ -339,6 +339,11 @@ abstract class ManagedStrategyBase(
         executionRandom = executionRandomCopy;
     }
 
+    protected fun checkCanHaveObstruction(lazyMessage: () -> String) {
+        if (requireObstructionFreedom)
+            throw IntendedExecutionException(AssertionError(lazyMessage()))
+    }
+
     override fun onActorStart(iThread: Int) {
         currentActorId[iThread]++
     }
@@ -455,8 +460,6 @@ abstract class ManagedStrategyBase(
         }
 
         fun waitMonitor(iThread: Int, monitor: Any) {
-            // TODO: support timeouts for wait
-            // they can break reproducability of an execution and thus was not added now.
             // TODO: can add spurious wakeups
             check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
             releaseMonitor(monitor)

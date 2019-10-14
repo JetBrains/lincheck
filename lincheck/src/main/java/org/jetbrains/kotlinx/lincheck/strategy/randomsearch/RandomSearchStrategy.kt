@@ -40,7 +40,7 @@ class RandomSearchStrategy(
         verifier: Verifier,
         testCfg: RandomSearchCTestConfiguration,
         reporter: Reporter
-) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, !testCfg.checkObstructionFreedom) {
+) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, testCfg.checkObstructionFreedom) {
     // an increasing id of operation performed within this execution
     private val executionPosition = AtomicInteger(0)
     // ids of operations where a thread should be switched

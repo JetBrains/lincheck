@@ -26,6 +26,9 @@ import kotlin.Suppress;
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
+import org.jetbrains.kotlinx.lincheck.util.AnalysisReport;
+import org.jetbrains.kotlinx.lincheck.util.ErrorAnalysisReport;
+import org.jetbrains.kotlinx.lincheck.util.OkAnalysisReport;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.DEFAULT_LOG_LEVEL;
 import java.util.*;
@@ -130,7 +133,6 @@ public class LinChecker {
         // Run iterations
         for (int iteration = 1; iteration <= testCfg.iterations; iteration++) {
             ExecutionScenario scenario = exGen.nextExecution();
-            // Check correctness of the generated scenario
             reporter.logIteration(iteration, testCfg.iterations, scenario);
             TestReport report = runScenario(scenario, testCfg);
             if (!report.getSuccess()) {
@@ -199,7 +201,7 @@ public class LinChecker {
         return new ExecutionScenario(initExecution, parallelExecution, postExecution);
     }
 
-    private TestReport runScenario(ExecutionScenario scenario, CTestConfiguration testCfg) throws AssertionError, Exception {
+    private void runScenario(ExecutionScenario scenario, CTestConfiguration testCfg) throws AssertionError, Exception {
         validateScenario(testCfg, scenario);
         Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testCfg.sequentialSpecification);
         if (testCfg.requireStateEquivalenceImplCheck) verifier.checkStateEquivalenceImplementation();

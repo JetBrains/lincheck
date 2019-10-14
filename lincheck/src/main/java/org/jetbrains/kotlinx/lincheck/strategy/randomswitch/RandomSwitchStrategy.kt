@@ -37,7 +37,7 @@ class RandomSwitchStrategy(
         verifier: Verifier,
         testCfg: RandomSwitchCTestConfiguration,
         reporter: Reporter
-) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, !testCfg.checkObstructionFreedom) {
+) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, testCfg.checkObstructionFreedom) {
    // maximum number of thread switches that managed strategy may use to search for incorrect execution
     private val maxInvocations = testCfg.invocationsPerIteration
     private var switchProbability = startSwitchProbability
