@@ -29,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativelyRelaxedLinearizabilityVerifier;
 
 import java.lang.annotation.*;
 
