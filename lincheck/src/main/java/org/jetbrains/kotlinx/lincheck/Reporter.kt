@@ -49,9 +49,9 @@ enum class LoggingLevel {
     DEBUG, INFO, ERROR
 }
 
-private fun <T> printInColumns(
+private fun <T> printInColumnsCustom(
         groupedObjects: List<List<T>>,
-        joinColumns: (List<String>) -> String = { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
+        joinColumns: (List<String>) -> String
 ): String {
     val nRows = groupedObjects.map { it.size }.max()!!
     val nColumns = groupedObjects.size
@@ -67,6 +67,10 @@ private fun <T> printInColumns(
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
             .map { rowCells -> joinColumns(rowCells) }
             .joinToString(separator = "\n")
+}
+
+private fun <T> printInColumns(groupedObjects: List<List<T>>) {
+    printInColumnsCustom(groupedObjects, { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") })
 }
 
 private class ActorWithResult(val actorRepresentation: String, val spaces: Int, val resultRepresentation: String) {
@@ -165,19 +169,6 @@ fun StringBuilder.appendIncorrectExecution(
         return result
     }
 
-    fun shorten(stackTraceElementRepr: String): String {
-        var wasPoints = 0
-        for ((i, c) in stackTraceElementRepr.withIndex().reversed()) {
-            if (c == '.') {
-                wasPoints++
-                if (wasPoints == 3)
-                    return stackTraceElementRepr.drop(i + 1)
-            }
-        }
-
-        return stackTraceElementRepr
-    }
-
     val execution = mutableListOf<ParallelExecutionRepresentation>()
 
     for (event in threadEvents) {
@@ -230,7 +221,7 @@ fun StringBuilder.appendIncorrectExecution(
     val executionData = splitToColumns(nThreads, execution)
 
     appendln("Parallel part execution:")
-    appendln(printInColumns(executionData) {
+    appendln(printInColumnsCustom(executionData) {
         val builder = StringBuilder()
         for (i in it.indices) {
             if (i % 2 == 0)
@@ -243,4 +234,20 @@ fun StringBuilder.appendIncorrectExecution(
 
         builder.toString()
     })
+}
+
+/**
+ * Removes info about package in a stack trace element representation
+ */
+private fun shorten(stackTraceElementRepr: String): String {
+    var wasPoints = 0
+    for ((i, c) in stackTraceElementRepr.withIndex().reversed()) {
+        if (c == '.') {
+            wasPoints++
+            if (wasPoints == 3)
+                return stackTraceElementRepr.drop(i + 1)
+        }
+    }
+
+    return stackTraceElementRepr
 }
