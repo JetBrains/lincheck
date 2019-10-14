@@ -69,9 +69,9 @@ private fun <T> printInColumnsCustom(
             .joinToString(separator = "\n")
 }
 
-private fun <T> printInColumns(groupedObjects: List<List<T>>) {
-    printInColumnsCustom(groupedObjects, { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") })
-}
+private fun <T> printInColumns(groupedObjects: List<List<T>>) =
+        printInColumnsCustom(groupedObjects) { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
+
 
 private class ActorWithResult(val actorRepresentation: String, val spaces: Int, val resultRepresentation: String) {
     override fun toString(): String = actorRepresentation + ":" + " ".repeat(spaces) + resultRepresentation
