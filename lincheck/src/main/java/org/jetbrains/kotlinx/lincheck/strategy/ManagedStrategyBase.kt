@@ -105,6 +105,7 @@ abstract class ManagedStrategyBase(
         awaitTurn(iThread)
         if (!monitorTracker.canAcquireMonitor(monitor)) {
             monitorTracker.awaitAcquiringMonitor(iThread, monitor)
+            // switch to another thread and wait for a moment the monitor can be acquired
             switchCurrentThread(iThread, codeLocation, SwitchReason.LOCK_WAIT)
         }
 
@@ -138,6 +139,7 @@ abstract class ManagedStrategyBase(
 
         awaitTurn(iThread)
         monitorTracker.waitMonitor(iThread, monitor)
+        // switch to another thread and wait till a notify event happens
         switchCurrentThread(iThread, codeLocation, SwitchReason.MONITOR_WAIT)
 
         return false
@@ -282,7 +284,7 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Wait untill this thread is allowed to be executed
+     * Waits until this thread is allowed to be executed
      */
     protected fun awaitTurn(iThread: Int) {
         while (currentThread != iThread) {
@@ -349,7 +351,7 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Detects loop if we visit a codeLocation too often
+     * Detects loop when visiting a codeLocation too often
      */
     protected class LoopDetector(val maxRepetitions: Int) {
         private var lastIThread = Int.MIN_VALUE

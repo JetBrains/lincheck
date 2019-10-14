@@ -22,8 +22,10 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
-import java.lang.RuntimeException
 
+/**
+ * Class for info about concurent test run.
+ */
 interface AnalysisReport
 
 class ErrorAnalysisReport(val exception: Throwable, val iteration: Int, val testCfg: CTestConfiguration) : AnalysisReport

@@ -4,6 +4,9 @@ import org.objectweb.asm.ClassWriter;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
 
+/**
+ * ClassWriter for classes transformed by LinCheck
+ */
 public class TransformationClassWriter extends ClassWriter {
     private ClassLoader loader;
 

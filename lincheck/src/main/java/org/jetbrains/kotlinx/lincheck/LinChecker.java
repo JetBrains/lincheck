@@ -81,7 +81,7 @@ public class LinChecker {
     /**
      * Runs all concurrent tests described with {@code @<XXX>CTest} annotations on the specified test class.
      *
-     * @return TestReport with information about concurrent test run.
+     * @return AnalisisReport with information about concurrent test run. Holds AssertionError is data structure is incorrect.
      */
     static TestReport analyze(Class<?> testClass) {
         return analyze(testClass, null);
@@ -90,14 +90,14 @@ public class LinChecker {
     /**
      * Runs concurrent test on specified class with the specified by options environment.
      *
-     * @return TestReport with information about concurrent test run.
+     * @return AnalisisReport with information about concurrent test run. Holds AssertionError is data structure is incorrect.
      */
     static TestReport analyze(Class<?> testClass, Options options) {
         return new LinChecker(testClass, options).analyze();
     }
 
     /**
-     * @throws AssertionError if algorithm or data structure is not correct
+     * @return AnalisisReport with information about concurrent test run. Holds AssertionError is data structure is incorrect.
      */
     private void check() throws AssertionError {
         TestReport report = analyze();

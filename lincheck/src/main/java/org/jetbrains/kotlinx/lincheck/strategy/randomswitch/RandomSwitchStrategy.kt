@@ -53,6 +53,7 @@ class RandomSwitchStrategy(
 
         try {
             repeat(maxInvocations){
+                // switch probability changes linearly from startSwitchProbability to endSwitchProbability
                 switchProbability = startSwitchProbability + it * (endSwitchProbability - startSwitchProbability) / maxInvocations
                 checkResults(runInvocation())
             }

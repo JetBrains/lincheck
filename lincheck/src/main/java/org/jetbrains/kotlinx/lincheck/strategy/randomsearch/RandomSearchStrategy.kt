@@ -31,7 +31,7 @@ import kotlin.random.Random
 
 /**
  * RandomSearchStrategy at first studies codeLocations at the choosen thread
- * until a blocking event or thread finish and
+ * until a blocking event or a thread finish and
  * then chooses one uniform randomly
  */
 class RandomSearchStrategy(
