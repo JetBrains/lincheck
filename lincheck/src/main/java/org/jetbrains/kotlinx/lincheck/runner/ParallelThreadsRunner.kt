@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
-import java.lang.Exception
 import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
 import java.util.concurrent.atomic.AtomicReference
@@ -157,13 +156,24 @@ open class ParallelThreadsRunner(
     override fun run(): ExecutionResult? {
         reset()
         val initResults = scenario.initExecution.map { initActor -> executeActor(testInstance, initActor) }
-        val parallelResults = executor.invokeAll(testThreadExecutions).map { f ->
+        val parallelResults = testThreadExecutions.map { executor.submit(it) }.map { future ->
             try {
-                f.get().toMutableList()
-            } catch (e: Exception) { // Kotlin can't catch multiple exceptions :(((
-                e.catch(InterruptedException::class.java, ExecutionException::class.java) {
-                    throw IllegalStateException(e)
+                future.get(1, TimeUnit.SECONDS).toList()
+            } catch (e: TimeoutException) {
+                val stackTraces = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread }
+                val msgBuilder = StringBuilder()
+                msgBuilder.appendln("The execution has hung, see the thread dump:")
+                for ((t, stackTrace) in stackTraces) {
+                    t as TestThread
+                    msgBuilder.appendln("Thread-${t.iThread}:")
+                    for (ste in stackTrace) {
+                        if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
+                        msgBuilder.appendln("\t$ste")
+                    }
+                    msgBuilder.appendln()
                 }
+                Thread.getAllStackTraces().map { it.key }.filterIsInstance<TestThread>().forEach { it.stop() }
+                throw AssertionError(msgBuilder.toString())
             }
         }
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
