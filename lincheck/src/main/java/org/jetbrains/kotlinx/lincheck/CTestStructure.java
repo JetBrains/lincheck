@@ -57,23 +57,35 @@ public class CTestStructure {
      * Constructs {@link CTestStructure} for the specified test class.
      */
     public static CTestStructure getFromTestClass(Class<?> testClass) {
-        // Read named parameter paramgen (declared for class)
         Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
-        for (Param paramAnn : testClass.getAnnotationsByType(Param.class)) {
+        Map<String, OperationGroup> groupConfigs = new HashMap<>();
+        List<ActorGenerator> actorGenerators = new ArrayList<>();
+        Class<?> clazz = testClass;
+        while (clazz != null) {
+            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators);
+            clazz = clazz.getSuperclass();
+        }
+        // Create StressCTest class configuration
+        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()));
+    }
+
+    private static void readTestStructureFromClass(Class<?> clazz, Map<String, ParameterGenerator<?>> namedGens,
+                                                   Map<String, OperationGroup> groupConfigs,
+                                                   List<ActorGenerator> actorGenerators) {
+        // Read named parameter paramgen (declared for class)
+        for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
             if (paramAnn.name().isEmpty()) {
                 throw new IllegalArgumentException("@Param name in class declaration cannot be empty");
             }
             namedGens.put(paramAnn.name(), createGenerator(paramAnn));
         }
         // Read group configurations
-        Map<String, OperationGroup> groupConfigs = new HashMap<>();
-        for (OpGroupConfig opGroupConfigAnn: testClass.getAnnotationsByType(OpGroupConfig.class)) {
+        for (OpGroupConfig opGroupConfigAnn: clazz.getAnnotationsByType(OpGroupConfig.class)) {
             groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
-                opGroupConfigAnn.nonParallel()));
+                    opGroupConfigAnn.nonParallel()));
         }
         // Create actor paramgen
-        List<ActorGenerator> actorGenerators = new ArrayList<>();
-        for (Method m : testClass.getDeclaredMethods()) {
+        for (Method m : clazz.getDeclaredMethods()) {
             // Operation
             if (m.isAnnotationPresent(Operation.class)) {
                 Operation operationAnn = m.getAnnotation(Operation.class);
@@ -81,7 +93,7 @@ public class CTestStructure {
                 // Check that params() in @Operation is empty or has the same size as the method
                 if (operationAnn.params().length > 0 && operationAnn.params().length != m.getParameterCount()) {
                     throw new IllegalArgumentException("Invalid count of paramgen for " + m.toString()
-                        + " method in @Operation");
+                            + " method in @Operation");
                 }
                 // Construct list of parameter paramgen
                 final List<ParameterGenerator<?>> gens = new ArrayList<>();
@@ -104,8 +116,6 @@ public class CTestStructure {
                 }
             }
         }
-        // Create StressCTest class configuration
-        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()));
     }
 
     private static ParameterGenerator<?> getOrCreateGenerator(Method m, Parameter p, String nameInOperation,
