@@ -6,7 +6,7 @@
     <groupId>org.jetbrains.kotlinx</groupId>
     <artifactId>lincheck-all</artifactId>
     <packaging>pom</packaging>
-    <version>2.4-SNAPSHOT</version>
+    <version>2.4</version>
 
     <name>lin-check (all)</name>
     <description>Framework for testing concurrent data structures</description>
@@ -273,7 +273,7 @@
     <scm>
         <connection>scm:git:https://github.com/Kotlin/kotlinx.lincheck.git</connection>
         <developerConnection>scm:git:git@github.com:Kotlin/kotlinx.lincheck.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>lincheck-2.4</tag>
     </scm>
 
     <distributionManagement>
