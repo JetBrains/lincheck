@@ -60,7 +60,7 @@ public class TestThreadExecutionGenerator {
     private static final Type RUNNER_TYPE = Type.getType(Runner.class);
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
-    private static final Method RUNNER_ON_EXCEPTION_METHOD = new Method("onException", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
+    private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
 
     private static final Type STRATEGY_TYPE = Type.getType(Strategy.class);
     private static final Method STRATEGY_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
@@ -292,7 +292,7 @@ public class TestThreadExecutionGenerator {
             mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
             mv.push(iThread);
             mv.loadLocal(eLocal);
-            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_EXCEPTION_METHOD);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FAILURE_METHOD);
             // just throw the exception further
             mv.throwException();
 

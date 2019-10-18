@@ -67,9 +67,9 @@ public abstract class ManagedStrategy extends Strategy {
             }
 
             @Override
-            public void onException(int iThread, Throwable e) {
+            public void onFailure(int iThread, Throwable e) {
                 ManagedStrategy.this.onException(iThread, e);
-                super.onException(iThread, e);
+                super.onFailure(iThread, e);
             }
 
             @Override

@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.runner;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.Actor;
 import org.jetbrains.kotlinx.lincheck.ExecutionClassLoader;
 import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader;
@@ -107,7 +106,7 @@ public abstract class Runner {
      * if an exception has been thrown.
      * @param iThread number of invoking thread
      */
-    public void onException(int iThread, Throwable e) {}
+    public void onFailure(int iThread, Throwable e) {}
 
     /**
      * This method is invoked by a test thread
