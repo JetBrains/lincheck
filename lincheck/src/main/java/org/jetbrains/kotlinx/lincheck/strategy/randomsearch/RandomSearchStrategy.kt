@@ -72,12 +72,12 @@ class RandomSearchStrategy(
         }
     }
 
-    override fun onFinish(iThread: Int) {
+    override fun onFinish(threadId: Int) {
         // the reason to increament execution position here is to
         // add possibility not to add a switch between last thread switch and
         // the moment when we must to switch
         executionPosition.incrementAndGet()
-        super.onFinish(iThread)
+        super.onFinish(threadId)
     }
 
     override fun onNewSwitch() {
@@ -91,7 +91,7 @@ class RandomSearchStrategy(
         }
     }
 
-    override fun shouldSwitch(iThread: Int): Boolean {
+    override fun shouldSwitch(threadId: Int): Boolean {
         // the increment of current position is made in the same place as where the check is
         // because the position check and the position increment are dual operations
         executionPosition.incrementAndGet()

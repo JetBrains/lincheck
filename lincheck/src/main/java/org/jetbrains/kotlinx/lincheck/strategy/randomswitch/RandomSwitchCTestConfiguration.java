@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
  * Configuration for {@link RandomSwitchStrategy random-switch} strategy.
  */
 public class RandomSwitchCTestConfiguration extends CTestConfiguration {
-    public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 10000;
+    public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 1000;
 
     public boolean checkObstructionFreedom;
     public final int maxRepetitions;

@@ -78,6 +78,8 @@ data class ExceptionResult @JvmOverloads constructor(val tClazz: Class<out Throw
         if (tClazz == other.tClazz) return true
         return tClazz?.name?.equals(other.tClazz?.name) ?: false
     }
+
+    override fun hashCode(): Int = tClazz?.name.hashCode()
 }
 
 /**

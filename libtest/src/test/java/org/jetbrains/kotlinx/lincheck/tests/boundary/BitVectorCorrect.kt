@@ -29,21 +29,14 @@ import org.cliffc.high_scale_lib.NonBlockingSetInt
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
 
 @Param(name = "key", gen = IntGen::class, conf = "1:10")
-class BitVectorCorrect : AbstractLincheckTest(false, false) {
-
+class BitVectorCorrect : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
     private val q = NonBlockingSetInt()
 
     @Operation(params = ["key"])
-    fun add(key: Int): Boolean {
-        return q.add(key)
-    }
+    fun add(key: Int): Boolean = q.add(key)
 
     @Operation
-    fun remove(@Param(name = "key") key: Int): Boolean {
-        return q.remove(key)
-    }
+    fun remove(@Param(name = "key") key: Int): Boolean = q.remove(key)
 
-    public override fun extractState(): Any {
-        return q
-    }
+    public override fun extractState(): Any = q
 }

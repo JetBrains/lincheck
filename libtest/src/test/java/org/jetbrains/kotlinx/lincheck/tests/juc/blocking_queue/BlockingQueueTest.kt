@@ -32,29 +32,20 @@ import java.util.NoSuchElementException
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 
-class BlockingQueueTest : AbstractLincheckTest(false, false) {
-
+class BlockingQueueTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
     private val q = ArrayBlockingQueue<Int>(10)
 
     @Operation
-    fun add(@Param(gen = IntGen::class) value: Int?): Boolean {
-        return q.add(value!!)
-    }
+    fun add(@Param(gen = IntGen::class) value: Int?): Boolean = q.add(value!!)
 
     @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
-    fun element(): Int? {
-        return q.element()
-    }
+    fun element(): Int? = q.element()
 
     @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
-    fun remove(): Int? {
-        return q.remove()
-    }
+    fun remove(): Int? = q.remove()
 
     @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
-    fun poll(): Int? {
-        return q.poll()
-    }
+    fun poll(): Int? = q.poll()
 
     override fun extractState(): Any {
         val elements = ArrayList<Int>()

@@ -39,7 +39,7 @@ import org.jetbrains.kotlinx.lincheck.util.Either;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import org.objectweb.asm.ClassVisitor;
 
-import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectExecution;
+import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectInterleaving;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectResults;
 
 import java.util.List;
@@ -51,7 +51,7 @@ import java.util.List;
  * {@link #createStrategy} method is used. It is impossible to add new strategy
  * without any code change.
  */
-public abstract class Strategy {
+public abstract class Strategy implements AutoCloseable {
     protected final ExecutionScenario scenario;
     protected final Reporter reporter;
     protected final Verifier verifier;
@@ -77,9 +77,9 @@ public abstract class Strategy {
         if (!verifier.verifyResults(results)) {
             StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:\n");
             appendIncorrectResults(msgBuilder, scenario, results);
-            if (threadEvents != null) {
+            if (interleavingEvents != null) {
                 msgBuilder.append(System.lineSeparator());
-                appendIncorrectExecution(msgBuilder, scenario, results, threadEvents);
+                appendIncorrectInterleaving(msgBuilder, scenario, results, interleavingEvents);
             }
             report = new TestReport(ErrorType.INCORRECT_RESULTS);
             report.setErrorDetails(msgBuilder.toString());
@@ -123,5 +123,8 @@ public abstract class Strategy {
         throw new IllegalArgumentException("Unknown strategy configuration type: " + testCfg.getClass());
     }
 
-    public abstract TestReport run() throws Exception;
+    public abstract void run() throws Exception;
+
+    @Override
+    public void close() {}
 }

@@ -69,16 +69,16 @@ abstract class ManagedStrategyBase(
     @Throws(Exception::class)
     abstract override fun run(): Unit
 
-    override fun onStart(iThread: Int) {
-        awaitTurn(iThread)
+    override fun onStart(threadId: Int) {
+        awaitTurn(threadId)
     }
 
-    override fun onFinish(iThread: Int) {
-        awaitTurn(iThread)
-        finishThread(iThread)
+    override fun onFinish(threadId: Int) {
+        awaitTurn(threadId)
+        finishThread(threadId)
     }
 
-    override fun onException(iThread: Int, e: Throwable) {
+    override fun onFailure(threadId: Int, e: Throwable) {
         exception = e
     }
 
@@ -87,121 +87,121 @@ abstract class ManagedStrategyBase(
      */
     protected open fun onNewSwitch() {}
 
-    override fun beforeSharedVariableRead(iThread: Int, codeLocation: Int) {
-        newSuspensionPoint(iThread, codeLocation)
+    override fun beforeSharedVariableRead(threadId: Int, codeLocation: Int) {
+        newSuspensionPoint(threadId, codeLocation)
     }
 
-    override fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int) {
-        newSuspensionPoint(iThread, codeLocation)
+    override fun beforeSharedVariableWrite(threadId: Int, codeLocation: Int) {
+        newSuspensionPoint(threadId, codeLocation)
     }
 
-    override fun beforeLockAcquire(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
-        if (iThread == nThreads) return true
+    override fun beforeLockAcquire(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
+        if (threadId == nThreads) return true
 
         checkCanHaveObstruction { "At least obstruction freedom required but a lock found" }
 
-        newSuspensionPoint(iThread, codeLocation)
+        newSuspensionPoint(threadId, codeLocation)
 
-        awaitTurn(iThread)
+        awaitTurn(threadId)
         if (!monitorTracker.canAcquireMonitor(monitor)) {
-            monitorTracker.awaitAcquiringMonitor(iThread, monitor)
+            monitorTracker.awaitAcquiringMonitor(threadId, monitor)
             // switch to another thread and wait for a moment the monitor can be acquired
-            switchCurrentThread(iThread, codeLocation, SwitchReason.LOCK_WAIT)
+            switchCurrentThread(threadId, codeLocation, SwitchReason.LOCK_WAIT)
         }
 
-        monitorTracker.acquireMonitor(iThread, monitor)
+        monitorTracker.acquireMonitor(threadId, monitor)
 
         return false
     }
 
-    override fun beforeLockRelease(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
-        if (iThread == nThreads) return true
+    override fun beforeLockRelease(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
+        if (threadId == nThreads) return true
 
-        awaitTurn(iThread)
+        awaitTurn(threadId)
         monitorTracker.releaseMonitor(monitor)
         return false
     }
 
-    override fun beforePark(iThread: Int, codeLocation: Int, withTimeout: Boolean): Boolean {
-        return iThread == nThreads
+    override fun beforePark(threadId: Int, codeLocation: Int, withTimeout: Boolean): Boolean {
+        return threadId == nThreads
     }
 
-    override fun afterUnpark(iThread: Int, codeLocation: Int, thread: Any) {}
+    override fun afterUnpark(threadId: Int, codeLocation: Int, thread: Any) {}
 
-    override fun beforeWait(iThread: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
-        if (iThread == nThreads) return true
+    override fun beforeWait(threadId: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
+        if (threadId == nThreads) return true
 
         checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
 
-        newSuspensionPoint(iThread, codeLocation)
+        newSuspensionPoint(threadId, codeLocation)
 
         if (withTimeout) return false // timeout occur instantly
 
-        awaitTurn(iThread)
-        monitorTracker.waitMonitor(iThread, monitor)
+        awaitTurn(threadId)
+        monitorTracker.waitMonitor(threadId, monitor)
         // switch to another thread and wait till a notify event happens
-        switchCurrentThread(iThread, codeLocation, SwitchReason.MONITOR_WAIT)
+        switchCurrentThread(threadId, codeLocation, SwitchReason.MONITOR_WAIT)
 
         return false
     }
 
-    override fun afterNotify(iThread: Int, codeLocation: Int, monitor: Any, notifyAll: Boolean) {
+    override fun afterNotify(threadId: Int, codeLocation: Int, monitor: Any, notifyAll: Boolean) {
         if (notifyAll)
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
     }
 
-    override fun afterThreadInterrupt(iThread: Int, codeLocation: Int, iInterruptedThread: Int) {}
+    override fun afterThreadInterrupt(threadId: Int, codeLocation: Int, iInterruptedThread: Int) {}
 
-    override fun afterCoroutineSuspended(iThread: Int) {
-        check(currentThread == iThread)
-        isSuspended[iThread].set(true)
-        if (runner.canResumeCoroutine(iThread, currentActorId[iThread])) {
-            newSuspensionPoint(iThread, -1)
+    override fun afterCoroutineSuspended(threadId: Int) {
+        check(currentThread == threadId)
+        isSuspended[threadId].set(true)
+        if (runner.canResumeCoroutine(threadId, currentActorId[threadId])) {
+            newSuspensionPoint(threadId, -1)
         } else {
             // Currently a suspension point does not supposed to violate obstruction-freedom
             // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
-            switchCurrentThread(iThread, -1)
+            switchCurrentThread(threadId, -1)
         }
     }
 
-    override fun beforeCoroutineResumed(iThread: Int) {
-        check(currentThread == iThread)
-        isSuspended[iThread].set(false)
+    override fun beforeCoroutineResumed(threadId: Int) {
+        check(currentThread == threadId)
+        isSuspended[threadId].set(false)
     }
 
-    override fun beforeClassInitialization(iThread: Int) {
-        if (iThread < nThreads)
-            classInitializationLevel[iThread]++
+    override fun beforeClassInitialization(threadId: Int) {
+        if (threadId < nThreads)
+            classInitializationLevel[threadId]++
     }
 
-    override fun afterClassInitialization(iThread: Int) {
-        if (iThread < nThreads)
-            classInitializationLevel[iThread]--
+    override fun afterClassInitialization(threadId: Int) {
+        if (threadId < nThreads)
+            classInitializationLevel[threadId]--
     }
 
-    protected fun newSuspensionPoint(iThread: Int, codeLocation: Int) {
-        if (iThread == nThreads) return // can suspend only test threads
-        if (classInitializationLevel[iThread] != 0) return // can not suspend in static initialization blocks
+    protected fun newSuspensionPoint(threadId: Int, codeLocation: Int) {
+        if (threadId == nThreads) return // can suspend only test threads
+        if (classInitializationLevel[threadId] != 0) return // can not suspend in static initialization blocks
 
-        awaitTurn(iThread)
+        awaitTurn(threadId)
 
         var isLoop = false
 
-        if (loopDetector.newOperation(iThread, codeLocation)) {
+        if (loopDetector.newOperation(threadId, codeLocation)) {
             checkCanHaveObstruction { "At least obstruction freedom required but an active lock found" }
             isLoop = true
         }
 
-        val shouldSwitch = isLoop or shouldSwitch(iThread)
+        val shouldSwitch = isLoop or shouldSwitch(threadId)
 
         if (shouldSwitch) {
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
-            switchCurrentThread(iThread, codeLocation, reason)
+            switchCurrentThread(threadId, codeLocation, reason)
         }
 
-        eventLogger.passCodeLocation(iThread, codeLocation)
+        eventLogger.passCodeLocation(threadId, codeLocation)
 
         // continue operation
     }
@@ -209,36 +209,36 @@ abstract class ManagedStrategyBase(
     /**
      * Returns whether thread should switch at the suspension point
      */
-    protected abstract fun shouldSwitch(iThread: Int): Boolean
+    protected abstract fun shouldSwitch(threadId: Int): Boolean
 
     /**
      * Switch due to thread finish
      */
-    protected fun finishThread(iThread: Int) {
-        finished[iThread].set(true)
+    protected fun finishThread(threadId: Int) {
+        finished[threadId].set(true)
 
-        eventLogger.finishThread(iThread)
+        eventLogger.finishThread(threadId)
         onNewSwitch()
 
-        doSwitchCurrentThread(iThread, true)
+        doSwitchCurrentThread(threadId, true)
     }
 
     /**
      * Regular switch on another thread
      */
-    protected fun switchCurrentThread(iThread: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH) {
-        eventLogger.newSwitch(iThread, codeLocation, reason)
+    protected fun switchCurrentThread(threadId: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH) {
+        eventLogger.newSwitch(threadId, codeLocation, reason)
         onNewSwitch()
-        doSwitchCurrentThread(iThread)
+        doSwitchCurrentThread(threadId)
 
-        awaitTurn(iThread)
+        awaitTurn(threadId)
     }
 
-    private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
+    private fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
         var switchableThreads = 0
 
         for (i in 0 until nThreads)
-            if (i != iThread && canResume(i))
+            if (i != threadId && canResume(i))
                 switchableThreads++
 
         if (switchableThreads == 0) {
@@ -249,7 +249,7 @@ abstract class ManagedStrategyBase(
 
                 if (nextThread == null) {
                     val exception = AssertionError("Must switch not to get into deadlock, but there are no threads to switch")
-                    onException(iThread, exception)
+                    onFailure(threadId, exception)
                     throw exception
                 }
 
@@ -261,7 +261,7 @@ abstract class ManagedStrategyBase(
         var nextThreadNumber = executionRandom.nextInt(switchableThreads)
 
         for (i in 0 until nThreads)
-            if (i != iThread && canResume(i)) {
+            if (i != threadId && canResume(i)) {
                 nextThreadNumber--
 
                 if (nextThreadNumber < 0) {
@@ -274,11 +274,11 @@ abstract class ManagedStrategyBase(
     /**
      * Returns whether the thread could continue its execution
      */
-    protected fun canResume(iThread: Int): Boolean {
-        var canResume = !finished[iThread].get() && monitorTracker.canResume(iThread)
+    protected fun canResume(threadId: Int): Boolean {
+        var canResume = !finished[threadId].get() && monitorTracker.canResume(threadId)
 
-        if (isSuspended[iThread].get())
-            canResume = canResume && runner.canResumeCoroutine(iThread, currentActorId[iThread])
+        if (isSuspended[threadId].get())
+            canResume = canResume && runner.canResumeCoroutine(threadId, currentActorId[threadId])
 
         return canResume
     }
@@ -286,8 +286,8 @@ abstract class ManagedStrategyBase(
     /**
      * Waits until this thread is allowed to be executed
      */
-    protected fun awaitTurn(iThread: Int) {
-        while (currentThread != iThread) {
+    protected fun awaitTurn(threadId: Int) {
+        while (currentThread != threadId) {
             // just wait actively
             // check to avoid deadlock due to unhandled exception
             if (exception != null) throw exception!!
@@ -346,8 +346,8 @@ abstract class ManagedStrategyBase(
             throw IntendedExecutionException(AssertionError(lazyMessage()))
     }
 
-    override fun onActorStart(iThread: Int) {
-        currentActorId[iThread]++
+    override fun onActorStart(threadId: Int) {
+        currentActorId[threadId]++
     }
 
     /**
@@ -357,10 +357,10 @@ abstract class ManagedStrategyBase(
         private var lastIThread = Int.MIN_VALUE
         private val operationCounts = mutableMapOf<Int, Int>()
 
-        fun newOperation(iThread: Int, codeLocation: Int): Boolean {
-            if (lastIThread != iThread) {
+        fun newOperation(threadId: Int, codeLocation: Int): Boolean {
+            if (lastIThread != threadId) {
                 operationCounts.clear()
-                lastIThread = iThread
+                lastIThread = threadId
             }
 
             val count = (operationCounts[codeLocation] ?: 0) + 1
@@ -379,55 +379,55 @@ abstract class ManagedStrategyBase(
      * Logs thread events such as thread switches and passed codeLocations
      */
     protected interface ThreadEventLogger {
-        fun newSwitch(iThread: Int, codeLocation: Int, reason: SwitchReason)
-        fun finishThread(iThread: Int)
-        fun passCodeLocation(iThread: Int, codeLocation: Int)
+        fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason)
+        fun finishThread(threadId: Int)
+        fun passCodeLocation(threadId: Int, codeLocation: Int)
 
-        fun threadEvents(): List<ThreadEvent>
+        fun threadEvents(): List<InterleavingEvent>
     }
 
     /**
      * Just ignores every event
      */
     protected object DummyEventLogger : ThreadEventLogger {
-        override fun newSwitch(iThread: Int, codeLocation: Int, reason: SwitchReason) {
+        override fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
             // ignore
         }
 
-        override fun finishThread(iThread: Int) {
+        override fun finishThread(threadId: Int) {
             // ignore
         }
 
-        override fun passCodeLocation(iThread: Int, codeLocation: Int) {
+        override fun passCodeLocation(threadId: Int, codeLocation: Int) {
             // ignore
         }
 
-        override fun threadEvents(): List<ThreadEvent> = emptyList()
+        override fun threadEvents(): List<InterleavingEvent> = emptyList()
     }
 
     /**
      * Implementation of ThreadEventLogger
      */
     protected inner class SimpleEventLogger : ThreadEventLogger {
-        private val threadEvents = mutableListOf<ThreadEvent>()
+        private val threadEvents = mutableListOf<InterleavingEvent>()
 
-        override fun newSwitch(iThread: Int, codeLocation: Int, reason: SwitchReason) {
-            val actorId = currentActorId[iThread]
+        override fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
+            val actorId = currentActorId[threadId]
             if (codeLocation != -1)
-                threadEvents.add(SwitchEvent(iThread, actorId, getLocationDescription(codeLocation), reason))
+                threadEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
             else
-                threadEvents.add(SuspendSwitchEvent(iThread, actorId))
+                threadEvents.add(SuspendSwitchEvent(threadId, actorId))
         }
 
-        override fun finishThread(iThread: Int) {
-            threadEvents.add(FinishEvent(iThread, parallelActors[iThread].size))
+        override fun finishThread(threadId: Int) {
+            threadEvents.add(FinishEvent(threadId, parallelActors[threadId].size))
         }
 
-        override fun passCodeLocation(iThread: Int, codeLocation: Int) {
-            threadEvents.add(PassCodeLocationEvent(iThread, currentActorId[iThread], getLocationDescription(codeLocation)))
+        override fun passCodeLocation(threadId: Int, codeLocation: Int) {
+            threadEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
         }
 
-        override fun threadEvents(): List<ThreadEvent> = threadEvents
+        override fun threadEvents(): List<InterleavingEvent> = threadEvents
     }
 
     /**
@@ -443,30 +443,30 @@ abstract class ManagedStrategyBase(
 
         fun canAcquireMonitor(monitor: Any) = monitor !in acquiredMonitors
 
-        fun acquireMonitor(iThread: Int, monitor: Any) {
+        fun acquireMonitor(threadId: Int, monitor: Any) {
             acquiredMonitors.add(monitor)
-            acquiringMonitor[iThread] = null
+            acquiringMonitor[threadId] = null
         }
 
         fun releaseMonitor(monitor: Any) {
             acquiredMonitors.remove(monitor)
         }
 
-        fun canResume(iThread: Int): Boolean {
-            val monitor = acquiringMonitor[iThread] ?: return true
-            return !needsNotification[iThread] && canAcquireMonitor(monitor)
+        fun canResume(threadId: Int): Boolean {
+            val monitor = acquiringMonitor[threadId] ?: return true
+            return !needsNotification[threadId] && canAcquireMonitor(monitor)
         }
 
-        fun awaitAcquiringMonitor(iThread: Int, monitor: Any) {
-            acquiringMonitor[iThread] = monitor
+        fun awaitAcquiringMonitor(threadId: Int, monitor: Any) {
+            acquiringMonitor[threadId] = monitor
         }
 
-        fun waitMonitor(iThread: Int, monitor: Any) {
+        fun waitMonitor(threadId: Int, monitor: Any) {
             // TODO: can add spurious wakeups
             check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
             releaseMonitor(monitor)
-            needsNotification[iThread] = true
-            awaitAcquiringMonitor(iThread, monitor)
+            needsNotification[threadId] = true
+            awaitAcquiringMonitor(threadId, monitor)
         }
 
         fun notify(monitor: Any) {
@@ -475,9 +475,9 @@ abstract class ManagedStrategyBase(
         }
 
         fun notifyAll(monitor: Any) {
-            for (iThread in needsNotification.indices)
-                if (acquiringMonitor[iThread] === monitor)
-                    needsNotification[iThread] = false
+            for (threadId in needsNotification.indices)
+                if (acquiringMonitor[threadId] === monitor)
+                    needsNotification[threadId] = false
         }
 
         // TODO: add tests on wait-notify using custom scenarios

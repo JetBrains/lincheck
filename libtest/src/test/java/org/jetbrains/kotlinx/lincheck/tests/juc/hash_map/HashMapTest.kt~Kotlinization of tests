@@ -30,22 +30,15 @@ import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
 import java.util.HashMap
 
 @Param(name = "key", gen = IntGen::class)
-class HashMapTest : AbstractLincheckTest(true, false) {
-
+class HashMapTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
     private val m = HashMap<Int, Int>()
 
     @Operation
-    fun put(key: Int, @Param(name = "key") value: Int): Int? {
-        return m.put(key, value)
-    }
+    fun put(key: Int, @Param(name = "key") value: Int): Int? = m.put(key, value)
 
     @Operation
-    operator fun get(@Param(name = "key") key: Int?): Int? {
-        return m[key]
-    }
+    operator fun get(@Param(name = "key") key: Int?): Int? = m[key]
 
-    override fun extractState(): Any {
-        return m
-    }
+    override fun extractState(): Any = m
 }
 

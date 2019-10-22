@@ -62,7 +62,7 @@ class RandomSwitchStrategy(
         }
     }
 
-    override fun shouldSwitch(iThread: Int): Boolean {
+    override fun shouldSwitch(threadId: Int): Boolean {
         // TODO: can reduce number of random calls using geometric distribution
         return executionRandom.nextDouble() < switchProbability
     }

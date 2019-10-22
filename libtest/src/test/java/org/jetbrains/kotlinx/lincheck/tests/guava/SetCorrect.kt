@@ -31,21 +31,14 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 @Param(name = "key", gen = IntGen::class)
-class SetCorrect : AbstractLincheckTest(false, false) {
-
+class SetCorrect : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
     private val q = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
 
     @Operation(params = ["key"])
-    fun add(params: Int?): Boolean {
-        return q.add(params)
-    }
+    fun add(params: Int?): Boolean = q.add(params)
 
     @Operation(params = ["key"])
-    fun remove(params: Int?): Boolean {
-        return q.remove(params)
-    }
+    fun remove(params: Int?): Boolean = q.remove(params)
 
-    override fun extractState(): Any {
-        return q
-    }
+    override fun extractState(): Any = q
 }

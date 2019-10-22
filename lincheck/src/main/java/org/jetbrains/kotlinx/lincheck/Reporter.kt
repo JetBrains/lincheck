@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.io.PrintStream
 
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
@@ -49,7 +50,7 @@ enum class LoggingLevel {
     DEBUG, INFO, ERROR
 }
 
-private fun <T> printInColumnsCustom(
+private inline fun <T> printInColumnsCustom(
         groupedObjects: List<List<T>>,
         joinColumns: (List<String>) -> String
 ): String {
@@ -69,8 +70,7 @@ private fun <T> printInColumnsCustom(
             .joinToString(separator = "\n")
 }
 
-private fun <T> printInColumns(groupedObjects: List<List<T>>) =
-        printInColumnsCustom(groupedObjects) { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
+private fun <T> printInColumns(groupedObjects: List<List<T>>) = printInColumnsCustom(groupedObjects) { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
 
 
 private class ActorWithResult(val actorRepresentation: String, val spaces: Int, val resultRepresentation: String) {
@@ -133,45 +133,45 @@ fun StringBuilder.appendIncorrectResults(scenario: ExecutionScenario, results: E
     }
 }
 
-fun StringBuilder.appendIncorrectExecution(
+fun StringBuilder.appendIncorrectInterleaving(
         scenario: ExecutionScenario,
         results: ExecutionResult,
-        threadEvents: List<ThreadEvent>
+        interleavingEvents: List<InterleavingEvent>
 ) {
     val nThreads = scenario.threads
     val lastStartedActor = IntArray(nThreads) { -1 }
     val interestingActors = Array(nThreads) { mutableSetOf<Int>() }
 
-    for (event in threadEvents) {
+    for (event in interleavingEvents) {
         if (event is SwitchEvent || event is SuspendSwitchEvent) {
             interestingActors[event.iThread].add(event.iActor)
         }
     }
 
-    class ParallelExecutionRepresentation(val iThread: Int, val repr: Pair<String, String>)
+    class InterleavingRepresentation(val iThread: Int, val left: String, val right: String)
 
-    fun splitToColumns(nThreads: Int, execution: List<ParallelExecutionRepresentation>): List<List<String>> {
+    fun splitToColumns(nThreads: Int, execution: List<InterleavingRepresentation>): List<List<String>> {
         val result = List(nThreads * 2) { mutableListOf<String>() }
         for (message in execution) {
             val firstColumn = 2 * message.iThread
             val secondColumn = 2 * message.iThread + 1
 
-            result[firstColumn].add(message.repr.first)
-            result[secondColumn].add(message.repr.second)
+            result[firstColumn].add(message.left)
+            result[secondColumn].add(message.right)
 
             val neededSize = result[firstColumn].size
 
-            for (i in result.indices)
-                if (result[i].size != neededSize)
-                    result[i].add("")
+            for (column in result)
+                if (column.size != neededSize)
+                    column.add("")
         }
 
         return result
     }
 
-    val execution = mutableListOf<ParallelExecutionRepresentation>()
+    val execution = mutableListOf<InterleavingRepresentation>()
 
-    for (event in threadEvents) {
+    for (event in interleavingEvents) {
         val iThread = event.iThread
         val iActor = event.iActor
 
@@ -180,7 +180,7 @@ fun StringBuilder.appendIncorrectExecution(
                 val lastActor = lastStartedActor[iThread]
 
                 if (lastActor != -1 && lastActor in interestingActors[iThread])
-                    execution.add(ParallelExecutionRepresentation(iThread, "" to "* result: ${results.parallelResults[iThread][lastActor]}"))
+                    execution.add(InterleavingRepresentation(iThread, "", "* result: ${results.parallelResults[iThread][lastActor]}"))
 
                 val nextActor = ++lastStartedActor[iThread]
 
@@ -188,32 +188,33 @@ fun StringBuilder.appendIncorrectExecution(
                     // print actor
                     // if is not interesting then print with the result in the same line
                     if (nextActor !in interestingActors[iThread])
-                        execution.add(ParallelExecutionRepresentation(
+                        execution.add(InterleavingRepresentation(
                                 iThread,
-                                "${scenario.parallelExecution[iThread][nextActor]}" to "* result: ${results.parallelResults[iThread][nextActor]}"
+                                "${scenario.parallelExecution[iThread][nextActor]}",
+                                "* result: ${results.parallelResults[iThread][nextActor]}"
                         ))
                     else
-                        execution.add(ParallelExecutionRepresentation(iThread, "${scenario.parallelExecution[iThread][nextActor]}" to "*"))
+                        execution.add(InterleavingRepresentation(iThread, "${scenario.parallelExecution[iThread][nextActor]}", "*"))
                 }
             }
         }
         when (event) {
             is SwitchEvent -> {
-                execution.add(ParallelExecutionRepresentation(iThread, "" to "switch at: ${shorten(event.info.toString())}"))
+                execution.add(InterleavingRepresentation(iThread, "", "switch at: ${shorten(event.info.toString())}"))
                 // print reason if any
                 if (event.reason.toString().isNotEmpty())
-                    execution.add(ParallelExecutionRepresentation(iThread, "" to "reason: ${event.reason}"))
+                    execution.add(InterleavingRepresentation(iThread, "", "reason: ${event.reason}"))
             }
             is SuspendSwitchEvent -> {
-                execution.add(ParallelExecutionRepresentation(iThread, "" to "switch"))
-                execution.add(ParallelExecutionRepresentation(iThread, "" to "reason: ${event.reason}"))
+                execution.add(InterleavingRepresentation(iThread, "", "switch"))
+                execution.add(InterleavingRepresentation(iThread, "", "reason: ${event.reason}"))
             }
             is FinishEvent -> {
-                execution.add(ParallelExecutionRepresentation(iThread, "" to "thread is finished"))
+                execution.add(InterleavingRepresentation(iThread, "", "thread is finished"))
             }
             is PassCodeLocationEvent -> {
                 if (iActor in interestingActors[iThread])
-                    execution.add(ParallelExecutionRepresentation(iThread, "" to "pass: ${shorten(event.info.toString())}"))
+                    execution.add(InterleavingRepresentation(iThread, "", "pass: ${shorten(event.info.toString())}"))
             }
         }
     }

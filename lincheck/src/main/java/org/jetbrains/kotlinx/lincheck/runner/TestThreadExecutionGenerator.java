@@ -284,7 +284,7 @@ public class TestThreadExecutionGenerator {
             mv.goTo(actorEnd);
             mv.visitLabel(commonExceptionHandler);
 
-            // call onException method
+            // call onFailure method
             mv.dup();
             int eLocal = mv.newLocal(THROWABLE_TYPE);
             mv.storeLocal(eLocal);

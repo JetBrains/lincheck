@@ -29,21 +29,14 @@ import com.google.common.collect.ConcurrentHashMultiset
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
 
 @Param(name = "count", gen = IntGen::class, conf = "1:10")
-class MultisetCorrect : AbstractLincheckTest(false, false) {
-
+class MultisetCorrect : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
     private val q = ConcurrentHashMultiset.create<Int>()
 
     @Operation
-    fun add(value: Int, @Param(name = "count") count: Int): Int {
-        return q.add(value, count)
-    }
+    fun add(value: Int, @Param(name = "count") count: Int): Int = q.add(value, count)
 
     @Operation
-    fun remove(value: Int, @Param(name = "count") count: Int): Int {
-        return q.remove(value, count)
-    }
+    fun remove(value: Int, @Param(name = "count") count: Int): Int = q.remove(value, count)
 
-    override fun extractState(): Any {
-        return q
-    }
+    override fun extractState(): Any = q
 }

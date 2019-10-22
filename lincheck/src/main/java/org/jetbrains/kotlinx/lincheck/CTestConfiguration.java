@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.function.Function.identity;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 
 /**
@@ -109,14 +110,6 @@ public abstract class CTestConfiguration {
                         ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                         chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 
-        List<CTestConfiguration> configurations = Stream.concat(
-                stressConfigurations,
-                Stream.concat(
-                        randomSwitchConfigurations,
-                        randomSearchConfigurations
-                )
-        ).collect(Collectors.toList());
-
-        return configurations;
+        return Stream.of(stressConfigurations, randomSearchConfigurations, randomSwitchConfigurations).flatMap(identity()).collect(Collectors.toList());
     }
 }

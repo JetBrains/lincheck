@@ -1,10 +1,8 @@
-package org.jetbrains.kotlinx.lincheck.tests.custom.counter
-
-/*
+/*-
  * #%L
  * libtest
  * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
+ * Copyright (C) 2019 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,22 +19,34 @@ package org.jetbrains.kotlinx.lincheck.tests.custom.counter
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package org.jetbrains.kotlinx.lincheck.tests.lockfreequeue
 
+import com.github.lock.free.queue.LockFreeQueue
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
-import tests.custom.counter.Counter
-import tests.custom.counter.CounterWrong1
+import java.util.ArrayList
 
-class CounterTest3 : AbstractLincheckTest(true, false) {
-
-    private val counter = CounterWrong1()
+class QueueIncorrect : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+    private val q = LockFreeQueue<Int>()
 
     @Operation
-    fun incAndGet(): Int {
-        return counter.incrementAndGet()
+    fun add(@Param(gen = IntGen::class) value: Int) {
+        q.add(value)
+    }
+
+    @Operation
+    fun takeOrNull(): Any? {
+        return q.takeOrNull()
     }
 
     override fun extractState(): Any {
-        return counter.get()
+        val elements = ArrayList<Int>()
+        while (true) {
+            val element = q.takeOrNull() ?: break
+            elements.add(element)
+        }
+        return elements
     }
 }
