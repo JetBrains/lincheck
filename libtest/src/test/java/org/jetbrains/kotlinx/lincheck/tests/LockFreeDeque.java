@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 
 // Double-linked list by Sundell
 public class LockFreeDeque<T> {
-
     private final Node head;
     private final Node tail;
 

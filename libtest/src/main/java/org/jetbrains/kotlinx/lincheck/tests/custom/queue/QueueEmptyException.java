@@ -1,8 +1,10 @@
-/*-
+package org.jetbrains.kotlinx.lincheck.tests.custom.queue;
+
+/*
  * #%L
- * Lincheck
+ * libtest
  * %%
- * Copyright (C) 2019 JetBrains s.r.o.
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,21 +21,13 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
-
-@StressCTest(iterations = 1, actorsBefore = 0, actorsAfter = 0,
-             requireStateEquivalenceImplCheck = false, minimizeFailedScenario = false)
-class HangingTest {
-    @Operation
-    fun badOperation() {
-        while (true) {}
+public class QueueEmptyException extends Exception {
+    public QueueEmptyException(String message) {
+        super(message);
     }
 
-    @Test(expected = AssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
+    public QueueEmptyException() {
+
+    }
 }

@@ -1,8 +1,10 @@
-/*-
+package org.jetbrains.kotlinx.lincheck.tests.guava
+
+/*
  * #%L
  * libtest
  * %%
- * Copyright (C) 2019 JetBrains s.r.o.
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,28 +21,22 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.tests.linearizability
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import com.google.common.collect.ConcurrentHashMultiset
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
-import java.util.concurrent.ConcurrentLinkedDeque
 
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
-class ConcurrentDequeStressTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
-    val deque = ConcurrentLinkedDeque<Int>()
-
-    @Operation
-    fun addFirst(e: Int) = deque.addFirst(e)
+@Param(name = "count", gen = IntGen::class, conf = "1:10")
+class MultisetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+    private val q = ConcurrentHashMultiset.create<Int>()
 
     @Operation
-    fun addLast(e: Int) = deque.addLast(e)
+    fun add(value: Int, @Param(name = "count") count: Int): Int = q.add(value, count)
 
     @Operation
-    fun pollFirst() = deque.pollFirst()
+    fun remove(value: Int, @Param(name = "count") count: Int): Int = q.remove(value, count)
 
-    @Operation
-    fun pollLast() = deque.pollLast()
-
-    override fun extractState() = deque.toList()
+    override fun extractState(): Any = q
 }

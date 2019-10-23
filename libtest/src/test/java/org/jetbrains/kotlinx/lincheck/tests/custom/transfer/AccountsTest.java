@@ -22,19 +22,17 @@ package org.jetbrains.kotlinx.lincheck.tests.custom.transfer;
  * #L%
  */
 
+import kotlin.jvm.Volatile;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import tests.custom.transfer.Accounts;
-import tests.custom.transfer.AccountsWrong1;
-import tests.custom.transfer.AccountsWrong2;
-import tests.custom.transfer.AccountsWrong3;
-import tests.custom.transfer.AccountsWrong4;
 
 import java.util.Arrays;
 import java.util.List;
@@ -58,10 +56,11 @@ public class AccountsTest {
         AccountsTest.accountCreator = accountCreator;
     }
 
-    @StressCTest(threads = 3, requireStateEquivalenceImplCheck = false)
+    @StressCTest(threads = 3)
     @Param(name = "id", gen = IntGen.class, conf = "1:4")
     @Param(name = "amount", gen = IntGen.class)
-    public static class AccountsLinearizabilityTest {
+    public static class AccountsLinearizabilityTest extends VerifierState {
+        @Volatile
         private Accounts acc = accountCreator.get();
 
         @Operation(params = {"id"})
@@ -79,6 +78,12 @@ public class AccountsTest {
             @Param(name = "amount") int amount)
         {
             acc.transfer(from, to, amount);
+        }
+
+        @NotNull
+        @Override
+        protected Object extractState() {
+            return acc;
         }
     }
 

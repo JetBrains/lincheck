@@ -53,7 +53,6 @@
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>lincheck</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

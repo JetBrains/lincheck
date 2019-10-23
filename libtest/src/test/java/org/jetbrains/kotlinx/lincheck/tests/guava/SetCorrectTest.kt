@@ -1,8 +1,10 @@
-/*-
+package org.jetbrains.kotlinx.lincheck.tests.guava
+
+/*
  * #%L
  * libtest
  * %%
- * Copyright (C) 2019 JetBrains s.r.o.
+ * Copyright (C) 2015 - 2018 Devexperts, LLC
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,28 +21,24 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.tests.linearizability
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
-import java.util.concurrent.ConcurrentLinkedDeque
 
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
-class ConcurrentDequeStressTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
-    val deque = ConcurrentLinkedDeque<Int>()
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
-    @Operation
-    fun addFirst(e: Int) = deque.addFirst(e)
+@Param(name = "key", gen = IntGen::class)
+class SetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+    private val q = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
 
-    @Operation
-    fun addLast(e: Int) = deque.addLast(e)
+    @Operation(params = ["key"])
+    fun add(params: Int?): Boolean = q.add(params)
 
-    @Operation
-    fun pollFirst() = deque.pollFirst()
+    @Operation(params = ["key"])
+    fun remove(params: Int?): Boolean = q.remove(params)
 
-    @Operation
-    fun pollLast() = deque.pollLast()
-
-    override fun extractState() = deque.toList()
+    override fun extractState(): Any = q
 }

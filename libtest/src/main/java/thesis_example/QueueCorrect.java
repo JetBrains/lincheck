@@ -22,8 +22,8 @@ package thesis_example;
  * #L%
  */
 
-import tests.custom.queue.QueueEmptyException;
-import tests.custom.queue.QueueFullException;
+import org.jetbrains.kotlinx.lincheck.tests.custom.queue.QueueEmptyException;
+import org.jetbrains.kotlinx.lincheck.tests.custom.queue.QueueFullException;
 
 public class QueueCorrect {
     private int indGet;

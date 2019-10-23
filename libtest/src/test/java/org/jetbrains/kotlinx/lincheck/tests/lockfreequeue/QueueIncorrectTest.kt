@@ -19,28 +19,34 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.tests.linearizability
+package org.jetbrains.kotlinx.lincheck.tests.lockfreequeue
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
+import com.github.lock.free.queue.LockFreeQueue
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
-import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.ArrayList
 
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
-class ConcurrentDequeStressTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
-    val deque = ConcurrentLinkedDeque<Int>()
-
-    @Operation
-    fun addFirst(e: Int) = deque.addFirst(e)
+class QueueIncorrectTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+    private val q = LockFreeQueue<Int>()
 
     @Operation
-    fun addLast(e: Int) = deque.addLast(e)
+    fun add(@Param(gen = IntGen::class) value: Int) {
+        q.add(value)
+    }
 
     @Operation
-    fun pollFirst() = deque.pollFirst()
+    fun takeOrNull(): Any? {
+        return q.takeOrNull()
+    }
 
-    @Operation
-    fun pollLast() = deque.pollLast()
-
-    override fun extractState() = deque.toList()
+    override fun extractState(): Any {
+        val elements = ArrayList<Int>()
+        while (true) {
+            val element = q.takeOrNull() ?: break
+            elements.add(element)
+        }
+        return elements
+    }
 }
