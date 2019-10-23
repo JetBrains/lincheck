@@ -51,7 +51,7 @@ import java.util.List;
  * {@link #createStrategy} method is used. It is impossible to add new strategy
  * without any code change.
  */
-public abstract class Strategy implements AutoCloseable {
+public abstract class Strategy {
     protected final ExecutionScenario scenario;
     protected final Reporter reporter;
     protected final Verifier verifier;
@@ -124,7 +124,4 @@ public abstract class Strategy implements AutoCloseable {
     }
 
     public abstract void run() throws Exception;
-
-    @Override
-    public void close() {}
 }
