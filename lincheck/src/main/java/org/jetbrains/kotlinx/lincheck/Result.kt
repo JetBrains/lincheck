@@ -70,7 +70,7 @@ data class ExceptionResult @JvmOverloads constructor(val tClazz: Class<out Throw
     override fun toString() = wasSuspendedPrefix + "${tClazz?.simpleName}"
 
     /**
-     * Check equals carefully because stored exceptions may be loaded by different loaders
+     * Check equals carefully, because stored exceptions may be loaded by different loaders
      */
     override fun equals(other: Any?): Boolean {
         if (other == null) return false
