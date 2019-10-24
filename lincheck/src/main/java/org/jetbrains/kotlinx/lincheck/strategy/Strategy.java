@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
-import com.devexperts.jagent.ClassInfo;
 import org.objectweb.asm.ClassVisitor;
 
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendIncorrectResults;
@@ -62,7 +61,7 @@ public abstract class Strategy {
         }
     }
 
-    public ClassVisitor createTransformer(ClassVisitor cv, ClassInfo classInfo) {
+    public ClassVisitor createTransformer(ClassVisitor cv) {
         throw new UnsupportedOperationException(getClass() + " runner does not transform classes");
     }
 

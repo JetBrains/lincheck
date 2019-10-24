@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  */
 
 
-import com.devexperts.jagent.ClassInfo;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -56,17 +55,27 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Method AFTER_LOCK_RELEASE_METHOD = new Method("afterLockRelease", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE, OBJECT_TYPE});
 
     private String className;
-    private String fileName;
+    private String fileName = "";
     private final List<StackTraceElement> codeLocations = new ArrayList<>();
 
-    public ManagedStrategyTransformer(ClassVisitor cv, ClassInfo ci) {
+    public ManagedStrategyTransformer(ClassVisitor cv) {
         super(ASM_API, cv);
-        this.className = ci.getClassName();
-        this.fileName = ci.getSourceFile();
     }
 
     public List<StackTraceElement> getCodeLocations() {
         return codeLocations;
+    }
+
+    @Override
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        this.className = name;
+        super.visit(version, access, name, signature, superName, interfaces);
+    }
+
+    @Override
+    public void visitSource(String source, String debug) {
+        this.fileName = source;
+        super.visitSource(source, debug);
     }
 
     @Override

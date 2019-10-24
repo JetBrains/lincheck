@@ -24,11 +24,6 @@ package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import com.devexperts.jagent.ClassInfo;
-import com.devexperts.jagent.ClassInfoCache;
-import com.devexperts.jagent.ClassInfoVisitor;
-import com.devexperts.jagent.FrameClassWriter;
-import com.devexperts.jagent.Log;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -49,7 +44,6 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private final Runner runner;
     // Cache for classloading and frames computing during the transformation
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
-    private final ClassInfoCache ciCache = new ClassInfoCache(new Log("lin-check", Log.Level.DEBUG, null));
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         this.strategy = strategy;
@@ -68,7 +62,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
                 !className.equals("ManagedStrategyHolder")) ||
             className.startsWith("sun.") ||
-            className.startsWith("java.");
+            className.startsWith("java.") ||
+            className.startsWith("jdk.internal.");
         // TODO let's transform java.util.concurrent
     }
 
@@ -106,20 +101,16 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private byte[] instrument(String className) throws IOException {
         // Create ClassReader
         ClassReader cr = new ClassReader(className);
-        // Build class info
-        ClassInfoVisitor ciVisitor = new ClassInfoVisitor();
-        cr.accept(ciVisitor, 0);
-        ClassInfo ci = ciVisitor.buildClassInfo();
         // Construct transformation pipeline:
         // apply the strategy's transformer at first,
         // then the runner's one.
-        ClassWriter cw = new FrameClassWriter(this, ciCache, ci.getVersion());
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         ClassVisitor cv = new CheckClassAdapter(cw, false); // for debug
         if (runner.needsTransformation()) {
-            cv = runner.createTransformer(cv, ci);
+            cv = runner.createTransformer(cv);
         }
         if (strategy.needsTransformation()) {
-            cv = strategy.createTransformer(cv, ci);
+            cv = strategy.createTransformer(cv);
         }
         // Get transformed bytecode
         cr.accept(cv, ClassReader.EXPAND_FRAMES);
