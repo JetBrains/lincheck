@@ -29,21 +29,21 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
  * Configuration for {@link RandomSwitchStrategy random-switch} strategy.
  */
 public class RandomSwitchCTestConfiguration extends CTestConfiguration {
-    public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 1000;
+    public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 1_000;
 
     public boolean checkObstructionFreedom;
-    public final int maxRepetitions;
-    public final int invocationsPerIteration;
+    public final int hangingDetectionThreshold;
+    public final int maxInvocationsPerIteration;
 
     public RandomSwitchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
         int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        boolean checkObstructionFreedom, int maxRepetitions, int invocationsPerIteration,
+        boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
         boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);
         this.checkObstructionFreedom = checkObstructionFreedom;
-        this.maxRepetitions = maxRepetitions;
-        this.invocationsPerIteration = invocationsPerIteration;
+        this.hangingDetectionThreshold = hangingDetectionThreshold;
+        this.maxInvocationsPerIteration = invocationsPerIteration;
     }
 }

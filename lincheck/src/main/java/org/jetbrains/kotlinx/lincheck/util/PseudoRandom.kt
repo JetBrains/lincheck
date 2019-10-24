@@ -1,11 +1,11 @@
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.util.PseudoRandomPolynomials.getPrimitivePolynomial
 import kotlin.math.pow
 
 /**
  * Pseudo random implementation based on Sobol sequences.
- * Use O(number of dimensions * log (number of points)) memory
+ * Use O(number of dimensions * log (number of points)) memory.
+ * Details in https://web.maths.unsw.edu.au/~fkuo/sobol/joe-kuo-notes.pdf
  */
 class PseudoRandom private constructor(
         private val lastValues: MutableList<Int>, // last value for i-th dimension
@@ -15,6 +15,8 @@ class PseudoRandom private constructor(
     // direction numbers for i-th dimension
     private val directionNumbers = mutableListOf<MutableList<Int>>()
 
+    constructor(): this(mutableListOf(), mutableListOf(), 0)
+
     /**
      * All values generated after call of this function will belong to next point
      */
@@ -23,7 +25,7 @@ class PseudoRandom private constructor(
     }
 
     fun nextDouble(): Double {
-        if (lastValues.size == nextDimension) {
+        if (nextDimension == lastValues.size) {
             lastValues.add(0)
             lastIds.add(0)
             nextDimension++
@@ -31,21 +33,17 @@ class PseudoRandom private constructor(
         }
 
         val bit = lowestZeroBit(lastIds[nextDimension]++)
-        val result = lastValues[nextDimension] xor getDirectionNumber(nextDimension, bit)
-        lastValues[nextDimension++] = result
+        val randomNumber = lastValues[nextDimension] xor getDirectionNumber(nextDimension, bit)
+        lastValues[nextDimension++] = randomNumber
 
-        var double = result / 2.0.pow(32)
-        if (double < 0)
-            double += 1.0 // handling sign bit
+        var result = randomNumber / 2.0.pow(32)
+        if (result < 0)
+            result += 1.0 // handling sign bit
 
-        return double
+        return result
     }
 
-    fun nextInt(upperBound: Int = Int.MAX_VALUE): Int {
-        return (nextDouble() * upperBound).toInt()
-    }
-
-    constructor(): this(mutableListOf(), mutableListOf(), 0)
+    fun nextInt(upperBound: Int = Int.MAX_VALUE): Int = (nextDouble() * upperBound).toInt()
 
     fun copy(): PseudoRandom {
         return PseudoRandom(lastValues.toMutableList(), lastIds.toMutableList(), nextDimension)
@@ -71,7 +69,7 @@ class PseudoRandom private constructor(
                 var value = numbers[currentSize - degree] xor (numbers[currentSize - degree] shr degree)
 
                 // TODO: use UInt when won't be experimental
-                // handle negative shr so that no to copy sign bit
+                // handle negative shr so that not to copy sign bit
                 if (numbers[currentSize - degree] and (1 shl 31) != 0) {
                     for (j in 0 until degree)
                         value = value xor (1 shl (31 - j))

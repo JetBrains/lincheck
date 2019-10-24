@@ -19,31 +19,31 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomsearch;
+package org.jetbrains.kotlinx.lincheck.strategy.uniformsearch;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 /**
- * Configuration for {@link RandomSearchStrategy random search} strategy.
+ * Configuration for {@link UniformSearchStrategy random search} strategy.
  */
-public class RandomSearchCTestConfiguration extends CTestConfiguration {
-    public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 1000;
+public class UniformSearchCTestConfiguration extends CTestConfiguration {
+    public static final int DEFAULT_MAX_INVOCATIONS_PER_ITERATION = 1_000;
 
     public boolean checkObstructionFreedom;
-    public final int maxRepetitions;
-    public final int invocationsPerIteration;
+    public final int hangingDetectionThreshold;
+    public final int maxInvocationsPerIteration;
 
-    public RandomSearchCTestConfiguration(Class<?> testClass,int iterations, int threads, int actorsPerThread, int actorsBefore,
-         int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-         boolean checkObstructionFreedom, int maxRepetitions, int invocationsPerIteration,
-         boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
+    public UniformSearchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
+                                           int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
+                                           boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
+                                           boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);
         this.checkObstructionFreedom = checkObstructionFreedom;
-        this.maxRepetitions = maxRepetitions;
-        this.invocationsPerIteration = invocationsPerIteration;
+        this.hangingDetectionThreshold = hangingDetectionThreshold;
+        this.maxInvocationsPerIteration = invocationsPerIteration;
     }
 }

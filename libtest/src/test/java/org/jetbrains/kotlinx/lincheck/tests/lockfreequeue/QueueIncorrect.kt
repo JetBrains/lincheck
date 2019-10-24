@@ -32,14 +32,10 @@ class QueueIncorrect : AbstractLincheckTest(shouldFail = false, checkObstruction
     private val q = LockFreeQueue<Int>()
 
     @Operation
-    fun add(@Param(gen = IntGen::class) value: Int) {
-        q.add(value)
-    }
+    fun add(@Param(gen = IntGen::class) value: Int) = q.add(value)
 
     @Operation
-    fun takeOrNull(): Any? {
-        return q.takeOrNull()
-    }
+    fun takeOrNull(): Any? = q.takeOrNull()
 
     override fun extractState(): Any {
         val elements = ArrayList<Int>()

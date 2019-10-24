@@ -19,35 +19,37 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.strategy.randomswitch;
+package org.jetbrains.kotlinx.lincheck.test.strategy.uniformsearch;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.kotlinx.lincheck.Options;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchOptions;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-@StressCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
-        generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
-public class RandomSwitchCTestAnnTest extends VerifierState {
+public class UniformSearchOptionsTest {
     private AtomicInteger i = new AtomicInteger();
 
-    @Operation
+    @Operation()
     public int incAndGet() {
         return i.incrementAndGet();
     }
 
     @Test
     public void test() {
-        LinChecker.check(RandomSwitchCTestAnnTest.class);
-    }
-
-    @Override
-    protected Object extractState() {
-        return i.get();
+        Options opts = new UniformSearchOptions()
+            .iterations(10)
+            .invocationsPerIteration(200)
+            .executionGenerator(RandomExecutionGenerator.class)
+            .threads(2)
+            .actorsPerThread(4)
+            .verifier(LinearizabilityVerifier.class)
+            .requireStateEquivalenceImplCheck(false)
+            .minimizeFailedScenario(false);
+        LinChecker.check(UniformSearchOptionsTest.class, opts);
     }
 }

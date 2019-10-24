@@ -19,27 +19,27 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomsearch;
+package org.jetbrains.kotlinx.lincheck.strategy.uniformsearch;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
 import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_MAX_REPETITIONS;
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
-import static org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
+import static org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
 
 /**
- * Options for {@link RandomSearchStrategy random search} strategy.
+ * Options for {@link UniformSearchStrategy uniform search} strategy.
  */
-public class RandomSearchOptions extends Options<RandomSearchOptions, RandomSearchCTestConfiguration> {
+public class UniformSearchOptions extends Options<UniformSearchOptions, UniformSearchCTestConfiguration> {
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
-    protected int maxRepetitions = DEFAULT_MAX_REPETITIONS;
-    protected int invocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION;
+    protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
+    protected int maxInvocationsPerIteration = DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
 
     /**
      * Check obstruction freedom of the concurrent algorithm
      */
-    public RandomSearchOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
+    public UniformSearchOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
         this.checkObstructionFreedom = checkObstructionFreedom;
         return this;
     }
@@ -47,23 +47,23 @@ public class RandomSearchOptions extends Options<RandomSearchOptions, RandomSear
     /**
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
      */
-    public RandomSearchOptions maxRepetitions(int maxRepetitions) {
-        this.maxRepetitions = maxRepetitions;
+    public UniformSearchOptions maxRepetitions(int maxRepetitions) {
+        this.hangingDetectionThreshold = maxRepetitions;
         return this;
     }
 
     /**
-     * Maximum number of invocationsPerIteration that managed strategy may use to search for incorrect execution
+     * Number of maxInvocationsPerIteration that managed strategy may use to search for incorrect execution
      */
-    public RandomSearchOptions invocationsPerIteration(int invocationsPerIteration) {
-        this.invocationsPerIteration = invocationsPerIteration;
+    public UniformSearchOptions invocationsPerIteration(int invocationsPerIteration) {
+        this.maxInvocationsPerIteration = invocationsPerIteration;
         return this;
     }
 
     @Override
-    public RandomSearchCTestConfiguration createTestConfigurations(Class<?> testClass) {
-        return new RandomSearchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-            executionGenerator, verifier, checkObstructionFreedom, maxRepetitions, invocationsPerIteration,
+    public UniformSearchCTestConfiguration createTestConfigurations(Class<?> testClass) {
+        return new UniformSearchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
+            executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, maxInvocationsPerIteration,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass));
     }

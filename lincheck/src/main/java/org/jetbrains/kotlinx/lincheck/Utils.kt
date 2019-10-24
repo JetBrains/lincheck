@@ -84,7 +84,6 @@ internal fun executeActor(
         // load class with default ClassLoader
         val eClass = Class.forName((invE.cause ?: invE)::class.java.name)
         for (ec in actor.handledExceptions) {
-            @Suppress("UNCHECKED_CAST")
             if (ec.isAssignableFrom(eClass))
                 return ExceptionResult(eClass as Class<out Throwable>?)
         }

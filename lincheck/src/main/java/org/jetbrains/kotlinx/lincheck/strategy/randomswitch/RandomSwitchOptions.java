@@ -24,18 +24,18 @@ package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
 import org.jetbrains.kotlinx.lincheck.Options;
 
 import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_MAX_REPETITIONS;
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
 import static org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
 
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 
 /**
- * Options for {@link RandomSwitchStrategy random search} strategy.
+ * Options for {@link RandomSwitchStrategy random-switch} strategy.
  */
 public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwitchCTestConfiguration> {
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
-    protected int maxRepetitions = DEFAULT_MAX_REPETITIONS;
-    protected int invocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION;
+    protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
+    protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION;
 
     /**
      * Check obstruction freedom of the concurrent algorithm
@@ -49,22 +49,22 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
      */
     public RandomSwitchOptions maxRepetitions(int maxRepetitions) {
-        this.maxRepetitions = maxRepetitions;
+        this.hangingDetectionThreshold = maxRepetitions;
         return this;
     }
 
     /**
-     * Maximum number of invocationsPerIteration that managed strategy may use to search for incorrect execution
+     * Number of maxInvocationsPerIteration that managed strategy may use to search for incorrect execution
      */
     public RandomSwitchOptions invocationsPerIteration(int invocationsPerIteration) {
-        this.invocationsPerIteration = invocationsPerIteration;
+        this.maxInvocationsPerIteration = invocationsPerIteration;
         return this;
     }
 
     @Override
     public RandomSwitchCTestConfiguration createTestConfigurations(Class<?> testClass) {
         return new RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-            executionGenerator, verifier, checkObstructionFreedom, maxRepetitions, invocationsPerIteration,
+            executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, maxInvocationsPerIteration,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass));
     }

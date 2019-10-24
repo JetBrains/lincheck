@@ -25,27 +25,23 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.random.Random
+
+private const val startSwitchProbability = 0.05
+private const val endSwitchProbability = 1.0
 
 /**
  * RandomSwitchStrategy just switches at any codeLocation to a random thread
  */
-class RandomSwitchStrategy(
+internal class RandomSwitchStrategy(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         verifier: Verifier,
         testCfg: RandomSwitchCTestConfiguration,
         reporter: Reporter
-) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, testCfg.checkObstructionFreedom) {
+) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.hangingDetectionThreshold, testCfg.checkObstructionFreedom) {
    // maximum number of thread switches that managed strategy may use to search for incorrect execution
-    private val maxInvocations = testCfg.invocationsPerIteration
+    private val maxInvocations = testCfg.maxInvocationsPerIteration
     private var switchProbability = startSwitchProbability
-
-    companion object {
-        private const val startSwitchProbability = 0.05
-        private const val endSwitchProbability = 1.0
-    }
 
     @Throws(Exception::class)
     override fun run() {
@@ -64,11 +60,11 @@ class RandomSwitchStrategy(
 
     override fun shouldSwitch(threadId: Int): Boolean {
         // TODO: can reduce number of random calls using geometric distribution
-        return executionRandom.nextDouble() < switchProbability
+        return random.nextDouble() < switchProbability
     }
 
     override fun initializeInvocation() {
-        executionRandom.endLastPoint() // a point corresponds to an invocation
+        random.endLastPoint() // a point corresponds to an invocation
         super.initializeInvocation()
     }
 }

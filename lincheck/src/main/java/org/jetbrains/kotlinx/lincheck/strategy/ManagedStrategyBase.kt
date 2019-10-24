@@ -53,9 +53,9 @@ abstract class ManagedStrategyBase(
     // tracker of acquisitions and releases of monitors
     protected val monitorTracker = MonitorTracker(nThreads)
     // random used for execution
-    protected var executionRandom = PseudoRandom()
+    protected var random = PseudoRandom()
     // copy of random used for execution for reproducability of results
-    protected var executionRandomCopy = executionRandom
+    protected var executionRandomCopy = random
     // unhandled exception thrown by testClass
     @Volatile
     protected var exception: Throwable? = null
@@ -258,7 +258,7 @@ abstract class ManagedStrategyBase(
             return // ignore switch, because there is no one to switch to
         }
 
-        var nextThreadNumber = executionRandom.nextInt(switchableThreads)
+        var nextThreadNumber = random.nextInt(switchableThreads)
 
         for (i in 0 until nThreads)
             if (i != threadId && canResume(i)) {
@@ -329,16 +329,16 @@ abstract class ManagedStrategyBase(
         finished.forEach { it.set(false) }
         isSuspended.forEach { it.set(false) }
         // save previous random state
-        executionRandomCopy = executionRandom.copy()
+        executionRandomCopy = random.copy()
         // start from random thread
-        currentThread = executionRandom.nextInt(nThreads)
+        currentThread = random.nextInt(nThreads)
         currentActorId.fill(-1)
         loopDetector.reset()
         exception = null
     }
 
     protected fun restoreRandom() {
-        executionRandom = executionRandomCopy;
+        random = executionRandomCopy;
     }
 
     protected fun checkCanHaveObstruction(lazyMessage: () -> String) {

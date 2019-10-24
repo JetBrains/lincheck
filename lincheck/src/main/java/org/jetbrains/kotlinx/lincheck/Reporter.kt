@@ -214,7 +214,7 @@ fun StringBuilder.appendIncorrectInterleaving(
             }
             is PassCodeLocationEvent -> {
                 if (iActor in interestingActors[iThread])
-                    execution.add(InterleavingRepresentation(iThread, "", "pass: ${shorten(event.info.toString())}"))
+                    execution.add(InterleavingRepresentation(iThread, "", "pass: ${shorten(event.codeLocation.toString())}"))
             }
         }
     }

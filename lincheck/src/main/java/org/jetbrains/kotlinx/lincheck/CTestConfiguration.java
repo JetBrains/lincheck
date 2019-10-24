@@ -24,10 +24,8 @@ package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTest;
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
@@ -51,7 +49,7 @@ public abstract class CTestConfiguration {
     public static final int DEFAULT_ACTORS_PER_THREAD = 5;
     public static final int DEFAULT_ACTORS_BEFORE = 5;
     public static final int DEFAULT_ACTORS_AFTER = 5;
-    public static final int DEFAULT_MAX_REPETITIONS = 20;
+    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 20;
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
     public static final boolean DEFAULT_MINIMIZE_ERROR = true;
@@ -94,22 +92,14 @@ public abstract class CTestConfiguration {
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                     chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 
-        Stream<RandomSearchCTestConfiguration> randomSearchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSearchCTest.class))
-                .map(ann -> new RandomSearchCTestConfiguration(testClass, ann.iterations(),
+        Stream<UniformSearchCTestConfiguration> randomSearchConfigurations = Arrays.stream(testClass.getAnnotationsByType(UniformSearchCTest.class))
+                .map(ann -> new UniformSearchCTestConfiguration(testClass, ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                         ann.generator(), ann.verifier(),
-                        ann.checkObstructionFreedom(), ann.maxRepetitions(), ann.invocationsPerIteration(),
+                        ann.checkObstructionFreedom(), ann.hangingDetectionThreshold(), ann.invocationsPerIteration(),
                         ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                         chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 
-        Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
-                .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
-                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                        ann.generator(), ann.verifier(),
-                        ann.checkObstructionFreedom(), ann.maxRepetitions(), ann.invocationsPerIteration(),
-                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
-                        chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
-
-        return Stream.of(stressConfigurations, randomSearchConfigurations, randomSwitchConfigurations).flatMap(identity()).collect(Collectors.toList());
+        return Stream.of(stressConfigurations, randomSearchConfigurations).flatMap(identity()).collect(Collectors.toList());
     }
 }

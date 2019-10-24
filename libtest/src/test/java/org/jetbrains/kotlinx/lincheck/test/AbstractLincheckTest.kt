@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.linCheckAnalysis
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.jetbrains.kotlinx.lincheck.strategy.randomsearch.RandomSearchOptions
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchOptions
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchOptions
 import org.jetbrains.kotlinx.lincheck.util.ErrorAnalysisReport
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -43,7 +43,7 @@ abstract class AbstractLincheckTest(val shouldFail: Boolean, val checkObstructio
 
     @Test
     fun testRandomSearchStrategy() {
-        val options = RandomSearchOptions()
+        val options = UniformSearchOptions()
                 .checkObstructionFreedom(checkObstructionFreedom)
 
         runTest(options)

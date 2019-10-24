@@ -37,6 +37,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
+
 /**
  * This transformer applies required for {@link Strategy} and {@link Runner}
  * class transformations and hines them from others.
@@ -64,9 +66,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * @return result of checking class
      */
     private static boolean doNotTransform(String className) {
-        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE)) {
-            return false;
-        }
+        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE)) return false;
         return className == null ||
             (
                 className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
@@ -78,8 +78,6 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 className.startsWith("kotlin.") &&
                 !className.startsWith("kotlin.collections.")
             ) ||
-            //className.startsWith("kotlin.coroutines.") ||
-            //className.startsWith("kotlinx.coroutines.") ||
             className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.");
@@ -153,5 +151,34 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             return className.substring(TRANSFORMED_POINTED_PACKAGE.length());
         }
         return className;
+    }
+}
+
+/**
+ * ClassWriter for classes transformed by LinCheck.
+ * Overrides getCommonSuperClass method so that it could work correctly for classes transformed by LinCheck.
+ */
+class TransformationClassWriter extends ClassWriter {
+    private ClassLoader loader;
+
+    public TransformationClassWriter(int flags, ClassLoader loader) {
+        super(flags);
+        this.loader = loader;
+    }
+
+    protected ClassLoader getClassLoader() {
+        return loader;
+    }
+
+    /**
+     * ASM uses Class.forName for given types, however it can lead to cyclic dependencies when loading transformed classes.
+     * Thus, we call original method for not-transformed class names and then just fix it if needed.
+     */
+    @Override
+    protected String getCommonSuperClass(final String type1, final String type2) {
+        String result = super.getCommonSuperClass(originalName(type1), originalName(type2));
+        if (result.startsWith(JAVA_UTIL_PACKAGE))
+            return TRANSFORMED_PACKAGE + result;
+        return result;
     }
 }

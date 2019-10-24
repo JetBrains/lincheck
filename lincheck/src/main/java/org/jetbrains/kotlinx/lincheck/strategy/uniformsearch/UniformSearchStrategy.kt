@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomsearch
+package org.jetbrains.kotlinx.lincheck.strategy.uniformsearch
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -27,20 +27,19 @@ import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.util.PseudoRandom
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.random.Random
 
 /**
- * RandomSearchStrategy at first studies codeLocations at the choosen thread
+ * UniformSearchStrategy at first studies codeLocations at the choosen thread
  * until a blocking event or a thread finish and
  * then chooses one uniform randomly
  */
-class RandomSearchStrategy(
+class UniformSearchStrategy(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         verifier: Verifier,
-        testCfg: RandomSearchCTestConfiguration,
+        testCfg: UniformSearchCTestConfiguration,
         reporter: Reporter
-) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.maxRepetitions, testCfg.checkObstructionFreedom) {
+) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.hangingDetectionThreshold, testCfg.checkObstructionFreedom) {
     // an increasing id of operation performed within this execution
     private val executionPosition = AtomicInteger(0)
     // ids of operations where a thread should be switched
@@ -48,8 +47,8 @@ class RandomSearchStrategy(
     // id of last operation till last thread we switched to finished
     private var nextFinishPosition: Int? = null
     // maximum number of thread switches that managed strategy may use to search for incorrect execution
-    private val maxInvocations = testCfg.invocationsPerIteration
-    // number of used invocationsPerIteration
+    private val maxInvocations = testCfg.maxInvocationsPerIteration
+    // number of used maxInvocationsPerIteration
     private var usedInvocations = 0
 
     // fields for approximation of width of interleaving tree
@@ -65,7 +64,7 @@ class RandomSearchStrategy(
         try {
             while (usedInvocations < maxInvocations) {
                 searchForExecution(0)
-                executionRandom.endLastPoint() // a point corresponds to one search branch
+                random.endLastPoint() // a point corresponds to one search branch
             }
         } finally {
             runner.close()
@@ -125,7 +124,7 @@ class RandomSearchStrategy(
         if (level == maxLevel) return
 
         // choose next switch
-        val switchPosition = (startPosition..finishPosition).random(executionRandom)
+        val switchPosition = (startPosition..finishPosition).random(random)
 
         // run recursively
         switchPositions.add(switchPosition)
