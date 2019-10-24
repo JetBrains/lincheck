@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
+import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.*
@@ -96,13 +97,16 @@ internal fun executeActor(
     }
 }
 
-private val methodsCache = WeakHashMap<Class<*>, HashMap<Method, Method>>()
+private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
 
-private fun getMethod(instance: Any, actor: Actor): Method = methodsCache
-    .computeIfAbsent(instance.javaClass) { hashMapOf() }
-    .computeIfAbsent(actor.method) {
-        instance.javaClass.getMethod(actor.method.name, *actor.method.parameterTypes)
+private fun getMethod(instance: Any, actor: Actor): Method {
+    val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
+    return methods[actor.method]?.get() ?: run {
+        val method = instance.javaClass.getMethod(actor.method.name, *actor.method.parameterTypes)
+        methods[actor.method] = WeakReference(method)
+        method
     }
+}
 
 /**
  * Creates [Result] of corresponding type from any given value.
