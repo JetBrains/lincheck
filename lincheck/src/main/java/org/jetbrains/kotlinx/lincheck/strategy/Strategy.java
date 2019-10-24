@@ -23,7 +23,10 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  */
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.ErrorType;
 import org.jetbrains.kotlinx.lincheck.Reporter;
+import org.jetbrains.kotlinx.lincheck.TestReport;
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
@@ -46,6 +49,7 @@ public abstract class Strategy {
     protected final ExecutionScenario scenario;
     protected final Reporter reporter;
     private final Verifier verifier;
+    protected TestReport report;
 
     protected Strategy(ExecutionScenario scenario, Verifier verifier, Reporter reporter) {
         this.scenario = scenario;
@@ -53,12 +57,26 @@ public abstract class Strategy {
         this.reporter = reporter;
     }
 
-    protected void verifyResults(ExecutionResult results) {
+    /**
+     * Check whether results are correct.
+     */
+    protected boolean verifyResults(ExecutionOutcome outcome) {
+        if (outcome instanceof TestReport) {
+            report = (TestReport) outcome;
+            return false;
+        }
+
+        ExecutionResult results = (ExecutionResult) outcome;
+
         if (!verifier.verifyResults(results)) {
             StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:\n");
             appendIncorrectResults(msgBuilder, scenario, results);
-            throw new AssertionError(msgBuilder.toString());
+            report = new TestReport(ErrorType.INCORRECT_RESULTS);
+            report.setErrorDetails(msgBuilder.toString());
+            return false;
         }
+
+        return true;
     }
 
     public ClassVisitor createTransformer(ClassVisitor cv) {
@@ -85,5 +103,5 @@ public abstract class Strategy {
         throw new IllegalArgumentException("Unknown strategy configuration type: " + testCfg.getClass());
     }
 
-    public abstract void run() throws Exception;
+    public abstract TestReport run() throws Exception;
 }

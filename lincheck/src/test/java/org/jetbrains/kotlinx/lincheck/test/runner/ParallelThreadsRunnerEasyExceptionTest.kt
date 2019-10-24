@@ -86,7 +86,7 @@ class SuspendResumeScenarios {
 class ParallelThreadsRunnerExceptionTest {
 
     val mockStrategy = object : Strategy(null, null, null) {
-        override fun run() {
+        override fun run(): TestReport {
             throw UnsupportedOperationException()
         }
     }

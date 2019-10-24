@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
@@ -153,41 +154,55 @@ open class ParallelThreadsRunner(
         return finalResult
     }
 
-    override fun run(): ExecutionResult? {
-        reset()
-        val initResults = scenario.initExecution.map { initActor -> executeActor(testInstance, initActor) }
-        val parallelResults = testThreadExecutions.map { executor.submit(it) }.map { future ->
-            try {
-                future.get(1, TimeUnit.SECONDS).toList()
-            } catch (e: TimeoutException) {
-                val stackTraces = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread }
-                val msgBuilder = StringBuilder()
-                msgBuilder.appendln("The execution has hung, see the thread dump:")
-                for ((t, stackTrace) in stackTraces) {
-                    t as TestThread
-                    msgBuilder.appendln("Thread-${t.iThread}:")
-                    for (ste in stackTrace) {
-                        if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
-                        msgBuilder.appendln("\t$ste")
+    override fun run(): ExecutionOutcome {
+        try {
+            reset()
+            val initResults = scenario.initExecution.map { initActor -> executeActor(testInstance, initActor) }
+            val parallelResults = testThreadExecutions.map { executor.submit(it) }.map { future ->
+                try {
+                    future.get(1, TimeUnit.SECONDS).toList()
+                } catch (e: TimeoutException) {
+                    val stackTraces = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread }
+                    val msgBuilder = StringBuilder()
+                    msgBuilder.appendln("The execution has hung, see the thread dump:")
+                    for ((t, stackTrace) in stackTraces) {
+                        t as TestThread
+                        msgBuilder.appendln("Thread-${t.iThread}:")
+                        for (ste in stackTrace) {
+                            if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
+                            msgBuilder.appendln("\t$ste")
+                        }
+                        msgBuilder.appendln()
                     }
-                    msgBuilder.appendln()
+                    Thread.getAllStackTraces().map { it.key }.filterIsInstance<TestThread>().forEach { it.stop() }
+                    val report = TestReport(ErrorType.DEADLOCK)
+                    report.errorDetails = msgBuilder.toString()
+                    return report
                 }
-                Thread.getAllStackTraces().map { it.key }.filterIsInstance<TestThread>().forEach { it.stop() }
-                throw AssertionError(msgBuilder.toString())
             }
-        }
-        val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
-        var postPartSuspended = false
-        val postResults = scenario.postExecution.map { postActor ->
-            // no actors are executed after suspension of a post part
-            if (postPartSuspended) {
-                NoResult
-            } else {
-                // post part may contain suspendable actors if there aren't any in the parallel part, invoke with dummy continuation
-                executeActor(testInstance, postActor, dummyCompletion).also { postPartSuspended = it.wasSuspended }
+            val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
+            var postPartSuspended = false
+            val postResults = scenario.postExecution.map { postActor ->
+                // no actors are executed after suspension of a post part
+                if (postPartSuspended) {
+                    NoResult
+                } else {
+                    // post part may contain suspendable actors if there aren't any in the parallel part, invoke with dummy continuation
+                    executeActor(testInstance, postActor, dummyCompletion).also { postPartSuspended = it.wasSuspended }
+                }
             }
+
+            return ExecutionResult(initResults, parallelResults, postResults)
+        } catch (e: Throwable) {
+            val report = TestReport(ErrorType.INCORRECT_RESULTS)
+            val msgBuilder = StringBuilder()
+            msgBuilder.appendln("Illegal exception was thrown:")
+            msgBuilder.appendln(e.message)
+            msgBuilder.appendln()
+            msgBuilder.appendExecutionScenario(scenario)
+            report.errorDetails = msgBuilder.toString()
+            return report
         }
-        return ExecutionResult(initResults, parallelResults, postResults)
     }
 
     override fun onStart(iThread: Int) {

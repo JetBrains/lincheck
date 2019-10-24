@@ -33,7 +33,7 @@ import java.util.Objects;
  * <p>
  * All the result parts should have the same dimensions as the scenario.
  */
-public class ExecutionResult {
+public class ExecutionResult implements ExecutionOutcome {
     /**
      * Results of the initial sequential part of the execution.
      * @see ExecutionScenario#initExecution

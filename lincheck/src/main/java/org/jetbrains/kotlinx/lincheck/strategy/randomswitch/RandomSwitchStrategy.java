@@ -22,7 +22,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.ErrorType;
 import org.jetbrains.kotlinx.lincheck.Reporter;
+import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategy;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
@@ -44,9 +46,14 @@ public class RandomSwitchStrategy extends ManagedStrategy {
     }
 
     @Override
-    protected void runImpl() throws Exception {
+    protected TestReport runImpl() throws Exception {
         for (int i = 0; i < invocations; i++)
-            verifyResults(runInvocation());
+            if (!verifyResults(runInvocation())) {
+                report.setErrorInvocation(i + 1);
+                return report;
+            }
+
+        return new TestReport(ErrorType.NO_ERROR);
     }
 
     @Override

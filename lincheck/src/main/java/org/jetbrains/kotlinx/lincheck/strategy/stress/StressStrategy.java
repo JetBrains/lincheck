@@ -23,7 +23,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress;
  */
 
 import org.jetbrains.kotlinx.lincheck.Actor;
+import org.jetbrains.kotlinx.lincheck.ErrorType;
 import org.jetbrains.kotlinx.lincheck.Reporter;
+import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
@@ -73,7 +75,7 @@ public class StressStrategy extends Strategy {
     }
 
     @Override
-    public void run() throws InterruptedException {
+    public TestReport run() throws InterruptedException {
         try {
             // Run invocations
             for (int invocation = 0; invocation < invocations; invocation++) {
@@ -87,10 +89,16 @@ public class StressStrategy extends Strategy {
                     }
                 }
                 uninitializedThreads.set(scenario.parallelExecution.size()); // reinit synchronization
-                verifyResults(runner.run());
+
+                if (verifyResults(runner.run())) {
+                    report.setErrorInvocation(invocation + 1);
+                    return report;
+                }
             }
         } finally {
             runner.close();
         }
+
+        return new TestReport(ErrorType.NO_ERROR);
     }
 }

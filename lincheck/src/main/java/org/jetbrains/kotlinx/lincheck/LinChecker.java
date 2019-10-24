@@ -75,37 +75,73 @@ public class LinChecker {
     }
 
     /**
+     * Runs all concurrent tests described with {@code @<XXX>CTest} annotations on the specified test class.
+     *
+     * @return TestReport with information about concurrent test run.
+     */
+    static TestReport analyze(Class<?> testClass) {
+        return analyze(testClass, null);
+    }
+
+    /**
+     * Runs concurrent test on specified class with the specified by options environment.
+     *
+     * @return TestReport with information about concurrent test run.
+     */
+    static TestReport analyze(Class<?> testClass, Options options) {
+        return new LinChecker(testClass, options).analyze();
+    }
+
+    /**
      * @throws AssertionError if algorithm or data structure is not correct
      */
     private void check() throws AssertionError {
+        TestReport report = analyze();
+        if (!report.getSuccess()) {
+            throw new AssertionError(report.getErrorDetails());
+        }
+    }
+
+    /**
+     * @return TestReport with information about concurrent test run.
+     */
+    private TestReport analyze() throws AssertionError {
         if (testConfigurations.isEmpty()) {
             throw new IllegalStateException("No Lin-Check test configuration to run");
         }
-        testConfigurations.forEach(testConfiguration -> {
+
+        for (CTestConfiguration testConfiguration : testConfigurations) {
             try {
-                checkImpl(testConfiguration);
-            } catch (RuntimeException | AssertionError e) {
-                throw e;
+                TestReport report = analyzeImpl(testConfiguration);
+                if (!report.getSuccess()) return report;
             } catch (Exception e) {
+                // an Exception in LinCheck
                 throw new IllegalStateException(e);
             }
-        });
+
+        };
+
+        return new TestReport(ErrorType.NO_ERROR);
     }
 
-    private void checkImpl(CTestConfiguration testCfg) throws AssertionError, Exception {
+    private TestReport analyzeImpl(CTestConfiguration testCfg) throws AssertionError, Exception {
         ExecutionGenerator exGen = createExecutionGenerator(testCfg.generatorClass, testCfg);
         // Run iterations
         for (int iteration = 1; iteration <= testCfg.iterations; iteration++) {
             ExecutionScenario scenario = exGen.nextExecution();
             // Check correctness of the generated scenario
             reporter.logIteration(iteration, testCfg.iterations, scenario);
-            try {
-                runScenario(scenario, testCfg);
-            } catch (AssertionError e) {
-                if (!testCfg.minimizeFailedScenario) throw e;
-                minimizeScenario(scenario, testCfg, e);
+            TestReport report = runScenario(scenario, testCfg);
+            if (!report.getSuccess()) {
+                if (testCfg.minimizeFailedScenario)
+                    report = minimizeScenario(scenario, testCfg, report);
+
+                report.setErrorIteration(iteration);
+                return report;
             }
         }
+
+        return new TestReport(ErrorType.NO_ERROR);
     }
 
     // Tries to minimize the specified failing scenario to make the error easier to understand.
@@ -114,7 +150,7 @@ public class LinChecker {
     // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
     // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
     // Thus, the algorithm works in the linear time of the total number of actors.
-    private void minimizeScenario(ExecutionScenario scenario, CTestConfiguration testCfg, AssertionError currentError) throws AssertionError, Exception {
+    private TestReport minimizeScenario(ExecutionScenario scenario, CTestConfiguration testCfg, TestReport currentReport) throws AssertionError, Exception {
         reporter.logScenarioMinimization(scenario);
         for (int i = 0; i < scenario.parallelExecution.size(); i++) {
             for (int j = 0; j < scenario.parallelExecution.get(i).size(); j++) {
@@ -122,7 +158,9 @@ public class LinChecker {
                 newScenario.parallelExecution.get(i).remove(j);
                 if (newScenario.parallelExecution.get(i).isEmpty())
                     newScenario.parallelExecution.remove(i); // remove empty thread
-                minimizeNewScenarioAttempt(newScenario, testCfg);
+
+                TestReport report = minimizeNewScenarioAttempt(newScenario, testCfg);
+                if (!report.getSuccess()) return report;
             }
         }
         for (int i = 0; i < scenario.initExecution.size(); i++) {
@@ -135,19 +173,14 @@ public class LinChecker {
             newScenario.postExecution.remove(i);
             minimizeNewScenarioAttempt(newScenario, testCfg);
         }
-        throw currentError;
+        return currentReport;
     }
 
-    private void minimizeNewScenarioAttempt(ExecutionScenario newScenario, CTestConfiguration testCfg) throws AssertionError, Exception {
-        try {
-            runScenario(newScenario, testCfg);
-        } catch (IllegalArgumentException e) {
-            // Ignore incorrect scenarios
-        } catch (AssertionError e) {
-            // Scenario has been minimized! Try to minimize more!
-            minimizeScenario(newScenario, testCfg, e);
-            throw new IllegalStateException("Never reaches, the previous `minimizeScenario` call always throw an exception");
-        }
+    private TestReport minimizeNewScenarioAttempt(ExecutionScenario newScenario, CTestConfiguration testCfg) throws AssertionError, Exception {
+        TestReport report = runScenario(newScenario, testCfg);
+        if (!report.getSuccess())
+            return minimizeScenario(newScenario, testCfg, report);
+        return new TestReport(ErrorType.NO_ERROR);
     }
 
     private ExecutionScenario copyScenario(ExecutionScenario scenario) {
@@ -160,12 +193,12 @@ public class LinChecker {
         return new ExecutionScenario(initExecution, parallelExecution, postExecution);
     }
 
-    private void runScenario(ExecutionScenario scenario, CTestConfiguration testCfg) throws AssertionError, Exception {
+    private TestReport runScenario(ExecutionScenario scenario, CTestConfiguration testCfg) throws AssertionError, Exception {
         validateScenario(testCfg, scenario);
         Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testCfg.sequentialSpecification);
         if (testCfg.requireStateEquivalenceImplCheck) verifier.checkStateEquivalenceImplementation();
         Strategy strategy = Strategy.createStrategy(testCfg, testClass, scenario, verifier, reporter);
-        strategy.run();
+        return strategy.run();
     }
 
     private void validateScenario(CTestConfiguration testCfg, ExecutionScenario scenario) {

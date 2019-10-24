@@ -102,7 +102,7 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
 }
 
-private fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
+fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
     if (scenario.initExecution.isNotEmpty()) {
         appendln("Execution scenario (init part):")
         appendln(scenario.initExecution)

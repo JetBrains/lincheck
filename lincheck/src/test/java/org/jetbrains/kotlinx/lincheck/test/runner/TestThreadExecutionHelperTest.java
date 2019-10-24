@@ -45,7 +45,7 @@ public class TestThreadExecutionHelperTest {
     public void setUp() {
         Strategy mockStrategy = new Strategy(null, null, null) {
             @Override
-            public void run(){
+            public TestReport run(){
                 throw new UnsupportedOperationException();
             }
         };

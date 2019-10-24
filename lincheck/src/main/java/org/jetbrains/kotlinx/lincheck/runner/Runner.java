@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import org.jetbrains.kotlinx.lincheck.ExecutionClassLoader;
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.objectweb.asm.ClassVisitor;
@@ -82,7 +82,7 @@ public abstract class Runner {
      * Runs next invocation
      * @return the obtained results
      */
-    public abstract ExecutionResult run() throws InterruptedException;
+    public abstract ExecutionOutcome run() throws InterruptedException;
 
     /**
      * This method is invoked by every test thread as the first operation.

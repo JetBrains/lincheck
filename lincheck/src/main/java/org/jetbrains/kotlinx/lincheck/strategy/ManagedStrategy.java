@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  */
 
 import org.jetbrains.kotlinx.lincheck.Reporter;
+import org.jetbrains.kotlinx.lincheck.TestReport;
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner;
@@ -75,9 +77,9 @@ public abstract class ManagedStrategy extends Strategy {
     }
 
     @Override
-    public final void run() throws Exception {
+    public final TestReport run() throws Exception {
         try {
-            runImpl();
+            return runImpl();
         } finally {
             runner.close();
         }
@@ -88,7 +90,7 @@ public abstract class ManagedStrategy extends Strategy {
      *
      * @return invocation results for each executed actor.
      */
-    protected final ExecutionResult runInvocation() throws InterruptedException {
+    protected final ExecutionOutcome runInvocation() throws InterruptedException {
         return runner.run();
     }
 
@@ -103,10 +105,8 @@ public abstract class ManagedStrategy extends Strategy {
 
     /**
      * This method implements the strategy logic
-     *
-     * @throws Exception an occurred exception (at least by {@link Verifier}) during the testing
      */
-    protected abstract void runImpl() throws Exception;
+    protected abstract TestReport runImpl() throws Exception;
 
     // == LISTENING EVENTS ==
 
