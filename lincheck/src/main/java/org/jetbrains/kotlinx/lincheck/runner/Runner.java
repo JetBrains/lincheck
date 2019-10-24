@@ -27,14 +27,13 @@ import org.jetbrains.kotlinx.lincheck.TransformationClassLoader;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import com.devexperts.jagent.ClassInfo;
 import org.objectweb.asm.ClassVisitor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
  * like fibers, it may require code transformation, so {@link #needsTransformation()}
- * method has to return {@code true} and {@link #createTransformer(ClassVisitor, ClassInfo)}
+ * method has to return {@code true} and {@link #createTransformer(ClassVisitor)}
  * one has to be implemented.
  */
 public abstract class Runner {
@@ -67,7 +66,7 @@ public abstract class Runner {
      *
      * @return class visitor which transform the code due to support this runner.
      */
-    public ClassVisitor createTransformer(ClassVisitor cv, ClassInfo classInfo) {
+    public ClassVisitor createTransformer(ClassVisitor cv) {
         throw new UnsupportedOperationException(getClass() + " runner does not transform classes");
     }
 

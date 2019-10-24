@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
-import com.devexperts.jagent.ClassInfo;
 import org.objectweb.asm.ClassVisitor;
 
 /**
@@ -66,8 +65,8 @@ public abstract class ManagedStrategy extends Strategy {
     }
 
     @Override
-    public ClassVisitor createTransformer(ClassVisitor cv, ClassInfo classInfo) {
-        return transformer = new ManagedStrategyTransformer(cv, classInfo);
+    public ClassVisitor createTransformer(ClassVisitor cv) {
+        return transformer = new ManagedStrategyTransformer(cv);
     }
 
     @Override

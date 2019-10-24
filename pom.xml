@@ -26,6 +26,7 @@
         <lastCopyrightYear>2019</lastCopyrightYear>
         <kotlin.version>1.3.41</kotlin.version>
         <dokka.version>0.9.17</dokka.version>
+        <asm.version>7.1</asm.version>
         <deploy.skip>false</deploy.skip>
     </properties>
 
@@ -255,13 +256,6 @@
         </dependency>
     </dependencies>
 
-    <repositories>
-        <repository>
-            <id>bintray-devexperts-Maven</id>
-            <name>bintray</name>
-            <url>https://dl.bintray.com/devexperts/Maven</url>
-        </repository>
-    </repositories>
     <pluginRepositories>
         <pluginRepository>
             <id>jcenter</id>
