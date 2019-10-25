@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
 import java.util.ArrayList
 
-class QueueIncorrect : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class QueueIncorrect : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
     private val q = LockFreeQueue<Int>()
 
     @Operation
