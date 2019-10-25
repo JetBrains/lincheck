@@ -26,10 +26,11 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.cliffc.high_scale_lib.NonBlockingSetInt
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.ErrorType
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
 @Param(name = "key", gen = IntGen::class, conf = "1:10")
-class BitVectorCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class BitVectorCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val q = NonBlockingSetInt()
 
     @Operation(params = ["key"])

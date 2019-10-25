@@ -26,10 +26,11 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.cliffc.high_scale_lib.NonBlockingHashSet
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.ErrorType
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
 @Param(name = "key", gen = IntGen::class)
-class SetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class SetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val q = NonBlockingHashSet<Int>()
 
     @Operation(params = ["key"])

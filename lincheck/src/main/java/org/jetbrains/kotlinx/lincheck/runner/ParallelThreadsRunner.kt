@@ -22,10 +22,10 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.util.Either
 import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
 import java.util.concurrent.atomic.AtomicReference
@@ -40,7 +40,7 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  *
  * It is pretty useful for stress testing or if you do not care about context switches.
  */
-open class ParallelThreadsRunner(
+internal open class ParallelThreadsRunner(
     scenario: ExecutionScenario,
     strategy: Strategy,
     testClass: Class<*>,
@@ -154,7 +154,7 @@ open class ParallelThreadsRunner(
         return finalResult
     }
 
-    override fun run(): ExecutionOutcome {
+    override fun run(): Either<TestReport, ExecutionResult> {
         try {
             reset()
             val initResults = scenario.initExecution.map { initActor -> executeActor(testInstance, initActor) }
@@ -177,7 +177,7 @@ open class ParallelThreadsRunner(
                     Thread.getAllStackTraces().map { it.key }.filterIsInstance<TestThread>().forEach { it.stop() }
                     val report = TestReport(ErrorType.DEADLOCK)
                     report.errorDetails = msgBuilder.toString()
-                    return report
+                    return Either.Error(report)
                 }
             }
             val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
@@ -191,8 +191,7 @@ open class ParallelThreadsRunner(
                     executeActor(testInstance, postActor, dummyCompletion).also { postPartSuspended = it.wasSuspended }
                 }
             }
-
-            return ExecutionResult(initResults, parallelResults, postResults)
+            return Either.Value(ExecutionResult(initResults, parallelResults, postResults))
         } catch (e: Throwable) {
             val report = TestReport(ErrorType.INCORRECT_RESULTS)
             val msgBuilder = StringBuilder()
@@ -201,7 +200,7 @@ open class ParallelThreadsRunner(
             msgBuilder.appendln()
             msgBuilder.appendExecutionScenario(scenario)
             report.errorDetails = msgBuilder.toString()
-            return report
+            return Either.Error(report)
         }
     }
 

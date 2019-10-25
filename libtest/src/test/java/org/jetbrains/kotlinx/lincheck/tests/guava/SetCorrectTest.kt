@@ -22,16 +22,17 @@ package org.jetbrains.kotlinx.lincheck.tests.guava
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 @Param(name = "key", gen = IntGen::class)
-class SetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class SetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val q = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
 
     @Operation(params = ["key"])

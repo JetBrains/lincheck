@@ -63,7 +63,6 @@ public class StressStrategy extends Strategy {
             }
         }
         // Create runner
-        Phaser phaser = new Phaser(testCfg.threads);
         runner = new ParallelThreadsRunner(scenario, this, testClass, waits) {
             @Override
             public void onStart(int iThread) {
@@ -90,7 +89,7 @@ public class StressStrategy extends Strategy {
                 }
                 uninitializedThreads.set(scenario.parallelExecution.size()); // reinit synchronization
 
-                if (verifyResults(runner.run())) {
+                if (!verifyResults(runner.run())) {
                     report.setErrorInvocation(invocation + 1);
                     return report;
                 }

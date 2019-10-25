@@ -26,10 +26,11 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import com.google.common.collect.ConcurrentHashMultiset
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.ErrorType
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
 @Param(name = "count", gen = IntGen::class, conf = "1:10")
-class MultisetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class MultisetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val q = ConcurrentHashMultiset.create<Int>()
 
     @Operation

@@ -21,32 +21,28 @@
  */
 package org.jetbrains.kotlinx.lincheck.tests
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.linCheckAnalyze
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 import java.lang.AssertionError
-import java.lang.IllegalStateException
 
 /**
  * An abstraction for testing all lincheck strategies
  */
-abstract class AbstractLincheckTest(val shouldFail: Boolean, val checkObstructionFreedom: Boolean = false) : VerifierState() {
+abstract class AbstractLinCheckTest(val expectedError: ErrorType) : VerifierState() {
     @Test
     fun testStressStrategy() {
         runTest(StressOptions())
     }
 
     private fun runTest(options: Options<*, *>) {
-        var failed = false
-
-        try {
-            val report = LinChecker.check(this.javaClass, options)
-        } catch (e: AssertionError) {
-            failed = true
-            if (failed && !shouldFail)
-                throw e
-        }
+        val report = linCheckAnalyze(this.javaClass, options)
+        assertEquals(report.errorDetails, expectedError, report.errorType)
     }
 }

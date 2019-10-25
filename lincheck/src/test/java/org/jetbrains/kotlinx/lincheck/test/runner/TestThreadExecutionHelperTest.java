@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution;
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
+import org.jetbrains.kotlinx.lincheck.util.Either;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,7 +52,7 @@ public class TestThreadExecutionHelperTest {
         };
         runner = new Runner(null, mockStrategy, ArrayDeque.class) {
             @Override
-            public ExecutionResult run() {
+            public Either<TestReport, ExecutionResult> run() {
                 throw new UnsupportedOperationException();
             }
         };

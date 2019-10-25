@@ -22,13 +22,14 @@
 package org.jetbrains.kotlinx.lincheck.tests.lockfreequeue
 
 import com.github.lock.free.queue.LockFreeQueue
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 import java.util.ArrayList
 
-class QueueIncorrectTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class QueueIncorrectTest : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val q = LockFreeQueue<Int>()
 
     @Operation

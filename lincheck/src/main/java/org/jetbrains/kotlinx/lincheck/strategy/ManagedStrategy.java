@@ -24,11 +24,11 @@ package org.jetbrains.kotlinx.lincheck.strategy;
 
 import org.jetbrains.kotlinx.lincheck.Reporter;
 import org.jetbrains.kotlinx.lincheck.TestReport;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
+import org.jetbrains.kotlinx.lincheck.util.Either;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import org.objectweb.asm.ClassVisitor;
 
@@ -90,7 +90,7 @@ public abstract class ManagedStrategy extends Strategy {
      *
      * @return invocation results for each executed actor.
      */
-    protected final ExecutionOutcome runInvocation() throws InterruptedException {
+    protected final Either<TestReport, ExecutionResult> runInvocation() throws InterruptedException {
         return runner.run();
     }
 

@@ -23,12 +23,11 @@ package org.jetbrains.kotlinx.lincheck.tests.boundary
  */
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.cliffc.high_scale_lib.NonBlockingHashMap
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.ErrorType
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
-class MapCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class MapCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val map = NonBlockingHashMap<Int, Int>()
 
     @Operation

@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.junit.Assert.*
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.util.concurrent.ThreadLocalRandom
 
 @StressCTest(iterations = 1, requireStateEquivalenceImplCheck = false, actorsBefore = 1, actorsAfter = 1, threads = 3)

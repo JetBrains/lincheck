@@ -21,13 +21,14 @@
  */
 package org.jetbrains.kotlinx.lincheck.tests.linearizability
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 import java.util.concurrent.ConcurrentLinkedDeque
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class ConcurrentDequeStressTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class ConcurrentDequeStressTest : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     val deque = ConcurrentLinkedDeque<Int>()
 
     @Operation

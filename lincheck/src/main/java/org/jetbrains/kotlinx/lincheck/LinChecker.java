@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import kotlin.Suppress;
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
@@ -158,7 +159,6 @@ public class LinChecker {
                 newScenario.parallelExecution.get(i).remove(j);
                 if (newScenario.parallelExecution.get(i).isEmpty())
                     newScenario.parallelExecution.remove(i); // remove empty thread
-
                 TestReport report = minimizeNewScenarioAttempt(newScenario, testCfg);
                 if (!report.getSuccess()) return report;
             }
@@ -166,20 +166,26 @@ public class LinChecker {
         for (int i = 0; i < scenario.initExecution.size(); i++) {
             ExecutionScenario newScenario = copyScenario(scenario);
             newScenario.initExecution.remove(i);
-            minimizeNewScenarioAttempt(newScenario, testCfg);
+            TestReport report = minimizeNewScenarioAttempt(newScenario, testCfg);
+            if (!report.getSuccess()) return report;
         }
         for (int i = 0; i < scenario.postExecution.size(); i++) {
             ExecutionScenario newScenario = copyScenario(scenario);
             newScenario.postExecution.remove(i);
-            minimizeNewScenarioAttempt(newScenario, testCfg);
+            TestReport report = minimizeNewScenarioAttempt(newScenario, testCfg);
+            if (!report.getSuccess()) return report;
         }
         return currentReport;
     }
 
     private TestReport minimizeNewScenarioAttempt(ExecutionScenario newScenario, CTestConfiguration testCfg) throws AssertionError, Exception {
-        TestReport report = runScenario(newScenario, testCfg);
-        if (!report.getSuccess())
-            return minimizeScenario(newScenario, testCfg, report);
+        try {
+            TestReport report = runScenario(newScenario, testCfg);
+            if (!report.getSuccess())
+                return minimizeScenario(newScenario, testCfg, report);
+        } catch (IllegalArgumentException e) {
+            // Ignore incorrect scenarios
+        }
         return new TestReport(ErrorType.NO_ERROR);
     }
 

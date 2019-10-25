@@ -22,15 +22,16 @@ package org.jetbrains.kotlinx.lincheck.tests.juc.hash_map
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
 import java.util.HashMap
 
 @Param(name = "key", gen = IntGen::class)
-class HashMapTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class HashMapTest : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val m = HashMap<Int, Int>()
 
     @Operation

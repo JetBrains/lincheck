@@ -21,10 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck.tests.custom.counter
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
-class CounterWrong0Test : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class CounterWrong0Test : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val counter = CounterWrong0()
 
     @Operation
@@ -33,7 +34,7 @@ class CounterWrong0Test : AbstractLincheckTest(shouldFail = true, checkObstructi
     override fun extractState(): Any = counter.get()
 }
 
-class CounterCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class CounterCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val counter = CounterCorrect()
 
     @Operation
@@ -42,7 +43,7 @@ class CounterCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstruc
     override fun extractState(): Any = counter.get()
 }
 
-class CounterWrong1Test : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class CounterWrong1Test : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val counter = CounterWrong1()
 
     @Operation
@@ -51,7 +52,7 @@ class CounterWrong1Test : AbstractLincheckTest(shouldFail = true, checkObstructi
     override fun extractState(): Any = counter.get()
 }
 
-class CounterWrong2Test : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class CounterWrong2Test : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val counter = CounterWrong2()
 
     @Operation
@@ -60,7 +61,7 @@ class CounterWrong2Test : AbstractLincheckTest(shouldFail = true, checkObstructi
     override fun extractState(): Any = counter.get()
 }
 
-class CounterGetTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class CounterGetTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val counter = CounterGet()
 
     @Operation

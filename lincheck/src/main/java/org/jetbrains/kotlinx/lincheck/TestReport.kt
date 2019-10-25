@@ -21,9 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome
 
-class TestReport(val errorType: ErrorType) : ExecutionOutcome {
+class TestReport(val errorType: ErrorType) {
     val success get() = errorType == ErrorType.NO_ERROR
     var errorIteration: Int? = null
     var errorInvocation: Int? = null

@@ -21,10 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck.tests
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 
-class DequeLinearizabilityTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class DequeLinearizabilityTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val deque = LockFreeDeque<Int>();
 
     @Operation

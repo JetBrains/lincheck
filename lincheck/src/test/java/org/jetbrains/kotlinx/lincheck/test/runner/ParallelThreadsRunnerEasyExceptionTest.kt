@@ -27,6 +27,7 @@ import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.test.verifier.*
+import org.jetbrains.kotlinx.lincheck.util.Either
 import org.junit.Assert.assertEquals
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.*
@@ -117,7 +118,7 @@ class ParallelThreadsRunnerExceptionTest {
         val runner =
             ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
         val results = runner.run()
-        assertEquals(results, expectedResults)
+        assertEquals(results, Either.Value(expectedResults))
     }
 
     @Test
@@ -136,7 +137,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
         val results = runner.run()
-        assertEquals(results, expectedResults)
+        assertEquals(results, Either.Value(expectedResults))
     }
 
     @Test
@@ -151,7 +152,7 @@ class ParallelThreadsRunnerExceptionTest {
         val runner =
             ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
         val results = runner.run()
-        assertEquals(results, expectedResults)
+        assertEquals(results, Either.Value(expectedResults))
     }
 }
 

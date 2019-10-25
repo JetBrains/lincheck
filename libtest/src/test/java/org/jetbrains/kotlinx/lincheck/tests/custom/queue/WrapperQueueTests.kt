@@ -21,13 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.tests.custom.queue
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
-class WrapperQueueCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class WrapperQueueCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val queue = QueueSynchronized(10)
 
     @Operation(handleExceptionsAsResult = [QueueFullException::class])
@@ -39,7 +39,7 @@ class WrapperQueueCorrectTest : AbstractLincheckTest(shouldFail = false, checkOb
     override fun extractState(): Any = queue
 }
 
-class WrapperQueueWrong1Test : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class WrapperQueueWrong1Test : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val queue = QueueWrong1(10)
 
     @Operation(handleExceptionsAsResult = [QueueFullException::class])
@@ -51,7 +51,7 @@ class WrapperQueueWrong1Test : AbstractLincheckTest(shouldFail = true, checkObst
     override fun extractState(): Any = queue
 }
 
-class WrapperQueueWrong2Test : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class WrapperQueueWrong2Test : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val queue = QueueWrong2(10)
 
     @Operation(handleExceptionsAsResult = [QueueFullException::class])
@@ -63,7 +63,7 @@ class WrapperQueueWrong2Test : AbstractLincheckTest(shouldFail = true, checkObst
     override fun extractState(): Any = queue
 }
 
-class WrapperQueueWrong3Test : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = false) {
+class WrapperQueueWrong3Test : AbstractLinCheckTest(expectedError = ErrorType.INCORRECT_RESULTS) {
     private val queue = QueueWrong3(10)
 
     @Operation(handleExceptionsAsResult = [QueueFullException::class])

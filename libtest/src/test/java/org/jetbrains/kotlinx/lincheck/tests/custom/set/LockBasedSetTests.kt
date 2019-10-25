@@ -21,13 +21,14 @@
  */
 package org.jetbrains.kotlinx.lincheck.tests.custom.set
 
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SpinLockSetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+internal class SpinLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val set = SpinLockSet()
 
     @Operation
@@ -43,23 +44,7 @@ internal class SpinLockSetCorrectTest : AbstractLincheckTest(shouldFail = false,
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SpinLockSetWrongGuarranteeTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = true) {
-    private val set = SpinLockSet()
-
-    @Operation
-    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
-
-    @Operation
-    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
-
-    @Operation
-    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
-
-    override fun extractState(): Any = (1..5).map { set.contains(it) }
-}
-
-@Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class ReentrantLockSetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+internal class ReentrantLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val set = ReentrantLockSet()
 
     @Operation
@@ -75,23 +60,7 @@ internal class ReentrantLockSetCorrectTest : AbstractLincheckTest(shouldFail = f
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class ReentrantLockSetWrongGuarranteeTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = true) {
-    private val set = ReentrantLockSet()
-
-    @Operation
-    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
-
-    @Operation
-    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
-
-    @Operation
-    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
-
-    override fun extractState(): Any = (1..5).map { set.contains(it) }
-}
-
-@Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SynchronizedLockSetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+internal class SynchronizedLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val set = SynchronizedLockSet()
 
     @Operation
@@ -107,39 +76,7 @@ internal class SynchronizedLockSetCorrectTest : AbstractLincheckTest(shouldFail 
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SynchronizedLockSetWrongGuarranteeTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = true) {
-    private val set = SynchronizedLockSet()
-
-    @Operation
-    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
-
-    @Operation
-    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
-
-    @Operation
-    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
-
-    override fun extractState(): Any = (1..5).map { set.contains(it) }
-}
-
-@Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SynchronizedMethodSetCorrectTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
-    private val set = SynchronizedMethodSet()
-
-    @Operation
-    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
-
-    @Operation
-    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
-
-    @Operation
-    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
-
-    override fun extractState(): Any = (1..5).map { set.contains(it) }
-}
-
-@Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SynchronizedMethodSetWrongGuarranteeTest : AbstractLincheckTest(shouldFail = true, checkObstructionFreedom = true) {
+internal class SynchronizedMethodSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val set = SynchronizedMethodSet()
 
     @Operation

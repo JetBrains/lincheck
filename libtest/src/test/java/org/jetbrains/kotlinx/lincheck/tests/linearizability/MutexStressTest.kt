@@ -22,14 +22,15 @@
 package org.jetbrains.kotlinx.lincheck.tests.linearizability
 
 import kotlinx.coroutines.sync.Mutex
+import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.tests.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 import java.lang.IllegalStateException
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class MutexStressTest : AbstractLincheckTest(shouldFail = false, checkObstructionFreedom = false) {
+class MutexStressTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val mutex = Mutex(true)
 
     @Operation(handleExceptionsAsResult = [IllegalStateException::class])

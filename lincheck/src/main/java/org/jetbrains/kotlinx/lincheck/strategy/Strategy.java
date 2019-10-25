@@ -26,13 +26,13 @@ import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.ErrorType;
 import org.jetbrains.kotlinx.lincheck.Reporter;
 import org.jetbrains.kotlinx.lincheck.TestReport;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionOutcome;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchStrategy;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy;
+import org.jetbrains.kotlinx.lincheck.util.Either;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import org.objectweb.asm.ClassVisitor;
 
@@ -60,13 +60,13 @@ public abstract class Strategy {
     /**
      * Check whether results are correct.
      */
-    protected boolean verifyResults(ExecutionOutcome outcome) {
-        if (outcome instanceof TestReport) {
-            report = (TestReport) outcome;
+    protected boolean verifyResults(Either<TestReport, ExecutionResult> outcome) {
+        if (outcome instanceof Either.Error) {
+            report = ((Either.Error<TestReport>) outcome).getError();
             return false;
         }
 
-        ExecutionResult results = (ExecutionResult) outcome;
+        ExecutionResult results = ((Either.Value<ExecutionResult>) outcome).getValue();
 
         if (!verifier.verifyResults(results)) {
             StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:\n");
