@@ -60,7 +60,6 @@ public class AccountsTest {
     @Param(name = "id", gen = IntGen.class, conf = "1:4")
     @Param(name = "amount", gen = IntGen.class)
     public static class AccountsLinearizabilityTest extends VerifierState {
-        @Volatile
         private Accounts acc = accountCreator.get();
 
         @Operation(params = {"id"})

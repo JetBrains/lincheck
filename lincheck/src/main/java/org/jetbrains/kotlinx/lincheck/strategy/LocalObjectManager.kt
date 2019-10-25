@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import java.util.*
 
 class LocalObjectManager {
-    // for each local object store number of objects that depend on it
+    // for each local object store all objects that depend on it (e.g, are referenced from it)
     private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
 
     fun newLocalObject(o: Any) {
@@ -33,28 +33,22 @@ class LocalObjectManager {
 
     fun deleteLocalObject(o: Any?) {
         if (o == null) return
-
-        val objects = localObjects[o] ?: return
-        localObjects.remove(o)
-
+        val objects = localObjects.remove(o) ?: return
         // when an object stops being local, all dependent objects stop too
-        for (obj in objects) {
-            deleteLocalObject(obj)
-        }
+        objects.forEach { deleteLocalObject(it) }
     }
 
     fun isLocalObject(o: Any?) = localObjects.containsKey(o)
 
-    fun addDependency(owner: Any, dependant: Any?) {
-        if (dependant == null) return
-
+    fun addDependency(owner: Any, dependent: Any?) {
+        if (dependent == null) return
         val ownerObjects = localObjects[owner]
-
         if (ownerObjects != null) {
-            ownerObjects.add(dependant)
+            // actually save the dependency
+            ownerObjects.add(dependent)
         } else {
-            // a link to dependant leaked to a non local object
-            deleteLocalObject(dependant)
+            // a link to the dependent leaked to a non-local object
+            deleteLocalObject(dependent)
         }
     }
 }

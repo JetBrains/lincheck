@@ -137,9 +137,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * Returns name of class the moment before it was transformed
      */
     static String originalName(String className) {
-        if (className.startsWith(TRANSFORMED_PACKAGE)) {
+        if (className.startsWith(TRANSFORMED_PACKAGE))
             return className.substring(TRANSFORMED_PACKAGE.length());
-        }
         return className;
     }
 
@@ -147,9 +146,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * Returns name of class the moment before it was transformed
      */
     private String originalPointedName(String className) {
-        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE)) {
+        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE))
             return className.substring(TRANSFORMED_POINTED_PACKAGE.length());
-        }
         return className;
     }
 }

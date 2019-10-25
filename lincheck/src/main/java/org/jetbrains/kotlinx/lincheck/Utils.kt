@@ -82,7 +82,7 @@ internal fun executeActor(
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLinCheckResult(res)
     } catch (invE: Throwable) {
         // load class with default ClassLoader
-        val eClass = Class.forName((invE.cause ?: invE)::class.java.name)
+        val eClass = loadBySystemClassLoader((invE.cause ?: invE)::class.java)
         for (ec in actor.handledExceptions) {
             if (ec.isAssignableFrom(eClass))
                 return ExceptionResult(eClass as Class<out Throwable>?)
@@ -172,3 +172,5 @@ internal operator fun ExecutionResult.set(threadId: Int, actorId: Int, value: Re
     parallelResults.size + 1 -> postResults[actorId] = value
     else -> parallelResults[threadId - 1][actorId] = value
 }
+
+private fun loadBySystemClassLoader(clazz: Class<*>): Class<*> = Class.forName(clazz.name)

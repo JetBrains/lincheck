@@ -37,10 +37,8 @@ import java.util.concurrent.Callable;
 public abstract class TestThreadExecution implements Callable<Result[]> {
     // The following fields are assigned in TestThreadExecutionGenerator
     protected Runner runner;
-    protected Strategy strategy;
     public Object testInstance;
     protected Object[] objArgs;
-    protected Actor[] actors;
     public int[] waits; // for StressStrategy
 
     // It is better to return List<Result>,

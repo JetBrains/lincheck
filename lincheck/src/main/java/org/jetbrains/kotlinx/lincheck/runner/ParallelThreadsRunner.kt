@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.createLinCheckResult
 import org.jetbrains.kotlinx.lincheck.executeActor
+import org.jetbrains.kotlinx.lincheck.strategy.IntendedExecutionException
 import org.jetbrains.kotlinx.lincheck.util.Either
 import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
@@ -56,7 +57,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private val testThreadExecutions = List(scenario.threads) { t ->
-        TestThreadExecutionGenerator.create(this, strategy, t, scenario.parallelExecution[t], completions[t], false, scenario.hasSuspendableActors())
+        TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], false, scenario.hasSuspendableActors())
             .also { if (waits != null) it.waits = waits[t] }
     }
 
@@ -125,6 +126,7 @@ internal open class ParallelThreadsRunner(
         val finalResult: Result
         val completion = completions[threadId][actorId]
         if (res === COROUTINE_SUSPENDED) {
+            // Coroutine is suspended. Call method so that strategy can learn it.
             afterCoroutineSuspended(threadId)
             // Thread was suspended -> if suspended method call has follow-up after this suspension point
             // then wait for result of this suspension point
@@ -137,9 +139,8 @@ internal open class ParallelThreadsRunner(
                     return Suspended
                 }
             }
-
+            // Coroutine will be resumed. Call method so that strategy can learn it.
             beforeCoroutineResumed(threadId)
-
             if (suspensionPointResults[threadId] !== NoResult) {
                 // Result of the suspension point equals to the final method call result
                 // completion.resumeWith was called in the resuming thread, final result is written
@@ -159,16 +160,16 @@ internal open class ParallelThreadsRunner(
         return finalResult
     }
 
-    override fun afterCoroutineSuspended(iThread: Int) {
+    override fun afterCoroutineSuspended(threadId: Int) {
         completedOrSuspendedThreads.incrementAndGet()
     }
 
-    override fun beforeCoroutineResumed(iThread: Int) {}
+    override fun beforeCoroutineResumed(threadId: Int) {}
 
 
-    override fun canResumeCoroutine(iThread: Int, iActor: Int): Boolean {
-        val completion = completions[iThread][iActor]
-        return completion.resWithCont.get() != null || suspensionPointResults[iThread] !== NoResult
+    override fun canResumeCoroutine(threadId: Int, actorId: Int): Boolean {
+        val completion = completions[threadId][actorId]
+        return completion.resWithCont.get() != null || suspensionPointResults[threadId] !== NoResult
     }
 
     override fun run(): Either<TestReport, ExecutionResult> {
@@ -221,9 +222,9 @@ internal open class ParallelThreadsRunner(
         }
     }
 
-    override fun onStart(iThread: Int) {
-        super.onStart(iThread)
-        (Thread.currentThread() as TestThread).iThread = iThread
+    override fun onStart(threadId: Int) {
+        super.onStart(threadId)
+        (Thread.currentThread() as TestThread).threadId = threadId
     }
 
     override fun close() {
@@ -233,6 +234,6 @@ internal open class ParallelThreadsRunner(
 
      // For [TestThreadExecution] instances
     class TestThread(r: Runnable) : Thread(r) {
-        var iThread: Int = 0
+        var threadId: Int = 0
     }
 }

@@ -49,10 +49,8 @@ public class TestThreadExecutionGenerator {
 
     private static final Type CLASS_TYPE = Type.getType(Class.class);
     private static final Type OBJECT_TYPE = Type.getType(Object.class);
-    private static final Type ACTOR_TYPE = Type.getType(Actor.class);
     private static final Method OBJECT_GET_CLASS = new Method("getClass", CLASS_TYPE, NO_ARGS);
     private static final Type OBJECT_ARRAY_TYPE = Type.getType(Object[].class);
-    private static final Type ACTOR_ARRAY_TYPE = Type.getType(Actor[].class);
     private static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
     private static final Type INT_ARRAY_TYPE = Type.getType(int[].class);
     private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, NO_ARGS);
@@ -61,9 +59,7 @@ public class TestThreadExecutionGenerator {
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
     private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
-
-    private static final Type STRATEGY_TYPE = Type.getType(Strategy.class);
-    private static final Method STRATEGY_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
+    private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
@@ -111,7 +107,7 @@ public class TestThreadExecutionGenerator {
     /**
      * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#call()} implementation.
      */
-    public static TestThreadExecution create(Runner runner, Strategy strategy, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions, boolean waitsEnabled, boolean scenarioContainsSuspendableActors) {
+    public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions, boolean waitsEnabled, boolean scenarioContainsSuspendableActors) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
@@ -120,9 +116,7 @@ public class TestThreadExecutionGenerator {
         try {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
-            execution.strategy = strategy;
             execution.objArgs = objArgs.toArray();
-            execution.actors = actors.toArray(new Actor[0]);
             return execution;
         } catch (InstantiationException | IllegalAccessException e) {
             throw new IllegalStateException("Cannot initialize generated execution class", e);
@@ -165,7 +159,7 @@ public class TestThreadExecutionGenerator {
         );
         mv.visitCode();
         int resLocal = createResultArray(mv, actors.size());
-        // Call runner's onStart(iThread) method
+        // Call runner's onStart(threadId) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
@@ -198,30 +192,25 @@ public class TestThreadExecutionGenerator {
                 mv.invokeStatic(UTILS_TYPE, UTILS_CONSUME_CPU);
             }
 
-            // Start of try-catch block for all exceptions
-            Label commonExceptionStart = mv.newLabel(),
-                    commonExceptionEnd = mv.newLabel(),
-                    commonExceptionHandler = mv.newLabel();
-            mv.visitTryCatchBlock(commonExceptionStart, commonExceptionEnd, commonExceptionHandler, null);
-            mv.visitLabel(commonExceptionStart);
-
             // Start of try-catch block for exceptions which this actor should handle
-            Label handledExceptionStart, handledExceptionEnd = null, handledExceptionHandler = null;
+            Label handler = null;
             Label actorEnd = mv.newLabel();
+            Label start = mv.newLabel();
+            Label end = mv.newLabel();
             if (actor.getHandlesExceptions()) {
-                handledExceptionStart = mv.newLabel();
-                handledExceptionEnd = mv.newLabel();
-                handledExceptionHandler = mv.newLabel();
+                handler = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(handledExceptionStart, handledExceptionEnd, handledExceptionHandler, Type.getType(ec).getInternalName());
-                mv.visitLabel(handledExceptionStart);
+                    mv.visitTryCatchBlock(start, end, handler, Type.getType(ec).getInternalName());
             }
-
+            // Catch those exceptions that were not catched yet
+            Label remainingExceptionHandler = mv.newLabel();
+            mv.visitTryCatchBlock(start, end, remainingExceptionHandler, THROWABLE_TYPE.getInternalName());
+            mv.visitLabel(start);
             // onActorStart call
             mv.loadThis();
-            mv.getField(TEST_THREAD_EXECUTION_TYPE, "strategy", STRATEGY_TYPE);
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
             mv.push(iThread);
-            mv.invokeVirtual(STRATEGY_TYPE, STRATEGY_ON_ACTOR_START);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_START);
 
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
@@ -250,7 +239,7 @@ public class TestThreadExecutionGenerator {
             mv.invokeVirtual(testType, actorMethod);
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {
-                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, iThread, i)
+                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, threadId, i)
                 mv.push(iThread);
                 mv.push(i);
                 mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
@@ -268,22 +257,19 @@ public class TestThreadExecutionGenerator {
             // Store result to array
             mv.arrayStore(RESULT_TYPE);
             // End of try-catch block for handled exceptions
+            mv.visitLabel(end);
+            mv.goTo(actorEnd);
             if (actor.getHandlesExceptions()) {
-                mv.visitLabel(handledExceptionEnd);
-                mv.goTo(actorEnd);
-                mv.visitLabel(handledExceptionHandler);
+                mv.visitLabel(handler);
                 if (scenarioContainsSuspendableActors) {
                     storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
                 } else {
                     storeExceptionResultFromThrowable(mv, resLocal, iLocal);
                 }
             }
-
-            // End of try-catch block for all exceptions
-            mv.visitLabel(commonExceptionEnd);
+            // End of try-catch block for all other exceptions
             mv.goTo(actorEnd);
-            mv.visitLabel(commonExceptionHandler);
-
+            mv.visitLabel(remainingExceptionHandler);
             // call onFailure method
             mv.dup();
             int eLocal = mv.newLocal(THROWABLE_TYPE);
@@ -312,7 +298,7 @@ public class TestThreadExecutionGenerator {
             mv.visitJumpInsn(GOTO, launchNextActor);
             mv.visitLabel(launchNextActor);
         }
-        // Call runner's onFinish(iThread) method
+        // Call runner's onFinish(threadId) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);

@@ -65,8 +65,8 @@ public class StressStrategy extends Strategy {
         // Create runner
         runner = new ParallelThreadsRunner(scenario, this, testClass, waits) {
             @Override
-            public void onStart(int iThread) {
-                super.onStart(iThread);
+            public void onStart(int threadId) {
+                super.onStart(threadId);
                 uninitializedThreads.decrementAndGet(); // this thread has finished initialization
                 while (uninitializedThreads.get() != 0) {} // wait for other threads to start
             }

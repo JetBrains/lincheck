@@ -75,7 +75,7 @@ public abstract class Strategy {
         ExecutionResult results = ((Either.Value<ExecutionResult>) outcome).getValue();
 
         if (!verifier.verifyResults(results)) {
-            StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:\n");
+            StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:" + System.lineSeparator());
             appendIncorrectResults(msgBuilder, scenario, results);
             if (interleavingEvents != null) {
                 msgBuilder.append(System.lineSeparator());
@@ -102,7 +102,10 @@ public abstract class Strategy {
      */
     public boolean canResumeCoroutine(int iThread) { return true; }
 
-    public void onActorStart(int iThread) {}
+    /**
+     * Is invoked before each actor execution in a thread.
+     */
+    public void onActorStart(int threadId) {}
 
     /**
      * Creates {@link Strategy} based on {@code testCfg} type.
