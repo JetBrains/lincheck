@@ -22,12 +22,9 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import jdk.internal.org.objectweb.asm.Opcodes;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import com.devexperts.jagent.ClassInfo;
-import com.devexperts.jagent.ClassInfoCache;
-import com.devexperts.jagent.ClassInfoVisitor;
-import com.devexperts.jagent.Log;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -38,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
+import static org.objectweb.asm.Opcodes.V1_6;
 
 /**
  * This transformer applies required for {@link Strategy} and {@link Runner}
@@ -120,7 +118,9 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // Construct transformation pipeline:
         // apply the strategy's transformer at first,
         // then the runner's one.
-        ClassWriter cw = new TransformationClassWriter(ClassWriter.COMPUTE_FRAMES, this);
+        ClassVersionGetter infoGetter = new ClassVersionGetter();
+        cr.accept(infoGetter, 0);
+        ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), this);
         ClassVisitor cv = new CheckClassAdapter(cw, false); // for debug
         if (runner.needsTransformation()) {
             cv = runner.createTransformer(cv);
@@ -157,15 +157,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
  * Overrides getCommonSuperClass method so that it could work correctly for classes transformed by LinCheck.
  */
 class TransformationClassWriter extends ClassWriter {
-    private ClassLoader loader;
-
-    public TransformationClassWriter(int flags, ClassLoader loader) {
-        super(flags);
-        this.loader = loader;
-    }
-
-    protected ClassLoader getClassLoader() {
-        return loader;
+    public TransformationClassWriter(int classVersion, ClassLoader loader) {
+        super(classVersion > V1_6 ? COMPUTE_FRAMES : COMPUTE_MAXS);
     }
 
     /**
@@ -178,5 +171,25 @@ class TransformationClassWriter extends ClassWriter {
         if (result.startsWith(JAVA_UTIL_PACKAGE))
             return TRANSFORMED_PACKAGE + result;
         return result;
+    }
+}
+
+/**
+ * Visitor for retrieving infomation of class version needed for choosing between COMPUTE_FRAME and COMPUTE_MAXS
+ */
+class ClassVersionGetter extends ClassVisitor {
+    private int classVersion;
+
+    public ClassVersionGetter() {
+        super(Opcodes.ASM5);
+    }
+
+    @Override
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        this.classVersion = version;
+    }
+
+    public int getClassVersion() {
+        return classVersion;
     }
 }

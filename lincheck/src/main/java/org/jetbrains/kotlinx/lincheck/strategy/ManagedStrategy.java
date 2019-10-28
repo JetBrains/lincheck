@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  * #L%
  */
 
-import com.devexperts.jagent.ClassInfo;
 import org.jetbrains.kotlinx.lincheck.Reporter;
 import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;

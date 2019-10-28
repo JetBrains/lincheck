@@ -22,8 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  * #L%
  */
 
-import com.devexperts.jagent.ClassInfo;
-
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -86,7 +84,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private String fileName = "";
     private final List<StackTraceElement> codeLocations;
 
-    ManagedStrategyTransformer(ClassVisitor cv, ClassInfo ci, List<StackTraceElement> codeLocations) {
+    ManagedStrategyTransformer(ClassVisitor cv, List<StackTraceElement> codeLocations) {
         super(ASM_API, new ClassRemapper(cv, new JavaUtilRemapper()));
         this.codeLocations = codeLocations;
     }
