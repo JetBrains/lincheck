@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.Options;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchOptions;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
 
@@ -41,7 +41,7 @@ public class UniformSearchOptionsTest {
 
     @Test
     public void test() {
-        Options opts = new UniformSearchOptions()
+        Options opts = new ModelCheckingOptions()
             .iterations(10)
             .invocationsPerIteration(200)
             .executionGenerator(RandomExecutionGenerator.class)

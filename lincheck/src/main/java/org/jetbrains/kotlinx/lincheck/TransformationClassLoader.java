@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
-import jdk.internal.org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.objectweb.asm.ClassReader;
