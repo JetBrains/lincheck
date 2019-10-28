@@ -24,20 +24,19 @@ package org.jetbrains.kotlinx.lincheck.strategy.uniformsearch
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
-import org.jetbrains.kotlinx.lincheck.util.PseudoRandom
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * UniformSearchStrategy at first studies codeLocations at the choosen thread
+ * ModelCheckingStrategy at first studies codeLocations at the choosen thread
  * until a blocking event or a thread finish and
  * then chooses one uniform randomly
  */
-class UniformSearchStrategy(
+class ModelCheckingStrategy(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         verifier: Verifier,
-        testCfg: UniformSearchCTestConfiguration,
+        testCfg: ModelCheckingCTestConfiguration,
         reporter: Reporter
 ) : ManagedStrategyBase(testClass, scenario, verifier, reporter, testCfg.hangingDetectionThreshold, testCfg.checkObstructionFreedom) {
     // an increasing id of operation performed within this execution
@@ -64,7 +63,6 @@ class UniformSearchStrategy(
         try {
             while (usedInvocations < maxInvocations) {
                 searchForExecution(0)
-                random.endLastPoint() // a point corresponds to one search branch
             }
         } finally {
             runner.close()
@@ -124,7 +122,7 @@ class UniformSearchStrategy(
         if (level == maxLevel) return
 
         // choose next switch
-        val switchPosition = (startPosition..finishPosition).random(random)
+        val switchPosition = (startPosition..finishPosition).random()
 
         // run recursively
         switchPositions.add(switchPosition)
@@ -134,12 +132,12 @@ class UniformSearchStrategy(
         return
     }
 
-    override fun initializeInvocation() {
+    override fun initializeInvocation(generateNewRandomSeed: Boolean) {
         nextFinishPosition = null
         executionPosition.set(-1) // one step before zero
         usedInvocations++
 
-        super.initializeInvocation()
+        super.initializeInvocation(generateNewRandomSeed)
     }
 }
 
@@ -152,5 +150,3 @@ private fun Long.pow(n: Int): Long {
 
     return result
 }
-
-private fun IntRange.random(random: PseudoRandom): Int = random.nextInt(this.last - this.start + 1) + this.start

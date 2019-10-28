@@ -62,9 +62,4 @@ internal class RandomSwitchStrategy(
         // TODO: can reduce number of random calls using geometric distribution
         return random.nextDouble() < switchProbability
     }
-
-    override fun initializeInvocation() {
-        random.endLastPoint() // a point corresponds to an invocation
-        super.initializeInvocation()
-    }
 }

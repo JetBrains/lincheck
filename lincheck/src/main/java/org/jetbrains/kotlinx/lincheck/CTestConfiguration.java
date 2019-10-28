@@ -24,8 +24,8 @@ package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTest;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
@@ -92,8 +92,8 @@ public abstract class CTestConfiguration {
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                     chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 
-        Stream<UniformSearchCTestConfiguration> randomSearchConfigurations = Arrays.stream(testClass.getAnnotationsByType(UniformSearchCTest.class))
-                .map(ann -> new UniformSearchCTestConfiguration(testClass, ann.iterations(),
+        Stream<ModelCheckingCTestConfiguration> randomSearchConfigurations = Arrays.stream(testClass.getAnnotationsByType(ModelCheckingCTest.class))
+                .map(ann -> new ModelCheckingCTestConfiguration(testClass, ann.iterations(),
                         ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                         ann.generator(), ann.verifier(),
                         ann.checkObstructionFreedom(), ann.hangingDetectionThreshold(), ann.invocationsPerIteration(),

@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.strategy.uniformsearch;
+package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.Options;
@@ -31,7 +31,7 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class UniformSearchOptionsTest {
+public class ModelCheckingOptionsTest {
     private AtomicInteger i = new AtomicInteger();
 
     @Operation()
@@ -50,6 +50,6 @@ public class UniformSearchOptionsTest {
             .verifier(LinearizabilityVerifier.class)
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
-        LinChecker.check(UniformSearchOptionsTest.class, opts);
+        LinChecker.check(ModelCheckingOptionsTest.class, opts);
     }
 }

@@ -32,16 +32,16 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
 
 import java.lang.annotation.*;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
+import static org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
 
 /**
- * This annotation configures concurrent test using {@link UniformSearchStrategy managed} strategy.
+ * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Repeatable(UniformSearchCTest.RandomSearchCTests.class)
+@Repeatable(ModelCheckingCTest.ModelCheckingCTests.class)
 @Inherited
-public @interface UniformSearchCTest {
+public @interface ModelCheckingCTest {
     /**
      * Number of different test scenarios to be executed
      */
@@ -131,22 +131,20 @@ public @interface UniformSearchCTest {
      * The specified class defines the sequential behavior of the testing data structure;
      * it is used by {@link Verifier} to build a labeled transition system,
      * and should have the same methods as the testing data structure.
-     * However, some verifiers require additional parameters for these methods,
-     * see {@link QuantitativelyRelaxedLinearizabilityVerifier} as an example.
-     *
+     * However, some verifiers require additional parameters for these methods.
      * By default, the provided concurrent implementation is used in a sequential way.
      */
     Class<?> sequentialSpecification() default DummySequentialSpecification.class;
 
     /**
-     * Holder annotation for {@link UniformSearchCTest}.
+     * Holder annotation for {@link ModelCheckingCTest}.
      * Not a public API.
      */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @Inherited
-    @interface RandomSearchCTests {
-        UniformSearchCTest[] value();
+    @interface ModelCheckingCTests {
+        ModelCheckingCTest[] value();
     }
 
 }

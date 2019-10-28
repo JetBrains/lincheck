@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.util.PseudoRandom
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.IllegalStateException
 import java.util.*
@@ -52,10 +51,11 @@ abstract class ManagedStrategyBase(
     protected var eventLogger: ThreadEventLogger = DummyEventLogger
     // tracker of acquisitions and releases of monitors
     protected val monitorTracker = MonitorTracker(nThreads)
+    // random used for generation of seeds and traversing of ExecutionTree
+    protected val generationRandom = Random()
+    protected var executionRandomSeed: Long = 0L
     // random used for execution
-    protected var random = PseudoRandom()
-    // copy of random used for execution for reproducability of results
-    protected var executionRandomCopy = random
+    protected lateinit var random: Random
     // unhandled exception thrown by testClass
     @Volatile
     protected var exception: Throwable? = null
@@ -302,8 +302,7 @@ abstract class ManagedStrategyBase(
         if (!verifier.verifyResults(results)) {
             // re-run execution to get all thread events
             eventLogger = SimpleEventLogger()
-            restoreRandom()
-            val repeatedResults = runInvocation()
+            val repeatedResults = runInvocation(false)
             require(repeatedResults == results) {
                 "Indeterminism found. The execution should have returned the same result, but did not"
             }
@@ -315,30 +314,29 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Runs invocation using runner
+     * Runs invocation using runner.
+     * [generateNewRandomSeed] determines whether the execution should be different from the previous one.
+     * Set it false if need to re-run previous execution.
      */
-    protected fun runInvocation(): ExecutionResult {
-        initializeInvocation()
+    protected fun runInvocation(generateNewRandomSeed: Boolean = true): ExecutionResult {
+        initializeInvocation(generateNewRandomSeed)
         return runner.run()
     }
 
     /**
      * Returns all data to the initial state before invocation
      */
-    protected open fun initializeInvocation() {
+    protected open fun initializeInvocation(generateNewRandomSeed: Boolean) {
         finished.forEach { it.set(false) }
         isSuspended.forEach { it.set(false) }
-        // save previous random state
-        executionRandomCopy = random.copy()
+        if (generateNewRandomSeed)
+            executionRandomSeed = generationRandom.nextLong()
+        random = Random(executionRandomSeed)
         // start from random thread
         currentThread = random.nextInt(nThreads)
         currentActorId.fill(-1)
         loopDetector.reset()
         exception = null
-    }
-
-    protected fun restoreRandom() {
-        random = executionRandomCopy;
     }
 
     protected fun checkCanHaveObstruction(lazyMessage: () -> String) {
@@ -353,7 +351,7 @@ abstract class ManagedStrategyBase(
     /**
      * Detects loop when visiting a codeLocation too often
      */
-    protected class LoopDetector(val maxRepetitions: Int) {
+    protected class LoopDetector(private val maxRepetitions: Int) {
         private var lastIThread = Int.MIN_VALUE
         private val operationCounts = mutableMapOf<Int, Int>()
 

@@ -29,8 +29,8 @@ import org.jetbrains.kotlinx.lincheck.ThreadEvent;
 import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchStrategy;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingStrategy;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchStrategy;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
@@ -116,9 +116,9 @@ public abstract class Strategy {
         if (testCfg instanceof StressCTestConfiguration) {
             return new StressStrategy(testClass, scenario, verifier,
                 (StressCTestConfiguration) testCfg, reporter);
-        } else if (testCfg instanceof UniformSearchCTestConfiguration) {
-            return new UniformSearchStrategy(testClass, scenario, verifier,
-                    (UniformSearchCTestConfiguration) testCfg, reporter);
+        } else if (testCfg instanceof ModelCheckingCTestConfiguration) {
+            return new ModelCheckingStrategy(testClass, scenario, verifier,
+                    (ModelCheckingCTestConfiguration) testCfg, reporter);
         } else if (testCfg instanceof RandomSwitchCTestConfiguration) {
             return new RandomSwitchStrategy(testClass, scenario, verifier,
                 (RandomSwitchCTestConfiguration) testCfg, reporter);

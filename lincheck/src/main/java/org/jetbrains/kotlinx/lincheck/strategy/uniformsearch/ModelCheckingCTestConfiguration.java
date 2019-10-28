@@ -26,16 +26,16 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 /**
- * Configuration for {@link UniformSearchStrategy random search} strategy.
+ * Configuration for {@link ModelCheckingStrategy random search} strategy.
  */
-public class UniformSearchCTestConfiguration extends CTestConfiguration {
+public class ModelCheckingCTestConfiguration extends CTestConfiguration {
     public static final int DEFAULT_MAX_INVOCATIONS_PER_ITERATION = 1_000;
 
     public boolean checkObstructionFreedom;
     public final int hangingDetectionThreshold;
     public final int maxInvocationsPerIteration;
 
-    public UniformSearchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
+    public ModelCheckingCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
                                            boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
                                            boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)

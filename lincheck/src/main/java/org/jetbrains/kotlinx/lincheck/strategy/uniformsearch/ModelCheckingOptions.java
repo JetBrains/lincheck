@@ -26,12 +26,12 @@ import org.jetbrains.kotlinx.lincheck.Options;
 import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
 import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
-import static org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.UniformSearchCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
+import static org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
 
 /**
- * Options for {@link UniformSearchStrategy uniform search} strategy.
+ * Options for {@link ModelCheckingStrategy uniform search} strategy.
  */
-public class UniformSearchOptions extends Options<UniformSearchOptions, UniformSearchCTestConfiguration> {
+public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelCheckingCTestConfiguration> {
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
     protected int maxInvocationsPerIteration = DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
@@ -39,7 +39,7 @@ public class UniformSearchOptions extends Options<UniformSearchOptions, UniformS
     /**
      * Check obstruction freedom of the concurrent algorithm
      */
-    public UniformSearchOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
+    public ModelCheckingOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
         this.checkObstructionFreedom = checkObstructionFreedom;
         return this;
     }
@@ -47,7 +47,7 @@ public class UniformSearchOptions extends Options<UniformSearchOptions, UniformS
     /**
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
      */
-    public UniformSearchOptions maxRepetitions(int maxRepetitions) {
+    public ModelCheckingOptions maxRepetitions(int maxRepetitions) {
         this.hangingDetectionThreshold = maxRepetitions;
         return this;
     }
@@ -55,14 +55,14 @@ public class UniformSearchOptions extends Options<UniformSearchOptions, UniformS
     /**
      * Number of maxInvocationsPerIteration that managed strategy may use to search for incorrect execution
      */
-    public UniformSearchOptions invocationsPerIteration(int invocationsPerIteration) {
+    public ModelCheckingOptions invocationsPerIteration(int invocationsPerIteration) {
         this.maxInvocationsPerIteration = invocationsPerIteration;
         return this;
     }
 
     @Override
-    public UniformSearchCTestConfiguration createTestConfigurations(Class<?> testClass) {
-        return new UniformSearchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
+    public ModelCheckingCTestConfiguration createTestConfigurations(Class<?> testClass) {
+        return new ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
             executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, maxInvocationsPerIteration,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass));
