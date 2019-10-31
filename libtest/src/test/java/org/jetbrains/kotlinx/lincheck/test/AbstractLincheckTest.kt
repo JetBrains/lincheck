@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.linCheckAnalysis
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchOptions
 import org.jetbrains.kotlinx.lincheck.util.ErrorAnalysisReport
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState

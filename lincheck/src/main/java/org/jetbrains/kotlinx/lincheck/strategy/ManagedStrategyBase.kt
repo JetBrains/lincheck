@@ -52,7 +52,7 @@ abstract class ManagedStrategyBase(
     // tracker of acquisitions and releases of monitors
     protected val monitorTracker = MonitorTracker(nThreads)
     // random used for generation of seeds and traversing of ExecutionTree
-    protected val generationRandom = Random()
+    protected val generationRandom = Random(0)
     protected var executionRandomSeed: Long = 0L
     // random used for execution
     protected lateinit var random: Random
@@ -75,7 +75,10 @@ abstract class ManagedStrategyBase(
 
     override fun onFinish(threadId: Int) {
         awaitTurn(threadId)
-        finishThread(threadId)
+        finished[threadId].set(true)
+        eventLogger.finishThread(threadId)
+        onNewSwitch()
+        doSwitchCurrentThread(threadId, true)
     }
 
     override fun onFailure(threadId: Int, e: Throwable) {
@@ -184,25 +187,18 @@ abstract class ManagedStrategyBase(
     protected fun newSuspensionPoint(threadId: Int, codeLocation: Int) {
         if (threadId == nThreads) return // can suspend only test threads
         if (classInitializationLevel[threadId] != 0) return // can not suspend in static initialization blocks
-
         awaitTurn(threadId)
-
         var isLoop = false
-
         if (loopDetector.newOperation(threadId, codeLocation)) {
             checkCanHaveObstruction { "At least obstruction freedom required but an active lock found" }
             isLoop = true
         }
-
-        val shouldSwitch = isLoop or shouldSwitch(threadId)
-
+        val shouldSwitch = shouldSwitch(threadId) or isLoop
         if (shouldSwitch) {
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(threadId, codeLocation, reason)
         }
-
         eventLogger.passCodeLocation(threadId, codeLocation)
-
         // continue operation
     }
 
@@ -210,18 +206,6 @@ abstract class ManagedStrategyBase(
      * Returns whether thread should switch at the suspension point
      */
     protected abstract fun shouldSwitch(threadId: Int): Boolean
-
-    /**
-     * Switch due to thread finish
-     */
-    protected fun finishThread(threadId: Int) {
-        finished[threadId].set(true)
-
-        eventLogger.finishThread(threadId)
-        onNewSwitch()
-
-        doSwitchCurrentThread(threadId, true)
-    }
 
     /**
      * Regular switch on another thread
@@ -234,42 +218,30 @@ abstract class ManagedStrategyBase(
         awaitTurn(threadId)
     }
 
-    private fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
-        var switchableThreads = 0
-
-        for (i in 0 until nThreads)
-            if (i != threadId && canResume(i))
-                switchableThreads++
-
-        if (switchableThreads == 0) {
+    protected open fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
+        val switchableThreads = switchableThreads(threadId)
+        val switchableThreadsCount = switchableThreads.count()
+        if (switchableThreadsCount == 0) {
             if (mustSwitch && !finished.all { it.get() }) {
                 // all threads are suspended
                 // then switch on any suspended thread to finish it and get SuspendedResult
-                val nextThread = (0 until nThreads).filter { !finished[it].get() && isSuspended[it].get() }.firstOrNull()
-
+                val nextThread = (0 until nThreads).firstOrNull { !finished[it].get() && isSuspended[it].get() }
                 if (nextThread == null) {
                     val exception = AssertionError("Must switch not to get into deadlock, but there are no threads to switch")
                     onFailure(threadId, exception)
                     throw exception
                 }
-
                 currentThread = nextThread
             }
             return // ignore switch, because there is no one to switch to
         }
-
-        var nextThreadNumber = random.nextInt(switchableThreads)
-
-        for (i in 0 until nThreads)
-            if (i != threadId && canResume(i)) {
-                nextThreadNumber--
-
-                if (nextThreadNumber < 0) {
-                    currentThread = i
-                    break
-                }
-            }
+        val nextThreadNumber = chooseThread(switchableThreadsCount)
+        currentThread = switchableThreads.drop(nextThreadNumber).first()
     }
+
+    protected fun switchableThreads(threadId: Int) = (0 until nThreads).filter { it != threadId && canResume(it) }
+
+    abstract fun chooseThread(switchableThreads: Int): Int
 
     /**
      * Returns whether the thread could continue its execution
@@ -332,8 +304,6 @@ abstract class ManagedStrategyBase(
         if (generateNewRandomSeed)
             executionRandomSeed = generationRandom.nextLong()
         random = Random(executionRandomSeed)
-        // start from random thread
-        currentThread = random.nextInt(nThreads)
         currentActorId.fill(-1)
         loopDetector.reset()
         exception = null
@@ -403,9 +373,6 @@ abstract class ManagedStrategyBase(
         override fun threadEvents(): List<InterleavingEvent> = emptyList()
     }
 
-    /**
-     * Implementation of ThreadEventLogger
-     */
     protected inner class SimpleEventLogger : ThreadEventLogger {
         private val threadEvents = mutableListOf<InterleavingEvent>()
 

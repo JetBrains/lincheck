@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.Options;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingOptions;
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
 

@@ -241,14 +241,15 @@ fun StringBuilder.appendIncorrectInterleaving(
  * Removes info about package in a stack trace element representation
  */
 private fun shorten(stackTraceElementRepr: String): String {
+    val stackTraceElement = stackTraceElementRepr.replace('/', '.')
     var wasPoints = 0
-    for ((i, c) in stackTraceElementRepr.withIndex().reversed()) {
+    for ((i, c) in stackTraceElement.withIndex().reversed()) {
         if (c == '.') {
             wasPoints++
             if (wasPoints == 3)
-                return stackTraceElementRepr.drop(i + 1)
+                return stackTraceElement.drop(i + 1)
         }
     }
 
-    return stackTraceElementRepr
+    return stackTraceElement
 }

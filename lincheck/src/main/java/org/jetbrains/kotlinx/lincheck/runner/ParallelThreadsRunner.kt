@@ -51,7 +51,6 @@ internal open class ParallelThreadsRunner(
 ) : Runner(scenario, strategy, testClass) {
     private lateinit var testInstance: Any
     private val executor = newFixedThreadPool(scenario.threads, ParallelThreadsRunner::TestThread)
-
     private val completions = List(scenario.threads) { threadId ->
         List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
     }

@@ -24,8 +24,8 @@ package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTest;
-import org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;

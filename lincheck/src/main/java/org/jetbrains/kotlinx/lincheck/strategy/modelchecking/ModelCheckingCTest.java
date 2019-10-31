@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.uniformsearch;
+package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
 
 import java.lang.annotation.*;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.uniformsearch.ModelCheckingCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
+import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
 
 /**
  * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.

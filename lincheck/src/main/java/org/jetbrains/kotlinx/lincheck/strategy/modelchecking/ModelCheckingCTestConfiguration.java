@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.uniformsearch;
+package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;

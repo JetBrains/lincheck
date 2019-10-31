@@ -62,4 +62,12 @@ internal class RandomSwitchStrategy(
         // TODO: can reduce number of random calls using geometric distribution
         return random.nextDouble() < switchProbability
     }
+
+    override fun chooseThread(switchableThreads: Int): Int = random.nextInt(switchableThreads)
+
+    override fun initializeInvocation(generateNewRandomSeed: Boolean) {
+        super.initializeInvocation(generateNewRandomSeed)
+        // start from random thread
+        currentThread = random.nextInt(nThreads)
+    }
 }
