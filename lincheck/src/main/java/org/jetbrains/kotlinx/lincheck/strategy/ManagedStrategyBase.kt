@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.util.Either
+import org.jetbrains.kotlinx.lincheck.util.valueOrNull
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.IllegalStateException
 import java.util.*
@@ -56,18 +58,15 @@ abstract class ManagedStrategyBase(
     protected var executionRandomSeed: Long = 0L
     // random used for execution
     protected lateinit var random: Random
-    // unhandled exception thrown by testClass
-    @Volatile
-    protected var exception: Throwable? = null
     // is thread suspended
     protected val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
-    // number of clinit blocks entered and not leaved for each thread
+    // number of <clinit> blocks entered and not leaved for each thread
     protected val classInitializationLevel = IntArray(nThreads) { 0 }
     // current actor id for each thread
     protected val currentActorId = IntArray(nThreads)
 
     @Throws(Exception::class)
-    abstract override fun run(): Unit
+    abstract override fun runImpl(): TestReport
 
     override fun onStart(threadId: Int) {
         awaitTurn(threadId)
@@ -79,10 +78,6 @@ abstract class ManagedStrategyBase(
         eventLogger.finishThread(threadId)
         onNewSwitch()
         doSwitchCurrentThread(threadId, true)
-    }
-
-    override fun onFailure(threadId: Int, e: Throwable) {
-        exception = e
     }
 
     /**
@@ -109,7 +104,7 @@ abstract class ManagedStrategyBase(
         if (!monitorTracker.canAcquireMonitor(monitor)) {
             monitorTracker.awaitAcquiringMonitor(threadId, monitor)
             // switch to another thread and wait for a moment the monitor can be acquired
-            switchCurrentThread(threadId, codeLocation, SwitchReason.LOCK_WAIT)
+            switchCurrentThread(threadId, codeLocation, SwitchReason.LOCK_WAIT, true)
         }
 
         monitorTracker.acquireMonitor(threadId, monitor)
@@ -143,7 +138,7 @@ abstract class ManagedStrategyBase(
         awaitTurn(threadId)
         monitorTracker.waitMonitor(threadId, monitor)
         // switch to another thread and wait till a notify event happens
-        switchCurrentThread(threadId, codeLocation, SwitchReason.MONITOR_WAIT)
+        switchCurrentThread(threadId, codeLocation, SwitchReason.MONITOR_WAIT, true)
 
         return false
     }
@@ -165,7 +160,7 @@ abstract class ManagedStrategyBase(
         } else {
             // Currently a suspension point does not supposed to violate obstruction-freedom
             // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
-            switchCurrentThread(threadId, -1)
+            switchCurrentThread(threadId, -1, SwitchReason.SUSPENDED, true)
         }
     }
 
@@ -210,10 +205,10 @@ abstract class ManagedStrategyBase(
     /**
      * Regular switch on another thread
      */
-    protected fun switchCurrentThread(threadId: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH) {
+    protected fun switchCurrentThread(threadId: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         eventLogger.newSwitch(threadId, codeLocation, reason)
         onNewSwitch()
-        doSwitchCurrentThread(threadId)
+        doSwitchCurrentThread(threadId, mustSwitch)
 
         awaitTurn(threadId)
     }
@@ -227,9 +222,10 @@ abstract class ManagedStrategyBase(
                 // then switch on any suspended thread to finish it and get SuspendedResult
                 val nextThread = (0 until nThreads).firstOrNull { !finished[it].get() && isSuspended[it].get() }
                 if (nextThread == null) {
-                    val exception = AssertionError("Must switch not to get into deadlock, but there are no threads to switch")
-                    onFailure(threadId, exception)
-                    throw exception
+                    // must switch not to get into a deadlock, but there are no threads to switch.
+                    // so just emulate a deadlock to let runner detect it.
+                    while (true);
+                    throw AssertionError("Should not get here, because of endless loop on the previous line")
                 }
                 currentThread = nextThread
             }
@@ -256,33 +252,31 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Waits until this thread is allowed to be executed
+     * Waits until this thread is allowed to be executed.
      */
     protected fun awaitTurn(threadId: Int) {
-        while (currentThread != threadId) {
-            // just wait actively
-            // check to avoid deadlock due to unhandled exception
-            if (exception != null) throw exception!!
-        }
+        // wait actively.
+        // can get to a deadlock here, but runner should detect it.
+        while (currentThread != threadId);
     }
 
     /**
      * Verifies results and if there are incorrect results then re-runs logging
-     * all thread events
+     * all thread events.
      */
-    protected fun checkResults(results: ExecutionResult) {
-        if (!verifier.verifyResults(results)) {
+    protected fun checkResults(results: Either<TestReport, ExecutionResult>): Boolean {
+        // in case strategy have already formed a report, just accept it
+        if (report != null) return false
+        if (results is Either.Error || !verifier.verifyResults((results as Either.Value).value)) {
             // re-run execution to get all thread events
             eventLogger = SimpleEventLogger()
             val repeatedResults = runInvocation(false)
-            require(repeatedResults == results) {
+            require(repeatedResults.valueOrNull() == results.valueOrNull()) {
                 "Indeterminism found. The execution should have returned the same result, but did not"
             }
-
-            verifyResults(results, eventLogger.threadEvents())
-
-            throw IllegalStateException("Should not reach. verifyResults should throw AssertionError")
+            return verifyResults(results, eventLogger.threadEvents())
         }
+        return true
     }
 
     /**
@@ -290,13 +284,13 @@ abstract class ManagedStrategyBase(
      * [generateNewRandomSeed] determines whether the execution should be different from the previous one.
      * Set it false if need to re-run previous execution.
      */
-    protected fun runInvocation(generateNewRandomSeed: Boolean = true): ExecutionResult {
+    protected fun runInvocation(generateNewRandomSeed: Boolean = true): Either<TestReport, ExecutionResult> {
         initializeInvocation(generateNewRandomSeed)
         return runner.run()
     }
 
     /**
-     * Returns all data to the initial state before invocation
+     * Returns all data to the initial state before invocation.
      */
     protected open fun initializeInvocation(generateNewRandomSeed: Boolean) {
         finished.forEach { it.set(false) }
@@ -306,7 +300,7 @@ abstract class ManagedStrategyBase(
         random = Random(executionRandomSeed)
         currentActorId.fill(-1)
         loopDetector.reset()
-        exception = null
+        report = null
     }
 
     protected fun checkCanHaveObstruction(lazyMessage: () -> String) {
@@ -319,7 +313,7 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Detects loop when visiting a codeLocation too often
+     * Detects loop when visiting a codeLocation too often.
      */
     protected class LoopDetector(private val maxRepetitions: Int) {
         private var lastIThread = Int.MIN_VALUE
@@ -344,7 +338,7 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Logs thread events such as thread switches and passed codeLocations
+     * Logs thread events such as thread switches and passed codeLocations.
      */
     protected interface ThreadEventLogger {
         fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason)
@@ -355,7 +349,7 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Just ignores every event
+     * Just ignores every event.
      */
     protected object DummyEventLogger : ThreadEventLogger {
         override fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
@@ -396,7 +390,7 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Track operations with monitor (acquire/release, wait/notify) to tell whether a thread can be executed
+     * Track operations with monitor (acquire/release, wait/notify) to tell whether a thread can be executed.
      */
     protected class MonitorTracker(nThreads: Int) {
         // which monitors are held by test threads

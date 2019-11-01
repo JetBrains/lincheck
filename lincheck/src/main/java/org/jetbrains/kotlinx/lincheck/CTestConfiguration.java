@@ -45,6 +45,7 @@ import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecificati
  */
 public abstract class CTestConfiguration {
     public static final int DEFAULT_ITERATIONS = 200;
+    public static final int DEFAULT_INVOCATIONS = 1_000;
     public static final int DEFAULT_THREADS = 2;
     public static final int DEFAULT_ACTORS_PER_THREAD = 5;
     public static final int DEFAULT_ACTORS_BEFORE = 5;

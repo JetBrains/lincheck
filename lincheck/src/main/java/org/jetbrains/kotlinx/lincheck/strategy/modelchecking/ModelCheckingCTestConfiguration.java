@@ -29,8 +29,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
  */
 public class ModelCheckingCTestConfiguration extends CTestConfiguration {
-    public static final int DEFAULT_MAX_INVOCATIONS_PER_ITERATION = 1_000;
-
     public boolean checkObstructionFreedom;
     public final int hangingDetectionThreshold;
     public final int maxInvocationsPerIteration;

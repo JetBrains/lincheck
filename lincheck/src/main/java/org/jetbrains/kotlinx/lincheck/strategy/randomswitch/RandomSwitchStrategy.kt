@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 private const val startSwitchProbability = 0.05
-private const val endSwitchProbability = 1.0
+private const val endSwitchProbability = 0.99
 
 /**
  * RandomSwitchStrategy just switches at any codeLocation to a random thread
@@ -44,18 +44,17 @@ internal class RandomSwitchStrategy(
     private var switchProbability = startSwitchProbability
 
     @Throws(Exception::class)
-    override fun run() {
-        // should only used once for each Strategy object
-
-        try {
-            repeat(maxInvocations){
-                // switch probability changes linearly from startSwitchProbability to endSwitchProbability
-                switchProbability = startSwitchProbability + it * (endSwitchProbability - startSwitchProbability) / maxInvocations
-                checkResults(runInvocation())
+    override fun runImpl(): TestReport {
+        repeat(maxInvocations){
+            // switch probability changes linearly from startSwitchProbability to endSwitchProbability
+            switchProbability = startSwitchProbability + it * (endSwitchProbability - startSwitchProbability) / maxInvocations
+            if (!checkResults(runInvocation())){
+                report.errorInvocation = it + 1
+                return report
             }
-        } finally {
-            runner.close()
         }
+
+        return TestReport(ErrorType.NO_ERROR)
     }
 
     override fun shouldSwitch(threadId: Int): Boolean {

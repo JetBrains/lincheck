@@ -35,7 +35,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**

@@ -184,7 +184,7 @@ internal open class ParallelThreadsRunner(
                     msgBuilder.appendln("The execution has hung, see the thread dump:")
                     for ((t, stackTrace) in stackTraces) {
                         t as TestThread
-                        msgBuilder.appendln("Thread-${t.iThread}:")
+                        msgBuilder.appendln("Thread-${t.threadId}:")
                         for (ste in stackTrace) {
                             if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
                             msgBuilder.appendln("\t$ste")

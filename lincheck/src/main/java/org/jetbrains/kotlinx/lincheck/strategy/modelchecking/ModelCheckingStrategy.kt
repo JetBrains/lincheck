@@ -63,23 +63,25 @@ class ModelCheckingStrategy(
 
 
     @Throws(Exception::class)
-    override fun run() {
-        try {
-            while (usedInvocations < maxInvocations) {
+    override fun runImpl(): TestReport {
+        while (usedInvocations < maxInvocations) {
+            if (root.isFullyExplored) {
+                // explored everything with current limit on number of switches
+                maxNumberOfSwitches++
+                root.resetExploration()
                 if (root.isFullyExplored) {
-                    // explored everything with current limit on number of switches
-                    maxNumberOfSwitches++
-                    root.resetExploration()
-                    if (root.isFullyExplored) {
-                        // everything is fully explored and number of switches don't change it
-                        return
-                    }
+                    // everything is fully explored and number of switches don't change it
+                    return TestReport(ErrorType.NO_ERROR)
                 }
-                root.exploreChild()
             }
-        } finally {
-            runner.close()
+            root.exploreChild()
+
+            if (report != null) {
+                report.errorInvocation = usedInvocations
+                return report
+            }
         }
+        return TestReport(ErrorType.NO_ERROR)
     }
 
     override fun onFinish(threadId: Int) {
@@ -242,14 +244,14 @@ class ModelCheckingStrategy(
 
         override fun exploreChild() {
             if (maxNumberOfSwitches == switchPositions.size) {
-                checkResults(runInvocation())
+                if (!checkResults(runInvocation())) return
                 explore()
                 return
             }
             if (isNotInitialized()) {
                 notInitializedSwitchChoices.add(this)
                 // initialize during the run
-                checkResults(runInvocation())
+                if (!checkResults(runInvocation())) return
             }
             if (children.isEmpty()) {
                 // no children => should be a leaf node.

@@ -25,6 +25,9 @@ import org.jetbrains.kotlinx.lincheck.ErrorType
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.linCheckAnalyze
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTest
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Assert.assertEquals
@@ -39,6 +42,16 @@ abstract class AbstractLinCheckTest(val expectedError: ErrorType) : VerifierStat
     @Test
     fun testStressStrategy() {
         runTest(StressOptions())
+    }
+
+    @Test
+    fun testModelCheckingStrategy() {
+        runTest(ModelCheckingOptions())
+    }
+
+    @Test
+    fun testRandomSwitchStrategy() {
+        runTest(RandomSwitchOptions())
     }
 
     private fun runTest(options: Options<*, *>) {

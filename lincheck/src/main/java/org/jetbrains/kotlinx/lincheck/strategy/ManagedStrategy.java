@@ -67,7 +67,7 @@ public abstract class ManagedStrategy extends Strategy {
 
             @Override
             public void onFailure(int iThread, Throwable e) {
-                ManagedStrategy.this.onException(iThread, e);
+                ManagedStrategy.this.onFailure(iThread, e);
                 super.onFailure(iThread, e);
             }
 
@@ -113,15 +113,6 @@ public abstract class ManagedStrategy extends Strategy {
     }
 
     /**
-     * Runs next invocation with the same {@link ExecutionScenario scenario}.
-     *
-     * @return invocation results for each executed actor.
-     */
-    protected final Either<TestReport, ExecutionResult> runInvocation() throws InterruptedException {
-        return runner.run();
-    }
-
-    /**
      * Returns a {@link StackTraceElement} described the specified code location
      *
      * @param codeLocation code location identifier which is inserted by transformer
@@ -153,7 +144,7 @@ public abstract class ManagedStrategy extends Strategy {
      * This method is executed if an exception has been thrown.
      * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      */
-    public void onException(int iThread, Throwable e) {}
+    public void onFailure(int iThread, Throwable e) {}
 
     /**
      * This method is executed before a shared variable read operation.

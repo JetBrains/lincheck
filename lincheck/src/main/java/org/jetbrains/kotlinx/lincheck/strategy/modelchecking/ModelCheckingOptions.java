@@ -23,10 +23,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.*;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
-import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
 
 /**
  * Options for {@link ModelCheckingStrategy uniform search} strategy.
@@ -34,7 +32,7 @@ import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckin
 public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelCheckingCTestConfiguration> {
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
-    protected int maxInvocationsPerIteration = DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
+    protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS;
 
     /**
      * Check obstruction freedom of the concurrent algorithm

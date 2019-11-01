@@ -25,7 +25,6 @@ package org.jetbrains.kotlinx.lincheck.strategy;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.ErrorType;
 import org.jetbrains.kotlinx.lincheck.Reporter;
-import org.jetbrains.kotlinx.lincheck.ThreadEvent;
 import org.jetbrains.kotlinx.lincheck.TestReport;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
@@ -55,7 +54,7 @@ public abstract class Strategy {
     protected final ExecutionScenario scenario;
     protected final Reporter reporter;
     protected final Verifier verifier;
-    git
+    protected TestReport report = null;
 
     protected Strategy(ExecutionScenario scenario, Verifier verifier, Reporter reporter) {
         this.scenario = scenario;
@@ -66,7 +65,7 @@ public abstract class Strategy {
     /**
      * Check whether results are correct.
      */
-    protected boolean verifyResults(Either<TestReport, ExecutionResult> outcome, List<ThreadEvent> threadEvents) {
+    protected boolean verifyResults(Either<TestReport, ExecutionResult> outcome, List<InterleavingEvent> interleavingEvents) {
         if (outcome instanceof Either.Error) {
             report = ((Either.Error<TestReport>) outcome).getError();
             return false;
@@ -126,5 +125,5 @@ public abstract class Strategy {
         throw new IllegalArgumentException("Unknown strategy configuration type: " + testCfg.getClass());
     }
 
-    public abstract void run() throws Exception;
+    public abstract TestReport run() throws Exception;
 }

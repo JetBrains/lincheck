@@ -24,11 +24,13 @@ package org.jetbrains.kotlinx.lincheck.tests.custom.transfer;
 
 import kotlin.jvm.Volatile;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.kotlinx.lincheck.ErrorType;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions;
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,6 +39,9 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
+
+import static org.jetbrains.kotlinx.lincheck.AnalyzeAccessorKt.linCheckAnalyze;
+import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class AccountsTest {
@@ -56,7 +61,6 @@ public class AccountsTest {
         AccountsTest.accountCreator = accountCreator;
     }
 
-    @StressCTest(threads = 3)
     @Param(name = "id", gen = IntGen.class, conf = "1:4")
     @Param(name = "amount", gen = IntGen.class)
     public static class AccountsLinearizabilityTest extends VerifierState {
@@ -86,8 +90,8 @@ public class AccountsTest {
         }
     }
 
-    @Test(expected = AssertionError.class)
-    public void test() throws Exception {
-        LinChecker.check(AccountsLinearizabilityTest.class);
+    @Test
+    public void test() {
+        assertEquals(linCheckAnalyze(AccountsLinearizabilityTest.class, new StressOptions().threads(3)).getErrorType(), ErrorType.INCORRECT_RESULTS);
     }
 }

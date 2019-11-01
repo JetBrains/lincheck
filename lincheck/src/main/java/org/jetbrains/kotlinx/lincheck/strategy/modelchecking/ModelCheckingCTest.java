@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
 
 import java.lang.annotation.*;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_INVOCATIONS;
 
 /**
  * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.
@@ -110,7 +110,7 @@ public @interface ModelCheckingCTest {
     /**
      * Number of maxInvocationsPerIteration that managed strategy may use to search for incorrect execution
      */
-    int invocationsPerIteration() default DEFAULT_MAX_INVOCATIONS_PER_ITERATION;
+    int invocationsPerIteration() default DEFAULT_INVOCATIONS;
 
     /**
      * Require correctness check of test instance state equivalency relation, which is defined by the user.

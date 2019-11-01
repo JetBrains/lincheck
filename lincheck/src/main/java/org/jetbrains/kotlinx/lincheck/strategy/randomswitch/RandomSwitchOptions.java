@@ -46,9 +46,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
-import static org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.*;
 
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 
@@ -58,7 +56,7 @@ import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecificati
 public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwitchCTestConfiguration> {
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
-    protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION;
+    protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS;
 
     /**
      * Check obstruction freedom of the concurrent algorithm
