@@ -213,7 +213,7 @@ internal open class ParallelThreadsRunner(
             val report = TestReport(ErrorType.INCORRECT_RESULTS)
             val msgBuilder = StringBuilder()
             msgBuilder.appendln("Illegal exception was thrown:")
-            msgBuilder.appendln(e.message)
+            msgBuilder.appendlnStackTrace(e)
             msgBuilder.appendln()
             msgBuilder.appendExecutionScenario(scenario)
             report.errorDetails = msgBuilder.toString()

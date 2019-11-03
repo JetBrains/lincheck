@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives;
 import org.objectweb.asm.Opcodes;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
@@ -65,6 +66,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     private static boolean doNotTransform(String className) {
         if (className.startsWith(TRANSFORMED_POINTED_PACKAGE)) return false;
+        if (TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(className.replace('.', '/'))) return true;
+
         return className == null ||
             (
                 className.startsWith("org.jetbrains.kotlinx.lincheck.") &&

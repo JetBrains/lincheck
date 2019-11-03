@@ -54,7 +54,6 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Type UNSAFE_TYPE = Type.getType(Unsafe.class);
     private static final Type UNSAFE_LOADER_TYPE = Type.getType(UnsafeLoader.class);
 
-    private static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
     private static final Type STRING_TYPE = Type.getType(String.class);
     private static final Type CLASS_TYPE = Type.getType(Class.class);
 
@@ -84,6 +83,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private String fileName = "";
     private final List<StackTraceElement> codeLocations;
 
+
     ManagedStrategyTransformer(ClassVisitor cv, List<StackTraceElement> codeLocations) {
         super(ASM_API, new ClassRemapper(cv, new JavaUtilRemapper()));
         this.codeLocations = codeLocations;
@@ -108,7 +108,6 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
     @Override
     public MethodVisitor visitMethod(int access, String mname, String desc, String signature, String[] exceptions) {
-        //System.out.println(className);
         // replace native method VMSupportsCS8 in AtomicLong with stub
         if ((access & ACC_NATIVE) != 0 && mname.equals("VMSupportsCS8")) {
             MethodVisitor mv = super.visitMethod(access & ~ACC_NATIVE, mname, desc, signature, exceptions);
@@ -122,7 +121,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
         MethodVisitor mv = super.visitMethod(access, mname, desc, signature, exceptions);
         mv = new JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions);
-        mv = new IndirectSharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+        mv = new TrustedPrimitiveSharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
         mv = new SynchronizedLockTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
 
         if (isSynchronized) {
@@ -153,9 +152,10 @@ class ManagedStrategyTransformer extends ClassVisitor {
         public String map(String name) {
             // TODO: remove this exception check when exceptions in transformable strategies will be supported
             boolean isJavaUtilException = name.startsWith("java/util/") && name.endsWith("Exception");
-            boolean isFieldUpdater = name.startsWith("java/util/concurrent/atomic/Atomic") && name.endsWith("FieldUpdater");
+            boolean isTrustedAtomicPrimitive = TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(name);
+            // function package is not transformed, because AFU uses it and thus there will be transformation problems
             boolean inFunctionPackage = name.startsWith("java/util/function/");
-            if (name.startsWith("java/util/") && !isFieldUpdater && !inFunctionPackage && !isJavaUtilException) name = TRANSFORMED_PACKAGE + name;
+            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !inFunctionPackage && !isJavaUtilException) name = TRANSFORMED_PACKAGE + name;
             return name;
         }
     }
@@ -182,39 +182,24 @@ class ManagedStrategyTransformer extends ClassVisitor {
     }
 
     /**
-     * Adds invocations of ManagedStrategy methods before indirect reads and writes of shared variables
-     * via Unsafe or VarHandle
+     * Adds invocations of ManagedStrategy methods before reads and writes made with trusted atomic primitives
+     * (see {@link TrustedAtomicPrimitives}).
      */
-    private class IndirectSharedVariableAccessMethodTransformer extends ManagedStrategyMethodVisitor {
-        IndirectSharedVariableAccessMethodTransformer(String methodName, GeneratorAdapter mv) {
+    private class TrustedPrimitiveSharedVariableAccessMethodTransformer extends ManagedStrategyMethodVisitor {
+        TrustedPrimitiveSharedVariableAccessMethodTransformer(String methodName, GeneratorAdapter mv) {
             super(methodName, mv);
         }
 
         @Override
         public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-            if (isUnsafe(owner) || isVarHandle(owner) || isAtomicFieldUpdater(owner)) {
-                String lowerName = name.toLowerCase();;
-                if (lowerName.contains("set") || lowerName.contains("swap") || lowerName.contains("put")) {
+            if (TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(owner)) {
+                AtomicPrimitiveMethodType type = TrustedAtomicPrimitives.INSTANCE.classifyTrustedMethod(owner, name);
+                if (type == AtomicPrimitiveMethodType.WRITE)
                     invokeBeforeSharedVariableWrite();
-                }
-                if (lowerName.contains("get")) {
+                else if (type == AtomicPrimitiveMethodType.READ)
                     invokeBeforeSharedVariableRead();
-                }
             }
-
             mv.visitMethodInsn(opcode, owner, name, desc, itf);
-        }
-
-        private boolean isUnsafe(String owner) {
-            return owner.equals("sun/misc/Unsafe");
-        }
-
-        private boolean isVarHandle(String owner) {
-            return owner.equals("java/lang/invoke/VarHandle");
-        }
-
-        private boolean isAtomicFieldUpdater(String owner) {
-            return owner.endsWith("FieldUpdater") && owner.contains("Atomic");
         }
     }
 

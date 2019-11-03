@@ -23,6 +23,9 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import java.util.*
 
+/**
+ * Tracks creation of local objects and leaks of their references to non-local objects.
+ */
 class LocalObjectManager {
     // for each local object store all objects that depend on it (e.g, are referenced from it)
     private val localObjects = IdentityHashMap<Any, MutableList<Any>>()

@@ -26,6 +26,9 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.io.PrintStream
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.lang.Exception
 
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = synchronized(this) {
@@ -115,6 +118,13 @@ fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
         appendln("Execution scenario (post part):")
         append(scenario.postExecution)
     }
+}
+
+fun StringBuilder.appendlnStackTrace(e: Throwable) {
+    val sw = StringWriter()
+    val pw = PrintWriter(sw)
+    e.printStackTrace(pw)
+    appendln(sw.toString())
 }
 
 fun StringBuilder.appendIncorrectResults(scenario: ExecutionScenario, results: ExecutionResult) {
