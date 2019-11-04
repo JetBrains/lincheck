@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.LIVELOCK_EVENTS_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.util.Either
@@ -36,7 +37,7 @@ abstract class ManagedStrategyBase(
         scenario: ExecutionScenario,
         verifier: Verifier,
         reporter: Reporter,
-        maxRepetitions: Int,
+        hangingDetectionThreshold: Int,
         protected val requireObstructionFreedom: Boolean
 ) : ManagedStrategy(testClass, scenario, verifier, reporter) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
@@ -50,7 +51,7 @@ abstract class ManagedStrategyBase(
     @Volatile
     protected var threadSafeReport: TestReport? = null
     // detector of loops (i.e. active locks)
-    protected val loopDetector = LoopDetector(maxRepetitions)
+    protected val loopDetector = LoopDetector(hangingDetectionThreshold)
     // logger of all events in the execution such as thread switches
     protected var eventLogger: ThreadEventLogger = DummyEventLogger
     // tracker of acquisitions and releases of monitors
@@ -343,7 +344,7 @@ abstract class ManagedStrategyBase(
     /**
      * Detects loop when visiting a codeLocation too often.
      */
-    protected class LoopDetector(private val maxRepetitions: Int) {
+    protected class LoopDetector(private val hangingDetectionThreshold: Int) {
         private var lastIThread = Int.MIN_VALUE
         private val operationCounts = mutableMapOf<Int, Int>()
 
@@ -357,7 +358,7 @@ abstract class ManagedStrategyBase(
             val count = (operationCounts[codeLocation] ?: 0) + 1
             operationCounts[codeLocation] = count
             // return true if we exceededthe maximum number of repetitions that we can have
-            return count > maxRepetitions
+            return count > hangingDetectionThreshold
         }
 
         fun reset() {
@@ -395,25 +396,33 @@ abstract class ManagedStrategyBase(
     }
 
     protected inner class SimpleEventLogger : ThreadEventLogger {
-        private val threadEvents = mutableListOf<InterleavingEvent>()
+        private val interleavingEvents = mutableListOf<InterleavingEvent>()
 
         override fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
             val actorId = currentActorId[threadId]
             if (codeLocation != -1)
-                threadEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
+                interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
             else
-                threadEvents.add(SuspendSwitchEvent(threadId, actorId))
+                interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
+
+            if (interleavingEvents.size > LIVELOCK_EVENTS_THRESHOLD) {
+                val testReport = TestReport(ErrorType.LIVELOCK)
+                testReport.errorDetails = "Livelock occured."
+                threadSafeReport = testReport
+                // forcibly finish execution by throwing an exception.
+                throw ForcibleExecutionFinishException()
+            }
         }
 
         override fun finishThread(threadId: Int) {
-            threadEvents.add(FinishEvent(threadId, parallelActors[threadId].size))
+            interleavingEvents.add(FinishEvent(threadId, parallelActors[threadId].size))
         }
 
         override fun passCodeLocation(threadId: Int, codeLocation: Int) {
-            threadEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
+            interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
         }
 
-        override fun interleavingEvents(): List<InterleavingEvent> = threadEvents
+        override fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
     }
 
     /**

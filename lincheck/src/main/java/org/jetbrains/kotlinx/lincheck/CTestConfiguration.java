@@ -50,11 +50,12 @@ public abstract class CTestConfiguration {
     public static final int DEFAULT_ACTORS_PER_THREAD = 5;
     public static final int DEFAULT_ACTORS_BEFORE = 5;
     public static final int DEFAULT_ACTORS_AFTER = 5;
-    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 20;
+    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 30;
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
     public static final boolean DEFAULT_MINIMIZE_ERROR = true;
     public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
+    public static final int LIVELOCK_EVENTS_THRESHOLD = 5000; // this number is supposed to be so large that there is no need to add it as an option
 
     public final Class<?> testClass;
     public final int iterations;
