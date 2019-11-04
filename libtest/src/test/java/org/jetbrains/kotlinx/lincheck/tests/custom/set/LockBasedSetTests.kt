@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.tests.AbstractLinCheckTest
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SpinLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
+class SpinLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val set = SpinLockSet()
 
     @Operation
@@ -44,7 +44,7 @@ internal class SpinLockSetCorrectTest : AbstractLinCheckTest(expectedError = Err
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class ReentrantLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
+class ReentrantLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val set = ReentrantLockSet()
 
     @Operation
@@ -60,7 +60,7 @@ internal class ReentrantLockSetCorrectTest : AbstractLinCheckTest(expectedError 
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SynchronizedLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
+class SynchronizedLockSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
     private val set = SynchronizedLockSet()
 
     @Operation
@@ -76,7 +76,71 @@ internal class SynchronizedLockSetCorrectTest : AbstractLinCheckTest(expectedErr
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-internal class SynchronizedMethodSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
+class SynchronizedMethodSetCorrectTest : AbstractLinCheckTest(expectedError = ErrorType.NO_ERROR) {
+    private val set = SynchronizedMethodSet()
+
+    @Operation
+    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
+
+    @Operation
+    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
+
+    @Operation
+    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
+
+    override fun extractState(): Any = (1..5).map { set.contains(it) }
+}
+
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class SpinLockSetWrongGuaranteeTest : AbstractLinCheckTest(expectedError = ErrorType.OBSTRUCTION_FREEDOM_VIOLATED, checkObstructionFreedom = true) {
+    private val set = SpinLockSet()
+
+    @Operation
+    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
+
+    @Operation
+    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
+
+    @Operation
+    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
+
+    override fun extractState(): Any = (1..5).map { set.contains(it) }
+}
+
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class ReentrantLockSetWrongGuaranteeTest : AbstractLinCheckTest(expectedError = ErrorType.OBSTRUCTION_FREEDOM_VIOLATED, checkObstructionFreedom = true) {
+    private val set = ReentrantLockSet()
+
+    @Operation
+    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
+
+    @Operation
+    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
+
+    @Operation
+    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
+
+    override fun extractState(): Any = (1..5).map { set.contains(it) }
+}
+
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class SynchronizedLockSetWrongGuaranteeTest : AbstractLinCheckTest(expectedError = ErrorType.OBSTRUCTION_FREEDOM_VIOLATED, checkObstructionFreedom = true) {
+    private val set = SynchronizedLockSet()
+
+    @Operation
+    fun add(@Param(name = "key") key: Int): Boolean  = set.add(key)
+
+    @Operation
+    fun remove(@Param(name = "key") key: Int): Boolean = set.remove(key)
+
+    @Operation
+    operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
+
+    override fun extractState(): Any = (1..5).map { set.contains(it) }
+}
+
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class SynchronizedMethodSetWrongGuaranteeTest : AbstractLinCheckTest(expectedError = ErrorType.OBSTRUCTION_FREEDOM_VIOLATED, checkObstructionFreedom = true) {
     private val set = SynchronizedMethodSet()
 
     @Operation

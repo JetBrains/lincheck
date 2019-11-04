@@ -38,29 +38,35 @@ import java.lang.AssertionError
 /**
  * An abstraction for testing all lincheck strategies
  */
-abstract class AbstractLinCheckTest(private var expectedError: ErrorType) : VerifierState() {
+abstract class AbstractLinCheckTest(private val expectedError: ErrorType, private val checkObstructionFreedom: Boolean = false) : VerifierState() {
     @Test
     fun testStressStrategy() {
-        // stress strategy can not distinguish livelock from deadlock
-        if (expectedError == ErrorType.LIVELOCK)
-            expectedError = ErrorType.DEADLOCK
-        // stress strategy can not check obstruction freedom
-        if (expectedError == ErrorType.OBSTRUCTION_FREEDOM_VIOLATED)
-            expectedError = ErrorType.NO_ERROR
-        runTest(StressOptions())
+        val error = when (expectedError) {
+            // stress strategy can not distinguish livelock from deadlock
+            ErrorType.LIVELOCK -> ErrorType.DEADLOCK
+            // stress strategy can not check obstruction freedom
+            ErrorType.OBSTRUCTION_FREEDOM_VIOLATED -> ErrorType.NO_ERROR
+            else -> expectedError
+        }
+        runTest(StressOptions(), error)
     }
 
     @Test
     fun testModelCheckingStrategy() {
-        runTest(ModelCheckingOptions())
+        runTest(ModelCheckingOptions().checkObstructionFreedom(checkObstructionFreedom), expectedError)
     }
 
     @Test
     fun testRandomSwitchStrategy() {
-        runTest(RandomSwitchOptions())
+        val error = when (expectedError) {
+            // random-switch strategy can not check obstruction freedom
+            ErrorType.OBSTRUCTION_FREEDOM_VIOLATED -> ErrorType.NO_ERROR
+            else -> expectedError
+        }
+        runTest(RandomSwitchOptions(), error)
     }
 
-    private fun runTest(options: Options<*, *>) {
+    private fun runTest(options: Options<*, *>, expectedError: ErrorType) {
         val report = linCheckAnalyze(this.javaClass, options)
         assertEquals(report.errorDetails, expectedError, report.errorType)
     }

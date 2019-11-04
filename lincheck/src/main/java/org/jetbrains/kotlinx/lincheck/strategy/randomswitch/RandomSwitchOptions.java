@@ -54,17 +54,8 @@ import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecificati
  * Options for {@link RandomSwitchStrategy random-switch} strategy.
  */
 public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwitchCTestConfiguration> {
-    protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
     protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS;
-
-    /**
-     * Check obstruction freedom of the concurrent algorithm
-     */
-    public RandomSwitchOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
-        this.checkObstructionFreedom = checkObstructionFreedom;
-        return this;
-    }
 
     /**
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
@@ -85,7 +76,7 @@ public class RandomSwitchOptions extends Options<RandomSwitchOptions, RandomSwit
     @Override
     public RandomSwitchCTestConfiguration createTestConfigurations(Class<?> testClass) {
         return new RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-            executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, maxInvocationsPerIteration,
+            executionGenerator, verifier, hangingDetectionThreshold, maxInvocationsPerIteration,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass));
     }
