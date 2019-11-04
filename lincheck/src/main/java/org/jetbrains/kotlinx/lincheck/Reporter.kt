@@ -238,7 +238,7 @@ fun StringBuilder.appendIncorrectInterleaving(
 
     val executionData = splitToColumns(nThreads, execution)
 
-    appendln("Parallel part execution:")
+    appendln("= Parallel part execution: =")
     appendln(printInColumnsCustom(executionData) {
         val builder = StringBuilder()
         for (i in it.indices) {

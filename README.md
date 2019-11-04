@@ -30,13 +30,15 @@ Table of contents
       * [Run test](#run-test)
    * [Execution strategies](#execution-strategies)
       * [Stress strategy](#stress-strategy)
+      * [Model checking strategy](#model-checking-strategy)
    * [Correctness contracts](#correctness-contracts)
       * [Linearizability](#linearizability)
       * [Serializability](#serializability)
       * [Quiescent consistency](#quiescent-consistency)
    * [Blocking data structures](#blocking-data-structures)   
    * [Configuration via options](#configuration-via-options)
-   * [Sample](#sample)
+   * [Sample 1](#sample-1)
+   * [Sample 1](#sample-1)
    * [Contacts](#contacts)
 
 
@@ -177,9 +179,16 @@ In order to use this strategy, just `@StressCTest` annotation should be added to
 * **actorsAfter** - number of operations to be executed after the concurrent part, helps to verify that a data structure is still correct;
 * **verifier** - verifier for an expected correctness contract (see [Correctness contracts](#correctness-contracts) for details).
 
+## Model checking strategy
+For the case of sequential consistensy memory model, which is a common case, model checking strategy was developed. This mode was originally inspired by the `CHESS` framework for C#, which studies all possible schedules with a bounded number of context switches. It ignores weak memory model effects, so it is recommended to use both stress strategy and model checking strategy.
 
+Similarly to stress strategies, this strategy can be used by `@ModelCheckingCTest` annotation or `ModelCheckingOptions`.
 
+It has the same parameters as stress strategy plus the following ones:
+* **checkObstructionFreedom** - specify, whether the strategy should also check obstruction freedom of the algorithm.
+* **hangingDetectionThreshold** - maximum number of times that a thread can visit a certain code location without switching to another thread that is still not recognized as hanging (i.e. because of spiin lock).
 
+In comparison to stress strategy model checking strategy can also print the trace that led to incorrect results, not just the incorrect results.
 
 # Correctness contracts
 Once the generated scenario is executed using the specified strategy, it is needed to verify the operation results for correctness. By default **lincheck** checks the result for linearizability, which is de-facto a standard type of correctness. However, there are also verifiers for some relaxed contracts, which should be set via `@..CTest(verifier = ..Verifier.class)` option.
@@ -404,15 +413,35 @@ public class HashMapLinearizabilityTest extends VerifierState {
 **Test output**
 
 ```
+java.lang.AssertionError: Invalid interleaving found:
 = Invalid execution results: =
-Init part:
-[put(1, 2): null, put(4, 6): null, get(5): null, put(3, -6): null, put(1, -8): 2]
 Parallel part:
-| get(4):     6    | put(2, 1):  null |
-| get(2):     null | put(5, 4):  null |
-| put(5, -8): null | get(3):     -6   |
-| get(3):     -6   | get(4):     6    |
-| put(3, 5):  -6   | put(1, -4): -8   |
-Post part:
-[put(5, -8): 4, put(5, -2): -8, get(1): -4, put(2, -8): 1, get(1): -4]
+| put(5,-8): null | put(5,4): null |
+```
+
+If we used `@ModelCheckingCTest` instead of `@StressCTest` then we could get:
+```
+java.lang.AssertionError: Invalid interleaving found:
+= Invalid execution results: =
+Parallel part:
+| put(5,-8): null | put(5,4): null |
+= Parallel part execution: =
+|                              | put(5,4) *                                           |
+|                              |          pass: HashMap.putVal(HashMap.java:628)      |
+|                              |          pass: HashMap.resize(HashMap.java:678)      |
+|                              |          pass: HashMap.resize(HashMap.java:680)      |
+|                              |          pass: HashMap.resize(HashMap.java:702)      |
+|                              |          switch at: HashMap.resize(HashMap.java:705) |
+| put(5,-8) * result: null     |                                                      |
+|           thread is finished |                                                      |
+|                              |          pass: HashMap.resize(HashMap.java:705)      |
+|                              |          pass: HashMap.putVal(HashMap.java:630)      |
+|                              |          pass: HashMap.putVal(HashMap.java:631)      |
+|                              |          pass: HashMap.putVal(HashMap.java:661)      |
+|                              |          pass: HashMap.putVal(HashMap.java:661)      |
+|                              |          pass: HashMap.putVal(HashMap.java:662)      |
+|                              |          pass: HashMap.putVal(HashMap.java:662)      |
+|                              |          pass: HashMap.putVal(HashMap.java:662)      |
+|                              |          * result: null                              |
+|                              |          thread is finished                          |
 ```
