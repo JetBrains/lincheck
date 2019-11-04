@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.util.Either
 import org.jetbrains.kotlinx.lincheck.util.valueOrNull
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.lang.IllegalStateException
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.IdentityHashMap
@@ -47,6 +46,9 @@ abstract class ManagedStrategyBase(
     // what thread is currently allowed to perform operations
     @Volatile
     protected var currentThread: Int = 0
+    // volatile wrapper for report defined in Strategy
+    @Volatile
+    protected var threadSafeReport: TestReport? = null
     // detector of loops (i.e. active locks)
     protected val loopDetector = LoopDetector(maxRepetitions)
     // logger of all events in the execution such as thread switches
@@ -97,16 +99,15 @@ abstract class ManagedStrategyBase(
         if (threadId == nThreads) return true
 
         checkCanHaveObstruction { "At least obstruction freedom required but a lock found" }
-
         newSuspensionPoint(threadId, codeLocation)
-
         awaitTurn(threadId)
+        // check if can acquire required monitor
         if (!monitorTracker.canAcquireMonitor(monitor)) {
             monitorTracker.awaitAcquiringMonitor(threadId, monitor)
             // switch to another thread and wait for a moment the monitor can be acquired
             switchCurrentThread(threadId, codeLocation, SwitchReason.LOCK_WAIT, true)
         }
-
+        // can acquire monitor now. actually does it
         monitorTracker.acquireMonitor(threadId, monitor)
 
         return false
@@ -130,11 +131,8 @@ abstract class ManagedStrategyBase(
         if (threadId == nThreads) return true
 
         checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
-
         newSuspensionPoint(threadId, codeLocation)
-
         if (withTimeout) return false // timeout occur instantly
-
         awaitTurn(threadId)
         monitorTracker.waitMonitor(threadId, monitor)
         // switch to another thread and wait till a notify event happens
@@ -156,6 +154,7 @@ abstract class ManagedStrategyBase(
         check(currentThread == threadId)
         isSuspended[threadId].set(true)
         if (runner.canResumeCoroutine(threadId, currentActorId[threadId])) {
+            // -1, because we don't know the actual codelocation
             newSuspensionPoint(threadId, -1)
         } else {
             // Currently a suspension point does not supposed to violate obstruction-freedom
@@ -185,7 +184,7 @@ abstract class ManagedStrategyBase(
         awaitTurn(threadId)
         var isLoop = false
         if (loopDetector.newOperation(threadId, codeLocation)) {
-            checkCanHaveObstruction { "At least obstruction freedom required but an active lock found" }
+            checkCanHaveObstruction { "At least obstruction freedom required, but an active lock found" }
             isLoop = true
         }
         val shouldSwitch = shouldSwitch(threadId) or isLoop
@@ -224,8 +223,11 @@ abstract class ManagedStrategyBase(
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
                     // so just emulate a deadlock to let runner detect it.
-                    while (true);
-                    throw AssertionError("Should not get here, because of endless loop on the previous line")
+                    val testReport = TestReport(ErrorType.DEADLOCK)
+                    testReport.errorDetails = "Deadlock occured."
+                    threadSafeReport = testReport
+                    // forcibly finish execution by throwing an exception.
+                    throw ForcibleExecutionFinishException()
                 }
                 currentThread = nextThread
             }
@@ -244,10 +246,8 @@ abstract class ManagedStrategyBase(
      */
     protected fun canResume(threadId: Int): Boolean {
         var canResume = !finished[threadId].get() && monitorTracker.canResume(threadId)
-
         if (isSuspended[threadId].get())
             canResume = canResume && runner.canResumeCoroutine(threadId, currentActorId[threadId])
-
         return canResume
     }
 
@@ -257,7 +257,10 @@ abstract class ManagedStrategyBase(
     protected fun awaitTurn(threadId: Int) {
         // wait actively.
         // can get to a deadlock here, but runner should detect it.
-        while (currentThread != threadId);
+        while (currentThread != threadId) {
+            // finish forcibly if an error occured and we already have a report.
+            if (threadSafeReport != null) throw ForcibleExecutionFinishException()
+        }
     }
 
     /**
@@ -267,14 +270,33 @@ abstract class ManagedStrategyBase(
     protected fun checkResults(results: Either<TestReport, ExecutionResult>): Boolean {
         // in case strategy have already formed a report, just accept it
         if (report != null) return false
-        if (results is Either.Error || !verifier.verifyResults((results as Either.Value).value)) {
+        if (threadSafeReport != null || results is Either.Error || !verifier.verifyResults((results as Either.Value).value)) {
             // re-run execution to get all thread events
             eventLogger = SimpleEventLogger()
             val repeatedResults = runInvocation(false)
+            // check that the results are the same
             require(repeatedResults.valueOrNull() == results.valueOrNull()) {
                 "Indeterminism found. The execution should have returned the same result, but did not"
             }
-            return verifyResults(results, eventLogger.threadEvents())
+            // if a report has been already made by the strategy then use it
+            if (threadSafeReport != null) {
+                report = threadSafeReport
+                val msgBuilder = StringBuilder(report.errorDetails ?: "")
+                msgBuilder.appendExecutionScenario(scenario)
+                val interleavingEvents = eventLogger.interleavingEvents()
+                if (!interleavingEvents.isEmpty()) {
+                    msgBuilder.appendln()
+                    msgBuilder.appendIncorrectInterleaving(scenario, null, interleavingEvents)
+                    when (report.errorType) {
+                        ErrorType.DEADLOCK -> msgBuilder.appendln().append("All threads are in deadlock.")
+                        ErrorType.LIVELOCK -> msgBuilder.appendln().append("All threads are in livelock.")
+                        else -> { /* print nothing */ }
+                    }
+                }
+                report.errorDetails = msgBuilder.toString()
+                return false
+            }
+            return verifyResults(results, eventLogger.interleavingEvents())
         }
         return true
     }
@@ -301,11 +323,17 @@ abstract class ManagedStrategyBase(
         currentActorId.fill(-1)
         loopDetector.reset()
         report = null
+        threadSafeReport = null
     }
 
     protected fun checkCanHaveObstruction(lazyMessage: () -> String) {
-        if (requireObstructionFreedom)
-            throw IntendedExecutionException(AssertionError(lazyMessage()))
+        if (requireObstructionFreedom) {
+            val testReport = TestReport(ErrorType.OBSTRUCTION_FREEDOM_VIOLATED)
+            testReport.errorDetails = lazyMessage()
+            threadSafeReport = testReport
+            // forcibly finish execution by throwing an exception.
+            throw ForcibleExecutionFinishException()
+        }
     }
 
     override fun onActorStart(threadId: Int) {
@@ -321,14 +349,14 @@ abstract class ManagedStrategyBase(
 
         fun newOperation(threadId: Int, codeLocation: Int): Boolean {
             if (lastIThread != threadId) {
+                // if we switched threads then reset counts
                 operationCounts.clear()
                 lastIThread = threadId
             }
-
+            // increment the number of times that we visited a codelocation
             val count = (operationCounts[codeLocation] ?: 0) + 1
-
             operationCounts[codeLocation] = count
-
+            // return true if we exceededthe maximum number of repetitions that we can have
             return count > maxRepetitions
         }
 
@@ -344,8 +372,7 @@ abstract class ManagedStrategyBase(
         fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason)
         fun finishThread(threadId: Int)
         fun passCodeLocation(threadId: Int, codeLocation: Int)
-
-        fun threadEvents(): List<InterleavingEvent>
+        fun interleavingEvents(): List<InterleavingEvent>
     }
 
     /**
@@ -364,7 +391,7 @@ abstract class ManagedStrategyBase(
             // ignore
         }
 
-        override fun threadEvents(): List<InterleavingEvent> = emptyList()
+        override fun interleavingEvents(): List<InterleavingEvent> = emptyList()
     }
 
     protected inner class SimpleEventLogger : ThreadEventLogger {
@@ -386,7 +413,7 @@ abstract class ManagedStrategyBase(
             threadEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
         }
 
-        override fun threadEvents(): List<InterleavingEvent> = threadEvents
+        override fun interleavingEvents(): List<InterleavingEvent> = threadEvents
     }
 
     /**

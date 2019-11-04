@@ -25,7 +25,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
  * InterleavingEvent stores information about events occuring during managed execution so that we could
  * write the execution by Reporter
  */
-sealed class InterleavingEvent(val iThread: Int, val iActor: Int)
+sealed class InterleavingEvent(val threadId: Int, val actorId: Int)
 
 class SwitchEvent(threadId: Int, actorId: Int, val info: StackTraceElement, val reason: SwitchReason) : InterleavingEvent(threadId, actorId)
 class SuspendSwitchEvent(threadId: Int, actorId: Int) : InterleavingEvent(threadId, actorId) {

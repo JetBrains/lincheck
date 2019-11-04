@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.createLinCheckResult
 import org.jetbrains.kotlinx.lincheck.executeActor
-import org.jetbrains.kotlinx.lincheck.strategy.IntendedExecutionException
+import org.jetbrains.kotlinx.lincheck.strategy.ForcibleExecutionFinishException
 import org.jetbrains.kotlinx.lincheck.util.Either
 import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
@@ -210,6 +210,10 @@ internal open class ParallelThreadsRunner(
             }
             return Either.Value(ExecutionResult(initResults, parallelResults, postResults))
         } catch (e: Throwable) {
+            val isIntendedExit = e is ExecutionException && e.cause is ForcibleExecutionFinishException
+            // just return something in case we were halted on purpose.
+            // the code that have halted us knows what happened better.
+            if (isIntendedExit) return Either.Value(ExecutionResult(emptyList(), emptyList(), emptyList()))
             val report = TestReport(ErrorType.INCORRECT_RESULTS)
             val msgBuilder = StringBuilder()
             msgBuilder.appendln("Illegal exception was thrown:")

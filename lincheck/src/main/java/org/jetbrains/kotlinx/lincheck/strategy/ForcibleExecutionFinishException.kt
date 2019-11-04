@@ -24,6 +24,9 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import java.lang.RuntimeException
 
 /**
- * Wrapper for exceptions thrown by Lincheck in actors
+ * This exeptions is used to finish execution correctly when using managed strategies.
+ * Otherwise, we have no way to do it in case of (i.e.) deadlock.
+ * If we just leave it, then the execution will not be halted (except for the cases when test code handles interruption).
+ * If we forcibly pass throught all barriers, then we can get another exception due to being in an incorrect state.
  */
-internal class IntendedExecutionException(cause: Error) : Exception(cause)
+internal class ForcibleExecutionFinishException : RuntimeException()
