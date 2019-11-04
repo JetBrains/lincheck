@@ -112,7 +112,7 @@ fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
     }
     appendln("Execution scenario (parallel part):")
     append(printInColumns(scenario.parallelExecution))
-    if (scenario.parallelExecution.isNotEmpty()) {
+    if (scenario.postExecution.isNotEmpty()) {
         appendln()
         appendln("Execution scenario (post part):")
         append(scenario.postExecution)

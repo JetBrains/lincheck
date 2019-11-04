@@ -281,7 +281,7 @@ abstract class ManagedStrategyBase(
             // if a report has been already made by the strategy then use it
             if (threadSafeReport != null) {
                 report = threadSafeReport
-                val msgBuilder = StringBuilder(report.errorDetails ?: "")
+                val msgBuilder = if (report.errorDetails == null) StringBuilder() else StringBuilder(report.errorDetails).appendln()
                 msgBuilder.appendExecutionScenario(scenario)
                 val interleavingEvents = eventLogger.interleavingEvents()
                 if (!interleavingEvents.isEmpty()) {
