@@ -38,9 +38,15 @@ import java.lang.AssertionError
 /**
  * An abstraction for testing all lincheck strategies
  */
-abstract class AbstractLinCheckTest(val expectedError: ErrorType) : VerifierState() {
+abstract class AbstractLinCheckTest(private var expectedError: ErrorType) : VerifierState() {
     @Test
     fun testStressStrategy() {
+        // stress strategy can not distinguish livelock from deadlock
+        if (expectedError == ErrorType.LIVELOCK)
+            expectedError = ErrorType.DEADLOCK
+        // stress strategy can not check obstruction freedom
+        if (expectedError == ErrorType.OBSTRUCTION_FREEDOM_VIOLATED)
+            expectedError = ErrorType.NO_ERROR
         runTest(StressOptions())
     }
 

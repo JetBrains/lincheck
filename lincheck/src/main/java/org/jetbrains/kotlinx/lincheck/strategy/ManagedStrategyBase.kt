@@ -37,8 +37,8 @@ abstract class ManagedStrategyBase(
         scenario: ExecutionScenario,
         verifier: Verifier,
         reporter: Reporter,
-        hangingDetectionThreshold: Int,
-        protected val requireObstructionFreedom: Boolean
+        private val hangingDetectionThreshold: Int,
+        private val requireObstructionFreedom: Boolean
 ) : ManagedStrategy(testClass, scenario, verifier, reporter) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
 
@@ -51,11 +51,11 @@ abstract class ManagedStrategyBase(
     @Volatile
     protected var threadSafeReport: TestReport? = null
     // detector of loops (i.e. active locks)
-    protected val loopDetector = LoopDetector(hangingDetectionThreshold)
+    private lateinit var loopDetector: LoopDetector
     // logger of all events in the execution such as thread switches
-    protected var eventLogger: ThreadEventLogger = DummyEventLogger
+    private lateinit var eventLogger: ThreadEventLogger
     // tracker of acquisitions and releases of monitors
-    protected val monitorTracker = MonitorTracker(nThreads)
+    private lateinit var monitorTracker: MonitorTracker
     // random used for generation of seeds and traversing of ExecutionTree
     protected val generationRandom = Random(0)
     protected var executionRandomSeed: Long = 0L
@@ -273,7 +273,6 @@ abstract class ManagedStrategyBase(
         if (report != null) return false
         if (threadSafeReport != null || results is Either.Error || !verifier.verifyResults((results as Either.Value).value)) {
             // re-run execution to get all thread events
-            eventLogger = SimpleEventLogger()
             val repeatedResults = runInvocation(false)
             // check that the results are the same
             require(repeatedResults.valueOrNull() == results.valueOrNull()) {
@@ -285,7 +284,7 @@ abstract class ManagedStrategyBase(
                 val msgBuilder = if (report.errorDetails == null) StringBuilder() else StringBuilder(report.errorDetails).appendln()
                 msgBuilder.appendExecutionScenario(scenario)
                 val interleavingEvents = eventLogger.interleavingEvents()
-                if (!interleavingEvents.isEmpty()) {
+                if (interleavingEvents.isNotEmpty()) {
                     msgBuilder.appendln()
                     msgBuilder.appendIncorrectInterleaving(scenario, null, interleavingEvents)
                     when (report.errorType) {
@@ -304,33 +303,49 @@ abstract class ManagedStrategyBase(
 
     /**
      * Runs invocation using runner.
-     * [generateNewRandomSeed] determines whether the execution should be different from the previous one.
+     * [generateNewRandomExecution] determines whether the execution should be different from the previous one.
      * Set it false if need to re-run previous execution.
      */
-    protected fun runInvocation(generateNewRandomSeed: Boolean = true): Either<TestReport, ExecutionResult> {
-        initializeInvocation(generateNewRandomSeed)
+    protected fun runInvocation(generateNewRandomExecution: Boolean = true): Either<TestReport, ExecutionResult> {
+        initializeInvocation(generateNewRandomExecution)
         return runner.run()
     }
 
     /**
      * Returns all data to the initial state before invocation.
      */
-    protected open fun initializeInvocation(generateNewRandomSeed: Boolean) {
+    protected open fun initializeInvocation(generateNewRandomExecution: Boolean) {
         finished.forEach { it.set(false) }
         isSuspended.forEach { it.set(false) }
-        if (generateNewRandomSeed)
+        if (generateNewRandomExecution) {
             executionRandomSeed = generationRandom.nextLong()
+            eventLogger = DummyEventLogger()
+        } else {
+            // if we rerun previous execution then we should collect more info
+            eventLogger = SimpleEventLogger()
+        }
         random = Random(executionRandomSeed)
         currentActorId.fill(-1)
-        loopDetector.reset()
+        loopDetector = LoopDetector(hangingDetectionThreshold)
+        monitorTracker = MonitorTracker(nThreads)
         report = null
         threadSafeReport = null
     }
 
-    protected fun checkCanHaveObstruction(lazyMessage: () -> String) {
+    private fun checkCanHaveObstruction(lazyMessage: () -> String) {
         if (requireObstructionFreedom) {
             val testReport = TestReport(ErrorType.OBSTRUCTION_FREEDOM_VIOLATED)
             testReport.errorDetails = lazyMessage()
+            threadSafeReport = testReport
+            // forcibly finish execution by throwing an exception.
+            throw ForcibleExecutionFinishException()
+        }
+    }
+
+    private fun checkLiveLockHappened(interleavingEventsCount: Int) {
+        if (interleavingEventsCount > LIVELOCK_EVENTS_THRESHOLD) {
+            val testReport = TestReport(ErrorType.LIVELOCK)
+            testReport.errorDetails = "Livelock occured."
             threadSafeReport = testReport
             // forcibly finish execution by throwing an exception.
             throw ForcibleExecutionFinishException()
@@ -360,10 +375,6 @@ abstract class ManagedStrategyBase(
             // return true if we exceededthe maximum number of repetitions that we can have
             return count > hangingDetectionThreshold
         }
-
-        fun reset() {
-            lastIThread = Int.MIN_VALUE
-        }
     }
 
     /**
@@ -377,19 +388,23 @@ abstract class ManagedStrategyBase(
     }
 
     /**
-     * Just ignores every event.
+     * Used not to create garbage on regular runs
      */
-    protected object DummyEventLogger : ThreadEventLogger {
+    protected inner class DummyEventLogger : ThreadEventLogger {
+        private var interleavingEventsCount = 0
+
         override fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
-            // ignore
+            interleavingEventsCount++
+            // check livelock after every switch
+            checkLiveLockHappened(interleavingEventsCount)
         }
 
         override fun finishThread(threadId: Int) {
-            // ignore
+            interleavingEventsCount++
         }
 
         override fun passCodeLocation(threadId: Int, codeLocation: Int) {
-            // ignore
+            interleavingEventsCount++
         }
 
         override fun interleavingEvents(): List<InterleavingEvent> = emptyList()
@@ -404,14 +419,8 @@ abstract class ManagedStrategyBase(
                 interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
             else
                 interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
-
-            if (interleavingEvents.size > LIVELOCK_EVENTS_THRESHOLD) {
-                val testReport = TestReport(ErrorType.LIVELOCK)
-                testReport.errorDetails = "Livelock occured."
-                threadSafeReport = testReport
-                // forcibly finish execution by throwing an exception.
-                throw ForcibleExecutionFinishException()
-            }
+            // check livelock after every switch
+            checkLiveLockHappened(interleavingEvents.size)
         }
 
         override fun finishThread(threadId: Int) {

@@ -109,12 +109,12 @@ class ModelCheckingStrategy(
         return executionPosition.get() in switchPositions
     }
 
-    override fun initializeInvocation(generateNewRandomSeed: Boolean) {
+    override fun initializeInvocation(generateNewRandomExecution: Boolean) {
         nextThreadToSwitch = threadSwitchChoices.listIterator()
         currentThread = nextThreadToSwitch.next()
         executionPosition.set(-1) // one step before zero
         usedInvocations++
-        super.initializeInvocation(generateNewRandomSeed)
+        super.initializeInvocation(generateNewRandomExecution)
     }
 
     override fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean) {
