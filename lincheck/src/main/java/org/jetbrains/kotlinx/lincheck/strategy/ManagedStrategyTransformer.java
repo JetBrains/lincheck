@@ -33,7 +33,10 @@ import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.sql.SQLOutput;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME;
 import static org.objectweb.asm.Opcodes.*;
@@ -403,9 +406,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                 default:
                     // do nothing
             }
-
             mv.visitInsn(opcode);
-
         }
 
         private void loadSynchronizedMethodMonitorOwner() {
@@ -607,19 +608,19 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
         @Override
         public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
+            boolean isObjectCreation = opcode == INVOKESPECIAL && "<init>".equals(name) && "java/lang/Object".equals(owner);
+            if (isObjectCreation)
+                mv.dup(); // will be used for adding to LocalObjectManager
+
             mv.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
 
-            boolean isInit = opcode == INVOKESPECIAL && "<init>".equals(name);
-            if (isInit && "Ljava/lang/Object".equals(owner)) {
-                mv.dup();
+            if (isObjectCreation)
                 invokeOnNewLocalObject();
-            }
         }
 
         @Override
         public void visitIntInsn(final int opcode, final int operand) {
             mv.visitIntInsn(opcode, operand);
-
             if (opcode == NEWARRAY) {
                 mv.dup();
                 invokeOnNewLocalObject();
@@ -629,7 +630,6 @@ class ManagedStrategyTransformer extends ClassVisitor {
         @Override
         public void visitTypeInsn(final int opcode, final String type) {
             mv.visitTypeInsn(opcode, type);
-
             if (opcode == ANEWARRAY) {
                 mv.dup();
                 invokeOnNewLocalObject();
@@ -639,18 +639,22 @@ class ManagedStrategyTransformer extends ClassVisitor {
         @Override
         public void visitFieldInsn(int opcode, String owner, String name, String desc) {
             boolean isNotPrimitiveType = desc.startsWith("L") || desc.startsWith("[");
+            boolean isFinalField = isFinalField(owner, name);
 
-            if (isNotPrimitiveType && !isFinalField(owner, name)) {
+            if (isNotPrimitiveType) {
                 switch (opcode) {
                     case Opcodes.PUTSTATIC:
                         mv.dup();
                         invokeOnLocalObjectDelete();
                         break;
                     case Opcodes.PUTFIELD:
-                        // owner, value
-                        mv.dup2(); // owner, value, owner, value
-                        invokeOnDependencyAddition(); // owner, value
-
+                        // we cannot invoke this method for final field, because an object may uninitialized yet
+                        // will add dependeny for final fields after <init> ends instead
+                        if (!isFinalField) {
+                            // owner, value
+                            mv.dup2(); // owner, value, owner, value
+                            invokeOnDependencyAddition(); // owner, value
+                        }
                         break;
                 }
             }
@@ -672,13 +676,27 @@ class ManagedStrategyTransformer extends ClassVisitor {
                     invokeOnDependencyAddition(); // array, index
                     mv.loadLocal(value); // array, index, value
                     break;
+                case RETURN:
+                    if ("<init>".equals(methodName)) {
+                        // handle all final field added dependencies
+                        Type ownerType = Type.getObjectType(className);
+                        for (Field field : getNonStaticFinalFields(className)) {
+                            if (field.getType().isPrimitive()) continue;
+                            Type fieldType = Type.getType(field.getType());
+                            mv.loadThis(); // owner
+                            mv.loadThis(); // owner, owner
+                            mv.getField(ownerType, field.getName(), fieldType); // owner, value
+                            invokeOnDependencyAddition();
+                        }
+                    }
+                    break;
             }
             mv.visitInsn(opcode);
         }
     }
 
     private class ManagedStrategyMethodVisitor extends MethodVisitor {
-        private final String methodName;
+        protected final String methodName;
         protected final GeneratorAdapter mv;
 
         private int lineNumber;
@@ -897,6 +915,24 @@ class ManagedStrategyTransformer extends ClassVisitor {
         public void visitLineNumber(int line, Label start) {
             this.lineNumber = line;
             super.visitLineNumber(line, start);
+        }
+    }
+
+    /**
+     * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
+     */
+    private List<Field> getNonStaticFinalFields(String ownerInternal) {
+        if (ownerInternal.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+            ownerInternal = ownerInternal.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length());
+        }
+        try {
+            Class clazz = Class.forName(ownerInternal.replace('/', '.'));
+            Field[] fields = clazz.getDeclaredFields();
+            return Arrays.stream(fields)
+                    .filter(field -> (field.getModifiers() & (Modifier.FINAL | Modifier.STATIC)) == Modifier.FINAL)
+                    .collect(Collectors.toList());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 

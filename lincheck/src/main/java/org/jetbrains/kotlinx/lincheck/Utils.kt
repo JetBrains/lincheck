@@ -180,18 +180,18 @@ object UnsafeHolder {
     @Volatile
     private var theUnsafe: Unsafe? = null
 
-    val unsafe: Unsafe
-        get() {
-            if (theUnsafe == null) {
-                try {
-                    val f = Unsafe::class.java.getDeclaredField("theUnsafe")
-                    f.isAccessible = true
-                    theUnsafe = f.get(null) as Unsafe
-                } catch (e: Exception) {
-                    throw RuntimeException(e)
-                }
+    @JvmStatic
+    fun getUnsafe(): Unsafe {
+        if (theUnsafe == null) {
+            try {
+                val f = Unsafe::class.java.getDeclaredField("theUnsafe")
+                f.isAccessible = true
+                theUnsafe = f.get(null) as Unsafe
+            } catch (e: Exception) {
+                throw RuntimeException(e)
             }
-
-            return theUnsafe!!
         }
+
+        return theUnsafe!!
+    }
 }
