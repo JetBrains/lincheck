@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.CTestConfiguration.LIVELOCK_EVENTS_THRESHO
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.util.Either
-import org.jetbrains.kotlinx.lincheck.util.valueOrNull
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -53,7 +52,7 @@ abstract class ManagedStrategyBase(
     // detector of loops (i.e. active locks)
     private lateinit var loopDetector: LoopDetector
     // logger of all events in the execution such as thread switches
-    private lateinit var eventLogger: ThreadEventLogger
+    private lateinit var eventCollector: ExecutionEventCollector
     // tracker of acquisitions and releases of monitors
     private lateinit var monitorTracker: MonitorTracker
     // random used for generation of seeds and traversing of ExecutionTree
@@ -78,7 +77,7 @@ abstract class ManagedStrategyBase(
     override fun onFinish(threadId: Int) {
         awaitTurn(threadId)
         finished[threadId].set(true)
-        eventLogger.finishThread(threadId)
+        eventCollector.finishThread(threadId)
         onNewSwitch()
         doSwitchCurrentThread(threadId, true)
     }
@@ -123,7 +122,9 @@ abstract class ManagedStrategyBase(
     }
 
     override fun beforePark(threadId: Int, codeLocation: Int, withTimeout: Boolean): Boolean {
-        return threadId == nThreads
+        if (threadId == nThreads) return true
+        newSuspensionPoint(threadId, codeLocation)
+        return false
     }
 
     override fun afterUnpark(threadId: Int, codeLocation: Int, thread: Any) {}
@@ -193,7 +194,7 @@ abstract class ManagedStrategyBase(
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(threadId, codeLocation, reason)
         }
-        eventLogger.passCodeLocation(threadId, codeLocation)
+        eventCollector.passCodeLocation(threadId, codeLocation)
         // continue operation
     }
 
@@ -206,7 +207,7 @@ abstract class ManagedStrategyBase(
      * Regular switch on another thread
      */
     protected fun switchCurrentThread(threadId: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
-        eventLogger.newSwitch(threadId, codeLocation, reason)
+        eventCollector.newSwitch(threadId, codeLocation, reason)
         onNewSwitch()
         doSwitchCurrentThread(threadId, mustSwitch)
 
@@ -272,18 +273,12 @@ abstract class ManagedStrategyBase(
         // in case strategy have already formed a report, just accept it
         if (report != null) return false
         if (threadSafeReport != null || results is Either.Error || !verifier.verifyResults((results as Either.Value).value)) {
-            // re-run execution to get all thread events
-            val repeatedResults = runInvocation(false)
-            // check that the results are the same
-            require(repeatedResults.valueOrNull() == results.valueOrNull()) {
-                "Indeterminism found. The execution should have returned the same result, but did not"
-            }
             // if a report has been already made by the strategy then use it
             if (threadSafeReport != null) {
                 report = threadSafeReport
                 val msgBuilder = if (report.errorDetails == null) StringBuilder() else StringBuilder(report.errorDetails).appendln()
                 msgBuilder.appendExecutionScenario(scenario)
-                val interleavingEvents = eventLogger.interleavingEvents()
+                val interleavingEvents = eventCollector.interleavingEvents()
                 if (interleavingEvents.isNotEmpty()) {
                     msgBuilder.appendln()
                     msgBuilder.appendIncorrectInterleaving(scenario, null, interleavingEvents)
@@ -296,7 +291,7 @@ abstract class ManagedStrategyBase(
                 report.errorDetails = msgBuilder.toString()
                 return false
             }
-            return verifyResults(results, eventLogger.interleavingEvents())
+            return verifyResults(results, eventCollector.interleavingEvents())
         }
         return true
     }
@@ -306,28 +301,23 @@ abstract class ManagedStrategyBase(
      * [generateNewRandomExecution] determines whether the execution should be different from the previous one.
      * Set it false if need to re-run previous execution.
      */
-    protected fun runInvocation(generateNewRandomExecution: Boolean = true): Either<TestReport, ExecutionResult> {
-        initializeInvocation(generateNewRandomExecution)
+    protected fun runInvocation(): Either<TestReport, ExecutionResult> {
+        initializeInvocation()
         return runner.run()
     }
 
     /**
      * Returns all data to the initial state before invocation.
      */
-    protected open fun initializeInvocation(generateNewRandomExecution: Boolean) {
+    protected open fun initializeInvocation() {
         finished.forEach { it.set(false) }
         isSuspended.forEach { it.set(false) }
-        if (generateNewRandomExecution) {
-            executionRandomSeed = generationRandom.nextLong()
-            eventLogger = DummyEventLogger()
-        } else {
-            // if we rerun previous execution then we should collect more info
-            eventLogger = SimpleEventLogger()
-        }
+        executionRandomSeed = generationRandom.nextLong()
         random = Random(executionRandomSeed)
         currentActorId.fill(-1)
         loopDetector = LoopDetector(hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
+        eventCollector = ExecutionEventCollector()
         report = null
         threadSafeReport = null
     }
@@ -380,40 +370,10 @@ abstract class ManagedStrategyBase(
     /**
      * Logs thread events such as thread switches and passed codeLocations.
      */
-    protected interface ThreadEventLogger {
-        fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason)
-        fun finishThread(threadId: Int)
-        fun passCodeLocation(threadId: Int, codeLocation: Int)
-        fun interleavingEvents(): List<InterleavingEvent>
-    }
-
-    /**
-     * Used not to create garbage on regular runs
-     */
-    protected inner class DummyEventLogger : ThreadEventLogger {
-        private var interleavingEventsCount = 0
-
-        override fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
-            interleavingEventsCount++
-            // check livelock after every switch
-            checkLiveLockHappened(interleavingEventsCount)
-        }
-
-        override fun finishThread(threadId: Int) {
-            interleavingEventsCount++
-        }
-
-        override fun passCodeLocation(threadId: Int, codeLocation: Int) {
-            interleavingEventsCount++
-        }
-
-        override fun interleavingEvents(): List<InterleavingEvent> = emptyList()
-    }
-
-    protected inner class SimpleEventLogger : ThreadEventLogger {
+    protected inner class ExecutionEventCollector {
         private val interleavingEvents = mutableListOf<InterleavingEvent>()
 
-        override fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
+        fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
             val actorId = currentActorId[threadId]
             if (codeLocation != -1)
                 interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
@@ -423,15 +383,15 @@ abstract class ManagedStrategyBase(
             checkLiveLockHappened(interleavingEvents.size)
         }
 
-        override fun finishThread(threadId: Int) {
+        fun finishThread(threadId: Int) {
             interleavingEvents.add(FinishEvent(threadId, parallelActors[threadId].size))
         }
 
-        override fun passCodeLocation(threadId: Int, codeLocation: Int) {
+        fun passCodeLocation(threadId: Int, codeLocation: Int) {
             interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
         }
 
-        override fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
+        fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
     }
 
     /**

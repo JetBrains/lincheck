@@ -43,19 +43,4 @@ public class ManagedStrategyHolder {
             throw new IllegalStateException("Cannot set strategy to ManagedStrategyHolder", e);
         }
     }
-
-    /**
-     * Removes strategy in the specified class loader to prevent memory leak.
-     */
-    public static void clearStrategy(ClassLoader loader) {
-        try {
-            Class<?> clazz = loader.loadClass(ManagedStrategyHolder.class.getCanonicalName());
-            // set all fields to null
-            clazz.getField("strategy").set(null, null);
-            clazz.getField("objectManager").set(null, null);
-        } catch (ClassNotFoundException | IllegalAccessException | NoSuchFieldException e) {
-            throw new IllegalStateException("Cannot set strategy to ManagedStrategyHolder", e);
-        }
-
-    }
 }

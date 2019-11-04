@@ -64,8 +64,8 @@ internal class RandomSwitchStrategy(
 
     override fun chooseThread(switchableThreads: Int): Int = random.nextInt(switchableThreads)
 
-    override fun initializeInvocation(generateNewRandomExecution: Boolean) {
-        super.initializeInvocation(generateNewRandomExecution)
+    override fun initializeInvocation() {
+        super.initializeInvocation()
         // start from random thread
         currentThread = random.nextInt(nThreads)
     }

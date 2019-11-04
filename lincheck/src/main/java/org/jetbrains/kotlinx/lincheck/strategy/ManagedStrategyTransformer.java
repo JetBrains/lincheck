@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.UnsafeHolder;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -34,9 +35,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
-import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE;
+import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME;
 import static org.objectweb.asm.Opcodes.*;
-import static org.objectweb.asm.commons.GeneratorAdapter.EQ;
+import static org.objectweb.asm.commons.GeneratorAdapter.*;
 
 /**
  * This transformer inserts {@link ManagedStrategy}' methods invocations.
@@ -50,10 +51,8 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Type MANAGED_STRATEGY_HOLDER_TYPE = Type.getType(ManagedStrategyHolder.class);
     private static final Type MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy.class);
     private static final Type LOCAL_OBJECT_MANAGER_TYPE = Type.getType(LocalObjectManager.class);
-
     private static final Type UNSAFE_TYPE = Type.getType(Unsafe.class);
-    private static final Type UNSAFE_LOADER_TYPE = Type.getType(UnsafeLoader.class);
-
+    private static final Type UNSAFE_LOADER_TYPE = Type.getType(UnsafeHolder.class);
     private static final Type STRING_TYPE = Type.getType(String.class);
     private static final Type CLASS_TYPE = Type.getType(Class.class);
 
@@ -111,7 +110,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
         // replace native method VMSupportsCS8 in AtomicLong with stub
         if ((access & ACC_NATIVE) != 0 && mname.equals("VMSupportsCS8")) {
             MethodVisitor mv = super.visitMethod(access & ~ACC_NATIVE, mname, desc, signature, exceptions);
-            return new NativeMethodStubTransformer(new GeneratorAdapter(mv, access & ~ACC_NATIVE, mname, desc));
+            return new VMSupportsCS8MethodGenerator(new GeneratorAdapter(mv, access & ~ACC_NATIVE, mname, desc));
         }
 
         boolean isSynchronized = (access & ACC_SYNCHRONIZED) != 0;
@@ -121,12 +120,11 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
         MethodVisitor mv = super.visitMethod(access, mname, desc, signature, exceptions);
         mv = new JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions);
-        mv = new TrustedPrimitiveSharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
-        mv = new SynchronizedLockTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+        mv = new SynchronizedBlockTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
 
         if (isSynchronized) {
             // synchronized method is replaced with synchronized lock
-            mv = new SynchronizedLockAddingTransformer(mname, new GeneratorAdapter(mv, access, mname, desc), className, access, classVersion);
+            mv = new SynchronizedBlockAddingTransformer(mname, new GeneratorAdapter(mv, access, mname, desc), className, access, classVersion);
         }
 
         if ("<clinit>".equals(mname)) {
@@ -145,28 +143,27 @@ class ManagedStrategyTransformer extends ClassVisitor {
     }
 
     /**
-     * Changes package of some transformed classes, because they cannot stay in the same package
+     * Changes package of transformed classes from java/util package, excluding some
      */
     private static class JavaUtilRemapper extends Remapper {
         @Override
         public String map(String name) {
-            // TODO: remove this exception check when exceptions in transformable strategies will be supported
-            boolean isJavaUtilException = name.startsWith("java/util/") && name.endsWith("Exception");
             boolean isTrustedAtomicPrimitive = TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(name);
             // function package is not transformed, because AFU uses it and thus there will be transformation problems
             boolean inFunctionPackage = name.startsWith("java/util/function/");
-            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !inFunctionPackage && !isJavaUtilException) name = TRANSFORMED_PACKAGE + name;
+            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive)
+                name = TRANSFORMED_PACKAGE_INTERNAL_NAME + name;
             return name;
         }
     }
 
     /**
-     * Replaces native methods from java/util with stubs
+     * Generates body of a native method VMSupportsCS8
      */
-    private static class NativeMethodStubTransformer extends MethodVisitor {
+    private static class VMSupportsCS8MethodGenerator extends MethodVisitor {
         GeneratorAdapter mv;
 
-        NativeMethodStubTransformer(GeneratorAdapter mv) {
+        VMSupportsCS8MethodGenerator(GeneratorAdapter mv) {
             super(ASM_API, null);
             this.mv = mv;
         }
@@ -182,29 +179,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
     }
 
     /**
-     * Adds invocations of ManagedStrategy methods before reads and writes made with trusted atomic primitives
-     * (see {@link TrustedAtomicPrimitives}).
-     */
-    private class TrustedPrimitiveSharedVariableAccessMethodTransformer extends ManagedStrategyMethodVisitor {
-        TrustedPrimitiveSharedVariableAccessMethodTransformer(String methodName, GeneratorAdapter mv) {
-            super(methodName, mv);
-        }
-
-        @Override
-        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-            if (TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(owner)) {
-                AtomicPrimitiveMethodType type = TrustedAtomicPrimitives.INSTANCE.classifyTrustedMethod(owner, name);
-                if (type == AtomicPrimitiveMethodType.WRITE)
-                    invokeBeforeSharedVariableWrite();
-                else if (type == AtomicPrimitiveMethodType.READ)
-                    invokeBeforeSharedVariableRead();
-            }
-            mv.visitMethodInsn(opcode, owner, name, desc, itf);
-        }
-    }
-
-    /**
-     * Adds invocations of ManagedStrategy methods before direct reads and writes of shared variables
+     * Adds invocations of ManagedStrategy methods before reads and writes of shared variables
      */
     private class SharedVariableAccessMethodTransformer extends ManagedStrategyMethodVisitor {
 
@@ -225,8 +200,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                         mv.dup();
                         // possible bug here when owner is not initialized yet, however haven't succeeded in making anti-test
                         invokeOnLocalCheck();
-                        mv.push(true);
-                        mv.ifCmp(Type.BOOLEAN_TYPE, EQ, skipCodeLocation);
+                        mv.ifZCmp(GT, skipCodeLocation);
 
                         invokeBeforeSharedVariableRead();
 
@@ -240,8 +214,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                         // possible bug here when owner is not initialized yet, however haven't succeeded in making anti-test
                         dupOwnerOnPutField(desc);
                         invokeOnLocalCheck();
-                        mv.push(true);
-                        mv.ifCmp(Type.BOOLEAN_TYPE, EQ, skipCodeLocation);
+                        mv.ifZCmp(GT, skipCodeLocation);
                         invokeBeforeSharedVariableWrite();
 
                         mv.visitLabel(skipCodeLocation);
@@ -296,10 +269,22 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
             super.visitInsn(opcode);
         }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            if (TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(owner)) {
+                AtomicPrimitiveMethodType type = TrustedAtomicPrimitives.INSTANCE.classifyTrustedMethod(owner, name);
+                if (type == AtomicPrimitiveMethodType.WRITE)
+                    invokeBeforeSharedVariableWrite();
+                else if (type == AtomicPrimitiveMethodType.READ)
+                    invokeBeforeSharedVariableRead();
+            }
+            mv.visitMethodInsn(opcode, owner, name, desc, itf);
+        }
     }
 
     /**
-     * Replaces `Unsafe.getUnsafe` with `UnsafeLoader.getUnsafe`
+     * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`
      */
     private static class UnsafeTransformer extends MethodVisitor {
         private GeneratorAdapter mv;
@@ -323,8 +308,8 @@ class ManagedStrategyTransformer extends ClassVisitor {
     /**
      * Adds invocations of ManagedStrategy methods before monitorenter and monitorexit instructions
      */
-    private class SynchronizedLockTransformer extends ManagedStrategyMethodVisitor {
-        SynchronizedLockTransformer(String methodName, GeneratorAdapter mv) {
+    private class SynchronizedBlockTransformer extends ManagedStrategyMethodVisitor {
+        SynchronizedBlockTransformer(String methodName, GeneratorAdapter mv) {
             super(methodName, mv);
         }
 
@@ -338,8 +323,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                     Label skipMonitorEnter = mv.newLabel();
                     mv.dup();
                     invokeBeforeLockAcquire();
-                    mv.push(false);
-                    mv.ifCmp(Type.BOOLEAN_TYPE, EQ, skipMonitorEnter);
+                    mv.ifZCmp(EQ, skipMonitorEnter);
                     mv.monitorEnter();
                     mv.goTo(opEnd);
                     mv.visitLabel(skipMonitorEnter);
@@ -351,8 +335,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                     Label skipMonitorExit = mv.newLabel();
                     mv.dup();
                     invokeBeforeLockRelease();
-                    mv.push(false);
-                    mv.ifCmp(Type.BOOLEAN_TYPE, EQ, skipMonitorExit);
+                    mv.ifZCmp(EQ, skipMonitorExit);
                     mv.monitorExit();
                     mv.goTo(opEnd);
                     mv.visitLabel(skipMonitorExit);
@@ -368,7 +351,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
     /**
      * Replace "method(...) {...}" with "method(...) {synchronized(this) {...} }"
      */
-    private class SynchronizedLockAddingTransformer extends ManagedStrategyMethodVisitor {
+    private class SynchronizedBlockAddingTransformer extends ManagedStrategyMethodVisitor {
         private final String className;
         private final boolean isStatic;
         private final int classVersion;
@@ -376,7 +359,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
         private final Label tryLabel = new Label();
         private final Label catchLabel = new Label();
 
-        SynchronizedLockAddingTransformer(String methodName, GeneratorAdapter mv, String className, int access, int classVersion) {
+        SynchronizedBlockAddingTransformer(String methodName, GeneratorAdapter mv, String className, int access, int classVersion) {
             super(methodName, mv);
 
             this.className = className;
@@ -468,9 +451,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                 default:
                     // do nothing
             }
-
             mv.visitInsn(opcode);
-
         }
     }
 
@@ -484,9 +465,13 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
         @Override
         public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-            Label afterWait = mv.newLabel();
+            Label afterWait = null;
 
-            if (isWait(opcode, name, desc)) {
+            boolean isWait = isWait(opcode, name, desc);
+            boolean isNotify = isNotify(opcode, name, desc);
+
+            if (isWait) {
+                afterWait = mv.newLabel();
                 boolean withTimeout = !desc.equals("()V");
 
                 int lastArgument = 0;
@@ -506,8 +491,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                 invokeBeforeWait(withTimeout);
 
                 Label beforeWait = mv.newLabel();
-                mv.push(true);
-                mv.ifCmp(Type.BOOLEAN_TYPE, EQ, beforeWait); // wait if returned true
+                mv.ifZCmp(GT, beforeWait);
 
                 mv.pop();
 
@@ -521,15 +505,14 @@ class ManagedStrategyTransformer extends ClassVisitor {
                     mv.loadLocal(lastArgument);
                 }
             }
-
-            if (isNotify(opcode, name, desc)) {
+            if (isNotify)
                 mv.dup();
-            }
 
             mv.visitMethodInsn(opcode, owner, name, desc, itf);
-            mv.visitLabel(afterWait);
+            if (isWait)
+                mv.visitLabel(afterWait);
 
-            if (isNotify(opcode, name, desc)) {
+            if (isNotify) {
                 boolean notifyAll = name.equals("notifyAll");
                 invokeAfterNotify(notifyAll);
             }
@@ -570,7 +553,6 @@ class ManagedStrategyTransformer extends ClassVisitor {
             boolean isPark = owner.equals("sun/misc/Unsafe") && name.equals("park");
 
             if (isPark) {
-
                 Label withoutTimeoutBranch = mv.newLabel();
                 Label invokeBeforeParkEnd = mv.newLabel();
                 mv.dup2();
@@ -583,8 +565,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                 mv.push(false);
                 invokeBeforePark();
                 mv.visitLabel(invokeBeforeParkEnd);
-                mv.push(true);
-                mv.ifCmp(Type.BOOLEAN_TYPE, EQ, beforePark); // park if returned true
+                mv.ifZCmp(GT, beforePark); // park if returned true
                 // delete park params
                 mv.pop2(); // time
                 mv.pop(); // isAbsolute
@@ -919,13 +900,13 @@ class ManagedStrategyTransformer extends ClassVisitor {
         }
     }
 
-    private boolean isFinalField(String owner, String name) {
-        if (owner.startsWith(TRANSFORMED_PACKAGE)) {
-            owner = owner.substring(TRANSFORMED_PACKAGE.length());
+    private boolean isFinalField(String ownerInternal, String fieldName) {
+        if (ownerInternal.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+            ownerInternal = ownerInternal.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length());
         }
         try {
-            Class clazz = Class.forName(owner.replace('/', '.'));
-            return (findField(clazz, name).getModifiers()  & Modifier.FINAL) == Modifier.FINAL;
+            Class clazz = Class.forName(ownerInternal.replace('/', '.'));
+            return (findField(clazz, fieldName).getModifiers()  & Modifier.FINAL) == Modifier.FINAL;
         } catch (ClassNotFoundException | NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -933,32 +914,12 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
     private Field findField(Class<?> clazz, String fieldName) throws NoSuchFieldException {
         do {
-            try {
-                return clazz.getDeclaredField(fieldName);
-            } catch(NoSuchFieldException e) {
-                // the field is not in this class
-                // need to go to a super class
-            }
+            Field[] fields = clazz.getDeclaredFields();
+            for (Field field : fields)
+                if (field.getName().equals(fieldName))
+                    return field;
             clazz = clazz.getSuperclass();
         } while(clazz != null);
         throw new NoSuchFieldException();
-    }
-
-    public static class UnsafeLoader {
-        private static volatile Unsafe theUnsafe = null;
-
-        static public Unsafe getUnsafe() {
-            if (theUnsafe == null) {
-                try {
-                    Field f = Unsafe.class.getDeclaredField("theUnsafe");
-                    f.setAccessible(true);
-                    theUnsafe =  (Unsafe) f.get(null);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            return theUnsafe;
-        }
     }
 }

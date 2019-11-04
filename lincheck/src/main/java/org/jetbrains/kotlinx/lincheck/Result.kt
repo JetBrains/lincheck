@@ -66,8 +66,12 @@ private const val VOID = "void"
 /**
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
  */
-data class ExceptionResult @JvmOverloads constructor(val tClazz: Class<out Throwable>?, override val wasSuspended: Boolean = false) : Result() {
-    override fun toString() = wasSuspendedPrefix + "${tClazz?.simpleName}"
+data class ExceptionResult @JvmOverloads constructor(val exceptionClassName: String?, override val wasSuspended: Boolean = false) : Result() {
+    // with default parameter the compilator don't choose correct variants of the constructor
+    constructor(tClazz: Class<out Throwable>?, wasSuspended: Boolean): this(tClazz?.simpleName, wasSuspended)
+    constructor(tClazz: Class<out Throwable>?): this(tClazz?.simpleName, false)
+
+    override fun toString() = wasSuspendedPrefix + exceptionClassName
 
     /**
      * Check equals carefully, because stored exceptions may be loaded by different loaders
@@ -75,11 +79,10 @@ data class ExceptionResult @JvmOverloads constructor(val tClazz: Class<out Throw
     override fun equals(other: Any?): Boolean {
         if (other == null) return false
         if (other !is ExceptionResult) return false
-        if (tClazz == other.tClazz) return true
-        return tClazz?.name?.equals(other.tClazz?.name) ?: false
+        return exceptionClassName == other.exceptionClassName ?: false
     }
 
-    override fun hashCode(): Int = tClazz?.name.hashCode()
+    override fun hashCode(): Int = exceptionClassName.hashCode()
 }
 
 /**

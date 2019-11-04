@@ -50,8 +50,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
 
     public static final String JAVA_UTIL_PACKAGE = "java/util/";
-    public static final String TRANSFORMED_PACKAGE = "org/jetbrains/kotlinx/lincheck/transformed/";
-    public static final String TRANSFORMED_POINTED_PACKAGE = TRANSFORMED_PACKAGE.replaceAll("/", ".");
+    public static final String TRANSFORMED_PACKAGE_INTERNAL_NAME = "org/jetbrains/kotlinx/lin-check/tran$f*rmed/";
+    public static final String TRANSFORMED_PACKAGE_NAME = TRANSFORMED_PACKAGE_INTERNAL_NAME.replaceAll("/", ".");
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         this.strategy = strategy;
@@ -65,7 +65,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * @return result of checking class
      */
     private static boolean doNotTransform(String className) {
-        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE)) return false;
+        if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
         if (TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(className.replace('.', '/'))) return true;
 
         return className == null ||
@@ -97,7 +97,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 return result;
             }
             try {
-                byte[] bytes = instrument(originalPointedName(name));
+                byte[] bytes = instrument(originalName(name));
                 result = defineClass(name, bytes, 0, bytes.length);
                 cache.put(name, result);
                 return result;
@@ -139,18 +139,18 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     /**
      * Returns name of class the moment before it was transformed
      */
-    static String originalName(String className) {
-        if (className.startsWith(TRANSFORMED_PACKAGE))
-            return className.substring(TRANSFORMED_PACKAGE.length());
+    static String originalInternalName(String className) {
+        if (className.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME))
+            return className.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length());
         return className;
     }
 
     /**
      * Returns name of class the moment before it was transformed
      */
-    private String originalPointedName(String className) {
-        if (className.startsWith(TRANSFORMED_POINTED_PACKAGE))
-            return className.substring(TRANSFORMED_POINTED_PACKAGE.length());
+    private String originalName(String className) {
+        if (className.startsWith(TRANSFORMED_PACKAGE_NAME))
+            return className.substring(TRANSFORMED_PACKAGE_NAME.length());
         return className;
     }
 }
@@ -170,9 +170,9 @@ class TransformationClassWriter extends ClassWriter {
      */
     @Override
     protected String getCommonSuperClass(final String type1, final String type2) {
-        String result = super.getCommonSuperClass(originalName(type1), originalName(type2));
+        String result = super.getCommonSuperClass(originalInternalName(type1), originalInternalName(type2));
         if (result.startsWith(JAVA_UTIL_PACKAGE))
-            return TRANSFORMED_PACKAGE + result;
+            return TRANSFORMED_PACKAGE_INTERNAL_NAME + result;
         return result;
     }
 }

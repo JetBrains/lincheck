@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
+import sun.misc.Unsafe
 import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -174,3 +175,23 @@ internal operator fun ExecutionResult.set(threadId: Int, actorId: Int, value: Re
 }
 
 private fun loadBySystemClassLoader(clazz: Class<*>): Class<*> = Class.forName(clazz.name)
+
+object UnsafeHolder {
+    @Volatile
+    private var theUnsafe: Unsafe? = null
+
+    val unsafe: Unsafe
+        get() {
+            if (theUnsafe == null) {
+                try {
+                    val f = Unsafe::class.java.getDeclaredField("theUnsafe")
+                    f.isAccessible = true
+                    theUnsafe = f.get(null) as Unsafe
+                } catch (e: Exception) {
+                    throw RuntimeException(e)
+                }
+            }
+
+            return theUnsafe!!
+        }
+}

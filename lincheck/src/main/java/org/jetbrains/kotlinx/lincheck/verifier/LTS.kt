@@ -112,7 +112,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
         private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result) =
             (result == expectedResult) ||
             (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value && !expectedResult.wasSuspended) ||
-            (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz && !expectedResult.wasSuspended) ||
+            (result is ExceptionResult && expectedResult is ExceptionResult && result.exceptionClassName == expectedResult.exceptionClassName && !expectedResult.wasSuspended) ||
             (expectedResult == VoidResult && result == SuspendedVoidResult)
 
         private inline fun <T> generateNextState(
