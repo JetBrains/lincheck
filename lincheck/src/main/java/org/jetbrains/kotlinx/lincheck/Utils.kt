@@ -21,15 +21,16 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
+import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.ref.WeakReference
-import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.Method
+import java.lang.reflect.*
 import java.util.*
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.coroutines.*
+import kotlin.coroutines.intrinsics.*
 
 
 @Volatile
@@ -81,12 +82,12 @@ internal fun executeActor(
         val res = m.invoke(specification, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLinCheckResult(res)
     } catch (invE: Throwable) {
-        val eClass = (invE.cause ?: invE)::class.java
+        val eClass = (invE.cause ?: invE).javaClass.normalize()
         for (ec in actor.handledExceptions) {
             if (ec.isAssignableFrom(eClass))
-                return ExceptionResult(eClass)
+                return ExceptionResult.create(eClass)
         }
-        throw IllegalStateException("Invalid exception as a result", invE)
+        throw IllegalStateException("Invalid exception as a result of $actor", invE)
     } catch (e: Exception) {
         e.catch(
             NoSuchMethodException::class.java,
@@ -96,6 +97,8 @@ internal fun executeActor(
         }
     }
 }
+
+internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadClass(name) as Class<T>
 
 private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
 
@@ -123,7 +126,7 @@ private fun getMethod(instance: Any, actor: Actor): Method {
  */
 internal fun createLinCheckResult(res: Any?, wasSuspended: Boolean = false) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
-    res != null && res is Throwable -> ExceptionResult(res.javaClass, wasSuspended)
+    res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
     else -> ValueResult(res, wasSuspended)
@@ -137,10 +140,10 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Throwable -> ValueResult(value::class.java, wasSuspended)
             else -> ValueResult(value, wasSuspended)
         }
-    } else ExceptionResult(exceptionOrNull()?.let { it::class.java }, wasSuspended)
+    } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
 
 
-fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
+inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
         return block()
     } else throw this
@@ -170,4 +173,22 @@ internal operator fun ExecutionResult.set(threadId: Int, actorId: Int, value: Re
     0 -> initResults[actorId] = value
     parallelResults.size + 1 -> postResults[actorId] = value
     else -> parallelResults[threadId - 1][actorId] = value
+}
+
+/**
+ * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
+ */
+fun <T> kotlin.Result<T>.cancelled() = isFailure && exceptionOrNull() is CancellationException
+
+object CancellableContinuationHolder {
+    var storedLastCancellableCont: CancellableContinuation<*>? = null
+}
+
+fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
+    val t = Thread.currentThread()
+    if (t is ParallelThreadsRunner.TestThread) {
+        t.cont = cont
+    } else {
+        storedLastCancellableCont = cont
+    }
 }

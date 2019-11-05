@@ -22,10 +22,8 @@ package org.jetbrains.kotlinx.lincheck.annotations;
  * #L%
  */
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import kotlinx.coroutines.*;
+import java.lang.annotation.*;
 
 /**
  * Mark your method with this annotation in order
@@ -56,4 +54,10 @@ public @interface Operation {
      * Handle the specified exceptions as a result of this operation invocation.
      */
     Class<? extends Throwable>[] handleExceptionsAsResult() default {};
+
+    /**
+     * Specified whether the operation can be cancelled if it suspends,
+     * see {@link CancellableContinuation#cancel}; {@code true} by default.
+     */
+    boolean cancellableOnSuspension() default true;
 }

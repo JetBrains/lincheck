@@ -31,12 +31,14 @@ import kotlin.coroutines.Continuation
  *
  * @see Operation
  */
-data class Actor(
+data class Actor @JvmOverloads constructor(
     val method: Method,
     val arguments: List<Any?>,
-    val handledExceptions: List<Class<out Throwable>>
+    val handledExceptions: List<Class<out Throwable>>,
+    val cancelOnSuspension: Boolean = false
 ) {
-    override fun toString() = method.name + arguments.joinToString(prefix = "(", postfix = ")", separator = ",") { it.toString() }
+    override fun toString() = cancellableMark + method.name + arguments.joinToString(prefix = "(", postfix = ")", separator = ",") { it.toString() }
+    private val cancellableMark get() = (if (cancelOnSuspension) "*" else "")
 
     val handlesExceptions = handledExceptions.isNotEmpty()
 

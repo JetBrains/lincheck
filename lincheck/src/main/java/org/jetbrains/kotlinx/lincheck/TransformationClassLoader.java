@@ -31,23 +31,32 @@ import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
  * This transformer applies required for {@link Strategy} and {@link Runner}
  * class transformations and hines them from others.
  */
 public class TransformationClassLoader extends ExecutionClassLoader {
-    // Strategy and runner provide class transformers
-    private final Strategy strategy;
-    private final Runner runner;
+    private final List<Function<ClassVisitor, ClassVisitor>> classTransformers;
     // Cache for classloading and frames computing during the transformation
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
-        this.strategy = strategy;
-        this.runner = runner;
+        classTransformers = new ArrayList<>();
+        // apply the strategy's transformer at first, then the runner's one.
+        if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
+        if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);
+    }
+
+    public TransformationClassLoader(Function<ClassVisitor, ClassVisitor> classTransformer) {
+        this.classTransformers = Collections.singletonList(classTransformer);
     }
 
     /**
@@ -60,10 +69,12 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         return className == null ||
             (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.equals("ManagedStrategyHolder")) ||
+                !className.endsWith("ManagedStrategyHolder")) ||
             className.startsWith("sun.") ||
             className.startsWith("java.") ||
-            className.startsWith("jdk.internal.");
+            className.startsWith("jdk.internal.") ||
+            className.startsWith("kotlin.") ||
+            (className.equals("kotlinx.coroutines.CancellableContinuation"));
         // TODO let's transform java.util.concurrent
     }
 
@@ -106,12 +117,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // then the runner's one.
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         ClassVisitor cv = new CheckClassAdapter(cw, false); // for debug
-        if (runner.needsTransformation()) {
-            cv = runner.createTransformer(cv);
-        }
-        if (strategy.needsTransformation()) {
-            cv = strategy.createTransformer(cv);
-        }
+        for (Function<ClassVisitor, ClassVisitor> ct : classTransformers)
+            cv = ct.apply(cv);
         // Get transformed bytecode
         cr.accept(cv, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();

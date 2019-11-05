@@ -51,7 +51,7 @@ class LinearizabilityContext : VerifierContext {
 
     override fun nextContext(threadId: Int): LinearizabilityContext? {
         // Check whether the specified thread is not suspended and there are unprocessed actors
-        if (isCompleted(threadId) || suspended[threadId]) return null
+        if (isCompleted(threadId)) return null
         // Check whether an actorWithToken from the specified thread can be executed
         // in accordance with the rule that all actors from init part should be
         // executed at first, after that all actors from parallel part, and
@@ -65,6 +65,12 @@ class LinearizabilityContext : VerifierContext {
         val actorId = executed[threadId]
         val actor = scenario[threadId][actorId]
         val expectedResult = results[threadId][actorId]
+        // Check whether the operation has been suspended and should be followed by cancellation
+        if (suspended[threadId]) {
+            return if (actor.cancelOnSuspension && expectedResult === Cancelled)
+                state.nextByCancellation(actor, tickets[threadId]).createContext(threadId)
+            else null
+        }
         // Try to make transition by the next actor from the current thread,
         // passing the ticket corresponding to the current thread.
         return state.next(actor, expectedResult, tickets[threadId])?.createContext(threadId)
@@ -78,7 +84,8 @@ class LinearizabilityContext : VerifierContext {
         nextTickets[threadId] = if (wasSuspended) ticket else NO_TICKET
         if (rf != null) { // remapping
             nextTickets.forEachIndexed { tid, ticket ->
-                if (tid != threadId && ticket != NO_TICKET) nextTickets[tid] = rf[ticket]
+                if (tid != threadId && ticket != NO_TICKET)
+                    nextTickets[tid] = rf[ticket]
             }
         }
         // update "suspended" statuses

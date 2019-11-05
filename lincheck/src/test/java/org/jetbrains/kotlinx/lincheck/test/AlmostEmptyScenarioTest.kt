@@ -43,7 +43,6 @@ class AlmostEmptyScenarioTest {
             fail("Should fail with AssertionError")
         } catch (e: AssertionError) {
             val m = e.message!!
-            println(m)
             assertFalse("Empty init/post parts should not be printed", m.contains(Regex("\\\\[\\s*\\\\]")))
             assertFalse("Empty init/post parts should not be printed", m.contains(Regex("Init")))
             assertFalse("Empty init/post parts should not be printed", m.contains(Regex("Post")))

@@ -22,12 +22,16 @@
 
 package org.jetbrains.kotlinx.lincheck.verifier
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
+import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.coroutines.*
-import kotlin.math.max
+import kotlin.math.*
+import kotlin.text.StringBuilder
 
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
@@ -52,7 +56,11 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(private val sequentialSpecification: Class<*>) {
+class LTS(sequentialSpecification: Class<*>) {
+    // we should transform the specification with `CancellabilitySupportClassTransformer`
+    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
+                                                    .loadClass(sequentialSpecification.name)!!
+
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
      * Equivalency relation among LTS states is defined by the [StateInfo] class.
@@ -66,10 +74,10 @@ class LTS(private val sequentialSpecification: Class<*>) {
      * Every state stores possible transitions([transitionsByRequests] and [transitionsByFollowUps]) by actors which are computed lazily
      * by the corresponding [next] requests ([nextByRequest] and [nextByFollowUp] respectively).
      */
-    inner class State(val seqToCreate: List<ActorWithTicket>) {
-        private val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
-
-        private val transitionsByFollowUps by lazy { mutableMapOf<ActorWithTicket, TransitionInfo>() }
+    inner class State(val seqToCreate: List<Operation>) {
+        internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
+        internal val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
+        internal val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
 
         /**
          * Computes or gets the existing transition from the current state by the given [actor].
@@ -79,27 +87,38 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
         private fun nextByRequest(actor: Actor, expectedResult: Result): TransitionInfo? {
             val transitionInfo = transitionsByRequests.computeIfAbsent(actor) {
-                generateNextState { instance, suspendedOperations, resumedTicketsWithResults ->
+                generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     val ticket = findFirstAvailableTicket(suspendedOperations, resumedTicketsWithResults)
-                    val requestOperation = ActorWithTicket(actor, ticket)
+                    val op = Operation(actor, ticket, REQUEST)
                     // Invoke the given operation to count the next transition.
-                    val result = requestOperation.invoke(instance, suspendedOperations, resumedTicketsWithResults)
-                    createTransition(requestOperation, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
+                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
+                    createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
             return if (transitionInfo.isLegalByRequest(expectedResult)) transitionInfo else null
         }
 
         private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
-            val transitionInfo = transitionsByFollowUps.computeIfAbsent(ActorWithTicket(actor, ticket)) { op ->
-                generateNextState { instance, suspendedOperations, resumedTicketsWithResults ->
+            val transitionInfo = transitionsByFollowUps.computeIfAbsent(ticket) {
+                generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     // Invoke the given operation to count the next transition.
-                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults)
+                    val op = Operation(actor, ticket, FOLLOW_UP)
+                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
                     createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
             if (transitionInfo.wasSuspended) error("Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported")
             return if (transitionInfo.isLegalByFollowUp(expectedResult)) transitionInfo else null
+        }
+
+        fun nextByCancellation(actor: Actor, ticket: Int): TransitionInfo = transitionsByCancellations.computeIfAbsent(ticket) {
+            generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
+                // Invoke the given operation to count the next transition.
+                val op = Operation(actor, ticket, OperationType.CANCELLATION)
+                val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
+                check(result === Cancelled)
+                createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
+            }
         }
 
         private fun TransitionInfo.isLegalByRequest(expectedResult: Result) =
@@ -118,29 +137,29 @@ class LTS(private val sequentialSpecification: Class<*>) {
         private inline fun <T> generateNextState(
             action: (
                 instance: Any,
-                suspendedActorWithTickets: MutableList<ActorWithTicket>,
-                resumedTicketsWithResults: MutableMap<Int, ResumedResult>
+                suspendedOperations: MutableList<Operation>,
+                resumedTicketsWithResults: MutableMap<Int, ResumedResult>,
+                continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
             ) -> T
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
             val instance = createInitialStateInstance()
-            val suspendedOperations = mutableListOf<ActorWithTicket>()
+            val suspendedOperations = mutableListOf<Operation>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
+            val continuationsMap = mutableMapOf<Operation, CancellableContinuation<*>>()
             try {
-                for (operation in seqToCreate) {
-                    operation.invoke(instance, suspendedOperations, resumedTicketsWithResults)
-                }
+                seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap) }
             } catch (e: Exception) {
                 throw  IllegalStateException(e)
             }
-            return action(instance, suspendedOperations, resumedTicketsWithResults)
+            return action(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
         }
 
         private fun createTransition(
-            actorWithTicket: ActorWithTicket,
+            actorWithTicket: Operation,
             result: Result,
             instance: Any,
-            suspendedActorWithTickets: List<ActorWithTicket>,
+            suspendedActorWithTickets: List<Operation>,
             resumedOperations: List<ResumptionInfo>
         ): TransitionInfo {
             val stateInfo = StateInfo(this, instance, suspendedActorWithTickets, resumedOperations)
@@ -165,35 +184,45 @@ class LTS(private val sequentialSpecification: Class<*>) {
         }
     }
 
-    private fun ActorWithTicket.invoke(
+    private fun Operation.invoke(
         externalState: Any,
-        suspendedActorWithTickets: MutableList<ActorWithTicket>,
-        resumedTicketsWithResults: MutableMap<Int, ResumedResult>
+        suspendedOperations: MutableList<Operation>,
+        resumedOperations: MutableMap<Int, ResumedResult>,
+        continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
     ): Result {
-        val prevResumedTickets = mutableListOf<Int>().also { it.addAll(resumedTicketsWithResults.keys) }
-        val res = if (resumedTicketsWithResults.containsKey(ticket)) {
-            // The given operation is a followUp available for execution.
-            val (cont, suspensionPointRes) = resumedTicketsWithResults[ticket]!!.contWithSuspensionPointRes
-            val finalRes = (
-                if (cont == null) suspensionPointRes // Resumed operation has no follow-up.
-                else {
-                    cont.resumeWith(suspensionPointRes)
-                    resumedTicketsWithResults[ticket]!!.contWithSuspensionPointRes.second
-                })
-            resumedTicketsWithResults.remove(ticket)
-            createLinCheckResult(finalRes, wasSuspended = true)
-        } else {
-            executeActor(externalState, actor, Completion(ticket, actor, resumedTicketsWithResults))
+        val prevResumedTickets = resumedOperations.keys.toMutableList()
+        storedLastCancellableCont = null
+        val res = when (type) {
+            REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations))
+            FOLLOW_UP -> {
+                val (cont, suspensionPointRes) = resumedOperations[ticket]!!.contWithSuspensionPointRes
+                val finalRes = (
+                    if (cont == null) suspensionPointRes // Resumed operation has no follow-up.
+                    else {
+                        cont.resumeWith(suspensionPointRes)
+                        resumedOperations[ticket]!!.contWithSuspensionPointRes.second
+                    })
+                resumedOperations.remove(ticket)
+                createLinCheckResult(finalRes, wasSuspended = true)
+            }
+            CANCELLATION -> {
+                check(continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancel()) { "Error, should be able to cancel" }
+                check(suspendedOperations.removeIf { it.actor == actor && it.ticket == ticket }) { "Should be found, something is going very wrong..." }
+                check(!resumedOperations.containsKey(ticket)) { "Cancelled operations should not be processed as the resumed ones" }
+                Cancelled
+            }
         }
         if (res === Suspended) {
+            val cont = storedLastCancellableCont
+            storedLastCancellableCont = null
+            if (cont !== null) continuationsMap[this] = cont
             // Operation suspended it's execution.
-            suspendedActorWithTickets.add(this)
-        } else {
-            resumedTicketsWithResults.forEach { resumedTicket, res ->
-                if (!prevResumedTickets.contains(resumedTicket)) {
-                    suspendedActorWithTickets.removeIf { it.ticket == resumedTicket }
-                    res.by = actor
-                }
+            suspendedOperations.add(this)
+        }
+        resumedOperations.forEach { (resumedTicket, res) ->
+            if (!prevResumedTickets.contains(resumedTicket)) {
+                suspendedOperations.removeIf { it.ticket == resumedTicket }
+                res.by = actor
             }
         }
         return res
@@ -202,8 +231,8 @@ class LTS(private val sequentialSpecification: Class<*>) {
     /**
      * Creates and stores the new LTS state or gets the one if already exists.
      */
-    private fun <T> StateInfo.intern(
-        curOperation: ActorWithTicket?,
+    private inline fun <T> StateInfo.intern(
+        curOperation: Operation?,
         block: (StateInfo, RemappingFunction?) -> T
     ): T {
         return if (stateInfos.containsKey(this)) {
@@ -240,7 +269,8 @@ class LTS(private val sequentialSpecification: Class<*>) {
         }
     }
 
-    private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction {
+    private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction? {
+        if (maxTicket == NO_TICKET) return null
         val rf = IntArray(maxTicket + 1) { NO_TICKET }
         // Remap tickets of suspended operations according the order of suspension.
         for (i in suspendedOperations.indices) {
@@ -255,7 +285,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
 
     private fun findFirstAvailableTicket(
-        suspendedActorWithTickets: List<ActorWithTicket>,
+        suspendedActorWithTickets: List<Operation>,
         resumedTicketsWithResults: MutableMap<Int, ResumedResult>
     ): Int {
         for (ticket in 0 until suspendedActorWithTickets.size + resumedTicketsWithResults.size) {
@@ -265,6 +295,30 @@ class LTS(private val sequentialSpecification: Class<*>) {
             }
         }
         return suspendedActorWithTickets.size + resumedTicketsWithResults.size
+    }
+
+    fun generateDotGraph(): String {
+        val builder = StringBuilder()
+        builder.appendln("digraph {")
+        builder.appendln("\"${initialState.hashCode()}\" [style=filled, fillcolor=green]")
+        builder.appendTransitions(initialState, IdentityHashMap())
+        builder.appendln("}")
+        return builder.toString()
+    }
+
+    private fun StringBuilder.appendTransitions(state: State, visitedStates: IdentityHashMap<State, Unit>) {
+        state.transitionsByRequests.forEach { actor, transition ->
+            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+            if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
+        }
+        state.transitionsByFollowUps.forEach { ticket, transition ->
+            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<F,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+            if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
+        }
+        state.transitionsByCancellations.forEach { ticket, transition ->
+            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<C,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+            if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
+        }
     }
 }
 
@@ -280,7 +334,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
 private class StateInfo(
     var state: State,
     val instance: Any,
-    val suspendedOperations: List<ActorWithTicket>,
+    val suspendedOperations: List<Operation>,
     val resumedOperations: List<ResumptionInfo>
 ) {
     override fun equals(other: Any?): Boolean {
@@ -298,8 +352,8 @@ private class StateInfo(
 
     val maxTicket: Int
         get() = max(
-            suspendedOperations.maxBy { it.ticket }?.ticket ?: 0,
-            resumedOperations.maxBy { it.resumedActorTicket }?.resumedActorTicket ?: 0
+            suspendedOperations.maxBy { it.ticket }?.ticket ?: NO_TICKET,
+            resumedOperations.maxBy { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
         )
 }
 
@@ -317,8 +371,11 @@ internal class VerifierInterceptor(
     ContinuationInterceptor {
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
         return Continuation(EmptyCoroutineContext) { res ->
-            resumedTicketsWithResults[ticket] =
-                ResumedResult(continuation as Continuation<Any?> to res).also { it.resumedActor = actor }
+            // write the result only if the operation has not been cancelled
+            if (!res.cancelled()) {
+                resumedTicketsWithResults[ticket] = ResumedResult(continuation as Continuation<Any?> to res)
+                    .also { it.resumedActor = actor }
+            }
         }
     }
 }
@@ -343,8 +400,9 @@ internal class Completion(
         get() = VerifierInterceptor(ticket, actor, resumedTicketsWithResults)
 
     override fun resumeWith(result: kotlin.Result<Any?>) {
-        resumedTicketsWithResults[ticket] =
-            ResumedResult(null to result).also { it.resumedActor = actor }
+        // write the result only if the operation has not been cancelled
+        if (!result.cancelled())
+            resumedTicketsWithResults[ticket] = ResumedResult(null to result).also { it.resumedActor = actor }
     }
 }
 
@@ -383,11 +441,15 @@ internal class Completion(
  * 3. [receive_request(ticket):res] // `receive` completes it's execution
  * ```
  */
-data class ActorWithTicket(
+data class Operation(
     val actor: Actor,
-    val ticket: Int
+    val ticket: Int,
+    val type: OperationType
 )
 
+enum class OperationType { REQUEST, FOLLOW_UP, CANCELLATION }
+
+// should be less than all tickets
 internal const val NO_TICKET = -1
 
 private data class ResumptionInfo(
@@ -419,7 +481,7 @@ class TransitionInfo(
      * Stores correspondence between tickets assigned to operations on the current way to this state.
      * and previously assigned tickets.
      */
-    val rf: RemappingFunction?, // TODO inline class?
+    val rf: RemappingFunction?, // TODO long + inline class
     /**
      * Transition result
      */
