@@ -1,6 +1,6 @@
 package org.jetbrains.kotlinx.lincheck
 
-import kotlin.coroutines.Continuation
+import kotlin.coroutines.*
 
 /*
  * #%L
@@ -38,7 +38,7 @@ import kotlin.coroutines.Continuation
  */
 sealed class Result {
     abstract val wasSuspended: Boolean
-    protected val wasSuspendedPrefix: String get() = (if (wasSuspended) "S + " else "")
+    protected val wasSuspendedPrefix: String get() = (if (wasSuspended) "SUSPENDED + " else "")
 }
 
 /**
@@ -63,12 +63,27 @@ object SuspendedVoidResult : Result() {
 
 private const val VOID = "void"
 
+object Cancelled : Result() {
+    override val wasSuspended get() = true
+    override fun toString() = wasSuspendedPrefix + "CANCELLED"
+}
+
 /**
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
  */
-data class ExceptionResult @JvmOverloads constructor(val tClazz: Class<out Throwable>?, override val wasSuspended: Boolean = false) : Result() {
-    override fun toString() = wasSuspendedPrefix + "${tClazz?.simpleName}"
+@Suppress("DataClassPrivateConstructor")
+data class ExceptionResult private constructor(val tClazz: Class<out Throwable>, override val wasSuspended: Boolean) : Result() {
+    override fun toString() = wasSuspendedPrefix + tClazz.simpleName
+
+    companion object {
+        @Suppress("UNCHECKED_CAST")
+        @JvmOverloads
+        fun create(tClazz: Class<out Throwable>, wasSuspended: Boolean = false) = ExceptionResult(tClazz.normalize(), wasSuspended)
+    }
 }
+// for byte-code generation
+@JvmSynthetic
+fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet

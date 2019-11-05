@@ -30,7 +30,7 @@ import org.junit.Test
 import java.util.concurrent.CancellationException
 
 class BufferedChannelCustomTest : VerifierState() {
-    val ch = Channel<Int>(3)
+    private val ch = Channel<Int>(3)
 
     override fun extractState(): Pair<Any, Boolean> {
         val state = mutableListOf<Any>()
@@ -138,7 +138,7 @@ class BufferedChannelCustomTest : VerifierState() {
                 operation(actor(r), ValueResult(2))
                 operation(actor(r), Suspended)
             }
-        }, expected = true)
+        }, true)
     }
 
     @Test
@@ -153,6 +153,6 @@ class BufferedChannelCustomTest : VerifierState() {
                     operation(actor(s, 5), ValueResult("Cancelled(5)"))
                 }
             }
-        }, expected = true)
+        }, true)
     }
 }

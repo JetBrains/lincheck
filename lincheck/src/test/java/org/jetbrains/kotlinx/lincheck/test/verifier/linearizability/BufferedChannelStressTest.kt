@@ -21,42 +21,32 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import kotlinx.coroutines.channels.Channel
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import kotlinx.coroutines.channels.*
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.junit.*
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-@StressCTest(verifier = LinearizabilityVerifier::class)
-class BufferedChannelStressTest : VerifierState() {
-    val ch = Channel<Int>(2)
+@StressCTest(actorsPerThread = 3, sequentialSpecification = SequentiaBuffered2IntChannel::class)
+class BufferedChannelStressTest {
+    private val c = Channel<Int>(2)
+
+    @Operation(cancellableOnSuspension = false)
+    suspend fun send(@Param(name = "value") value: Int) = c.send(value)
+
+    @Operation(cancellableOnSuspension = false)
+    suspend fun receive() = c.receive()
 
     @Operation
-    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+    fun poll() = c.poll()
 
     @Operation
-    suspend fun receive() = ch.receive()
-
-    @Operation
-    fun poll() = ch.poll()
-
-    @Operation
-    fun offer(@Param(name = "value") value: Int) = ch.offer(value)
+    fun offer(@Param(name = "value") value: Int) = c.offer(value)
 
     @Test
     fun test() = LinChecker.check(BufferedChannelStressTest::class.java)
-
-    override fun extractState(): Any {
-        val state = mutableListOf<Any>()
-        while (true) {
-            val x = poll() ?: break // no elements
-            state.add(x)
-        }
-        return state
-    }
 }
+
+class SequentiaBuffered2IntChannel : SequentialIntChannel(capacity = 2)

@@ -81,7 +81,8 @@ public class TestThreadExecutionGenerator {
     private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, new Type[] {OBJECT_TYPE});
 
     private static final Type EXCEPTION_RESULT_TYPE = Type.getType(ExceptionResult.class);
-    private static final Method EXCEPTION_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, new Type[] {CLASS_TYPE});
+    private static final Type RESULT_KT_TYPE = Type.getType(ResultKt.class);
+    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = Type.getType(Result[].class);
 
@@ -298,17 +299,15 @@ public class TestThreadExecutionGenerator {
     }
 
     private static void storeExceptionResultFromThrowable(GeneratorAdapter mv, int resLocal, int iLocal) {
-        int eLocal = mv.newLocal(THROWABLE_TYPE);
+        mv.invokeVirtual(OBJECT_TYPE, OBJECT_GET_CLASS);
+        int eLocal = mv.newLocal(CLASS_TYPE);
         mv.storeLocal(eLocal);
         mv.loadLocal(resLocal);
         mv.loadLocal(iLocal);
-        //Load exception result type to create new instance of unprocessed exception result
-        mv.newInstance(EXCEPTION_RESULT_TYPE);
-        mv.dup();
-        // Load exception result
+        // Create exception result instance
         mv.loadLocal(eLocal);
-        mv.invokeVirtual(OBJECT_TYPE, OBJECT_GET_CLASS);
-        mv.invokeConstructor(EXCEPTION_RESULT_TYPE, EXCEPTION_RESULT_TYPE_CONSTRUCTOR);
+        mv.invokeStatic(RESULT_KT_TYPE, RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD);
+        mv.checkCast(RESULT_TYPE);
         mv.arrayStore(RESULT_TYPE);
     }
 

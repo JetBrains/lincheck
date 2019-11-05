@@ -21,22 +21,19 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
+import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlinx.coroutines.channels.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+import org.junit.*
 
-
+@LogLevel(LoggingLevel.DEBUG)
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-@StressCTest(verifier = LinearizabilityVerifier::class, actorsAfter = 0)
-class RendezvousChannelStressTest : VerifierState() {
-
-    val ch = Channel<Int>()
+@StressCTest(sequentialSpecification = SequentialRendezvousIntChannel::class, verifier = LinearizabilityVerifier::class)
+class RendezvousChannelStressTest {
+    private val ch = Channel<Int>()
 
     @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
     suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
@@ -52,6 +49,6 @@ class RendezvousChannelStressTest : VerifierState() {
 
     @Test
     fun test() = LinChecker.check(RendezvousChannelStressTest::class.java)
-
-    override fun extractState() = ch.isClosedForSend || ch.isClosedForReceive
 }
+
+class SequentialRendezvousIntChannel : SequentialIntChannel(capacity = 0)

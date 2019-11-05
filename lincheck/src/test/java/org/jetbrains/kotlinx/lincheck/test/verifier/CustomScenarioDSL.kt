@@ -55,34 +55,34 @@ fun verify(
     testClass: Class<*>,
     verifierClass: Class<out Verifier>,
     block: ExecutionBuilder.() -> Unit,
-    expected: Boolean
+    correct: Boolean
 ) {
     val (scenario, results) = scenarioWithResults(block)
     val verifier = verifierClass.getConstructor(ExecutionScenario::class.java, Class::class.java)
         .newInstance(scenario, testClass)
     val res = verifier.verifyResults(results)
-    assert(res == expected)
+    assert(res == correct)
 }
 
 fun scenarioWithResults(
     block: ExecutionBuilder.() -> Unit
 ): Pair<ExecutionScenario, ExecutionResult> = ExecutionBuilder().apply(block).buildScenarioWithResults()
 
-fun actor(f: KFunction<*>, vararg args: Any?): Actor {
-    val method = f.javaMethod
+fun actor(function: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false): Actor {
+    val method = function.javaMethod
         ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
     require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
     return Actor(
         method = method,
         arguments = args.toList(),
-        handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList()
+        handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList(),
+        cancelOnSuspension = cancelOnSuspension
     )
 }
 
 data class Operation(val actor: Actor, val result: Result)
 
 class ThreadExecution : ArrayList<Operation>() {
-
     fun operation(actor: Actor, result: Result) {
         add(Operation(actor, result))
     }

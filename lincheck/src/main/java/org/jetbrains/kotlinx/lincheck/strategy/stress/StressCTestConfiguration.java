@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
  * Configuration for {@link StressStrategy stress} strategy.
  */
 public class StressCTestConfiguration extends CTestConfiguration {
-    public static final int DEFAULT_INVOCATIONS = 1_000;
+    public static final int DEFAULT_INVOCATIONS = 10_000;
 
     public final int invocationsPerIteration;
     public final boolean addWaits;

@@ -104,7 +104,7 @@ public class CTestStructure {
                 }
                 // Get list of handled exceptions if they are presented
                 List<Class<? extends Throwable>> handledExceptions = Arrays.asList(operationAnn.handleExceptionsAsResult());
-                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, operationAnn.runOnce());
+                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, operationAnn.runOnce(), operationAnn.cancellableOnSuspension());
                 actorGenerators.add(actorGenerator);
                 // Get list of groups and add this operation to specified ones
                 String opGroup = operationAnn.group();

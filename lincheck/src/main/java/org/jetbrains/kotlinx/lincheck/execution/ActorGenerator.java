@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.execution;
  * #L%
  */
 
+import kotlin.random.Random;
 import org.jetbrains.kotlinx.lincheck.Actor;
 
 import org.jetbrains.kotlinx.lincheck.ActorKt;
@@ -40,19 +41,21 @@ public class ActorGenerator {
     private final List<ParameterGenerator<?>> parameterGenerators;
     private final List<Class<? extends Throwable>> handledExceptions;
     private final boolean useOnce;
+    private final boolean cancellableOnSuspension;
 
     public ActorGenerator(Method method, List<ParameterGenerator<?>> parameterGenerators,
-        List<Class<? extends Throwable>> handledExceptions, boolean useOnce)
+        List<Class<? extends Throwable>> handledExceptions, boolean useOnce, boolean cancellableOnSuspension)
     {
         this.method = method;
         this.parameterGenerators = parameterGenerators;
         this.handledExceptions = handledExceptions;
         this.useOnce = useOnce;
+        this.cancellableOnSuspension = cancellableOnSuspension && isSuspendable();
     }
 
     public Actor generate() {
         List<Object> parameters = parameterGenerators.stream().map(ParameterGenerator::generate).collect(Collectors.toList());
-        return new Actor(method, parameters, handledExceptions);
+        return new Actor(method, parameters, handledExceptions, cancellableOnSuspension & Random.Default.nextBoolean());
     }
 
     public boolean useOnce() {

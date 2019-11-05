@@ -21,15 +21,16 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.objectweb.asm.*
 import java.util.concurrent.*
-import java.util.concurrent.Executors.newFixedThreadPool
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.Executors.*
+import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.coroutines.intrinsics.*
 
 private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<kotlin.Result<Any?>, Continuation<Any?>>>
 
@@ -75,11 +76,14 @@ open class ParallelThreadsRunner(
             get() = ParallelThreadRunnerInterceptor(resWithCont)
 
         override fun resumeWith(result: kotlin.Result<Any?>) {
-            // decrement completed or suspended threads only if continuation was not intercepted,
-            // otherwise it was already decremented before writing resWithCont
-            resWithCont.get() ?: completedOrSuspendedThreads.decrementAndGet()
-            // write method's final result
-            suspensionPointResults[threadId] = createLinCheckResult(result, wasSuspended = true)
+            // decrement completed or suspended threads only if the operation was not cancelled and
+            // the continuation was not intercepted; it was already decremented before writing `resWithCont` otherwise
+            if (!result.cancelled()) {
+                if (resWithCont.get() === null)
+                    completedOrSuspendedThreads.decrementAndGet()
+                // write function's final result
+                suspensionPointResults[threadId] = createLinCheckResult(result, wasSuspended = true)
+            }
         }
     }
 
@@ -94,13 +98,16 @@ open class ParallelThreadsRunner(
     ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
         override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
             return Continuation(EmptyCoroutineContext) { result ->
-                completedOrSuspendedThreads.decrementAndGet()
-                resWithCont.set(result to continuation as Continuation<Any?>)
+                // decrement completed or suspended threads only if the operation was not cancelled
+                if (!result.cancelled()) {
+                    completedOrSuspendedThreads.decrementAndGet()
+                    resWithCont.set(result to continuation as Continuation<Any?>)
+                }
             }
         }
     }
 
-    private fun isThreadCompleted(threadId: Int, actorId: Int) = actorId == scenario.parallelExecution[threadId].size - 1
+    private fun isLastActor(threadId: Int, actorId: Int) = actorId == scenario.parallelExecution[threadId].size - 1
 
     private fun reset() {
         testInstance = testClass.newInstance()
@@ -119,38 +126,41 @@ open class ParallelThreadsRunner(
      */
     @Suppress("unused")
     fun processInvocationResult(res: Any?, threadId: Int, actorId: Int): Result {
-        val finalResult: Result
-        val completion = completions[threadId][actorId]
-        if (res === COROUTINE_SUSPENDED) {
+        val finalResult = if (res === COROUTINE_SUSPENDED) {
+            val actor = scenario.parallelExecution[threadId][actorId]
+            val t = Thread.currentThread() as TestThread
+            val cont = t.cont.also { t.cont = null }
+            if (actor.cancelOnSuspension && cont !== null && cont.cancel()) Cancelled
+            else waitAndInvokeFollowUp(threadId, actorId)
+        } else createLinCheckResult(res)
+        if (isLastActor(threadId, actorId) && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()
-            // Thread was suspended -> if suspended method call has follow-up after this suspension point
-            // then wait for result of this suspension point
-            // and continuation written by resuming thread to be executed by this thread,
-            // or final result written by the resuming thread
-            while (completion.resWithCont.get() === null && suspensionPointResults[threadId] === NoResult) {
-                if (completedOrSuspendedThreads.get() == scenario.threads) {
-                    // all threads were suspended or completed
-                    suspensionPointResults[threadId] = NoResult
-                    return Suspended
-                }
-            }
-            if (suspensionPointResults[threadId] !== NoResult) {
-                // Result of the suspension point equals to the final method call result
-                // completion.resumeWith was called in the resuming thread, final result is written
-                finalResult = suspensionPointResults[threadId]
-            } else {
-                // Suspended thread got result of the suspension point and continuation to resume
-                val resumedValue = completion.resWithCont.get().first
-                val cont = completion.resWithCont.get().second
-                cont.resumeWith(resumedValue)
-                finalResult = suspensionPointResults[threadId]
-            }
-        } else {
-            finalResult = createLinCheckResult(res)
-        }
-        if (isThreadCompleted(threadId, actorId)) completedOrSuspendedThreads.incrementAndGet()
         suspensionPointResults[threadId] = NoResult
         return finalResult
+    }
+
+    private fun waitAndInvokeFollowUp(threadId: Int, actorId: Int): Result {
+        completedOrSuspendedThreads.incrementAndGet()
+        // Tf the suspended method call has a follow-up part after this suspension point,
+        // then wait for the resuming thread to write a result of this suspension point
+        // as well as the continuation to be executed by this thread;
+        // wait for the final result of the method call otherwise.
+        val completion = completions[threadId][actorId]
+        while (completion.resWithCont.get() === null && suspensionPointResults[threadId] === NoResult) {
+            if (completedOrSuspendedThreads.get() == scenario.threads) {
+                // all threads were suspended or completed
+                suspensionPointResults[threadId] = NoResult
+                return Suspended
+            }
+        }
+        // Check whether the result of the suspension point with the continuation has been stored
+        // by the resuming thread, and invoke the follow-up part in this case
+        if (completion.resWithCont.get() !== null) {
+            // Suspended thread got result of the suspension point and continuation to resume
+            val resumedValue = completion.resWithCont.get().first
+            completion.resWithCont.get().second.resumeWith(resumedValue)
+        }
+        return suspensionPointResults[threadId]
     }
 
     override fun run(): ExecutionResult? {
@@ -158,7 +168,7 @@ open class ParallelThreadsRunner(
         val initResults = scenario.initExecution.map { initActor -> executeActor(testInstance, initActor) }
         val parallelResults = testThreadExecutions.map { executor.submit(it) }.map { future ->
             try {
-                future.get(1, TimeUnit.SECONDS).toList()
+                future.get(10, TimeUnit.SECONDS).toList()
             } catch (e: TimeoutException) {
                 val stackTraces = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread }
                 val msgBuilder = StringBuilder()
@@ -200,8 +210,15 @@ open class ParallelThreadsRunner(
         executor.shutdown()
     }
 
+    override fun needsTransformation() = true
+
+    override fun createTransformer(cv: ClassVisitor): ClassVisitor {
+        return CancellabilitySupportClassTransformer(cv)
+    }
+
      // For [TestThreadExecution] instances
     class TestThread(r: Runnable) : Thread(r) {
         var iThread: Int = 0
+        var cont: CancellableContinuation<*>? = null
     }
 }
