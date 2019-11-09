@@ -1,41 +1,42 @@
-package org.jetbrains.kotlinx.lincheck.paramgen
-
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator.UNIQUE_MODIFIER
-import kotlin.random.Random
-
-/*
+/*-
  * #%L
  * Lincheck
  * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
+ * Copyright (C) 2019 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package org.jetbrains.kotlinx.lincheck.paramgen
+
+import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator.DISTINCT_MODIFIER
+import kotlin.random.Random
+
+private const val DEFAULT_BEGIN = -10
+private const val DEFAULT_END = 10
 
 class IntGen(configuration: String) : ParameterGenerator<Int> {
-
     private val genImpl: IntParameterGenerator
 
     init {
-        val args = configuration.replace("\\s".toRegex(), "").split(":".toRegex()).filter { it.isNotEmpty() }
+        val args = tokenizeConfiguration(configuration)
         genImpl = when {
-            args.isEmpty() -> IntRangeGen(DEFAULT_BEGIN..DEFAULT_END)
-            args.size == 1 && args[0] == UNIQUE_MODIFIER -> IntUniqueGen()
-            args.size == 2 -> IntRangeGen(args[0].toInt()..args[1].toInt())
-            else -> throw IllegalArgumentException("There should be zero arguments or '$UNIQUE_MODIFIER' " +
+            args.isEmpty() -> RangeIntGen(DEFAULT_BEGIN..DEFAULT_END)
+            args.size == 1 && args[0] == DISTINCT_MODIFIER -> DistinctIntGen()
+            args.size == 2 -> RangeIntGen(args[0].toInt()..args[1].toInt())
+            else -> throw IllegalArgumentException("There should be zero arguments or '$DISTINCT_MODIFIER' " +
                     "or two arguments (begin and end) separated by colon")
         }
     }
@@ -50,7 +51,7 @@ class IntGen(configuration: String) : ParameterGenerator<Int> {
         fun checkRange(min: Int, max: Int, type: String)
     }
 
-    private class IntRangeGen(val range: IntRange) : IntParameterGenerator {
+    private class RangeIntGen(val range: IntRange) : IntParameterGenerator {
         private val random = Random(0)
 
         override fun generate(): Int = range.random(random)
@@ -62,7 +63,7 @@ class IntGen(configuration: String) : ParameterGenerator<Int> {
         }
     }
 
-    private class IntUniqueGen : IntParameterGenerator {
+    private class DistinctIntGen : IntParameterGenerator {
         private var nextToGenerate = 0
         private var maxValue = Int.MAX_VALUE
         private var type = ""
@@ -82,9 +83,6 @@ class IntGen(configuration: String) : ParameterGenerator<Int> {
             this.type = type
         }
     }
-
-    companion object {
-        private const val DEFAULT_BEGIN = -10
-        private const val DEFAULT_END = 10
-    }
 }
+
+internal fun tokenizeConfiguration(configuration: String) = configuration.replace("\\s".toRegex(), "").split(":".toRegex()).filter { it.isNotEmpty() }
