@@ -45,7 +45,8 @@ class DoubleGenTest {
 
     @Test
     fun generateWithZeroStep() {
-        DoubleGen("30:0:40").generate()
+        // for zero step any number in range is possible
+        assertTrue(DoubleGen("30:0:40").generate() in 30.0..40.0)
     }
 
 

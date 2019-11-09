@@ -52,7 +52,7 @@ class DoubleGen(configuration: String) : ParameterGenerator<Double> {
 
         override fun generate(): Double {
             val delta = range.endInclusive - range.start
-            if (step == 0.0) // step is not defined
+            if (step == 0.0) // step is not defined => any number in range is possible
                 return range.start + delta * random.nextDouble()
             val maxSteps = (delta / step).toInt()
             return range.start + step * random.nextInt(maxSteps + 1)
