@@ -39,7 +39,7 @@ class DoubleGen(configuration: String) : ParameterGenerator<Double> {
             args.size == 2 -> RangeDoubleGen(args[0].toDouble()..args[1].toDouble(), DEFAULT_STEP)
             args.size == 3 -> RangeDoubleGen(args[0].toDouble()..args[2].toDouble(), args[1].toDouble())
             else -> throw IllegalArgumentException("There should be zero arguments or '$DISTINCT_MODIFIER' " +
-                    "or two (begin and end) or three (begin, step and end) arguments separated by comma" )
+                    "or two (begin and end) or three (begin, step and end) arguments separated with colon" )
         }
     }
 

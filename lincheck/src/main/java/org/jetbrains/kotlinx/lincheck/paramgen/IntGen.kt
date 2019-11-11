@@ -37,7 +37,7 @@ class IntGen(configuration: String) : ParameterGenerator<Int> {
             args.size == 1 && args[0] == DISTINCT_MODIFIER -> DistinctIntGen()
             args.size == 2 -> RangeIntGen(args[0].toInt()..args[1].toInt())
             else -> throw IllegalArgumentException("There should be zero arguments or '$DISTINCT_MODIFIER' " +
-                    "or two arguments (begin and end) separated by colon")
+                    "or two arguments (begin and end) separated with colon")
         }
     }
 
@@ -85,4 +85,4 @@ class IntGen(configuration: String) : ParameterGenerator<Int> {
     }
 }
 
-internal fun tokenizeConfiguration(configuration: String) = configuration.replace("\\s".toRegex(), "").split(":".toRegex()).filter { it.isNotEmpty() }
+internal fun tokenizeConfiguration(configuration: String) = configuration.replace("\\s".toRegex(), "").split("[:\\s]".toRegex()).filter(String::isNotEmpty)
