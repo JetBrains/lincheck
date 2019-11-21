@@ -22,8 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.Actor;
-import org.jetbrains.kotlinx.lincheck.Reporter;
+import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
@@ -61,13 +60,15 @@ public class StressStrategy extends Strategy {
             }
         }
         // Create runner
-        Phaser phaser = new Phaser(testCfg.threads);
         runner = new ParallelThreadsRunner(scenario, this, testClass, waits) {
             @Override
             public void onStart(int iThread) {
                 super.onStart(iThread);
                 uninitializedThreads.decrementAndGet(); // this thread has finished initialization
-                while (uninitializedThreads.get() != 0) {} // wait for other threads to start
+                // wait for other threads to start
+                for (int i = 1; uninitializedThreads.get() != 0; i++) {
+                   if (i % 10_000_000 == 0)  Thread.yield();
+                }
             }
         };
     }

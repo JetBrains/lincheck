@@ -146,12 +146,14 @@ open class ParallelThreadsRunner(
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.
         val completion = completions[threadId][actorId]
+        var i = 1
         while (completion.resWithCont.get() === null && suspensionPointResults[threadId] === NoResult) {
+            // Check whether the scenario is completed and the current suspended operation cannot be resumed.
             if (completedOrSuspendedThreads.get() == scenario.threads) {
-                // all threads were suspended or completed
                 suspensionPointResults[threadId] = NoResult
                 return Suspended
             }
+            if (i++ % 10_000_000 == 0) Thread.yield()
         }
         // Check whether the result of the suspension point with the continuation has been stored
         // by the resuming thread, and invoke the follow-up part in this case
