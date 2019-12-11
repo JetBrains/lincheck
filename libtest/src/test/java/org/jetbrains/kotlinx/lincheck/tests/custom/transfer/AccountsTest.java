@@ -22,23 +22,20 @@ package org.jetbrains.kotlinx.lincheck.tests.custom.transfer;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.annotations.*;
+import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.annotations.Param;
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import tests.custom.transfer.Accounts;
-import tests.custom.transfer.AccountsWrong1;
-import tests.custom.transfer.AccountsWrong2;
-import tests.custom.transfer.AccountsWrong3;
-import tests.custom.transfer.AccountsWrong4;
+import org.jetbrains.kotlinx.lincheck.annotations.*;
+import org.jetbrains.kotlinx.lincheck.paramgen.*;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
+import org.junit.*;
+import org.junit.runner.*;
+import org.junit.runners.*;
+import tests.custom.transfer.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Supplier;
+import java.util.*;
+import java.util.function.*;
 
 @RunWith(Parameterized.class)
 public class AccountsTest {
@@ -58,11 +55,11 @@ public class AccountsTest {
         AccountsTest.accountCreator = accountCreator;
     }
 
-    @StressCTest(threads = 3, requireStateEquivalenceImplCheck = false)
+    @StressCTest(threads = 3, actorsPerThread = 3)
     @Param(name = "id", gen = IntGen.class, conf = "1:4")
     @Param(name = "amount", gen = IntGen.class)
-    public static class AccountsLinearizabilityTest {
-        private Accounts acc = accountCreator.get();
+    public static class AccountsLinearizabilityTest extends VerifierState {
+        private final Accounts acc = accountCreator.get();
 
         @Operation(params = {"id"})
         public int getAmount(int key) {
@@ -76,14 +73,23 @@ public class AccountsTest {
 
         @Operation
         public void transfer(@Param(name = "id") int from, @Param(name = "id") int to,
-            @Param(name = "amount") int amount)
+                             @Param(name = "amount") int amount)
         {
             acc.transfer(from, to, amount);
+        }
+
+        @NotNull
+        @Override
+        protected Object extractState() {
+            List<Integer> amounts = new ArrayList<>();
+            for (int id = 1; id <= 4; id++)
+                amounts.add(getAmount(id));
+            return amounts;
         }
     }
 
     @Test(expected = AssertionError.class)
-    public void test() throws Exception {
+    public void test() {
         LinChecker.check(AccountsLinearizabilityTest.class);
     }
 }
