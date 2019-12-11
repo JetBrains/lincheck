@@ -125,14 +125,16 @@ class LTS(sequentialSpecification: Class<*>) {
             // Allow transition with a suspended result
             // regardless whether the operation was suspended during test running or not,
             // thus allowing elimination of interblocking operations in the implementation.
-            result == expectedResult || wasSuspended
+            result == expectedResult || (expectedResult != NoResult && result == Suspended)
 
 
         private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result) =
+            // We allow extra suspensions since the dual data structures formalism is too strict in this place
             (result == expectedResult) ||
-            (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value && !expectedResult.wasSuspended) ||
-            (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz && !expectedResult.wasSuspended) ||
-            (expectedResult == VoidResult && result == SuspendedVoidResult)
+            (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value) ||
+            (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz) ||
+            (result == SuspendedVoidResult && expectedResult == VoidResult) ||
+            (result == VoidResult && expectedResult == SuspendedVoidResult)
 
         private inline fun <T> generateNextState(
             action: (
