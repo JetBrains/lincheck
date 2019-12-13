@@ -78,7 +78,7 @@ open class ParallelThreadsRunner(
         override fun resumeWith(result: kotlin.Result<Any?>) {
             // decrement completed or suspended threads only if the operation was not cancelled and
             // the continuation was not intercepted; it was already decremented before writing `resWithCont` otherwise
-            if (!result.cancelled()) {
+            if (!result.cancelledByLincheck()) {
                 if (resWithCont.get() === null)
                     completedOrSuspendedThreads.decrementAndGet()
                 // write function's final result
@@ -99,7 +99,7 @@ open class ParallelThreadsRunner(
         override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
             return Continuation(EmptyCoroutineContext) { result ->
                 // decrement completed or suspended threads only if the operation was not cancelled
-                if (!result.cancelled()) {
+                if (!result.cancelledByLincheck()) {
                     completedOrSuspendedThreads.decrementAndGet()
                     resWithCont.set(result to continuation as Continuation<Any?>)
                 }
@@ -130,7 +130,7 @@ open class ParallelThreadsRunner(
             val actor = scenario.parallelExecution[threadId][actorId]
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cont.cancel()) Cancelled
+            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) Cancelled
             else waitAndInvokeFollowUp(threadId, actorId)
         } else createLinCheckResult(res)
         if (isLastActor(threadId, actorId) && finalResult !== Suspended)

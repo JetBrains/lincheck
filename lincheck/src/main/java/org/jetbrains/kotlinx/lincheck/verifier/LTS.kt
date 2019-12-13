@@ -208,7 +208,7 @@ class LTS(sequentialSpecification: Class<*>) {
                 createLinCheckResult(finalRes, wasSuspended = true)
             }
             CANCELLATION -> {
-                check(continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancel()) { "Error, should be able to cancel" }
+                check(continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancelByLincheck()) { "Error, should be able to cancel" }
                 check(suspendedOperations.removeIf { it.actor == actor && it.ticket == ticket }) { "Should be found, something is going very wrong..." }
                 check(!resumedOperations.containsKey(ticket)) { "Cancelled operations should not be processed as the resumed ones" }
                 Cancelled
@@ -374,7 +374,7 @@ internal class VerifierInterceptor(
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
         return Continuation(EmptyCoroutineContext) { res ->
             // write the result only if the operation has not been cancelled
-            if (!res.cancelled()) {
+            if (!res.cancelledByLincheck()) {
                 resumedTicketsWithResults[ticket] = ResumedResult(continuation as Continuation<Any?> to res)
                     .also { it.resumedActor = actor }
             }
@@ -403,7 +403,7 @@ internal class Completion(
 
     override fun resumeWith(result: kotlin.Result<Any?>) {
         // write the result only if the operation has not been cancelled
-        if (!result.cancelled())
+        if (!result.cancelledByLincheck())
             resumedTicketsWithResults[ticket] = ResumedResult(null to result).also { it.resumedActor = actor }
     }
 }

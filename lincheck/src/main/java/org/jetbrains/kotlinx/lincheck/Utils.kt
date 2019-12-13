@@ -175,10 +175,14 @@ internal operator fun ExecutionResult.set(threadId: Int, actorId: Int, value: Re
     else -> parallelResults[threadId - 1][actorId] = value
 }
 
+fun <T> CancellableContinuation<T>.cancelByLincheck() = cancel(cancellationByLincheckException)
+
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
  */
-fun <T> kotlin.Result<T>.cancelled() = isFailure && exceptionOrNull() is CancellationException
+fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
+
+private val cancellationByLincheckException = Exception("Cancelled by lincheck")
 
 object CancellableContinuationHolder {
     var storedLastCancellableCont: CancellableContinuation<*>? = null
