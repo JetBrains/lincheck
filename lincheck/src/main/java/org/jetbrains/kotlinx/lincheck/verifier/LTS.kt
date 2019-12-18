@@ -125,7 +125,7 @@ class LTS(sequentialSpecification: Class<*>) {
             // Allow transition with a suspended result
             // regardless whether the operation was suspended during test running or not,
             // thus allowing elimination of interblocking operations in the implementation.
-            result == expectedResult || (expectedResult != NoResult && result == Suspended)
+            isLegalByFollowUp(expectedResult) || (expectedResult != NoResult && result == Suspended)
 
 
         private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result) =
