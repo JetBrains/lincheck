@@ -23,17 +23,13 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress;
  */
 
 import org.jetbrains.kotlinx.lincheck.*;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner;
-import org.jetbrains.kotlinx.lincheck.runner.Runner;
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
+import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.kotlinx.lincheck.runner.*;
+import org.jetbrains.kotlinx.lincheck.strategy.*;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * This strategy
@@ -46,7 +42,6 @@ public class StressStrategy extends Strategy {
     private final Runner runner;
 
     private final List<int[]> waits;
-    private final AtomicInteger uninitializedThreads = new AtomicInteger(0); // for threads synchronization
 
     public StressStrategy(Class<?> testClass, ExecutionScenario scenario,
                           Verifier verifier, StressCTestConfiguration testCfg, Reporter reporter) {
@@ -60,17 +55,7 @@ public class StressStrategy extends Strategy {
             }
         }
         // Create runner
-        runner = new ParallelThreadsRunner(scenario, this, testClass, waits) {
-            @Override
-            public void onStart(int iThread) {
-                super.onStart(iThread);
-                uninitializedThreads.decrementAndGet(); // this thread has finished initialization
-                // wait for other threads to start
-                for (int i = 1; uninitializedThreads.get() != 0; i++) {
-                   if (i % 10_000_000 == 0)  Thread.yield();
-                }
-            }
-        };
+        runner = new ParallelThreadsRunner(scenario, this, testClass, waits);
     }
 
     @Override
@@ -87,7 +72,6 @@ public class StressStrategy extends Strategy {
                         }
                     }
                 }
-                uninitializedThreads.set(scenario.parallelExecution.size()); // reinit synchronization
                 verifyResults(runner.run());
             }
         } finally {
