@@ -60,6 +60,10 @@ open class ParallelThreadsRunner(
 
     private var suspensionPointResults = MutableList<Result>(scenario.threads) { NoResult }
 
+    private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
+    private var spinningTimeBeforeYield = 50_000 // # of loop cycles
+    private var yieldInvokedInOnStart = false
+
     /**
      * Passed as continuation to invoke the suspendable actor from [threadId].
      *
@@ -115,6 +119,14 @@ open class ParallelThreadsRunner(
         suspensionPointResults = MutableList(scenario.threads) { NoResult }
         completedOrSuspendedThreads.set(0)
         completions.forEach { it.forEach { it.resWithCont.set(null) } }
+        uninitializedThreads.set(scenario.threads)
+        // update `spinningTimeBeforeYield` adaptively
+        if (yieldInvokedInOnStart) {
+            spinningTimeBeforeYield = (spinningTimeBeforeYield + 1) / 2
+            yieldInvokedInOnStart = false
+        } else {
+            spinningTimeBeforeYield = (spinningTimeBeforeYield * 2).coerceAtMost(MAX_SPINNING_TIME_BEFORE_YIELD)
+        }
     }
 
     /**
@@ -153,7 +165,7 @@ open class ParallelThreadsRunner(
                 suspensionPointResults[threadId] = NoResult
                 return Suspended
             }
-            if (i++ % 10_000_000 == 0) Thread.yield()
+            if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
         }
         // Check whether the result of the suspension point with the continuation has been stored
         // by the resuming thread, and invoke the follow-up part in this case
@@ -205,6 +217,16 @@ open class ParallelThreadsRunner(
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         (Thread.currentThread() as TestThread).iThread = iThread
+        uninitializedThreads.decrementAndGet() // this thread has finished initialization
+        // wait for other threads to start
+        var i = 1
+        while (uninitializedThreads.get() != 0) {
+            if (i % spinningTimeBeforeYield == 0) {
+                yieldInvokedInOnStart = true
+                Thread.yield()
+            }
+            i++
+        }
     }
 
     override fun close() {
@@ -224,3 +246,5 @@ open class ParallelThreadsRunner(
         var cont: CancellableContinuation<*>? = null
     }
 }
+
+private const val MAX_SPINNING_TIME_BEFORE_YIELD = 10_000_000
