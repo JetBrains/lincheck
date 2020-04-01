@@ -33,10 +33,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+
+import static java.util.Arrays.asList;
 
 public class TestThreadExecutionHelperTest {
     private Runner runner;
@@ -60,68 +61,77 @@ public class TestThreadExecutionHelperTest {
     @Test
     public void testBase() throws Exception {
         TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
-            Arrays.asList(
-                new Actor(Queue.class.getMethod("add", Object.class), Arrays.asList(1), Collections.emptyList()),
-                new Actor(Queue.class.getMethod("add", Object.class), Arrays.asList(2), Collections.emptyList()),
+            asList(
+                new Actor(Queue.class.getMethod("add", Object.class), asList(1), Collections.emptyList()),
+                new Actor(Queue.class.getMethod("add", Object.class), asList(2), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("element"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("peek"), Collections.emptyList(), Collections.emptyList())
             ), Collections.emptyList(), false, false);
         ex.testInstance = new ArrayDeque<>();
+        ex.results = new Result[5];
+        ex.run();
         Assert.assertArrayEquals(new Result[] {
             new ValueResult(true),
             new ValueResult(true),
             new ValueResult(1),
             new ValueResult(2),
             new ValueResult(2)
-        }, ex.call());
+        }, ex.results);
     }
 
     @Test(expected = NoSuchElementException.class)
     public void testGlobalException() throws Exception {
         TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
-            Arrays.asList(
-                new Actor(Queue.class.getMethod("add", Object.class), Arrays.asList(1), Collections.emptyList()),
+            asList(
+                new Actor(Queue.class.getMethod("add", Object.class), asList(1), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
-                new Actor(Queue.class.getMethod("add", Object.class), Arrays.asList(2), Collections.emptyList())
+                new Actor(Queue.class.getMethod("add", Object.class), asList(2), Collections.emptyList())
             ),  Collections.emptyList(), false, false);
         ex.testInstance = new ArrayDeque<>();
-        ex.call();
+        ex.results = new Result[4];
+        ex.run();
     }
 
     @Test
     public void testActorExceptionHandling() throws Exception {
         TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
-            Arrays.asList(
-                new Actor(ArrayDeque.class.getMethod("addLast", Object.class), Arrays.asList(1), Collections.emptyList()),
+            asList(
+                new Actor(ArrayDeque.class.getMethod("addLast", Object.class), asList(1), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
-                new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Arrays.asList(NoSuchElementException.class)),
-                new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Arrays.asList(Exception.class, NoSuchElementException.class))
+                new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), asList(NoSuchElementException.class)),
+                new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), asList(Exception.class, NoSuchElementException.class))
             ), Collections.emptyList(), false, false);
         ex.testInstance = new ArrayDeque<>();
+        ex.results = new Result[4];
+        ex.clocks = new int[4][1];
+        ex.allThreadExecutions = (TestThreadExecution[]) asList(ex).toArray();
+        ex.run();
         Assert.assertArrayEquals(new Result[] {
             VoidResult.INSTANCE,
             new ValueResult(1),
             ExceptionResult.Companion.create(NoSuchElementException.class),
             ExceptionResult.Companion.create(NoSuchElementException.class)
-        }, ex.call());
+        }, ex.results);
     }
 
     @Test
     public void testWaits() throws Exception {
         TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
-            Arrays.asList(
-                new Actor(Queue.class.getMethod("add", Object.class), Arrays.asList(1), Collections.emptyList()),
+            asList(
+                new Actor(Queue.class.getMethod("add", Object.class), asList(1), Collections.emptyList()),
                 new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Collections.emptyList()),
-                new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), Arrays.asList(NoSuchElementException.class))
+                new Actor(Queue.class.getMethod("remove"), Collections.emptyList(), asList(NoSuchElementException.class))
             ), Collections.emptyList(), true, false);
         ex.testInstance = new ArrayDeque<>();
+        ex.results = new Result[3];
         ex.waits = new int[] {15, 100};
+        ex.run();
         Assert.assertArrayEquals(new Result[] {
             new ValueResult(true),
             new ValueResult(1),
             ExceptionResult.Companion.create(NoSuchElementException.class)
-        }, ex.call());
+        }, ex.results);
     }
 }

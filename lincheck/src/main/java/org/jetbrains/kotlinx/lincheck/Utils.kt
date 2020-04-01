@@ -165,14 +165,8 @@ internal operator fun ExecutionScenario.get(threadId: Int): List<Actor> = when (
  */
 internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (threadId) {
     0 -> initResults
-    parallelResults.size + 1 -> postResults
-    else -> parallelResults[threadId - 1]
-}
-
-internal operator fun ExecutionResult.set(threadId: Int, actorId: Int, value: Result) = when (threadId) {
-    0 -> initResults[actorId] = value
-    parallelResults.size + 1 -> postResults[actorId] = value
-    else -> parallelResults[threadId - 1][actorId] = value
+    parallelResultsWithClock.size + 1 -> postResults
+    else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
 fun <T> CancellableContinuation<T>.cancelByLincheck() = cancel(cancellationByLincheckException)

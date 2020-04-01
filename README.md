@@ -162,7 +162,7 @@ public class MyConcurrentTest {
 
 
 # Execution strategies
-The section above describes how to specify the operations and the initial state, whereas this section is about executing the test. Using the provided operations **lincheck** generates several random scenarios and then executes them using the specified execution strategy. At this moment stress strategy is implemented only, but some managed strategies will be added soon as well.
+The section above describes how to specify the operations and the initial state, whereas this section is about executing the test. Using the provided operations **lincheck** generates several random scenarios and then executes them using the specified execution strategy. At this moment, only stress strategy is implemented, but a model checking one will be added soon.
 
 ## Stress strategy
 The first implemented in **lincheck** execution strategy is stress testing strategy. This strategy uses the same idea as `JCStress` tool - it executes the generated scenario in parallel a lot of times in hope to hit on an interleaving which produces incorrect results. This strategy is pretty useful for finding bugs related to low-level effects (like a forgotten volatile modifier), but, unfortunately, does not guarantee any coverage. It is also recommended to use not only Intel processors with this strategy because its internal memory model is quite strong and cannot produce a lot of behaviors which are possible with ARM, for example. 
@@ -367,14 +367,14 @@ public class MyConcurrentTest {
 ```
 
 
-# Sample
-Here is a test for a not thread-safe `HashMap` with its result. It uses the default configuration and tests `put` and `get` operations only:
+# Example
+Here is a test for a not thread-safe `HashMap` with the failed scenario and the corresponding result. It uses the default configuration and tests `put` and `get` operations only:
 
 **Test class**
 
 ```java
+@StressCTest(minimizeFailedScenario = false)
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
-@StressCTest
 public class HashMapLinearizabilityTest extends VerifierState {
     private HashMap<Integer, Integer> map = new HashMap<>();
 
@@ -404,15 +404,19 @@ public class HashMapLinearizabilityTest extends VerifierState {
 **Test output**
 
 ```
-= Invalid execution results: =
+= Invalid execution results =
 Init part:
-[put(1, 2): null, put(4, 6): null, get(5): null, put(3, -6): null, put(1, -8): 2]
+[put(1,2): null, put(4,6): null, get(5): null, put(3,-6): null, put(1,-8): 2]
 Parallel part:
-| get(4):     6    | put(2, 1):  null |
-| get(2):     null | put(5, 4):  null |
-| put(5, -8): null | get(3):     -6   |
-| get(3):     -6   | get(4):     6    |
-| put(3, 5):  -6   | put(1, -4): -8   |
+| get(4):    6          | put(2,1):  null       |
+| get(2):    1    [1,0] | put(5,4):  null [1,1] |
+| put(5,-8): null [2,1] | get(3):    5    [5,2] |
+| get(3):    -6   [3,1] | get(4):    6    [5,3] |
+| put(3,5):  -6   [4,1] | put(1,-4): -8   [5,4] |
 Post part:
-[put(5, -8): 4, put(5, -2): -8, get(1): -4, put(2, -8): 1, get(1): -4]
+[put(5,-8): 4, put(5,-2): -8, get(1): -4, put(2,-8): 1, get(1): -4]
+---
+values in "[..]" brackets indicate the number of completed operations 
+in each of the parallel threads seen at the beginning of the current operation
+---
 ```

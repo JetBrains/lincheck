@@ -58,9 +58,8 @@ fun verify(
     correct: Boolean
 ) {
     val (scenario, results) = scenarioWithResults(block)
-    val verifier = verifierClass.getConstructor(ExecutionScenario::class.java, Class::class.java)
-        .newInstance(scenario, testClass)
-    val res = verifier.verifyResults(results)
+    val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
+    val res = verifier.verifyResults(scenario, results)
     assert(res == correct)
 }
 
@@ -124,7 +123,7 @@ class ExecutionBuilder {
             post.map { it.actor }
         ) to ExecutionResult(
             initial.map { it.result },
-            parallelResults,
+            parallelResults.map { it.withEmptyClock(parallelExecution.size) },
             post.map { it.result }
         )
     }

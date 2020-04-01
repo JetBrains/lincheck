@@ -33,11 +33,11 @@ import org.jetbrains.kotlinx.lincheck.execution.*
  * the next possible transitions using [VerifierContext.nextContext] function. This verifier
  * uses depth-first search to find a proper path.
  */
-abstract class AbstractLTSVerifier(protected val scenario: ExecutionScenario, protected val sequentialSpecification: Class<*>) : CachedVerifier() {
+abstract class AbstractLTSVerifier(protected val sequentialSpecification: Class<*>) : CachedVerifier() {
     abstract val lts: LTS
-    abstract fun createInitialContext(results: ExecutionResult): VerifierContext
+    abstract fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult): VerifierContext
 
-    override fun verifyResultsImpl(results: ExecutionResult) = createInitialContext(results).verify()
+    override fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult) = createInitialContext(scenario, results).verify()
 
     private fun VerifierContext.verify(): Boolean {
         // Check if a possible path is found.

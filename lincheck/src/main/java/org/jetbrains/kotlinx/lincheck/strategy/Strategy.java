@@ -54,7 +54,7 @@ public abstract class Strategy {
     }
 
     protected void verifyResults(ExecutionResult results) {
-        if (!verifier.verifyResults(results)) {
+        if (!verifier.verifyResults(scenario, results)) {
             StringBuilder msgBuilder = new StringBuilder("Invalid interleaving found:\n");
             appendIncorrectResults(msgBuilder, scenario, results);
             throw new AssertionError(msgBuilder.toString());

@@ -31,7 +31,7 @@ private typealias Core<E> = LockFreeMPSCQueueCore<E>
 /**
  * Lock-free Multiply-Producer Single-Consumer Queue from kotlinx.coroutines project.
  */
-class LockFreeMPSCQueue<E : Any> {
+class LockFreeMPSCQuiescentConsistentQueue<E : Any> {
     private val _cur = AtomicReference(Core<E>(LockFreeMPSCQueueCore.INITIAL_CAPACITY))
 
     // Note: it is not atomic w.r.t. remove operation (remove can transiently fail when isEmpty is false)
@@ -71,7 +71,7 @@ class LockFreeMPSCQueue<E : Any> {
  * Lock-free Multiply-Producer Single-Consumer Queue core.
  * *Note: This queue is NOT linearizable. It provides only quiescent consistency for its operations.*
  *
- * @see LockFreeMPSCQueue
+ * @see LockFreeMPSCQuiescentConsistentQueue
  * @suppress **This is unstable API and it is subject to change.**
  */
 internal class LockFreeMPSCQueueCore<E : Any>(private val capacity: Int) {

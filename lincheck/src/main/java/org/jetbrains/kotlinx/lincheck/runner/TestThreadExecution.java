@@ -1,5 +1,3 @@
-package org.jetbrains.kotlinx.lincheck.runner;
-
 /*
  * #%L
  * Lincheck
@@ -10,38 +8,51 @@ package org.jetbrains.kotlinx.lincheck.runner;
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package org.jetbrains.kotlinx.lincheck.runner;
 
 import org.jetbrains.kotlinx.lincheck.Result;
+
+import java.util.*;
 import java.util.concurrent.Callable;
 
 /**
  * Instance of this class represents the test execution for ONE thread. Several instances should be ran in parallel.
  * All implementations of this class should be generated via {@link TestThreadExecutionGenerator}.
+ * The results and clocks are in the `results`  and `clocks` fields correspondingly.
  *
- * <p> This class should be public for having access from generated classes.
+ * <p> This class should be public for having access from generated ones.
  */
-public abstract class TestThreadExecution implements Callable<Result[]> {
+public abstract class TestThreadExecution implements Runnable {
     // The following fields are assigned in TestThreadExecutionGenerator
     protected Runner runner;
     public Object testInstance;
     protected Object[] objArgs;
     public int[] waits; // for StressStrategy
+    public TestThreadExecution[] allThreadExecutions;
 
-    // It is better to return List<Result>,
-    // but such implementation requires to have a synthetic
-    // method to support generics and the byte-code generation
-    // is more bug-prone. If you need to use
-    // List<Result>, see Arrays.asList(..) method.
-    public abstract Result[] call();
+    public Result[] results; // for ExecutionResult
+    public int[][] clocks; // for HBClock
+    public volatile int curClock;
+    public boolean useClocks;
+
+    public void readClocks(int currentActor) {
+        for (int i = 0; i < allThreadExecutions.length; i++) {
+            clocks[currentActor][i] = allThreadExecutions[i].curClock;
+        }
+    }
+
+    public void incClock() {
+        curClock++;
+    }
 }

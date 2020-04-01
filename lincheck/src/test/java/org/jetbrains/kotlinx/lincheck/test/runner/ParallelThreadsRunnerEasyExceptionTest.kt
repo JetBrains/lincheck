@@ -25,9 +25,10 @@ import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
 import org.junit.Test
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.test.verifier.*
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.*
 
@@ -84,7 +85,6 @@ class SuspendResumeScenarios {
  * Test [ParallelThreadsRunner] different suspend-resume scenarios with exceptions.
  */
 class ParallelThreadsRunnerExceptionTest {
-
     val mockStrategy = object : Strategy(null, null, null) {
         override fun run() {
             throw UnsupportedOperationException()
@@ -114,10 +114,9 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner =
-            ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
+        val runner = ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
         val results = runner.run()
-        assertEquals(results, expectedResults)
+        assertTrue(results.equalsIgnoringClocks(expectedResults))
     }
 
     @Test
@@ -136,7 +135,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
         val results = runner.run()
-        assertEquals(results, expectedResults)
+        assertTrue(results.equalsIgnoringClocks(expectedResults))
     }
 
     @Test
@@ -148,12 +147,8 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner =
-            ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
+        val runner = ParallelThreadsRunner(scenario, mockStrategy, testClass, null)
         val results = runner.run()
-        assertEquals(results, expectedResults)
+        assertTrue(results.equalsIgnoringClocks(expectedResults))
     }
 }
-
-
-

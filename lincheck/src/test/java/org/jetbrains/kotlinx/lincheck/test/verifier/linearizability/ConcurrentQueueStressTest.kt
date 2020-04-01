@@ -33,8 +33,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 @StressCTest(verifier = LinearizabilityVerifier::class, iterations = 10, invocationsPerIteration = 1000, actorsBefore = 10, actorsAfter = 10, actorsPerThread = 5, threads = 3)
 class ConcurrentQueueStressTest : VerifierState() {
-
-    val queue = ConcurrentLinkedQueue<Int>()
+    private val queue = ConcurrentLinkedQueue<Int>()
 
     @Operation
     fun add(e: Int) = queue.add(e)

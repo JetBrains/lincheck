@@ -22,8 +22,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.*
 import java.io.PrintStream
 
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
@@ -71,34 +70,49 @@ private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
             .joinToString(separator = "\n")
 }
 
-private class ActorWithResult(val actorRepresentation: String, val spaces: Int, val resultRepresentation: String) {
-    override fun toString(): String = actorRepresentation + ":" + " ".repeat(spaces) + resultRepresentation
+private class ActorWithResult(val actorRepresentation: String, val spacesAfterActor: Int,
+                              val resultRepresentation: String, val spacesAfterResult: Int,
+                              val clockRepresentation: String) {
+    override fun toString(): String =
+        actorRepresentation + ":" + " ".repeat(spacesAfterActor) + resultRepresentation +
+                                    " ".repeat(spacesAfterResult) + clockRepresentation
 }
 
-private fun uniteActorsAndResults(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
+private fun uniteActorsAndResultsLinear(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
-    val actorRepresentations = actors.map { it.toString() }
-    return actors.indices.map { ActorWithResult("${actors[it]}", 1, "${results[it]}") }
+    return actors.indices.map {
+        ActorWithResult("${actors[it]}", 1, "${results[it]}", 0, "")
+    }
 }
 
-private fun uniteParallelActorsAndResults(actors: List<List<Actor>>, results: List<List<Result>>): List<List<ActorWithResult>> {
+private fun uniteParallelActorsAndResults(actors: List<List<Actor>>, results: List<List<ResultWithClock>>): List<List<ActorWithResult>> {
     require(actors.size == results.size) {
         "Different numbers of threads and matching results found (${actors.size} != ${results.size})"
     }
     return actors.mapIndexed { id, threadActors -> uniteActorsAndResultsAligned(threadActors, results[id]) }
 }
 
-private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
+private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<ResultWithClock>): List<ActorWithResult> {
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
     val actorRepresentations = actors.map { it.toString() }
+    val resultRepresentations = results.map { it.result.toString() }
     val maxActorLength = actorRepresentations.map { it.length }.max()!!
-    return actorRepresentations.mapIndexed { id, actorRepr ->
-        val spaces = 1 + maxActorLength - actorRepr.length
-        ActorWithResult(actorRepr, spaces, "${results[id]}")
+    val maxResultLength = resultRepresentations.map { it.length }.max()!!
+    return actors.indices.map { i ->
+        val actorRepr = actorRepresentations[i]
+        val resultRepr = resultRepresentations[i]
+        val clock = results[i].clockOnStart
+        val spacesAfterActor = maxActorLength - actorRepr.length + 1
+        val spacesAfterResultToAlign = maxResultLength - resultRepr.length
+        if (clock.empty) {
+            ActorWithResult(actorRepr, spacesAfterActor, resultRepr, spacesAfterResultToAlign, "")
+        } else {
+            ActorWithResult(actorRepr, spacesAfterActor, resultRepr, spacesAfterResultToAlign + 1, clock.toString())
+        }
     }
 }
 
@@ -117,17 +131,20 @@ private fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
 }
 
 fun StringBuilder.appendIncorrectResults(scenario: ExecutionScenario, results: ExecutionResult) {
-    appendln("= Invalid execution results: =")
+    appendln("= Invalid execution results =")
     if (scenario.initExecution.isNotEmpty()) {
         appendln("Init part:")
-        appendln(uniteActorsAndResults(scenario.initExecution, results.initResults))
+        appendln(uniteActorsAndResultsLinear(scenario.initExecution, results.initResults))
     }
     appendln("Parallel part:")
-    val parallelExecutionData = uniteParallelActorsAndResults(scenario.parallelExecution, results.parallelResults)
+    val parallelExecutionData = uniteParallelActorsAndResults(scenario.parallelExecution, results.parallelResultsWithClock)
     append(printInColumns(parallelExecutionData))
     if (scenario.postExecution.isNotEmpty()) {
         appendln()
         appendln("Post part:")
-        append(uniteActorsAndResults(scenario.postExecution, results.postResults))
+        append(uniteActorsAndResultsLinear(scenario.postExecution, results.postResults))
     }
+    if (results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
+        appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
+            "in each of the parallel threads seen at the beginning of the current operation\n---")
 }
