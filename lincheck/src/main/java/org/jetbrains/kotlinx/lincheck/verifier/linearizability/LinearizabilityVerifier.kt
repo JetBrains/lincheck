@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.util.*
 
 /**
  * This verifier checks that the specified results could happen if the testing operations are linearizable.
@@ -34,13 +35,10 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
  * This verifier is based on [AbstractLTSVerifier] and caches the already processed results
  * for performance improvement (see [CachedVerifier]).
  */
-class LinearizabilityVerifier(
-    scenario: ExecutionScenario,
-    sequentialSpecification: Class<*>
-) : AbstractLTSVerifier(scenario, sequentialSpecification) {
+class LinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVerifier(sequentialSpecification) {
     override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
 
-    override fun createInitialContext(results: ExecutionResult) =
+    override fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult) =
         LinearizabilityContext(scenario, results, lts.initialState)
 }
 
@@ -50,7 +48,6 @@ class LinearizabilityContext : VerifierContext {
                 executed: IntArray, suspended: BooleanArray, tickets: IntArray) : super(scenario, results, state, executed, suspended, tickets)
 
     override fun nextContext(threadId: Int): LinearizabilityContext? {
-        // Check whether the specified thread is not suspended and there are unprocessed actors
         if (isCompleted(threadId)) return null
         // Check whether an actorWithToken from the specified thread can be executed
         // in accordance with the rule that all actors from init part should be
@@ -58,7 +55,7 @@ class LinearizabilityContext : VerifierContext {
         // all actors from post part should be executed at last.
         val legal = when (threadId) {
             0 -> true // INIT: we already checked that there is an unprocessed actorWithToken
-            in 1..scenario.threads -> isCompleted(0) // PARALLEL
+            in 1..scenario.threads -> isCompleted(0) && hblegal(threadId) // PARALLEL
             else -> initCompleted && parallelCompleted // POST
         }
         if (!legal) return null
@@ -74,6 +71,16 @@ class LinearizabilityContext : VerifierContext {
         // Try to make transition by the next actor from the current thread,
         // passing the ticket corresponding to the current thread.
         return state.next(actor, expectedResult, tickets[threadId])?.createContext(threadId)
+    }
+
+    // checks whether the transition does not violate the happens-before relation constructed on the clocks
+    private fun hblegal(threadId: Int): Boolean {
+        val actorId = executed[threadId]
+        val clocks = results.parallelResultsWithClock[threadId - 1][actorId].clockOnStart
+        for (i in 1..scenario.threads) {
+            if (executed[i] < clocks[i - 1]) return false
+        }
+        return true
     }
 
     private fun TransitionInfo.createContext(threadId: Int): LinearizabilityContext {

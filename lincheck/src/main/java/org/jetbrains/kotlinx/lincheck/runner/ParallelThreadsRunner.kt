@@ -31,6 +31,7 @@ import java.util.concurrent.Executors.*
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.random.*
 
 private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<kotlin.Result<Any?>, Continuation<Any?>>>
 
@@ -53,9 +54,13 @@ open class ParallelThreadsRunner(
         List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
     }
 
-    private val testThreadExecutions = List(scenario.threads) { t ->
+    private val testThreadExecutions = Array(scenario.threads) { t ->
         TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], false, scenario.hasSuspendableActors())
             .also { if (waits != null) it.waits = waits[t] }
+    }
+
+    init {
+        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }
 
     private var suspensionPointResults = MutableList<Result>(scenario.threads) { NoResult }
@@ -115,7 +120,16 @@ open class ParallelThreadsRunner(
 
     private fun reset() {
         testInstance = testClass.newInstance()
-        testThreadExecutions.forEach { ex -> ex.testInstance = testInstance }
+        val useClocks = Random.nextBoolean()
+        testThreadExecutions.forEachIndexed { t, ex ->
+            ex.testInstance = testInstance
+            val threads = scenario.threads
+            val actors = scenario.parallelExecution[t].size
+            ex.useClocks = useClocks
+            ex.curClock = 0
+            ex.clocks = Array(actors) { emptyClockArray(threads) }
+            ex.results = arrayOfNulls(actors)
+        }
         suspensionPointResults = MutableList(scenario.threads) { NoResult }
         completedOrSuspendedThreads.set(0)
         completions.forEach { it.forEach { it.resWithCont.set(null) } }
@@ -177,12 +191,12 @@ open class ParallelThreadsRunner(
         return suspensionPointResults[threadId]
     }
 
-    override fun run(): ExecutionResult? {
+    override fun run(): ExecutionResult {
         reset()
         val initResults = scenario.initExecution.map { initActor -> executeActor(testInstance, initActor) }
-        val parallelResults = testThreadExecutions.map { executor.submit(it) }.map { future ->
+        testThreadExecutions.map { executor.submit(it) }.forEach { future ->
             try {
-                future.get(10, TimeUnit.SECONDS).toList()
+                future.get(10, TimeUnit.SECONDS)
             } catch (e: TimeoutException) {
                 val stackTraces = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread }
                 val msgBuilder = StringBuilder()
@@ -200,6 +214,9 @@ open class ParallelThreadsRunner(
                 throw AssertionError(msgBuilder.toString())
             }
         }
+        val parallelResultsWithClock = testThreadExecutions.map { ex ->
+            ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second)) }
+        }
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
         val postResults = scenario.postExecution.map { postActor ->
@@ -211,7 +228,7 @@ open class ParallelThreadsRunner(
                 executeActor(testInstance, postActor, dummyCompletion).also { postPartSuspended = it.wasSuspended }
             }
         }
-        return ExecutionResult(initResults, parallelResults, postResults)
+        return ExecutionResult(initResults, parallelResultsWithClock, postResults)
     }
 
     override fun onStart(iThread: Int) {

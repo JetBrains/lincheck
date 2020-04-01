@@ -34,8 +34,8 @@ import org.junit.Test;
 
 @StressCTest(verifier = QuiescentConsistencyVerifier.class, requireStateEquivalenceImplCheck = false)
 @OpGroupConfig(name = "consumer", nonParallel = true)
-public class LockFreeMPSCQueueTest {
-    private LockFreeMPSCQueue<Integer> q = new LockFreeMPSCQueue<>();
+public class LockFreeMPSCQuiescentConsistentQueueTest {
+    private final LockFreeMPSCQuiescentConsistentQueue<Integer> q = new LockFreeMPSCQuiescentConsistentQueue<>();
 
     @Operation(group = "consumer")
     @QuiescentConsistent
@@ -56,6 +56,6 @@ public class LockFreeMPSCQueueTest {
 
     @Test
     public void test() {
-        LinChecker.check(LockFreeMPSCQueueTest.class);
+        LinChecker.check(LockFreeMPSCQuiescentConsistentQueueTest.class);
     }
 }

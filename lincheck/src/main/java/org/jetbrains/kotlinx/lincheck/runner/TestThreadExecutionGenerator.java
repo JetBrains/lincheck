@@ -25,10 +25,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.Type;
+import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
@@ -39,6 +36,7 @@ import java.util.List;
 
 import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 import static org.objectweb.asm.Opcodes.*;
+import static org.objectweb.asm.Type.*;
 
 /**
  * This class is used to generate {@link TestThreadExecution thread executions}.
@@ -46,51 +44,53 @@ import static org.objectweb.asm.Opcodes.*;
 public class TestThreadExecutionGenerator {
     private static final Type[] NO_ARGS = new Type[] {};
 
-    private static final Type CLASS_TYPE = Type.getType(Class.class);
-    private static final Type OBJECT_TYPE = Type.getType(Object.class);
+    private static final Type CLASS_TYPE = getType(Class.class);
+    private static final Type OBJECT_TYPE = getType(Object.class);
     private static final Method OBJECT_GET_CLASS = new Method("getClass", CLASS_TYPE, NO_ARGS);
-    private static final Type OBJECT_ARRAY_TYPE = Type.getType(Object[].class);
-    private static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
-    private static final Type INT_ARRAY_TYPE = Type.getType(int[].class);
-    private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, NO_ARGS);
+    private static final Type OBJECT_ARRAY_TYPE = getType(Object[].class);
+    private static final Type THROWABLE_TYPE = getType(Throwable.class);
+    private static final Type INT_ARRAY_TYPE = getType(int[].class);
+    private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", VOID_TYPE, NO_ARGS);
 
-    private static final Type RUNNER_TYPE = Type.getType(Runner.class);
-    private static final Method RUNNER_ON_START_METHOD = new Method("onStart", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
-    private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+    private static final Type RUNNER_TYPE = getType(Runner.class);
+    private static final Method RUNNER_ON_START_METHOD = new Method("onStart", VOID_TYPE, new Type[]{INT_TYPE});
+    private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
 
-    private static final Type TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution.class);
+    private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
+    private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
+    private static final Method TEST_THREAD_EXECUTION_READ_CLOCKS = new Method("readClocks", VOID_TYPE, new Type[]{INT_TYPE});
 
-    private static final Type UTILS_TYPE = Type.getType(UtilsKt.class);
-    private static final Method UTILS_CONSUME_CPU = new Method("consumeCPU", Type.VOID_TYPE, new Type[] {Type.INT_TYPE});
+    private static final Type UTILS_TYPE = getType(UtilsKt.class);
+    private static final Method UTILS_CONSUME_CPU = new Method("consumeCPU", VOID_TYPE, new Type[] {INT_TYPE});
 
-    private static final Type RESULT_TYPE = Type.getType(Result.class);
+    private static final Type RESULT_TYPE = getType(Result.class);
 
-    private static final Type NO_RESULT_TYPE = Type.getType(NoResult.class);
+    private static final Type NO_RESULT_TYPE = getType(NoResult.class);
     private static final String NO_RESULT_CLASS_NAME = NoResult.class.getCanonicalName().replace('.', '/');
 
-    private static final Type VOID_RESULT_TYPE = Type.getType(VoidResult.class);
+    private static final Type VOID_RESULT_TYPE = getType(VoidResult.class);
     private static final String VOID_RESULT_CLASS_NAME = VoidResult.class.getCanonicalName().replace('.', '/');
 
-    private static final Type SUSPENDED_VOID_RESULT_TYPE = Type.getType(SuspendedVoidResult.class);
+    private static final Type SUSPENDED_VOID_RESULT_TYPE = getType(SuspendedVoidResult.class);
     private static final String SUSPENDED_RESULT_CLASS_NAME = SuspendedVoidResult.class.getCanonicalName().replace('.', '/');
 
     private static final String INSTANCE = "INSTANCE";
 
-    private static final Type VALUE_RESULT_TYPE = Type.getType(ValueResult.class);
-    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", Type.VOID_TYPE, new Type[] {OBJECT_TYPE});
+    private static final Type VALUE_RESULT_TYPE = getType(ValueResult.class);
+    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
 
-    private static final Type EXCEPTION_RESULT_TYPE = Type.getType(ExceptionResult.class);
-    private static final Type RESULT_KT_TYPE = Type.getType(ResultKt.class);
+    private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
+    private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
     private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
 
-    private static final Type RESULT_ARRAY_TYPE = Type.getType(Result[].class);
+    private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
 
-    private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", Type.BOOLEAN_TYPE, new Type[]{});
+    private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", BOOLEAN_TYPE, new Type[]{});
 
-    private static final Type PARALLEL_THREADS_RUNNER_TYPE = Type.getType(ParallelThreadsRunner.class);
-    private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, Type.INT_TYPE, Type.INT_TYPE });
-    private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", Type.BOOLEAN_TYPE, new Type[]{});
+    private static final Type PARALLEL_THREADS_RUNNER_TYPE = getType(ParallelThreadsRunner.class);
+    private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
+    private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
     private static int generatedClassNumber = 0;
 
@@ -103,14 +103,14 @@ public class TestThreadExecutionGenerator {
     }
 
     /**
-     * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#call()} implementation.
+     * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#run()} implementation.
      */
     public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions, boolean waitsEnabled, boolean scenarioContainsSuspendableActors) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
         Class<? extends TestThreadExecution> clz = runner.classLoader.defineClass(className,
-                generateClass(internalClassName, Type.getType(runner.testClass), iThread, actors, objArgs, completions, waitsEnabled, scenarioContainsSuspendableActors));
+                generateClass(internalClassName, getType(runner.testClass), iThread, actors, objArgs, completions, waitsEnabled, scenarioContainsSuspendableActors));
         try {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
@@ -149,27 +149,31 @@ public class TestThreadExecutionGenerator {
                                     boolean waitsEnabled, boolean scenarioContainsSuspendableActors)
     {
         int access = ACC_PUBLIC;
-        Method m = new Method("call", RESULT_ARRAY_TYPE, NO_ARGS);
+        Method m = new Method("run", VOID_TYPE, NO_ARGS);
         GeneratorAdapter mv = new GeneratorAdapter(access, m,
                 // Try-catch blocks sorting is required
                 new TryCatchBlockSorter(cv.visitMethod(access, m.getName(), m.getDescriptor(), null, null),
                         access, m.getName(), m.getDescriptor(), null, null)
         );
         mv.visitCode();
-        int resLocal = createResultArray(mv, actors.size());
+        // Load `results`
+        int resLocal = mv.newLocal(RESULT_ARRAY_TYPE);
+        mv.loadThis();
+        mv.getField(TEST_THREAD_EXECUTION_TYPE, "results", RESULT_ARRAY_TYPE);
+        mv.storeLocal(resLocal);
         // Call runner's onStart(iThread) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
         mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_START_METHOD);
         // Number of current operation (starts with 0)
-        int iLocal = mv.newLocal(Type.INT_TYPE);
+        int iLocal = mv.newLocal(INT_TYPE);
         mv.push(0);
         mv.storeLocal(iLocal);
-
-        Label returnNoResult, launchNextActor;
         // Invoke actors
+        Label returnNoResult, launchNextActor;
         for (int i = 0; i < actors.size(); i++) {
+            readClocksIfNeeded(i, mv);
             launchNextActor = mv.newLabel();
             returnNoResult = mv.newLabel();
             if (scenarioContainsSuspendableActors) {
@@ -178,7 +182,7 @@ public class TestThreadExecutionGenerator {
                 mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
                 mv.invokeVirtual(RUNNER_TYPE, RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD);
                 mv.push(true);
-                mv.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, returnNoResult);
+                mv.ifCmp(BOOLEAN_TYPE, GeneratorAdapter.EQ, returnNoResult);
             }
             Actor actor = actors.get(i);
             // Add busy-wait before operation execution (for non-first operations only)
@@ -186,7 +190,7 @@ public class TestThreadExecutionGenerator {
                 mv.loadThis();
                 mv.getField(TEST_THREAD_EXECUTION_TYPE, "waits", INT_ARRAY_TYPE);
                 mv.push(i - 1);
-                mv.arrayLoad(Type.INT_TYPE);
+                mv.arrayLoad(INT_TYPE);
                 mv.invokeStatic(UTILS_TYPE, UTILS_CONSUME_CPU);
             }
             // Start of try-catch block for exceptions which this actor should handle
@@ -197,7 +201,7 @@ public class TestThreadExecutionGenerator {
                 handler = mv.newLabel();
                 handlerEnd = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(start, end, handler, Type.getType(ec).getInternalName());
+                    mv.visitTryCatchBlock(start, end, handler, getType(ec).getInternalName());
                 mv.visitLabel(start);
             }
             // Load result array and index to store the current result
@@ -256,6 +260,9 @@ public class TestThreadExecutionGenerator {
                 }
                 mv.visitLabel(handlerEnd);
             }
+            // Increment the clock
+            mv.loadThis();
+            mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);
             // Increment number of current operation
             mv.iinc(iLocal, 1);
             mv.visitJumpInsn(GOTO, launchNextActor);
@@ -275,12 +282,22 @@ public class TestThreadExecutionGenerator {
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
         mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FINISH_METHOD);
-        // Return results
-        mv.loadThis();
-        mv.loadLocal(resLocal);
-        mv.returnValue();
-        mv.visitMaxs(1, 1);
+        // Complete the method
+        mv.visitInsn(RETURN);
+        mv.visitMaxs(2, 2);
         mv.visitEnd();
+    }
+
+    // `actorNumber` starts with 0
+    private static void readClocksIfNeeded(int actorNumber, GeneratorAdapter mv) {
+        mv.loadThis();
+        mv.getField(TEST_THREAD_EXECUTION_TYPE, "useClocks", BOOLEAN_TYPE);
+        Label l = new Label();
+        mv.visitJumpInsn(IFEQ, l);
+        mv.loadThis();
+        mv.push(actorNumber);
+        mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_READ_CLOCKS);
+        mv.visitLabel(l);
     }
 
     private static void createVoidResult(Actor actor, GeneratorAdapter mv) {
@@ -288,7 +305,7 @@ public class TestThreadExecutionGenerator {
             Label suspendedVoidResult = mv.newLabel();
             mv.invokeVirtual(RESULT_TYPE, RESULT_WAS_SUSPENDED_GETTER_METHOD);
             mv.push(true);
-            mv.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, suspendedVoidResult);
+            mv.ifCmp(BOOLEAN_TYPE, GeneratorAdapter.EQ, suspendedVoidResult);
             mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
             mv.visitLabel(suspendedVoidResult);
             mv.visitFieldInsn(GETSTATIC, SUSPENDED_RESULT_CLASS_NAME, INSTANCE, SUSPENDED_VOID_RESULT_TYPE.getDescriptor());
@@ -329,14 +346,6 @@ public class TestThreadExecutionGenerator {
         mv.arrayStore(RESULT_TYPE);
     }
 
-    private static int createResultArray(GeneratorAdapter mv, int size) {
-        int resLocal = mv.newLocal(RESULT_ARRAY_TYPE);
-        mv.push(size);
-        mv.newArray(RESULT_TYPE);
-        mv.storeLocal(resLocal);
-        return resLocal;
-    }
-
     private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, Completion completion) {
         int nArguments = actor.getArguments().size();
         for (int j = 0; j < nArguments; j++) {
@@ -371,7 +380,7 @@ public class TestThreadExecutionGenerator {
             mv.getField(TEST_THREAD_EXECUTION_TYPE, "objArgs", OBJECT_ARRAY_TYPE); // this -> objArgs
             mv.push(objArgs.size()); // objArgs -> objArgs, index
             mv.arrayLoad(OBJECT_TYPE); // objArgs, index -> arg
-            mv.checkCast(Type.getType(argClass)); // cast object to argument type
+            mv.checkCast(getType(argClass)); // cast object to argument type
             objArgs.add(arg);
         }
     }

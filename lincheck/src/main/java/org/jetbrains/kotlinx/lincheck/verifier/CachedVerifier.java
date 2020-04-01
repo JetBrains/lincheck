@@ -22,10 +22,9 @@ package org.jetbrains.kotlinx.lincheck.verifier;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
+import org.jetbrains.kotlinx.lincheck.execution.*;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * This verifier cached the already verified results in a hash table,
@@ -34,14 +33,14 @@ import java.util.Set;
  * phase significantly.
  */
 public abstract class CachedVerifier implements Verifier {
-    private final Set<ExecutionResult> previousResults = new HashSet<>();
+    private final Map<ExecutionScenario, Set<ExecutionResult>> previousResults = new HashMap<>();
 
     @Override
-    public final boolean verifyResults(ExecutionResult results) {
-        if (!previousResults.add(results))
-            return true;
-        return verifyResultsImpl(results);
+    public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
+        boolean newResult = previousResults.computeIfAbsent(scenario, s -> new HashSet<>()).add(results);
+        if (!newResult) return true;
+        return verifyResultsImpl(scenario, results);
     }
 
-    public abstract boolean verifyResultsImpl(ExecutionResult results);
+    public abstract boolean verifyResultsImpl(ExecutionScenario scenario, ExecutionResult results);
 }

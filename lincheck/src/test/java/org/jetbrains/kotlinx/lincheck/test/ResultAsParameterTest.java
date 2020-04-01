@@ -37,7 +37,7 @@ import java.util.List;
 @OpGroupConfig(name = "push_remove", nonParallel = true)
 @StressCTest
 public class ResultAsParameterTest extends VerifierState {
-    private Stack stack = new Stack();
+    private final Stack stack = new Stack();
     private Node lastPushNode = null;
 
     @Operation(runOnce = true, group = "push_remove")

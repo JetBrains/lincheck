@@ -30,10 +30,10 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
  */
 public class EpsilonVerifier implements Verifier {
 
-    public EpsilonVerifier(ExecutionScenario scenario, Class<?> sequentialSpecification) {}
+    public EpsilonVerifier(Class<?> sequentialSpecification) {}
 
     @Override
-    public boolean verifyResults(ExecutionResult results) {
+    public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
         return true; // Always correct results :)
     }
 

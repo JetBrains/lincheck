@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.verifier;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult;
+import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 
 /**
@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
  * By default, it checks for linearizability (see {@link LinearizabilityVerifier}).
  * <p>
  * IMPORTANT!
- * All implementations should have {@code (ExecutionScenario scenario, Class<?> sequentialSpecification)} constructor,
+ * All implementations should have {@code (Class<?> sequentialSpecification)} constructor,
  * which takes the scenario to be tested and the correct sequential implementation of the testing data structure.
  */
 public interface Verifier {
@@ -38,7 +38,7 @@ public interface Verifier {
      * Verifies the specified results for correctness.
      * Returns {@code true} if results are possible, {@code false} otherwise.
      */
-    boolean verifyResults(ExecutionResult results);
+    boolean verifyResults(ExecutionScenario scenario, ExecutionResult results);
 
     /**
      * Verifiers which use sequential implementation instances as states (or parts of them)

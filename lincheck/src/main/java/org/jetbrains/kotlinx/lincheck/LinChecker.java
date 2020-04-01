@@ -162,7 +162,7 @@ public class LinChecker {
 
     private void runScenario(ExecutionScenario scenario, CTestConfiguration testCfg) throws AssertionError, Exception {
         validateScenario(testCfg, scenario);
-        Verifier verifier = createVerifier(testCfg.verifierClass, scenario, testCfg.sequentialSpecification);
+        Verifier verifier = createVerifier(testCfg.verifierClass, testCfg.sequentialSpecification);
         if (testCfg.requireStateEquivalenceImplCheck) verifier.checkStateEquivalenceImplementation();
         Strategy strategy = Strategy.createStrategy(testCfg, testClass, scenario, verifier, reporter);
         strategy.run();
@@ -177,9 +177,8 @@ public class LinChecker {
         }
     }
 
-    private Verifier createVerifier(Class<? extends Verifier> verifierClass, ExecutionScenario scenario,
-                                    Class<?> sequentialSpecification) throws Exception {
-        return verifierClass.getConstructor(ExecutionScenario.class, Class.class).newInstance(scenario, sequentialSpecification);
+    private Verifier createVerifier(Class<? extends Verifier> verifierClass, Class<?> sequentialSpecification) throws Exception {
+        return verifierClass.getConstructor(Class.class).newInstance(sequentialSpecification);
     }
 
     private ExecutionGenerator createExecutionGenerator(Class<? extends ExecutionGenerator> generatorClass,
