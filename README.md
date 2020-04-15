@@ -406,15 +406,15 @@ public class HashMapLinearizabilityTest extends VerifierState {
 ```
 = Invalid execution results =
 Init part:
-[put(1,2): null, put(4,6): null, get(5): null, put(3,-6): null, put(1,-8): 2]
+[put(1, 2): null, put(4, 6): null, get(5): null, put(3, -6): null, put(1, -8): 2]
 Parallel part:
-| get(4):    6          | put(2,1):  null       |
-| get(2):    1    [1,0] | put(5,4):  null [1,1] |
-| put(5,-8): null [2,1] | get(3):    5    [5,2] |
-| get(3):    -6   [3,1] | get(4):    6    [5,3] |
-| put(3,5):  -6   [4,1] | put(1,-4): -8   [5,4] |
+| get(4):     6          | put(2, 1):  null       |
+| get(2):     1    [1,-] | put(5, 4):  null [1,1] |
+| put(5, -8): null [2,1] | get(3):     5    [5,2] |
+| get(3):     -6   [3,1] | get(4):     6    [5,3] |
+| put(3, 5):  -6   [4,1] | put(1, -4): -8   [5,4] |
 Post part:
-[put(5,-8): 4, put(5,-2): -8, get(1): -4, put(2,-8): 1, get(1): -4]
+[put(5, -8): 4, put(5, -2): -8, get(1): -4, put(2, -8): 1, get(1): -4]
 ---
 values in "[..]" brackets indicate the number of completed operations 
 in each of the parallel threads seen at the beginning of the current operation
