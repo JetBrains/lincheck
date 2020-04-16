@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 
-class HangingTest : AbstractLincheckTest(DeadlockedWithDumpFailedIteration::class) {
+class HangingTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     @Operation
     fun badOperation() {
         while (true) {}

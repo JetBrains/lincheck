@@ -27,8 +27,8 @@ import org.objectweb.asm.*
 /**
  * Implementation of this class describes how to run the generated execution.
  *
- * Note that strategy could run execution several times. For strategy creating
- * [.createStrategy] method is used. It is impossible to add new strategy
+ * Note that strategy can run execution several times. For strategy creating
+ * [.createStrategy] method is used. It is impossible to add a new strategy
  * without any code change.
  */
 abstract class Strategy protected constructor(
@@ -39,5 +39,5 @@ abstract class Strategy protected constructor(
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    abstract fun run(): FailedIteration?
+    abstract fun run(): LincheckFailure?
 }

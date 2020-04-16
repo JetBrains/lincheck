@@ -41,7 +41,7 @@ public class TestThreadExecutionHelperTest {
         ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList());
         Strategy strategy = new Strategy(scenario) {
             @Override
-            public FailedIteration run() {
+            public LincheckFailure run() {
                 throw new UnsupportedOperationException();
             }
         };

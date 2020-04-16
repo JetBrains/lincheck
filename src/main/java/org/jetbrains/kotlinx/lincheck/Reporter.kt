@@ -36,8 +36,8 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
         }
     }
 
-    fun logFailedIteration(failedIteration: FailedIteration) = log(INFO) {
-        StringBuilder().appendFailedIteration(failedIteration)
+    fun logFailedIteration(failure: LincheckFailure) = log(INFO) {
+        StringBuilder().appendFailure(failure)
     }
 
     fun logScenarioMinimization(scenario: ExecutionScenario) = log(INFO) {
@@ -135,26 +135,26 @@ private fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
     }
 }
 
-internal fun StringBuilder.appendFailedIteration(failedIteration: FailedIteration): StringBuilder =
-    when (failedIteration) {
-        is IncorrectResultsFailedIteration -> appendIncorrectResultsFailedIteration(failedIteration)
-        is DeadlockedWithDumpFailedIteration -> appendDeadlockedWithDumpFailedIteration(failedIteration)
-        is UnexpectedExceptionFailedIteration -> appendUnexpectedException(failedIteration)
+internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder =
+    when (failure) {
+        is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
+        is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
+        is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
     }
 
-private fun StringBuilder.appendUnexpectedException(failedIteration: UnexpectedExceptionFailedIteration): StringBuilder {
+private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
     appendln("= The execution failed with an unexpected exception =")
-    appendExecutionScenario(failedIteration.scenario)
+    appendExecutionScenario(failure.scenario)
     val sw = StringWriter()
-    failedIteration.exception.printStackTrace(PrintWriter(sw))
+    failure.exception.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
     return this
 }
 
-private fun StringBuilder.appendDeadlockedWithDumpFailedIteration(failedIteration: DeadlockedWithDumpFailedIteration): StringBuilder {
+private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
     appendln("= The execution has hung, see the thread dump =")
-    appendExecutionScenario(failedIteration.scenario)
-    for ((t, stackTrace) in failedIteration.threadDump) {
+    appendExecutionScenario(failure.scenario)
+    for ((t, stackTrace) in failure.threadDump) {
         val threadNumber = if (t is ParallelThreadsRunner.TestThread) t.iThread else "?"
         appendln("Thread-$threadNumber:")
         for (ste in stackTrace) {
@@ -165,21 +165,21 @@ private fun StringBuilder.appendDeadlockedWithDumpFailedIteration(failedIteratio
     return this
 }
 
-private fun StringBuilder.appendIncorrectResultsFailedIteration(failedIteration: IncorrectResultsFailedIteration): StringBuilder {
+private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResultsFailure): StringBuilder {
     appendln("= Invalid execution results =")
-    if (failedIteration.scenario.initExecution.isNotEmpty()) {
+    if (failure.scenario.initExecution.isNotEmpty()) {
         appendln("Init part:")
-        appendln(uniteActorsAndResultsLinear(failedIteration.scenario.initExecution, failedIteration.results.initResults))
+        appendln(uniteActorsAndResultsLinear(failure.scenario.initExecution, failure.results.initResults))
     }
     appendln("Parallel part:")
-    val parallelExecutionData = uniteParallelActorsAndResults(failedIteration.scenario.parallelExecution, failedIteration.results.parallelResultsWithClock)
+    val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
     append(printInColumns(parallelExecutionData))
-    if (failedIteration.scenario.postExecution.isNotEmpty()) {
+    if (failure.scenario.postExecution.isNotEmpty()) {
         appendln()
         appendln("Post part:")
-        append(uniteActorsAndResultsLinear(failedIteration.scenario.postExecution, failedIteration.results.postResults))
+        append(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
     }
-    if (failedIteration.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
+    if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
         appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
             "in each of the parallel threads seen at the beginning of the current operation\n---")
     return this

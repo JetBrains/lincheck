@@ -27,11 +27,11 @@ import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.FailedIterationKt.toFailedIteration;
+import static org.jetbrains.kotlinx.lincheck.strategy.LincheckFailureKt.toLincheckFailure;
 
 
 /**
- * This managed strategy switches current thread to a random one with the specified probability.
+ * This managed strategy switches the current thread to a random one with the specified probability.
  * In addition it tries to avoid both communication and resource deadlocks and to check for livelocks.
  * <p>
  * TODO: not developed yet, dummy implementation only
@@ -48,15 +48,15 @@ public class RandomSwitchStrategy extends ManagedStrategy {
     }
 
     @Override
-    protected FailedIteration runImpl() {
+    protected LincheckFailure runImpl() {
         for (int i = 1; i < invocations; i++) {
             InvocationResult ir = runInvocation();
             if (ir instanceof CompletedInvocationResult) {
                 ExecutionResult results = ((CompletedInvocationResult) ir).getResults();
                 if (!verifier.verifyResults(getScenario(), results))
-                    return new IncorrectResultsFailedIteration(getScenario(), results);
+                    return new IncorrectResultsFailure(getScenario(), results);
             } else {
-                return toFailedIteration(ir, getScenario());
+                return toLincheckFailure(ir, getScenario());
             }
         }
         return null;

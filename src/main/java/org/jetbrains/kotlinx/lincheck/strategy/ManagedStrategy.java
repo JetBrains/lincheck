@@ -71,7 +71,7 @@ public abstract class ManagedStrategy extends Strategy {
     }
 
     @Override
-    public final FailedIteration run() {
+    public final LincheckFailure run() {
         try {
             return runImpl();
         } finally {
@@ -100,7 +100,7 @@ public abstract class ManagedStrategy extends Strategy {
     /**
      * This method implements the strategy logic
      */
-    protected abstract FailedIteration runImpl();
+    protected abstract LincheckFailure runImpl();
 
     // == LISTENING EVENTS ==
 

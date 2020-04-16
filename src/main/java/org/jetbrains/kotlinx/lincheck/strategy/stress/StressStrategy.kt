@@ -50,7 +50,7 @@ class StressStrategy(
         runner = ParallelThreadsRunner(this, testClass, waits)
     }
 
-    override fun run(): FailedIteration? {
+    override fun run(): LincheckFailure? {
         try {
             // Run invocations
             for (invocation in 0 until invocations) {
@@ -66,9 +66,9 @@ class StressStrategy(
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results))
-                            return IncorrectResultsFailedIteration(scenario, ir.results)
+                            return IncorrectResultsFailure(scenario, ir.results)
                     }
-                    else -> return ir.toFailedIteration(scenario)
+                    else -> return ir.toLincheckFailure(scenario)
                 }
             }
             return null

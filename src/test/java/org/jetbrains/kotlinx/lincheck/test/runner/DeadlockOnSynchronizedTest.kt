@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
-class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockedWithDumpFailedIteration::class) {
+class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     private var counter = 0
     private var lock1 = Any()
     private var lock2 = Any()

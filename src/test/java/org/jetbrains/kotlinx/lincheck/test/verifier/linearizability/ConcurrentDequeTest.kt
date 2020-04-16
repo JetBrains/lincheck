@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.test.*
 import java.util.concurrent.*
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class ConcurrentDequeTest : AbstractLincheckTest(IncorrectResultsFailedIteration::class) {
+class ConcurrentDequeTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     private val deque = ConcurrentLinkedDeque<Int>()
 
     @Operation

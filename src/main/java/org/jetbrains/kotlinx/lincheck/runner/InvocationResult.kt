@@ -31,14 +31,14 @@ sealed class InvocationResult
 /**
  * The invocation completed successfully, the output [results] are provided.
  */
-data class CompletedInvocationResult(
+class CompletedInvocationResult(
     val results: ExecutionResult
 ) : InvocationResult()
 
 /**
- * Indicates that the invocation has get into deadlock or livelock.
+ * Indicates that the invocation has run into deadlock or livelock.
  */
-data class DeadlockInvocationResult(
+class DeadlockInvocationResult(
     val threadDump: Map<Thread, Array<StackTraceElement>>
 ) : InvocationResult()
 

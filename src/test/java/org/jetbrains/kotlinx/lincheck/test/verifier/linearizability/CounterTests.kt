@@ -29,7 +29,7 @@ import kotlin.reflect.KClass
 
 abstract class AbstractCounterTest(
     private val counter: Counter,
-    vararg expectedErrors: KClass<out FailedIteration>
+    vararg expectedErrors: KClass<out LincheckFailure>
 ) : AbstractLincheckTest(*expectedErrors) {
     @Operation
     fun incAndGet(): Int = counter.incAndGet()
@@ -38,9 +38,9 @@ abstract class AbstractCounterTest(
 }
 
 class CounterCorrectTest : AbstractCounterTest(CounterCorrect())
-class CounterWrong0Test : AbstractCounterTest(CounterWrong0(), IncorrectResultsFailedIteration::class)
-class CounterWrong1Test : AbstractCounterTest(CounterWrong1(), IncorrectResultsFailedIteration::class)
-class CounterWrong2Test : AbstractCounterTest(CounterWrong2(), IncorrectResultsFailedIteration::class)
+class CounterWrong0Test : AbstractCounterTest(CounterWrong0(), IncorrectResultsFailure::class)
+class CounterWrong1Test : AbstractCounterTest(CounterWrong1(), IncorrectResultsFailure::class)
+class CounterWrong2Test : AbstractCounterTest(CounterWrong2(), IncorrectResultsFailure::class)
 
 interface Counter {
     fun incAndGet(): Int

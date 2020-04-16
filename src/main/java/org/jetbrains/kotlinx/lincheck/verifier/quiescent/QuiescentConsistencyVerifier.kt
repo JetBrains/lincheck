@@ -25,6 +25,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * This verifier tests for quiescent consistency.
@@ -33,31 +35,51 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
  * However, we believe that quiescent points do not occur
  * in practice while supporting them complicates the implementation.
  */
-class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : CachedVerifier() {
+class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier {
     private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
+    private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = WeakHashMap()
+
     override fun checkStateEquivalenceImplementation() = linearizabilityVerifier.checkStateEquivalenceImplementation()
 
-    override fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
-        val newThreads = scenario.threads + scenario.parallelExecution.flatten().count { it.isQuiescentConsistent }
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
+        val convertedScenario = scenario.converted
+        val convertedResults = results.convert(scenario, convertedScenario.threads)
+        return linearizabilityVerifier.verifyResults(convertedScenario, convertedResults)
+    }
+
+    private val ExecutionScenario.converted: ExecutionScenario get() = scenarioMapping.computeIfAbsent(this) {
         val parallelExecution = ArrayList<MutableList<Actor>>()
-        val parallelResults = ArrayList<MutableList<ResultWithClock>>()
-        repeat(scenario.threads) {
+        repeat(threads) {
             parallelExecution.add(ArrayList())
+        }
+        parallelExecution.forEachIndexed { t, threadActors ->
+            for (a in threadActors) {
+                if (a.isQuiescentConsistent) {
+                    parallelExecution.add(mutableListOf(a))
+                } else {
+                    parallelExecution[t].add(a)
+                }
+            }
+        }
+        ExecutionScenario(initExecution, parallelExecution, postExecution)
+    }
+
+    private fun ExecutionResult.convert(originalScenario: ExecutionScenario, newThreads: Int): ExecutionResult {
+        val parallelResults = ArrayList<MutableList<ResultWithClock>>()
+        repeat(originalScenario.threads) {
             parallelResults.add(ArrayList())
         }
-        val clocks = Array(scenario.threads) { ArrayList<IntArray>() }
-        val clockMapping = Array(scenario.threads) { ArrayList<Int>() }
+        val clocks = Array(originalScenario.threads) { ArrayList<IntArray>() }
+        val clockMapping = Array(originalScenario.threads) { ArrayList<Int>() }
         clockMapping.forEach { it.add(-1) }
-        scenario.parallelExecution.forEachIndexed { t, threadActors ->
+        originalScenario.parallelExecution.forEachIndexed { t, threadActors ->
             threadActors.forEachIndexed { i, a ->
-                val r = results.parallelResultsWithClock[t][i]
+                val r = parallelResultsWithClock[t][i]
                 if (a.isQuiescentConsistent) {
                     clockMapping[t].add(clockMapping[t][i])
-                    parallelExecution.add(mutableListOf(a))
                     parallelResults.add(mutableListOf(r.result.withEmptyClock(newThreads)))
                 } else {
                     clockMapping[t].add(clockMapping[t][i] + 1)
-                    parallelExecution[t].add(a)
                     val c = IntArray(newThreads) { 0 }
                     clocks[t].add(c)
                     parallelResults[t].add(ResultWithClock(r.result, HBClock(c)))
@@ -66,17 +88,15 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : CachedVe
         }
         clocks.forEachIndexed { t, threadClocks ->
             threadClocks.forEachIndexed { i, c ->
-                for (j in 0 until scenario.threads) {
-                    val old = results.parallelResultsWithClock[t][i].clockOnStart[j]
+                for (j in 0 until originalScenario.threads) {
+                    val old = parallelResultsWithClock[t][i].clockOnStart[j]
                     c[j] = clockMapping[j][old]
                 }
             }
         }
-        val convertedScenario = ExecutionScenario(scenario.initExecution, parallelExecution, scenario.postExecution)
-        val convertedResults = ExecutionResult(results.initResults, parallelResults, results.postResults)
-        return linearizabilityVerifier.verifyResultsImpl(convertedScenario, convertedResults)
+        return ExecutionResult(initResults, parallelResults, postResults)
     }
-}
+ }
 
 private val Actor.isQuiescentConsistent: Boolean get() = method.isAnnotationPresent(QuiescentConsistent::class.java)
 

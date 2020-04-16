@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.test.*
 import java.util.*
 
 @Param(name = "key", gen = IntGen::class)
-class HashMapTest : AbstractLincheckTest(IncorrectResultsFailedIteration::class, UnexpectedExceptionFailedIteration::class) {
+class HashMapTest : AbstractLincheckTest(IncorrectResultsFailure::class, UnexpectedExceptionFailure::class) {
     private val m = HashMap<Int, Int>()
 
     @Operation

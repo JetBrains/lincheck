@@ -33,8 +33,8 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 public @interface Operation {
     /**
-     * Binds the arguments of this operations with the specified {@link Param parameter configurations}
-     * by theirs {@link Param#name()} names.
+     * Binds the arguments of this operation with the specified {@link Param parameter configurations}
+     * by their {@link Param#name()} names.
      */
     String[] params() default {};
 

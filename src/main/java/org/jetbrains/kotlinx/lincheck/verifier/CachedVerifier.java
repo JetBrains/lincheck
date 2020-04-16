@@ -33,7 +33,7 @@ import java.util.*;
  * phase significantly.
  */
 public abstract class CachedVerifier implements Verifier {
-    private final Map<ExecutionScenario, Set<ExecutionResult>> previousResults = new HashMap<>();
+    private final Map<ExecutionScenario, Set<ExecutionResult>> previousResults = new WeakHashMap<>();
 
     @Override
     public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {

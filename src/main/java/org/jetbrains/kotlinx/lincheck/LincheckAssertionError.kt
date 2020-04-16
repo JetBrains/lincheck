@@ -23,10 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.lang.AssertionError
-import java.lang.StringBuilder
 
 class LincheckAssertionError(
-    failedIteration: FailedIteration
-) : AssertionError(failedIteration.createMessage())
-
-private fun FailedIteration.createMessage() = StringBuilder().appendFailedIteration(this).toString()
+    failure: LincheckFailure
+) : AssertionError(failure)

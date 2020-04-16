@@ -46,33 +46,33 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      * @throws LincheckAssertionError if the testing data structure is incorrect.
      */
     fun check() {
-        val failedIteration = checkImpl() ?: return
-        throw LincheckAssertionError(failedIteration)
+        val failure = checkImpl() ?: return
+        throw LincheckAssertionError(failure)
     }
 
     /**
      * @return TestReport with information about concurrent test run.
      */
-    internal fun checkImpl(): FailedIteration? {
+    internal fun checkImpl(): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
-            val failedIteration = testCfg.checkImpl()
-            if (failedIteration != null) return failedIteration
+            val failure = testCfg.checkImpl()
+            if (failure != null) return failure
         }
         return null
     }
 
-    private fun CTestConfiguration.checkImpl(): FailedIteration? {
+    private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { iteration ->
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(iteration, iterations, scenario)
-            val failedIteration = scenario.run(this, verifier)
-            if (failedIteration != null) {
-                val minimizedFailedIteration = if (!minimizeFailedScenario) failedIteration
-                                               else failedIteration.minimize(this, verifier)
+            val failure = scenario.run(this, verifier)
+            if (failure != null) {
+                val minimizedFailedIteration = if (!minimizeFailedScenario) failure
+                                               else failure.minimize(this, verifier)
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
@@ -86,7 +86,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
     // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
     // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun FailedIteration.minimize(testCfg: CTestConfiguration, verifier: Verifier): FailedIteration {
+    private fun LincheckFailure.minimize(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure {
         reporter.logScenarioMinimization(scenario)
         for (i in scenario.parallelExecution.indices) {
             for (j in scenario.parallelExecution[i].indices) {
@@ -115,7 +115,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, verifier: Verifier) =
         if (isValid) run(testCfg, verifier) else null
 
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): FailedIteration? {
+    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? {
         val strategy = testCfg.createStrategy(testClass, this, verifier)
         return strategy.run()
     }

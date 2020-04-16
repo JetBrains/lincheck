@@ -25,29 +25,29 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 
-sealed class FailedIteration(
+sealed class LincheckFailure(
     val scenario: ExecutionScenario
 ) {
-    override fun toString() = StringBuilder().appendFailedIteration(this).toString()
+    override fun toString() = StringBuilder().appendFailure(this).toString()
 }
 
-internal class IncorrectResultsFailedIteration(
+internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     val results: ExecutionResult
-) : FailedIteration(scenario)
+) : LincheckFailure(scenario)
 
-internal class DeadlockedWithDumpFailedIteration(
+internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
     val threadDump: Map<Thread, Array<StackTraceElement>>
-) : FailedIteration(scenario)
+) : LincheckFailure(scenario)
 
-internal class UnexpectedExceptionFailedIteration(
+internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     val exception: Throwable
-) : FailedIteration(scenario)
+) : LincheckFailure(scenario)
 
-internal fun InvocationResult.toFailedIteration(scenario: ExecutionScenario) = when (this) {
-    is DeadlockInvocationResult -> DeadlockedWithDumpFailedIteration(scenario, threadDump)
-    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailedIteration(scenario, exception)
+internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario) = when (this) {
+    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump)
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }
