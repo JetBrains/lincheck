@@ -30,24 +30,18 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import org.junit.Assert.*
 
-@Param(name = "key", gen = IntGen::class, conf = "1:5")
 class FailedScenarioMinimizationTest: VerifierState() {
-    private val m = HashMap<Int, Int>()
-    override fun extractState() = m
+    @Volatile
+    private var counter = 0
 
     @Operation
-    fun put(@Param(name = "key") key: Int, @Param(gen = IntGen::class) value: Int) = m.put(key, value)
+    fun inc() = counter++
 
-    @Operation
-    fun get(@Param(name = "key") key: Int) = m.get(key)
-
-    @Operation
-    fun remove(@Param(name = "key") key: Int) = m.remove(key)
+    override fun extractState() = counter
 
     @Test
     fun testWithoutMinimization() {
-        val options = StressOptions().invocationsPerIteration(100_000)
-                                     .actorsPerThread(15)
+        val options = StressOptions().actorsPerThread(10)
                                      .minimizeFailedScenario(false)
         try {
             LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
@@ -57,14 +51,13 @@ class FailedScenarioMinimizationTest: VerifierState() {
             assertTrue("The init part should NOT be minimized", m.contains("Init"))
             assertTrue("The post part should NOT be minimized", m.contains("Post"))
             assertEquals("The parallel part should NOT be minimized",
-                    15, m.lines().filter { it.contains("|") }.size)
+                    10, m.lines().filter { it.contains("|") }.size)
         }
     }
 
     @Test
     fun testWithMinimization() {
-        val options = StressOptions().invocationsPerIteration(100_000)
-                                     .actorsPerThread(15)
+        val options = StressOptions().actorsPerThread(10)
         try {
             LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
             fail("Should fail with AssertionError")
