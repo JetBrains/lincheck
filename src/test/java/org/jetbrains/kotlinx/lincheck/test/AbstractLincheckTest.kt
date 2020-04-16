@@ -29,7 +29,7 @@ import org.junit.*
 import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
-    private vararg val expectedErrors: KClass<out LincheckFailure>
+    private vararg val expectedFailures: KClass<out LincheckFailure>
 ) : VerifierState() {
     open fun <O: Options<O, *>> O.customize() {}
     override fun extractState(): Any = System.identityHashCode(this)
@@ -37,11 +37,11 @@ abstract class AbstractLincheckTest(
     private fun <O : Options<O, *>> O.runInternalTest() {
         val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)
         if (failure === null) {
-            assert(expectedErrors.isEmpty()) {
+            assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
             }
         } else {
-            assert(expectedErrors.contains(failure::class)) {
+            assert(expectedFailures.contains(failure::class)) {
                 "This test has been failed with an unexpected error: \n $failure"
             }
         }
