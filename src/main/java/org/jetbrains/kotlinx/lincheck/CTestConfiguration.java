@@ -31,6 +31,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 
+import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -81,7 +82,8 @@ public abstract class CTestConfiguration {
         this.sequentialSpecification = sequentialSpecification;
     }
 
-    protected abstract Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario, Verifier verifier);
+    protected abstract Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario,
+                                               List<Method> validationFunctions, Verifier verifier);
 
     static List<CTestConfiguration> createFromTestClassAnnotations(Class<?> testClass) {
         Stream<StressCTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))

@@ -46,8 +46,15 @@ internal class UnexpectedExceptionFailure(
     val exception: Throwable
 ) : LincheckFailure(scenario)
 
+internal class ValidationFailure(
+    scenario: ExecutionScenario,
+    val functionName: String,
+    val exception: Throwable
+) : LincheckFailure(scenario)
+
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario) = when (this) {
     is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception)
+    is ValidationFailureInvocationResult -> ValidationFailure(this.scenario, functionName, exception)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

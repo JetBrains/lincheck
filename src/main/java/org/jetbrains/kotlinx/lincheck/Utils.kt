@@ -72,14 +72,14 @@ internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testIn
  * Executes the specified actor on the sequential specification instance and returns its result.
  */
 internal fun executeActor(
-    specification: Any,
+    instance: Any,
     actor: Actor,
     completion: Continuation<Any?>?
 ): Result {
     try {
-        val m = getMethod(specification, actor)
+        val m = getMethod(instance, actor.method)
         val args = if (actor.isSuspendable) actor.arguments + completion else actor.arguments
-        val res = m.invoke(specification, *args.toTypedArray())
+        val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
         val eClass = (invE.cause ?: invE).javaClass.normalize()
@@ -98,16 +98,37 @@ internal fun executeActor(
     }
 }
 
+internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
+                                        onError: (functionName: String, exception: Throwable) -> Unit) {
+    for (f in validationFunctions) {
+        val validationException = executeValidationFunction(instance, f)
+        if (validationException != null) {
+            onError(f.name, validationException)
+            return
+        }
+    }
+}
+
+private fun executeValidationFunction(instance: Any, validationFunction: Method): Throwable? {
+    val m = getMethod(instance, validationFunction)
+    try {
+        m.invoke(instance)
+    } catch (e: Throwable) {
+        return e
+    }
+    return null
+}
+
 internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadClass(name) as Class<T>
 
 private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
 
-private fun getMethod(instance: Any, actor: Actor): Method {
+private fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
-    return methods[actor.method]?.get() ?: run {
-        val method = instance.javaClass.getMethod(actor.method.name, *actor.method.parameterTypes)
-        methods[actor.method] = WeakReference(method)
-        method
+    return methods[method]?.get() ?: run {
+        val m = instance.javaClass.getMethod(method.name, *method.parameterTypes)
+        methods[method] = WeakReference(m)
+        m
     }
 }
 

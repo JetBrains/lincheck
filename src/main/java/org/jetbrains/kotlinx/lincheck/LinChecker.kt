@@ -116,7 +116,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         if (isValid) run(testCfg, verifier) else null
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? {
-        val strategy = testCfg.createStrategy(testClass, this, verifier)
+        val strategy = testCfg.createStrategy(testClass, this, testStructure.validationFunctions, verifier)
         return strategy.run()
     }
 

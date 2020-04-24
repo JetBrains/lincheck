@@ -22,9 +22,7 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig;
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.annotations.Param;
+import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
@@ -47,10 +45,12 @@ import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<OperationGroup> operationGroups;
+    public final List<Method> validationFunctions;
 
-    private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups) {
+    private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups, List<Method> validationFunctions) {
         this.actorGenerators = actorGenerators;
         this.operationGroups = operationGroups;
+        this.validationFunctions = validationFunctions;
     }
 
     /**
@@ -60,18 +60,21 @@ public class CTestStructure {
         Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
+        List<Method> validationFunctions = new ArrayList<>();
         Class<?> clazz = testClass;
         while (clazz != null) {
-            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators);
+            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions);
             clazz = clazz.getSuperclass();
         }
         // Create StressCTest class configuration
-        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()));
+        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions);
     }
 
     private static void readTestStructureFromClass(Class<?> clazz, Map<String, ParameterGenerator<?>> namedGens,
                                                    Map<String, OperationGroup> groupConfigs,
-                                                   List<ActorGenerator> actorGenerators) {
+                                                   List<ActorGenerator> actorGenerators,
+                                                   List<Method> validationFunctions
+    ) {
         // Read named parameter paramgen (declared for class)
         for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
             if (paramAnn.name().isEmpty()) {
@@ -114,6 +117,11 @@ public class CTestStructure {
                         throw new IllegalStateException("Operation group " + opGroup + " is not configured");
                     operationGroup.actors.add(actorGenerator);
                 }
+            }
+            if (m.isAnnotationPresent(Validate.class)) {
+                if (m.getParameterCount() != 0)
+                    throw new IllegalStateException("Validation function " + m.getName() + " should not have parameters");
+                validationFunctions.add(m);
             }
         }
     }

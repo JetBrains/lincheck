@@ -28,6 +28,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.objectweb.asm.*;
 
+import java.lang.reflect.*;
+import java.util.*;
 import java.util.concurrent.atomic.*;
 
 /**
@@ -39,15 +41,17 @@ import java.util.concurrent.atomic.*;
 public abstract class Runner {
     protected final ExecutionScenario scenario;
     protected final Class<?> testClass;
+    protected final List<Method> validationFunctions;
     public final ExecutionClassLoader classLoader;
 
     protected final AtomicInteger completedOrSuspendedThreads = new AtomicInteger(0);
 
-    protected Runner(Strategy strategy, Class<?> testClass) {
+    protected Runner(Strategy strategy, Class<?> testClass, List<Method> validationFunctions) {
         this.scenario = strategy.getScenario();
         this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
             new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
         this.testClass = loadClass(testClass.getTypeName());
+        this.validationFunctions = validationFunctions;
     }
 
     /**

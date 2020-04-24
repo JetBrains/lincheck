@@ -45,7 +45,7 @@ public class TestThreadExecutionHelperTest {
                 throw new UnsupportedOperationException();
             }
         };
-        runner = new Runner(strategy, ArrayDeque.class) {
+        runner = new Runner(strategy, ArrayDeque.class, emptyList()) {
             @Override
             public InvocationResult run() {
                 throw new UnsupportedOperationException();

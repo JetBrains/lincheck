@@ -48,3 +48,9 @@ class DeadlockInvocationResult(
 class UnexpectedExceptionInvocationResult(
     val exception: Throwable
 ) : InvocationResult()
+
+class ValidationFailureInvocationResult(
+    val scenario: ExecutionScenario,
+    val functionName: String,
+    val exception: Throwable
+) : InvocationResult()

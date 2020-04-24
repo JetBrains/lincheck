@@ -25,12 +25,14 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.lang.reflect.*
 import java.util.*
 
 class StressStrategy(
     testCfg: StressCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
+    validationFunctions: List<Method>,
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val random = Random(0)
@@ -47,7 +49,7 @@ class StressStrategy(
             }
         }
         // Create runner
-        runner = ParallelThreadsRunner(this, testClass, waits)
+        runner = ParallelThreadsRunner(this, testClass, validationFunctions, waits)
     }
 
     override fun run(): LincheckFailure? {
