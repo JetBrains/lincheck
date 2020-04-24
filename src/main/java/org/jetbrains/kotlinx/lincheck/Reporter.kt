@@ -121,13 +121,15 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
 }
 
-private fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
+internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
     if (scenario.initExecution.isNotEmpty()) {
         appendln("Execution scenario (init part):")
         appendln(scenario.initExecution)
     }
-    appendln("Execution scenario (parallel part):")
-    append(printInColumns(scenario.parallelExecution))
+    if (scenario.parallelExecution.isNotEmpty()) {
+        appendln("Execution scenario (parallel part):")
+        append(printInColumns(scenario.parallelExecution))
+    }
     if (scenario.parallelExecution.isNotEmpty()) {
         appendln()
         appendln("Execution scenario (post part):")
@@ -140,14 +142,13 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
+        is ValidationFailure -> appendValidationFailure(failure)
     }
 
 private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
     appendln("= The execution failed with an unexpected exception =")
     appendExecutionScenario(failure.scenario)
-    val sw = StringWriter()
-    failure.exception.printStackTrace(PrintWriter(sw))
-    appendln(sw.toString())
+    appendException(failure.exception)
     return this
 }
 
@@ -183,4 +184,17 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
         appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
             "in each of the parallel threads seen at the beginning of the current operation\n---")
     return this
+}
+
+private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
+    appendln("= Validation function ${failure.functionName} has been failed =")
+    appendExecutionScenario(failure.scenario)
+    appendException(failure.exception)
+    return this
+}
+
+private fun StringBuilder.appendException(t: Throwable) {
+    val sw = StringWriter()
+    t.printStackTrace(PrintWriter(sw))
+    appendln(sw.toString())
 }

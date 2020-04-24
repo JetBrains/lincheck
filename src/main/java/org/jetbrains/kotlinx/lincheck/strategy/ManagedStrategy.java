@@ -26,6 +26,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.objectweb.asm.*;
 
+import java.lang.reflect.*;
+import java.util.*;
+
 /**
  * This is an abstract class for all managed strategies.
  * This abstraction helps to choose a proper {@link Runner},
@@ -41,10 +44,10 @@ public abstract class ManagedStrategy extends Strategy {
     private final Runner runner;
     private ManagedStrategyTransformer transformer;
 
-    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario) {
+    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
-        runner = new ParallelThreadsRunner(this, testClass, null) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions,null) {
             @Override
             public void onStart(int iThread) {
                 super.onStart(iThread);

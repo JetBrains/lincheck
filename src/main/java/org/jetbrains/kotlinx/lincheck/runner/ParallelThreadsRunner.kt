@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
+import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.Executors.*
 import java.util.concurrent.atomic.*
@@ -44,8 +45,9 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
 open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
+    validationFunctions: List<Method>,
     waits: List<IntArray>?
-) : Runner(strategy, testClass) {
+) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val executor = newFixedThreadPool(scenario.threads, ParallelThreadsRunner::TestThread)
 
@@ -192,7 +194,18 @@ open class ParallelThreadsRunner(
 
     override fun run(): InvocationResult {
         reset()
-        val initResults = scenario.initExecution.map { initActor -> executeActor(testInstance, initActor) }
+        val initResults = scenario.initExecution.mapIndexed { i, initActor ->
+            executeActor(testInstance, initActor).also {
+                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                    val s = ExecutionScenario(
+                        scenario.initExecution.subList(0, i + 1),
+                        emptyList(),
+                        emptyList()
+                    )
+                    return ValidationFailureInvocationResult(s, functionName, exception)
+                }
+            }
+        }
         testThreadExecutions.map { executor.submit(it) }.forEach { future ->
             try {
                 future.get(10, TimeUnit.SECONDS)
@@ -206,16 +219,35 @@ open class ParallelThreadsRunner(
         val parallelResultsWithClock = testThreadExecutions.map { ex ->
             ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second)) }
         }
+        executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+            val s = ExecutionScenario(
+                scenario.initExecution,
+                scenario.parallelExecution,
+                emptyList()
+            )
+            return ValidationFailureInvocationResult(s, functionName, exception)
+        }
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
-        val postResults = scenario.postExecution.map { postActor ->
+        val postResults = scenario.postExecution.mapIndexed { i, postActor ->
             // no actors are executed after suspension of a post part
-            if (postPartSuspended) {
+            val result = if (postPartSuspended) {
                 NoResult
             } else {
                 // post part may contain suspendable actors if there aren't any in the parallel part, invoke with dummy continuation
-                executeActor(testInstance, postActor, dummyCompletion).also { postPartSuspended = it.wasSuspended }
+                executeActor(testInstance, postActor, dummyCompletion).also {
+                    postPartSuspended = it.wasSuspended
+                }
             }
+            executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                val s = ExecutionScenario(
+                    scenario.initExecution,
+                    scenario.parallelExecution,
+                    scenario.postExecution.subList(0, i + 1)
+                )
+                return ValidationFailureInvocationResult(s, functionName, exception)
+            }
+            result
         }
         val results = ExecutionResult(initResults, parallelResultsWithClock, postResults)
         return CompletedInvocationResult(results)

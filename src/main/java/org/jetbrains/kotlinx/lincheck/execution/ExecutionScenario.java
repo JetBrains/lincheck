@@ -28,6 +28,7 @@ import java.util.*;
 import java.util.stream.*;
 
 import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
+import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendExecutionScenario;
 
 /**
  * This class represents an execution scenario, which
@@ -76,5 +77,12 @@ public class ExecutionScenario {
      */
     public boolean hasSuspendableActors() {
         return Stream.concat(parallelExecution.stream().flatMap(Collection::stream), postExecution.stream()).anyMatch(actor -> isSuspendable(actor.getMethod()));
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        appendExecutionScenario(sb, this);
+        return sb.toString();
     }
 }

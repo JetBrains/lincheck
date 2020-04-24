@@ -140,6 +140,31 @@ Thus, **lincheck** can test that the testing data structure is correct even with
 This sequential specification class should have the same methods as the testing data structure.
 The specification class can be defined via `sequentialSpecification` parameter in both `Options` instances and the corresponding annotations.
 
+## Validation functions
+It is possible in **lincheck** to add the validation of the testing data structure invariants,
+which is implemented via functions that can be executed multiple times during execution
+when there is no running operation in an intermediate state (e.g., in the stress mode
+they are invoked after each of the init and post part operations and after the whole parallel part).
+Thus, these functions should not modify the data structure.
+
+Validation functions should be marked with `@Validate` annotation, should not have arguments,
+and should not return anything (in other words, the returning type is `void`).
+In case the testing data structure is in an invalid state, they should throw exceptions
+(`AssertionError` or `IllegalStateException` are the preferable ones).
+
+```kotlin
+class MyLockFreeListTest {
+  private val list = MyLockFreeList<Int>()  
+
+  @Validate 
+  fun checkNoRemovedNodesInTheList() = check(!list.hasRemovedNodes()) {
+    "The list contains logically removed nodes while all the operations are completed: $list"
+  }
+  
+  ...
+}
+```
+ 
 ## Run test
 In order to run a test, `LinChecker.check(...)` method should be executed with the provided test class as a parameter. Then **lincheck** looks at execution strategies to be used, which can be provided using annotations or options (see [Configuration via options](#configuration-via-options) for details), and runs a test with each of provided strategies. If an error is found, an `AssertionError` is thrown and the detailed error information is printed to the standard output. It is recommended to use **JUnit** or similar testing library to run `LinChecker.check(...)` method. 
 

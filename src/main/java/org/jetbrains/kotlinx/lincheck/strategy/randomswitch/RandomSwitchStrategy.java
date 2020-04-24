@@ -27,6 +27,9 @@ import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
 
+import java.lang.reflect.*;
+import java.util.*;
+
 import static org.jetbrains.kotlinx.lincheck.strategy.LincheckFailureKt.toLincheckFailure;
 
 
@@ -41,8 +44,9 @@ public class RandomSwitchStrategy extends ManagedStrategy {
     private final Verifier verifier;
 
     public RandomSwitchStrategy(RandomSwitchCTestConfiguration testCfg, Class<?> testClass,
-                                ExecutionScenario scenario, Verifier verifier) {
-        super(testClass, scenario);
+                                ExecutionScenario scenario, List<Method> validationFunctions,
+                                Verifier verifier) {
+        super(testClass, scenario, validationFunctions);
         this.invocations = testCfg.invocationsPerIteration;
         this.verifier = verifier;
     }

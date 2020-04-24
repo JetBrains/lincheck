@@ -27,6 +27,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
+import java.lang.reflect.*;
+import java.util.*;
+
 /**
  * Configuration for {@link RandomSwitchStrategy random-switch} strategy.
  */
@@ -45,7 +48,7 @@ public class RandomSwitchCTestConfiguration extends CTestConfiguration {
     }
 
     @Override
-    protected Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario, Verifier verifier) {
-        return new RandomSwitchStrategy(this, testClass, scenario, verifier);
+    protected Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, Verifier verifier) {
+        return new RandomSwitchStrategy(this, testClass, scenario, validationFunctions, verifier);
     }
 }
