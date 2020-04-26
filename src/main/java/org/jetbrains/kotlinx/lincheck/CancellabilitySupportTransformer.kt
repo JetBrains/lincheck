@@ -30,29 +30,23 @@ import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
 internal class CancellabilitySupportClassTransformer(cv: ClassVisitor) : ClassVisitor(Opcodes.ASM5, cv) {
-    private var className: String? = null
-
-    override fun visit(version: Int, access: Int, name: String?, signature: String?, superName: String?, interfaces: Array<String>?) {
-        className = name
-        super.visit(version, access, name, signature, superName, interfaces)
-    }
-
     override fun visitMethod(access: Int, methodName: String?, desc: String?, signature: String?, exceptions: Array<String>?): MethodVisitor {
-        var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        val transform = "kotlinx/coroutines/CancellableContinuationImpl" == className && "getResult" == methodName
-        if (transform) {
-            mv = CancellabilitySupportMethodTransformer(access, methodName, desc, mv)
-        }
-        return mv
+        val mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        return CancellabilitySupportMethodTransformer(access, methodName, desc, mv)
     }
 }
 
 private class CancellabilitySupportMethodTransformer(access: Int, methodName: String?, desc: String?, mv: MethodVisitor)
     : AdviceAdapter(Opcodes.ASM5, mv, access, methodName, desc)
 {
-    override fun onMethodEnter() {
-        this.loadThis()
-        this.invokeStatic(storeCancellableContOwnerType, storeCancellableContMethod)
+    override fun visitMethodInsn(opcodeAndSource: Int, className: String?, methodName: String?, descriptor: String?, isInterface: Boolean) {
+        val isGetResult = ("kotlinx/coroutines/CancellableContinuation" == className || "kotlinx/coroutines/CancellableContinuationImpl" == className)
+                          && "getResult" == methodName
+        if (isGetResult) {
+            this.dup()
+            this.invokeStatic(storeCancellableContOwnerType, storeCancellableContMethod)
+        }
+        super.visitMethodInsn(opcodeAndSource, className, methodName, descriptor, isInterface)
     }
 }
 

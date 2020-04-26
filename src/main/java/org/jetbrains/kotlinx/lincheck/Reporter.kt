@@ -30,26 +30,24 @@ import java.io.*
 
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
-        StringBuilder("\n= Iteration $iteration / $maxIterations =\n").run {
-            appendExecutionScenario(scenario)
-            out.println(this)
-        }
+        appendln("\n= Iteration $iteration / $maxIterations =")
+        appendExecutionScenario(scenario)
     }
 
     fun logFailedIteration(failure: LincheckFailure) = log(INFO) {
-        StringBuilder().appendFailure(failure)
+        appendFailure(failure)
     }
 
     fun logScenarioMinimization(scenario: ExecutionScenario) = log(INFO) {
-        StringBuilder("\nInvalid interleaving found, trying to minimize the scenario below:\n").run {
-            appendExecutionScenario(scenario)
-            out.println(this)
-        }
+        appendln("\nInvalid interleaving found, trying to minimize the scenario below:")
+        appendExecutionScenario(scenario)
     }
 
-    private inline fun log(logLevel: LoggingLevel, crossinline msg: () -> Any): Unit = synchronized(this) {
+    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
-        out.println(msg())
+        val sb = StringBuilder()
+        msg(sb)
+        out.println(sb)
     }
 }
 
@@ -121,7 +119,7 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
 }
 
-internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) {
+internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
     if (scenario.initExecution.isNotEmpty()) {
         appendln("Execution scenario (init part):")
         appendln(scenario.initExecution)
@@ -129,12 +127,13 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario) 
     if (scenario.parallelExecution.isNotEmpty()) {
         appendln("Execution scenario (parallel part):")
         append(printInColumns(scenario.parallelExecution))
-    }
-    if (scenario.parallelExecution.isNotEmpty()) {
         appendln()
+    }
+    if (scenario.postExecution.isNotEmpty()) {
         appendln("Execution scenario (post part):")
         append(scenario.postExecution)
     }
+    return this
 }
 
 internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder =

@@ -74,7 +74,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||
             className.startsWith("kotlin.") ||
-            (className.equals("kotlinx.coroutines.CancellableContinuation"));
+            className.equals("kotlinx.coroutines.CancellableContinuation") ||
+            className.equals("kotlinx.coroutines.CoroutineDispatcher");
         // TODO let's transform java.util.concurrent
     }
 
