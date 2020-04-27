@@ -65,10 +65,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
-        repeat(iterations) { iteration ->
+        repeat(iterations) { i ->
             val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(iteration, iterations, scenario)
+            reporter.logIteration(i + 1, iterations, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure
