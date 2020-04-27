@@ -44,24 +44,25 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
         val convertedScenario = scenario.converted
         val convertedResults = results.convert(scenario, convertedScenario.threads)
+        checkScenarioAndResultsAreSimilarlyConverted(convertedScenario, convertedResults)
         return linearizabilityVerifier.verifyResults(convertedScenario, convertedResults)
     }
 
     private val ExecutionScenario.converted: ExecutionScenario get() = scenarioMapping.computeIfAbsent(this) {
-        val parallelExecution = ArrayList<MutableList<Actor>>()
+        val parallelExecutionConverted = ArrayList<MutableList<Actor>>()
         repeat(threads) {
-            parallelExecution.add(ArrayList())
+            parallelExecutionConverted.add(ArrayList())
         }
         parallelExecution.forEachIndexed { t, threadActors ->
             for (a in threadActors) {
                 if (a.isQuiescentConsistent) {
-                    parallelExecution.add(mutableListOf(a))
+                    parallelExecutionConverted.add(mutableListOf(a))
                 } else {
-                    parallelExecution[t].add(a)
+                    parallelExecutionConverted[t].add(a)
                 }
             }
         }
-        ExecutionScenario(initExecution, parallelExecution, postExecution)
+        ExecutionScenario(initExecution, parallelExecutionConverted, postExecution)
     }
 
     private fun ExecutionResult.convert(originalScenario: ExecutionScenario, newThreads: Int): ExecutionResult {
@@ -95,6 +96,23 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
             }
         }
         return ExecutionResult(initResults, parallelResults, postResults)
+    }
+
+    private fun checkScenarioAndResultsAreSimilarlyConverted(scenario: ExecutionScenario, results: ExecutionResult) {
+        check(scenario.initExecution.size == results.initResults.size) {
+            "Transformed scenario and results have different number of operations in init parts"
+        }
+        check(scenario.postExecution.size == results.postResults.size) {
+            "Transformed scenario and results have different number of operations in post parts"
+        }
+        check(scenario.parallelExecution.size == results.parallelResultsWithClock.size) {
+            "Transformed scenario and results have different number of parallel threads"
+        }
+        for (t in 0 until scenario.threads) {
+            check(scenario.parallelExecution[t].size == results.parallelResultsWithClock[t].size) {
+                "Transformed scenario and resutls have different number of operations in thread $t"
+            }
+        }
     }
  }
 

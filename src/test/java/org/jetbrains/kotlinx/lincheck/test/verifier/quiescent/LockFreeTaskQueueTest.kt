@@ -46,8 +46,8 @@ class LockFreeTaskQueueTest: AbstractLincheckTest() {
     fun close() = q.close()
 
     override fun <O : Options<O, *>> O.customize() {
-        actorsBefore(0)
-        actorsAfter(0)
+        actorsBefore(2)
+        actorsAfter(2)
         threads(2)
         actorsPerThread(3)
         verifier(QuiescentConsistencyVerifier::class.java)
