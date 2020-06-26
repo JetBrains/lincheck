@@ -42,7 +42,7 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  *
  * It is pretty useful for stress testing or if you do not care about context switches.
  */
-open class ParallelThreadsRunner(
+internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
@@ -167,14 +167,15 @@ open class ParallelThreadsRunner(
     }
 
     private fun waitAndInvokeFollowUp(threadId: Int, actorId: Int): Result {
-        completedOrSuspendedThreads.incrementAndGet()
+        // Coroutine is suspended. Call method so that strategy can learn it.
+        afterCoroutineSuspended(threadId)
         // Tf the suspended method call has a follow-up part after this suspension point,
         // then wait for the resuming thread to write a result of this suspension point
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.
         val completion = completions[threadId][actorId]
         var i = 1
-        while (completion.resWithCont.get() === null && suspensionPointResults[threadId] === NoResult) {
+        while (!canResumeCoroutine(threadId, actorId) || !strategy.canResumeCoroutine(threadId)) {
             // Check whether the scenario is completed and the current suspended operation cannot be resumed.
             if (completedOrSuspendedThreads.get() == scenario.threads) {
                 suspensionPointResults[threadId] = NoResult
@@ -182,6 +183,8 @@ open class ParallelThreadsRunner(
             }
             if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
         }
+        // Coroutine will be resumed. Call method so that strategy can learn it.
+        beforeCoroutineResumed(threadId)
         // Check whether the result of the suspension point with the continuation has been stored
         // by the resuming thread, and invoke the follow-up part in this case
         if (completion.resWithCont.get() !== null) {
@@ -190,6 +193,18 @@ open class ParallelThreadsRunner(
             completion.resWithCont.get().second.resumeWith(resumedValue)
         }
         return suspensionPointResults[threadId]
+    }
+
+    override fun afterCoroutineSuspended(threadId: Int) {
+        completedOrSuspendedThreads.incrementAndGet()
+    }
+
+    override fun beforeCoroutineResumed(threadId: Int) {}
+
+
+    override fun canResumeCoroutine(threadId: Int, actorId: Int): Boolean {
+        val completion = completions[threadId][actorId]
+        return completion.resWithCont.get() != null || suspensionPointResults[threadId] !== NoResult
     }
 
     override fun run(): InvocationResult {
@@ -210,7 +225,7 @@ open class ParallelThreadsRunner(
             try {
                 future.get(10, TimeUnit.SECONDS)
             } catch (e: TimeoutException) {
-                val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread }
+                val threadDump = collectThreadDump()
                 return DeadlockInvocationResult(threadDump)
             } catch (e: ExecutionException) {
                 return UnexpectedExceptionInvocationResult(e.cause!!)
@@ -253,9 +268,9 @@ open class ParallelThreadsRunner(
         return CompletedInvocationResult(results)
     }
 
-    override fun onStart(iThread: Int) {
-        super.onStart(iThread)
-        (Thread.currentThread() as TestThread).iThread = iThread
+    override fun onStart(threadId: Int) {
+        super.onStart(threadId)
+        (Thread.currentThread() as TestThread).threadId = threadId
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1
@@ -281,7 +296,7 @@ open class ParallelThreadsRunner(
 
      // For [TestThreadExecution] instances
     class TestThread(r: Runnable) : Thread(r) {
-        var iThread: Int = 0
+        var threadId: Int = 0
         var cont: CancellableContinuation<*>? = null
     }
 }

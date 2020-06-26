@@ -54,13 +54,13 @@ public class RandomSwitchStrategy extends ManagedStrategy {
     @Override
     protected LincheckFailure runImpl() {
         for (int i = 1; i < invocations; i++) {
-            InvocationResult ir = runInvocation();
+            InvocationResult ir = runner.run();
             if (ir instanceof CompletedInvocationResult) {
                 ExecutionResult results = ((CompletedInvocationResult) ir).getResults();
                 if (!verifier.verifyResults(getScenario(), results))
-                    return new IncorrectResultsFailure(getScenario(), results);
+                    return new IncorrectResultsFailure(getScenario(), results, null);
             } else {
-                return toLincheckFailure(ir, getScenario());
+                return toLincheckFailure(ir, getScenario(), null);
             }
         }
         return null;

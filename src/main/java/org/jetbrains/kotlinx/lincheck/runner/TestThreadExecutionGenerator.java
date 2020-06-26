@@ -55,6 +55,8 @@ public class TestThreadExecutionGenerator {
     private static final Type RUNNER_TYPE = getType(Runner.class);
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
+    private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
+    private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
@@ -161,7 +163,7 @@ public class TestThreadExecutionGenerator {
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "results", RESULT_ARRAY_TYPE);
         mv.storeLocal(resLocal);
-        // Call runner's onStart(iThread) method
+        // Call runner's onStart(threadId) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
@@ -194,16 +196,26 @@ public class TestThreadExecutionGenerator {
                 mv.invokeStatic(UTILS_TYPE, UTILS_CONSUME_CPU);
             }
             // Start of try-catch block for exceptions which this actor should handle
-            Label start, end = null, handler = null, handlerEnd = null;
+            Label handler = null;
+            Label actorEnd = mv.newLabel();
+            Label start = mv.newLabel();
+            Label end = mv.newLabel();
             if (actor.getHandlesExceptions()) {
-                start = mv.newLabel();
-                end = mv.newLabel();
                 handler = mv.newLabel();
-                handlerEnd = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
                     mv.visitTryCatchBlock(start, end, handler, getType(ec).getInternalName());
                 mv.visitLabel(start);
             }
+            // Catch those exceptions that were not catched yet
+            Label remainingExceptionHandler = mv.newLabel();
+            mv.visitTryCatchBlock(start, end, remainingExceptionHandler, THROWABLE_TYPE.getInternalName());
+            mv.visitLabel(start);
+            // onActorStart call
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_START);
+
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
             mv.push(i);
@@ -231,7 +243,7 @@ public class TestThreadExecutionGenerator {
             mv.invokeVirtual(testType, actorMethod);
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {
-                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, iThread, i)
+                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, threadId, i)
                 mv.push(iThread);
                 mv.push(i);
                 mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
@@ -248,18 +260,32 @@ public class TestThreadExecutionGenerator {
             }
             // Store result to array
             mv.arrayStore(RESULT_TYPE);
-            // End of try-catch block
+            // End of try-catch block for handled exceptions
+            mv.visitLabel(end);
+            mv.goTo(actorEnd);
             if (actor.getHandlesExceptions()) {
-                mv.visitLabel(end);
-                mv.goTo(handlerEnd);
                 mv.visitLabel(handler);
                 if (scenarioContainsSuspendableActors) {
                     storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
                 } else {
                     storeExceptionResultFromThrowable(mv, resLocal, iLocal);
                 }
-                mv.visitLabel(handlerEnd);
             }
+            // End of try-catch block for all other exceptions
+            mv.goTo(actorEnd);
+            mv.visitLabel(remainingExceptionHandler);
+            // call onFailure method
+            mv.dup();
+            int eLocal = mv.newLocal(THROWABLE_TYPE);
+            mv.storeLocal(eLocal);
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.loadLocal(eLocal);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FAILURE_METHOD);
+            // just throw the exception further
+            mv.throwException();
+            mv.visitLabel(actorEnd);
             // Increment the clock
             mv.loadThis();
             mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);
@@ -277,7 +303,7 @@ public class TestThreadExecutionGenerator {
             mv.visitJumpInsn(GOTO, launchNextActor);
             mv.visitLabel(launchNextActor);
         }
-        // Call runner's onFinish(iThread) method
+        // Call runner's onFinish(threadId) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);

@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCa
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import sun.misc.Unsafe
 import java.lang.ref.WeakReference
 import java.lang.reflect.*
 import java.util.*
@@ -211,3 +212,25 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
         storedLastCancellableCont = cont
     }
 }
+
+object UnsafeHolder {
+    @Volatile
+    private var theUnsafe: Unsafe? = null
+
+    @JvmStatic
+    fun getUnsafe(): Unsafe {
+        if (theUnsafe == null) {
+            try {
+                val f = Unsafe::class.java.getDeclaredField("theUnsafe")
+                f.isAccessible = true
+                theUnsafe = f.get(null) as Unsafe
+            } catch (e: Exception) {
+                throw RuntimeException(e)
+            }
+        }
+
+        return theUnsafe!!
+    }
+}
+
+fun collectThreadDump() = Thread.getAllStackTraces().filter { (t, _) -> t is ParallelThreadsRunner.TestThread }

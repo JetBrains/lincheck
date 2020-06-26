@@ -21,8 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.objectweb.asm.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.objectweb.asm.ClassVisitor
 
 /**
  * Implementation of this class describes how to run the generated execution.
@@ -40,4 +40,16 @@ abstract class Strategy protected constructor(
     }
 
     abstract fun run(): LincheckFailure?
+
+    /**
+     * Check if Strategy allows to resume the coroutine.
+     */
+    open fun canResumeCoroutine(threadId: Int): Boolean {
+        return true
+    }
+
+    /**
+     * Is invoked before each actor execution in a thread.
+     */
+    open fun onActorStart(threadId: Int) {}
 }

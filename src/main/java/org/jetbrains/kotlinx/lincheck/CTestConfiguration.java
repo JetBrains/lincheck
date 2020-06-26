@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
@@ -37,6 +39,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.function.UnaryOperator.identity;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 
 /**
@@ -86,18 +89,26 @@ public abstract class CTestConfiguration {
                                                List<Method> validationFunctions, Verifier verifier);
 
     static List<CTestConfiguration> createFromTestClassAnnotations(Class<?> testClass) {
-        Stream<StressCTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))
+        Stream<CTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))
             .map(ann -> new StressCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                     chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
-        Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
+        Stream<CTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
             .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(),
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                     chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
-        return Stream.concat(stressConfigurations, randomSwitchConfigurations).collect(Collectors.toList());
+        Stream<CTestConfiguration> modelCheckingConfigurations = Arrays.stream(testClass.getAnnotationsByType(ModelCheckingCTest.class))
+                .map(ann -> new ModelCheckingCTestConfiguration(testClass, ann.iterations(),
+                        ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
+                        ann.generator(), ann.verifier(),
+                        ann.checkObstructionFreedom(), ann.hangingDetectionThreshold(), ann.invocationsPerIteration(),
+                        ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
+                        chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+
+        return Stream.of(stressConfigurations, randomSwitchConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());
     }
 }

@@ -30,6 +30,7 @@ Table of contents
       * [Run test](#run-test)
    * [Execution strategies](#execution-strategies)
       * [Stress strategy](#stress-strategy)
+      * [Model checking strategy](#model-checking-strategy)
    * [Correctness contracts](#correctness-contracts)
       * [Linearizability](#linearizability)
       * [Serializability](#serializability)
@@ -202,9 +203,16 @@ In order to use this strategy, just `@StressCTest` annotation should be added to
 * **actorsAfter** - number of operations to be executed after the concurrent part, helps to verify that a data structure is still correct;
 * **verifier** - verifier for an expected correctness contract (see [Correctness contracts](#correctness-contracts) for details).
 
+## Model checking strategy
+For the case of sequential consistency memory model, which is a common case, model checking strategy was developed. This mode was originally inspired by the `CHESS` framework for C#, which studies all possible schedules with a bounded number of context switches. It ignores weak memory model effects, so it is recommended to use both stress strategy and model checking strategy.
 
+Similarly to the stress strategies, this strategy can be used by `@ModelCheckingCTest` annotation or `ModelCheckingOptions`.
 
+It has the same parameters as stress strategy plus the following ones:
+* **checkObstructionFreedom** - specify, whether the strategy should also check obstruction freedom of the algorithm.
+* **hangingDetectionThreshold** - maximum number of times that a thread can visit a certain code location without switching to another thread that is still not recognized as hanging (i.e. because of spin lock).
 
+In comparison to the stress strategy the model checking strategy can also print the trace that led to incorrect results, not just the incorrect results.
 
 # Correctness contracts
 Once the generated scenario is executed using the specified strategy, it is needed to verify the operation results for correctness. By default **lincheck** checks the result for linearizability, which is de-facto a standard type of correctness. However, there are also verifiers for some relaxed contracts, which should be set via `@..CTest(verifier = ..Verifier.class)` option.
@@ -444,4 +452,31 @@ Post part:
 values in "[..]" brackets indicate the number of completed operations 
 in each of the parallel threads seen at the beginning of the current operation
 ---
+```
+
+If we used `@ModelCheckingCTest` instead of `@StressCTest` and `minimizeScenario = true`, we could get:
+```
+java.lang.AssertionError: Invalid interleaving found:
+= Invalid execution results: =
+Parallel part:
+| put(5,-8): null | put(5,4): null |
+= Parallel part execution: =
+|                              | put(5,4) *                                           |
+|                              |          pass: HashMap.putVal(HashMap.java:628)      |
+|                              |          pass: HashMap.resize(HashMap.java:678)      |
+|                              |          pass: HashMap.resize(HashMap.java:680)      |
+|                              |          pass: HashMap.resize(HashMap.java:702)      |
+|                              |          switch at: HashMap.resize(HashMap.java:705) |
+| put(5,-8) * result: null     |                                                      |
+|           thread is finished |                                                      |
+|                              |          pass: HashMap.resize(HashMap.java:705)      |
+|                              |          pass: HashMap.putVal(HashMap.java:630)      |
+|                              |          pass: HashMap.putVal(HashMap.java:631)      |
+|                              |          pass: HashMap.putVal(HashMap.java:661)      |
+|                              |          pass: HashMap.putVal(HashMap.java:661)      |
+|                              |          pass: HashMap.putVal(HashMap.java:662)      |
+|                              |          pass: HashMap.putVal(HashMap.java:662)      |
+|                              |          pass: HashMap.putVal(HashMap.java:662)      |
+|                              |          * result: null                              |
+|                              |          thread is finished                          |
 ```

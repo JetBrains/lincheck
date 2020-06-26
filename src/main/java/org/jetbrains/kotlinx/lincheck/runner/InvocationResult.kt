@@ -54,3 +54,7 @@ class ValidationFailureInvocationResult(
     val functionName: String,
     val exception: Throwable
 ) : InvocationResult()
+
+class ObstructionFreedomViolationInvocationResult(
+    val reason: String
+) : InvocationResult()

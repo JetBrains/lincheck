@@ -28,6 +28,7 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  */
 public class ManagedStrategyHolder {
     public static ManagedStrategy strategy;
+    public static LocalObjectManager objectManager;
 
     /**
      * Sets the specified strategy in the specified class loader.
@@ -36,6 +37,8 @@ public class ManagedStrategyHolder {
         try {
             Class<?> clazz = loader.loadClass(ManagedStrategyHolder.class.getCanonicalName());
             clazz.getField("strategy").set(null, strategy);
+            // object manager is connected to strategy and should be reset on strategy change
+            clazz.getField("objectManager").set(null, new LocalObjectManager());
         } catch (ClassNotFoundException | IllegalAccessException | NoSuchFieldException e) {
             throw new IllegalStateException("Cannot set strategy to ManagedStrategyHolder", e);
         }
