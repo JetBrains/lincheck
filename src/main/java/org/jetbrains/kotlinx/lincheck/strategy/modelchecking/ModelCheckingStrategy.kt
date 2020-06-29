@@ -21,6 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.appendExecutionScenario
+import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
@@ -45,23 +47,22 @@ internal class ModelCheckingStrategy(
     private val executionPosition = AtomicInteger(0)
     // ids of operations where a thread should be switched
     private val switchPositions = mutableListOf<Int>()
-    // ids of threads to which a thread should switch at a corresponding choice
+    // ids of threads to which a thread should switch at the corresponding choices
     private val threadSwitchChoices = mutableListOf<Int>()
     // maximum number of thread switches that managed strategy may use to search for incorrect execution
     private val maxInvocations = testCfg.maxInvocationsPerIteration
-    // number of used maxInvocationsPerIteration
+    // number of used invocations
     private var usedInvocations = 0
-    // maximum number of switches that stratefy tries to use
+    // maximum number of switches that strategy tries to use
     private var maxNumberOfSwitches = 1
-    // the root for builded interleaving tree
+    // the root for the interleaving tree
     private var root: InterleavingNode = ThreadChoosingNode(nThreads)
-    // queue of nodes that should be initialized on next run
+    // queue of nodes that should be initialized on the next run
     private var notInitializedThreadChoices: LinkedList<ThreadChoosingNode> = LinkedList()
-    // queue of nodes that should be initialized on next run
+    // queue of nodes that should be initialized on the next run
     private var notInitializedSwitchChoices: LinkedList<SwitchChoosingNode> = LinkedList()
-    // iterator over threadSwitchChoices, containing information about what thread should be next
+    // iterator over threadSwitchChoices with information about what thread should be next
     private lateinit var nextThreadToSwitch: MutableListIterator<Int>
-
 
     @Throws(Exception::class)
     override fun runImpl(): LincheckFailure? {
@@ -75,16 +76,16 @@ internal class ModelCheckingStrategy(
                     return null
                 }
             }
-
             root.exploreChild()?.let { return it }
         }
         return null
     }
 
     override fun onFinish(threadId: Int) {
-        // the reason to increament execution position here is to
+        // the reason to increment execution position here is to
         // add possibility not to add a switch between last thread switch and
-        // the moment when we must to switch
+        // the moment when we must switch
+        check(threadId == currentThread)
         executionPosition.incrementAndGet()
         super.onFinish(threadId)
     }
@@ -92,7 +93,7 @@ internal class ModelCheckingStrategy(
     override fun onNewSwitch() {
         val position = executionPosition.get()
         if (lastSwitchPosition() < position) {
-            // strictly after last switch.
+            // strictly after the last switch.
             // initialize node with choice of next switch location.
             val node = notInitializedSwitchChoices.poll() ?: return
             node.initialize(position)
@@ -102,6 +103,7 @@ internal class ModelCheckingStrategy(
     override fun shouldSwitch(threadId: Int): Boolean {
         // the increment of current position is made in the same place as where the check is,
         // because the position check and the position increment are dual operations
+        check(threadId == currentThread)
         executionPosition.incrementAndGet()
         return executionPosition.get() in switchPositions
     }
@@ -117,11 +119,9 @@ internal class ModelCheckingStrategy(
     override fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean) {
         if (notInitializedThreadChoices.isNotEmpty() && executionPosition.get() >= lastSwitchPosition()) {
             val node = notInitializedThreadChoices.poll()
-            // initialize node with choice of next thread
-            if (node != null) {
-                val switchableThreads = switchableThreads(threadId)
-                node.initialize(switchableThreads.size)
-            }
+            // initialize node with the choice of next thread
+            val switchableThreads = switchableThreads(threadId)
+            node.initialize(switchableThreads.size)
         }
         super.doSwitchCurrentThread(threadId, mustSwitch)
     }
@@ -134,7 +134,7 @@ internal class ModelCheckingStrategy(
             random.nextInt(switchableThreads)
     }
 
-    private fun lastSwitchPosition() = if (switchPositions.isEmpty()) -1 else switchPositions.last()
+    private fun lastSwitchPosition() = switchPositions.lastOrNull() ?: -1
 
     private abstract inner class InterleavingNode {
         protected var percentageUnexplored = 1.0
@@ -156,13 +156,14 @@ internal class ModelCheckingStrategy(
             percentageUnexplored = if (isFullyExplored) 0.0 else 1.0
         }
 
-        fun endExploration() {
+        fun finishExploration() {
             isFullyExplored = true
             percentageUnexplored = 0.0
         }
 
         protected fun updatePercentageExplored() {
             if (children.isEmpty()) return
+
             val total = children.fold(0.0) { acc, node ->
                 acc + node.percentageUnexplored
             }
@@ -178,7 +179,8 @@ internal class ModelCheckingStrategy(
             var sumWeight = 0.0
             children.forEachIndexed { i, child ->
                 sumWeight += child.percentageUnexplored
-                if (sumWeight >= random) return i
+                if (sumWeight >= random)
+                    return i
             }
             return children.lastIndex
         }
@@ -187,7 +189,7 @@ internal class ModelCheckingStrategy(
     }
 
     /**
-     * Represents a choice of a thread that should be next execution.
+     * Represents a choice of a thread that should be next in the execution.
      */
     private inner class ThreadChoosingNode(nThreads: Int? = null) : InterleavingNode() {
         private val nThreads: Int?
@@ -202,7 +204,7 @@ internal class ModelCheckingStrategy(
             val child: InterleavingNode
             val wasNotInitialized = isNotInitialized()
             if (wasNotInitialized) {
-                // will be initilized during next run
+                // will be initialized during next run
                 notInitializedThreadChoices.add(this)
                 // suppose that we will have a child, but we don't know yet which one it will be
                 child = SwitchChoosingNode()
@@ -215,7 +217,7 @@ internal class ModelCheckingStrategy(
             updatePercentageExplored()
             if (nThreads == 0) {
                 // there are no variants of threads to switch, so this node should be a leaf node
-                endExploration()
+                finishExploration()
                 return null
             }
             // if was not initialized before, we didn't knew which of our children will be the child
@@ -243,7 +245,7 @@ internal class ModelCheckingStrategy(
         override fun exploreChild(): LincheckFailure? {
             if (maxNumberOfSwitches == switchPositions.size) {
                 checkResults(runInvocation())?.let { return it }
-                endExploration()
+                finishExploration()
                 return null
             }
             if (isNotInitialized()) {
@@ -253,7 +255,7 @@ internal class ModelCheckingStrategy(
             }
             if (children.isEmpty()) {
                 // no children => should be a leaf node.
-                endExploration()
+                finishExploration()
                 return null
             }
             val child = chooseChild()

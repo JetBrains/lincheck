@@ -22,9 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.appendExecutionScenario
 import org.jetbrains.kotlinx.lincheck.collectThreadDump
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
 import org.jetbrains.kotlinx.lincheck.runner.DeadlockInvocationResult
@@ -32,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.runner.InvocationResult
 import org.jetbrains.kotlinx.lincheck.runner.ObstructionFreedomViolationInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -185,6 +184,7 @@ internal abstract class ManagedStrategyBase(
 
     protected fun newSuspensionPoint(threadId: Int, codeLocation: Int) {
         if (threadId == nThreads) return // can suspend only test threads
+        check(threadId == currentThread)
         if (classInitializationLevel[threadId] != 0) return // can not suspend in static initialization blocks
         awaitTurn(threadId)
         var isLoop = false
@@ -213,7 +213,6 @@ internal abstract class ManagedStrategyBase(
         eventCollector.newSwitch(threadId, codeLocation, reason)
         onNewSwitch()
         doSwitchCurrentThread(threadId, mustSwitch)
-
         awaitTurn(threadId)
     }
 
@@ -365,6 +364,8 @@ internal abstract class ManagedStrategyBase(
                 interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
             else
                 interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
+            println("switch: ${getLocationDescription(codeLocation)}")
+
             // check livelock after every switch
             checkLiveLockHappened(interleavingEvents.size)
         }
@@ -375,6 +376,11 @@ internal abstract class ManagedStrategyBase(
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
             interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
+            println("pass: ${getLocationDescription(codeLocation)}")
+            if ("${getLocationDescription(codeLocation)}".contains("Weak")) {
+                val e = RuntimeException()
+                e.printStackTrace(System.out)
+            }
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents

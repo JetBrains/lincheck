@@ -106,7 +106,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 return result;
             }
             try {
-                byte[] bytes = instrument(name);
+                byte[] bytes = instrument(originalName(name));
                 result = defineClass(name, bytes, 0, bytes.length);
                 cache.put(name, result);
                 return result;

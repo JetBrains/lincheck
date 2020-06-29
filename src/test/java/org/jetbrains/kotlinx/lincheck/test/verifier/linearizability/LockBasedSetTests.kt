@@ -39,7 +39,7 @@ abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
     @Operation
     operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
 
-    override fun extractState(): Any = (1..5).map { set.contains(it) }
+    override fun extractState(): Any = (1..5).toList().map { set.contains(it) }
 }
 
 class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet())

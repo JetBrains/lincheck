@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.*;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.*;
 
@@ -46,7 +45,7 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     /**
      * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
      */
-    public ModelCheckingOptions maxRepetitions(int maxRepetitions) {
+    public ModelCheckingOptions hangingDetectionThreshold(int maxRepetitions) {
         this.hangingDetectionThreshold = maxRepetitions;
         return this;
     }

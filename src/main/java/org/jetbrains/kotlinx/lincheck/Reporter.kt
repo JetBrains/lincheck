@@ -136,7 +136,7 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
     }
     if (scenario.postExecution.isNotEmpty()) {
         appendln("Execution scenario (post part):")
-        append(scenario.postExecution)
+        appendln(scenario.postExecution)
     }
     return this
 }
@@ -175,6 +175,8 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
         appendln("Thread-$threadNumber:")
         for (ste in stackTrace) {
             if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
+            // omit information about strategy code insertions
+            if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.strategy.")) continue
             appendln("\t$ste")
         }
     }
