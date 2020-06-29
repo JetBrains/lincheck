@@ -23,6 +23,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.Options;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
 import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.*;
 
@@ -33,6 +36,7 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
     protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS;
+    protected List<String> ignoredEntryPoints = new ArrayList<>(DEFAULT_IGNORED_ENTRY_POINTS);
 
     /**
      * Check obstruction freedom of the concurrent algorithm
@@ -58,11 +62,19 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
         return this;
     }
 
+    /**
+     * Add an entry point which should not be transformed in the format such as "java.util.concurrent."
+     */
+    public ModelCheckingOptions addIgnoredEntryPoint(String ignoredEntryPoint) {
+        this.ignoredEntryPoints.add(ignoredEntryPoint.replace(".", "/"));
+        return this;
+    }
+
     @Override
     public ModelCheckingCTestConfiguration createTestConfigurations(Class<?> testClass) {
         return new ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, maxInvocationsPerIteration,
-                requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+                ignoredEntryPoints, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass));
     }
 }

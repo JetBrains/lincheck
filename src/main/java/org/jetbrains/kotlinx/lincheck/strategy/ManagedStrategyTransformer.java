@@ -67,26 +67,28 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Method AFTER_NOTIFY_METHOD = new Method("afterNotify", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE, OBJECT_TYPE, Type.BOOLEAN_TYPE});
     private static final Method BEFORE_PARK_METHOD = new Method("beforePark", Type.BOOLEAN_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE, Type.BOOLEAN_TYPE});
     private static final Method AFTER_UNPARK_METHOD = new Method("afterUnpark", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE, OBJECT_TYPE});
-    private static final Method BEFORE_CLASS_INITIALIZATION_METHOD = new Method("beforeClassInitialization", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
-    private static final Method AFTER_CLASS_INITIALIZATION_METHOD = new Method("afterClassInitialization", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+    private static final Method ENTER_IGNORED_SECTION_METHOD = new Method("enterIgnoredSection", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+    private static final Method LEAVE_IGNORED_SECTION_METHOD = new Method("leaveIgnoredSection", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
 
     private static final Method NEW_LOCAL_OBJECT_METHOD = new Method("newLocalObject", Type.VOID_TYPE, new Type[]{OBJECT_TYPE});
     private static final Method DELETE_LOCAL_OBJECT_METHOD = new Method("deleteLocalObject", Type.VOID_TYPE, new Type[]{OBJECT_TYPE});
     private static final Method IS_LOCAL_OBJECT_METHOD = new Method("isLocalObject", Type.BOOLEAN_TYPE, new Type[]{OBJECT_TYPE});
-    private static final Method ADD_DEPENDENCY = new Method("addDependency", Type.VOID_TYPE, new Type[]{OBJECT_TYPE, OBJECT_TYPE});
+    private static final Method ADD_DEPENDENCY_METHOD = new Method("addDependency", Type.VOID_TYPE, new Type[]{OBJECT_TYPE, OBJECT_TYPE});
 
     private static final Method GET_UNSAFE_METHOD = new Method("getUnsafe", UNSAFE_TYPE, new Type[]{});
-    private static final Method CLASS_FOR_NAME = new Method("forName", CLASS_TYPE, new Type[]{STRING_TYPE});
+    private static final Method CLASS_FOR_NAME_METHOD = new Method("forName", CLASS_TYPE, new Type[]{STRING_TYPE});
 
     private String className;
     private int classVersion;
     private String fileName = "";
     private final List<StackTraceElement> codeLocations;
+    private final List<String> ignoredEntryPoints;
 
 
-    ManagedStrategyTransformer(ClassVisitor cv, List<StackTraceElement> codeLocations) {
+    ManagedStrategyTransformer(ClassVisitor cv, List<StackTraceElement> codeLocations, List<String> ignoredEntryPoints) {
         super(ASM_API, new ClassRemapper(cv, new JavaUtilRemapper()));
         this.codeLocations = codeLocations;
+        this.ignoredEntryPoints = ignoredEntryPoints;
     }
 
     List<StackTraceElement> getCodeLocations() {
@@ -127,20 +129,30 @@ class ManagedStrategyTransformer extends ClassVisitor {
             // synchronized method is replaced with synchronized lock
             mv = new SynchronizedBlockAddingTransformer(mname, new GeneratorAdapter(mv, access, mname, desc), className, access, classVersion);
         }
-
-        if ("<clinit>".equals(mname)) {
-            mv = new ClassInitializationTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
-        }
-
-        mv = new WaitNotifyTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
-        mv = new ParkUnparkTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
         mv = new UnsafeTransformer(new GeneratorAdapter(mv, access, mname, desc));
-        // SharedVariableAccessMethodTransformer should be an earlier visitor than ClassInitializationTransformer
-        // not to have suspension points before 'beforeClassInitialization' call in <clinit> block.
-        mv = new LocalObjectManagingTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
-        mv = new SharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+
+        boolean shouldBeIgnored = "<clinit>".equals(mname) || shouldBeIgnored(className);
+        if (shouldBeIgnored) {
+            // static initialization sections and classes corresponding to ignoredEntryPoints
+            // should not have inserted strategy methods.
+            mv = new IgnoredSectionTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+        } else {
+            mv = new WaitNotifyTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+            mv = new ParkUnparkTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+            // SharedVariableAccessMethodTransformer should be an earlier visitor than ClassInitializationTransformer
+            // not to have suspension points before 'beforeClassInitialization' call in <clinit> block.
+            mv = new LocalObjectManagingTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+            mv = new SharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+        }
         mv = new TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions);
         return mv;
+    }
+
+    private boolean shouldBeIgnored(String className) {
+        for (String entryPoint : ignoredEntryPoints)
+            if (className.startsWith(entryPoint))
+                return true;
+        return false;
     }
 
     /**
@@ -414,7 +426,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
                     mv.visitLdcInsn(classType);
                 } else {
                     mv.visitLdcInsn(classType.getClassName());
-                    mv.invokeStatic(CLASS_TYPE, CLASS_FOR_NAME);
+                    mv.invokeStatic(CLASS_TYPE, CLASS_FOR_NAME_METHOD);
                 }
             } else {
                 mv.loadThis();
@@ -423,10 +435,10 @@ class ManagedStrategyTransformer extends ClassVisitor {
     }
 
     /**
-     * Adds beforeClassInitialization call before method and afterClassInitialization call after method
+     * Adds enterIgnoredSection call before ignored methods and leaveIgnoredSection call after method
      */
-    private class ClassInitializationTransformer extends ManagedStrategyMethodVisitor {
-        ClassInitializationTransformer(String methodName, GeneratorAdapter mv) {
+    private class IgnoredSectionTransformer extends ManagedStrategyMethodVisitor {
+        IgnoredSectionTransformer(String methodName, GeneratorAdapter mv) {
             super(methodName, mv);
         }
 
@@ -823,19 +835,19 @@ class ManagedStrategyTransformer extends ClassVisitor {
             mv.loadLocal(ownerLocal);
             mv.loadLocal(dependantLocal);
 
-            mv.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY);
+            mv.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY_METHOD);
         }
 
         void invokeBeforeClassInitialization() {
             loadStrategy();
             loadCurrentThreadNumber();
-            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CLASS_INITIALIZATION_METHOD);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_IGNORED_SECTION_METHOD);
         }
 
         void invokeAfterClassInitialization() {
             loadStrategy();
             loadCurrentThreadNumber();
-            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_CLASS_INITIALIZATION_METHOD);
+            mv.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD);
         }
 
 

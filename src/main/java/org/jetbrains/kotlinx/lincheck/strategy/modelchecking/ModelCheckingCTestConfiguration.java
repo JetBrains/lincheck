@@ -28,6 +28,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -38,21 +40,32 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
     public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 20;
     public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final int LIVELOCK_EVENTS_THRESHOLD = 5_000;
+    public static final List<String> DEFAULT_IGNORED_ENTRY_POINTS = new ArrayList<>(
+            Arrays.asList(
+                    // these entry points have access to WeakHashMap, which is not deterministic, but can be not transformed
+                    "kotlinx/coroutines/internal/StackTraceRecoveryKt",
+                    "kotlinx/coroutines/internal/ExceptionsConstuctorKt"
+            )
+    );
 
     public boolean checkObstructionFreedom;
     public final int hangingDetectionThreshold;
     public final int maxInvocationsPerIteration;
+    protected List<String> ignoredEntryPoints;
+
 
     public ModelCheckingCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
                                            boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
-                                           boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
+                                           List<String> ignoredEntryPoints, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
+                                           Class<?> sequentialSpecification)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);
         this.checkObstructionFreedom = checkObstructionFreedom;
         this.hangingDetectionThreshold = hangingDetectionThreshold;
         this.maxInvocationsPerIteration = invocationsPerIteration;
+        this.ignoredEntryPoints = ignoredEntryPoints;
     }
 
     @Override

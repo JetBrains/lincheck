@@ -46,7 +46,7 @@ public class RandomSwitchStrategy extends ManagedStrategy {
     public RandomSwitchStrategy(RandomSwitchCTestConfiguration testCfg, Class<?> testClass,
                                 ExecutionScenario scenario, List<Method> validationFunctions,
                                 Verifier verifier) {
-        super(testClass, scenario, validationFunctions);
+        super(testClass, scenario, validationFunctions, Collections.emptyList());
         this.invocations = testCfg.invocationsPerIteration;
         this.verifier = verifier;
     }

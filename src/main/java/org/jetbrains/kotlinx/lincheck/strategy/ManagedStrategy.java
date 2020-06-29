@@ -43,10 +43,12 @@ public abstract class ManagedStrategy extends Strategy {
 
     protected final Runner runner;
     private ManagedStrategyTransformer transformer;
+    private List<String> ignoredEntryPoints;
 
-    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions) {
+    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, List<String> ignoredEntryPoints) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
+        this.ignoredEntryPoints = ignoredEntryPoints;
         runner = new ParallelThreadsRunner(this, testClass, validationFunctions,null) {
             @Override
             public void onStart(int threadId) {
@@ -89,7 +91,7 @@ public abstract class ManagedStrategy extends Strategy {
         } else {
             previousCodeLocations = transformer.getCodeLocations();
         }
-        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations);
+        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations, ignoredEntryPoints);
     }
 
     @Override
@@ -246,17 +248,18 @@ public abstract class ManagedStrategy extends Strategy {
 
     /**
      * This method is invoked by a test thread
-     * before a class initialization start
+     * before an ignored section start.
+     * These sections are determined by Strategy.ignoredEntryPoints()
      * @param threadId number of invoking thread
      */
-    public void beforeClassInitialization(int threadId) {}
+    public void enterIgnoredSection(int threadId) {}
 
     /**
      * This method is invoked by a test thread
-     * after a class initialization end
+     * after an ignored section end
      * @param threadId number of invoking thread
      */
-    public void afterClassInitialization(int threadId) {}
+    public void leaveIgnoredSection(int threadId) {}
 
     // == UTILITY METHODS
 

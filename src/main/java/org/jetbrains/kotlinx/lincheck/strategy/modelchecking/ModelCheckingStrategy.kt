@@ -21,8 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.appendExecutionScenario
-import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
@@ -42,7 +40,10 @@ internal class ModelCheckingStrategy(
         scenario: ExecutionScenario,
         validationFunctions: List<Method>,
         verifier: Verifier
-) : ManagedStrategyBase(testClass, scenario, verifier, validationFunctions, testCfg.hangingDetectionThreshold, testCfg.checkObstructionFreedom) {
+) : ManagedStrategyBase(
+        testClass, scenario, verifier, validationFunctions, testCfg.hangingDetectionThreshold,
+        testCfg.checkObstructionFreedom, testCfg.ignoredEntryPoints
+) {
     // an increasing id of operation performed within this execution
     private val executionPosition = AtomicInteger(0)
     // ids of operations where a thread should be switched
@@ -58,9 +59,9 @@ internal class ModelCheckingStrategy(
     // the root for the interleaving tree
     private var root: InterleavingNode = ThreadChoosingNode(nThreads)
     // queue of nodes that should be initialized on the next run
-    private var notInitializedThreadChoices: LinkedList<ThreadChoosingNode> = LinkedList()
+    private var notInitializedThreadChoice: ThreadChoosingNode? = null
     // queue of nodes that should be initialized on the next run
-    private var notInitializedSwitchChoices: LinkedList<SwitchChoosingNode> = LinkedList()
+    private var notInitializedSwitchChoice: SwitchChoosingNode? = null
     // iterator over threadSwitchChoices with information about what thread should be next
     private lateinit var nextThreadToSwitch: MutableListIterator<Int>
 
@@ -95,7 +96,8 @@ internal class ModelCheckingStrategy(
         if (lastSwitchPosition() < position) {
             // strictly after the last switch.
             // initialize node with choice of next switch location.
-            val node = notInitializedSwitchChoices.poll() ?: return
+            val node = notInitializedSwitchChoice ?: return
+            notInitializedSwitchChoice = null
             node.initialize(position)
         }
     }
@@ -117,8 +119,9 @@ internal class ModelCheckingStrategy(
     }
 
     override fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean) {
-        if (notInitializedThreadChoices.isNotEmpty() && executionPosition.get() >= lastSwitchPosition()) {
-            val node = notInitializedThreadChoices.poll()
+        if (notInitializedThreadChoice != null && executionPosition.get() == lastSwitchPosition()) {
+            val node = notInitializedThreadChoice!!
+            notInitializedThreadChoice = null
             // initialize node with the choice of next thread
             val switchableThreads = switchableThreads(threadId)
             node.initialize(switchableThreads.size)
@@ -205,7 +208,8 @@ internal class ModelCheckingStrategy(
             val wasNotInitialized = isNotInitialized()
             if (wasNotInitialized) {
                 // will be initialized during next run
-                notInitializedThreadChoices.add(this)
+                check(notInitializedThreadChoice == null)
+                notInitializedThreadChoice = this
                 // suppose that we will have a child, but we don't know yet which one it will be
                 child = SwitchChoosingNode()
             } else {
@@ -249,7 +253,8 @@ internal class ModelCheckingStrategy(
                 return null
             }
             if (isNotInitialized()) {
-                notInitializedSwitchChoices.add(this)
+                check(notInitializedSwitchChoice == null)
+                notInitializedSwitchChoice = this
                 // initialize during the run
                 checkResults(runInvocation())?.let { return it }
             }

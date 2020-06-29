@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.runner.InvocationResult
 import org.jetbrains.kotlinx.lincheck.runner.ObstructionFreedomViolationInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -42,8 +41,9 @@ internal abstract class ManagedStrategyBase(
         protected val verifier: Verifier,
         validationFunctions: List<Method>,
         private val hangingDetectionThreshold: Int,
-        private val requireObstructionFreedom: Boolean
-) : ManagedStrategy(testClass, scenario, validationFunctions) {
+        private val requireObstructionFreedom: Boolean,
+        ignoredEntryPoints: List<String>
+) : ManagedStrategy(testClass, scenario, validationFunctions, ignoredEntryPoints) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
     // whether a thread finished all its operations
     protected val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
@@ -65,7 +65,7 @@ internal abstract class ManagedStrategyBase(
     // is thread suspended
     protected val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // number of <clinit> blocks entered and not left for each thread
-    protected val classInitializationLevel = IntArray(nThreads) { 0 }
+    protected val ignoredSectionLevel = IntArray(nThreads) { 0 }
     // current actor id for each thread
     protected val currentActorId = IntArray(nThreads)
     // InvocationResult that was observed by the strategy in the execution (e.g. deadlock)
@@ -172,20 +172,20 @@ internal abstract class ManagedStrategyBase(
         isSuspended[threadId].set(false)
     }
 
-    override fun beforeClassInitialization(threadId: Int) {
+    override fun enterIgnoredSection(threadId: Int) {
         if (threadId < nThreads)
-            classInitializationLevel[threadId]++
+            ignoredSectionLevel[threadId]++
     }
 
-    override fun afterClassInitialization(threadId: Int) {
+    override fun leaveIgnoredSection(threadId: Int) {
         if (threadId < nThreads)
-            classInitializationLevel[threadId]--
+            ignoredSectionLevel[threadId]--
     }
 
     protected fun newSuspensionPoint(threadId: Int, codeLocation: Int) {
         if (threadId == nThreads) return // can suspend only test threads
         check(threadId == currentThread)
-        if (classInitializationLevel[threadId] != 0) return // can not suspend in static initialization blocks
+        if (ignoredSectionLevel[threadId] != 0) return // can not suspend in static initialization blocks
         awaitTurn(threadId)
         var isLoop = false
         if (loopDetector.newOperation(threadId, codeLocation)) {
@@ -364,7 +364,6 @@ internal abstract class ManagedStrategyBase(
                 interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
             else
                 interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
-            println("switch: ${getLocationDescription(codeLocation)}")
 
             // check livelock after every switch
             checkLiveLockHappened(interleavingEvents.size)
@@ -376,11 +375,6 @@ internal abstract class ManagedStrategyBase(
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
             interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
-            println("pass: ${getLocationDescription(codeLocation)}")
-            if ("${getLocationDescription(codeLocation)}".contains("Weak")) {
-                val e = RuntimeException()
-                e.printStackTrace(System.out)
-            }
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
