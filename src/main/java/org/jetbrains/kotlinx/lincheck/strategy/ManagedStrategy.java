@@ -80,7 +80,7 @@ public abstract class ManagedStrategy extends Strategy {
                 super.beforeCoroutineResumed(threadId);
             }
         };
-        ManagedStrategyHolder.setStrategy(runner.classLoader, this);
+        ManagedStateHolder.setState(runner.classLoader, this);
     }
 
     @Override

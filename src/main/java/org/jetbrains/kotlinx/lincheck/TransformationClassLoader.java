@@ -79,9 +79,11 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         if (TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(className.replace('.', '/'))) return true;
 
         return className == null ||
-            (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+            (
+                className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.endsWith("ManagedStrategyHolder")) ||
+                !className.endsWith("ManagedStateHolder")
+            ) ||
             className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||

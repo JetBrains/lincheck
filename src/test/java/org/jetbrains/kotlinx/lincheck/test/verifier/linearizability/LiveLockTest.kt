@@ -21,36 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicBoolean
-
-class DeadLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
-    private var counter = 0
-    private var lock1 = Any()
-    private var lock2 = Any()
-
-    @Operation
-    fun inc12(): Int {
-        synchronized(lock1) {
-            synchronized(lock2) {
-                return counter++
-            }
-        }
-    }
-
-    @Operation
-    fun inc21(): Int {
-        synchronized(lock2) {
-            synchronized(lock1) {
-                return counter++
-            }
-        }
-    }
-
-    override fun extractState(): Any = counter
-}
 
 class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     private var counter = 0
@@ -76,6 +51,11 @@ class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     }
 
     override fun extractState(): Any = counter
+
+
+    override fun <O : Options<O, *>> O.customize() {
+        minimizeFailedScenario(false)
+    }
 
     private fun AtomicBoolean.synchronized(block: () -> Int): Int {
         while (!this.compareAndSet(false, true));

@@ -50,9 +50,10 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Type[] NO_ARGS = new Type[]{};
 
     private static final Type OBJECT_TYPE = Type.getType(Object.class);
-    private static final Type MANAGED_STRATEGY_HOLDER_TYPE = Type.getType(ManagedStrategyHolder.class);
+    private static final Type MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStateHolder.class);
     private static final Type MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy.class);
     private static final Type LOCAL_OBJECT_MANAGER_TYPE = Type.getType(LocalObjectManager.class);
+    private static final Type RANDOM_TYPE = Type.getType(java.util.Random.class);
     private static final Type UNSAFE_TYPE = Type.getType(Unsafe.class);
     private static final Type UNSAFE_LOADER_TYPE = Type.getType(UnsafeHolder.class);
     private static final Type STRING_TYPE = Type.getType(String.class);
@@ -75,7 +76,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static final Method IS_LOCAL_OBJECT_METHOD = new Method("isLocalObject", Type.BOOLEAN_TYPE, new Type[]{OBJECT_TYPE});
     private static final Method ADD_DEPENDENCY_METHOD = new Method("addDependency", Type.VOID_TYPE, new Type[]{OBJECT_TYPE, OBJECT_TYPE});
 
-    private static final Method GET_UNSAFE_METHOD = new Method("getUnsafe", UNSAFE_TYPE, new Type[]{});
+    private static final Method GET_UNSAFE_METHOD = new Method("getUnsafe", UNSAFE_TYPE, NO_ARGS);
     private static final Method CLASS_FOR_NAME_METHOD = new Method("forName", CLASS_TYPE, new Type[]{STRING_TYPE});
 
     private String className;
@@ -143,6 +144,8 @@ class ManagedStrategyTransformer extends ClassVisitor {
             // not to have suspension points before 'beforeClassInitialization' call in <clinit> block.
             mv = new LocalObjectManagingTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
             mv = new SharedVariableAccessMethodTransformer(mname, new GeneratorAdapter(mv, access, mname, desc));
+            mv = new TimeStubTransformer(new GeneratorAdapter(mv, access, mname, desc));
+            mv = new ThreadLocalRandomTransformer(className, new GeneratorAdapter(mv, access, mname, desc));
         }
         mv = new TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions);
         return mv;
@@ -163,7 +166,6 @@ class ManagedStrategyTransformer extends ClassVisitor {
         public String map(String name) {
             boolean isTrustedAtomicPrimitive = TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(name);
             // function package is not transformed, because AFU uses it and thus there will be transformation problems
-            boolean inFunctionPackage = name.startsWith("java/util/function/");
             if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive)
                 name = TRANSFORMED_PACKAGE_INTERNAL_NAME + name;
             return name;
@@ -300,7 +302,7 @@ class ManagedStrategyTransformer extends ClassVisitor {
      * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`
      */
     private static class UnsafeTransformer extends MethodVisitor {
-        private GeneratorAdapter mv;
+        private final GeneratorAdapter mv;
 
         UnsafeTransformer(GeneratorAdapter mv) {
             super(ASM_API, mv);
@@ -315,6 +317,68 @@ class ManagedStrategyTransformer extends ClassVisitor {
                 return;
             }
             mv.visitMethodInsn(opcode, owner, name, desc, itf);
+        }
+    }
+
+    /**
+     * Replaces `System.nanoTime` and `System.currentTimeMillis` with stubs to prevent non-determinism
+     */
+    private static class TimeStubTransformer extends MethodVisitor {
+        private final GeneratorAdapter mv;
+
+        TimeStubTransformer(GeneratorAdapter mv) {
+            super(ASM_API, mv);
+            this.mv = mv;
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            if (owner.equals("java/lang/System") && (name.equals("nanoTime") || name.equals("currentTimeMillis"))) {
+                mv.push(1337L); // any constant value
+                return;
+            }
+            mv.visitMethodInsn(opcode, owner, name, desc, itf);
+        }
+    }
+
+    /**
+     * Replaces ThreadLocalRandom with a sequential Random to prevent non-determinism in managed executions.
+     */
+    private static class ThreadLocalRandomTransformer extends MethodVisitor {
+        private final GeneratorAdapter mv;
+        private final String className;
+
+        ThreadLocalRandomTransformer(String className, GeneratorAdapter mv) {
+            super(ASM_API, mv);
+            this.mv = mv;
+            this.className = className;
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            boolean isInternalInvocation = className.equals("java/util/concurrent/ThreadLocalRandom");
+            boolean isThreadLocalRandomMethod = owner.equals("java/util/concurrent/ThreadLocalRandom");
+
+            if (!isInternalInvocation && isThreadLocalRandomMethod && opcode == INVOKEVIRTUAL) {
+                mv.pop();
+                loadRandom();
+                mv.visitMethodInsn(opcode, "java/util/Random", name, desc, itf);
+                return;
+            }
+
+            // there is also a static method in ThreadLocalRandom that is used inside java.util.concurrent.
+            // it is replaced with nextInt method.
+            if (!isInternalInvocation && isThreadLocalRandomMethod && name.equals("nextSecondarySeed")) {
+                loadRandom();
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/Random", "nextInt", desc, itf);
+                return;
+            }
+
+            mv.visitMethodInsn(opcode, owner, name, desc, itf);
+        }
+
+        private void loadRandom() {
+            mv.getStatic(MANAGED_STATE_HOLDER_TYPE, "random", RANDOM_TYPE);
         }
     }
 
@@ -852,10 +916,10 @@ class ManagedStrategyTransformer extends ClassVisitor {
 
 
         void loadStrategy() {
-            mv.getStatic(MANAGED_STRATEGY_HOLDER_TYPE, "strategy", MANAGED_STRATEGY_TYPE);
+            mv.getStatic(MANAGED_STATE_HOLDER_TYPE, "strategy", MANAGED_STRATEGY_TYPE);
         }
 
-        void loadLocalObjectManager() { mv.getStatic(MANAGED_STRATEGY_HOLDER_TYPE, "objectManager", LOCAL_OBJECT_MANAGER_TYPE); }
+        void loadLocalObjectManager() { mv.getStatic(MANAGED_STATE_HOLDER_TYPE, "objectManager", LOCAL_OBJECT_MANAGER_TYPE); }
 
         void loadCurrentThreadNumber() {
             loadStrategy();

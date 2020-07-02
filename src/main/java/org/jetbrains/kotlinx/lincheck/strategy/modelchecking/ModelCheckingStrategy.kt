@@ -25,8 +25,8 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.RuntimeException
 import java.lang.reflect.Method
-import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -165,8 +165,11 @@ internal class ModelCheckingStrategy(
         }
 
         protected fun updatePercentageExplored() {
-            if (children.isEmpty()) return
-
+            try {
+                if (children.isEmpty()) return
+            } catch(e: UninitializedPropertyAccessException) {
+                throw RuntimeException("An interleaving tree node was not initialized. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc)", e)
+            }
             val total = children.fold(0.0) { acc, node ->
                 acc + node.percentageUnexplored
             }

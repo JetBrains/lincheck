@@ -54,4 +54,8 @@ class LocalObjectManager {
             deleteLocalObject(dependent)
         }
     }
+
+    fun reset() {
+        localObjects.clear()
+    }
 }

@@ -308,6 +308,7 @@ internal abstract class ManagedStrategyBase(
         monitorTracker = MonitorTracker(nThreads)
         eventCollector = ExecutionEventCollector()
         suddenInvocationResult = null
+        ManagedStateHolder.resetState(runner.classLoader)
     }
 
     private fun checkCanHaveObstruction(lazyMessage: () -> String) {
@@ -360,9 +361,9 @@ internal abstract class ManagedStrategyBase(
 
         fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
             val actorId = currentActorId[threadId]
-            if (codeLocation != -1)
+            if (codeLocation != -1) {
                 interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
-            else
+            } else
                 interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
 
             // check livelock after every switch
