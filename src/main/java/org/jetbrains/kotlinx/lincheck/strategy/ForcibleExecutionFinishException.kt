@@ -24,9 +24,9 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import java.lang.RuntimeException
 
 /**
- * This exception is used to finish execution correctly for managed strategies.
+ * This exception is used to finish the execution correctly for managed strategies.
  * Otherwise, there is no way to do it in case of (i.e.) deadlocks.
- * If we just leave it, then the execution will not be halted (except for the cases when test code handles interruption).
+ * If we just leave it, then the execution will not be halted.
  * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
  */
 internal class ForcibleExecutionFinishException : RuntimeException()

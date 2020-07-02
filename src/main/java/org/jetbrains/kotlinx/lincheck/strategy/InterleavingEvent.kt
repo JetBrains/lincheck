@@ -22,7 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 /**
- * InterleavingEvent stores information about events occuring during managed execution
+ * Stores information about events occuring during managed execution
  */
 sealed class InterleavingEvent(val threadId: Int, val actorId: Int)
 

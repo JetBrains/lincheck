@@ -99,17 +99,22 @@ public @interface ModelCheckingCTest {
     Class<? extends Verifier> verifier() default LinearizabilityVerifier.class;
 
     /**
-     * Check obstruction freedom of the concurrent algorithm
+     * Check obstruction freedom of the concurrent algorithm.
+     * In case of finding an obstruction lincheck will immediately stop and report it.
      */
     boolean checkObstructionFreedom() default false;
 
     /**
-     * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
+     * Use the specified maximum number of repetitions to detect endless loops.
+     * A found loop will force managed execution to switch the executing thread.
+     * In case of checkObstructionFreedom enabled it will report the obstruction instead.
      */
     int hangingDetectionThreshold() default DEFAULT_HANGING_DETECTION_THRESHOLD;
 
     /**
-     * Number of maxInvocationsPerIteration that managed strategy may use to search for incorrect execution
+     * The number of invocations that managed strategy may use to search for an incorrect execution.
+     * In case of small scenarios with only a few "interesting" code locations a lesser than this
+     * number of invocations will be used.
      */
     int invocationsPerIteration() default DEFAULT_INVOCATIONS;
 

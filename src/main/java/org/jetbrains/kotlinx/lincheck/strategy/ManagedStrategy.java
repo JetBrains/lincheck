@@ -43,7 +43,7 @@ public abstract class ManagedStrategy extends Strategy {
 
     protected final Runner runner;
     private ManagedStrategyTransformer transformer;
-    private List<String> ignoredEntryPoints;
+    private final List<String> ignoredEntryPoints;
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, List<String> ignoredEntryPoints) {
         super(scenario);

@@ -210,10 +210,11 @@ Similarly to the stress strategies, this strategy can be used by `@ModelChecking
 
 It has the same parameters as stress strategy plus the following ones:
 * **checkObstructionFreedom** - specify, whether the strategy should also check obstruction freedom of the algorithm.
-* **hangingDetectionThreshold** - maximum number of times that a thread can visit a certain code location without switching to another thread that is still not recognized as hanging (i.e. because of spin lock).
+* **hangingDetectionThreshold** - the maximum number of times that a thread can visit a certain code location without switching to another thread that is still not recognized as hanging (i.e. because of spin lock).
 
 In comparison to the stress strategy the model checking strategy can also print the trace that led to incorrect results, not just the incorrect results.
-It is critical that the testing data structure should be deterministic, and as a result, must not use `WeakReference`, `WeakHashMap` or time-based code.  
+
+It is critical that the testing data structure should be deterministic, and as a result, must not use `WeakReference`, `WeakHashMap` or globally changing state. However, standard java and kotlin `Random` and `ThreadLocalRandom` are supported in **lincheck** and can be used safely.  
 
 # Correctness contracts
 Once the generated scenario is executed using the specified strategy, it is needed to verify the operation results for correctness. By default **lincheck** checks the result for linearizability, which is de-facto a standard type of correctness. However, there are also verifiers for some relaxed contracts, which should be set via `@..CTest(verifier = ..Verifier.class)` option.

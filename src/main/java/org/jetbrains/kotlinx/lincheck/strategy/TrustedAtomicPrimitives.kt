@@ -25,11 +25,11 @@ package org.jetbrains.kotlinx.lincheck.strategy
  * Some atomic primitives are common and can be analyzed from a higher level of abstraction
  * or can not be transformed (i.e, Unsafe or AFU).
  * We don't transform them and improve the output of lincheck for them.
- * For example, in the execution instead of a codelocation in AtomicLong.get() method we could just print the codelocation
- * where the method is called with an increase of understandability.
+ * For example, in the execution instead of a code location in AtomicLong.get() method
+ * we could just print the code location where the method is called.
  */
 internal object TrustedAtomicPrimitives {
-    private val trustedAtomicPrimitives = listOf<(className: String)->Boolean>(
+    private val trustedAtomicPrimitives = listOf<(className: String) -> Boolean>(
             { it == "java/lang/invoke/VarHandle" },
             { it == "sun/misc/Unsafe" },
             { it.startsWith("java/util/concurrent/atomic/Atomic")}, // AFUs and Atomic[Integer/Long/...]

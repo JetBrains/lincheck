@@ -35,6 +35,10 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.collections.*
 
+/**
+ * This base class for managed strategies helps to handle code locations,
+ * support locks and waits, and log events
+ */
 internal abstract class ManagedStrategyBase(
         testClass: Class<*>,
         scenario: ExecutionScenario,
@@ -56,15 +60,15 @@ internal abstract class ManagedStrategyBase(
     private lateinit var eventCollector: ExecutionEventCollector
     // tracker of acquisitions and releases of monitors
     private lateinit var monitorTracker: MonitorTracker
-    // random used for generation of seeds and traversing of ExecutionTree
+    // random used for the generation of seeds and the execution tree
     protected val generationRandom = Random(0)
-    // random used for execution
+    // random used for the execution
     protected lateinit var random: Random
-    // seed for execution random
+    // seed for the execution random
     private var executionRandomSeed = 0L
     // is thread suspended
     protected val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
-    // number of <clinit> blocks entered and not left for each thread
+    // the number of blocks that should be ignored by the strategy entered and not left for each thread
     protected val ignoredSectionLevel = IntArray(nThreads) { 0 }
     // current actor id for each thread
     protected val currentActorId = IntArray(nThreads)
@@ -103,7 +107,7 @@ internal abstract class ManagedStrategyBase(
     override fun beforeLockAcquire(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
         if (threadId == nThreads) return true
 
-        checkCanHaveObstruction { "At least obstruction freedom required but a lock found" }
+        checkCanHaveObstruction { "At least obstruction freedom required, but a lock found" }
         newSuspensionPoint(threadId, codeLocation)
         // check if can acquire required monitor
         if (!monitorTracker.canAcquireMonitor(monitor)) {
@@ -136,12 +140,10 @@ internal abstract class ManagedStrategyBase(
 
         checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
         newSuspensionPoint(threadId, codeLocation)
-        if (withTimeout) return false // timeout occur instantly
-        awaitTurn(threadId)
+        if (withTimeout) return false // timeouts occur instantly
         monitorTracker.waitMonitor(threadId, monitor)
         // switch to another thread and wait till a notify event happens
         switchCurrentThread(threadId, codeLocation, SwitchReason.MONITOR_WAIT, true)
-
         return false
     }
 
@@ -152,16 +154,16 @@ internal abstract class ManagedStrategyBase(
             monitorTracker.notify(monitor)
     }
 
-    override fun afterThreadInterrupt(threadId: Int, codeLocation: Int, iInterruptedThread: Int) {}
+    override fun afterThreadInterrupt(threadId: Int, codeLocation: Int, interruptedThread: Int) {}
 
     override fun afterCoroutineSuspended(threadId: Int) {
         check(currentThread == threadId)
         isSuspended[threadId].set(true)
         if (runner.canResumeCoroutine(threadId, currentActorId[threadId])) {
-            // -1, because we don't know the actual code location
+            // -1, because we do not know the actual code location
             newSuspensionPoint(threadId, -1)
         } else {
-            // Currently a suspension point is not supposed to violate obstruction-freedom
+            // currently a coroutine suspension  is not supposed to violate obstruction-freedom
             // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
             switchCurrentThread(threadId, -1, SwitchReason.SUSPENDED, true)
         }
@@ -182,10 +184,13 @@ internal abstract class ManagedStrategyBase(
             ignoredSectionLevel[threadId]--
     }
 
+    /**
+     * Create a new interesting code location, where a thread context switch can occur
+     */
     protected fun newSuspensionPoint(threadId: Int, codeLocation: Int) {
         if (threadId == nThreads) return // can suspend only test threads
         check(threadId == currentThread)
-        if (ignoredSectionLevel[threadId] != 0) return // can not suspend in static initialization blocks
+        if (ignoredSectionLevel[threadId] != 0) return // can not suspend in ignored sections
         awaitTurn(threadId)
         var isLoop = false
         if (loopDetector.newOperation(threadId, codeLocation)) {
@@ -207,7 +212,7 @@ internal abstract class ManagedStrategyBase(
     protected abstract fun shouldSwitch(threadId: Int): Boolean
 
     /**
-     * Regular switch on another thread
+     * A regular switch on another thread
      */
     protected fun switchCurrentThread(threadId: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         eventCollector.newSwitch(threadId, codeLocation, reason)
@@ -256,8 +261,7 @@ internal abstract class ManagedStrategyBase(
      * Waits until this thread is allowed to be executed.
      */
     protected fun awaitTurn(threadId: Int) {
-        // wait actively.
-        // can get to a deadlock here, but runner should detect it.
+        // wait actively until the thread is allow to execute
         while (currentThread != threadId) {
             // finish forcibly if an error occured and we already have an InvocationResult.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishException()
@@ -334,7 +338,7 @@ internal abstract class ManagedStrategyBase(
     /**
      * Detects loop when visiting a codeLocation too often.
      */
-    internal class LoopDetector(private val hangingDetectionThreshold: Int) {
+    protected class LoopDetector(private val hangingDetectionThreshold: Int) {
         private var lastIThread = Int.MIN_VALUE
         private val operationCounts = mutableMapOf<Int, Int>()
 
@@ -354,9 +358,9 @@ internal abstract class ManagedStrategyBase(
     }
 
     /**
-     * Logs thread events such as thread switches and passed codeLocations.
+     * Logs thread events such as thread switches and passed code locations.
      */
-    internal inner class ExecutionEventCollector {
+    protected inner class ExecutionEventCollector {
         private val interleavingEvents = mutableListOf<InterleavingEvent>()
 
         fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
