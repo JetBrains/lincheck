@@ -52,6 +52,7 @@ public class ModelCheckingOptionsTest {
             .checkObstructionFreedom(true)
             .hangingDetectionThreshold(30)
             .logLevel(LoggingLevel.ERROR)
+            .addIgnoredEntryPoint("java.util.")
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
         LinChecker.check(ModelCheckingOptionsTest.class, opts);

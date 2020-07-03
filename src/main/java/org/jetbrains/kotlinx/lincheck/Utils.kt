@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_NAME
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -233,4 +234,10 @@ object UnsafeHolder {
     }
 }
 
-fun collectThreadDump() = Thread.getAllStackTraces().filter { (t, _) -> t is ParallelThreadsRunner.TestThread }
+fun collectThreadDump() = Thread.getAllStackTraces()
+        .filter { (t, _) -> t is ParallelThreadsRunner.TestThread }
+        .mapValues { pair ->
+            pair.value.map {
+                StackTraceElement(it.className.removePrefix(TRANSFORMED_PACKAGE_NAME), it.methodName, it.fileName, it.lineNumber)
+            }.toTypedArray()
+        }

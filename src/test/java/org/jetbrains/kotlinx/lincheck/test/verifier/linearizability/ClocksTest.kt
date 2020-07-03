@@ -24,16 +24,13 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.*
 import kotlin.reflect.jvm.*
 
-
-@StressCTest(generator = ClocksTestScenarioGenerator::class, iterations = 1,
-             actorsBefore = 0, threads = 2, actorsPerThread = 1, actorsAfter = 0,
-             sequentialSpecification = ClocksTestSequential::class,
-             requireStateEquivalenceImplCheck = false, minimizeFailedScenario = false)
-class ClocksTest {
+class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     @Volatile
     private var bStarted = false
 
@@ -56,16 +53,15 @@ class ClocksTest {
         return 0 // cannot return 0, should fail
     }
 
-    // the execution is sequential consistent but not linearizable
-    @Test
-    fun test() = try {
-        LinChecker.check(this::class.java)
-        throw AssertionError("Should fail since the execution with clocks is " +
-                             "sequential consistent but not linearizable")
-    } catch (e: LincheckAssertionError) {
-        assert(e.message!!.contains("Invalid execution results")) {
-            "Should fail because of the invalid interleaving, but the following exception was thrown:\n" + e.message
-        }
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+        actorsAfter(0)
+        executionGenerator(ClocksTestScenarioGenerator::class.java)
+        iterations(1)
+        actorsPerThread(1)
+        sequentialSpecification(ClocksTestSequential::class.java)
+        requireStateEquivalenceImplCheck(false)
+        minimizeFailedScenario(false)
     }
 }
 

@@ -25,11 +25,12 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import kotlin.coroutines.*
 
-class RunBlockingTest : VerifierState() {
+class RunBlockingTest : AbstractLincheckTest() {
     @Operation
     fun foo(x: Int) = runBlocking<Int> {
         suspendCoroutine sc@ { cont ->
@@ -46,9 +47,7 @@ class RunBlockingTest : VerifierState() {
 
     override fun extractState() = Unit
 
-    @Test
-    fun test() = StressOptions()
-        .iterations(1)
-        .minimizeFailedScenario(false)
-        .check(this::class.java)
+    override fun <O : Options<O, *>> O.customize() {
+        minimizeFailedScenario(false)
+    }
 }

@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER", "SubscriberImplementation")
 @OpGroupConfig(name = "consumer", nonParallel = true)
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
-class LockFreeTaskQueueTest: AbstractLincheckTest() {
+class LockFreeTaskQueueTest : AbstractLincheckTest() {
     private val q = LockFreeTaskQueue<Int>(true)
 
     @Operation

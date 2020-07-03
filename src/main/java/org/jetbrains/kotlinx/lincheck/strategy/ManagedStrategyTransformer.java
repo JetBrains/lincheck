@@ -164,9 +164,10 @@ class ManagedStrategyTransformer extends ClassVisitor {
     private static class JavaUtilRemapper extends Remapper {
         @Override
         public String map(String name) {
+            boolean isException = name.endsWith("Exception");
             boolean isTrustedAtomicPrimitive = TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(name);
             // function package is not transformed, because AFU uses it and thus there will be transformation problems
-            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive)
+            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !isException)
                 name = TRANSFORMED_PACKAGE_INTERNAL_NAME + name;
             return name;
         }

@@ -160,12 +160,12 @@ internal abstract class ManagedStrategyBase(
         check(currentThread == threadId)
         isSuspended[threadId].set(true)
         if (runner.canResumeCoroutine(threadId, currentActorId[threadId])) {
-            // -1, because we do not know the actual code location
-            newSuspensionPoint(threadId, -1)
+            // COROUTINE_SUSPENSION_CODELOCATION, because we do not know the actual code location
+            newSuspensionPoint(threadId, COROUTINE_SUSPENSION_CODELOCATION)
         } else {
             // currently a coroutine suspension  is not supposed to violate obstruction-freedom
             // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
-            switchCurrentThread(threadId, -1, SwitchReason.SUSPENDED, true)
+            switchCurrentThread(threadId, COROUTINE_SUSPENSION_CODELOCATION, SwitchReason.SUSPENDED, true)
         }
     }
 
@@ -348,7 +348,7 @@ internal abstract class ManagedStrategyBase(
                 operationCounts.clear()
                 lastIThread = threadId
             }
-            if (codeLocation == -1) return false;
+            if (codeLocation == COROUTINE_SUSPENSION_CODELOCATION) return false;
             // increment the number of times that we visited a codelocation
             val count = (operationCounts[codeLocation] ?: 0) + 1
             operationCounts[codeLocation] = count
@@ -365,7 +365,7 @@ internal abstract class ManagedStrategyBase(
 
         fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
             val actorId = currentActorId[threadId]
-            if (codeLocation != -1) {
+            if (codeLocation != COROUTINE_SUSPENSION_CODELOCATION) {
                 interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
             } else
                 interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
@@ -379,7 +379,8 @@ internal abstract class ManagedStrategyBase(
         }
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
-            interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
+            if (codeLocation != COROUTINE_SUSPENSION_CODELOCATION)
+                interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
@@ -434,5 +435,9 @@ internal abstract class ManagedStrategyBase(
                 if (acquiringMonitor[threadId] === monitor)
                     needsNotification[threadId] = false
         }
+    }
+
+    companion object {
+        private const val COROUTINE_SUSPENSION_CODELOCATION = -1; // currently the exact place of coroutine suspension is not known
     }
 }

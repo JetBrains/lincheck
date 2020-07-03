@@ -63,7 +63,7 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     }
 
     /**
-     * Add an entry point which should not be transformed in the format such as "java.util.concurrent."
+     * Add an entry point which should not be transformed in the format "java.util.concurrent." or "java.util.WeakHashMap"
      */
     public ModelCheckingOptions addIgnoredEntryPoint(String ignoredEntryPoint) {
         this.ignoredEntryPoints.add(ignoredEntryPoint.replace(".", "/"));

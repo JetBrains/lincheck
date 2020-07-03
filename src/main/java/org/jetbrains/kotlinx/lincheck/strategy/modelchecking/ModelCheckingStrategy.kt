@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.IllegalStateException
-import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicInteger
 
