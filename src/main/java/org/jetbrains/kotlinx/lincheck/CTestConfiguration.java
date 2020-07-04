@@ -52,6 +52,7 @@ public abstract class CTestConfiguration {
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
     public static final boolean DEFAULT_MINIMIZE_ERROR = true;
+    public static final long DEFAULT_TIMEOUT_IN_MILLIS = 10_000;
 
     public final Class<?> testClass;
     public final int iterations;
@@ -64,10 +65,11 @@ public abstract class CTestConfiguration {
     public final boolean requireStateEquivalenceImplCheck;
     public final Boolean minimizeFailedScenario;
     public final Class<?> sequentialSpecification;
+    public final long timeoutInMillis;
 
     protected CTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
         Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
+        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification, long timeoutInMillis)
     {
         this.testClass = testClass;
         this.iterations = iterations;
@@ -80,6 +82,7 @@ public abstract class CTestConfiguration {
         this.requireStateEquivalenceImplCheck = requireStateEquivalenceImplCheck;
         this.minimizeFailedScenario = minimizeFailedScenario;
         this.sequentialSpecification = sequentialSpecification;
+        this.timeoutInMillis = timeoutInMillis;
     }
 
     protected abstract Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario,
@@ -91,13 +94,13 @@ public abstract class CTestConfiguration {
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
-                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass), DEFAULT_TIMEOUT_IN_MILLIS));
         Stream<RandomSwitchCTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
             .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(),
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
-                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass), DEFAULT_TIMEOUT_IN_MILLIS));
         return Stream.concat(stressConfigurations, randomSwitchConfigurations).collect(Collectors.toList());
     }
 }

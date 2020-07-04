@@ -27,13 +27,15 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.runner.DeadlockOnSynchronizedTest
 import org.junit.Test
 
+/**
+ * This test checks that there are now odd threads in thread dumps.
+ */
 class ThreadDumpTest {
     @Test
     fun test() {
-        val iterations = 20
+        val iterations = 30
         repeat(iterations) {
-            println(it)
-            val options = StressOptions().minimizeFailedScenario(false).invocationsPerIteration(1)
+            val options = StressOptions().minimizeFailedScenario(false).invocationsPerIteration(1).timeoutInMillis(100)
             val failure = options.checkImpl(DeadlockOnSynchronizedTest::class.java)
             check(failure is DeadlockWithDumpFailure)
             check(failure.threadDump.size == 2) { "thread dump for 2 threads expected, but for ${failure.threadDump.size} threads found"}
