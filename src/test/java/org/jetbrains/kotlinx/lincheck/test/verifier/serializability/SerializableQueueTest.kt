@@ -41,6 +41,7 @@ class SerializableQueueTest : AbstractLincheckTest() {
         actorsBefore(0)
         actorsAfter(0)
         actorsPerThread(2)
+        iterations(10)
         verifier(SerializabilityVerifier::class.java)
         sequentialSpecification(SequentialIntQueue::class.java)
     }

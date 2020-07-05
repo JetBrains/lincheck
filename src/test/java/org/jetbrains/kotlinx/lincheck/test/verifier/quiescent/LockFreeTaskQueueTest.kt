@@ -50,6 +50,7 @@ class LockFreeTaskQueueTest : AbstractLincheckTest() {
         actorsAfter(2)
         threads(2)
         actorsPerThread(3)
+        iterations(10)
         verifier(QuiescentConsistencyVerifier::class.java)
     }
 

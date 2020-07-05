@@ -49,5 +49,6 @@ class RunBlockingTest : AbstractLincheckTest() {
 
     override fun <O : Options<O, *>> O.customize() {
         minimizeFailedScenario(false)
+        iterations(1)
     }
 }
