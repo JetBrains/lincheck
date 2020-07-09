@@ -39,7 +39,8 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     protected List<String> ignoredEntryPoints = new ArrayList<>(DEFAULT_IGNORED_ENTRY_POINTS);
 
     /**
-     * Check obstruction freedom of the concurrent algorithm
+     * Check obstruction freedom of the concurrent algorithm.
+     * In case of finding an obstruction lincheck will immediately stop and report it.
      */
     public ModelCheckingOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
         this.checkObstructionFreedom = checkObstructionFreedom;
@@ -47,7 +48,9 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     }
 
     /**
-     * Use the specified maximum number of repetitions to detect loops for checking concurrent guarantee
+     * Use the specified maximum number of repetitions to detect endless loops.
+     * A found loop will force managed execution to switch the executing thread.
+     * In case of checkObstructionFreedom enabled it will report the obstruction instead.
      */
     public ModelCheckingOptions hangingDetectionThreshold(int maxRepetitions) {
         this.hangingDetectionThreshold = maxRepetitions;
@@ -55,7 +58,9 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     }
 
     /**
-     * Number of maxInvocationsPerIteration that managed strategy may use to search for incorrect execution
+     * The number of invocations that managed strategy may use to search for an incorrect execution.
+     * In case of small scenarios with only a few "interesting" code locations a lesser than this
+     * number of invocations will be used.
      */
     public ModelCheckingOptions invocationsPerIteration(int invocationsPerIteration) {
         this.maxInvocationsPerIteration = invocationsPerIteration;

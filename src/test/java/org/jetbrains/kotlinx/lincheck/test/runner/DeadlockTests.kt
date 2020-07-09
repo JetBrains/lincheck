@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicBoolean
 
-class DeadlockTests : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     private var counter = 0
     private var lock1 = Any()
     private var lock2 = Any()
