@@ -62,7 +62,7 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("element"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("peek"), emptyList(), emptyList())
-            ), emptyList(), false, false);
+            ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[5];
         ex.run();
@@ -83,7 +83,7 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("add", Object.class), asList(2), emptyList())
-            ), emptyList(), false, false);
+            ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
         ex.run();
@@ -97,7 +97,7 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("remove"), emptyList(), asList(NoSuchElementException.class)),
                 new Actor(Queue.class.getMethod("remove"), emptyList(), asList(Exception.class, NoSuchElementException.class))
-            ), emptyList(), false, false);
+            ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
         ex.clocks = new int[4][1];
@@ -107,25 +107,6 @@ public class TestThreadExecutionHelperTest {
             VoidResult.INSTANCE,
             new ValueResult(1),
             ExceptionResult.Companion.create(NoSuchElementException.class),
-            ExceptionResult.Companion.create(NoSuchElementException.class)
-        }, ex.results);
-    }
-
-    @Test
-    public void testWaits() throws Exception {
-        TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
-            asList(
-                new Actor(Queue.class.getMethod("add", Object.class), asList(1), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(NoSuchElementException.class))
-            ), emptyList(), true, false);
-        ex.testInstance = new ArrayDeque<>();
-        ex.results = new Result[3];
-        ex.waits = new int[]{15, 100};
-        ex.run();
-        Assert.assertArrayEquals(new Result[]{
-            new ValueResult(true),
-            new ValueResult(1),
             ExceptionResult.Companion.create(NoSuchElementException.class)
         }, ex.results);
     }

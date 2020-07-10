@@ -24,10 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
-import org.jetbrains.kotlinx.lincheck.runner.DeadlockInvocationResult
-import org.jetbrains.kotlinx.lincheck.runner.InvocationResult
-import org.jetbrains.kotlinx.lincheck.runner.ObstructionFreedomViolationInvocationResult
+import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
@@ -89,6 +86,11 @@ internal abstract class ManagedStrategyBase(
         eventCollector.finishThread(threadId)
         onNewSwitch()
         doSwitchCurrentThread(threadId, true)
+    }
+
+    override fun onFailure(threadId: Int, e: Throwable) {
+        if (suddenInvocationResult == null) // not a forcible execution finish
+            suddenInvocationResult = UnexpectedExceptionInvocationResult(e)
     }
 
     /**

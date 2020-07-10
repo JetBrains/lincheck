@@ -45,8 +45,7 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
-    validationFunctions: List<Method>,
-    waits: List<IntArray>?
+    validationFunctions: List<Method>
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val executor = newFixedThreadPool(scenario.threads, ParallelThreadsRunner::TestThread)
@@ -56,8 +55,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private val testThreadExecutions = Array(scenario.threads) { t ->
-        TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], false, scenario.hasSuspendableActors())
-            .also { if (waits != null) it.waits = waits[t] }
+        TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
     }
 
     init {

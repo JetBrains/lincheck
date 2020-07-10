@@ -49,7 +49,7 @@ public abstract class ManagedStrategy extends Strategy {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
         this.ignoredEntryPoints = ignoredEntryPoints;
-        runner = new ParallelThreadsRunner(this, testClass, validationFunctions,null) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions) {
             @Override
             public void onStart(int threadId) {
                 super.onStart(threadId);

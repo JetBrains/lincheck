@@ -45,7 +45,7 @@ import static org.objectweb.asm.commons.GeneratorAdapter.*;
  * This transformer inserts {@link ManagedStrategy}' methods invocations.
  */
 class ManagedStrategyTransformer extends ClassVisitor {
-    private static final int ASM_API = Opcodes.ASM5;
+    private static final int ASM_API = ASM7;
 
     private static final Type[] NO_ARGS = new Type[]{};
 

@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
+import org.jetbrains.kotlinx.lincheck.consumeCPU
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -38,18 +39,20 @@ class StressStrategy(
     private val random = Random(0)
     private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
-    private val waits: MutableList<IntArray>?
+    private val waits: Array<IntArray>?
+    private val nextWaits: Array<IntIterator>?
 
     init {
         // Create waits if needed
-        waits = if (testCfg.addWaits) ArrayList() else null
-        if (testCfg.addWaits) {
-            for (actorsForThread in scenario.parallelExecution) {
-                waits!!.add(IntArray(actorsForThread.size))
+        waits = if (testCfg.addWaits)
+            Array(scenario.parallelExecution.size) {
+                IntArray(scenario.parallelExecution[it].size)
             }
-        }
+        else
+            null
+        nextWaits = waits?.map { it.iterator() }?.toTypedArray()
         // Create runner
-        runner = ParallelThreadsRunner(this, testClass, validationFunctions, waits)
+        runner = ParallelThreadsRunner(this, testClass, validationFunctions)
     }
 
     override fun run(): LincheckFailure? {
@@ -61,9 +64,12 @@ class StressStrategy(
                     val maxWait = (invocation.toFloat() * MAX_WAIT / invocations).toInt() + 1
                     for (waitsForThread in waits) {
                         for (i in waitsForThread.indices) {
-                            waitsForThread[i] = random.nextInt(maxWait)
+                            // no wait before the first actor, otherwise a random wait
+                            waitsForThread[i] = if (i == 0) 0 else random.nextInt(maxWait)
                         }
                     }
+                    for (i in waits.indices)
+                        nextWaits!![i] = waits[i].iterator()
                 }
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
@@ -76,6 +82,14 @@ class StressStrategy(
             return null
         } finally {
             runner.close()
+        }
+    }
+
+    override fun onActorStart(threadId: Int) {
+        nextWaits?.let {
+            val wait = it[threadId].nextInt()
+            if (wait != 0)
+                consumeCPU(wait)
         }
     }
 }
