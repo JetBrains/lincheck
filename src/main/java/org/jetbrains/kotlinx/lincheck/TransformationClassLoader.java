@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck;
  */
 
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedStateHolder;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives;
 import org.objectweb.asm.ClassReader;
@@ -82,7 +83,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             (
                 className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.endsWith("ManagedStateHolder")
+                !className.equals(ManagedStateHolder.class.getName())
             ) ||
             className.startsWith("sun.") ||
             className.startsWith("java.") ||
@@ -91,8 +92,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 className.startsWith("kotlin.") &&
                 !className.startsWith("kotlin.collections.")
             ) ||
-            className.equals("kotlinx.coroutines.CancellableContinuation") ||
-            className.equals("kotlinx.coroutines.CoroutineDispatcher");
+            className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
+            className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
     }
 
     @Override
