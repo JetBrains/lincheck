@@ -59,26 +59,22 @@ class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure:
 
 class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     private var counter = 0
-    private var lock1 = AtomicBoolean(false)
-    private var lock2 = AtomicBoolean(false)
+    private val lock1 = AtomicBoolean(false)
+    private val lock2 = AtomicBoolean(false)
 
     @Operation
-    fun inc12(): Int {
-        return lock1.synchronized {
-            lock2.synchronized {
+    fun inc12(): Int = lock1.withSpinLock {
+            lock2.withSpinLock {
                 counter++
             }
         }
-    }
 
     @Operation
-    fun inc21(): Int {
-        return lock2.synchronized {
-            lock1.synchronized {
+    fun inc21(): Int = lock2.withSpinLock {
+            lock1.withSpinLock {
                 counter++
             }
         }
-    }
 
     override fun extractState(): Any = counter
 
@@ -87,7 +83,7 @@ class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
         minimizeFailedScenario(false)
     }
 
-    private fun AtomicBoolean.synchronized(block: () -> Int): Int {
+    private fun AtomicBoolean.withSpinLock(block: () -> Int): Int {
         while (!this.compareAndSet(false, true));
         val result = block()
         this.set(false)

@@ -211,7 +211,7 @@ private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): S
 }
 
 private fun StringBuilder.appendObstructionFreedomViolationFailure(failure: ObstructionFreedomViolationFailure): StringBuilder {
-    appendln("= Obstruction freedom was required, but violated =")
+    appendln("= Obstruction freedom check was required, but has failed. Reason: ${failure.reason} =")
     appendExecutionScenario(failure.scenario)
     return this
 }

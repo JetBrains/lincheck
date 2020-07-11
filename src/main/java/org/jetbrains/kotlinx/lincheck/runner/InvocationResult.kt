@@ -49,12 +49,18 @@ class UnexpectedExceptionInvocationResult(
     val exception: Throwable
 ) : InvocationResult()
 
+/**
+ * The invocation completed succesfully, but a validation function check failed.
+ */
 class ValidationFailureInvocationResult(
     val scenario: ExecutionScenario,
     val functionName: String,
     val exception: Throwable
 ) : InvocationResult()
 
+/**
+ * Obstruction freedom check was requested, but the invocation has run into an obstruction.
+ */
 class ObstructionFreedomViolationInvocationResult(
     val reason: String
 ) : InvocationResult()

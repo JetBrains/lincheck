@@ -194,9 +194,9 @@ public class TestThreadExecutionGenerator {
                     mv.visitTryCatchBlock(start, end, handler, getType(ec).getInternalName());
                 mv.visitLabel(start);
             }
-            // Catch those exceptions that were not catched yet
-            Label remainingExceptionHandler = mv.newLabel();
-            mv.visitTryCatchBlock(start, end, remainingExceptionHandler, THROWABLE_TYPE.getInternalName());
+            // Catch those exceptions that has not been caught yet
+            Label unexpectedExceptionHandler = mv.newLabel();
+            mv.visitTryCatchBlock(start, end, unexpectedExceptionHandler, THROWABLE_TYPE.getInternalName());
             mv.visitLabel(start);
             // onActorStart call
             mv.loadThis();
@@ -261,8 +261,8 @@ public class TestThreadExecutionGenerator {
             }
             // End of try-catch block for all other exceptions
             mv.goTo(actorEnd);
-            mv.visitLabel(remainingExceptionHandler);
-            // call onFailure method
+            mv.visitLabel(unexpectedExceptionHandler);
+            // Call onFailure method
             mv.dup();
             int eLocal = mv.newLocal(THROWABLE_TYPE);
             mv.storeLocal(eLocal);
@@ -271,7 +271,7 @@ public class TestThreadExecutionGenerator {
             mv.push(iThread);
             mv.loadLocal(eLocal);
             mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FAILURE_METHOD);
-            // just throw the exception further
+            // Just throw the exception further
             mv.throwException();
             mv.visitLabel(actorEnd);
             // Increment the clock

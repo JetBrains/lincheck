@@ -59,18 +59,7 @@ class StressStrategy(
         try {
             // Run invocations
             for (invocation in 0 until invocations) {
-                // Specify waits if needed
-                if (waits != null) {
-                    val maxWait = (invocation.toFloat() * MAX_WAIT / invocations).toInt() + 1
-                    for (waitsForThread in waits) {
-                        for (i in waitsForThread.indices) {
-                            // no wait before the first actor, otherwise a random wait
-                            waitsForThread[i] = if (i == 0) 0 else random.nextInt(maxWait)
-                        }
-                    }
-                    for (i in waits.indices)
-                        nextWaits!![i] = waits[i].iterator()
-                }
+                initializeInvocation(invocation)
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results))
@@ -90,6 +79,21 @@ class StressStrategy(
             val wait = it[threadId].nextInt()
             if (wait != 0)
                 consumeCPU(wait)
+        }
+    }
+
+    private fun initializeInvocation(invocation: Int) {
+        // Specify waits if needed
+        if (waits != null) {
+            val maxWait = (invocation.toFloat() * MAX_WAIT / invocations).toInt() + 1
+            for (waitsForThread in waits) {
+                for (i in waitsForThread.indices) {
+                    // no wait before the first actor, otherwise a random wait
+                    waitsForThread[i] = if (i == 0) 0 else random.nextInt(maxWait)
+                }
+            }
+            for (i in waits.indices)
+                nextWaits!![i] = waits[i].iterator()
         }
     }
 }

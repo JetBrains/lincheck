@@ -26,8 +26,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTest;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.RandomSwitchCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
@@ -96,12 +94,6 @@ public abstract class CTestConfiguration {
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                     chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
-        Stream<CTestConfiguration> randomSwitchConfigurations = Arrays.stream(testClass.getAnnotationsByType(RandomSwitchCTest.class))
-            .map(ann -> new RandomSwitchCTestConfiguration(testClass, ann.iterations(),
-                    ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                    ann.generator(), ann.verifier(), ann.invocationsPerIteration(),
-                    ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
-                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
         Stream<CTestConfiguration> modelCheckingConfigurations = Arrays.stream(testClass.getAnnotationsByType(ModelCheckingCTest.class))
             .map(ann -> new ModelCheckingCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
@@ -109,6 +101,6 @@ public abstract class CTestConfiguration {
                     ann.invocationsPerIteration(), DEFAULT_IGNORED_ENTRY_POINTS, ann.requireStateEquivalenceImplCheck(),
                     ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 
-        return Stream.of(stressConfigurations, randomSwitchConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());
+        return Stream.of(stressConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());
     }
 }

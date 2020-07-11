@@ -24,21 +24,18 @@ package org.jetbrains.kotlinx.lincheck.test.verifier
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
-class EpsilonVerifierTest : AbstractLincheckTest() {
+@StressCTest(iterations = 5, threads = 2, actorsPerThread = 2, verifier = EpsilonVerifier::class)
+class EpsilonVerifierTest : VerifierState() {
     private var i = 0
 
     @Operation
     fun incAndGet() = i++ // non-atomic!
 
-    override fun extractState() = i
+    @Test
+    fun test() = LinChecker.check(EpsilonVerifierTest::class.java)
 
-    override fun <O : Options<O, *>> O.customize() {
-        actorsPerThread(2)
-        verifier(EpsilonVerifier::class.java)
-        iterations(5)
-    }
+    override fun extractState() = i
 }

@@ -59,7 +59,7 @@ abstract class AbstractLincheckTest(
 
     @Test(timeout = 100_000)
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(5_000)
+        invocationsPerIteration(10_000)
         iterations(30)
         minimizeFailedScenario(false)
         customize()

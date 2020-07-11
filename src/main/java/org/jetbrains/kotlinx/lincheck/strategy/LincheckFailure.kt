@@ -59,6 +59,7 @@ internal class ValidationFailure(
 
 internal class ObstructionFreedomViolationFailure(
         scenario: ExecutionScenario,
+        val reason: String,
         execution: List<InterleavingEvent>? = null
 ) : LincheckFailure(scenario, execution)
 
@@ -66,6 +67,6 @@ internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, exe
     is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, execution)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, execution)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, execution)
-    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, execution)
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, execution)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

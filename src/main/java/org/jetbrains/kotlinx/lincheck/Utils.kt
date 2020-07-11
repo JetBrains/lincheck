@@ -214,6 +214,11 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     }
 }
 
+/**
+ * This class is used for getting Unsafe.
+ * The reason why we need it is because in transformed java.util package some classes use Unsafe,
+ * but they can not access it directly after the transformation.
+ */
 object UnsafeHolder {
     @Volatile
     private var theUnsafe: Unsafe? = null

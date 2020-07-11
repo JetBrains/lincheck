@@ -34,7 +34,6 @@ import java.util.*;
  * Configuration for {@link RandomSwitchStrategy random-switch} strategy.
  */
 public class RandomSwitchCTestConfiguration extends CTestConfiguration {
-    public static final int DEFAULT_INVOCATIONS = 1_000;
     public final int invocationsPerIteration;
 
     public RandomSwitchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,

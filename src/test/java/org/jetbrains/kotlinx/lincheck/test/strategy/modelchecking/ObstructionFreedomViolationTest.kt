@@ -33,11 +33,10 @@ class ObstructionFreedomViolationTest : VerifierState() {
 
     @Operation
     @Synchronized
-    fun incAndGet(): Int = ++c
+    fun incAndGet(): Int = synchronized(this) { ++c }
 
     @Operation
-    @Synchronized
-    fun get(): Int = c
+    fun get(): Int = synchronized(this) { c }
 
     @Test
     fun test() {

@@ -21,18 +21,18 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
     private var classVersion = 0
     private lateinit var fileName: String
 
-    override fun visit(version: Int, access: Int, name: String, signature: String, superName: String, interfaces: Array<String>) {
+    override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name
         classVersion = version
         super.visit(version, access, name, signature, superName, interfaces)
     }
 
-    override fun visitSource(source: String, debug: String) {
+    override fun visitSource(source: String, debug: String?) {
         fileName = source
         super.visitSource(source, debug)
     }
 
-    override fun visitMethod(access: Int, mname: String, desc: String, signature: String, exceptions: Array<String>): MethodVisitor {
+    override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
         var access = access
         // replace native method VMSupportsCS8 in AtomicLong with stub
         if (access and Opcodes.ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
@@ -81,7 +81,7 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
      */
     private class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            val isException = Throwable::class.java.isAssignableFrom(Class.forName(name))
+            val isException = Throwable::class.java.isAssignableFrom(Class.forName(name.replace("/", ".")))
             val isTrustedAtomicPrimitive = isTrustedPrimitive(name)
             // function package is not transformed, because AFU uses it and thus there will be transformation problems
             if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !isException)
@@ -91,7 +91,8 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
     }
 
     /**
-     * Generates body of a native method VMSupportsCS8
+     * Generates body of a native method VMSupportsCS8.
+     * Native methods in java.util can not be transformed properly, so should be replaced with stubs.
      */
     private class VMSupportsCS8MethodGenerator(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, null) {
         override fun visitEnd() = adapter.run {

@@ -30,13 +30,13 @@ import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecificati
 import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.*;
 
 /**
- * Options for {@link ModelCheckingStrategy uniform search} strategy.
+ * Options for {@link ModelCheckingStrategy model checking} strategy.
  */
 public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelCheckingCTestConfiguration> {
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
     protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS;
-    protected List<String> ignoredEntryPoints = new ArrayList<>(DEFAULT_IGNORED_ENTRY_POINTS);
+    protected final List<String> ignoredEntryPoints = new ArrayList<>(DEFAULT_IGNORED_ENTRY_POINTS);
 
     /**
      * Check obstruction freedom of the concurrent algorithm.

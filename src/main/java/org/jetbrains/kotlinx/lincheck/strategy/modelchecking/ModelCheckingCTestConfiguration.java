@@ -48,10 +48,10 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
             )
     );
 
-    public boolean checkObstructionFreedom;
+    public final boolean checkObstructionFreedom;
     public final int hangingDetectionThreshold;
     public final int maxInvocationsPerIteration;
-    protected List<String> ignoredEntryPoints;
+    protected final List<String> ignoredEntryPoints;
 
 
     public ModelCheckingCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
