@@ -77,7 +77,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     private static boolean doNotTransform(String className) {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
-        if (TrustedAtomicPrimitives.INSTANCE.isTrustedPrimitive(className.replace('.', '/'))) return true;
+        if (TrustedAtomicPrimitives.isTrustedPrimitive(className)) return true;
 
         return className == null ||
             (

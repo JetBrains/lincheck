@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.Options;
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +37,7 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
     protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
     protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS;
-    protected final List<String> ignoredEntryPoints = new ArrayList<>(DEFAULT_IGNORED_ENTRY_POINTS);
+    protected final List<ManagedGuarantee> guarantees = new ArrayList<>(DEFAULT_GUARANTEES);
 
     /**
      * Check obstruction freedom of the concurrent algorithm.
@@ -70,8 +71,8 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     /**
      * Add an entry point which should not be transformed in the format "java.util.concurrent." or "java.util.WeakHashMap"
      */
-    public ModelCheckingOptions addIgnoredEntryPoint(String ignoredEntryPoint) {
-        this.ignoredEntryPoints.add(ignoredEntryPoint.replace(".", "/"));
+    public ModelCheckingOptions addGuarantee(ManagedGuarantee guarantee) {
+        this.guarantees.add(guarantee);
         return this;
     }
 
@@ -79,7 +80,7 @@ public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelChe
     public ModelCheckingCTestConfiguration createTestConfigurations(Class<?> testClass) {
         return new ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, maxInvocationsPerIteration,
-                ignoredEntryPoints, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+                guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass));
     }
 }

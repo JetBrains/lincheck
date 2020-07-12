@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 
 import static java.util.function.UnaryOperator.identity;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
-import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_IGNORED_ENTRY_POINTS;
+import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_GUARANTEES;
 
 /**
  * Configuration of an abstract concurrent test.
@@ -98,7 +98,7 @@ public abstract class CTestConfiguration {
             .map(ann -> new ModelCheckingCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.checkObstructionFreedom(), ann.hangingDetectionThreshold(),
-                    ann.invocationsPerIteration(), DEFAULT_IGNORED_ENTRY_POINTS, ann.requireStateEquivalenceImplCheck(),
+                    ann.invocationsPerIteration(), DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck(),
                     ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
 
         return Stream.of(stressConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());

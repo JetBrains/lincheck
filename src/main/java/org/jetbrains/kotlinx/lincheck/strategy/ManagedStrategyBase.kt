@@ -43,8 +43,8 @@ internal abstract class ManagedStrategyBase(
         validationFunctions: List<Method>,
         private val hangingDetectionThreshold: Int,
         private val requireObstructionFreedom: Boolean,
-        ignoredEntryPoints: List<String>
-) : ManagedStrategy(testClass, scenario, validationFunctions, ignoredEntryPoints) {
+        guarantees: List<ManagedGuarantee>
+) : ManagedStrategy(testClass, scenario, validationFunctions, guarantees) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
     // whether a thread finished all its operations
     protected val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }

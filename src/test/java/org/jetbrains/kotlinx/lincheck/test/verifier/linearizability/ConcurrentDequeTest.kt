@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -44,4 +45,8 @@ class ConcurrentDequeTest : AbstractLincheckTest(IncorrectResultsFailure::class)
     fun pollLast() = deque.pollLast()
 
     override fun extractState() = deque.toList()
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(100)
+    }
 }

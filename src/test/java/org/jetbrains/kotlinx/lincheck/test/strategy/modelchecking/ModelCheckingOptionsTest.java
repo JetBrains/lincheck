@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.LoggingLevel;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt;
 import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class ModelCheckingOptionsTest {
             .checkObstructionFreedom(true)
             .hangingDetectionThreshold(30)
             .logLevel(LoggingLevel.ERROR)
-            .addIgnoredEntryPoint("java.util.")
+            .addGuarantee(ManagedGuaranteeKt.forClasses("java.util.WeakHashMap").ignore().allMethods())
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
         LinChecker.check(ModelCheckingOptionsTest.class, opts);

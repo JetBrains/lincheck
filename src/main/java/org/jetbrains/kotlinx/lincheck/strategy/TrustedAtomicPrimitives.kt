@@ -30,32 +30,22 @@ package org.jetbrains.kotlinx.lincheck.strategy
  */
 internal object TrustedAtomicPrimitives {
     private val trustedAtomicPrimitives = listOf<(className: String) -> Boolean>(
-            { it == "java/lang/invoke/VarHandle" },
-            { it == "sun/misc/Unsafe" },
-            { it.startsWith("java/util/concurrent/atomic/Atomic")}, // AFUs and Atomic[Integer/Long/...]
-            { it.startsWith("kotlinx/atomicfu/Atomic")}
+            { it == "java.lang.invoke.VarHandle" },
+            { it == "sun.misc.Unsafe" },
+            { it.startsWith("java.util.concurrent.atomic.Atomic")}, // AFUs and Atomic[Integer/Long/...]
+            { it.startsWith("kotlinx.atomicfu.Atomic")}
     )
 
     private val writeKeyWords = listOf("write", "set", "swap", "put", "mark", "update")
     private val readKeyWords = listOf("read", "get", "is")
 
+    @JvmStatic
     fun isTrustedPrimitive(className: String) = trustedAtomicPrimitives.any { it(className) }
 
-    fun classifyTrustedMethod(className: String, methodName: String): AtomicPrimitiveMethodType {
-        check(isTrustedPrimitive(className))
-        // can add different logic for all primitives, but it is hard to maintain, so a method is judged only by its name
+    @JvmStatic
+    fun isTrustedMethod(methodName: String): Boolean {
         val loweredMethodName = methodName.toLowerCase()
-        if (writeKeyWords.any { loweredMethodName.contains(it) })
-            return AtomicPrimitiveMethodType.WRITE
-        if (readKeyWords.any { loweredMethodName.contains(it) })
-            return AtomicPrimitiveMethodType.READ
-
-        return AtomicPrimitiveMethodType.NONE
+        // there are too many methods to check manually, so instead an automatic check by key words is used
+        return writeKeyWords.any { loweredMethodName.contains(it) } || readKeyWords.any { loweredMethodName.contains(it) }
     }
-}
-
-internal enum class AtomicPrimitiveMethodType {
-    READ,
-    WRITE,
-    NONE
 }

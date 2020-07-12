@@ -2,24 +2,29 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader
 import org.jetbrains.kotlinx.lincheck.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives.classifyTrustedMethod
 import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives.isTrustedPrimitive
 import org.objectweb.asm.*
+import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 import org.objectweb.asm.commons.*
-import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.reflect.jvm.javaMethod
 
+
 /**
  * This transformer inserts [ManagedStrategy] methods invocations.
  */
-internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: MutableList<StackTraceElement>, private val ignoredEntryPoints: List<String>) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
+internal class ManagedStrategyTransformer(
+        cv: ClassVisitor?,
+        val codeLocations: MutableList<StackTraceElement>,
+        private val guarantees: List<ManagedGuarantee>
+) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
-    private lateinit var fileName: String
+    private var fileName: String? = null
 
     override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name
@@ -50,30 +55,19 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
             // synchronized method is replaced with synchronized lock
             mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), className, access, classVersion)
         }
+        mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
-        val shouldBeIgnored = "<clinit>" == mname || shouldBeIgnored(className)
-        if (shouldBeIgnored) {
-            // static initialization sections and classes corresponding to ignoredEntryPoints
-            // should not have inserted strategy methods.
-            mv = IgnoredSectionTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        } else {
-            mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-            mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-            // SharedVariableAccessMethodTransformer should be an earlier visitor than ClassInitializationTransformer
-            // not to have suspension points before 'beforeClassInitialization' call in <clinit> block.
-            mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-            mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-            mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
-            mv = ThreadLocalRandomTransformer(className, GeneratorAdapter(mv, access, mname, desc))
-        }
+        mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // SharedVariableAccessMethodTransformer should be an earlier visitor than ClassInitializationTransformer
+        // not to have suspension points before 'beforeIgnoredSectionEntering' call in <clinit> block.
+        mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = ThreadLocalRandomTransformer(className, GeneratorAdapter(mv, access, mname, desc))
         mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         return mv
-    }
-
-    private fun shouldBeIgnored(className: String): Boolean {
-        for (entryPoint in ignoredEntryPoints)
-            if (className.startsWith(entryPoint)) return true
-        return false
     }
 
     /**
@@ -81,8 +75,9 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
      */
     private class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            val isException = Throwable::class.java.isAssignableFrom(Class.forName(name.replace("/", ".")))
-            val isTrustedAtomicPrimitive = isTrustedPrimitive(name)
+            val normalizedName = name.replace("/", ".")
+            val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
+            val isTrustedAtomicPrimitive = isTrustedPrimitive(normalizedName)
             // function package is not transformed, because AFU uses it and thus there will be transformation problems
             if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !isException)
                 return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
@@ -92,7 +87,7 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
 
     /**
      * Generates body of a native method VMSupportsCS8.
-     * Native methods in java.util can not be transformed properly, so should be replaced with stubs.
+     * Native methods in java.util can not be transformed properly, so should be replaced with stubs
      */
     private class VMSupportsCS8MethodGenerator(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, null) {
         override fun visitEnd() = adapter.run {
@@ -161,17 +156,6 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
             super.visitInsn(opcode)
         }
 
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            if (isTrustedPrimitive(owner)) {
-                when (classifyTrustedMethod(owner, name)) {
-                    AtomicPrimitiveMethodType.WRITE -> invokeBeforeSharedVariableWrite()
-                    AtomicPrimitiveMethodType.READ -> invokeBeforeSharedVariableRead()
-                    else -> {}
-                }
-            }
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-        }
-
         // STACK: array, index, value -> array, index, value, arr
         private fun dupArrayOnArrayStore(opcode: Int) = adapter.run {
             val type = when (opcode) {
@@ -206,6 +190,55 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
                 pop2() // value, object
                 dupX2() // object, value, object
             }
+        }
+    }
+
+    /**
+     * Add strategy method invocations corresponding to ManagedGuarantee guarantees
+     */
+    private inner class ManagedGuaranteeTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            val guaranteeType = classifyGuaranteeType(owner, name)
+            if (guaranteeType == ManagedGuaranteeType.TREAT_AS_ATOMIC)
+                invokeBeforeSharedVariableWrite() // treat as write
+            if (guaranteeType != null)
+                invokeBeforeIgnoredSectionEntering()
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            if (guaranteeType != null)
+                invokeAfterIgnoredSectionLeaving()
+        }
+
+        /**
+         * Find a guarantee that a method has if any
+         */
+        private fun classifyGuaranteeType(className: String, methodName: String): ManagedGuaranteeType? {
+            for (guarantee in guarantees)
+                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.replace("/", ".")))
+                    return guarantee.type
+            return null
+        }
+    }
+
+    /**
+     * Makes all <clinit> sections ignored, because managed execution in <clinit> can lead to a deadlock
+     */
+    private inner class ClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter)  {
+        private val isClinit = methodName == "<clinit>"
+
+        override fun visitCode() {
+            if (isClinit)
+                invokeBeforeIgnoredSectionEntering()
+            mv.visitCode()
+        }
+
+        override fun visitInsn(opcode: Int) {
+            if (isClinit) {
+                when (opcode) {
+                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
+                    else -> { }
+                }
+            }
+            mv.visitInsn(opcode)
         }
     }
 
@@ -349,25 +382,6 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
             } else {
                 loadThis()
             }
-        }
-    }
-
-    /**
-     * Adds enterIgnoredSection call before ignored methods and leaveIgnoredSection call after method
-     */
-    private inner class IgnoredSectionTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        override fun visitCode() {
-            invokeIgnoredSectionEntering()
-            super.visitCode()
-        }
-
-        override fun visitInsn(opcode: Int) {
-            when (opcode) {
-                Opcodes.ARETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.IRETURN, Opcodes.LRETURN, Opcodes.RETURN ->
-                    invokeAfterIgnoredSectionLeaving()
-                else -> { }
-            }
-            adapter.visitInsn(opcode)
         }
     }
 
@@ -676,7 +690,7 @@ internal class ManagedStrategyTransformer(cv: ClassVisitor?, val codeLocations: 
             adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY_METHOD)
         }
 
-        fun invokeIgnoredSectionEntering() {
+        fun invokeBeforeIgnoredSectionEntering() {
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_IGNORED_SECTION_METHOD)

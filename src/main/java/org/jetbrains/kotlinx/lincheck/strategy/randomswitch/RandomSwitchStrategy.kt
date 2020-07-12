@@ -46,7 +46,7 @@ internal class RandomSwitchStrategy(
         verifier: Verifier
 ) : ManagedStrategyBase(
         testClass, scenario, verifier, validationFunctions, ModelCheckingCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD,
-        false, ArrayList(ModelCheckingCTestConfiguration.DEFAULT_IGNORED_ENTRY_POINTS)
+        false, ArrayList(ModelCheckingCTestConfiguration.DEFAULT_GUARANTEES)
 ) {
     // the number of invocations that the managed strategy may use to search for an incorrect execution
     private val maxInvocations = testCfg.invocationsPerIteration

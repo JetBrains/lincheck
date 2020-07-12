@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy;
 
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
 import org.objectweb.asm.*;
 
 import java.lang.reflect.*;
@@ -43,12 +44,12 @@ public abstract class ManagedStrategy extends Strategy {
 
     protected final Runner runner;
     private ManagedStrategyTransformer transformer;
-    private final List<String> ignoredEntryPoints;
+    private final List<ManagedGuarantee> guarantees;
 
-    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, List<String> ignoredEntryPoints) {
+    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, List<ManagedGuarantee> guarantees) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
-        this.ignoredEntryPoints = ignoredEntryPoints;
+        this.guarantees = guarantees;
         runner = new ParallelThreadsRunner(this, testClass, validationFunctions) {
             @Override
             public void onStart(int threadId) {
@@ -91,7 +92,7 @@ public abstract class ManagedStrategy extends Strategy {
         } else {
             previousCodeLocations = transformer.getCodeLocations();
         }
-        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations, ignoredEntryPoints);
+        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations, guarantees);
     }
 
     @Override
