@@ -251,6 +251,7 @@ internal class ManagedStrategyTransformer(
             if (owner == "sun/misc/Unsafe" && name == "getUnsafe") {
                 // load Unsafe
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
+                adapter.checkCast(UNSAFE_TYPE)
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -799,6 +800,7 @@ internal class ManagedStrategyTransformer(
         private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
         private val LOCAL_OBJECT_MANAGER_TYPE = Type.getType(LocalObjectManager::class.java)
         private val RANDOM_TYPE = Type.getType(Random::class.java)
+        private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
         private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
@@ -819,6 +821,6 @@ internal class ManagedStrategyTransformer(
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::isLocalObject.javaMethod)
         private val ADD_DEPENDENCY_METHOD = Method.getMethod(LocalObjectManager::addDependency.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
-        private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+        private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
     }
 }
