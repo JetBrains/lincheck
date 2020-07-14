@@ -29,7 +29,7 @@ import org.objectweb.asm.*;
 import java.lang.reflect.*;
 import java.util.*;
 
-import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_IN_MILLIS;
+import static org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_MS;
 
 /**
  * This is an abstract class for all managed strategies.
@@ -49,7 +49,7 @@ public abstract class ManagedStrategy extends Strategy {
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
-        runner = new ParallelThreadsRunner(this, testClass, validationFunctions,null, DEFAULT_TIMEOUT_IN_MILLIS) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions,null, DEFAULT_TIMEOUT_MS) {
             @Override
             public void onStart(int iThread) {
                 super.onStart(iThread);

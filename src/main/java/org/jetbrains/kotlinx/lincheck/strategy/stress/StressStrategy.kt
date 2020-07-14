@@ -49,7 +49,7 @@ class StressStrategy(
             }
         }
         // Create runner
-        runner = ParallelThreadsRunner(this, testClass, validationFunctions, waits, testCfg.timeoutInMillis)
+        runner = ParallelThreadsRunner(this, testClass, validationFunctions, waits, testCfg.timeoutMs)
     }
 
     override fun run(): LincheckFailure? {

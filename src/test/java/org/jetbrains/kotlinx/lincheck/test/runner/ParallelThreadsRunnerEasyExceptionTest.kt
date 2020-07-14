@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.runner
 import org.junit.Test
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_IN_MILLIS
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -108,7 +108,7 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner = ParallelThreadsRunner(mockStrategy(scenario), testClass, emptyList(), null, DEFAULT_TIMEOUT_IN_MILLIS)
+        val runner = ParallelThreadsRunner(mockStrategy(scenario), testClass, emptyList(), null, DEFAULT_TIMEOUT_MS)
         val results = (runner.run() as CompletedInvocationResult).results
         assertTrue(results.equalsIgnoringClocks(expectedResults))
     }
@@ -127,7 +127,7 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner = ParallelThreadsRunner(mockStrategy(scenario), testClass, emptyList(), null, DEFAULT_TIMEOUT_IN_MILLIS)
+        val runner = ParallelThreadsRunner(mockStrategy(scenario), testClass, emptyList(), null, DEFAULT_TIMEOUT_MS)
         val results = (runner.run() as CompletedInvocationResult).results
         assertTrue(results.equalsIgnoringClocks(expectedResults))
     }
@@ -141,7 +141,7 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner = ParallelThreadsRunner(mockStrategy(scenario), testClass, emptyList(), null, DEFAULT_TIMEOUT_IN_MILLIS)
+        val runner = ParallelThreadsRunner(mockStrategy(scenario), testClass, emptyList(), null, DEFAULT_TIMEOUT_MS)
         val results = (runner.run() as CompletedInvocationResult).results
         assertTrue(results.equalsIgnoringClocks(expectedResults))
     }

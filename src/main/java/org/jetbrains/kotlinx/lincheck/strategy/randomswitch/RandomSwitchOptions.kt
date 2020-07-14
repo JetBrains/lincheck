@@ -33,13 +33,13 @@ class RandomSwitchOptions : Options<RandomSwitchOptions, RandomSwitchCTestConfig
     /**
      * Run each test scenario `invocations` times.
      */
-    fun invocationsPerIteration(invocations: Int): RandomSwitchOptions = this.apply {
+    fun invocationsPerIteration(invocations: Int): RandomSwitchOptions = apply {
         invocationsPerIteration = invocations
     }
 
     override fun createTestConfigurations(testClass: Class<*>?): RandomSwitchCTestConfiguration {
         return RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass!!), timeoutInMillis)
+                chooseSequentialSpecification(sequentialSpecification, testClass!!), timeoutMs)
     }
 }

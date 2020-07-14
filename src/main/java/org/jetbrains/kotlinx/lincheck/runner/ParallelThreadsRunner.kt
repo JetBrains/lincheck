@@ -50,8 +50,8 @@ open class ParallelThreadsRunner(
     private val timeoutInMillis: Long // for deadlock recognition
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
-    private val testThreadHash = this.hashCode() // helps to distinguish this runner test threads from other test threads
-    private val executor = newFixedThreadPool(scenario.threads) { TestThread(it, testThreadHash) }
+    private val runnerHash = this.hashCode() // helps to distinguish this runner test threads from other test threads
+    private val executor = newFixedThreadPool(scenario.threads) { TestThread(it, runnerHash) }
 
     private val completions = List(scenario.threads) { threadId ->
         List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
@@ -212,7 +212,7 @@ open class ParallelThreadsRunner(
             try {
                 future.get(timeoutInMillis, TimeUnit.MILLISECONDS)
             } catch (e: TimeoutException) {
-                val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.hash == this.hashCode() }
+                val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
                 return DeadlockInvocationResult(threadDump)
             } catch (e: ExecutionException) {
                 return UnexpectedExceptionInvocationResult(e.cause!!)
@@ -282,7 +282,7 @@ open class ParallelThreadsRunner(
     }
 
      // For [TestThreadExecution] instances
-    class TestThread(r: Runnable, val hash: Int) : Thread(r) {
+    class TestThread(r: Runnable, val runnerHash: Int) : Thread(r) {
         var iThread: Int = 0
         var cont: CancellableContinuation<*>? = null
     }

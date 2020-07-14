@@ -21,7 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_IN_MILLIS
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
@@ -40,12 +40,12 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var requireStateEquivalenceImplementationCheck = true
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
-    protected var timeoutInMillis: Long = DEFAULT_TIMEOUT_IN_MILLIS
+    protected var timeoutMs: Long = DEFAULT_TIMEOUT_MS
 
     /**
      * Number of different test scenarios to be executed
      */
-    fun iterations(iterations: Int): OPT = this.applyAsOpt {
+    fun iterations(iterations: Int): OPT = applyAndCast {
         this.iterations = iterations
     }
 
@@ -58,7 +58,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      *
      * @see ExecutionScenario.parallelExecution
      */
-    fun threads(threads: Int): OPT = this.applyAsOpt {
+    fun threads(threads: Int): OPT = applyAndCast {
         this.threads = threads
     }
 
@@ -71,7 +71,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      *
      * @see ExecutionScenario.parallelExecution
      */
-    fun actorsPerThread(actorsPerThread: Int): OPT = this.applyAsOpt {
+    fun actorsPerThread(actorsPerThread: Int): OPT = applyAndCast {
         this.actorsPerThread = actorsPerThread
     }
 
@@ -84,7 +84,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      *
      * @see ExecutionScenario.initExecution
      */
-    fun actorsBefore(actorsBefore: Int): OPT = this.applyAsOpt {
+    fun actorsBefore(actorsBefore: Int): OPT = applyAndCast {
         this.actorsBefore = actorsBefore
     }
 
@@ -97,21 +97,21 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      *
      * @see ExecutionScenario.postExecution
      */
-    fun actorsAfter(actorsAfter: Int): OPT = this.applyAsOpt {
+    fun actorsAfter(actorsAfter: Int): OPT = applyAndCast {
         this.actorsAfter = actorsAfter
     }
 
     /**
      * Use the specified execution generator
      */
-    fun executionGenerator(executionGenerator: Class<out ExecutionGenerator?>): OPT = this.applyAsOpt {
+    fun executionGenerator(executionGenerator: Class<out ExecutionGenerator?>): OPT = applyAndCast {
         this.executionGenerator = executionGenerator
     }
 
     /**
      * Use the specified verifier
      */
-    fun verifier(verifier: Class<out Verifier?>): OPT = this.applyAsOpt {
+    fun verifier(verifier: Class<out Verifier?>): OPT = applyAndCast {
         this.verifier = verifier
     }
 
@@ -120,7 +120,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * It checks whether two new instances of a test class are equal.
      * If the check fails [[IllegalStateException]] is thrown.
      */
-    fun requireStateEquivalenceImplCheck(require: Boolean): OPT = this.applyAsOpt {
+    fun requireStateEquivalenceImplCheck(require: Boolean): OPT = applyAndCast {
         requireStateEquivalenceImplementationCheck = require
     }
 
@@ -130,7 +130,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * construct a smaller one so that the test fails on it as well.
      * Enabled by default.
      */
-    fun minimizeFailedScenario(minimizeFailedScenario: Boolean): OPT = this.applyAsOpt {
+    fun minimizeFailedScenario(minimizeFailedScenario: Boolean): OPT = applyAndCast {
         this.minimizeFailedScenario = minimizeFailedScenario
     }
 
@@ -139,7 +139,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Set logging level, [DEFAULT_LOG_LEVEL] is used by default.
      */
-    fun logLevel(logLevel: LoggingLevel): OPT = this.applyAsOpt {
+    fun logLevel(logLevel: LoggingLevel): OPT = applyAndCast {
         this.logLevel = logLevel
     }
 
@@ -150,20 +150,20 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      *
      * By default, the provided concurrent implementation is used in a sequential way.
      */
-    fun sequentialSpecification(clazz: Class<*>?): OPT = this.applyAsOpt {
+    fun sequentialSpecification(clazz: Class<*>?): OPT = applyAndCast {
         sequentialSpecification = clazz
     }
 
     /**
      * Internal, DO NOT USE.
      */
-    internal fun timeoutInMillis(timeoutInMillis: Long): OPT = this.applyAsOpt {
-        this.timeoutInMillis = timeoutInMillis
+    internal fun invocationTimeout(timeoutInMillis: Long): OPT = applyAndCast {
+        this.timeoutMs = timeoutInMillis
     }
 
     companion object {
         @Suppress("UNCHECKED_CAST")
-        private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> Options<OPT, CTEST>.applyAsOpt(
+        private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> Options<OPT, CTEST>.applyAndCast(
                 block: Options<OPT, CTEST>.() -> Unit
         ) = this.apply {
             block()
