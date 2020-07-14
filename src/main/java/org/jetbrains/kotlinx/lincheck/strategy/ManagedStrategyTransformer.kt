@@ -1,3 +1,24 @@
+/*-
+ * #%L
+ * Lincheck
+ * %%
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>.
+ * #L%
+ */
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader
@@ -66,6 +87,7 @@ internal class ManagedStrategyTransformer(
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadLocalRandomTransformer(className, GeneratorAdapter(mv, access, mname, desc))
         mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         return mv
@@ -244,7 +266,8 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`
+     * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`, because
+     * transformed java.util classes can not access Unsafe directly after transformation.
      */
     private class UnsafeTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
@@ -294,9 +317,10 @@ internal class ManagedStrategyTransformer(
     /**
      * Replaces ThreadLocalRandom with a sequential Random to prevent non-determinism in managed executions.
      */
-    private class ThreadLocalRandomTransformer(private val className: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+    private class ThreadLocalRandomTransformer(className: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        private val isInternalInvocation = className == "java/util/concurrent/ThreadLocalRandom"
+
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            val isInternalInvocation = className == "java/util/concurrent/ThreadLocalRandom"
             val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
             if (!isInternalInvocation && isThreadLocalRandomMethod && opcode == INVOKEVIRTUAL) {
                 adapter.pop()
@@ -312,6 +336,29 @@ internal class ManagedStrategyTransformer(
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+        }
+
+        private fun loadRandom() {
+            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::random.name, RANDOM_TYPE)
+        }
+    }
+
+    /**
+     * Makes java.util.Random deterministic.
+     */
+    private class RandomTransformer(private val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            // java.util.Random is initialized with time and seedUniquefier
+            // time is made deterministic by another transformer.
+            // seedUniquefier is replaced with zero by this transformer.
+            val isSeedUniquifier = owner == "java/util/Random" && name == "seedUniquifier"
+            if (isSeedUniquifier) {
+                // replace seedUniquifier with zero
+                adapter.push(0L)
+                return
+            }
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
         }
 
         private fun loadRandom() {
