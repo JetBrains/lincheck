@@ -40,13 +40,13 @@ internal class ManagedStrategyTransformer(
     override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
         var access = access
         // replace native method VMSupportsCS8 in AtomicLong with stub
-        if (access and Opcodes.ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
-            val mv = super.visitMethod(access and Opcodes.ACC_NATIVE.inv(), mname, desc, signature, exceptions)
-            return VMSupportsCS8MethodGenerator(GeneratorAdapter(mv, access and Opcodes.ACC_NATIVE.inv(), mname, desc))
+        if (access and ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
+            val mv = super.visitMethod(access and ACC_NATIVE.inv(), mname, desc, signature, exceptions)
+            return VMSupportsCS8MethodGenerator(GeneratorAdapter(mv, access and ACC_NATIVE.inv(), mname, desc))
         }
-        val isSynchronized = access and Opcodes.ACC_SYNCHRONIZED != 0
+        val isSynchronized = access and ACC_SYNCHRONIZED != 0
         if (isSynchronized) {
-            access = access xor Opcodes.ACC_SYNCHRONIZED // disable synchronized
+            access = access xor ACC_SYNCHRONIZED // disable synchronized
         }
         var mv = super.visitMethod(access, mname, desc, signature, exceptions)
         mv = JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions)
@@ -57,6 +57,7 @@ internal class ManagedStrategyTransformer(
         }
         mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -106,8 +107,8 @@ internal class ManagedStrategyTransformer(
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
             if (!isFinalField(owner, name)) {
                 when (opcode) {
-                    Opcodes.GETSTATIC -> invokeBeforeSharedVariableRead()
-                    Opcodes.GETFIELD -> {
+                    GETSTATIC -> invokeBeforeSharedVariableRead()
+                    GETFIELD -> {
                         val skipCodeLocation = newLabel()
                         dup()
                         invokeOnLocalObjectCheck()
@@ -116,8 +117,8 @@ internal class ManagedStrategyTransformer(
                         invokeBeforeSharedVariableRead()
                         visitLabel(skipCodeLocation)
                     }
-                    Opcodes.PUTSTATIC -> invokeBeforeSharedVariableWrite()
-                    Opcodes.PUTFIELD -> {
+                    PUTSTATIC -> invokeBeforeSharedVariableWrite()
+                    PUTFIELD -> {
                         val skipCodeLocation = newLabel()
                         dupOwnerOnPutField(desc)
                         invokeOnLocalObjectCheck()
@@ -133,7 +134,7 @@ internal class ManagedStrategyTransformer(
 
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
-                Opcodes.AALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD, Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD -> {
+                AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
                     val skipCodeLocation = adapter.newLabel()
                     dup2() // arr, ind
                     pop() // arr, ind -> arr
@@ -143,7 +144,7 @@ internal class ManagedStrategyTransformer(
                     invokeBeforeSharedVariableRead()
                     visitLabel(skipCodeLocation)
                 }
-                Opcodes.AASTORE, Opcodes.IASTORE, Opcodes.FASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.LASTORE, Opcodes.DASTORE -> {
+                AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
                     val skipCodeLocation = adapter.newLabel()
                     dupArrayOnArrayStore(opcode)
                     invokeOnLocalObjectCheck()
@@ -159,14 +160,14 @@ internal class ManagedStrategyTransformer(
         // STACK: array, index, value -> array, index, value, arr
         private fun dupArrayOnArrayStore(opcode: Int) = adapter.run {
             val type = when (opcode) {
-                Opcodes.AASTORE -> OBJECT_TYPE
-                Opcodes.IASTORE -> Type.INT_TYPE
-                Opcodes.FASTORE -> Type.FLOAT_TYPE
-                Opcodes.BASTORE -> Type.BOOLEAN_TYPE
-                Opcodes.CASTORE -> Type.CHAR_TYPE
-                Opcodes.SASTORE -> Type.SHORT_TYPE
-                Opcodes.LASTORE -> Type.LONG_TYPE
-                Opcodes.DASTORE -> Type.DOUBLE_TYPE
+                AASTORE -> OBJECT_TYPE
+                IASTORE -> Type.INT_TYPE
+                FASTORE -> Type.FLOAT_TYPE
+                BASTORE -> Type.BOOLEAN_TYPE
+                CASTORE -> Type.CHAR_TYPE
+                SASTORE -> Type.SHORT_TYPE
+                LASTORE -> Type.LONG_TYPE
+                DASTORE -> Type.DOUBLE_TYPE
                 else -> throw IllegalStateException("Unexpected opcode: $opcode")
             }
             val value = newLocal(type)
@@ -257,6 +258,26 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
+     * Replaces Object.hashCode and Any.hashCode invocations with just zero.
+     * This transformer prevents non-determinism due to the native hashCode implementation,
+     * which typically returns memory address of the object. There is no guarantee that
+     * memory addresses will be the same in different runs.
+     */
+    private class HashCodeStubTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            val isAnyHashCodeInvocation = owner == "kotlin/Any" && name == "hashCode"
+            val isObjectHashCodeInvocation = owner == "java/lang/Object" && name == "hashCode"
+            if (isAnyHashCodeInvocation || isObjectHashCodeInvocation) {
+                // instead of calling object.hashCode just return zero
+                adapter.pop() // remove object from the stack
+                adapter.push(0)
+                return
+            }
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+        }
+    }
+
+    /**
      * Replaces `System.nanoTime` and `System.currentTimeMillis` with stubs to prevent non-determinism
      */
     private class TimeStubTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
@@ -276,7 +297,7 @@ internal class ManagedStrategyTransformer(
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             val isInternalInvocation = className == "java/util/concurrent/ThreadLocalRandom"
             val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
-            if (!isInternalInvocation && isThreadLocalRandomMethod && opcode == Opcodes.INVOKEVIRTUAL) {
+            if (!isInternalInvocation && isThreadLocalRandomMethod && opcode == INVOKEVIRTUAL) {
                 adapter.pop()
                 loadRandom()
                 adapter.visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
@@ -286,7 +307,7 @@ internal class ManagedStrategyTransformer(
             // it is replaced with nextInt method.
             if (!isInternalInvocation && isThreadLocalRandomMethod && name == "nextSecondarySeed") {
                 loadRandom()
-                adapter.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/Random", "nextInt", desc, itf)
+                adapter.visitMethodInsn(INVOKEVIRTUAL, "java/util/Random", "nextInt", desc, itf)
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -303,7 +324,7 @@ internal class ManagedStrategyTransformer(
     private inner class SynchronizedBlockTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
-                Opcodes.MONITORENTER -> {
+                MONITORENTER -> {
                     val opEnd = newLabel()
                     val skipMonitorEnter: Label = newLabel()
                     dup()
@@ -316,7 +337,7 @@ internal class ManagedStrategyTransformer(
                     pop()
                     visitLabel(opEnd)
                 }
-                Opcodes.MONITOREXIT -> {
+                MONITOREXIT -> {
                     val opEnd = newLabel()
                     val skipMonitorExit: Label = newLabel()
                     dup()
@@ -338,7 +359,7 @@ internal class ManagedStrategyTransformer(
      * Replace "method(...) {...}" with "method(...) {synchronized(this) {...} }"
      */
     private inner class SynchronizedBlockAddingTransformer(methodName: String, mv: GeneratorAdapter, private val className: String?, access: Int, private val classVersion: Int) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isStatic: Boolean = access and Opcodes.ACC_STATIC != 0
+        private val isStatic: Boolean = access and ACC_STATIC != 0
         private val tryLabel = Label()
         private val catchLabel = Label()
 
@@ -360,7 +381,7 @@ internal class ManagedStrategyTransformer(
 
         override fun visitInsn(opcode: Int) {
             when (opcode) {
-                Opcodes.ARETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.IRETURN, Opcodes.LRETURN, Opcodes.RETURN -> {
+                ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
                     loadSynchronizedMethodMonitorOwner()
                     adapter.monitorExit()
                 }
@@ -373,7 +394,7 @@ internal class ManagedStrategyTransformer(
         private fun loadSynchronizedMethodMonitorOwner() = adapter.run {
             if (isStatic) {
                 val classType = Type.getType("L$className;")
-                if (classVersion >= Opcodes.V1_5) {
+                if (classVersion >= V1_5) {
                     visitLdcInsn(classType)
                 } else {
                     visitLdcInsn(classType.className)
@@ -431,7 +452,7 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun isWait(opcode: Int, name: String, desc: String): Boolean {
-            if (opcode == Opcodes.INVOKEVIRTUAL && name == "wait") {
+            if (opcode == INVOKEVIRTUAL && name == "wait") {
                 when (desc) {
                     "()V", "(J)V", "(JI)V" -> return true
                 }
@@ -440,8 +461,8 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun isNotify(opcode: Int, name: String, desc: String): Boolean {
-            val isNotify = opcode == Opcodes.INVOKEVIRTUAL && name == "notify" && desc == "()V"
-            val isNotifyAll = opcode == Opcodes.INVOKEVIRTUAL && name == "notifyAll" && desc == "()V"
+            val isNotify = opcode == INVOKEVIRTUAL && name == "notify" && desc == "()V"
+            val isNotifyAll = opcode == INVOKEVIRTUAL && name == "notifyAll" && desc == "()V"
             return isNotify || isNotifyAll
         }
     }
@@ -497,7 +518,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class LocalObjectManagingTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
-            val isObjectCreation = opcode == Opcodes.INVOKESPECIAL && "<init>" == name && "java/lang/Object" == owner
+            val isObjectCreation = opcode == INVOKESPECIAL && "<init>" == name && "java/lang/Object" == owner
             if (isObjectCreation) adapter.dup() // will be used for adding to LocalObjectManager
             adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             if (isObjectCreation) invokeOnNewLocalObject()
@@ -505,7 +526,7 @@ internal class ManagedStrategyTransformer(
 
         override fun visitIntInsn(opcode: Int, operand: Int) {
             adapter.visitIntInsn(opcode, operand)
-            if (opcode == Opcodes.NEWARRAY) {
+            if (opcode == NEWARRAY) {
                 adapter.dup()
                 invokeOnNewLocalObject()
             }
@@ -513,7 +534,7 @@ internal class ManagedStrategyTransformer(
 
         override fun visitTypeInsn(opcode: Int, type: String) {
             adapter.visitTypeInsn(opcode, type)
-            if (opcode == Opcodes.ANEWARRAY) {
+            if (opcode == ANEWARRAY) {
                 adapter.dup()
                 invokeOnNewLocalObject()
             }
@@ -524,11 +545,11 @@ internal class ManagedStrategyTransformer(
             val isFinalField = isFinalField(owner, name)
             if (isNotPrimitiveType) {
                 when (opcode) {
-                    Opcodes.PUTSTATIC -> {
+                    PUTSTATIC -> {
                         adapter.dup()
                         invokeOnLocalObjectDelete()
                     }
-                    Opcodes.PUTFIELD -> {
+                    PUTFIELD -> {
                         // we cannot invoke this method for final field, because an object may uninitialized yet
                         // will add dependency for final fields after <init> ends instead
                         if (!isFinalField) {
@@ -545,7 +566,7 @@ internal class ManagedStrategyTransformer(
         override fun visitInsn(opcode: Int) = adapter.run {
             val value: Int
             when (opcode) {
-                Opcodes.AASTORE -> {
+                AASTORE -> {
                     // array, index, value
                     value = newLocal(OBJECT_TYPE)
                     storeLocal(value) // array, index
@@ -555,7 +576,7 @@ internal class ManagedStrategyTransformer(
                     invokeOnDependencyAddition() // array, index
                     loadLocal(value) // array, index, value
                 }
-                Opcodes.RETURN -> if ("<init>" == methodName) {
+                RETURN -> if ("<init>" == methodName) {
                     // handle all final field added dependencies
                     val ownerType = Type.getObjectType(className)
                     for (field in getNonStaticFinalFields(className)) {
@@ -772,7 +793,7 @@ internal class ManagedStrategyTransformer(
     }
 
     companion object {
-        private const val ASM_API = Opcodes.ASM7
+        private const val ASM_API = ASM7
         private val OBJECT_TYPE = Type.getType(Any::class.java)
         private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStateHolder::class.java)
         private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
