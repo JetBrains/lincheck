@@ -66,7 +66,7 @@ internal abstract class ManagedStrategyBase(
     // is thread suspended
     protected val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // the number of blocks that should be ignored by the strategy entered and not left for each thread
-    protected val ignoredSectionLevel = IntArray(nThreads) { 0 }
+    protected val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // current actor id for each thread
     protected val currentActorId = IntArray(nThreads)
     // InvocationResult that was observed by the strategy in the execution (e.g. deadlock)
@@ -178,12 +178,12 @@ internal abstract class ManagedStrategyBase(
 
     override fun enterIgnoredSection(threadId: Int) {
         if (threadId < nThreads)
-            ignoredSectionLevel[threadId]++
+            ignoredSectionDepth[threadId]++
     }
 
     override fun leaveIgnoredSection(threadId: Int) {
         if (threadId < nThreads)
-            ignoredSectionLevel[threadId]--
+            ignoredSectionDepth[threadId]--
     }
 
     /**
@@ -192,7 +192,7 @@ internal abstract class ManagedStrategyBase(
     protected fun newSuspensionPoint(threadId: Int, codeLocation: Int) {
         if (threadId == nThreads) return // can suspend only test threads
         check(threadId == currentThread)
-        if (ignoredSectionLevel[threadId] != 0) return // can not suspend in ignored sections
+        if (ignoredSectionDepth[threadId] != 0) return // can not suspend in ignored sections
         awaitTurn(threadId)
         var isLoop = false
         if (loopDetector.newOperation(threadId, codeLocation)) {
@@ -245,9 +245,15 @@ internal abstract class ManagedStrategyBase(
         currentThread = switchableThreads[nextThreadNumber]
     }
 
+    /**
+     * Threads to which a thread [threadId] can switch
+     */
     protected fun switchableThreads(threadId: Int) = (0 until nThreads).filter { it != threadId && canResume(it) }
 
-    abstract fun chooseThread(switchableThreads: Int): Int
+    /**
+     * Chooses a thread to switch among [switchableThreads] variants
+     */
+    protected abstract fun chooseThread(switchableThreads: Int): Int
 
     /**
      * Returns whether the thread could continue its execution
@@ -267,6 +273,7 @@ internal abstract class ManagedStrategyBase(
         while (currentThread != threadId) {
             // finish forcibly if an error occured and we already have an InvocationResult.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishException()
+            Thread.yield()
         }
     }
 

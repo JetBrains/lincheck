@@ -50,9 +50,6 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
                     kotlinx.coroutines.internal.StackTraceRecoveryKt.class.getName(),
                     kotlinx.coroutines.internal.ExceptionsConstuctorKt.class.getName()
             ).ignore().allMethods(),
-            // Manual execution in static initialization methods can lead to a deadlock,
-            // so not thread context switches should be made in them
-            ManagedGuaranteeKt.forAllClasses().ignore().methods("<clinit>"),
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             // For this purpose they are treated as if they are atomic instructions.
             ManagedGuaranteeKt
