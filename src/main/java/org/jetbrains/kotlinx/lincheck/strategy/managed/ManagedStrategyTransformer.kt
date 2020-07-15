@@ -22,11 +22,13 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.UnsafeHolder
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.*
+import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
@@ -272,7 +274,6 @@ internal class ManagedStrategyTransformer(
             if (owner == "sun/misc/Unsafe" && name == "getUnsafe") {
                 // load Unsafe
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
-                adapter.checkCast(UNSAFE_TYPE)
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -838,13 +839,12 @@ internal class ManagedStrategyTransformer(
     }
 
     companion object {
-        private const val ASM_API = ASM7
         private val OBJECT_TYPE = Type.getType(Any::class.java)
         private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStateHolder::class.java)
         private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
         private val LOCAL_OBJECT_MANAGER_TYPE = Type.getType(LocalObjectManager::class.java)
         private val RANDOM_TYPE = Type.getType(Random::class.java)
-        private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
+        private val UNSAFE_TYPE = Type.getType(Unsafe::class.java)
         private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)

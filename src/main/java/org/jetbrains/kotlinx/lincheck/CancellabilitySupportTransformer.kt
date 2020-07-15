@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -29,7 +30,7 @@ import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
-internal class CancellabilitySupportClassTransformer(cv: ClassVisitor) : ClassVisitor(Opcodes.ASM5, cv) {
+internal class CancellabilitySupportClassTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
     override fun visitMethod(access: Int, methodName: String?, desc: String?, signature: String?, exceptions: Array<String>?): MethodVisitor {
         val mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         return CancellabilitySupportMethodTransformer(access, methodName, desc, mv)
@@ -37,7 +38,7 @@ internal class CancellabilitySupportClassTransformer(cv: ClassVisitor) : ClassVi
 }
 
 private class CancellabilitySupportMethodTransformer(access: Int, methodName: String?, desc: String?, mv: MethodVisitor)
-    : AdviceAdapter(Opcodes.ASM5, mv, access, methodName, desc)
+    : AdviceAdapter(ASM_API, mv, access, methodName, desc)
 {
     override fun visitMethodInsn(opcodeAndSource: Int, className: String?, methodName: String?, descriptor: String?, isInterface: Boolean) {
         val isGetResult = ("kotlinx/coroutines/CancellableContinuation" == className || "kotlinx/coroutines/CancellableContinuationImpl" == className)

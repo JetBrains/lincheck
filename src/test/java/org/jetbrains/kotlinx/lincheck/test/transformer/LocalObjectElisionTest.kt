@@ -38,11 +38,13 @@ import org.junit.Test
 class LocalObjectElisionTest : VerifierState() {
     @Operation
     fun operation() {
-        val a = A(0, this)
+        val a = A(0, this, IntArray(2))
         a.any = a
         a.value = 100
-        val b = A(a.value, a.any)
+        a.array[1] = 54
+        val b = A(a.value, a.any, a.array)
         b.value = 65
+        b.array[0] = 4
         if (a.value + b.value == 3) {
             // to prevent compiler optimizations
             println("!")
@@ -56,5 +58,5 @@ class LocalObjectElisionTest : VerifierState() {
 
     override fun extractState(): Any = 54 // any constant value
 
-    private data class A(var value: Int, var any: Any)
+    private data class A(var value: Int, var any: Any, val array: IntArray)
 }

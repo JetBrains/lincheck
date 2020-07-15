@@ -30,7 +30,7 @@ import org.junit.Test
 /**
  * Checks that System.nanoTime() and System.currentTimeMillis() are made deterministic by the transformer.
  */
-@ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
+@ModelCheckingCTest(iterations = 30, invocationsPerIteration = 1000)
 class TimeStubTest : VerifierState() {
     @Volatile
     private var a: Any = Any()

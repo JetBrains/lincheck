@@ -42,6 +42,7 @@ import java.util.function.Function;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.JAVA_UTIL_PACKAGE;
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME;
+import static org.objectweb.asm.Opcodes.ASM7;
 import static org.objectweb.asm.Opcodes.V1_6;
 
 /**
@@ -56,6 +57,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     public static final String JAVA_UTIL_PACKAGE = "java/util/";
     public static final String TRANSFORMED_PACKAGE_INTERNAL_NAME = "org/jetbrains/kotlinx/lincheck/tran$f*rmed/";
     public static final String TRANSFORMED_PACKAGE_NAME = TRANSFORMED_PACKAGE_INTERNAL_NAME.replaceAll("/", ".");
+    public static final int ASM_API = ASM7;
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         classTransformers = new ArrayList<>();
@@ -136,7 +138,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // then the runner's one.
         ClassVersionGetter infoGetter = new ClassVersionGetter();
         cr.accept(infoGetter, 0);
-        ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), this);
+        ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion());
         ClassVisitor cv = new CheckClassAdapter(cw, false); // for debug
         for (Function<ClassVisitor, ClassVisitor> ct : classTransformers)
             cv = ct.apply(cv);
@@ -165,7 +167,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
  * Overrides getCommonSuperClass method so that it could work correctly for classes transformed by LinCheck.
  */
 class TransformationClassWriter extends ClassWriter {
-    public TransformationClassWriter(int classVersion, ClassLoader loader) {
+    public TransformationClassWriter(int classVersion) {
         super(classVersion > V1_6 ? COMPUTE_FRAMES : COMPUTE_MAXS);
     }
 
@@ -198,7 +200,7 @@ class ClassVersionGetter extends ClassVisitor {
     private int classVersion;
 
     public ClassVersionGetter() {
-        super(Opcodes.ASM5);
+        super(TransformationClassLoader.ASM_API);
     }
 
 
