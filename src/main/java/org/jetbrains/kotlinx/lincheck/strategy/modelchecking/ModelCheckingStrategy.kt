@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.lang.IllegalStateException
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -148,76 +147,68 @@ internal class ModelCheckingStrategy(
      * An abstract node with an execution choice in the interleaving tree.
      */
     private abstract inner class InterleavingNode {
-        protected var unexploredFraction = 1.0
-        protected lateinit var children: Array<InterleavingNode>
+        private var fractionUnexplored = 1.0
+        protected lateinit var choices: Array<InterleavingNode>
         var isFullyExplored: Boolean = false
             protected set
+        val isInitialized: Boolean get() = ::choices.isInitialized
 
         abstract fun exploreChild(): LincheckFailure?
 
         fun resetExploration() {
             isFullyExplored = when {
-                isNotInitialized() -> false
-                else -> {
-                    children.forEach { it.resetExploration() }
-                    children.all { it.isFullyExplored }
+                isInitialized -> {
+                    choices.forEach { it.resetExploration() }
+                    choices.all { it.isFullyExplored }
                 }
+                else -> false
             }
-            unexploredFraction = if (isFullyExplored) 0.0 else 1.0
+            fractionUnexplored = if (isFullyExplored) 0.0 else 1.0
         }
 
         fun finishExploration() {
             isFullyExplored = true
-            unexploredFraction = 0.0
+            fractionUnexplored = 0.0
         }
 
-        protected fun updatePercentageExplored() {
-            if (isNotInitialized()) {
-                throw IllegalStateException("An interleaving tree node was not initialized properly. " +
-                        "Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc)")
+        protected fun updateExplorationStatistics() {
+            check(isInitialized) { "An interleaving tree node was not initialized properly. " +
+                    "Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc)" }
+            if (choices.isEmpty()) return
+            val total = choices.fold(0.0) { acc, node ->
+                acc + node.fractionUnexplored
             }
-
-            if (children.isEmpty()) return
-            val total = children.fold(0.0) { acc, node ->
-                acc + node.unexploredFraction
-            }
-            unexploredFraction = total / children.size
-            isFullyExplored = children.all { it.isFullyExplored }
+            fractionUnexplored = total / choices.size
+            isFullyExplored = choices.all { it.isFullyExplored }
         }
 
-        protected fun chooseChild(): Int {
-            if (children.size == 1) return 0
+        protected fun chooseUnexploredChild(): Int {
+            if (choices.size == 1) return 0
             // choose a weighted random child.
-            val total = children.sumByDouble { it.unexploredFraction }
+            val total = choices.sumByDouble { it.fractionUnexplored }
             val random = generationRandom.nextDouble() * total
             var sumWeight = 0.0
-            children.forEachIndexed { i, child ->
-                sumWeight += child.unexploredFraction
+            choices.forEachIndexed { i, child ->
+                sumWeight += child.fractionUnexplored
                 if (sumWeight >= random)
                     return i
             }
-            return children.lastIndex
+            return choices.lastIndex
         }
-
-        fun isNotInitialized() = !::children.isInitialized
     }
 
     /**
      * Represents a choice of a thread that should be next in the execution.
      */
-    private inner class ThreadChoosingNode(nThreads: Int? = null) : InterleavingNode() {
-        // the number of possible threads to switch to
-        private val nThreads: Int?
-            get() = if (isNotInitialized()) null else children.size
-
+    private inner class ThreadChoosingNode(threadsToSwitch: Int? = null) : InterleavingNode() {
         init {
-            if (nThreads != null)
-                children = Array(nThreads) { SwitchChoosingNode() }
+            if (threadsToSwitch != null)
+                choices = Array(threadsToSwitch) { SwitchChoosingNode() }
         }
 
         override fun exploreChild(): LincheckFailure? {
             val child: InterleavingNode
-            val wasNotInitialized = isNotInitialized()
+            val wasNotInitialized = !isInitialized
             if (wasNotInitialized) {
                 // will be initialized during next run
                 check(notInitializedThreadChoice == null)
@@ -225,13 +216,13 @@ internal class ModelCheckingStrategy(
                 // suppose that the node will have a child, but we do not know yet which one it will be
                 child = SwitchChoosingNode()
             } else {
-                val nextThread = chooseChild()
+                val nextThread = chooseUnexploredChild()
                 threadSwitchChoices.add(nextThread)
-                child = children[nextThread]
+                child = choices[nextThread]
             }
             child.exploreChild()?.let { return it }
-            updatePercentageExplored()
-            if (nThreads == 0) {
+            updateExplorationStatistics()
+            if (choices.isEmpty()) {
                 // there are no variants of threads to switch, so this node should be a leaf node
                 finishExploration()
                 return null
@@ -239,16 +230,16 @@ internal class ModelCheckingStrategy(
             // if the node was not initialized before, we did not know which of our children will be the child
             // so write the child now
             if (wasNotInitialized)
-                children[threadSwitchChoices.last()] = child
+                choices[threadSwitchChoices.last()] = child
             threadSwitchChoices.removeAt(threadSwitchChoices.lastIndex)
             return null
         }
 
         fun initialize(switchableThreads: Int) {
-            children = Array(switchableThreads) { SwitchChoosingNode() }
+            choices = Array(switchableThreads) { SwitchChoosingNode() }
             if (switchableThreads == 0) return
             // add the choice of the initialized node.
-            val nextThread = chooseChild()
+            val nextThread = chooseUnexploredChild()
             nextThreadToSwitch.add(nextThread)
         }
     }
@@ -268,29 +259,29 @@ internal class ModelCheckingStrategy(
                 finishExploration()
                 return null
             }
-            if (isNotInitialized()) {
+            if (!isInitialized) {
                 check(notInitializedSwitchChoice == null)
                 notInitializedSwitchChoice = this
                 // initialize during the next run
                 checkResults(runInvocation())?.let { return it }
             }
-            if (children.isEmpty()) {
+            if (choices.isEmpty()) {
                 // no children => should be a leaf node.
                 finishExploration()
                 return null
             }
-            val child = chooseChild()
+            val child = chooseUnexploredChild()
             val position = startPosition + child
             switchPositions.add(position)
-            children[child].exploreChild()?.let { return it }
-            updatePercentageExplored()
+            choices[child].exploreChild()?.let { return it }
+            updateExplorationStatistics()
             switchPositions.removeAt(switchPositions.lastIndex)
             return null
         }
 
         fun initialize(finishPosition: Int) {
             startPosition = lastSwitchPosition() + 1
-            children = Array(finishPosition - startPosition + 1) { ThreadChoosingNode() }
+            choices = Array(finishPosition - startPosition + 1) { ThreadChoosingNode() }
         }
     }
 }

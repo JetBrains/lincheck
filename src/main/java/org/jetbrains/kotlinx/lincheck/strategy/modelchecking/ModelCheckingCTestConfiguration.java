@@ -24,15 +24,16 @@ package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
-import org.jetbrains.kotlinx.lincheck.strategy.*;
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
+import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitivesKt;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt.forAllClasses;
-import static org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt.forClasses;
+import static org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt.*;
 
 /**
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
@@ -49,21 +50,20 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
             forClasses(
                     kotlinx.coroutines.internal.StackTraceRecoveryKt.class.getName(),
                     kotlinx.coroutines.internal.ExceptionsConstuctorKt.class.getName()
-            ).ignore().allMethods(),
-            // Manual execution in static initialization methods can lead to a deadlock,
-            // so not thread context switches should be made in them
-            forAllClasses().ignore().methods("<clinit>"),
+            ).allMethods().ignore(),
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             // For this purpose they are treated as if they are atomic instructions.
             forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
-                    .treatAsAtomic()
                     .allMethods()
+                    .treatAsAtomic()
+
     );
 
     public final boolean checkObstructionFreedom;
     public final int hangingDetectionThreshold;
     public final int maxInvocationsPerIteration;
     protected final List<ManagedGuarantee> guarantees;
+
 
     public ModelCheckingCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,

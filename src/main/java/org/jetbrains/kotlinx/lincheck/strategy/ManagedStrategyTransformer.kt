@@ -1,3 +1,24 @@
+/*-
+ * #%L
+ * Lincheck
+ * %%
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>.
+ * #L%
+ */
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader
@@ -56,6 +77,7 @@ internal class ManagedStrategyTransformer(
         }
         mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -64,7 +86,7 @@ internal class ManagedStrategyTransformer(
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = ThreadLocalRandomTransformer(className, GeneratorAdapter(mv, access, mname, desc))
+        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         return mv
     }
@@ -242,13 +264,35 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`
+     * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`, because
+     * transformed java.util classes can not access Unsafe directly after transformation.
      */
     private class UnsafeTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             if (owner == "sun/misc/Unsafe" && name == "getUnsafe") {
                 // load Unsafe
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
+                adapter.checkCast(UNSAFE_TYPE)
+                return
+            }
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+        }
+    }
+
+    /**
+     * Replaces Object.hashCode and Any.hashCode invocations with just zero.
+     * This transformer prevents non-determinism due to the native hashCode implementation,
+     * which typically returns memory address of the object. There is no guarantee that
+     * memory addresses will be the same in different runs.
+     */
+    private class HashCodeStubTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            val isAnyHashCodeInvocation = owner == "kotlin/Any" && name == "hashCode"
+            val isObjectHashCodeInvocation = owner == "java/lang/Object" && name == "hashCode"
+            if (isAnyHashCodeInvocation || isObjectHashCodeInvocation) {
+                // instead of calling object.hashCode just return zero
+                adapter.pop() // remove object from the stack
+                adapter.push(0)
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -269,21 +313,22 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Replaces ThreadLocalRandom with a sequential Random to prevent non-determinism in managed executions.
+     * Makes java.util.Random and all classes that extend it deterministic.
+     * In every Random method invocation replaces the owner with Random from ManagedStateHolder.
      */
-    private class ThreadLocalRandomTransformer(private val className: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+    private class RandomTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        private val randomMethods = Random::class.java.declaredMethods
+
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            val isInternalInvocation = className == "java/util/concurrent/ThreadLocalRandom"
-            val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
-            if (!isInternalInvocation && isThreadLocalRandomMethod && opcode == INVOKEVIRTUAL) {
-                adapter.pop()
-                loadRandom()
+            if (opcode == INVOKEVIRTUAL && extendsRandom(owner.replace("/", ".")) && isRandomMethod(name, desc)) {
+                replaceOwnerWithRandom(desc)
                 adapter.visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
                 return
             }
             // there is also a static method in ThreadLocalRandom that is used inside java.util.concurrent.
             // it is replaced with nextInt method.
-            if (!isInternalInvocation && isThreadLocalRandomMethod && name == "nextSecondarySeed") {
+            val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
+            if (isThreadLocalRandomMethod && name == "nextSecondarySeed") {
                 loadRandom()
                 adapter.visitMethodInsn(INVOKEVIRTUAL, "java/util/Random", "nextInt", desc, itf)
                 return
@@ -293,6 +338,28 @@ internal class ManagedStrategyTransformer(
 
         private fun loadRandom() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::random.name, RANDOM_TYPE)
+        }
+
+        private fun extendsRandom(className: String) = java.util.Random::class.java.isAssignableFrom(Class.forName(className))
+
+        private fun isRandomMethod(methodName: String, desc: String): Boolean = randomMethods.any {
+                val method = Method.getMethod(it)
+                method.name == methodName && method.descriptor == desc
+            }
+
+        private fun replaceOwnerWithRandom(desc: String) {
+            val arguments = Type.getArgumentTypes(desc)
+            val locals = IntArray(arguments.size)
+            // store all arguments
+            for (i in arguments.indices.reversed()) {
+                locals[i] = adapter.newLocal(arguments[i])
+                adapter.storeLocal(locals[i], arguments[i])
+            }
+            adapter.pop() // remove previous owner
+            loadRandom() // new owner
+            // load all arguments
+            for (i in arguments.indices)
+                adapter.loadLocal(locals[i], arguments[i])
         }
     }
 
@@ -729,9 +796,9 @@ internal class ManagedStrategyTransformer(
     /**
      * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
      */
-    private fun getNonStaticFinalFields(ownerInternal: String?): List<Field> {
+    private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
         var ownerInternal = ownerInternal
-        if (ownerInternal!!.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+        if (ownerInternal.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
             ownerInternal = ownerInternal.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
         }
         return try {
@@ -777,6 +844,7 @@ internal class ManagedStrategyTransformer(
         private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
         private val LOCAL_OBJECT_MANAGER_TYPE = Type.getType(LocalObjectManager::class.java)
         private val RANDOM_TYPE = Type.getType(Random::class.java)
+        private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
         private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
@@ -797,6 +865,6 @@ internal class ManagedStrategyTransformer(
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::isLocalObject.javaMethod)
         private val ADD_DEPENDENCY_METHOD = Method.getMethod(LocalObjectManager::addDependency.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
-        private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+        private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
     }
 }
