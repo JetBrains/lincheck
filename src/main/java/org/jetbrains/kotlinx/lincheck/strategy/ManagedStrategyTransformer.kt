@@ -88,7 +88,6 @@ internal class ManagedStrategyTransformer(
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = ThreadLocalRandomTransformer(className, GeneratorAdapter(mv, access, mname, desc))
         mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         return mv
     }
@@ -315,22 +314,22 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Replaces ThreadLocalRandom with a sequential Random to prevent non-determinism in managed executions.
+     * Makes java.util.Random and all classes that extend it deterministic.
+     * In every Random method invocation replaces the owner with Random from ManagedStateHolder.
      */
-    private class ThreadLocalRandomTransformer(className: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
-        private val isInternalInvocation = className == "java/util/concurrent/ThreadLocalRandom"
+    private class RandomTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        private val randomMethods = Random::class.java.declaredMethods
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
-            if (!isInternalInvocation && isThreadLocalRandomMethod && opcode == INVOKEVIRTUAL) {
-                adapter.pop()
-                loadRandom()
+            if (opcode == INVOKEVIRTUAL && extendsRandom(owner.replace("/", ".")) && isRandomMethod(name, desc)) {
+                replaceOwnerWithRandom(desc)
                 adapter.visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
                 return
             }
             // there is also a static method in ThreadLocalRandom that is used inside java.util.concurrent.
             // it is replaced with nextInt method.
-            if (!isInternalInvocation && isThreadLocalRandomMethod && name == "nextSecondarySeed") {
+            val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
+            if (isThreadLocalRandomMethod && name == "nextSecondarySeed") {
                 loadRandom()
                 adapter.visitMethodInsn(INVOKEVIRTUAL, "java/util/Random", "nextInt", desc, itf)
                 return
@@ -341,28 +340,27 @@ internal class ManagedStrategyTransformer(
         private fun loadRandom() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::random.name, RANDOM_TYPE)
         }
-    }
 
-    /**
-     * Makes java.util.Random deterministic.
-     */
-    private class RandomTransformer(private val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        private fun extendsRandom(className: String) = java.util.Random::class.java.isAssignableFrom(Class.forName(className))
 
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            // java.util.Random is initialized with time and seedUniquefier
-            // time is made deterministic by another transformer.
-            // seedUniquefier is replaced with zero by this transformer.
-            val isSeedUniquifier = owner == "java/util/Random" && name == "seedUniquifier"
-            if (isSeedUniquifier) {
-                // replace seedUniquifier with zero
-                adapter.push(0L)
-                return
+        private fun isRandomMethod(methodName: String, desc: String): Boolean = randomMethods.any {
+                val method = Method.getMethod(it)
+                method.name == methodName && method.descriptor == desc
             }
-            super.visitMethodInsn(opcode, owner, name, desc, itf)
-        }
 
-        private fun loadRandom() {
-            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::random.name, RANDOM_TYPE)
+        private fun replaceOwnerWithRandom(desc: String) {
+            val arguments = Type.getArgumentTypes(desc)
+            val locals = IntArray(arguments.size)
+            // store all arguments
+            for (i in arguments.indices.reversed()) {
+                locals[i] = adapter.newLocal(arguments[i])
+                adapter.storeLocal(locals[i], arguments[i])
+            }
+            adapter.pop() // remove previous owner
+            loadRandom() // new owner
+            // load all arguments
+            for (i in arguments.indices)
+                adapter.loadLocal(locals[i], arguments[i])
         }
     }
 
@@ -799,9 +797,9 @@ internal class ManagedStrategyTransformer(
     /**
      * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
      */
-    private fun getNonStaticFinalFields(ownerInternal: String?): List<Field> {
+    private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
         var ownerInternal = ownerInternal
-        if (ownerInternal!!.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+        if (ownerInternal.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
             ownerInternal = ownerInternal.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
         }
         return try {
