@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader
 import org.jetbrains.kotlinx.lincheck.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives.isTrustedPrimitive
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type

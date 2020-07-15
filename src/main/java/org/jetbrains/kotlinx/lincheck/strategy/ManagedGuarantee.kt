@@ -24,38 +24,46 @@ package org.jetbrains.kotlinx.lincheck.strategy
 /**
  * ManagedGuarantee will be constructed for classes with names [fullClassNames].
  */
-fun forClasses(vararg fullClassNames: String) = ManagedGuarantee.TypeBuilder { it in fullClassNames }
-
-/**
- * ManagedGuarantee will be constructed for all classes.
- */
-fun forAllClasses() = ManagedGuarantee.TypeBuilder { true }
-
-/**
- * ManagedGuarantee will be constructed for all classes in package [packageName].
- */
-fun forClassesInPackage(packageName: String): ManagedGuarantee.TypeBuilder {
-    // handle packages with and without a dot at the end correctly
-    val correctPackageName = if (packageName.endsWith('.')) packageName else "$packageName."
-    return ManagedGuarantee.TypeBuilder { it.startsWith(correctPackageName) }
-}
+fun forClasses(vararg fullClassNames: String) = ManagedGuarantee.MethodBuilder { it in fullClassNames }
 
 /**
  * ManagedGuarantee will be constructed for all classes satisfying [classPredicate].
  */
-fun forClassesSatisfying(classPredicate: (fullClassName: String) -> Boolean) = ManagedGuarantee.TypeBuilder(classPredicate)
+fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedGuarantee.MethodBuilder(classPredicate)
 
 class ManagedGuarantee private constructor(
         val classPredicate: (fullClassName: String) -> Boolean,
-        val type: ManagedGuaranteeType,
-        val methodPredicate: (methodName: String) -> Boolean
+        val methodPredicate: (methodName: String) -> Boolean,
+        val type: ManagedGuaranteeType
 ) {
-    class TypeBuilder internal constructor(protected val classPredicate: (fullClassName: String) -> Boolean) {
+    class MethodBuilder internal constructor(
+            protected val classPredicate: (fullClassName: String) -> Boolean
+    ) {
+        /**
+         * ManagedGuarantee will be constructed for methods with names [methodNames]
+         */
+        fun methods(vararg methodNames: String) = TypeBuilder(classPredicate) { it in methodNames }
+
+        /**
+         * ManagedGuarantee will be constructed for all methods
+         */
+        fun allMethods() = TypeBuilder(classPredicate) { true }
+
+        /**
+         * ManagedGuarantee will be constructed for all methods satisfying [methodPredicate]
+         */
+        fun methods(methodPredicate: (methodName: String) -> Boolean) = TypeBuilder(classPredicate, methodPredicate)
+    }
+
+    class TypeBuilder internal constructor(
+            protected val classPredicate: (fullClassName: String) -> Boolean,
+            protected val methodPredicate: (methodName: String) -> Boolean
+    ) {
         /**
          * The methods will be treated by model checking strategy as if they do not have
          * interesting code locations inside.
          */
-        fun ignore() = MethodBuilder(classPredicate, ManagedGuaranteeType.IGNORE)
+        fun ignore() = ManagedGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.IGNORE)
 
         /**
          * The methods will be treated by model checking strategy as an atomic instruction.
@@ -63,27 +71,7 @@ class ManagedGuarantee private constructor(
          * Contrary to IGNORE mode, model checking strategy can add thread context switches
          * immediately before or after method invocations.
          */
-        fun treatAsAtomic() = MethodBuilder(classPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
-    }
-
-    class MethodBuilder internal constructor(
-            protected val classPredicate: (fullClassName: String) -> Boolean,
-            protected val type: ManagedGuaranteeType
-    ) {
-        /**
-         * ManagedGuarantee will be constructed for methods with names [methodNames]
-         */
-        fun methods(vararg methodNames: String) = ManagedGuarantee(classPredicate, type) { it in methodNames }
-
-        /**
-         * ManagedGuarantee will be constructed for all methods
-         */
-        fun allMethods() = ManagedGuarantee(classPredicate, type) { true }
-
-        /**
-         * ManagedGuarantee will be constructed for all methods satisfying [methodPredicate]
-         */
-        fun methodsSatisfying(methodPredicate: (methodName: String) -> Boolean) = ManagedGuarantee(classPredicate, type, methodPredicate)
+        fun treatAsAtomic() = ManagedGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
     }
 }
 

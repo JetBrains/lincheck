@@ -21,6 +21,15 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
+
+private val trustedAtomicPrimitives = listOf<(className: String) -> Boolean>(
+        { it == "java.lang.invoke.VarHandle" },
+        { it == "sun.misc.Unsafe" },
+        { it.startsWith("java.util.concurrent.atomic.Atomic")}, // AFUs and Atomic[Integer/Long/...]
+        { it.startsWith("kotlinx.atomicfu.Atomic")}
+)
+
+
 /**
  * Some atomic primitives are common and can be analyzed from a higher level of abstraction
  * or can not be transformed (i.e, Unsafe or AFU).
@@ -28,24 +37,4 @@ package org.jetbrains.kotlinx.lincheck.strategy
  * For example, in the execution instead of a code location in AtomicLong.get() method
  * we could just print the code location where the method is called.
  */
-internal object TrustedAtomicPrimitives {
-    private val trustedAtomicPrimitives = listOf<(className: String) -> Boolean>(
-            { it == "java.lang.invoke.VarHandle" },
-            { it == "sun.misc.Unsafe" },
-            { it.startsWith("java.util.concurrent.atomic.Atomic")}, // AFUs and Atomic[Integer/Long/...]
-            { it.startsWith("kotlinx.atomicfu.Atomic")}
-    )
-
-    private val writeKeyWords = listOf("write", "set", "swap", "put", "mark", "update")
-    private val readKeyWords = listOf("read", "get", "is")
-
-    @JvmStatic
-    fun isTrustedPrimitive(className: String) = trustedAtomicPrimitives.any { it(className) }
-
-    @JvmStatic
-    fun isTrustedMethod(methodName: String): Boolean {
-        val loweredMethodName = methodName.toLowerCase()
-        // there are too many methods to check manually, so instead an automatic check by key words is used
-        return writeKeyWords.any { loweredMethodName.contains(it) } || readKeyWords.any { loweredMethodName.contains(it) }
-    }
-}
+fun isTrustedPrimitive(className: String) = trustedAtomicPrimitives.any { it(className) }

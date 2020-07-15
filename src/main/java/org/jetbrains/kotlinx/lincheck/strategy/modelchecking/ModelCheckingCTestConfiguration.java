@@ -25,14 +25,15 @@ import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives;
+import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitivesKt;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt.*;
 
 /**
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
@@ -46,16 +47,16 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
             // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
             // can be just ignored, so that no thread context switches are added inside their methods.
-            ManagedGuaranteeKt.forClasses(
+            forClasses(
                     kotlinx.coroutines.internal.StackTraceRecoveryKt.class.getName(),
                     kotlinx.coroutines.internal.ExceptionsConstuctorKt.class.getName()
-            ).ignore().allMethods(),
+            ).allMethods().ignore(),
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             // For this purpose they are treated as if they are atomic instructions.
-            ManagedGuaranteeKt
-                    .forClassesSatisfying(TrustedAtomicPrimitives::isTrustedPrimitive)
+            forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
+                    .allMethods()
                     .treatAsAtomic()
-                    .methodsSatisfying(TrustedAtomicPrimitives::isTrustedMethod)
+
     );
 
     public final boolean checkObstructionFreedom;

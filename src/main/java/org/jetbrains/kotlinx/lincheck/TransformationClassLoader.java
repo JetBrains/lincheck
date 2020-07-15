@@ -25,7 +25,7 @@ package org.jetbrains.kotlinx.lincheck;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedStateHolder;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives;
+import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitivesKt;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -77,7 +77,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     private static boolean doNotTransform(String className) {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
-        if (TrustedAtomicPrimitives.isTrustedPrimitive(className)) return true;
+        if (TrustedAtomicPrimitivesKt.isTrustedPrimitive(className)) return true;
 
         return className == null ||
             (
