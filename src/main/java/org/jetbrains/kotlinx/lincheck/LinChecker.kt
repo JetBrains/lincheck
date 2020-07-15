@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import kotlin.reflect.*
 
 /**
  * This class runs concurrent tests.
@@ -188,5 +189,14 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
  * ```
  */
 fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClass, this)
+
+/**
+ * This is a short-cut for the following code:
+ * ```
+ *  val options = ...
+ *  LinChecker.check(testClass.java, options)
+ * ```
+ */
+fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()

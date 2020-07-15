@@ -40,7 +40,5 @@ internal enum class SwitchReason(private val reason: String) {
     SUSPENDED("coroutine is suspended"),
     STRATEGY_SWITCH("");
 
-    override fun toString(): String {
-        return reason;
-    }
+    override fun toString() = reason
 }

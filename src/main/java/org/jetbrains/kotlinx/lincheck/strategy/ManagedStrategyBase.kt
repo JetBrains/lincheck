@@ -163,11 +163,11 @@ internal abstract class ManagedStrategyBase(
         isSuspended[threadId].set(true)
         if (runner.canResumeCoroutine(threadId, currentActorId[threadId])) {
             // COROUTINE_SUSPENSION_CODELOCATION, because we do not know the actual code location
-            newSuspensionPoint(threadId, COROUTINE_SUSPENSION_CODELOCATION)
+            newSuspensionPoint(threadId, COROUTINE_SUSPENSION_CODE_LOCATION)
         } else {
             // currently a coroutine suspension  is not supposed to violate obstruction-freedom
             // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
-            switchCurrentThread(threadId, COROUTINE_SUSPENSION_CODELOCATION, SwitchReason.SUSPENDED, true)
+            switchCurrentThread(threadId, COROUTINE_SUSPENSION_CODE_LOCATION, SwitchReason.SUSPENDED, true)
         }
     }
 
@@ -340,7 +340,7 @@ internal abstract class ManagedStrategyBase(
     /**
      * Detects loop when visiting a codeLocation too often.
      */
-    protected class LoopDetector(private val hangingDetectionThreshold: Int) {
+    private class LoopDetector(private val hangingDetectionThreshold: Int) {
         private var lastIThread = Int.MIN_VALUE
         private val operationCounts = mutableMapOf<Int, Int>()
 
@@ -350,7 +350,7 @@ internal abstract class ManagedStrategyBase(
                 operationCounts.clear()
                 lastIThread = threadId
             }
-            if (codeLocation == COROUTINE_SUSPENSION_CODELOCATION) return false;
+            if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false;
             // increment the number of times that we visited a codelocation
             val count = (operationCounts[codeLocation] ?: 0) + 1
             operationCounts[codeLocation] = count
@@ -362,12 +362,12 @@ internal abstract class ManagedStrategyBase(
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
-    protected inner class ExecutionEventCollector {
+    private inner class ExecutionEventCollector {
         private val interleavingEvents = mutableListOf<InterleavingEvent>()
 
         fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
             val actorId = currentActorId[threadId]
-            if (codeLocation != COROUTINE_SUSPENSION_CODELOCATION) {
+            if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
                 interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
             } else
                 interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
@@ -381,7 +381,7 @@ internal abstract class ManagedStrategyBase(
         }
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
-            if (codeLocation != COROUTINE_SUSPENSION_CODELOCATION)
+            if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION)
                 interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
         }
 
@@ -438,8 +438,6 @@ internal abstract class ManagedStrategyBase(
                     needsNotification[threadId] = false
         }
     }
-
-    companion object {
-        private const val COROUTINE_SUSPENSION_CODELOCATION = -1; // currently the exact place of coroutine suspension is not known
-    }
 }
+
+private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1; // currently the exact place of coroutine suspension is not known

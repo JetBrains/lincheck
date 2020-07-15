@@ -148,7 +148,7 @@ internal class ModelCheckingStrategy(
      * An abstract node with an execution choice in the interleaving tree.
      */
     private abstract inner class InterleavingNode {
-        protected var percentageUnexplored = 1.0
+        protected var unexploredFraction = 1.0
         protected lateinit var children: Array<InterleavingNode>
         var isFullyExplored: Boolean = false
             protected set
@@ -163,12 +163,12 @@ internal class ModelCheckingStrategy(
                     children.all { it.isFullyExplored }
                 }
             }
-            percentageUnexplored = if (isFullyExplored) 0.0 else 1.0
+            unexploredFraction = if (isFullyExplored) 0.0 else 1.0
         }
 
         fun finishExploration() {
             isFullyExplored = true
-            percentageUnexplored = 0.0
+            unexploredFraction = 0.0
         }
 
         protected fun updatePercentageExplored() {
@@ -179,20 +179,20 @@ internal class ModelCheckingStrategy(
 
             if (children.isEmpty()) return
             val total = children.fold(0.0) { acc, node ->
-                acc + node.percentageUnexplored
+                acc + node.unexploredFraction
             }
-            percentageUnexplored = total / children.size
+            unexploredFraction = total / children.size
             isFullyExplored = children.all { it.isFullyExplored }
         }
 
         protected fun chooseChild(): Int {
             if (children.size == 1) return 0
             // choose a weighted random child.
-            val total = children.sumByDouble { it.percentageUnexplored }
+            val total = children.sumByDouble { it.unexploredFraction }
             val random = generationRandom.nextDouble() * total
             var sumWeight = 0.0
             children.forEachIndexed { i, child ->
-                sumWeight += child.percentageUnexplored
+                sumWeight += child.unexploredFraction
                 if (sumWeight >= random)
                     return i
             }

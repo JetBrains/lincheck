@@ -24,15 +24,15 @@ package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt;
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitives;
+import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt.forAllClasses;
+import static org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt.forClasses;
 
 /**
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
@@ -46,26 +46,24 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
             // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
             // can be just ignored, so that no thread context switches are added inside their methods.
-            ManagedGuaranteeKt.forClasses(
+            forClasses(
                     kotlinx.coroutines.internal.StackTraceRecoveryKt.class.getName(),
                     kotlinx.coroutines.internal.ExceptionsConstuctorKt.class.getName()
             ).ignore().allMethods(),
             // Manual execution in static initialization methods can lead to a deadlock,
             // so not thread context switches should be made in them
-            ManagedGuaranteeKt.forAllClasses().ignore().methods("<clinit>"),
+            forAllClasses().ignore().methods("<clinit>"),
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             // For this purpose they are treated as if they are atomic instructions.
-            ManagedGuaranteeKt
-                    .forClassesSatisfying(TrustedAtomicPrimitives::isTrustedPrimitive)
+            forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
                     .treatAsAtomic()
-                    .methodsSatisfying(TrustedAtomicPrimitives::isTrustedMethod)
+                    .allMethods()
     );
 
     public final boolean checkObstructionFreedom;
     public final int hangingDetectionThreshold;
     public final int maxInvocationsPerIteration;
     protected final List<ManagedGuarantee> guarantees;
-
 
     public ModelCheckingCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
