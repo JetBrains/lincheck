@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy
+package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 /**
  * ManagedGuarantee will be constructed for classes with names [fullClassNames].

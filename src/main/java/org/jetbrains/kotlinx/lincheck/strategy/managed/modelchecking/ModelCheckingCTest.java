@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
+package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
@@ -32,8 +32,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
 
 import java.lang.annotation.*;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
-import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_INVOCATIONS;
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_INVOCATIONS;
 
 /**
  * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.

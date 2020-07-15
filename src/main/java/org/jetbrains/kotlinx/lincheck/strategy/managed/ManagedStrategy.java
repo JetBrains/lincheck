@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.strategy;
+package org.jetbrains.kotlinx.lincheck.strategy.managed;
 
 /*
  * #%L
@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy;
 
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
+import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.objectweb.asm.*;
 
 import java.lang.reflect.*;

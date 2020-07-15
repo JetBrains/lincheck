@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy
+package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 /**
  * Stores information about events occuring during managed execution

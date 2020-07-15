@@ -19,16 +19,16 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
+package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.Options;
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
-import static org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration.*;
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*;
 
 /**
  * Options for {@link ModelCheckingStrategy model checking} strategy.

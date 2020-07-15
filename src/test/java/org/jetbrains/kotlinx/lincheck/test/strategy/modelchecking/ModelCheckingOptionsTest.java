@@ -25,12 +25,13 @@ import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.LoggingLevel;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt;
-import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingOptions;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses;
 
 
 public class ModelCheckingOptionsTest {
@@ -53,7 +54,7 @@ public class ModelCheckingOptionsTest {
             .checkObstructionFreedom(true)
             .hangingDetectionThreshold(30)
             .logLevel(LoggingLevel.ERROR)
-            .addGuarantee(ManagedGuaranteeKt.forClasses("java.util.WeakHashMap").allMethods().ignore())
+            .addGuarantee(forClasses("java.util.WeakHashMap").allMethods().ignore())
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
         LinChecker.check(ModelCheckingOptionsTest.class, opts);

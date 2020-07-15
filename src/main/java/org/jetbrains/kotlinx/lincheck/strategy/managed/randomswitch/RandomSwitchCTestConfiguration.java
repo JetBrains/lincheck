@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.strategy.randomswitch;
+package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch;
 
 /*
  * #%L

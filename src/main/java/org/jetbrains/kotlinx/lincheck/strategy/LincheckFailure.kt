@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,

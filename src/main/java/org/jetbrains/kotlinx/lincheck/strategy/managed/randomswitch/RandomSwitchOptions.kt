@@ -19,11 +19,11 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomswitch
+package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
-import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 
 /**
  * Options for [random-switch][RandomSwitchStrategy] strategy.
@@ -40,7 +40,7 @@ internal class RandomSwitchOptions : Options<RandomSwitchOptions, RandomSwitchCT
 
     override fun createTestConfigurations(testClass: Class<*>?): RandomSwitchCTestConfiguration {
         return RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-                executionGenerator, verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass!!))
+            executionGenerator, verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+            chooseSequentialSpecification(sequentialSpecification, testClass!!))
     }
 }

@@ -26,6 +26,11 @@ import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.FinishEvent
+import org.jetbrains.kotlinx.lincheck.strategy.managed.PassCodeLocationEvent
+import org.jetbrains.kotlinx.lincheck.strategy.managed.SuspendSwitchEvent
+import org.jetbrains.kotlinx.lincheck.strategy.managed.SwitchEvent
 import java.io.*
 
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {

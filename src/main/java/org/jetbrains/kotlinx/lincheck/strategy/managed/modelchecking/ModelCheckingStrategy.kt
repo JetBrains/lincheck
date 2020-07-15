@@ -19,11 +19,11 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.modelchecking
+package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicInteger

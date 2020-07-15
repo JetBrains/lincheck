@@ -25,7 +25,7 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.randomswitch;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.*;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch.*;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
 import org.junit.*;
 

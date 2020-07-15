@@ -19,14 +19,14 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.randomswitch
+package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyBase
-import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyBase
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
@@ -39,11 +39,11 @@ private const val endSwitchProbability = 0.99
  * For internal experiments only!
  */
 internal class RandomSwitchStrategy(
-        testCfg: RandomSwitchCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
-        verifier: Verifier
+    testCfg: RandomSwitchCTestConfiguration,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunctions: List<Method>,
+    verifier: Verifier
 ) : ManagedStrategyBase(
         testClass, scenario, verifier, validationFunctions, ModelCheckingCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD,
         false, ArrayList(ModelCheckingCTestConfiguration.DEFAULT_GUARANTEES)

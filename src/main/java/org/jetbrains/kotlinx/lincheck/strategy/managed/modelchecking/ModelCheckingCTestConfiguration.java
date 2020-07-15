@@ -19,21 +19,19 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.modelchecking;
+package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedGuarantee;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.strategy.TrustedAtomicPrimitivesKt;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-
-import static org.jetbrains.kotlinx.lincheck.strategy.ManagedGuaranteeKt.*;
 
 /**
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
@@ -47,13 +45,13 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
             // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
             // can be just ignored, so that no thread context switches are added inside their methods.
-            forClasses(
+            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses(
                     kotlinx.coroutines.internal.StackTraceRecoveryKt.class.getName(),
                     kotlinx.coroutines.internal.ExceptionsConstuctorKt.class.getName()
             ).allMethods().ignore(),
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             // For this purpose they are treated as if they are atomic instructions.
-            forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
+            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
                     .allMethods()
                     .treatAsAtomic()
 

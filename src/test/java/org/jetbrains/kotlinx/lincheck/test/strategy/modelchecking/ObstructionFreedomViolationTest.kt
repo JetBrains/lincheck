@@ -21,10 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 

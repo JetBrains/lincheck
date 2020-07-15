@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.strategy;
+package org.jetbrains.kotlinx.lincheck.strategy.managed;
 
 /*
  * #%L
@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy;
  * #L%
  */
 
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.*;
 import java.util.Random;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_NAME;
@@ -35,7 +35,7 @@ public class ManagedStateHolder {
     public static ManagedStrategy strategy;
     public static LocalObjectManager objectManager;
     public static Random random;
-    private static final long initialSeed = 1337;
+    private static final long INITIAL_SEED = 1337;
 
     /**
      * Sets the specified strategy and its initial state in the specified class loader.
@@ -59,13 +59,15 @@ public class ManagedStateHolder {
     public static void resetState(ClassLoader loader) {
         try {
             Class<?> clazz = loader.loadClass(ManagedStateHolder.class.getCanonicalName());
-            Object random = clazz.getField("random").get(null);
-            Class<?> randomClass = loader.loadClass(TRANSFORMED_PACKAGE_NAME + Random.class.getCanonicalName());
-            randomClass.getMethod("setSeed", long.class).invoke(random, initialSeed);
-            ((LocalObjectManager)(clazz.getField("objectManager").get(null))).reset();
-        } catch (ClassNotFoundException | IllegalAccessException | NoSuchFieldException | NoSuchMethodException | InvocationTargetException e) {
+            clazz.getMethod("resetStateImpl").invoke(null);
+        } catch (Exception e) {
             throw new IllegalStateException("Cannot set state to ManagedStateHolder", e);
         }
+    }
 
+    @SuppressWarnings("unused")
+    public static void resetStateImpl() {
+        random.setSeed(INITIAL_SEED);
+        objectManager.reset();
     }
 }
