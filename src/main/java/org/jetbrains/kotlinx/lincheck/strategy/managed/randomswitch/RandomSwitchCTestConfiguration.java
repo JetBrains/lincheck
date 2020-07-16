@@ -25,6 +25,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuarantee;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.*;
@@ -33,17 +35,16 @@ import java.util.*;
 /**
  * Configuration for {@link RandomSwitchStrategy random-switch} strategy.
  */
-public class RandomSwitchCTestConfiguration extends CTestConfiguration {
-    public final int invocationsPerIteration;
-
+public class RandomSwitchCTestConfiguration extends ManagedCTestConfiguration {
     public RandomSwitchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
-        int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        int invocationsPerIteration, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
-        Class<?> sequentialSpecification)
+                                           int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
+                                           boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
+                                           List<ManagedGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
+                                           Class<?> sequentialSpecification)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);
-        this.invocationsPerIteration = invocationsPerIteration;
+                checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
+                minimizeFailedScenario, sequentialSpecification);
     }
 
     @Override

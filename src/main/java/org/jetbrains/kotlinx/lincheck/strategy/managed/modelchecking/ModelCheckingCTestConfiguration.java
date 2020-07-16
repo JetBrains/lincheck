@@ -36,33 +36,7 @@ import java.util.List;
 /**
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
  */
-public class ModelCheckingCTestConfiguration extends CTestConfiguration {
-    public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
-    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 20;
-    public static final int DEFAULT_INVOCATIONS = 10_000;
-    public static final int LIVELOCK_EVENTS_THRESHOLD = 5_000;
-    public static final List<ManagedGuarantee> DEFAULT_GUARANTEES = Arrays.asList(
-            // These classes use WeakHashMap, and thus, their code is non-deterministic.
-            // Non-determinism should not be present in managed executions, but luckily the classes
-            // can be just ignored, so that no thread context switches are added inside their methods.
-            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses(
-                    kotlinx.coroutines.internal.StackTraceRecoveryKt.class.getName(),
-                    kotlinx.coroutines.internal.ExceptionsConstuctorKt.class.getName()
-            ).allMethods().ignore(),
-            // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
-            // For this purpose they are treated as if they are atomic instructions.
-            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
-                    .allMethods()
-                    .treatAsAtomic()
-
-    );
-
-    public final boolean checkObstructionFreedom;
-    public final int hangingDetectionThreshold;
-    public final int maxInvocationsPerIteration;
-    protected final List<ManagedGuarantee> guarantees;
-
-
+public class ModelCheckingCTestConfiguration extends ManagedCTestConfiguration {
     public ModelCheckingCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
                                            boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
@@ -70,11 +44,8 @@ public class ModelCheckingCTestConfiguration extends CTestConfiguration {
                                            Class<?> sequentialSpecification)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);
-        this.checkObstructionFreedom = checkObstructionFreedom;
-        this.hangingDetectionThreshold = hangingDetectionThreshold;
-        this.maxInvocationsPerIteration = invocationsPerIteration;
-        this.guarantees = guarantees;
+                checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
+                minimizeFailedScenario, sequentialSpecification);
     }
 
     @Override

@@ -54,7 +54,7 @@ internal class ModelCheckingStrategy(
     // ids of threads to which the executing thread should switch at the corresponding choices
     private val threadSwitchChoices = mutableListOf<Int>()
     // the number of invocations that the managed strategy may use to search for an incorrect execution
-    private val maxInvocations = testCfg.maxInvocationsPerIteration
+    private val maxInvocations = testCfg.invocationsPerIteration
     // the number of used invocations
     private var usedInvocations = 0
     // the maximum number of switches that strategy tries to use currently

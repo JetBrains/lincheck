@@ -21,65 +21,18 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
-import org.jetbrains.kotlinx.lincheck.Options;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
-import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*;
 
 /**
  * Options for {@link ModelCheckingStrategy model checking} strategy.
  */
-public class ModelCheckingOptions extends Options<ModelCheckingOptions, ModelCheckingCTestConfiguration> {
-    protected boolean checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM;
-    protected int hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD;
-    protected int maxInvocationsPerIteration = DEFAULT_INVOCATIONS;
-    protected final List<ManagedGuarantee> guarantees = new ArrayList<>(DEFAULT_GUARANTEES);
-
-    /**
-     * Check obstruction freedom of the concurrent algorithm.
-     * In case of finding an obstruction lincheck will immediately stop and report it.
-     */
-    public ModelCheckingOptions checkObstructionFreedom(boolean checkObstructionFreedom) {
-        this.checkObstructionFreedom = checkObstructionFreedom;
-        return this;
-    }
-
-    /**
-     * Use the specified maximum number of repetitions to detect endless loops.
-     * A found loop will force managed execution to switch the executing thread.
-     * In case of checkObstructionFreedom enabled it will report the obstruction instead.
-     */
-    public ModelCheckingOptions hangingDetectionThreshold(int maxRepetitions) {
-        this.hangingDetectionThreshold = maxRepetitions;
-        return this;
-    }
-
-    /**
-     * The number of invocations that managed strategy may use to search for an incorrect execution.
-     * In case of small scenarios with only a few "interesting" code locations a lesser than this
-     * number of invocations will be used.
-     */
-    public ModelCheckingOptions invocationsPerIteration(int invocationsPerIteration) {
-        this.maxInvocationsPerIteration = invocationsPerIteration;
-        return this;
-    }
-
-    /**
-     * Add an entry point which should not be transformed in the format "java.util.concurrent." or "java.util.WeakHashMap"
-     */
-    public ModelCheckingOptions addGuarantee(ManagedGuarantee guarantee) {
-        this.guarantees.add(guarantee);
-        return this;
-    }
-
+public class ModelCheckingOptions extends ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration> {
     @Override
     public ModelCheckingCTestConfiguration createTestConfigurations(Class<?> testClass) {
         return new ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-                executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, maxInvocationsPerIteration,
+                executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
                 guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass));
     }

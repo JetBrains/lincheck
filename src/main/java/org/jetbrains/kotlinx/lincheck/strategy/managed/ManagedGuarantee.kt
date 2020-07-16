@@ -37,7 +37,7 @@ class ManagedGuarantee private constructor(
         val type: ManagedGuaranteeType
 ) {
     class MethodBuilder internal constructor(
-            protected val classPredicate: (fullClassName: String) -> Boolean
+            private val classPredicate: (fullClassName: String) -> Boolean
     ) {
         /**
          * ManagedGuarantee will be constructed for methods with names [methodNames]
@@ -56,8 +56,8 @@ class ManagedGuarantee private constructor(
     }
 
     class TypeBuilder internal constructor(
-            protected val classPredicate: (fullClassName: String) -> Boolean,
-            protected val methodPredicate: (methodName: String) -> Boolean
+            private val classPredicate: (fullClassName: String) -> Boolean,
+            private val methodPredicate: (methodName: String) -> Boolean
     ) {
         /**
          * The methods will be treated by model checking strategy as if they do not have

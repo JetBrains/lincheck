@@ -400,7 +400,7 @@ internal abstract class ManagedStrategyBase(
     /**
      * Track operations with monitor (acquire/release, wait/notify) to tell whether a thread can be executed.
      */
-    protected class MonitorTracker(nThreads: Int) {
+    private class MonitorTracker(nThreads: Int) {
         // which monitors are held by test threads
         private val acquiredMonitors = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
         // which monitor a thread want to acquire (or null)
