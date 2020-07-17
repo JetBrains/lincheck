@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import kotlin.jvm.functions.Function0;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
@@ -85,7 +86,7 @@ public abstract class CTestConfiguration {
     }
 
     protected abstract Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario,
-                                               List<Method> validationFunctions, Verifier verifier);
+                                               List<Method> validationFunctions, Method stateRepresentation, Verifier verifier);
 
     static List<CTestConfiguration> createFromTestClassAnnotations(Class<?> testClass) {
         Stream<CTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))

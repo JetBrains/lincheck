@@ -57,6 +57,14 @@ public abstract class Runner {
     }
 
     /**
+     * Returns current state representation of the test instance based on provided via StateRepresentation annotation function.
+     * Returns null if StateRepresentation annotation was not used.
+     */
+    public String getStateRepresentation() {
+        return null;
+    }
+
+    /**
      * Loads class using runner's class loader
      */
     private Class<?> loadClass(String className) {

@@ -31,7 +31,7 @@ internal class SuspendSwitchEvent(threadId: Int, actorId: Int) : InterleavingEve
     val reason = SwitchReason.SUSPENDED
 }
 internal class FinishEvent(threadId: Int, actorId: Int) : InterleavingEvent(threadId, actorId)
-internal class PassCodeLocationEvent(threadId: Int, actorId: Int, val codeLocation: StackTraceElement) : InterleavingEvent(threadId, actorId)
+internal class PassCodeLocationEvent(threadId: Int, actorId: Int, val codeLocation: StackTraceElement, val stateRepresentation: String?) : InterleavingEvent(threadId, actorId)
 
 internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),

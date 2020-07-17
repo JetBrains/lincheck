@@ -125,7 +125,11 @@ internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadC
 
 private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
 
-private fun getMethod(instance: Any, method: Method): Method {
+/**
+ * Get a method corresponding to [method] in [instance] methods.
+ * Solves problems with different class loaders of [method] and [instance].
+ */
+internal fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
     return methods[method]?.get() ?: run {
         val m = instance.javaClass.getMethod(method.name, *method.parameterTypes)

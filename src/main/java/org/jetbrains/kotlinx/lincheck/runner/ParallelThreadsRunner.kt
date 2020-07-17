@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
+import java.lang.Exception
 import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.Executors.*
@@ -45,7 +46,8 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
-    validationFunctions: List<Method>
+    validationFunctions: List<Method>,
+    private val stateRepresentation: Method?
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val executor = newFixedThreadPool(scenario.threads, ParallelThreadsRunner::TestThread)
@@ -199,7 +201,6 @@ internal open class ParallelThreadsRunner(
 
     override fun beforeCoroutineResumed(threadId: Int) {}
 
-
     override fun canResumeCoroutine(threadId: Int, actorId: Int): Boolean {
         val completion = completions[threadId][actorId]
         return completion.resWithCont.get() != null || suspensionPointResults[threadId] !== NoResult
@@ -290,6 +291,18 @@ internal open class ParallelThreadsRunner(
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor {
         return CancellabilitySupportClassTransformer(cv)
+    }
+
+    override fun getStateRepresentation(): String? {
+        stateRepresentation?.let {
+            try {
+                return getMethod(testInstance, it).invoke(testInstance) as String
+            } catch (e: Exception) {
+                println(e.cause)
+                e.printStackTrace()
+            }
+        }
+        return null
     }
 
      // For [TestThreadExecution] instances

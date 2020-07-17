@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress;
  * #L%
  */
 
+import kotlin.jvm.functions.Function0;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
@@ -51,7 +52,8 @@ public class StressCTestConfiguration extends CTestConfiguration {
     }
 
     @Override
-    protected Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, Verifier verifier) {
-        return new StressStrategy(this, testClass, scenario, validationFunctions, verifier);
+    protected Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
+                                      Method stateRepresentation, Verifier verifier) {
+        return new StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentation, verifier);
     }
 }

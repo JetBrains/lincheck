@@ -36,7 +36,7 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
     public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 20;
     public static final int DEFAULT_INVOCATIONS = 10_000;
-    public static final int LIVELOCK_EVENTS_THRESHOLD = 100_000;
+    public static final int LIVELOCK_EVENTS_THRESHOLD = 1_000;
     public static final List<ManagedGuarantee> DEFAULT_GUARANTEES = Arrays.asList(
             // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
@@ -56,7 +56,6 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public final int hangingDetectionThreshold;
     public final int invocationsPerIteration;
     public final List<ManagedGuarantee> guarantees;
-
 
     public ManagedCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,

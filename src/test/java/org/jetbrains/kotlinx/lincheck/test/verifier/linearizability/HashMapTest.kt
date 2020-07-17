@@ -38,5 +38,10 @@ class HashMapTest : AbstractLincheckTest(IncorrectResultsFailure::class, Unexpec
     operator fun get(@Param(name = "key") key: Int?): Int? = m[key]
 
     override fun extractState(): Any = m
+
+    @StateRepresentation
+    fun state(): String {
+        return m.toString()
+    }
 }
 

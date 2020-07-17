@@ -65,7 +65,7 @@ private fun <T> printInColumnsCustom(
         groupedObjects: List<List<T>>,
         joinColumns: (List<String>) -> String
 ): String {
-    val nRows = groupedObjects.map { it.size }.max()!!
+    val nRows = groupedObjects.map { it.size }.max() ?: 0
     val nColumns = groupedObjects.size
     val rows = (0 until nRows).map { rowIndex ->
         (0 until nColumns)
@@ -73,7 +73,7 @@ private fun <T> printInColumnsCustom(
                 .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
     }
     val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
-        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max()!!
+        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max() ?: 0
     }
     return (0 until nRows)
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
@@ -309,8 +309,11 @@ private fun StringBuilder.appendExecution(
                 execution.add(InterleavingRepresentation(threadId, "", "thread is finished"))
             }
             is PassCodeLocationEvent -> {
-                if (actorId in shouldBeDetailedActors[threadId])
-                    execution.add(InterleavingRepresentation(threadId, "", "pass: ${event.codeLocation.shorten()}"))
+                if (actorId in shouldBeDetailedActors[threadId]) {
+                    execution.add(InterleavingRepresentation(threadId, "", event.codeLocation.shorten()))
+                    if (event.stateRepresentation != null)
+                        execution.add(InterleavingRepresentation(threadId, "", "STACK: ${event.stateRepresentation}"))
+                }
             }
         }
     }

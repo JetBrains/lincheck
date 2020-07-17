@@ -43,9 +43,10 @@ internal class RandomSwitchStrategy(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
+    stateRepresentation: Method?,
     verifier: Verifier
 ) : ManagedStrategyBase(
-        testClass, scenario, verifier, validationFunctions, testCfg.hangingDetectionThreshold,
+        testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg.hangingDetectionThreshold,
         false, testCfg.guarantees
 ) {
     // the number of invocations that the managed strategy may use to search for an incorrect execution

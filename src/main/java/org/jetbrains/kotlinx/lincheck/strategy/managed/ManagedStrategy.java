@@ -46,11 +46,12 @@ public abstract class ManagedStrategy extends Strategy {
     private ManagedStrategyTransformer transformer;
     private final List<ManagedGuarantee> guarantees;
 
-    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, List<ManagedGuarantee> guarantees) {
+    protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
+                              Method stateRepresentation, List<ManagedGuarantee> guarantees) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
         this.guarantees = guarantees;
-        runner = new ParallelThreadsRunner(this, testClass, validationFunctions) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation) {
             @Override
             public void onStart(int threadId) {
                 super.onStart(threadId);

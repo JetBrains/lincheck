@@ -42,9 +42,10 @@ internal class ModelCheckingStrategy(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunctions: List<Method>,
+        stateRepresentation: Method?,
         verifier: Verifier
 ) : ManagedStrategyBase(
-        testClass, scenario, verifier, validationFunctions, testCfg.hangingDetectionThreshold,
+        testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg.hangingDetectionThreshold,
         testCfg.checkObstructionFreedom, testCfg.guarantees
 ) {
     // an increasing id of code locations in the execution

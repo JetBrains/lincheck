@@ -36,6 +36,7 @@ abstract class AbstractLincheckTest(
     override fun extractState(): Any = System.identityHashCode(this)
 
     private fun <O : Options<O, *>> O.runInternalTest() {
+        check(this@AbstractLincheckTest::class.java)
         val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)
         if (failure === null) {
             assert(expectedFailures.isEmpty()) {

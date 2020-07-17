@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import kotlin.jvm.functions.Function0;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
@@ -46,11 +47,14 @@ public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<OperationGroup> operationGroups;
     public final List<Method> validationFunctions;
+    public final Method stateRepresentation;
 
-    private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups, List<Method> validationFunctions) {
+    private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups,
+                           List<Method> validationFunctions, Method stateRepresentation) {
         this.actorGenerators = actorGenerators;
         this.operationGroups = operationGroups;
         this.validationFunctions = validationFunctions;
+        this.stateRepresentation = stateRepresentation;
     }
 
     /**
@@ -61,19 +65,25 @@ public class CTestStructure {
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
         List<Method> validationFunctions = new ArrayList<>();
+        List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
         while (clazz != null) {
-            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions);
+            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions, stateRepresentations);
             clazz = clazz.getSuperclass();
         }
+
+        Method stateRepresentation = null;
+        if (!stateRepresentations.isEmpty())
+            stateRepresentation = stateRepresentations.get(0);
         // Create StressCTest class configuration
-        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions);
+        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation);
     }
 
     private static void readTestStructureFromClass(Class<?> clazz, Map<String, ParameterGenerator<?>> namedGens,
                                                    Map<String, OperationGroup> groupConfigs,
                                                    List<ActorGenerator> actorGenerators,
-                                                   List<Method> validationFunctions
+                                                   List<Method> validationFunctions,
+                                                   List<Method> stateRepresentations
     ) {
         // Read named parameter paramgen (declared for class)
         for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
@@ -122,6 +132,16 @@ public class CTestStructure {
                 if (m.getParameterCount() != 0)
                     throw new IllegalStateException("Validation function " + m.getName() + " should not have parameters");
                 validationFunctions.add(m);
+            }
+
+            if (m.isAnnotationPresent(StateRepresentation.class)) {
+                if (m.getParameterCount() != 0)
+                    throw new IllegalStateException("State representation function " + m.getName() + " should not have parameters");
+                if (m.getReturnType() != String.class)
+                    throw new IllegalStateException("State representation function " + m.getName() + " should have String return type");
+                if (!stateRepresentations.isEmpty())
+                    throw new IllegalStateException("There should be at most one representation function");
+                stateRepresentations.add(m);
             }
         }
     }

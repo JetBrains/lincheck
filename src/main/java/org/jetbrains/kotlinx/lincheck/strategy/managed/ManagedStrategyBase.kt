@@ -43,10 +43,11 @@ internal abstract class ManagedStrategyBase(
         scenario: ExecutionScenario,
         protected val verifier: Verifier,
         validationFunctions: List<Method>,
+        stateRepresentation: Method?,
         private val hangingDetectionThreshold: Int,
         private val requireObstructionFreedom: Boolean,
         guarantees: List<ManagedGuarantee>
-) : ManagedStrategy(testClass, scenario, validationFunctions, guarantees) {
+) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, guarantees) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
     // whether a thread finished all its operations
     protected val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
@@ -390,8 +391,12 @@ internal abstract class ManagedStrategyBase(
         }
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
-            if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION)
-                interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation)))
+            if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
+                // enter ignored section, because stateRepresentation invokes transformed method with switch points
+                enterIgnoredSection(threadId)
+                interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation), runner.stateRepresentation))
+                leaveIgnoredSection(threadId)
+            }
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents

@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
+import kotlin.jvm.functions.Function0;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
@@ -49,7 +50,8 @@ public class ModelCheckingCTestConfiguration extends ManagedCTestConfiguration {
     }
 
     @Override
-    protected Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions, Verifier verifier) {
-        return new ModelCheckingStrategy(this, testClass, scenario, validationFunctions, verifier);
+    protected Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
+                                      Method stateRepresentation, Verifier verifier) {
+        return new ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentation, verifier);
     }
 }

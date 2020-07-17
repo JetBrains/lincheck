@@ -34,6 +34,7 @@ class StressStrategy(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
+    stateRepresentation: Method?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val random = Random(0)
@@ -52,7 +53,7 @@ class StressStrategy(
             null
         nextWaits = waits?.map { it.iterator() }?.toTypedArray()
         // Create runner
-        runner = ParallelThreadsRunner(this, testClass, validationFunctions)
+        runner = ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation)
     }
 
     override fun run(): LincheckFailure? {
