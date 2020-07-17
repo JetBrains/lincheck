@@ -95,14 +95,24 @@ internal class ModelCheckingStrategy(
         super.onFinish(threadId)
     }
 
-    override fun onNewSwitch() {
+    override fun onNewSwitch(threadId: Int) {
         val position = executionPosition.get()
+        // check whether a switch choice node should be initialized here
         if (lastSwitchPosition() < position) {
             // strictly after the last switch.
             // initialize node with the choice of the next switch location.
             val node = notInitializedSwitchChoice ?: return
             notInitializedSwitchChoice = null
             node.initialize(position)
+        }
+
+        // check whether a thread choice node should be initialized here
+        if (notInitializedThreadChoice != null && executionPosition.get() == lastSwitchPosition()) {
+            val node = notInitializedThreadChoice!!
+            notInitializedThreadChoice = null
+            // initialize node with the choice of the next thread
+            val switchableThreads = switchableThreads(threadId)
+            node.initialize(switchableThreads.size)
         }
     }
 
@@ -120,17 +130,6 @@ internal class ModelCheckingStrategy(
         executionPosition.set(-1) // one step before zero
         usedInvocations++
         super.initializeInvocation()
-    }
-
-    override fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean) {
-        if (notInitializedThreadChoice != null && executionPosition.get() == lastSwitchPosition()) {
-            val node = notInitializedThreadChoice!!
-            notInitializedThreadChoice = null
-            // initialize node with the choice of the next thread
-            val switchableThreads = switchableThreads(threadId)
-            node.initialize(switchableThreads.size)
-        }
-        super.doSwitchCurrentThread(threadId, mustSwitch)
     }
 
     override fun chooseThread(switchableThreads: Int): Int {

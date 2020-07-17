@@ -86,7 +86,7 @@ internal abstract class ManagedStrategyBase(
         awaitTurn(threadId)
         finished[threadId].set(true)
         eventCollector.finishThread(threadId)
-        onNewSwitch()
+        onNewSwitch(threadId)
         doSwitchCurrentThread(threadId, true)
     }
 
@@ -98,21 +98,21 @@ internal abstract class ManagedStrategyBase(
     /**
      * Is executed before any thread switch
      */
-    protected open fun onNewSwitch() {}
+    protected open fun onNewSwitch(threadId: Int) {}
 
     override fun beforeSharedVariableRead(threadId: Int, codeLocation: Int) {
-        newSuspensionPoint(threadId, codeLocation)
+        newSwitchPoint(threadId, codeLocation)
     }
 
     override fun beforeSharedVariableWrite(threadId: Int, codeLocation: Int) {
-        newSuspensionPoint(threadId, codeLocation)
+        newSwitchPoint(threadId, codeLocation)
     }
 
     override fun beforeLockAcquire(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
         if (threadId == nThreads) return true
 
         checkCanHaveObstruction { "At least obstruction freedom required, but a lock found" }
-        newSuspensionPoint(threadId, codeLocation)
+        newSwitchPoint(threadId, codeLocation)
         // check if can acquire required monitor
         if (!monitorTracker.canAcquireMonitor(monitor)) {
             monitorTracker.awaitAcquiringMonitor(threadId, monitor)
@@ -133,7 +133,7 @@ internal abstract class ManagedStrategyBase(
 
     override fun beforePark(threadId: Int, codeLocation: Int, withTimeout: Boolean): Boolean {
         if (threadId == nThreads) return true
-        newSuspensionPoint(threadId, codeLocation)
+        newSwitchPoint(threadId, codeLocation)
         return false
     }
 
@@ -143,7 +143,7 @@ internal abstract class ManagedStrategyBase(
         if (threadId == nThreads) return true
 
         checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
-        newSuspensionPoint(threadId, codeLocation)
+        newSwitchPoint(threadId, codeLocation)
         if (withTimeout) return false // timeouts occur instantly
         monitorTracker.waitMonitor(threadId, monitor)
         // switch to another thread and wait till a notify event happens
@@ -165,7 +165,7 @@ internal abstract class ManagedStrategyBase(
         isSuspended[threadId].set(true)
         if (runner.canResumeCoroutine(threadId, currentActorId[threadId])) {
             // COROUTINE_SUSPENSION_CODELOCATION, because we do not know the actual code location
-            newSuspensionPoint(threadId, COROUTINE_SUSPENSION_CODE_LOCATION)
+            newSwitchPoint(threadId, COROUTINE_SUSPENSION_CODE_LOCATION)
         } else {
             // currently a coroutine suspension  is not supposed to violate obstruction-freedom
             // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
@@ -189,9 +189,9 @@ internal abstract class ManagedStrategyBase(
     }
 
     /**
-     * Create a new interesting code location, where a thread context switch can occur
+     * Create a new switch point, where a thread context switch can occur
      */
-    protected fun newSuspensionPoint(threadId: Int, codeLocation: Int) {
+    protected fun newSwitchPoint(threadId: Int, codeLocation: Int) {
         if (threadId == nThreads) return // can suspend only test threads
         check(threadId == currentThread)
         if (ignoredSectionDepth[threadId] != 0) return // can not suspend in ignored sections
@@ -220,12 +220,12 @@ internal abstract class ManagedStrategyBase(
      */
     protected fun switchCurrentThread(threadId: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         eventCollector.newSwitch(threadId, codeLocation, reason)
-        onNewSwitch()
+        onNewSwitch(threadId)
         doSwitchCurrentThread(threadId, mustSwitch)
         awaitTurn(threadId)
     }
 
-    protected open fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
+    protected fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
         val switchableThreads = switchableThreads(threadId)
         val switchableThreadsCount = switchableThreads.count()
         if (switchableThreadsCount == 0) {
