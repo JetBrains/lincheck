@@ -306,9 +306,9 @@ private fun StringBuilder.appendExecution(
             }
             is PassCodeLocationEvent -> {
                 if (actorId in shouldBeDetailedActors[threadId]) {
-                    execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION +  event.codeLocation.shorten()))
                     if (event.stateRepresentation != null)
                         execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${event.stateRepresentation}"))
+                    execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION +  event.codeLocation.shorten()))
                 }
             }
         }
