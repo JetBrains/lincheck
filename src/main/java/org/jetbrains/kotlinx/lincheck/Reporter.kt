@@ -227,6 +227,8 @@ private fun StringBuilder.appendException(t: Throwable) {
     appendln(sw.toString())
 }
 
+private val EXECUTION_INDENTATION = "  "
+
 private fun StringBuilder.appendExecution(
         scenario: ExecutionScenario,
         results: ExecutionResult?,
@@ -246,18 +248,16 @@ private fun StringBuilder.appendExecution(
             shouldBeDetailedActors[event.threadId].add(event.actorId)
 
     // an event that is represented by the number of a thread it refers to and by what strings should be shown in two columns
-    class InterleavingRepresentation(val threadId: Int, val left: String, val right: String)
+    class InterleavingRepresentation(val threadId: Int, val representation: String)
 
     // convert events that should be printed to the final form of a matrix of strings
     fun splitToColumns(nThreads: Int, execution: List<InterleavingRepresentation>): List<List<String>> {
-        val result = List(nThreads * 2) { mutableListOf<String>() }
+        val result = List(nThreads) { mutableListOf<String>() }
         for (message in execution) {
-            val firstColumn = 2 * message.threadId
-            val secondColumn = 2 * message.threadId + 1
+            val columnId = message.threadId
             // write messages in appropriate columns
-            result[firstColumn].add(message.left)
-            result[secondColumn].add(message.right)
-            val neededSize = result[firstColumn].size
+            result[columnId].add(message.representation)
+            val neededSize = result[columnId].size
             for (column in result)
                 if (column.size != neededSize)
                     column.add("")
@@ -265,7 +265,7 @@ private fun StringBuilder.appendExecution(
         return result
     }
 
-    fun getParallelResult(threadId: Int, actorId: Int) = if (results == null) "*" else "* result: ${results.parallelResults[threadId][actorId]}"
+    fun getParallelResult(threadId: Int, actorId: Int) = if (results == null) "" else ": ${results.parallelResults[threadId][actorId]}"
 
     val execution = mutableListOf<InterleavingRepresentation>()
     for (event in interleavingEvents) {
@@ -278,7 +278,7 @@ private fun StringBuilder.appendExecution(
                 // print actors while they are older than the current
                 val lastActor = lastStartedActor[threadId]
                 if (lastActor != -1 && lastActor in shouldBeDetailedActors[threadId])
-                    execution.add(InterleavingRepresentation(threadId, "", getParallelResult(threadId, lastActor)))
+                    execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION + "result" + getParallelResult(threadId, lastActor)))
                 val nextActor = ++lastStartedActor[threadId]
                 if (nextActor != scenario.parallelExecution[threadId].size) {
                     // print actor
@@ -286,33 +286,29 @@ private fun StringBuilder.appendExecution(
                     if (nextActor !in shouldBeDetailedActors[threadId])
                         execution.add(InterleavingRepresentation(
                                 threadId,
-                                "${scenario.parallelExecution[threadId][nextActor]}",
-                                getParallelResult(threadId, nextActor)
+                                "${scenario.parallelExecution[threadId][nextActor]}${getParallelResult(threadId, nextActor)}"
                         ))
                     else
-                        execution.add(InterleavingRepresentation(threadId, "${scenario.parallelExecution[threadId][nextActor]}", "*"))
+                        execution.add(InterleavingRepresentation(threadId, "${scenario.parallelExecution[threadId][nextActor]}"))
                 }
             }
         }
         when (event) {
             is SwitchEvent -> {
-                execution.add(InterleavingRepresentation(threadId, "", "switch at: ${event.info.shorten()}"))
-                // print reason if any
-                if (event.reason.toString().isNotEmpty())
-                    execution.add(InterleavingRepresentation(threadId, "", "reason: ${event.reason}"))
+                val reason = if (event.reason.toString().isEmpty()) "" else " (reason: ${event.reason})"
+                execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION + "switch" + reason))
             }
             is SuspendSwitchEvent -> {
-                execution.add(InterleavingRepresentation(threadId, "", "switch"))
-                execution.add(InterleavingRepresentation(threadId, "", "reason: ${event.reason}"))
+                execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION + "switch (reason: ${event.reason})"))
             }
             is FinishEvent -> {
-                execution.add(InterleavingRepresentation(threadId, "", "thread is finished"))
+                execution.add(InterleavingRepresentation(threadId,  EXECUTION_INDENTATION + "thread is finished"))
             }
             is PassCodeLocationEvent -> {
                 if (actorId in shouldBeDetailedActors[threadId]) {
-                    execution.add(InterleavingRepresentation(threadId, "", event.codeLocation.shorten()))
+                    execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION +  event.codeLocation.shorten()))
                     if (event.stateRepresentation != null)
-                        execution.add(InterleavingRepresentation(threadId, "", "STACK: ${event.stateRepresentation}"))
+                        execution.add(InterleavingRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${event.stateRepresentation}"))
                 }
             }
         }
@@ -324,10 +320,7 @@ private fun StringBuilder.appendExecution(
     appendln(printInColumnsCustom(executionData) {
         val builder = StringBuilder()
         for (i in it.indices) {
-            if (i % 2 == 0)
-                builder.append(if (i == 0) "| " else " | ")
-            else
-                builder.append(' ')
+            builder.append(if (i == 0) "| " else " | ")
             builder.append(it[i])
         }
         builder.append(" |")

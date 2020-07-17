@@ -40,8 +40,6 @@ class HashMapTest : AbstractLincheckTest(IncorrectResultsFailure::class, Unexpec
     override fun extractState(): Any = m
 
     @StateRepresentation
-    fun state(): String {
-        return m.toString()
-    }
+    fun state(): String = m.toString()
 }
 
