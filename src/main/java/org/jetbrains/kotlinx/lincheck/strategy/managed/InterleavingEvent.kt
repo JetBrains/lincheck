@@ -55,4 +55,4 @@ internal enum class SwitchReason(private val reason: String) {
  * Info about a [methodName] method call.
  * [identifier] helps to distinguish two different calls of the same method.
  */
-internal class CallStackTraceElement(val methodName: String, val stackTraceElement: StackTraceElement, val identifier: Int)
+internal class CallStackTraceElement(val methodName: String, val codeLocation: StackTraceElement, val identifier: Int)

@@ -40,9 +40,11 @@ internal fun StringBuilder.appendExecution(
     val lastExecutedActors = IntArray(nThreads) { threadId -> interleavingEvents.filter { it.threadId == threadId}.map { it.actorId }.max() ?: -1 }
     // call stack traces of all interesting events for each thread and actor
     val interestingEvents = interestingEventStackTraces(scenario, interleavingEvents, lastExecutedActors)
+    // set of identifiers which were appended
+    val loggedMethodCalls = mutableSetOf<Int>()
     val execution = mutableListOf<InterleavingEventRepresentation>()
 
-    for (eventId in interleavingEvents.indices) {
+    eventLoop@for (eventId in interleavingEvents.indices) {
         val event = interleavingEvents[eventId]
         val threadId = event.threadId
         val actorId = event.actorId
@@ -50,7 +52,7 @@ internal fun StringBuilder.appendExecution(
         while (lastLoggedActor[threadId] < actorId) {
             val lastActor = lastLoggedActor[threadId]
             if (isInterestingActor(threadId, lastActor, interestingEvents) && results != null)
-                execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "result: ${results.parallelResults[threadId][actorId]}"))
+                execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "result: ${results.parallelResults[threadId][lastActor]}"))
             val nextActor = ++lastLoggedActor[threadId]
             if (nextActor != scenario.parallelExecution[threadId].size) {
                 // print actor
@@ -73,10 +75,24 @@ internal fun StringBuilder.appendExecution(
             }
             is PassCodeLocationEvent -> {
                 if (isInterestingActor(threadId, actorId, interestingEvents)) {
-                    execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION +  event.codeLocation.shorten()))
+                    val callStackTrace = event.callStackTrace
+                    val compressionPoint = callStackTrace.calculateCompressionPoint(interestingEvents[threadId][actorId])
+                    if (compressionPoint == callStackTrace.size) {
+                        // no compression
+                        execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + event.codeLocation.shorten()))
+                    } else {
+                        if (callStackTrace[compressionPoint].identifier in loggedMethodCalls)
+                            continue@eventLoop // this method call was already logged
+                        loggedMethodCalls += callStackTrace[compressionPoint].identifier
+                        val call = callStackTrace[compressionPoint]
+                        execution.add(InterleavingEventRepresentation(
+                                threadId,
+                                EXECUTION_INDENTATION + "\"${call.methodName}\" at " + call.codeLocation.shorten()
+                        ))
+                    }
                     if (event.stateRepresentation != null)
                         execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${event.stateRepresentation}"))
-                    execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION +  event.codeLocation.shorten()))
+
                 }
             }
         }
@@ -162,6 +178,15 @@ private fun CallStackTrace.firstDifferPosition(callStackTrace: CallStackTrace): 
             return position
     return size
 }
+
+/**
+ * Calculates how to compress call stack trace.
+ * Picks the first different position with all interesting event call stack traces.
+ * For example, for call stack trace (a -> b -> c) with an interesting event at (a -> b -> d)
+ * compression point will be "c" and its index (2) will be returned.
+ */
+private fun CallStackTrace.calculateCompressionPoint(interestingEvents: List<CallStackTrace>): Int =
+        interestingEvents.map { this.firstDifferPosition(it) }.max()!!
 
 private fun getActorRepresentation(threadId: Int, actorId: Int, scenario: ExecutionScenario, results: ExecutionResult?, isInteresting: Boolean) =
         StringBuilder().apply {
