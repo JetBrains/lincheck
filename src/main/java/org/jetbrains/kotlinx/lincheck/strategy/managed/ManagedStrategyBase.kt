@@ -50,7 +50,7 @@ internal abstract class ManagedStrategyBase(
 ) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, guarantees) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
     // whether a thread finished all its operations
-    protected val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
+    private val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // what thread is currently allowed to perform operations
     @Volatile
     protected var currentThread: Int = 0
@@ -67,14 +67,16 @@ internal abstract class ManagedStrategyBase(
     // seed for the execution random
     private var executionRandomSeed = 0L
     // is thread suspended
-    protected val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
+    private val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // the number of blocks that should be ignored by the strategy entered and not left for each thread
-    protected val ignoredSectionDepth = IntArray(nThreads) { 0 }
+    private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // current actor id for each thread
     protected val currentActorId = IntArray(nThreads)
     // InvocationResult that was observed by the strategy in the execution (e.g. deadlock)
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
+    private val callStackTrace: Array<MutableList<CallStackTraceElement>> = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+    private var methodIdentifier = 0
 
     @Throws(Exception::class)
     abstract override fun runImpl(): LincheckFailure?
@@ -187,6 +189,16 @@ internal abstract class ManagedStrategyBase(
     override fun leaveIgnoredSection(threadId: Int) {
         if (threadId < nThreads)
             ignoredSectionDepth[threadId]--
+    }
+
+    override fun beforeMethodCall(threadId: Int, methodName: String, codeLocation: Int) {
+        if (threadId < nThreads)
+            callStackTrace[threadId].add(CallStackTraceElement(methodName, getLocationDescription(codeLocation), methodIdentifier++))
+    }
+
+    override fun afterMethodCall(threadId: Int) {
+        if (threadId < nThreads)
+            callStackTrace[threadId].removeAt(callStackTrace[threadId].lastIndex)
     }
 
     /**
@@ -378,9 +390,9 @@ internal abstract class ManagedStrategyBase(
         fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
             val actorId = currentActorId[threadId]
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
-                interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason))
+                interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason, callStackTrace[threadId].toList()))
             } else
-                interleavingEvents.add(SuspendSwitchEvent(threadId, actorId))
+                interleavingEvents.add(SuspendSwitchEvent(threadId, actorId, callStackTrace[threadId].toList()))
 
             // check livelock after every switch
             checkLiveLockHappened(interleavingEvents.size)
@@ -394,7 +406,12 @@ internal abstract class ManagedStrategyBase(
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
                 // enter ignored section, because stateRepresentation invokes transformed method with switch points
                 enterIgnoredSection(threadId)
-                interleavingEvents.add(PassCodeLocationEvent(threadId, currentActorId[threadId], getLocationDescription(codeLocation), runner.stateRepresentation))
+                interleavingEvents.add(PassCodeLocationEvent(
+                        threadId, currentActorId[threadId],
+                        getLocationDescription(codeLocation),
+                        runner.stateRepresentation,
+                        callStackTrace[threadId].toList()
+                ))
                 leaveIgnoredSection(threadId)
             }
         }

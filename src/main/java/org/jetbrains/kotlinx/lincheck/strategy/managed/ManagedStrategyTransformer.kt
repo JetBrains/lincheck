@@ -79,6 +79,7 @@ internal class ManagedStrategyTransformer(
         }
         mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -263,6 +264,23 @@ internal class ManagedStrategyTransformer(
             }
             mv.visitInsn(opcode)
         }
+    }
+
+    /**
+     * Adds strategy method invocations before and after method calls.
+     */
+    private inner class CallStackTraceLoggingTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            val isStrategyCall = isStrategyCall(owner)
+            if (!isStrategyCall)
+                invokeBeforeMethodCall(methodName)
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            if (!isStrategyCall)
+                invokeAfterMethodCall()
+        }
+
+        private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy") ||
+                                                    className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
     }
 
     /**
@@ -769,6 +787,20 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
         }
 
+        fun invokeBeforeMethodCall(methodName: String) {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.push(methodName)
+            loadNewCodeLocation()
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
+        }
+
+        fun invokeAfterMethodCall() {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
+        }
+
         fun loadStrategy() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
         }
@@ -860,6 +892,8 @@ internal class ManagedStrategyTransformer(
         private val AFTER_UNPARK_METHOD = Method.getMethod(ManagedStrategy::afterUnpark.javaMethod)
         private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
         private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
+        private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
+        private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
         private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::newLocalObject.javaMethod)
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::deleteLocalObject.javaMethod)
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::isLocalObject.javaMethod)

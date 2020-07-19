@@ -21,17 +21,25 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+internal typealias CallStackTrace = List<CallStackTraceElement>
+
 /**
- * Stores information about events occuring during managed execution
+ * Stores information about events occurring during managed execution
  */
 sealed class InterleavingEvent(val threadId: Int, val actorId: Int)
 
-internal class SwitchEvent(threadId: Int, actorId: Int, val info: StackTraceElement, val reason: SwitchReason) : InterleavingEvent(threadId, actorId)
-internal class SuspendSwitchEvent(threadId: Int, actorId: Int) : InterleavingEvent(threadId, actorId) {
+internal class SwitchEvent(threadId: Int, actorId: Int, val info: StackTraceElement, val reason: SwitchReason, val callStackTrace: CallStackTrace) : InterleavingEvent(threadId, actorId)
+internal class SuspendSwitchEvent(threadId: Int, actorId: Int, val callStackTrace: CallStackTrace) : InterleavingEvent(threadId, actorId) {
     val reason = SwitchReason.SUSPENDED
 }
 internal class FinishEvent(threadId: Int, actorId: Int) : InterleavingEvent(threadId, actorId)
-internal class PassCodeLocationEvent(threadId: Int, actorId: Int, val codeLocation: StackTraceElement, val stateRepresentation: String?) : InterleavingEvent(threadId, actorId)
+internal class PassCodeLocationEvent(
+        threadId: Int,
+        actorId: Int,
+        val codeLocation: StackTraceElement,
+        val stateRepresentation: String?,
+        val callStackTrace: CallStackTrace
+) : InterleavingEvent(threadId, actorId)
 
 internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
@@ -42,3 +50,9 @@ internal enum class SwitchReason(private val reason: String) {
 
     override fun toString() = reason
 }
+
+/**
+ * Info about a [methodName] method call.
+ * [identifier] helps to distinguish two different calls of the same method.
+ */
+internal class CallStackTraceElement(val methodName: String, val stackTraceElement: StackTraceElement, val identifier: Int)

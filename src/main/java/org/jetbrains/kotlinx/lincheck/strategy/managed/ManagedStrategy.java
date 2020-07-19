@@ -250,7 +250,7 @@ public abstract class ManagedStrategy extends Strategy {
 
     /**
      * This method is invoked by a test thread
-     * before an ignored section start.
+     * before each ignored section start.
      * These sections are determined by Strategy.ignoredEntryPoints()
      * @param threadId number of invoking thread
      */
@@ -258,10 +258,26 @@ public abstract class ManagedStrategy extends Strategy {
 
     /**
      * This method is invoked by a test thread
-     * after an ignored section end
+     * after each ignored section end.
      * @param threadId number of invoking thread
      */
     public void leaveIgnoredSection(int threadId) {}
+
+    /**
+     * This method is invoked by a test thread
+     * before each method invocation.
+     * @param methodName method that is invoked
+     * @param codeLocation the byte-code location identifier of this invocation
+     * @param threadId number of invoking thread
+     */
+    public void beforeMethodCall(int threadId, String methodName, int codeLocation) {}
+
+    /**
+     * This method is invoked by a test thread
+     * after each method invocation.
+     * @param threadId number of invoking thread
+     */
+    public void afterMethodCall(int threadId) {}
 
     // == UTILITY METHODS
 
