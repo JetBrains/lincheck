@@ -50,7 +50,7 @@ open class ParallelThreadsRunner(
     private val timeoutInMillis: Long // for deadlock recognition
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
-    private val runnerHash = this.hashCode() // helps to distinguish this runner test threads from other test threads
+    private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = newFixedThreadPool(scenario.threads) { TestThread(it, runnerHash) }
 
     private val completions = List(scenario.threads) { threadId ->
