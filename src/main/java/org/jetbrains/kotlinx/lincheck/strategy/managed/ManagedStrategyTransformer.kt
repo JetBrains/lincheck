@@ -444,6 +444,8 @@ internal class ManagedStrategyTransformer(
             super.visitCode()
             loadSynchronizedMethodMonitorOwner()
             monitorEnter()
+            // note that invoking monitorEnter leads to unknown line number in the code location.
+            // TODO: will invoking monitorEnter after the first visitLineNumber be correct?
             visitLabel(tryLabel)
         }
 
@@ -674,7 +676,7 @@ internal class ManagedStrategyTransformer(
         private var lineNumber = 0
 
         fun invokeBeforeAtomicMethodCall(methodName: String) =
-                invokeOnSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD) { ste -> MethodCallCodeLocation(methodName, ste) }
+                invokeOnSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD, { ste -> MethodCallCodeLocation(methodName, ste) })
 
         fun invokeBeforeSharedVariableRead() = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD, ::ReadCodeLocation)
 
