@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
@@ -48,21 +48,29 @@ class ExecutionReportingTest : VerifierState() {
     @Operation
     fun operation2() {
         b++
+        treatedAsAtomic()
         uselessIncrements()
         intermediateMethod()
     }
 
-    fun intermediateMethod() {
+    private fun intermediateMethod() {
         resetFlag()
     }
 
+    private fun treatedAsAtomic() {}
+
     @Synchronized
-    fun resetFlag() {
+    private fun resetFlag() {
         canEnterForbiddenSection = true
         canEnterForbiddenSection = false
     }
 
-    fun uselessIncrements() {
+    private fun uselessIncrements() {
+        b++
+        b++
+    }
+
+    private fun ignored() {
         b++
         b++
     }
@@ -79,10 +87,17 @@ class ExecutionReportingTest : VerifierState() {
         check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
         check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)
         check("\"uselessIncrements\" at" in log) { "increments in uselessIncrements method should be compressed" }
+        check("\"treatedAsAtomic\" at" in log) { "treated as atomic methods should be reported" }
+        check("ignored" !in log) { "ignored methods should not be present in log" }
     }
 
     companion object {
-        val options = ModelCheckingOptions().actorsAfter(0).actorsBefore(0).actorsPerThread(1)
+        val options = ModelCheckingOptions()
+                .actorsAfter(0)
+                .actorsBefore(0)
+                .actorsPerThread(1)
+                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("treatedAsAtomic").treatAsAtomic())
+                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("ignored").ignore())
     }
 
     override fun extractState() = "$a $b $canEnterForbiddenSection"
