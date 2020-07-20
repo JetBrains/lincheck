@@ -36,7 +36,7 @@ internal class PassCodeLocationEvent(
         val codeLocation: StackTraceElement,
         val callStackTrace: CallStackTrace
 ) : InterleavingEvent(threadId, actorId)
-internal class StateRepresentationEvent(threadId: Int, actorId: Int, stateRepresentation: String) : InterleavingEvent(threadId, actorId)
+internal class StateRepresentationEvent(threadId: Int, actorId: Int, val stateRepresentation: String) : InterleavingEvent(threadId, actorId)
 
 internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),

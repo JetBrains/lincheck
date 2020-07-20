@@ -77,17 +77,25 @@ internal fun StringBuilder.appendExecution(
                     if (compressionPoint == callStackTrace.size) {
                         // no compression
                         execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + event.codeLocation.shorten()))
+                        val stateRepresentation = nextStateRepresentaton(interleavingEvents, eventId)
+                        if (stateRepresentation != null)
+                            execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${stateRepresentation}"))
                     } else {
-                        if (callStackTrace[compressionPoint].identifier in loggedMethodCalls)
-                            continue@eventLoop // this method call was already logged
-                        loggedMethodCalls += callStackTrace[compressionPoint].identifier
                         val call = callStackTrace[compressionPoint]
+                        val callIdentifier = call.identifier
+                        if (callIdentifier in loggedMethodCalls)
+                            continue@eventLoop // this method call was already logged
+                        loggedMethodCalls += callIdentifier
                         execution.add(InterleavingEventRepresentation(
                                 threadId,
                                 EXECUTION_INDENTATION + "\"${call.methodName}\" at " + call.codeLocation.shorten()
                         ))
+                        val stateRepresentation = lastCompressedStateRepresentation(interleavingEvents, eventId, callIdentifier, interestingEvents[threadId][actorId])
                     }
                 }
+            }
+            is StateRepresentationEvent -> {
+                // state representation event are logged immediately after pass code location events instead
             }
         }
     }
@@ -188,3 +196,28 @@ private fun getActorRepresentation(threadId: Int, actorId: Int, scenario: Execut
 
 private fun isInterestingActor(threadId: Int, actorId: Int, interestingEvents: Array<Array<List<CallStackTrace>>>) =
         interestingEvents[threadId][actorId].isNotEmpty()
+
+private fun nextStateRepresentaton(interleavingEvents: List<InterleavingEvent>, previousEventPosition: Int): String? {
+    if (previousEventPosition + 1 >= interleavingEvents.size) return null
+    val nextEvent = interleavingEvents[previousEventPosition + 1]
+    if (nextEvent is StateRepresentationEvent)
+        return nextEvent.stateRepresentation
+    return null
+}
+
+private fun lastCompressedStateRepresentation(interleavingEvents: List<InterleavingEvent>, startPosition: Int, callIdentifier: Int, interestingEvents: List<CallStackTrace>): String? {
+    var lastStateRepresentation: String? = null
+    loop@for (i in startPosition until interleavingEvents.size) {
+        val event = interleavingEvents[i]
+        when (event) {
+            is PassCodeLocationEvent -> {
+                val compressionPoint = event.callStackTrace.calculateCompressionPoint(interestingEvents)
+                if (compressionPoint == event.callStackTrace.size || event.callStackTrace[compressionPoint].identifier != callIdentifier)
+                    break@loop // compressed method ended
+            }
+            is StateRepresentationEvent -> lastStateRepresentation = event.stateRepresentation
+            else -> break@loop
+        }
+    }
+    return lastStateRepresentation
+}
