@@ -112,8 +112,7 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun beforeLockAcquire(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
-        if (threadId == nThreads) return true
-
+        if (!isTestThread(threadId)) return true
         checkCanHaveObstruction { "At least obstruction freedom required, but a lock found" }
         newSwitchPoint(threadId, codeLocation)
         // check if can acquire required monitor
@@ -129,13 +128,13 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun beforeLockRelease(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
-        if (threadId == nThreads) return true
+        if (!isTestThread(threadId)) return true
         monitorTracker.releaseMonitor(monitor)
         return false
     }
 
     override fun beforePark(threadId: Int, codeLocation: Int, withTimeout: Boolean): Boolean {
-        if (threadId == nThreads) return true
+        if (!isTestThread(threadId)) return true
         newSwitchPoint(threadId, codeLocation)
         return false
     }
@@ -143,7 +142,7 @@ internal abstract class ManagedStrategyBase(
     override fun afterUnpark(threadId: Int, codeLocation: Int, thread: Any) {}
 
     override fun beforeWait(threadId: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
-        if (threadId == nThreads) return true
+        if (!isTestThread(threadId)) return true
 
         checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
         newSwitchPoint(threadId, codeLocation)
@@ -182,29 +181,32 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun enterIgnoredSection(threadId: Int) {
-        if (threadId < nThreads)
+        if (isTestThread(threadId))
             ignoredSectionDepth[threadId]++
     }
 
     override fun leaveIgnoredSection(threadId: Int) {
-        if (threadId < nThreads)
+        if (isTestThread(threadId))
             ignoredSectionDepth[threadId]--
     }
 
     override fun beforeMethodCall(threadId: Int, methodName: String, codeLocation: Int) {
-        if (threadId < nThreads)
+        if (isTestThread(threadId))
             callStackTrace[threadId].add(CallStackTraceElement(methodName, getLocationDescription(codeLocation), methodIdentifier++))
     }
 
     override fun afterMethodCall(threadId: Int) {
-        if (threadId < nThreads)
+        if (isTestThread(threadId))
             callStackTrace[threadId].removeAt(callStackTrace[threadId].lastIndex)
     }
 
     override fun makeStateRepresentation(threadId: Int) {
-        if (threadId < nThreads)
+        if (isTestThread(threadId) && !shouldBeIgnored(threadId))
             eventCollector.makeStateRepresentation(threadId)
     }
+
+    private fun isTestThread(threadId: Int) = threadId < nThreads
+    private fun shouldBeIgnored(threadId: Int) = ignoredSectionDepth[threadId] > 0
 
     /**
      * Create a new switch point, where a thread context switch can occur
@@ -419,7 +421,7 @@ internal abstract class ManagedStrategyBase(
             enterIgnoredSection(threadId)
             val stateRepresentation = runner.stateRepresentation
             leaveIgnoredSection(threadId)
-            interleavingEvents.add(StateRepresentationEvent(threadId, currentActorId[threadId], runner.stateRepresentation))
+            interleavingEvents.add(StateRepresentationEvent(threadId, currentActorId[threadId], stateRepresentation))
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents

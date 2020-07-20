@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
+import kotlin.math.min
 
 private val EXECUTION_INDENTATION = "  "
 
@@ -49,9 +50,9 @@ internal fun StringBuilder.appendExecution(
         val threadId = event.threadId
         val actorId = event.actorId
         // print all actors that started since the last event
-        while (lastLoggedActor[threadId] < actorId) {
+        while (lastLoggedActor[threadId] < min(actorId, scenario.parallelExecution[threadId].size)) {
             val lastActor = lastLoggedActor[threadId]
-            if (isInterestingActor(threadId, lastActor, interestingEvents) && results != null)
+            if (lastActor >= 0 && isInterestingActor(threadId, lastActor, interestingEvents) && results != null)
                 execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "result: ${results.parallelResults[threadId][lastActor]}"))
             val nextActor = ++lastLoggedActor[threadId]
             if (nextActor != scenario.parallelExecution[threadId].size) {
@@ -91,6 +92,8 @@ internal fun StringBuilder.appendExecution(
                                 EXECUTION_INDENTATION + "\"${call.methodName}\" at " + call.codeLocation.shorten()
                         ))
                         val stateRepresentation = lastCompressedStateRepresentation(interleavingEvents, eventId, callIdentifier, interestingEvents[threadId][actorId])
+                        if (stateRepresentation != null)
+                            execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${stateRepresentation}"))
                     }
                 }
             }
@@ -190,7 +193,7 @@ private fun CallStackTrace.calculateCompressionPoint(interestingEvents: List<Cal
 private fun getActorRepresentation(threadId: Int, actorId: Int, scenario: ExecutionScenario, results: ExecutionResult?, isInteresting: Boolean) =
         StringBuilder().apply {
     append(scenario.parallelExecution[threadId][actorId].toString())
-    if (results != null && isInteresting)
+    if (results != null && !isInteresting)
         append(": ${results.parallelResults[threadId][actorId]}")
 }.toString()
 

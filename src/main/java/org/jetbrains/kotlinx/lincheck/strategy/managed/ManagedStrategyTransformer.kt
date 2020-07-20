@@ -287,7 +287,7 @@ internal class ManagedStrategyTransformer(
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             val isStrategyCall = isStrategyCall(owner)
             if (!isStrategyCall)
-                invokeBeforeMethodCall(methodName)
+                invokeBeforeMethodCall(name)
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             if (!isStrategyCall)
                 invokeAfterMethodCall()
