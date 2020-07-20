@@ -53,7 +53,7 @@ public abstract class ManagedStrategy extends Strategy {
         nThreads = scenario.parallelExecution.size();
         this.guarantees = guarantees;
         this.shouldMakeStateRepresentation = stateRepresentation != null;
-        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, true) {
             @Override
             public void onStart(int threadId) {
                 super.onStart(threadId);

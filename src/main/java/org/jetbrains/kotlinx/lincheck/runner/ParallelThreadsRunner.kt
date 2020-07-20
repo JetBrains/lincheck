@@ -47,7 +47,8 @@ internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
-    private val stateRepresentation: Method?
+    private val stateRepresentation: Method?,
+    private val useClocks: Boolean? = null
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val executor = newFixedThreadPool(scenario.threads, ParallelThreadsRunner::TestThread)
@@ -121,7 +122,7 @@ internal open class ParallelThreadsRunner(
 
     private fun reset() {
         testInstance = testClass.newInstance()
-        val useClocks = Random.nextBoolean()
+        val useClocks = useClocks ?: Random.nextBoolean()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
             val threads = scenario.threads
