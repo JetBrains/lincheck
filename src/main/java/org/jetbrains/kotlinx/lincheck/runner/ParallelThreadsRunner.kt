@@ -47,7 +47,7 @@ open class ParallelThreadsRunner(
     testClass: Class<*>,
     validationFunctions: List<Method>,
     waits: List<IntArray>?,
-    private val timeoutInMillis: Long // for deadlock recognition
+    private val timeoutMs: Long // for deadlock recognition
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
@@ -210,7 +210,7 @@ open class ParallelThreadsRunner(
         }
         testThreadExecutions.map { executor.submit(it) }.forEach { future ->
             try {
-                future.get(timeoutInMillis, TimeUnit.MILLISECONDS)
+                future.get(timeoutMs, TimeUnit.MILLISECONDS)
             } catch (e: TimeoutException) {
                 val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
                 return DeadlockInvocationResult(threadDump)

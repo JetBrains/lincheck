@@ -157,8 +157,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Internal, DO NOT USE.
      */
-    internal fun invocationTimeout(timeoutInMillis: Long): OPT = applyAndCast {
-        this.timeoutMs = timeoutInMillis
+    internal fun invocationTimeout(timeoutMs: Long): OPT = applyAndCast {
+        this.timeoutMs = timeoutMs
     }
 
     companion object {
