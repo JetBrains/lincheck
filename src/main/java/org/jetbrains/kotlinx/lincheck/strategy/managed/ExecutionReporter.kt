@@ -67,9 +67,6 @@ internal fun StringBuilder.appendExecution(
                 val reason = if (event.reason.toString().isEmpty()) "" else " (reason: ${event.reason})"
                 execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "switch" + reason))
             }
-            is SuspendSwitchEvent -> {
-                execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "switch (reason: ${event.reason})"))
-            }
             is FinishEvent -> {
                 execution.add(InterleavingEventRepresentation(threadId,  EXECUTION_INDENTATION + "thread is finished"))
             }
@@ -90,9 +87,6 @@ internal fun StringBuilder.appendExecution(
                                 EXECUTION_INDENTATION + "\"${call.methodName}\" at " + call.codeLocation.shorten()
                         ))
                     }
-                    if (event.stateRepresentation != null)
-                        execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${event.stateRepresentation}"))
-
                 }
             }
         }
@@ -142,13 +136,10 @@ private fun interestingEventStackTraces(
         interestingCallStackTraces.addAll(
                 eventsInThread.filter { it.actorId == actorId}.filterIsInstance(SwitchEvent::class.java).map { it.callStackTrace }
         )
-        interestingCallStackTraces.addAll(
-                eventsInThread.filter { it.actorId == actorId}.filterIsInstance(SuspendSwitchEvent::class.java).map { it.callStackTrace }
-        )
 
         // last pass code location can also be interesting in case of incomplete execution
         if (actorId == lastExecutedActors[threadId]) {
-            when (val lastEvent = eventsInThread.lastOrNull()) {
+            when (val lastEvent = eventsInThread.lastOrNull { it !is StateRepresentationEvent }) {
                 is PassCodeLocationEvent -> interestingCallStackTraces.add(lastEvent.callStackTrace)
                 else -> {}
             }

@@ -42,7 +42,8 @@ import kotlin.reflect.jvm.javaMethod
 internal class ManagedStrategyTransformer(
         cv: ClassVisitor?,
         val codeLocations: MutableList<StackTraceElement>,
-        private val guarantees: List<ManagedGuarantee>
+        private val guarantees: List<ManagedGuarantee>,
+        private val shouldMakeStateRepresentation: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -128,6 +129,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
+            var isWrite = false
             if (!isFinalField(owner, name)) {
                 when (opcode) {
                     GETSTATIC -> invokeBeforeSharedVariableRead()
@@ -140,7 +142,10 @@ internal class ManagedStrategyTransformer(
                         invokeBeforeSharedVariableRead()
                         visitLabel(skipCodeLocation)
                     }
-                    PUTSTATIC -> invokeBeforeSharedVariableWrite()
+                    PUTSTATIC -> {
+                        invokeBeforeSharedVariableWrite()
+                        isWrite = true
+                    }
                     PUTFIELD -> {
                         val skipCodeLocation = newLabel()
                         dupOwnerOnPutField(desc)
@@ -149,13 +154,17 @@ internal class ManagedStrategyTransformer(
                         // add strategy invocation only if is not a local object
                         invokeBeforeSharedVariableWrite()
                         visitLabel(skipCodeLocation)
+                        isWrite = true
                     }
                 }
             }
             super.visitFieldInsn(opcode, owner, name, desc)
+            if (isWrite)
+                invokeToMakeStateRepresentation()
         }
 
         override fun visitInsn(opcode: Int) = adapter.run {
+            var isWrite = false
             when (opcode) {
                 AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
                     val skipCodeLocation = adapter.newLabel()
@@ -175,9 +184,12 @@ internal class ManagedStrategyTransformer(
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableWrite()
                     visitLabel(skipCodeLocation)
+                    isWrite = true
                 }
             }
             super.visitInsn(opcode)
+            if (isWrite)
+                invokeToMakeStateRepresentation()
         }
 
         // STACK: array, index, value -> array, index, value, arr
@@ -228,8 +240,10 @@ internal class ManagedStrategyTransformer(
             if (guaranteeType != null)
                 invokeBeforeIgnoredSectionEntering()
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-            if (guaranteeType != null)
+            if (guaranteeType != null) {
                 invokeAfterIgnoredSectionLeaving()
+                invokeToMakeStateRepresentation()
+            }
         }
 
         /**
@@ -801,6 +815,14 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
         }
 
+        fun invokeToMakeStateRepresentation() {
+            if (shouldMakeStateRepresentation) {
+                loadStrategy()
+                loadCurrentThreadNumber()
+                adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, MAKE_STATE_REPRESENTATION_METHOD)
+            }
+        }
+
         fun loadStrategy() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
         }
@@ -876,7 +898,6 @@ internal class ManagedStrategyTransformer(
         private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
         private val LOCAL_OBJECT_MANAGER_TYPE = Type.getType(LocalObjectManager::class.java)
         private val RANDOM_TYPE = Type.getType(Random::class.java)
-        private val UNSAFE_TYPE = Type.getType(Unsafe::class.java)
         private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
@@ -894,6 +915,7 @@ internal class ManagedStrategyTransformer(
         private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
         private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
         private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
+        private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::makeStateRepresentation.javaMethod)
         private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::newLocalObject.javaMethod)
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::deleteLocalObject.javaMethod)
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::isLocalObject.javaMethod)

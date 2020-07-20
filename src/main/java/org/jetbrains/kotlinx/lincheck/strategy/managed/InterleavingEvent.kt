@@ -28,18 +28,15 @@ internal typealias CallStackTrace = List<CallStackTraceElement>
  */
 sealed class InterleavingEvent(val threadId: Int, val actorId: Int)
 
-internal class SwitchEvent(threadId: Int, actorId: Int, val info: StackTraceElement, val reason: SwitchReason, val callStackTrace: CallStackTrace) : InterleavingEvent(threadId, actorId)
-internal class SuspendSwitchEvent(threadId: Int, actorId: Int, val callStackTrace: CallStackTrace) : InterleavingEvent(threadId, actorId) {
-    val reason = SwitchReason.SUSPENDED
-}
-internal class FinishEvent(threadId: Int, actorId: Int) : InterleavingEvent(threadId, actorId)
+internal class SwitchEvent(threadId: Int, actorId: Int, val reason: SwitchReason, val callStackTrace: CallStackTrace) : InterleavingEvent(threadId, actorId)
+internal class FinishEvent(threadId: Int) : InterleavingEvent(threadId, Int.MAX_VALUE)
 internal class PassCodeLocationEvent(
         threadId: Int,
         actorId: Int,
         val codeLocation: StackTraceElement,
-        val stateRepresentation: String?,
         val callStackTrace: CallStackTrace
 ) : InterleavingEvent(threadId, actorId)
+internal class StateRepresentationEvent(threadId: Int, actorId: Int, stateRepresentation: String) : InterleavingEvent(threadId, actorId)
 
 internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),

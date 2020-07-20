@@ -45,12 +45,14 @@ public abstract class ManagedStrategy extends Strategy {
     protected final Runner runner;
     private ManagedStrategyTransformer transformer;
     private final List<ManagedGuarantee> guarantees;
+    private final boolean shouldMakeStateRepresentation;
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
                               Method stateRepresentation, List<ManagedGuarantee> guarantees) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
         this.guarantees = guarantees;
+        this.shouldMakeStateRepresentation = stateRepresentation != null;
         runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation) {
             @Override
             public void onStart(int threadId) {
@@ -93,7 +95,7 @@ public abstract class ManagedStrategy extends Strategy {
         } else {
             previousCodeLocations = transformer.getCodeLocations();
         }
-        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations, guarantees);
+        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations, guarantees, shouldMakeStateRepresentation);
     }
 
     @Override
@@ -278,6 +280,14 @@ public abstract class ManagedStrategy extends Strategy {
      * @param threadId number of invoking thread
      */
     public void afterMethodCall(int threadId) {}
+
+
+    /**
+     * This method is invoked by a test thread
+     * after each write or atomic method invocation
+     * @param threadId
+     */
+    public void makeStateRepresentation(int threadId) {}
 
     // == UTILITY METHODS
 

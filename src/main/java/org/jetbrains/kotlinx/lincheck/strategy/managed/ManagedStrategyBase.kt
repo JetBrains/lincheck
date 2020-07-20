@@ -120,7 +120,7 @@ internal abstract class ManagedStrategyBase(
         if (!monitorTracker.canAcquireMonitor(monitor)) {
             monitorTracker.awaitAcquiringMonitor(threadId, monitor)
             // switch to another thread and wait for a moment the monitor can be acquired
-            switchCurrentThread(threadId, codeLocation, SwitchReason.LOCK_WAIT, true)
+            switchCurrentThread(threadId, SwitchReason.LOCK_WAIT, true)
         }
         // can acquire monitor now. actually does it
         monitorTracker.acquireMonitor(threadId, monitor)
@@ -150,7 +150,7 @@ internal abstract class ManagedStrategyBase(
         if (withTimeout) return false // timeouts occur instantly
         monitorTracker.waitMonitor(threadId, monitor)
         // switch to another thread and wait till a notify event happens
-        switchCurrentThread(threadId, codeLocation, SwitchReason.MONITOR_WAIT, true)
+        switchCurrentThread(threadId, SwitchReason.MONITOR_WAIT, true)
         return false
     }
 
@@ -172,7 +172,7 @@ internal abstract class ManagedStrategyBase(
         } else {
             // currently a coroutine suspension  is not supposed to violate obstruction-freedom
             // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
-            switchCurrentThread(threadId, COROUTINE_SUSPENSION_CODE_LOCATION, SwitchReason.SUSPENDED, true)
+            switchCurrentThread(threadId, SwitchReason.SUSPENDED, true)
         }
     }
 
@@ -201,6 +201,11 @@ internal abstract class ManagedStrategyBase(
             callStackTrace[threadId].removeAt(callStackTrace[threadId].lastIndex)
     }
 
+    override fun makeStateRepresentation(threadId: Int) {
+        if (threadId < nThreads)
+            eventCollector.makeStateRepresentation(threadId)
+    }
+
     /**
      * Create a new switch point, where a thread context switch can occur
      */
@@ -217,7 +222,7 @@ internal abstract class ManagedStrategyBase(
         val shouldSwitch = shouldSwitch(threadId) or isLoop
         if (shouldSwitch) {
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
-            switchCurrentThread(threadId, codeLocation, reason)
+            switchCurrentThread(threadId, reason)
         }
         eventCollector.passCodeLocation(threadId, codeLocation)
         // continue operation
@@ -231,8 +236,8 @@ internal abstract class ManagedStrategyBase(
     /**
      * A regular switch on another thread
      */
-    protected fun switchCurrentThread(threadId: Int, codeLocation: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
-        eventCollector.newSwitch(threadId, codeLocation, reason)
+    protected fun switchCurrentThread(threadId: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+        eventCollector.newSwitch(threadId, reason)
         onNewSwitch(threadId)
         doSwitchCurrentThread(threadId, mustSwitch)
         awaitTurn(threadId)
@@ -387,33 +392,34 @@ internal abstract class ManagedStrategyBase(
     private inner class ExecutionEventCollector {
         private val interleavingEvents = mutableListOf<InterleavingEvent>()
 
-        fun newSwitch(threadId: Int, codeLocation: Int, reason: SwitchReason) {
-            val actorId = currentActorId[threadId]
-            if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
-                interleavingEvents.add(SwitchEvent(threadId, actorId, getLocationDescription(codeLocation), reason, callStackTrace[threadId].toList()))
-            } else
-                interleavingEvents.add(SuspendSwitchEvent(threadId, actorId, callStackTrace[threadId].toList()))
-
+        fun newSwitch(threadId: Int, reason: SwitchReason) {
+            interleavingEvents.add(SwitchEvent(threadId, currentActorId[threadId], reason, callStackTrace[threadId].toList()))
             // check livelock after every switch
             checkLiveLockHappened(interleavingEvents.size)
         }
 
         fun finishThread(threadId: Int) {
-            interleavingEvents.add(FinishEvent(threadId, parallelActors[threadId].size))
+            interleavingEvents.add(FinishEvent(threadId))
         }
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
-                // enter ignored section, because stateRepresentation invokes transformed method with switch points
                 enterIgnoredSection(threadId)
                 interleavingEvents.add(PassCodeLocationEvent(
                         threadId, currentActorId[threadId],
                         getLocationDescription(codeLocation),
-                        runner.stateRepresentation,
                         callStackTrace[threadId].toList()
                 ))
                 leaveIgnoredSection(threadId)
             }
+        }
+
+        fun makeStateRepresentation(threadId: Int) {
+            // enter ignored section, because stateRepresentation invokes transformed method with switch points
+            enterIgnoredSection(threadId)
+            val stateRepresentation = runner.stateRepresentation
+            leaveIgnoredSection(threadId)
+            interleavingEvents.add(StateRepresentationEvent(threadId, currentActorId[threadId], runner.stateRepresentation))
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
