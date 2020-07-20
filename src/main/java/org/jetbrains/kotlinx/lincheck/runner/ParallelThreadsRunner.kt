@@ -295,11 +295,7 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun getStateRepresentation(): String? {
-        try {
-            stateRepresentation?.let { return getMethod(testInstance, it).invoke(testInstance) as String }
-        } catch(e: Throwable) {
-            println(e.cause)
-        }
+        stateRepresentation?.let { return getMethod(testInstance, it).invoke(testInstance) as String }
         return null
     }
 
