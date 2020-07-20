@@ -77,7 +77,7 @@ internal fun StringBuilder.appendExecution(
                     val compressionPoint = callStackTrace.calculateCompressionPoint(interestingEvents[threadId][actorId])
                     if (compressionPoint == callStackTrace.size) {
                         // no compression
-                        execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + event.codeLocation.shorten()))
+                        execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + event.codeLocation.toString()))
                         val stateRepresentation = nextStateRepresentaton(interleavingEvents, eventId)
                         if (stateRepresentation != null)
                             execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${stateRepresentation}"))
@@ -89,7 +89,7 @@ internal fun StringBuilder.appendExecution(
                         loggedMethodCalls += callIdentifier
                         execution.add(InterleavingEventRepresentation(
                                 threadId,
-                                EXECUTION_INDENTATION + "\"${call.methodName}\" at " + call.codeLocation.shorten()
+                                EXECUTION_INDENTATION + call.codeLocation.toString()
                         ))
                         val stateRepresentation = lastCompressedStateRepresentation(interleavingEvents, eventId, callIdentifier, interestingEvents[threadId][actorId])
                         if (stateRepresentation != null)
@@ -116,22 +116,6 @@ internal fun StringBuilder.appendExecution(
 
         builder.toString()
     })
-}
-
-/**
- * Removes info about package in a stack trace element representation
- */
-private fun StackTraceElement.shorten(): String {
-    val stackTraceElement = this.toString().replace('/', '.')
-    var wasPoints = 0
-    for ((i, c) in stackTraceElement.withIndex().reversed()) {
-        if (c == '.') {
-            wasPoints++
-            if (wasPoints == 3)
-                return stackTraceElement.drop(i + 1)
-        }
-    }
-    return stackTraceElement
 }
 
 private class InterleavingEventRepresentation(val threadId: Int, val representation: String)

@@ -56,6 +56,7 @@ class ExecutionReportingTest : VerifierState() {
         resetFlag()
     }
 
+    @Synchronized
     fun resetFlag() {
         canEnterForbiddenSection = true
         canEnterForbiddenSection = false
@@ -71,9 +72,12 @@ class ExecutionReportingTest : VerifierState() {
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
-        check("resetFlag" in log)
         check("operation1" in log)
-        check("operation2" in log)
+        check("WRITE at ExecutionReportingTest.resetFlag" in log)
+        check("READ at ExecutionReportingTest.operation2" in log)
+        check("WRITE at ExecutionReportingTest.operation2" in log)
+        check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
+        check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)
         check("\"uselessIncrements\" at" in log) { "increments in uselessIncrements method should be compressed" }
     }
 

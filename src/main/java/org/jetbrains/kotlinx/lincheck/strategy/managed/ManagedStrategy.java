@@ -89,7 +89,7 @@ public abstract class ManagedStrategy extends Strategy {
 
     @Override
     public ClassVisitor createTransformer(ClassVisitor cv) {
-        List<StackTraceElement> previousCodeLocations;
+        List<CodeLocation> previousCodeLocations;
         if (transformer == null) {
             previousCodeLocations = new ArrayList<>();
         } else {
@@ -117,7 +117,7 @@ public abstract class ManagedStrategy extends Strategy {
      *
      * @param codeLocation code location identifier which is inserted by transformer
      */
-    protected final StackTraceElement getLocationDescription(int codeLocation) {
+    protected final CodeLocation getLocationDescription(int codeLocation) {
         return transformer.getCodeLocations().get(codeLocation);
     }
 
@@ -154,11 +154,19 @@ public abstract class ManagedStrategy extends Strategy {
     public void beforeSharedVariableRead(int threadId, int codeLocation) {}
 
     /**
-     * This method is executed before a shared variable write operation (including CAS).
+     * This method is executed before a shared variable write operation.
      * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      */
     public void beforeSharedVariableWrite(int threadId, int codeLocation) {}
+
+    /**
+     * This method is executed before an atomic method call.
+     * Atomic method is a method that is marked by ManagedGuarantee to be treated as atomic.
+     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param codeLocation the byte-code location identifier of this operation.
+     */
+    public void beforeAtomicMethodCall(int threadId, int codeLocation) {}
 
     /**
      *
@@ -223,14 +231,6 @@ public abstract class ManagedStrategy extends Strategy {
     public void afterNotify(int threadId, int codeLocation, Object monitor, boolean notifyAll) {}
 
     /**
-     *
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
-     * @param codeLocation the byte-code location identifier of this operation.
-     * @param iInterruptedThread
-     */
-    public void afterThreadInterrupt(int threadId, int codeLocation, int iInterruptedThread) {}
-
-    /**
      * This method is invoked by a test thread
      * if a coroutine was suspended
      * @param threadId number of invoking thread
@@ -268,11 +268,10 @@ public abstract class ManagedStrategy extends Strategy {
     /**
      * This method is invoked by a test thread
      * before each method invocation.
-     * @param methodName method that is invoked
      * @param codeLocation the byte-code location identifier of this invocation
      * @param threadId number of invoking thread
      */
-    public void beforeMethodCall(int threadId, String methodName, int codeLocation) {}
+    public void beforeMethodCall(int threadId, int codeLocation) {}
 
     /**
      * This method is invoked by a test thread

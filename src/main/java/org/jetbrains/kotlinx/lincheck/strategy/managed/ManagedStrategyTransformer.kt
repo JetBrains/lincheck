@@ -28,7 +28,6 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.*
-import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
@@ -41,7 +40,7 @@ import kotlin.reflect.jvm.javaMethod
  */
 internal class ManagedStrategyTransformer(
         cv: ClassVisitor?,
-        val codeLocations: MutableList<StackTraceElement>,
+        val codeLocations: MutableList<CodeLocation>,
         private val guarantees: List<ManagedGuarantee>,
         private val shouldMakeStateRepresentation: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
@@ -236,7 +235,7 @@ internal class ManagedStrategyTransformer(
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             val guaranteeType = classifyGuaranteeType(owner, name)
             if (guaranteeType == ManagedGuaranteeType.TREAT_AS_ATOMIC)
-                invokeBeforeSharedVariableWrite() // treat as write
+                invokeBeforeAtomicMethodCall(name)
             if (guaranteeType != null)
                 invokeBeforeIgnoredSectionEntering()
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -673,35 +672,38 @@ internal class ManagedStrategyTransformer(
 
     private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         private var lineNumber = 0
-        
-        fun invokeBeforeSharedVariableRead() = invokeOnSharedVariableAccess(BEFORE_SHARED_VARIABLE_READ_METHOD)
 
-        fun invokeBeforeSharedVariableWrite() = invokeOnSharedVariableAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD)
+        fun invokeBeforeAtomicMethodCall(methodName: String) =
+                invokeOnSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD) { ste -> MethodCallCodeLocation(methodName, ste) }
 
-        private fun invokeOnSharedVariableAccess(method: Method) {
+        fun invokeBeforeSharedVariableRead() = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD, ::ReadCodeLocation)
+
+        fun invokeBeforeSharedVariableWrite() = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD, ::WriteCodeLocation)
+
+        private fun invokeOnSharedMemoryAccess(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation()
+            loadNewCodeLocation(codeLocationConstructor)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
 
         // STACK: monitor
         fun invokeBeforeWait(withTimeout: Boolean) {
-            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout)
+            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitCodeLocation)
         }
 
         // STACK: monitor
         fun invokeAfterNotify(notifyAll: Boolean) {
-            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll)
+            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyCodeLocation)
         }
 
         // STACK: monitor
-        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean) {
+        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation()
+            loadNewCodeLocation(codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.push(flag)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
@@ -713,7 +715,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation()
+            loadNewCodeLocation(::ParkCodeLocation)
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
         }
@@ -724,28 +726,28 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(threadLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation()
+            loadNewCodeLocation(::UnparkCodeLocation)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
         }
 
         // STACK: monitor
         fun invokeBeforeLockAcquire() {
-            invokeOnLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD)
+            invokeOnLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterCodeLocation)
         }
 
         // STACK: monitor
         fun invokeBeforeLockRelease() {
-            invokeOnLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD)
+            invokeOnLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitCodeLocation)
         }
 
         // STACK: monitor
-        private fun invokeOnLockAcquireOrRelease(method: Method) {
+        private fun invokeOnLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation()
+            loadNewCodeLocation(codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
@@ -804,8 +806,7 @@ internal class ManagedStrategyTransformer(
         fun invokeBeforeMethodCall(methodName: String) {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(methodName)
-            loadNewCodeLocation()
+            loadNewCodeLocation { ste -> MethodCallCodeLocation(methodName, ste) }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
         }
 
@@ -836,9 +837,9 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD)
         }
 
-        fun loadNewCodeLocation() {
+        fun loadNewCodeLocation(codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             val codeLocation = codeLocations.size
-            codeLocations.add(StackTraceElement(className, methodName, fileName, lineNumber))
+            codeLocations.add(codeLocationConstructor(StackTraceElement(className, methodName, fileName, lineNumber)))
             adapter.push(codeLocation)
         }
 
@@ -916,6 +917,7 @@ internal class ManagedStrategyTransformer(
         private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
         private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
         private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::makeStateRepresentation.javaMethod)
+        private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
         private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::newLocalObject.javaMethod)
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::deleteLocalObject.javaMethod)
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::isLocalObject.javaMethod)

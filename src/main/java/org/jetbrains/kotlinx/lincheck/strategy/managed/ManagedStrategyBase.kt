@@ -111,6 +111,10 @@ internal abstract class ManagedStrategyBase(
         newSwitchPoint(threadId, codeLocation)
     }
 
+    override fun beforeAtomicMethodCall(threadId: Int, codeLocation: Int) {
+        newSwitchPoint(threadId, codeLocation)
+    }
+
     override fun beforeLockAcquire(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(threadId)) return true
         checkCanHaveObstruction { "At least obstruction freedom required, but a lock found" }
@@ -130,6 +134,7 @@ internal abstract class ManagedStrategyBase(
     override fun beforeLockRelease(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(threadId)) return true
         monitorTracker.releaseMonitor(monitor)
+        eventCollector.passCodeLocation(threadId, codeLocation)
         return false
     }
 
@@ -139,7 +144,9 @@ internal abstract class ManagedStrategyBase(
         return false
     }
 
-    override fun afterUnpark(threadId: Int, codeLocation: Int, thread: Any) {}
+    override fun afterUnpark(threadId: Int, codeLocation: Int, thread: Any) {
+        eventCollector.passCodeLocation(threadId, codeLocation)
+    }
 
     override fun beforeWait(threadId: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(threadId)) return true
@@ -158,9 +165,8 @@ internal abstract class ManagedStrategyBase(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
+        eventCollector.passCodeLocation(threadId, codeLocation)
     }
-
-    override fun afterThreadInterrupt(threadId: Int, codeLocation: Int, interruptedThread: Int) {}
 
     override fun afterCoroutineSuspended(threadId: Int) {
         check(currentThread == threadId)
@@ -190,9 +196,9 @@ internal abstract class ManagedStrategyBase(
             ignoredSectionDepth[threadId]--
     }
 
-    override fun beforeMethodCall(threadId: Int, methodName: String, codeLocation: Int) {
+    override fun beforeMethodCall(threadId: Int, codeLocation: Int) {
         if (isTestThread(threadId))
-            callStackTrace[threadId].add(CallStackTraceElement(methodName, getLocationDescription(codeLocation), methodIdentifier++))
+            callStackTrace[threadId].add(CallStackTraceElement(getLocationDescription(codeLocation), methodIdentifier++))
     }
 
     override fun afterMethodCall(threadId: Int) {
