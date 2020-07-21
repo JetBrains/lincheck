@@ -131,18 +131,18 @@ internal class ManagedStrategyTransformer(
             var isWrite = false
             if (!isFinalField(owner, name)) {
                 when (opcode) {
-                    GETSTATIC -> invokeBeforeSharedVariableRead()
+                    GETSTATIC -> invokeBeforeSharedVariableRead(name)
                     GETFIELD -> {
                         val skipCodeLocation = newLabel()
                         dup()
                         invokeOnLocalObjectCheck()
                         ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
                         // add strategy invocation only if is not a local object
-                        invokeBeforeSharedVariableRead()
+                        invokeBeforeSharedVariableRead(name)
                         visitLabel(skipCodeLocation)
                     }
                     PUTSTATIC -> {
-                        invokeBeforeSharedVariableWrite()
+                        invokeBeforeSharedVariableWrite(name)
                         isWrite = true
                     }
                     PUTFIELD -> {
@@ -151,7 +151,7 @@ internal class ManagedStrategyTransformer(
                         invokeOnLocalObjectCheck()
                         ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
                         // add strategy invocation only if is not a local object
-                        invokeBeforeSharedVariableWrite()
+                        invokeBeforeSharedVariableWrite(name)
                         visitLabel(skipCodeLocation)
                         isWrite = true
                     }
@@ -676,11 +676,11 @@ internal class ManagedStrategyTransformer(
         private var lineNumber = 0
 
         fun invokeBeforeAtomicMethodCall(methodName: String) =
-                invokeOnSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD, { ste -> MethodCallCodeLocation(methodName, ste) })
+                invokeOnSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD) { ste -> MethodCallCodeLocation(methodName, ste) }
 
-        fun invokeBeforeSharedVariableRead() = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD, ::ReadCodeLocation)
+        fun invokeBeforeSharedVariableRead(fieldName: String? = null) = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
 
-        fun invokeBeforeSharedVariableWrite() = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD, ::WriteCodeLocation)
+        fun invokeBeforeSharedVariableWrite(fieldName: String? = null) = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
 
         private fun invokeOnSharedMemoryAccess(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             loadStrategy()

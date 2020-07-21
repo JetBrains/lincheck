@@ -81,9 +81,9 @@ class ExecutionReportingTest : VerifierState() {
         check(failure != null) { "test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("operation1" in log)
-        check("WRITE at ExecutionReportingTest.resetFlag" in log)
-        check("READ at ExecutionReportingTest.operation2" in log)
-        check("WRITE at ExecutionReportingTest.operation2" in log)
+        check("canEnterForbiddenSection.WRITE at ExecutionReportingTest.resetFlag" in log)
+        check("b.READ at ExecutionReportingTest.operation2" in log)
+        check("b.WRITE at ExecutionReportingTest.operation2" in log)
         check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
         check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)
         check("\"uselessIncrements\" at" in log) { "increments in uselessIncrements method should be compressed" }

@@ -26,12 +26,12 @@ internal sealed class CodeLocation {
     override fun toString(): String = toStringImpl()
 }
 
-internal class ReadCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    override fun toStringImpl(): String = "READ at " + stackTraceElement.shorten()
+internal class ReadCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
+    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "READ at " + stackTraceElement.shorten()
 }
 
-internal class WriteCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    override fun toStringImpl(): String = "WRITE at " + stackTraceElement.shorten()
+internal class WriteCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
+    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "WRITE at " + stackTraceElement.shorten()
 }
 
 internal class MethodCallCodeLocation(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodeLocation() {
