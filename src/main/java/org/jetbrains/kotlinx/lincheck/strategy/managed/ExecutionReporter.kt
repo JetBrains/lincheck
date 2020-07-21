@@ -160,7 +160,7 @@ private fun splitToColumns(nThreads: Int, execution: List<InterleavingEventRepre
 
 private fun CallStackTrace.firstDifferPosition(callStackTrace: CallStackTrace): Int {
     for (position in indices)
-        if (this[position].identifier != callStackTrace[position].identifier)
+        if (position >= callStackTrace.size || this[position].identifier != callStackTrace[position].identifier)
             return position
     return size
 }
