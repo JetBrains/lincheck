@@ -58,8 +58,14 @@ internal fun StringBuilder.appendExecution(
             if (nextActor != scenario.parallelExecution[threadId].size) {
                 // print actor
                 // if it is not interesting then print with the result in the same line
-                val actorRepresentation = getActorRepresentation(threadId, nextActor, scenario, results, isInterestingActor(threadId, nextActor, interestingEvents))
+                val isInterestingActor = isInterestingActor(threadId, nextActor, interestingEvents)
+                val actorRepresentation = getActorRepresentation(threadId, nextActor, scenario, results, isInterestingActor)
                 execution.add(InterleavingEventRepresentation(threadId, actorRepresentation))
+                if (!isInterestingActor) {
+                    val stateRepresentation = lastStateRepresentation(threadId, actorId, interleavingEvents, eventId)
+                    if (stateRepresentation != null)
+                        execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
+                }
             }
         }
         // print the event itself
@@ -80,7 +86,7 @@ internal fun StringBuilder.appendExecution(
                         execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + event.codeLocation.toString()))
                         val stateRepresentation = nextStateRepresentaton(interleavingEvents, eventId)
                         if (stateRepresentation != null)
-                            execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${stateRepresentation}"))
+                            execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
                     } else {
                         val call = callStackTrace[compressionPoint]
                         val callIdentifier = call.identifier
@@ -93,7 +99,7 @@ internal fun StringBuilder.appendExecution(
                         ))
                         val stateRepresentation = lastCompressedStateRepresentation(interleavingEvents, eventId, callIdentifier, interestingEvents[threadId][actorId])
                         if (stateRepresentation != null)
-                            execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${stateRepresentation}"))
+                            execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
                     }
                 }
             }
@@ -194,9 +200,8 @@ private fun nextStateRepresentaton(interleavingEvents: List<InterleavingEvent>, 
 
 private fun lastCompressedStateRepresentation(interleavingEvents: List<InterleavingEvent>, startPosition: Int, callIdentifier: Int, interestingEvents: List<CallStackTrace>): String? {
     var lastStateRepresentation: String? = null
-    loop@for (i in startPosition until interleavingEvents.size) {
-        val event = interleavingEvents[i]
-        when (event) {
+    loop@for (position in startPosition until interleavingEvents.size) {
+        when (val event = interleavingEvents[position]) {
             is PassCodeLocationEvent -> {
                 val compressionPoint = event.callStackTrace.calculateCompressionPoint(interestingEvents)
                 if (compressionPoint == event.callStackTrace.size || event.callStackTrace[compressionPoint].identifier != callIdentifier)
@@ -208,3 +213,17 @@ private fun lastCompressedStateRepresentation(interleavingEvents: List<Interleav
     }
     return lastStateRepresentation
 }
+
+private fun lastStateRepresentation(threadId: Int, actorId: Int, interleavingEvents: List<InterleavingEvent>, startPosition: Int): String? {
+    var lastStateRepresentation: String? = null
+    for (position in startPosition until interleavingEvents.size) {
+        val event = interleavingEvents[position]
+        if (event.threadId != threadId || event.actorId != actorId)
+            return lastStateRepresentation
+        if (event is StateRepresentationEvent)
+            lastStateRepresentation = event.stateRepresentation
+    }
+    return lastStateRepresentation
+}
+
+private fun stateInterleavingEventRepresentation(threadId: Int, stateRepresentation: String) = InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${stateRepresentation}")
