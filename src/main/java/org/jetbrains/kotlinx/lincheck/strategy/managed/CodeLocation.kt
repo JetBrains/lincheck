@@ -31,7 +31,13 @@ internal class ReadCodeLocation(private val fieldName: String?, private val stac
 }
 
 internal class WriteCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "WRITE at " + stackTraceElement.shorten()
+    private lateinit var value: String
+
+    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "WRITE($value) at " + stackTraceElement.shorten()
+
+    fun addWrittenValue(value: Any) {
+        this.value = value.toString()
+    }
 }
 
 internal class MethodCallCodeLocation(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodeLocation() {

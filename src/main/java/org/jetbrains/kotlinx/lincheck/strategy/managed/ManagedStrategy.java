@@ -117,7 +117,7 @@ public abstract class ManagedStrategy extends Strategy {
      *
      * @param codeLocation code location identifier which is inserted by transformer
      */
-    protected final CodeLocation getLocationDescription(int codeLocation) {
+    public final CodeLocation getLocationDescription(int codeLocation) {
         return transformer.getCodeLocations().get(codeLocation);
     }
 

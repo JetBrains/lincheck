@@ -142,7 +142,7 @@ internal class ManagedStrategyTransformer(
                         visitLabel(skipCodeLocation)
                     }
                     PUTSTATIC -> {
-                        invokeBeforeSharedVariableWrite(name)
+                        invokeBeforeSharedVariableWrite(name, Type.getType(desc))
                         isWrite = true
                     }
                     PUTFIELD -> {
@@ -151,7 +151,7 @@ internal class ManagedStrategyTransformer(
                         invokeOnLocalObjectCheck()
                         ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
                         // add strategy invocation only if is not a local object
-                        invokeBeforeSharedVariableWrite(name)
+                        invokeBeforeSharedVariableWrite(name, Type.getType(desc))
                         visitLabel(skipCodeLocation)
                         isWrite = true
                     }
@@ -181,7 +181,7 @@ internal class ManagedStrategyTransformer(
                     invokeOnLocalObjectCheck()
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
                     // add strategy invocation only if is not a local object
-                    invokeBeforeSharedVariableWrite()
+                    invokeBeforeSharedVariableWrite(null, getArrayStoreType(opcode))
                     visitLabel(skipCodeLocation)
                     isWrite = true
                 }
@@ -193,17 +193,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: array, index, value -> array, index, value, arr
         private fun dupArrayOnArrayStore(opcode: Int) = adapter.run {
-            val type = when (opcode) {
-                AASTORE -> OBJECT_TYPE
-                IASTORE -> Type.INT_TYPE
-                FASTORE -> Type.FLOAT_TYPE
-                BASTORE -> Type.BOOLEAN_TYPE
-                CASTORE -> Type.CHAR_TYPE
-                SASTORE -> Type.SHORT_TYPE
-                LASTORE -> Type.LONG_TYPE
-                DASTORE -> Type.DOUBLE_TYPE
-                else -> throw IllegalStateException("Unexpected opcode: $opcode")
-            }
+            val type = getArrayStoreType(opcode)
             val value = newLocal(type)
             storeLocal(value)
             dup2() // array, index, array, index
@@ -226,6 +216,18 @@ internal class ManagedStrategyTransformer(
                 dupX2() // object, value, object
             }
         }
+
+        private fun getArrayStoreType(opcode: Int): Type = when (opcode) {
+                AASTORE -> OBJECT_TYPE
+                IASTORE -> Type.INT_TYPE
+                FASTORE -> Type.FLOAT_TYPE
+                BASTORE -> Type.BOOLEAN_TYPE
+                CASTORE -> Type.CHAR_TYPE
+                SASTORE -> Type.SHORT_TYPE
+                LASTORE -> Type.LONG_TYPE
+                DASTORE -> Type.DOUBLE_TYPE
+                else -> throw IllegalStateException("Unexpected opcode: $opcode")
+            }
     }
 
     /**
@@ -353,7 +355,10 @@ internal class ManagedStrategyTransformer(
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             if (opcode == INVOKEVIRTUAL && extendsRandom(owner.replace("/", ".")) && isRandomMethod(name, desc)) {
-                replaceOwnerWithRandom(desc)
+                val locals = adapter.storeParameters(desc)
+                adapter.pop() // pop replaced Random
+                loadRandom()
+                adapter.loadLocals(locals)
                 adapter.visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
                 return
             }
@@ -378,21 +383,6 @@ internal class ManagedStrategyTransformer(
                 val method = Method.getMethod(it)
                 method.name == methodName && method.descriptor == desc
             }
-
-        private fun replaceOwnerWithRandom(desc: String) {
-            val arguments = Type.getArgumentTypes(desc)
-            val locals = IntArray(arguments.size)
-            // store all arguments
-            for (i in arguments.indices.reversed()) {
-                locals[i] = adapter.newLocal(arguments[i])
-                adapter.storeLocal(locals[i], arguments[i])
-            }
-            adapter.pop() // remove previous owner
-            loadRandom() // new owner
-            // load all arguments
-            for (i in arguments.indices)
-                adapter.loadLocal(locals[i], arguments[i])
-        }
     }
 
     /**
@@ -680,7 +670,21 @@ internal class ManagedStrategyTransformer(
 
         fun invokeBeforeSharedVariableRead(fieldName: String? = null) = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
 
-        fun invokeBeforeSharedVariableWrite(fieldName: String? = null) = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
+        // STACK: value to be written
+        fun invokeBeforeSharedVariableWrite(fieldName: String? = null, type: Type)  {
+            val local = adapter.newLocal(type)
+            adapter.storeLocal(local)
+            adapter.loadLocal(local) // return stored value to the stack
+            invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
+            val codeLocation = codeLocations.lastIndex
+            loadStrategy()
+            adapter.push(codeLocation)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            adapter.checkCast(WRITE_CODELOCATION_TYPE)
+            adapter.loadLocal(local)
+            adapter.box(type)
+            adapter.invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
+        }
 
         private fun invokeOnSharedMemoryAccess(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             loadStrategy()
@@ -851,50 +855,6 @@ internal class ManagedStrategyTransformer(
         }
     }
 
-    /**
-     * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
-     */
-    private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
-        var ownerInternal = ownerInternal
-        if (ownerInternal.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
-            ownerInternal = ownerInternal.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
-        }
-        return try {
-            val clazz = Class.forName(ownerInternal.replace('/', '.'))
-            val fields = clazz.declaredFields
-            Arrays.stream(fields)
-                    .filter { field: Field -> field.modifiers and (Modifier.FINAL or Modifier.STATIC) == Modifier.FINAL }
-                    .collect(Collectors.toList())
-        } catch (e: ClassNotFoundException) {
-            throw RuntimeException(e)
-        }
-    }
-
-    private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
-        var internalName = ownerInternal
-        if (internalName.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
-            internalName = internalName.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
-        }
-        return try {
-            val clazz = Class.forName(internalName.replace('/', '.'))
-            findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
-        } catch (e: ClassNotFoundException) {
-            throw RuntimeException(e)
-        } catch (e: NoSuchFieldException) {
-            throw RuntimeException(e)
-        }
-    }
-
-    private fun findField(clazz: Class<*>, fieldName: String): Field {
-        var clazz: Class<*>? = clazz
-        do {
-            val fields = clazz!!.declaredFields
-            for (field in fields) if (field.name == fieldName) return field
-            clazz = clazz.superclass
-        } while (clazz != null)
-        throw NoSuchFieldException()
-    }
-
     companion object {
         private val OBJECT_TYPE = Type.getType(Any::class.java)
         private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStateHolder::class.java)
@@ -904,6 +864,7 @@ internal class ManagedStrategyTransformer(
         private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
+        private val WRITE_CODELOCATION_TYPE = Type.getType(WriteCodeLocation::class.java)
 
         private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
         private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -920,11 +881,93 @@ internal class ManagedStrategyTransformer(
         private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
         private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::makeStateRepresentation.javaMethod)
         private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
+        private val GET_CODELOCATION_DESCRIPTION_METHOD = Method.getMethod(ManagedStrategy::getLocationDescription.javaMethod)
         private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::newLocalObject.javaMethod)
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::deleteLocalObject.javaMethod)
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::isLocalObject.javaMethod)
         private val ADD_DEPENDENCY_METHOD = Method.getMethod(LocalObjectManager::addDependency.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
         private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
+        private val TO_STRING_METHOD = Method.getMethod(java.lang.Object::toString.javaMethod)
+        private val ADD_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodeLocation::addWrittenValue.javaMethod)
+
+        /**
+         * Returns array of locals containing given parameters.
+         * STACK: param_1 param_2 ... param_n
+         * RESULT STACK: (empty)
+         */
+        private fun GeneratorAdapter.storeParameters(paramTypes: Array<Type>): IntArray {
+            val locals = IntArray(paramTypes.size)
+            // store all arguments
+            for (i in paramTypes.indices.reversed()) {
+                locals[i] = newLocal(paramTypes[i])
+                storeLocal(locals[i], paramTypes[i])
+            }
+            return locals
+        }
+
+        private fun GeneratorAdapter.storeParameters(methodDescriptor: String) = storeParameters(Type.getArgumentTypes(methodDescriptor))
+
+        /**
+         * Returns array of locals containing given parameters.
+         * STACK: param_1 param_2 ... param_n
+         * RESULT STACK: param_1 param_2 ... param_n (the stack is not changed)
+         */
+        private fun GeneratorAdapter.copyParameters(paramTypes: Array<Type>): IntArray {
+            val locals = storeParameters(paramTypes)
+            loadLocals(locals)
+            return locals
+        }
+
+        private fun GeneratorAdapter.copyParameters(methodDescriptor: String) = copyParameters(Type.getArgumentTypes(methodDescriptor))
+
+        private fun GeneratorAdapter.loadLocals(locals: IntArray) {
+            for (local in locals)
+                loadLocal(local)
+        }
+
+        /**
+         * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
+         */
+        private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
+            var ownerInternal = ownerInternal
+            if (ownerInternal.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+                ownerInternal = ownerInternal.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
+            }
+            return try {
+                val clazz = Class.forName(ownerInternal.replace('/', '.'))
+                val fields = clazz.declaredFields
+                Arrays.stream(fields)
+                        .filter { field: Field -> field.modifiers and (Modifier.FINAL or Modifier.STATIC) == Modifier.FINAL }
+                        .collect(Collectors.toList())
+            } catch (e: ClassNotFoundException) {
+                throw RuntimeException(e)
+            }
+        }
+
+        private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
+            var internalName = ownerInternal
+            if (internalName.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+                internalName = internalName.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
+            }
+            return try {
+                val clazz = Class.forName(internalName.replace('/', '.'))
+                findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
+            } catch (e: ClassNotFoundException) {
+                throw RuntimeException(e)
+            } catch (e: NoSuchFieldException) {
+                throw RuntimeException(e)
+            }
+        }
+
+        private fun findField(clazz: Class<*>, fieldName: String): Field {
+            var clazz: Class<*>? = clazz
+            do {
+                val fields = clazz!!.declaredFields
+                for (field in fields) if (field.name == fieldName) return field
+                clazz = clazz.superclass
+            } while (clazz != null)
+            throw NoSuchFieldException()
+        }
     }
 }
