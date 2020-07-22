@@ -83,7 +83,7 @@ class ExecutionReportingTest : VerifierState() {
         check("operation1" in log)
         check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag" in log)
         check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag" in log)
-        check("b.READ at ExecutionReportingTest.operation2" in log)
+        check("b.READ: 0 at ExecutionReportingTest.operation2" in log)
         check("b.WRITE(1) at ExecutionReportingTest.operation2" in log)
         check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
         check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)

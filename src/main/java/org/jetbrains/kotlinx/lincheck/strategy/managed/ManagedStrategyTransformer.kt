@@ -128,38 +128,64 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            var isWrite = false
-            if (!isFinalField(owner, name)) {
-                when (opcode) {
-                    GETSTATIC -> invokeBeforeSharedVariableRead(name)
-                    GETFIELD -> {
-                        val skipCodeLocation = newLabel()
-                        dup()
-                        invokeOnLocalObjectCheck()
-                        ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
-                        // add strategy invocation only if is not a local object
-                        invokeBeforeSharedVariableRead(name)
-                        visitLabel(skipCodeLocation)
-                    }
-                    PUTSTATIC -> {
-                        invokeBeforeSharedVariableWrite(name, Type.getType(desc))
-                        isWrite = true
-                    }
-                    PUTFIELD -> {
-                        val skipCodeLocation = newLabel()
-                        dupOwnerOnPutField(desc)
-                        invokeOnLocalObjectCheck()
-                        ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
-                        // add strategy invocation only if is not a local object
-                        invokeBeforeSharedVariableWrite(name, Type.getType(desc))
-                        visitLabel(skipCodeLocation)
-                        isWrite = true
-                    }
-                }
+            if (isFinalField(owner, name)) {
+                super.visitFieldInsn(opcode, owner, name, desc)
+                return
             }
-            super.visitFieldInsn(opcode, owner, name, desc)
-            if (isWrite)
-                invokeToMakeStateRepresentation()
+
+            when (opcode) {
+                GETSTATIC -> {
+                    invokeBeforeSharedVariableRead(name)
+                    super.visitFieldInsn(opcode, owner, name, desc)
+                    afterSharedVariableRead(Type.getType(desc))
+                }
+                GETFIELD -> {
+                    val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
+                    val skipCodeLocationBefore = newLabel()
+                    dup()
+                    invokeOnLocalObjectCheck()
+                    copyLocal(isLocalObject)
+                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
+                    // add strategy invocation only if is not a local object
+                    invokeBeforeSharedVariableRead(name)
+                    visitLabel(skipCodeLocationBefore)
+
+                    super.visitFieldInsn(opcode, owner, name, desc)
+
+                    val skipCodeLocationAfter = newLabel()
+                    loadLocal(isLocalObject)
+                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
+                    // initialize ReadCodeLocation only if is not a local object
+                    afterSharedVariableRead(Type.getType(desc))
+                    visitLabel(skipCodeLocationAfter)
+                }
+                PUTSTATIC -> {
+                    invokeBeforeSharedVariableWrite(name, Type.getType(desc))
+                    super.visitFieldInsn(opcode, owner, name, desc)
+                    invokeMakeStateRepresentation()
+                }
+                PUTFIELD -> {
+                    val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
+                    val skipCodeLocationBefore = newLabel()
+                    dupOwnerOnPutField(desc)
+                    invokeOnLocalObjectCheck()
+                    copyLocal(isLocalObject)
+                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
+                    // add strategy invocation only if is not a local object
+                    invokeBeforeSharedVariableWrite(name, Type.getType(desc))
+                    visitLabel(skipCodeLocationBefore)
+
+                    super.visitFieldInsn(opcode, owner, name, desc)
+
+                    val skipCodeLocationAfter = newLabel()
+                    loadLocal(isLocalObject)
+                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
+                    // make state representation only if is not a local object
+                    invokeMakeStateRepresentation()
+                    visitLabel(skipCodeLocationAfter)
+                }
+                else -> throw IllegalArgumentException("Unknown field opcode")
+            }
         }
 
         override fun visitInsn(opcode: Int) = adapter.run {
@@ -188,7 +214,7 @@ internal class ManagedStrategyTransformer(
             }
             super.visitInsn(opcode)
             if (isWrite)
-                invokeToMakeStateRepresentation()
+                invokeMakeStateRepresentation()
         }
 
         // STACK: array, index, value -> array, index, value, arr
@@ -243,7 +269,7 @@ internal class ManagedStrategyTransformer(
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             if (guaranteeType != null) {
                 invokeAfterIgnoredSectionLeaving()
-                invokeToMakeStateRepresentation()
+                invokeMakeStateRepresentation()
             }
         }
 
@@ -666,27 +692,27 @@ internal class ManagedStrategyTransformer(
         private var lineNumber = 0
 
         fun invokeBeforeAtomicMethodCall(methodName: String) =
-                invokeOnSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD) { ste -> MethodCallCodeLocation(methodName, ste) }
+                onSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD) { ste -> MethodCallCodeLocation(methodName, ste) }
 
-        fun invokeBeforeSharedVariableRead(fieldName: String? = null) = invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
+        fun invokeBeforeSharedVariableRead(fieldName: String? = null) = onSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
 
         // STACK: value to be written
-        fun invokeBeforeSharedVariableWrite(fieldName: String? = null, type: Type)  {
-            val local = adapter.newLocal(type)
-            adapter.storeLocal(local)
-            adapter.loadLocal(local) // return stored value to the stack
-            invokeOnSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
+        fun invokeBeforeSharedVariableWrite(fieldName: String? = null, type: Type) = adapter.run {
+            val storedValue = newLocal(type)
+            copyLocal(storedValue) // save store value
+            onSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
+            // initialize WriteCodeLocation with stored value
             val codeLocation = codeLocations.lastIndex
             loadStrategy()
-            adapter.push(codeLocation)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
-            adapter.checkCast(WRITE_CODELOCATION_TYPE)
-            adapter.loadLocal(local)
-            adapter.box(type)
-            adapter.invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
+            push(codeLocation)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            checkCast(WRITE_CODELOCATION_TYPE)
+            loadLocal(storedValue)
+            box(type)
+            invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
         }
 
-        private fun invokeOnSharedMemoryAccess(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
+        private fun onSharedMemoryAccess(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             loadStrategy()
             loadCurrentThreadNumber()
             loadNewCodeLocation(codeLocationConstructor)
@@ -822,12 +848,27 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
         }
 
-        fun invokeToMakeStateRepresentation() {
+        fun invokeMakeStateRepresentation() {
             if (shouldMakeStateRepresentation) {
                 loadStrategy()
                 loadCurrentThreadNumber()
                 adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, MAKE_STATE_REPRESENTATION_METHOD)
             }
+        }
+
+        // STACK: value that was read
+        fun afterSharedVariableRead(valueType: Type) = adapter.run {
+            val readValue = newLocal(valueType)
+            copyLocal(readValue)
+            // initialize ReadCodeLocation
+            val codeLocation = codeLocations.lastIndex
+            loadStrategy()
+            push(codeLocation)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            checkCast(READ_CODELOCATION_TYPE)
+            loadLocal(readValue)
+            box(valueType)
+            invokeVirtual(READ_CODELOCATION_TYPE, ADD_READ_VALUE_METHOD)
         }
 
         fun loadStrategy() {
@@ -865,6 +906,7 @@ internal class ManagedStrategyTransformer(
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val WRITE_CODELOCATION_TYPE = Type.getType(WriteCodeLocation::class.java)
+        private val READ_CODELOCATION_TYPE = Type.getType(ReadCodeLocation::class.java)
 
         private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
         private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -888,8 +930,9 @@ internal class ManagedStrategyTransformer(
         private val ADD_DEPENDENCY_METHOD = Method.getMethod(LocalObjectManager::addDependency.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
         private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
-        private val TO_STRING_METHOD = Method.getMethod(java.lang.Object::toString.javaMethod)
         private val ADD_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodeLocation::addWrittenValue.javaMethod)
+        private val ADD_READ_VALUE_METHOD = Method.getMethod(ReadCodeLocation::addReadValue.javaMethod)
+
 
         /**
          * Returns array of locals containing given parameters.
@@ -924,6 +967,14 @@ internal class ManagedStrategyTransformer(
         private fun GeneratorAdapter.loadLocals(locals: IntArray) {
             for (local in locals)
                 loadLocal(local)
+        }
+
+        /**
+         * Saves the top value on the stack without changing stack.
+         */
+        private fun GeneratorAdapter.copyLocal(local: Int) {
+            storeLocal(local)
+            loadLocal(local)
         }
 
         /**

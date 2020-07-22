@@ -27,16 +27,22 @@ internal sealed class CodeLocation {
 }
 
 internal class ReadCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "READ at " + stackTraceElement.shorten()
+    private lateinit var value: Any
+
+    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "READ: ${value} at " + stackTraceElement.shorten()
+
+    fun addReadValue(value: Any) {
+        this.value = value
+    }
 }
 
 internal class WriteCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    private lateinit var value: String
+    private lateinit var value: Any
 
     override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "WRITE($value) at " + stackTraceElement.shorten()
 
     fun addWrittenValue(value: Any) {
-        this.value = value.toString()
+        this.value = value
     }
 }
 
