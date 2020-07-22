@@ -62,9 +62,12 @@ internal class WriteCodeLocation(private val fieldName: String?, private val sta
 
 internal class MethodCallCodeLocation(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodeLocation() {
     private var returnedValue: Any? = null
+    private var parameters: Array<Any?>? = null
 
     override fun toStringImpl(): String = StringBuilder().apply {
         append("$methodName(")
+        if (parameters != null)
+            append(parameters!!.joinToString(","))
         append(")")
         if (returnedValue != null)
             append(": $returnedValue")
@@ -73,6 +76,10 @@ internal class MethodCallCodeLocation(private val methodName: String, private va
 
     fun addReturnedValue(value: Any?) {
         this.returnedValue = value
+    }
+
+    fun addParameters(parameters: Array<Any?>) {
+        this.parameters = parameters
     }
 }
 
