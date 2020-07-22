@@ -27,27 +27,53 @@ internal sealed class CodeLocation {
 }
 
 internal class ReadCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    private lateinit var value: Any
+    private var value: Any? = null
 
-    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "READ: ${value} at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = StringBuilder().apply {
+        if (fieldName != null)
+            append("$fieldName.")
+        append("READ")
+        if (value != null)
+            append(": $value")
+        append(" at ${stackTraceElement.shorten()}")
+    }.toString()
 
-    fun addReadValue(value: Any) {
+    fun addReadValue(value: Any?) {
         this.value = value
     }
 }
 
 internal class WriteCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    private lateinit var value: Any
+    private var value: Any? = null
 
-    override fun toStringImpl(): String = (if (fieldName != null) "$fieldName." else "") + "WRITE($value) at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String  = StringBuilder().apply {
+        if (fieldName != null)
+            append("$fieldName.")
+        append("WRITE(")
+        if (value != null)
+            append("$value")
+        append(") at ${stackTraceElement.shorten()}")
+    }.toString()
 
-    fun addWrittenValue(value: Any) {
+    fun addWrittenValue(value: Any?) {
         this.value = value
     }
 }
 
 internal class MethodCallCodeLocation(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    override fun toStringImpl(): String = "\"$methodName\" at " + stackTraceElement.shorten()
+    private var returnedValue: Any? = null
+
+    override fun toStringImpl(): String = StringBuilder().apply {
+        append("$methodName(")
+        append(")")
+        if (returnedValue != null)
+            append(": $returnedValue")
+        append(" at ${stackTraceElement.shorten()}")
+    }.toString()
+
+    fun addReturnedValue(value: Any?) {
+        this.returnedValue = value
+    }
 }
 
 internal class MonitorEnterCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {

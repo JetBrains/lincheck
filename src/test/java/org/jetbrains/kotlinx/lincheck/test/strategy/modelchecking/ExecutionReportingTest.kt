@@ -65,9 +65,10 @@ class ExecutionReportingTest : VerifierState() {
         canEnterForbiddenSection = false
     }
 
-    private fun uselessIncrements() {
+    private fun uselessIncrements(): Boolean {
         b++
         b++
+        return false
     }
 
     private fun ignored() {
@@ -87,8 +88,8 @@ class ExecutionReportingTest : VerifierState() {
         check("b.WRITE(1) at ExecutionReportingTest.operation2" in log)
         check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
         check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)
-        check("\"uselessIncrements\" at" in log) { "increments in uselessIncrements method should be compressed" }
-        check("\"treatedAsAtomic\" at" in log) { "treated as atomic methods should be reported" }
+        check("uselessIncrements(): false at" in log) { "increments in uselessIncrements method should be compressed" }
+        check("treatedAsAtomic() at" in log) { "treated as atomic methods should be reported" }
         check("ignored" !in log) { "ignored methods should not be present in log" }
     }
 

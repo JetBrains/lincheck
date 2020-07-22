@@ -261,16 +261,22 @@ internal class ManagedStrategyTransformer(
      */
     private inner class ManagedGuaranteeTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            val guaranteeType = classifyGuaranteeType(owner, name)
-            if (guaranteeType == ManagedGuaranteeType.TREAT_AS_ATOMIC)
-                invokeBeforeAtomicMethodCall(name)
-            if (guaranteeType != null)
-                invokeBeforeIgnoredSectionEntering()
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-            if (guaranteeType != null) {
-                invokeAfterIgnoredSectionLeaving()
-                invokeMakeStateRepresentation()
+            when (classifyGuaranteeType(owner, name)) {
+                ManagedGuaranteeType.IGNORE -> {
+                    invokeBeforeIgnoredSectionEntering()
+                    adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                    invokeAfterIgnoredSectionLeaving()
+                }
+                ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
+                    invokeBeforeAtomicMethodCall(methodName)
+                    invokeBeforeIgnoredSectionEntering()
+                    adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                    invokeAfterIgnoredSectionLeaving()
+                    afterMethodCall(Method(name, desc).returnType)
+                }
+                null -> adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             }
+
         }
 
         /**
@@ -316,8 +322,10 @@ internal class ManagedStrategyTransformer(
             if (!isStrategyCall)
                 invokeBeforeMethodCall(name)
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-            if (!isStrategyCall)
+            if (!isStrategyCall) {
                 invokeAfterMethodCall()
+                afterMethodCall(Method(name, desc).returnType)
+            }
         }
 
         private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy") ||
@@ -697,18 +705,23 @@ internal class ManagedStrategyTransformer(
         fun invokeBeforeSharedVariableRead(fieldName: String? = null) = onSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
 
         // STACK: value to be written
-        fun invokeBeforeSharedVariableWrite(fieldName: String? = null, type: Type) = adapter.run {
-            val storedValue = newLocal(type)
-            copyLocal(storedValue) // save store value
+        fun invokeBeforeSharedVariableWrite(fieldName: String? = null, valueType: Type) {
             onSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
+            captureWrittenValue(valueType)
+        }
+
+        // STACK: value to be writteb
+        private fun captureWrittenValue(valueType: Type) = adapter.run {
+            val storedValue = newLocal(valueType)
+            copyLocal(storedValue) // save store value
             // initialize WriteCodeLocation with stored value
-            val codeLocation = codeLocations.lastIndex
+            val codeLocation = codeLocations.lastIndex // the last created code location
             loadStrategy()
             push(codeLocation)
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
             checkCast(WRITE_CODELOCATION_TYPE)
             loadLocal(storedValue)
-            box(type)
+            box(valueType)
             invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
         }
 
@@ -861,7 +874,7 @@ internal class ManagedStrategyTransformer(
             val readValue = newLocal(valueType)
             copyLocal(readValue)
             // initialize ReadCodeLocation
-            val codeLocation = codeLocations.lastIndex
+            val codeLocation = codeLocations.lastIndex /// the last created code location
             loadStrategy()
             push(codeLocation)
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
@@ -869,6 +882,22 @@ internal class ManagedStrategyTransformer(
             loadLocal(readValue)
             box(valueType)
             invokeVirtual(READ_CODELOCATION_TYPE, ADD_READ_VALUE_METHOD)
+        }
+
+        // STACK: returned value (unless void)
+        fun afterMethodCall(returnType: Type) = adapter.run {
+            if (returnType == Type.VOID_TYPE) return // no return value
+            val returnedValue = newLocal(returnType)
+            copyLocal(returnedValue)
+            // initialialize AtomiMethodCallCodeLocation return value
+            val codeLocation = codeLocations.lastIndex /// the last created code location
+            loadStrategy()
+            push(codeLocation)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            checkCast(METHOD_CALL_CODELOCATION_TYPE)
+            loadLocal(returnedValue)
+            box(returnType)
+            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_RETURNED_VALUE_METHOD)
         }
 
         fun loadStrategy() {
@@ -907,6 +936,7 @@ internal class ManagedStrategyTransformer(
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val WRITE_CODELOCATION_TYPE = Type.getType(WriteCodeLocation::class.java)
         private val READ_CODELOCATION_TYPE = Type.getType(ReadCodeLocation::class.java)
+        private val METHOD_CALL_CODELOCATION_TYPE = Type.getType(MethodCallCodeLocation::class.java)
 
         private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
         private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -932,7 +962,7 @@ internal class ManagedStrategyTransformer(
         private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
         private val ADD_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodeLocation::addWrittenValue.javaMethod)
         private val ADD_READ_VALUE_METHOD = Method.getMethod(ReadCodeLocation::addReadValue.javaMethod)
-
+        private val ADD_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodeLocation::addReturnedValue.javaMethod)
 
         /**
          * Returns array of locals containing given parameters.
