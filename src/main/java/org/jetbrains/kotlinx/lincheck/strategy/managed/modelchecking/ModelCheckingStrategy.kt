@@ -45,8 +45,7 @@ internal class ModelCheckingStrategy(
         stateRepresentation: Method?,
         verifier: Verifier
 ) : ManagedStrategyBase(
-        testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg.hangingDetectionThreshold,
-        testCfg.checkObstructionFreedom, testCfg.guarantees
+        testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg
 ) {
     // an increasing id of code locations in the execution
     private val executionPosition = AtomicInteger(0)

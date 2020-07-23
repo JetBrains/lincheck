@@ -82,6 +82,7 @@ class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
 
     override fun <O : Options<O, *>> O.customize() {
         minimizeFailedScenario(false)
+        invocationTimeout(100)
     }
 
     private fun AtomicBoolean.withSpinLock(block: () -> Int): Int {

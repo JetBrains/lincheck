@@ -19,21 +19,19 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
+package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
-
-import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
+import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 
 /**
- * Options for {@link ModelCheckingStrategy model checking} strategy.
+ * Options for [model checking][ModelCheckingStrategy] strategy.
  */
-public class ModelCheckingOptions extends ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration> {
-    @Override
-    public ModelCheckingCTestConfiguration createTestConfigurations(Class<?> testClass) {
-        return new ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
+class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
+    override fun createTestConfigurations(testClass: Class<*>?): ModelCheckingCTestConfiguration {
+        return ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
                 guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass));
+                chooseSequentialSpecification(sequentialSpecification, testClass!!), timeoutMs)
     }
 }

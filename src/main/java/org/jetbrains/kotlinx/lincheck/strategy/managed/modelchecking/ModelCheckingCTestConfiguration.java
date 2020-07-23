@@ -42,11 +42,11 @@ public class ModelCheckingCTestConfiguration extends ManagedCTestConfiguration {
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
                                            boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
                                            List<ManagedGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
-                                           Class<?> sequentialSpecification)
+                                           Class<?> sequentialSpecification, long timeoutMs)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
-                minimizeFailedScenario, sequentialSpecification);
+                minimizeFailedScenario, sequentialSpecification, timeoutMs);
     }
 
     @Override

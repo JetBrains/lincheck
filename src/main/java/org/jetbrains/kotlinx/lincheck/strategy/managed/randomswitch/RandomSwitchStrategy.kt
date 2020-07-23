@@ -46,8 +46,7 @@ internal class RandomSwitchStrategy(
     stateRepresentation: Method?,
     verifier: Verifier
 ) : ManagedStrategyBase(
-        testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg.hangingDetectionThreshold,
-        false, testCfg.guarantees
+        testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg
 ) {
     // the number of invocations that the managed strategy may use to search for an incorrect execution
     private val maxInvocations = testCfg.invocationsPerIteration

@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
@@ -44,10 +45,8 @@ internal abstract class ManagedStrategyBase(
         protected val verifier: Verifier,
         validationFunctions: List<Method>,
         stateRepresentation: Method?,
-        private val hangingDetectionThreshold: Int,
-        private val requireObstructionFreedom: Boolean,
-        guarantees: List<ManagedGuarantee>
-) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, guarantees) {
+        private val testCfg: ManagedCTestConfiguration
+) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, testCfg.guarantees, testCfg.timeoutMs) {
     protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
     // whether a thread finished all its operations
     private val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
@@ -261,7 +260,7 @@ internal abstract class ManagedStrategyBase(
                 val nextThread = (0 until nThreads).firstOrNull { !finished[it].get() && isSuspended[it].get() }
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
-                    suddenInvocationResult = DeadlockInvocationResult(collectThreadDump())
+                    suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner.hashCode()))
                     // forcibly finish execution by throwing an exception.
                     throw ForcibleExecutionFinishException()
                 }
@@ -345,7 +344,7 @@ internal abstract class ManagedStrategyBase(
         executionRandomSeed = generationRandom.nextLong()
         random = Random(executionRandomSeed)
         currentActorId.fill(-1)
-        loopDetector = LoopDetector(hangingDetectionThreshold)
+        loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
         eventCollector = ExecutionEventCollector()
         suddenInvocationResult = null
@@ -353,7 +352,7 @@ internal abstract class ManagedStrategyBase(
     }
 
     private fun checkCanHaveObstruction(lazyMessage: () -> String) {
-        if (requireObstructionFreedom) {
+        if (testCfg.checkObstructionFreedom) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // forcibly finish execution by throwing an exception.
             throw ForcibleExecutionFinishException()
@@ -362,7 +361,7 @@ internal abstract class ManagedStrategyBase(
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > LIVELOCK_EVENTS_THRESHOLD) {
-            suddenInvocationResult = DeadlockInvocationResult(collectThreadDump())
+            suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner.hashCode()))
             // forcibly finish execution by throwing an exception.
             throw ForcibleExecutionFinishException()
         }

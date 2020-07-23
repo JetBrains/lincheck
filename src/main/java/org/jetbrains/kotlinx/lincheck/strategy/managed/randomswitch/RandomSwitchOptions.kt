@@ -33,6 +33,6 @@ internal class RandomSwitchOptions : ManagedOptions<RandomSwitchOptions, RandomS
         return RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
                 guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass!!))
+                chooseSequentialSpecification(sequentialSpecification, testClass!!), timeoutMs)
     }
 }

@@ -48,12 +48,12 @@ public abstract class ManagedStrategy extends Strategy {
     private final boolean shouldMakeStateRepresentation;
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
-                              Method stateRepresentation, List<ManagedGuarantee> guarantees) {
+                              Method stateRepresentation, List<ManagedGuarantee> guarantees, long timeoutMs) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
         this.guarantees = guarantees;
         this.shouldMakeStateRepresentation = stateRepresentation != null;
-        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, true) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, true, timeoutMs) {
             @Override
             public void onStart(int threadId) {
                 super.onStart(threadId);

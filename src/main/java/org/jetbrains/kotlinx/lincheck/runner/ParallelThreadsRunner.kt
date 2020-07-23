@@ -49,7 +49,6 @@ internal open class ParallelThreadsRunner(
     validationFunctions: List<Method>,
     private val stateRepresentation: Method?,
     private val useClocks: Boolean? = null,
-    waits: List<IntArray>?,
     private val timeoutMs: Long // for deadlock recognition
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any

@@ -45,7 +45,6 @@ public class RandomSwitchCTestConfiguration extends ManagedCTestConfiguration {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
-        this.invocationsPerIteration = invocationsPerIteration;
     }
 
     @Override
