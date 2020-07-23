@@ -19,20 +19,27 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch
+package org.jetbrains.kotlinx.lincheck.strategy.randomswitch
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 
 /**
- * Options for [random switch][RandomSwitchStrategy] strategy.
- * Internal, DO NOT USE.
+ * Options for [random-switch][RandomSwitchStrategy] strategy.
  */
-internal class RandomSwitchOptions : ManagedOptions<RandomSwitchOptions, RandomSwitchCTestConfiguration>() {
+class RandomSwitchOptions : Options<RandomSwitchOptions, RandomSwitchCTestConfiguration>() {
+    protected var invocationsPerIteration = RandomSwitchCTestConfiguration.DEFAULT_INVOCATIONS
+
+    /**
+     * Run each test scenario `invocations` times.
+     */
+    fun invocationsPerIteration(invocations: Int): RandomSwitchOptions = apply {
+        invocationsPerIteration = invocations
+    }
+
     override fun createTestConfigurations(testClass: Class<*>?): RandomSwitchCTestConfiguration {
         return RandomSwitchCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-                executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
-                guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass!!))
+                executionGenerator, verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+                chooseSequentialSpecification(sequentialSpecification, testClass!!), timeoutMs)
     }
 }

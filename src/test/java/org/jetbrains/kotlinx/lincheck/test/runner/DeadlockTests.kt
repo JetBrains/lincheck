@@ -52,6 +52,7 @@ class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure:
 
     override fun <O : Options<O, *>> O.customize() {
         minimizeFailedScenario(false)
+        invocationTimeout(100)
     }
 
     override fun extractState(): Any = counter

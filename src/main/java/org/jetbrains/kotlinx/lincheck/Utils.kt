@@ -244,8 +244,8 @@ internal object UnsafeHolder {
     }
 }
 
-fun collectThreadDump() = Thread.getAllStackTraces()
-        .filter { (t, _) -> t is ParallelThreadsRunner.TestThread }
+fun collectThreadDump(runnerHash: Int) = Thread.getAllStackTraces()
+        .filter { (t, _) -> t is ParallelThreadsRunner.TestThread && t.runnerHash == runnerHash }
         .mapValues { pair ->
             pair.value.map {
                 StackTraceElement(it.className.removePrefix(TRANSFORMED_PACKAGE_NAME), it.methodName, it.fileName, it.lineNumber)

@@ -43,10 +43,10 @@ public class StressCTestConfiguration extends CTestConfiguration {
     public StressCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
         Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
         int invocationsPerIteration, boolean addWaits, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
-        Class<?> sequentialSpecification)
+        Class<?> sequentialSpecification, long timeoutMs)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification);
+                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
         this.invocationsPerIteration = invocationsPerIteration;
         this.addWaits = addWaits;
     }

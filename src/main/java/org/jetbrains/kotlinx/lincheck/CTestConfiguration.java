@@ -55,6 +55,7 @@ public abstract class CTestConfiguration {
     public static final Class<? extends ExecutionGenerator> DEFAULT_EXECUTION_GENERATOR = RandomExecutionGenerator.class;
     public static final Class<? extends Verifier> DEFAULT_VERIFIER = LinearizabilityVerifier.class;
     public static final boolean DEFAULT_MINIMIZE_ERROR = true;
+    public static final long DEFAULT_TIMEOUT_MS = 10_000;
 
     public final Class<?> testClass;
     public final int iterations;
@@ -67,10 +68,11 @@ public abstract class CTestConfiguration {
     public final boolean requireStateEquivalenceImplCheck;
     public final Boolean minimizeFailedScenario;
     public final Class<?> sequentialSpecification;
+    public final long timeoutMs;
 
     protected CTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
         Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification)
+        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification, long timeoutMs)
     {
         this.testClass = testClass;
         this.iterations = iterations;
@@ -83,6 +85,7 @@ public abstract class CTestConfiguration {
         this.requireStateEquivalenceImplCheck = requireStateEquivalenceImplCheck;
         this.minimizeFailedScenario = minimizeFailedScenario;
         this.sequentialSpecification = sequentialSpecification;
+        this.timeoutMs = timeoutMs;
     }
 
     protected abstract Strategy createStrategy(Class<?> testClass, ExecutionScenario scenario,
@@ -94,13 +97,13 @@ public abstract class CTestConfiguration {
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
-                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+                    chooseSequentialSpecification(ann.sequentialSpecification(), testClass), DEFAULT_TIMEOUT_MS));
         Stream<CTestConfiguration> modelCheckingConfigurations = Arrays.stream(testClass.getAnnotationsByType(ModelCheckingCTest.class))
             .map(ann -> new ModelCheckingCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.checkObstructionFreedom(), ann.hangingDetectionThreshold(),
                     ann.invocationsPerIteration(), DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck(),
-                    ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass)));
+                    ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass), DEFAULT_TIMEOUT_MS));
 
         return Stream.of(stressConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());
     }

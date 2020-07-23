@@ -37,6 +37,7 @@ class HangingTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
         actorsAfter(0)
         requireStateEquivalenceImplCheck(false)
         minimizeFailedScenario(false)
+        invocationTimeout(100)
     }
 
 }

@@ -53,7 +53,7 @@ class StressStrategy(
             null
         nextWaits = waits?.map { it.iterator() }?.toTypedArray()
         // Create runner
-        runner = ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation)
+        runner = ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, waits, testCfg.timeoutMs)
     }
 
     override fun run(): LincheckFailure? {
