@@ -30,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
+import kotlin.random.Random
 
 private const val startSwitchProbability = 0.05
 private const val endSwitchProbability = 0.99
@@ -51,6 +52,8 @@ internal class RandomSwitchStrategy(
     // the number of invocations that the managed strategy may use to search for an incorrect execution
     private val maxInvocations = testCfg.invocationsPerIteration
     private var switchProbability = startSwitchProbability
+    private var executionRandomSeed: Long = 0
+    private lateinit var executionRandom: Random
 
     @Throws(Exception::class)
     override fun runImpl(): LincheckFailure? {
@@ -70,14 +73,17 @@ internal class RandomSwitchStrategy(
 
     override fun shouldSwitch(threadId: Int): Boolean {
         // TODO: can reduce the number of random calls using geometric distribution
-        return random.nextDouble() < switchProbability
+        return executionRandom.nextDouble() < switchProbability
     }
 
-    override fun chooseThread(switchableThreads: Int): Int = random.nextInt(switchableThreads)
+    override fun chooseThread(switchableThreads: Int): Int = executionRandom.nextInt(switchableThreads)
 
-    override fun initializeInvocation() {
-        super.initializeInvocation()
+    override fun initializeInvocation(repeatExecution: Boolean) {
+        if (!repeatExecution)
+            executionRandomSeed = generationRandom.nextLong()
+        executionRandom = Random(executionRandomSeed)
         // start from random thread
-        currentThread = random.nextInt(nThreads)
+        currentThread = executionRandom.nextInt(nThreads)
+        super.initializeInvocation(repeatExecution)
     }
 }

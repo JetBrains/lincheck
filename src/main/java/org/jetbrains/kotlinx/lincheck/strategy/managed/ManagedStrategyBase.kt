@@ -61,10 +61,8 @@ internal abstract class ManagedStrategyBase(
     private lateinit var monitorTracker: MonitorTracker
     // random used for the generation of seeds and the execution tree
     protected val generationRandom = Random(0)
-    // random used for the execution
-    protected lateinit var random: Random
-    // seed for the execution random
-    private var executionRandomSeed = 0L
+    // should code locations be logged
+    private var loggingEnabled = true
     // is thread suspended
     private val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // the number of blocks that should be ignored by the strategy entered and not left for each thread
@@ -196,17 +194,17 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun beforeMethodCall(threadId: Int, codeLocation: Int) {
-        if (isTestThread(threadId))
+        if (isTestThread(threadId) && loggingEnabled)
             callStackTrace[threadId].add(CallStackTraceElement(getLocationDescription(codeLocation), methodIdentifier++))
     }
 
     override fun afterMethodCall(threadId: Int) {
-        if (isTestThread(threadId))
+        if (isTestThread(threadId) && loggingEnabled)
             callStackTrace[threadId].removeAt(callStackTrace[threadId].lastIndex)
     }
 
     override fun makeStateRepresentation(threadId: Int) {
-        if (isTestThread(threadId) && !shouldBeIgnored(threadId))
+        if (isTestThread(threadId) && loggingEnabled && !shouldBeIgnored(threadId))
             eventCollector.makeStateRepresentation(threadId)
     }
 
@@ -309,16 +307,17 @@ internal abstract class ManagedStrategyBase(
      * logging of all thread events.
      */
     protected fun checkResults(results: InvocationResult): LincheckFailure? {
-        val events = eventCollector.interleavingEvents()
         // if there an InvocationResult was determined by the Strategy then just ignore the Runner's results
-        suddenInvocationResult?.let { return it.toLincheckFailure(scenario, events) }
+        suddenInvocationResult?.let {
+            return it.toLincheckFailure(scenario, eventCollector.interleavingEvents())
+        }
         when (results) {
             is CompletedInvocationResult -> {
                 if (!verifier.verifyResults(scenario, results.results))
-                    return IncorrectResultsFailure(scenario, results.results, events)
+                    return IncorrectResultsFailure(scenario, results.results, eventCollector.interleavingEvents())
             }
             else -> {
-                return results.toLincheckFailure(scenario, events)
+                return results.toLincheckFailure(scenario, eventCollector.interleavingEvents())
             }
         }
 
@@ -328,7 +327,7 @@ internal abstract class ManagedStrategyBase(
     /**
      * Runs next invocation with the same [scenario][ExecutionScenario].
      *
-     * @return invocation results for each executed actor.
+     * @return invocation result for each executed actor.
      */
     fun runInvocation(): InvocationResult {
         initializeInvocation()
@@ -336,13 +335,36 @@ internal abstract class ManagedStrategyBase(
     }
 
     /**
+     * Reruns previous invocation to log all its execution events.
+     */
+    private fun rerunInvocation(previousResults: InvocationResult): InvocationResult {
+        initializeInvocation(true)
+        loggingEnabled = true
+        val loggedResults = runner.run()
+        val sameResultTypes = loggedResults.javaClass == previousResults.javaClass
+        val sameExecutionResults = loggedResults !is CompletedInvocationResult || previousResults !is CompletedInvocationResult || (loggedResults.results == previousResults.results)
+        check(sameResultTypes && sameExecutionResults) {
+            StringBuilder().apply {
+                appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
+                appendln("Reporting scenario without correct trace")
+                appendln(previousResults.asLincheckFailureWithoutTrace().toString())
+            }.toString()
+        }
+        return loggedResults
+    }
+
+    private fun InvocationResult.asLincheckFailureWithoutTrace(): LincheckFailure {
+        if (this is CompletedInvocationResult)
+            return IncorrectResultsFailure(scenario, results, null)
+        return toLincheckFailure(scenario, null)
+    }
+
+    /**
      * Returns all data to the initial state before invocation.
      */
-    protected open fun initializeInvocation() {
+    protected open fun initializeInvocation(repeatExecution: Boolean = false) {
         finished.forEach { it.set(false) }
         isSuspended.forEach { it.set(false) }
-        executionRandomSeed = generationRandom.nextLong()
-        random = Random(executionRandomSeed)
         currentActorId.fill(-1)
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
@@ -400,16 +422,19 @@ internal abstract class ManagedStrategyBase(
         private val interleavingEvents = mutableListOf<InterleavingEvent>()
 
         fun newSwitch(threadId: Int, reason: SwitchReason) {
+            if (!loggingEnabled) return // check that thread events
             interleavingEvents.add(SwitchEvent(threadId, currentActorId[threadId], reason, callStackTrace[threadId].toList()))
             // check livelock after every switch
             checkLiveLockHappened(interleavingEvents.size)
         }
 
         fun finishThread(threadId: Int) {
+            if (!loggingEnabled) return // check that thread events
             interleavingEvents.add(FinishEvent(threadId))
         }
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
+            if (!loggingEnabled) return // check that thread events
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
                 enterIgnoredSection(threadId)
                 interleavingEvents.add(PassCodeLocationEvent(

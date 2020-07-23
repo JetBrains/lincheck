@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyBase
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 
 /**
  * ModelCheckingStrategy studies interesting code locations in the scenario
@@ -67,6 +68,7 @@ internal class ModelCheckingStrategy(
     private var notInitializedSwitchChoice: SwitchChoosingNode? = null
     // an iterator over threadSwitchChoices with information about what thread should be next
     private lateinit var nextThreadToSwitch: MutableListIterator<Int>
+    private lateinit var executionFinishingRandom: Random
 
     @Throws(Exception::class)
     override fun runImpl(): LincheckFailure? {
@@ -124,12 +126,13 @@ internal class ModelCheckingStrategy(
         return executionPosition.get() in switchPositions
     }
 
-    override fun initializeInvocation() {
+    override fun initializeInvocation(repeatExecution: Boolean) {
         nextThreadToSwitch = threadSwitchChoices.listIterator()
         currentThread = nextThreadToSwitch.next() // the root chooses the first thread to execute
         executionPosition.set(-1) // one step before zero
         usedInvocations++
-        super.initializeInvocation()
+        executionFinishingRandom = Random(1) // random with any constant seed
+        super.initializeInvocation(repeatExecution)
     }
 
     override fun chooseThread(switchableThreads: Int): Int {
@@ -137,7 +140,7 @@ internal class ModelCheckingStrategy(
         return if (nextThreadToSwitch.hasNext())
             nextThreadToSwitch.next()
         else
-            random.nextInt(switchableThreads)
+            executionFinishingRandom.nextInt(switchableThreads)
     }
 
     private fun lastSwitchPosition() = switchPositions.lastOrNull() ?: -1
