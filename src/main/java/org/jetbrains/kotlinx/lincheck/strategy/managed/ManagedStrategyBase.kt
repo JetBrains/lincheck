@@ -61,8 +61,8 @@ internal abstract class ManagedStrategyBase(
     private lateinit var monitorTracker: MonitorTracker
     // random used for the generation of seeds and the execution tree
     protected val generationRandom = Random(0)
-    // should code locations be logged
-    private var loggingEnabled = true
+    // should code locations be logged, disabled by default
+    private var loggingEnabled = false
     // is thread suspended
     private val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // the number of blocks that should be ignored by the strategy entered and not left for each thread
@@ -307,17 +307,13 @@ internal abstract class ManagedStrategyBase(
      * logging of all thread events.
      */
     protected fun checkResults(results: InvocationResult): LincheckFailure? {
-        // if there an InvocationResult was determined by the Strategy then just ignore the Runner's results
-        suddenInvocationResult?.let {
-            return it.toLincheckFailure(scenario, eventCollector.interleavingEvents())
-        }
         when (results) {
             is CompletedInvocationResult -> {
                 if (!verifier.verifyResults(scenario, results.results))
-                    return IncorrectResultsFailure(scenario, results.results, eventCollector.interleavingEvents())
+                    return IncorrectResultsFailure(scenario, results.results, collectExecutionEvents(results))
             }
             else -> {
-                return results.toLincheckFailure(scenario, eventCollector.interleavingEvents())
+                return results.toLincheckFailure(scenario, collectExecutionEvents(results))
             }
         }
 
@@ -326,37 +322,54 @@ internal abstract class ManagedStrategyBase(
 
     /**
      * Runs next invocation with the same [scenario][ExecutionScenario].
-     *
      * @return invocation result for each executed actor.
      */
-    fun runInvocation(): InvocationResult {
-        initializeInvocation()
-        return runner.run()
-    }
+    fun runInvocation(): InvocationResult = doRunInvocation(false)
 
     /**
      * Reruns previous invocation to log all its execution events.
      */
-    private fun rerunInvocation(previousResults: InvocationResult): InvocationResult {
-        initializeInvocation(true)
+    private fun collectExecutionEvents(previousResults: InvocationResult): List<InterleavingEvent>? {
+        val detectedByStrategy = suddenInvocationResult != null
+        val canCollectExecutionEvents = when {
+            detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult, UnexpectedExceptionInvocationResult or
+            previousResults is CompletedInvocationResult -> true
+            previousResults is ValidationFailureInvocationResult -> true
+            else -> false
+        }
+
+        if (!canCollectExecutionEvents) {
+            // runner can be broken during previous run
+            // do not try to log anything
+            return null
+        }
         loggingEnabled = true
-        val loggedResults = runner.run()
+        val loggedResults = doRunInvocation(true)
         val sameResultTypes = loggedResults.javaClass == previousResults.javaClass
-        val sameExecutionResults = loggedResults !is CompletedInvocationResult || previousResults !is CompletedInvocationResult || (loggedResults.results == previousResults.results)
+        val sameExecutionResults = previousResults !is CompletedInvocationResult || loggedResults !is CompletedInvocationResult || previousResults.results == loggedResults.results
         check(sameResultTypes && sameExecutionResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
-                appendln("Reporting scenario without correct trace")
-                appendln(previousResults.asLincheckFailureWithoutTrace().toString())
+                appendln("Reporting scenario without execution trace.")
+                appendln(loggedResults.asLincheckFailureWithoutTrace().toString())
             }.toString()
         }
-        return loggedResults
+        return eventCollector.interleavingEvents()
     }
 
     private fun InvocationResult.asLincheckFailureWithoutTrace(): LincheckFailure {
         if (this is CompletedInvocationResult)
             return IncorrectResultsFailure(scenario, results, null)
         return toLincheckFailure(scenario, null)
+    }
+
+    private fun doRunInvocation(repeatExecution: Boolean): InvocationResult {
+        initializeInvocation(repeatExecution)
+        val result = runner.run()
+        // if strategy already determined invocation result, then return it instead
+        if (suddenInvocationResult != null)
+            return suddenInvocationResult!!
+        return result
     }
 
     /**
