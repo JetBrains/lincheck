@@ -47,7 +47,6 @@ class ExecutionReportingTest : VerifierState() {
 
     @Operation
     fun operation2() {
-        b++
         treatedAsAtomic()
         uselessIncrements(2)
         intermediateMethod()

@@ -24,7 +24,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.UnsafeHolder
-import org.objectweb.asm.*
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.*
@@ -77,15 +79,13 @@ internal class ManagedStrategyTransformer(
             // synchronized method is replaced with synchronized lock
             mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), className, access, classVersion)
         }
-        mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        // SharedVariableAccessMethodTransformer should be an earlier visitor than ClassInitializationTransformer
-        // not to have suspension points before 'beforeIgnoredSectionEntering' call in <clinit> block.
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -257,7 +257,9 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Add strategy method invocations corresponding to ManagedGuarantee guarantees
+     * Add strategy method invocations corresponding to ManagedGuarantee guarantees.
+     * CallStackTraceTransformer should be an earlier transformer than this transformer, because
+     * this transformer reuse code locations created by CallStackTraceTransformer for optimization purposes.
      */
     private inner class ManagedGuaranteeTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
@@ -269,11 +271,9 @@ internal class ManagedStrategyTransformer(
                 }
                 ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
                     invokeBeforeAtomicMethodCall(methodName, Type.getArgumentTypes(desc))
-                    val codeLocation = codeLocations.lastIndex // the code location that was created at the previous line
                     invokeBeforeIgnoredSectionEntering()
                     adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                     invokeAfterIgnoredSectionLeaving()
-                    afterMethodCall(Method(name, desc).returnType, codeLocation)
                 }
                 null -> adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             }
@@ -292,7 +292,9 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Makes all <clinit> sections ignored, because managed execution in <clinit> can lead to a deadlock
+     * Makes all <clinit> sections ignored, because managed execution in <clinit> can lead to a deadlock.
+     * SharedVariableAccessMethodTransformer should be earlier than this transformer not to create switch points before
+     * beforeIgnoredSectionEntering invocations.
      */
     private inner class ClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter)  {
         private val isClinit = methodName == "<clinit>"
@@ -331,8 +333,7 @@ internal class ManagedStrategyTransformer(
             afterMethodCall(Method(name, desc).returnType, codeLocation)
         }
 
-        private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy") ||
-                                                    className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
+        private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
     }
 
     /**
@@ -703,8 +704,10 @@ internal class ManagedStrategyTransformer(
         private var lineNumber = 0
 
         fun invokeBeforeAtomicMethodCall(methodName: String, paramTypes: Array<Type>) {
-            onSharedMemoryAccess(BEFORE_ATOMIC_METHOD_CALL_METHOD) { ste -> MethodCallCodeLocation(methodName, ste) }
-            captureParameters(paramTypes)
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.push(codeLocations.lastIndex) // reuse code location
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
 
         fun invokeBeforeSharedVariableRead(fieldName: String? = null) = onSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
