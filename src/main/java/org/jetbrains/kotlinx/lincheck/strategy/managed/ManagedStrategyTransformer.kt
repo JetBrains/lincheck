@@ -160,7 +160,7 @@ internal class ManagedStrategyTransformer(
                     visitLabel(skipCodeLocationAfter)
                 }
                 PUTSTATIC -> {
-                    invokeBeforeSharedVariableWrite(name, Type.getType(desc))
+                    beforeSharedVariableWrite(name, Type.getType(desc))
                     super.visitFieldInsn(opcode, owner, name, desc)
                     invokeMakeStateRepresentation()
                 }
@@ -172,7 +172,7 @@ internal class ManagedStrategyTransformer(
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    invokeBeforeSharedVariableWrite(name, Type.getType(desc))
+                    beforeSharedVariableWrite(name, Type.getType(desc))
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -189,7 +189,6 @@ internal class ManagedStrategyTransformer(
         }
 
         override fun visitInsn(opcode: Int) = adapter.run {
-            var isWrite = false
             when (opcode) {
                 AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
                     val skipCodeLocation = adapter.newLabel()
@@ -200,21 +199,30 @@ internal class ManagedStrategyTransformer(
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead()
                     visitLabel(skipCodeLocation)
+                    super.visitInsn(opcode)
                 }
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                    val skipCodeLocation = adapter.newLabel()
+                    val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
+                    val skipCodeLocationBefore = adapter.newLabel()
                     dupArrayOnArrayStore(opcode)
                     invokeOnLocalObjectCheck()
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
+                    copyLocal(isLocalObject)
+                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    invokeBeforeSharedVariableWrite(null, getArrayStoreType(opcode))
-                    visitLabel(skipCodeLocation)
-                    isWrite = true
+                    beforeSharedVariableWrite(null, getArrayStoreType(opcode))
+                    visitLabel(skipCodeLocationBefore)
+
+                    super.visitInsn(opcode)
+
+                    val skipCodeLocationAfter = newLabel()
+                    loadLocal(isLocalObject)
+                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
+                    // initialize make state representation only if is not a local object
+                    invokeMakeStateRepresentation()
+                    visitLabel(skipCodeLocationAfter)
                 }
+                else -> super.visitInsn(opcode)
             }
-            super.visitInsn(opcode)
-            if (isWrite)
-                invokeMakeStateRepresentation()
         }
 
         // STACK: array, index, value -> array, index, value, arr
@@ -243,17 +251,73 @@ internal class ManagedStrategyTransformer(
             }
         }
 
+        // STACK: value that was read
+        private fun afterSharedVariableRead(valueType: Type) = adapter.run {
+            val readValue = newLocal(valueType)
+            copyLocal(readValue)
+            // initialize ReadCodeLocation
+            val codeLocation = codeLocations.lastIndex /// the last created code location
+            loadStrategy()
+            push(codeLocation)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            checkCast(READ_CODELOCATION_TYPE)
+            loadLocal(readValue)
+            box(valueType)
+            invokeVirtual(READ_CODELOCATION_TYPE, ADD_READ_VALUE_METHOD)
+        }
+
+        // STACK: value to be written
+        private fun beforeSharedVariableWrite(fieldName: String? = null, valueType: Type) {
+            invokeBeforeSharedVariableWrite(fieldName)
+            captureWrittenValue(valueType)
+        }
+
+        // STACK: value to be written
+        private fun captureWrittenValue(valueType: Type) = adapter.run {
+            val storedValue = newLocal(valueType)
+            copyLocal(storedValue) // save store value
+            // initialize WriteCodeLocation with stored value
+            val codeLocation = codeLocations.lastIndex // the last created code location
+            loadStrategy()
+            push(codeLocation)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            checkCast(WRITE_CODELOCATION_TYPE)
+            loadLocal(storedValue)
+            box(valueType)
+            invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
+        }
+
         private fun getArrayStoreType(opcode: Int): Type = when (opcode) {
-                AASTORE -> OBJECT_TYPE
-                IASTORE -> Type.INT_TYPE
-                FASTORE -> Type.FLOAT_TYPE
-                BASTORE -> Type.BOOLEAN_TYPE
-                CASTORE -> Type.CHAR_TYPE
-                SASTORE -> Type.SHORT_TYPE
-                LASTORE -> Type.LONG_TYPE
-                DASTORE -> Type.DOUBLE_TYPE
-                else -> throw IllegalStateException("Unexpected opcode: $opcode")
-            }
+            AASTORE -> OBJECT_TYPE
+            IASTORE -> Type.INT_TYPE
+            FASTORE -> Type.FLOAT_TYPE
+            BASTORE -> Type.BOOLEAN_TYPE
+            CASTORE -> Type.CHAR_TYPE
+            SASTORE -> Type.SHORT_TYPE
+            LASTORE -> Type.LONG_TYPE
+            DASTORE -> Type.DOUBLE_TYPE
+            else -> throw IllegalStateException("Unexpected opcode: $opcode")
+        }
+
+        private fun invokeBeforeSharedVariableRead(fieldName: String? = null) = invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
+
+        private fun invokeBeforeSharedVariableWrite(fieldName: String? = null) = invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
+
+        private fun invokeBeforeSharedVariableReadOrWrite(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocation(codeLocationConstructor)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+        }
+
+        // STACK: object
+        private fun invokeOnLocalObjectCheck() {
+            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
+            adapter.storeLocal(objectLocal)
+            loadLocalObjectManager()
+            adapter.loadLocal(objectLocal)
+            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
+        }
     }
 
     /**
@@ -270,10 +334,11 @@ internal class ManagedStrategyTransformer(
                     invokeAfterIgnoredSectionLeaving()
                 }
                 ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
-                    invokeBeforeAtomicMethodCall(methodName, Type.getArgumentTypes(desc))
+                    invokeBeforeAtomicMethodCall()
                     invokeBeforeIgnoredSectionEntering()
                     adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                     invokeAfterIgnoredSectionLeaving()
+                    invokeMakeStateRepresentation()
                 }
                 null -> adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             }
@@ -288,6 +353,13 @@ internal class ManagedStrategyTransformer(
                 if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.replace("/", ".")))
                     return guarantee.type
             return null
+        }
+
+        private fun invokeBeforeAtomicMethodCall() {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.push(codeLocations.lastIndex) // reuse code location
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
 
@@ -326,7 +398,7 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            invokeBeforeMethodCall(name, Type.getArgumentTypes(desc))
+            beforeMethodCall(name, Type.getArgumentTypes(desc))
             val codeLocation = codeLocations.lastIndex // the code location that was created at the previous line
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             invokeAfterMethodCall()
@@ -334,6 +406,66 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
+
+        // STACK: param_1 param_2 ... param_n
+        private fun beforeMethodCall(methodName: String, paramTypes: Array<Type>) {
+            invokeBeforeMethodCall(methodName)
+            captureParameters(paramTypes)
+        }
+
+        // STACK: returned value (unless void)
+        private fun afterMethodCall(returnType: Type, codeLocation: Int) = adapter.run {
+            if (returnType == Type.VOID_TYPE) return // no return value
+            val returnedValue = newLocal(returnType)
+            copyLocal(returnedValue)
+            // initialialize MethodCallCodeLocation return value
+            loadStrategy()
+            push(codeLocation)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            checkCast(METHOD_CALL_CODELOCATION_TYPE)
+            loadLocal(returnedValue)
+            box(returnType)
+            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_RETURNED_VALUE_METHOD)
+        }
+
+        // STACK: param_1 param_2 ... param_n
+        private fun captureParameters(paramTypes: Array<Type>) = adapter.run {
+            if (paramTypes.isEmpty()) return // nothing to capture
+            val params = copyParameters(paramTypes)
+            // create array of parameters
+            push(paramTypes.size)
+            visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
+            val array = newLocal(OBJECT_ARRAY_TYPE)
+            storeLocal(array)
+            for (i in paramTypes.indices) {
+                loadLocal(array)
+                push(i)
+                loadLocal(params[i])
+                box(paramTypes[i]) // in case it is a primitive type
+                arrayStore(OBJECT_TYPE)
+            }
+            // initialize MethodCallCodeLocation parameter values
+            loadStrategy()
+            val codeLocation = codeLocations.lastIndex /// the last created code location
+            push(codeLocation)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+            checkCast(METHOD_CALL_CODELOCATION_TYPE)
+            loadLocal(array)
+            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_PARAMETERS_METHOD)
+        }
+
+        private fun invokeBeforeMethodCall(methodName: String) {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocation { ste -> MethodCallCodeLocation(methodName, ste) }
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
+        }
+
+        private fun invokeAfterMethodCall() {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
+        }
     }
 
     /**
@@ -458,6 +590,27 @@ internal class ManagedStrategyTransformer(
                 else -> visitInsn(opcode)
             }
         }
+
+        // STACK: monitor
+        private fun invokeBeforeLockAcquire() {
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterCodeLocation)
+        }
+
+        // STACK: monitor
+        private fun invokeBeforeLockRelease() {
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitCodeLocation)
+        }
+
+        // STACK: monitor
+        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
+            val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
+            adapter.storeLocal(monitorLocal)
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocation(codeLocationConstructor)
+            adapter.loadLocal(monitorLocal)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+        }
     }
 
     /**
@@ -572,6 +725,28 @@ internal class ManagedStrategyTransformer(
             val isNotifyAll = opcode == INVOKEVIRTUAL && name == "notifyAll" && desc == "()V"
             return isNotify || isNotifyAll
         }
+
+        // STACK: monitor
+        private fun invokeBeforeWait(withTimeout: Boolean) {
+            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitCodeLocation)
+        }
+
+        // STACK: monitor
+        private fun invokeAfterNotify(notifyAll: Boolean) {
+            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyCodeLocation)
+        }
+
+        // STACK: monitor
+        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
+            val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
+            adapter.storeLocal(monitorLocal)
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocation(codeLocationConstructor)
+            adapter.loadLocal(monitorLocal)
+            adapter.push(flag)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+        }
     }
 
     /**
@@ -618,6 +793,28 @@ internal class ManagedStrategyTransformer(
                 invokeAfterUnpark()
             }
         }
+
+        // STACK: withTimeout
+        private fun invokeBeforePark() {
+            val withTimeoutLocal: Int = adapter.newLocal(Type.BOOLEAN_TYPE)
+            adapter.storeLocal(withTimeoutLocal)
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocation(::ParkCodeLocation)
+            adapter.loadLocal(withTimeoutLocal)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
+        }
+
+        // STACK: thread
+        private fun invokeAfterUnpark() {
+            val threadLocal: Int = adapter.newLocal(OBJECT_TYPE)
+            adapter.storeLocal(threadLocal)
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocation(::UnparkCodeLocation)
+            adapter.loadLocal(threadLocal)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
+        }
     }
 
     /**
@@ -654,7 +851,7 @@ internal class ManagedStrategyTransformer(
                 when (opcode) {
                     PUTSTATIC -> {
                         adapter.dup()
-                        invokeOnLocalObjectDelete()
+                        invokeDeleteLocalObject()
                     }
                     PUTFIELD -> {
                         // we cannot invoke this method for final field, because an object may uninitialized yet
@@ -662,7 +859,7 @@ internal class ManagedStrategyTransformer(
                         if (!isFinalField) {
                             // owner, value
                             adapter.dup2() // owner, value, owner, value
-                            invokeOnDependencyAddition() // owner, value
+                            invokeAddDependency() // owner, value
                         }
                     }
                 }
@@ -680,10 +877,10 @@ internal class ManagedStrategyTransformer(
                     dup2() // array, index, array, index
                     pop() // array, index, array
                     loadLocal(value) // array, index, array, value
-                    invokeOnDependencyAddition() // array, index
+                    invokeAddDependency() // array, index
                     loadLocal(value) // array, index, value
                 }
-                RETURN -> if ("<init>" == methodName) {
+                RETURN -> if (methodName == "<init>") {
                     // handle all final field added dependencies
                     val ownerType = Type.getObjectType(className)
                     for (field in getNonStaticFinalFields(className)) {
@@ -692,121 +889,15 @@ internal class ManagedStrategyTransformer(
                         loadThis() // owner
                         loadThis() // owner, owner
                         getField(ownerType, field.name, fieldType) // owner, value
-                        invokeOnDependencyAddition()
+                        invokeAddDependency()
                     }
                 }
             }
             adapter.visitInsn(opcode)
         }
-    }
-
-    private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
-        private var lineNumber = 0
-
-        fun invokeBeforeAtomicMethodCall(methodName: String, paramTypes: Array<Type>) {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            adapter.push(codeLocations.lastIndex) // reuse code location
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
-        }
-
-        fun invokeBeforeSharedVariableRead(fieldName: String? = null) = onSharedMemoryAccess(BEFORE_SHARED_VARIABLE_READ_METHOD) { ste -> ReadCodeLocation(fieldName, ste)}
-
-        // STACK: value to be written
-        fun invokeBeforeSharedVariableWrite(fieldName: String? = null, valueType: Type) {
-            onSharedMemoryAccess(BEFORE_SHARED_VARIABLE_WRITE_METHOD) { ste -> WriteCodeLocation(fieldName, ste)}
-            captureWrittenValue(valueType)
-        }
-
-        // STACK: value to be written
-        private fun captureWrittenValue(valueType: Type) = adapter.run {
-            val storedValue = newLocal(valueType)
-            copyLocal(storedValue) // save store value
-            // initialize WriteCodeLocation with stored value
-            val codeLocation = codeLocations.lastIndex // the last created code location
-            loadStrategy()
-            push(codeLocation)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
-            checkCast(WRITE_CODELOCATION_TYPE)
-            loadLocal(storedValue)
-            box(valueType)
-            invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
-        }
-
-        private fun onSharedMemoryAccess(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadNewCodeLocation(codeLocationConstructor)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
-        }
-
-        // STACK: monitor
-        fun invokeBeforeWait(withTimeout: Boolean) {
-            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitCodeLocation)
-        }
-
-        // STACK: monitor
-        fun invokeAfterNotify(notifyAll: Boolean) {
-            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyCodeLocation)
-        }
-
-        // STACK: monitor
-        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
-            val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(monitorLocal)
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadNewCodeLocation(codeLocationConstructor)
-            adapter.loadLocal(monitorLocal)
-            adapter.push(flag)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
-        }
-
-        // STACK: withTimeout
-        fun invokeBeforePark() {
-            val withTimeoutLocal: Int = adapter.newLocal(Type.BOOLEAN_TYPE)
-            adapter.storeLocal(withTimeoutLocal)
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadNewCodeLocation(::ParkCodeLocation)
-            adapter.loadLocal(withTimeoutLocal)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
-        }
-
-        // STACK: thread
-        fun invokeAfterUnpark() {
-            val threadLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(threadLocal)
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadNewCodeLocation(::UnparkCodeLocation)
-            adapter.loadLocal(threadLocal)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
-        }
-
-        // STACK: monitor
-        fun invokeBeforeLockAcquire() {
-            invokeOnLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterCodeLocation)
-        }
-
-        // STACK: monitor
-        fun invokeBeforeLockRelease() {
-            invokeOnLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitCodeLocation)
-        }
-
-        // STACK: monitor
-        private fun invokeOnLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
-            val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(monitorLocal)
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadNewCodeLocation(codeLocationConstructor)
-            adapter.loadLocal(monitorLocal)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
-        }
 
         // STACK: object
-        fun invokeOnNewLocalObject() {
+        private fun invokeOnNewLocalObject() {
             val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(objectLocal)
             loadLocalObjectManager()
@@ -815,7 +906,7 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: object
-        fun invokeOnLocalObjectDelete() {
+        private fun invokeDeleteLocalObject() {
             val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(objectLocal)
             loadLocalObjectManager()
@@ -823,17 +914,8 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, DELETE_LOCAL_OBJECT_METHOD)
         }
 
-        // STACK: object
-        fun invokeOnLocalObjectCheck() {
-            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(objectLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(objectLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
-        }
-
         // STACK: owner, dependant
-        fun invokeOnDependencyAddition() {
+        private fun invokeAddDependency() {
             val ownerLocal: Int = adapter.newLocal(OBJECT_TYPE)
             val dependantLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(dependantLocal)
@@ -843,34 +925,24 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(dependantLocal)
             adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY_METHOD)
         }
+    }
 
-        fun invokeBeforeIgnoredSectionEntering() {
+    private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        private var lineNumber = 0
+
+        protected fun invokeBeforeIgnoredSectionEntering() {
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_IGNORED_SECTION_METHOD)
         }
 
-        fun invokeAfterIgnoredSectionLeaving() {
+        protected fun invokeAfterIgnoredSectionLeaving() {
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
         }
 
-        fun invokeBeforeMethodCall(methodName: String, paramTypes: Array<Type>) {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadNewCodeLocation { ste -> MethodCallCodeLocation(methodName, ste) }
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
-            captureParameters(paramTypes)
-        }
-
-        fun invokeAfterMethodCall() {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
-        }
-
-        fun invokeMakeStateRepresentation() {
+        protected fun invokeMakeStateRepresentation() {
             if (shouldMakeStateRepresentation) {
                 loadStrategy()
                 loadCurrentThreadNumber()
@@ -878,76 +950,20 @@ internal class ManagedStrategyTransformer(
             }
         }
 
-        // STACK: value that was read
-        fun afterSharedVariableRead(valueType: Type) = adapter.run {
-            val readValue = newLocal(valueType)
-            copyLocal(readValue)
-            // initialize ReadCodeLocation
-            val codeLocation = codeLocations.lastIndex /// the last created code location
-            loadStrategy()
-            push(codeLocation)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
-            checkCast(READ_CODELOCATION_TYPE)
-            loadLocal(readValue)
-            box(valueType)
-            invokeVirtual(READ_CODELOCATION_TYPE, ADD_READ_VALUE_METHOD)
-        }
-
-        // STACK: param_1 param_2 ... param_n
-        private fun captureParameters(paramTypes: Array<Type>) = adapter.run {
-            if (paramTypes.isEmpty()) return // nothing to capture
-            val params = copyParameters(paramTypes)
-            // create array of parameters
-            push(paramTypes.size)
-            visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
-            val array = newLocal(OBJECT_ARRAY_TYPE)
-            storeLocal(array)
-            for (i in paramTypes.indices) {
-                loadLocal(array)
-                push(i)
-                loadLocal(params[i])
-                box(paramTypes[i]) // in case it is a primitive type
-                arrayStore(OBJECT_TYPE)
-            }
-            // initialize MethodCallCodeLocation parameter values
-            loadStrategy()
-            val codeLocation = codeLocations.lastIndex /// the last created code location
-            push(codeLocation)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
-            checkCast(METHOD_CALL_CODELOCATION_TYPE)
-            loadLocal(array)
-            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_PARAMETERS_METHOD)
-        }
-
-        // STACK: returned value (unless void)
-        fun afterMethodCall(returnType: Type, codeLocation: Int) = adapter.run {
-            if (returnType == Type.VOID_TYPE) return // no return value
-            val returnedValue = newLocal(returnType)
-            copyLocal(returnedValue)
-            // initialialize MethodCallCodeLocation return value
-            loadStrategy()
-            push(codeLocation)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
-            checkCast(METHOD_CALL_CODELOCATION_TYPE)
-            loadLocal(returnedValue)
-            box(returnType)
-            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_RETURNED_VALUE_METHOD)
-        }
-
-        fun loadStrategy() {
+        protected fun loadStrategy() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
         }
 
-        fun loadLocalObjectManager() {
+        protected fun loadLocalObjectManager() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::objectManager.name, LOCAL_OBJECT_MANAGER_TYPE)
         }
 
-        fun loadCurrentThreadNumber() {
+        protected fun loadCurrentThreadNumber() {
             loadStrategy()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD)
         }
 
-        fun loadNewCodeLocation(codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
+        protected fun loadNewCodeLocation(codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             val codeLocation = codeLocations.size
             codeLocations.add(codeLocationConstructor(StackTraceElement(className, methodName, fileName, lineNumber)))
             adapter.push(codeLocation)
