@@ -128,7 +128,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name)) {
+            if (isFinalField(owner, name) || isSuspendStateMachine(owner)) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
             }
@@ -317,6 +317,12 @@ internal class ManagedStrategyTransformer(
             loadLocalObjectManager()
             adapter.loadLocal(objectLocal)
             adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
+        }
+
+        private fun isSuspendStateMachine(owner: String): Boolean {
+            // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
+            // it is internal, so check by name
+            return Class.forName(owner.replace("/", ".")).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
         }
     }
 

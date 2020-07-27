@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
 
+import kotlinx.coroutines.delay
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
@@ -46,8 +47,9 @@ class ExecutionReportingTest : VerifierState() {
     }
 
     @Operation
-    fun operation2() {
+    suspend fun operation2() {
         b++
+        delay(0)
         treatedAsAtomic()
         uselessIncrements(2)
         intermediateMethod()
@@ -79,6 +81,12 @@ class ExecutionReportingTest : VerifierState() {
 
     @Test
     fun test() {
+        val options = ModelCheckingOptions()
+                .actorsAfter(0)
+                .actorsBefore(0)
+                .actorsPerThread(1)
+                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("treatedAsAtomic").treatAsAtomic())
+                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("ignored").ignore())
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
@@ -92,15 +100,8 @@ class ExecutionReportingTest : VerifierState() {
         check("uselessIncrements(2): false at" in log) { "increments in uselessIncrements method should be compressed" }
         check("treatedAsAtomic() at" in log) { "treated as atomic methods should be reported" }
         check("ignored" !in log) { "ignored methods should not be present in log" }
-    }
-
-    companion object {
-        val options = ModelCheckingOptions()
-                .actorsAfter(0)
-                .actorsBefore(0)
-                .actorsPerThread(1)
-                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("treatedAsAtomic").treatAsAtomic())
-                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("ignored").ignore())
+        check("label" !in log) { "suspend state machine related fields should not be reported" }
+        check("L$0" !in log) { "suspend state machine related fields should not be reported" }
     }
 
     override fun extractState() = "$a $b $canEnterForbiddenSection"
