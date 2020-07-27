@@ -100,10 +100,13 @@ internal class ManagedStrategyTransformer(
     private class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
             val normalizedName = name.replace("/", ".")
+            // transformation of exceptions causes a lot of trouble with catching expected exceptions
             val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
+            // transformation of java.util.function cause AFU update methods to fail, because AFU can not be transformed
+            val inFunctionPackage = name.startsWith("java/util/function/")
             val isTrustedAtomicPrimitive = isTrustedPrimitive(normalizedName)
             // function package is not transformed, because AFU uses it and thus there will be transformation problems
-            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !isException)
+            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !isException && !inFunctionPackage)
                 return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
             return name
         }
