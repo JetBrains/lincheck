@@ -99,14 +99,14 @@ internal class ManagedStrategyTransformer(
      */
     private class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            val normalizedName = name.replace("/", ".")
+            val normalizedName = name.toClassName()
             // transformation of exceptions causes a lot of trouble with catching expected exceptions
             val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
             // transformation of java.util.function cause AFU update methods to fail, because AFU can not be transformed
             val inFunctionPackage = name.startsWith("java/util/function/")
-            val isTrustedAtomicPrimitive = isTrustedPrimitive(normalizedName)
+            val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
             // function package is not transformed, because AFU uses it and thus there will be transformation problems
-            if (name.startsWith("java/util/") && !isTrustedAtomicPrimitive && !isException && !inFunctionPackage)
+            if (name.startsWith("java/util/") && !isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
                 return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
             return name
         }
@@ -131,7 +131,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name) || isSuspendStateMachine(owner)) {
+            if (isFinalField(owner, name) || isSuspendStateMachine(owner) || isTrustedPrimitive(owner.toClassName())) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
             }
@@ -325,7 +325,7 @@ internal class ManagedStrategyTransformer(
         private fun isSuspendStateMachine(owner: String): Boolean {
             // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
             // it is internal, so check by name
-            return Class.forName(owner.replace("/", ".")).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
+            return Class.forName(owner.toClassName()).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
         }
     }
 
@@ -359,7 +359,7 @@ internal class ManagedStrategyTransformer(
          */
         private fun classifyGuaranteeType(className: String, methodName: String): ManagedGuaranteeType? {
             for (guarantee in guarantees)
-                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.replace("/", ".")))
+                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.toClassName()))
                     return guarantee.type
             return null
         }
@@ -533,7 +533,7 @@ internal class ManagedStrategyTransformer(
         private val randomMethods = Random::class.java.declaredMethods
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            if (opcode == INVOKEVIRTUAL && extendsRandom(owner.replace("/", ".")) && isRandomMethod(name, desc)) {
+            if (opcode == INVOKEVIRTUAL && extendsRandom(owner.toClassName()) && isRandomMethod(name, desc)) {
                 val locals = adapter.storeParameters(desc)
                 adapter.pop() // pop replaced Random
                 loadRandom()
@@ -827,14 +827,45 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Track local objects for odd switch codeLocations elimination
+     * Track local objects for odd switch points elimination.
+     * A local object is an object that can be possible viewed only from one thread.
      */
     private inner class LocalObjectManagingTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
-            val isObjectCreation = opcode == INVOKESPECIAL && "<init>" == name && "java/lang/Object" == owner
-            if (isObjectCreation) adapter.dup() // will be used for adding to LocalObjectManager
-            adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            if (isObjectCreation) invokeOnNewLocalObject()
+            val isObjectCreation = opcode == INVOKESPECIAL && name == "<init>" && owner == "java/lang/Object"
+            val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(owner.toClassName())
+            val lowerCaseName = name.toLowerCase()
+            val isPrimitiveWrite = isImpossibleToTransformPrimitive && WRITE_KEYWORDS.any { it in lowerCaseName }
+            val isObjectPrimitiveWrite = isPrimitiveWrite && Type.getArgumentTypes(descriptor).lastOrNull()?.descriptor?.isNotPrimitiveType() ?: false
+
+            when {
+                isObjectCreation -> {
+                    adapter.dup() // will be used for onNewLocalObject method
+                    adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                    invokeOnNewLocalObject()
+                }
+                isObjectPrimitiveWrite -> {
+                    // the exact list of methods that should be matched here:
+                    // Unsafe.put[Ordered]?Object[Volatile]?
+                    // Unsafe.getAndSet
+                    // Unsafe.compareAndSwapObject
+                    // VarHandle.set[Volatile | Acquire | Opaque]?
+                    // VarHandle.[weak]?CompareAndSet[Plain | Acquire | Release]?
+                    // VarHandle.compareAndExchange[Acquire | Release]?
+                    // VarHandle.getAndSet[Acquire | Release]?
+                    // AtomicReferenceFieldUpdater.compareAndSet
+                    // AtomicReferenceFieldUpdater.[lazy]?Set
+                    // AtomicReferenceFieldUpdater.getAndSet
+
+                    // all this methods have the field owner as the first argument and the written value as the last one
+                    val params = adapter.copyParameters(descriptor)
+                    adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                    adapter.loadLocal(params.first())
+                    adapter.loadLocal(params.last())
+                    invokeAddDependency()
+                }
+                else -> adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            }
         }
 
         override fun visitIntInsn(opcode: Int, operand: Int) {
@@ -854,7 +885,7 @@ internal class ManagedStrategyTransformer(
         }
 
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-            val isNotPrimitiveType = desc.startsWith("L") || desc.startsWith("[")
+            val isNotPrimitiveType = desc.isNotPrimitiveType()
             val isFinalField = isFinalField(owner, name)
             if (isNotPrimitiveType) {
                 when (opcode) {
@@ -1025,6 +1056,8 @@ internal class ManagedStrategyTransformer(
         private val ADD_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodeLocation::addReturnedValue.javaMethod)
         private val ADD_PARAMETERS_METHOD = Method.getMethod(MethodCallCodeLocation::addParameters.javaMethod)
 
+        private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
+
         /**
          * Returns array of locals containing given parameters.
          * STACK: param_1 param_2 ... param_n
@@ -1053,6 +1086,8 @@ internal class ManagedStrategyTransformer(
             return locals
         }
 
+        private fun GeneratorAdapter.copyParameters(methodDescriptor: String): IntArray = copyParameters(Type.getArgumentTypes(methodDescriptor))
+
         private fun GeneratorAdapter.loadLocals(locals: IntArray) {
             for (local in locals)
                 loadLocal(local)
@@ -1075,7 +1110,7 @@ internal class ManagedStrategyTransformer(
                 ownerInternal = ownerInternal.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
-                val clazz = Class.forName(ownerInternal.replace('/', '.'))
+                val clazz = Class.forName(ownerInternal.toClassName())
                 val fields = clazz.declaredFields
                 Arrays.stream(fields)
                         .filter { field: Field -> field.modifiers and (Modifier.FINAL or Modifier.STATIC) == Modifier.FINAL }
@@ -1091,7 +1126,7 @@ internal class ManagedStrategyTransformer(
                 internalName = internalName.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
-                val clazz = Class.forName(internalName.replace('/', '.'))
+                val clazz = Class.forName(internalName.toClassName())
                 findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
             } catch (e: ClassNotFoundException) {
                 throw RuntimeException(e)
@@ -1109,5 +1144,10 @@ internal class ManagedStrategyTransformer(
             } while (clazz != null)
             throw NoSuchFieldException()
         }
+
+        private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
+
+        private fun String.toInternalName() = this.replace(".", "/")
+        private fun String.toClassName() = this.replace("/", ".")
     }
 }
