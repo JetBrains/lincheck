@@ -34,6 +34,8 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.stream.Collectors
+import kotlin.coroutines.Continuation
+import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.javaMethod
 
 
@@ -407,7 +409,7 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            beforeMethodCall(name, Type.getArgumentTypes(desc))
+            beforeMethodCall(name, Type.getArgumentTypes(desc), isSuspend(owner, name, desc))
             val codeLocation = codeLocations.lastIndex // the code location that was created at the previous line
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             invokeAfterMethodCall()
@@ -417,9 +419,9 @@ internal class ManagedStrategyTransformer(
         private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
         // STACK: param_1 param_2 ... param_n
-        private fun beforeMethodCall(methodName: String, paramTypes: Array<Type>) {
+        private fun beforeMethodCall(methodName: String, paramTypes: Array<Type>, isSuspend: Boolean) {
             invokeBeforeMethodCall(methodName)
-            captureParameters(paramTypes)
+            captureParameters(paramTypes, isSuspend)
         }
 
         // STACK: returned value (unless void)
@@ -438,18 +440,30 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: param_1 param_2 ... param_n
-        private fun captureParameters(paramTypes: Array<Type>) = adapter.run {
+        private fun captureParameters(paramTypes: Array<Type>, isSuspend: Boolean) = adapter.run {
             if (paramTypes.isEmpty()) return // nothing to capture
             val params = copyParameters(paramTypes)
+            val paramCount: Int
+            if (isSuspend && paramTypes.last().internalName == "kotlin/coroutines/Continuation") {
+                // do not log last continuation in suspend functions
+                paramCount = paramTypes.size - 1
+            } else {
+                paramCount = paramTypes.size
+            }
             // create array of parameters
-            push(paramTypes.size)
+            push(paramCount)
             visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
             val array = newLocal(OBJECT_ARRAY_TYPE)
             storeLocal(array)
-            for (i in paramTypes.indices) {
+            for (i in 0 until paramCount) {
                 loadLocal(array)
                 push(i)
-                loadLocal(params[i])
+                if (paramTypes[i].descriptor.isObject() && Continuation::class.java.isAssignableFrom(Class.forName(paramTypes[i].className))) {
+                    // do not log continuation, because it has too ugly toString representation
+                    push("<cont>")
+                } else {
+                    loadLocal(params[i])
+                }
                 box(paramTypes[i]) // in case it is a primitive type
                 arrayStore(OBJECT_TYPE)
             }
@@ -1147,7 +1161,17 @@ internal class ManagedStrategyTransformer(
 
         private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
 
-        private fun String.toInternalName() = this.replace(".", "/")
+        private fun String.isObject() = startsWith("L")
+
         private fun String.toClassName() = this.replace("/", ".")
+
+        private fun isSuspend(owner: String, methodName: String, descriptor: String): Boolean =
+                try {
+                    Class.forName(owner.toClassName()).kotlin.declaredFunctions.any {
+                        it.isSuspend && it.name == methodName && Method.getMethod(it.javaMethod).descriptor == descriptor
+                    }
+                } catch(e: Throwable) {
+                    false
+                }
     }
 }
