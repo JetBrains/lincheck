@@ -224,11 +224,11 @@ internal abstract class ManagedStrategyBase(
             isLoop = true
         }
         val shouldSwitch = shouldSwitch(threadId) or isLoop
-        eventCollector.passCodeLocation(threadId, codeLocation)
         if (shouldSwitch) {
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(threadId, reason)
         }
+        eventCollector.passCodeLocation(threadId, codeLocation)
         // continue operation
     }
 
