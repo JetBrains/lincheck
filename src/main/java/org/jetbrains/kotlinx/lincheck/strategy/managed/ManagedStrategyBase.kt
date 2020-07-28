@@ -194,7 +194,7 @@ internal abstract class ManagedStrategyBase(
 
     override fun beforeMethodCall(threadId: Int, codeLocation: Int) {
         if (isTestThread(threadId) && loggingEnabled)
-            callStackTrace[threadId].add(CallStackTraceElement(getLocationDescription(codeLocation), methodIdentifier++))
+            callStackTrace[threadId].add(CallStackTraceElement(getLocationDescription(codeLocation) as MethodCallCodeLocation, methodIdentifier++))
     }
 
     override fun afterMethodCall(threadId: Int) {
