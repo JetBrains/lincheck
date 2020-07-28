@@ -34,7 +34,7 @@ import java.util.List;
  */
 public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
-    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 20;
+    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 30;
     public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final int LIVELOCK_EVENTS_THRESHOLD = 1_000;
     public static final List<ManagedGuarantee> DEFAULT_GUARANTEES = Arrays.asList(
