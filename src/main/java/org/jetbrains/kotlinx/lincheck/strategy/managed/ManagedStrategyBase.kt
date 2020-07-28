@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
@@ -195,7 +194,7 @@ internal abstract class ManagedStrategyBase(
 
     override fun beforeMethodCall(threadId: Int, codeLocation: Int) {
         if (isTestThread(threadId) && loggingEnabled)
-            callStackTrace[threadId].add(CallStackTraceElement(getLocationDescription(codeLocation), methodIdentifier++))
+            callStackTrace[threadId].add(CallStackTraceElement(getLocationDescription(codeLocation) as MethodCallCodeLocation, methodIdentifier++))
     }
 
     override fun afterMethodCall(threadId: Int) {
@@ -404,20 +403,21 @@ internal abstract class ManagedStrategyBase(
 
     override fun onActorStart(threadId: Int) {
         currentActorId[threadId]++
+        loopDetector.reset(threadId) // visiting same code location in different actors is ok
     }
 
     /**
      * Detects loop when visiting a codeLocation too often.
      */
     private class LoopDetector(private val hangingDetectionThreshold: Int) {
-        private var lastIThread = Int.MIN_VALUE
+        private var lastThreadId = -1 // no last thread
         private val operationCounts = mutableMapOf<Int, Int>()
 
         fun newOperation(threadId: Int, codeLocation: Int): Boolean {
-            if (lastIThread != threadId) {
+            if (lastThreadId != threadId) {
                 // if we switched threads then reset counts
                 operationCounts.clear()
-                lastIThread = threadId
+                lastThreadId = threadId
             }
             if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false;
             // increment the number of times that we visited a codelocation
@@ -425,6 +425,11 @@ internal abstract class ManagedStrategyBase(
             operationCounts[codeLocation] = count
             // return true if the thread exceeded the maximum number of repetitions that we can have
             return count > hangingDetectionThreshold
+        }
+
+        fun reset(threadId: Int) {
+            operationCounts.clear()
+            lastThreadId = threadId
         }
     }
 

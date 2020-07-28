@@ -38,3 +38,12 @@ private val trustedAtomicPrimitives = listOf<(className: String) -> Boolean>(
  * we could just print the code location where the method is called.
  */
 fun isTrustedPrimitive(className: String) = trustedAtomicPrimitives.any { it(className) }
+
+/**
+ * Some primitives can not be transformed due to the CallerSensitive annotation.
+ * These primitives are a subset of trusted ones.
+ */
+fun isImpossibleToTransformPrimitive(className: String) =
+        className == "sun.misc.Unsafe" ||
+        className == "java.lang.invoke.VarHandle" ||
+        (className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater"))

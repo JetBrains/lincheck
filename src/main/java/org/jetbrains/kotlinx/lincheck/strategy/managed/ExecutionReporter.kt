@@ -135,7 +135,14 @@ private fun interestingEventStackTraces(
     Array(scenario.parallelExecution[threadId].size) { actorId ->
         val interestingCallStackTraces = mutableListOf<CallStackTrace>()
         interestingCallStackTraces.addAll(
-                eventsInThread.filter { it.actorId == actorId}.filterIsInstance(SwitchEvent::class.java).map { it.callStackTrace }
+                eventsInThread.filter { it.actorId == actorId }.filterIsInstance(SwitchEvent::class.java).map { it.callStackTrace }
+        )
+        interestingCallStackTraces.addAll(
+                eventsInThread
+                        .filter { it.actorId == actorId }
+                        .filterIsInstance(PassCodeLocationEvent::class.java)
+                        .filter { it.callStackTrace.lastOrNull()?.codeLocation?.returnedValue?.toString() == "COROUTINE_SUSPENDED" }
+                        .map { it.callStackTrace }
         )
 
         // last pass code location can also be interesting in case of incomplete execution
