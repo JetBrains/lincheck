@@ -192,7 +192,6 @@ public class TestThreadExecutionGenerator {
                 handler = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
                     mv.visitTryCatchBlock(start, end, handler, getType(ec).getInternalName());
-                mv.visitLabel(start);
             }
             // Catch those exceptions that has not been caught yet
             Label unexpectedExceptionHandler = mv.newLabel();
