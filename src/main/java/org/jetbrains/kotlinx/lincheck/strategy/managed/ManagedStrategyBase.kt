@@ -272,8 +272,7 @@ internal abstract class ManagedStrategyBase(
 
     protected fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
         val switchableThreads = switchableThreads(threadId)
-        val switchableThreadsCount = switchableThreads.count()
-        if (switchableThreadsCount == 0) {
+        if (switchableThreads.isEmpty()) {
             if (mustSwitch && !finished.all { it.get() }) {
                 // all threads are suspended
                 // then switch on any suspended thread to finish it and get SuspendedResult
@@ -288,7 +287,7 @@ internal abstract class ManagedStrategyBase(
             }
             return // ignore switch, because there is no one to switch to
         }
-        val nextThreadNumber = chooseThread(switchableThreadsCount)
+        val nextThreadNumber = chooseThread(switchableThreads.size)
         currentThread = switchableThreads[nextThreadNumber]
     }
 
