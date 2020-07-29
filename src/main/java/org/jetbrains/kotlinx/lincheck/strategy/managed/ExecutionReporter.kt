@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.math.min
 
 private val EXECUTION_INDENTATION = "  "
@@ -44,7 +45,6 @@ internal fun StringBuilder.appendExecution(
     // set of identifiers which were appended
     val loggedMethodCalls = mutableSetOf<Int>()
     val execution = mutableListOf<InterleavingEventRepresentation>()
-
     eventLoop@for (eventId in interleavingEvents.indices) {
         val event = interleavingEvents[eventId]
         val threadId = event.threadId
@@ -135,13 +135,13 @@ private fun interestingEventStackTraces(
     Array(scenario.parallelExecution[threadId].size) { actorId ->
         val interestingCallStackTraces = mutableListOf<CallStackTrace>()
         interestingCallStackTraces.addAll(
-                eventsInThread.filter { it.actorId == actorId }.filterIsInstance(SwitchEvent::class.java).map { it.callStackTrace }
+                eventsInThread.filter { it.actorId == actorId }.filterIsInstance<SwitchEvent>().map { it.callStackTrace }
         )
         interestingCallStackTraces.addAll(
                 eventsInThread
                         .filter { it.actorId == actorId }
-                        .filterIsInstance(PassCodeLocationEvent::class.java)
-                        .filter { it.callStackTrace.lastOrNull()?.codeLocation?.returnedValue?.toString() == "COROUTINE_SUSPENDED" }
+                        .filterIsInstance<PassCodeLocationEvent>()
+                        .filter { it.callStackTrace.lastOrNull()?.codeLocation?.returnedValue?.value == COROUTINE_SUSPENDED }
                         .map { it.callStackTrace }
         )
 

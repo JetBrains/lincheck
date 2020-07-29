@@ -21,6 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlin.coroutines.Continuation
+
 internal sealed class CodeLocation {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
@@ -61,26 +63,34 @@ internal class WriteCodeLocation(private val fieldName: String?, private val sta
 }
 
 internal class MethodCallCodeLocation(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodeLocation() {
-    var returnedValue: Any? = null
+    var returnedValue: ValueHolder? = null
     private var parameters: Array<Any?>? = null
 
     override fun toStringImpl(): String = StringBuilder().apply {
         append("$methodName(")
         if (parameters != null)
-            append(parameters!!.joinToString(","))
+            append(parameters!!.joinToString(",", transform = ::adornedStringRepresentation))
         append(")")
         if (returnedValue != null)
-            append(": $returnedValue")
+            append(": ${returnedValue!!.value}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun addReturnedValue(value: Any?) {
-        this.returnedValue = value
+        this.returnedValue = ValueHolder(value)
     }
 
     fun addParameters(parameters: Array<Any?>) {
         this.parameters = parameters
     }
+
+    private fun adornedStringRepresentation(any: Any?): String {
+        if (any is Continuation<*>)
+            return "<cont>" // Continuation.toString looks ugly, so show this instead
+        return any.toString()
+    }
+
+    internal class ValueHolder(val value: Any?)
 }
 
 internal class MonitorEnterCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
