@@ -491,6 +491,7 @@ internal class ManagedStrategyTransformer(
             if (owner == "sun/misc/Unsafe" && name == "getUnsafe") {
                 // load Unsafe
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
+                adapter.checkCast(UNSAFE_TYPE)
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -1030,6 +1031,7 @@ internal class ManagedStrategyTransformer(
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
+        private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
         private val WRITE_CODELOCATION_TYPE = Type.getType(WriteCodeLocation::class.java)
         private val READ_CODELOCATION_TYPE = Type.getType(ReadCodeLocation::class.java)
         private val METHOD_CALL_CODELOCATION_TYPE = Type.getType(MethodCallCodeLocation::class.java)

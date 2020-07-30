@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACK
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import sun.misc.Unsafe
 import java.lang.ref.WeakReference
 import java.lang.reflect.*
 import java.util.*
@@ -226,15 +225,15 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
  */
 internal object UnsafeHolder {
     @Volatile
-    private var theUnsafe: Unsafe? = null
+    private var theUnsafe: Any? = null
 
     @JvmStatic
-    fun getUnsafe(): Unsafe {
+    fun getUnsafe(): Any {
         if (theUnsafe == null) {
             try {
-                val f = Unsafe::class.java.getDeclaredField("theUnsafe")
+                val f = Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe")
                 f.isAccessible = true
-                theUnsafe = f.get(null) as Unsafe
+                theUnsafe = f.get(null)
             } catch (e: Exception) {
                 throw RuntimeException(e)
             }
