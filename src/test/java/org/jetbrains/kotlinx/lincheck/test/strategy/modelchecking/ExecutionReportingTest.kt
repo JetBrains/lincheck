@@ -47,9 +47,8 @@ class ExecutionReportingTest : VerifierState() {
     }
 
     @Operation
-    suspend fun operation2() {
+    fun operation2() {
         b++
-        delay(0)
         treatedAsAtomic()
         uselessIncrements(2)
         intermediateMethod()
@@ -100,8 +99,6 @@ class ExecutionReportingTest : VerifierState() {
         check("uselessIncrements(2): false at" in log) { "increments in uselessIncrements method should be compressed" }
         check("treatedAsAtomic() at" in log) { "treated as atomic methods should be reported" }
         check("ignored" !in log) { "ignored methods should not be present in log" }
-        check("label" !in log) { "suspend state machine related fields should not be reported" }
-        check("L$0" !in log) { "suspend state machine related fields should not be reported" }
     }
 
     override fun extractState() = "$a $b $canEnterForbiddenSection"

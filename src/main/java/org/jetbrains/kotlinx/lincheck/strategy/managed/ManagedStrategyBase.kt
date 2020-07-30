@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -33,6 +32,7 @@ import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.collections.*
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
  * This base class for managed strategies helps to handle code locations,
@@ -46,7 +46,6 @@ internal abstract class ManagedStrategyBase(
         stateRepresentation: Method?,
         private val testCfg: ManagedCTestConfiguration
 ) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, testCfg.guarantees, testCfg.timeoutMs) {
-    protected val parallelActors: List<List<Actor>> = scenario.parallelExecution
     // whether a thread finished all its operations
     private val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // what thread is currently allowed to perform operations
@@ -71,8 +70,12 @@ internal abstract class ManagedStrategyBase(
     // InvocationResult that was observed by the strategy in the execution (e.g. deadlock)
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
-    private val callStackTrace: Array<MutableList<CallStackTraceElement>> = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+    // stack with info about method invocations in current stack trace for each thread
+    private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+    // an increasing id all method invocations
     private var methodIdentifier = 0
+    // stack with info about suspended method invocations for each thread
+    private val suspendedMethodStack = Array(nThreads) { mutableListOf<Int>() }
 
     @Throws(Exception::class)
     abstract override fun runImpl(): LincheckFailure?
@@ -193,13 +196,32 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun beforeMethodCall(threadId: Int, codeLocation: Int) {
-        if (isTestThread(threadId) && loggingEnabled)
-            callStackTrace[threadId].add(CallStackTraceElement(getLocationDescription(codeLocation) as MethodCallCodeLocation, methodIdentifier++))
+        if (isTestThread(threadId) && loggingEnabled) {
+            val callStackTrace = callStackTrace[threadId]
+            val suspendedMethodStack = suspendedMethodStack[threadId]
+            val methodId = if (suspendedMethodStack.isNotEmpty()) {
+                // if there was a suspension before, then instead of creating a new identifier
+                // use the one that the suspended call had
+                val lastId = suspendedMethodStack.last()
+                suspendedMethodStack.remove(suspendedMethodStack.lastIndex)
+                lastId
+            } else {
+                methodIdentifier++
+            }
+            callStackTrace.add(CallStackTraceElement(getLocationDescription(codeLocation) as MethodCallCodeLocation, methodId))
+        }
     }
 
-    override fun afterMethodCall(threadId: Int) {
-        if (isTestThread(threadId) && loggingEnabled)
-            callStackTrace[threadId].removeAt(callStackTrace[threadId].lastIndex)
+    override fun afterMethodCall(threadId: Int, codeLocation: Int) {
+        if (isTestThread(threadId) && loggingEnabled) {
+            val callStackTrace = callStackTrace[threadId]
+            val methodCallCodeLocation = getLocationDescription(codeLocation) as MethodCallCodeLocation
+            if (methodCallCodeLocation.returnedValue?.value == COROUTINE_SUSPENDED) {
+                // if a method call is suspended, save its identifier to reuse for continuation resuming
+                suspendedMethodStack[threadId].add(callStackTrace.lastIndex)
+            }
+            callStackTrace.removeAt(callStackTrace.lastIndex)
+        }
     }
 
     override fun makeStateRepresentation(threadId: Int) {
@@ -208,6 +230,7 @@ internal abstract class ManagedStrategyBase(
     }
 
     private fun isTestThread(threadId: Int) = threadId < nThreads
+
     private fun shouldBeIgnored(threadId: Int) = ignoredSectionDepth[threadId] > 0
 
     /**
@@ -249,8 +272,7 @@ internal abstract class ManagedStrategyBase(
 
     protected fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
         val switchableThreads = switchableThreads(threadId)
-        val switchableThreadsCount = switchableThreads.count()
-        if (switchableThreadsCount == 0) {
+        if (switchableThreads.isEmpty()) {
             if (mustSwitch && !finished.all { it.get() }) {
                 // all threads are suspended
                 // then switch on any suspended thread to finish it and get SuspendedResult
@@ -265,7 +287,7 @@ internal abstract class ManagedStrategyBase(
             }
             return // ignore switch, because there is no one to switch to
         }
-        val nextThreadNumber = chooseThread(switchableThreadsCount)
+        val nextThreadNumber = chooseThread(switchableThreads.size)
         currentThread = switchableThreads[nextThreadNumber]
     }
 
@@ -382,6 +404,9 @@ internal abstract class ManagedStrategyBase(
         monitorTracker = MonitorTracker(nThreads)
         eventCollector = ExecutionEventCollector()
         suddenInvocationResult = null
+        ignoredSectionDepth.fill(0)
+        callStackTrace.forEach { it.clear() }
+        suspendedMethodStack.forEach { it.clear() }
         ManagedStateHolder.resetState(runner.classLoader)
     }
 

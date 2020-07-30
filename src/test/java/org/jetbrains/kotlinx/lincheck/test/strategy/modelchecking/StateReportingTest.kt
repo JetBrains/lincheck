@@ -52,7 +52,7 @@ class StateReportingTest : VerifierState() {
                 .addGuarantee(forClasses(this::class.java.name)
                 .methods("inc").treatAsAtomic())
         val failure = options.checkImpl(this::class.java)
-        check(failure != null) { "test should fail" }
+        check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("STATE: 1" in log)
         check("STATE: 2" in log)

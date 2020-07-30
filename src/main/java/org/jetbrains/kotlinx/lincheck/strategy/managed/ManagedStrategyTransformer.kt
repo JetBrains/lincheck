@@ -34,7 +34,6 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.stream.Collectors
-import kotlin.coroutines.Continuation
 import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.javaMethod
 
@@ -83,7 +82,7 @@ internal class ManagedStrategyTransformer(
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -133,7 +132,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name) || isSuspendStateMachine(owner) || isTrustedPrimitive(owner.toClassName())) {
+            if (isFinalField(owner, name) || isTrustedPrimitive(owner.toClassName()) || isSuspendStateMachine(owner)) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
             }
@@ -323,12 +322,6 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(objectLocal)
             adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
         }
-
-        private fun isSuspendStateMachine(owner: String): Boolean {
-            // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
-            // it is internal, so check by name
-            return Class.forName(owner.toClassName()).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
-        }
     }
 
     /**
@@ -402,17 +395,17 @@ internal class ManagedStrategyTransformer(
     /**
      * Adds strategy method invocations before and after method calls.
      */
-    private inner class CallStackTraceLoggingTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class CallStackTraceLoggingTransformer(className: String, methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+        private val isSuspendStateMachine = isSuspendStateMachine(className)
+
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            val isStrategyCall = isStrategyCall(owner)
-            if (isStrategyCall) {
+            if (isSuspendStateMachine || isStrategyCall(owner)) {
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
             beforeMethodCall(name, Type.getArgumentTypes(desc), isSuspend(owner, name, desc))
             val codeLocation = codeLocations.lastIndex // the code location that was created at the previous line
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-            invokeAfterMethodCall()
             afterMethodCall(Method(name, desc).returnType, codeLocation)
         }
 
@@ -426,17 +419,19 @@ internal class ManagedStrategyTransformer(
 
         // STACK: returned value (unless void)
         private fun afterMethodCall(returnType: Type, codeLocation: Int) = adapter.run {
-            if (returnType == Type.VOID_TYPE) return // no return value
-            val returnedValue = newLocal(returnType)
-            copyLocal(returnedValue)
-            // initialialize MethodCallCodeLocation return value
-            loadStrategy()
-            push(codeLocation)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
-            checkCast(METHOD_CALL_CODELOCATION_TYPE)
-            loadLocal(returnedValue)
-            box(returnType)
-            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_RETURNED_VALUE_METHOD)
+            if (returnType != Type.VOID_TYPE) {
+                val returnedValue = newLocal(returnType)
+                copyLocal(returnedValue)
+                // initialize MethodCallCodeLocation return value
+                loadStrategy()
+                push(codeLocation)
+                invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
+                checkCast(METHOD_CALL_CODELOCATION_TYPE)
+                loadLocal(returnedValue)
+                box(returnType)
+                invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_RETURNED_VALUE_METHOD)
+            }
+            invokeAfterMethodCall(codeLocation)
         }
 
         // STACK: param_1 param_2 ... param_n
@@ -458,12 +453,7 @@ internal class ManagedStrategyTransformer(
             for (i in 0 until paramCount) {
                 loadLocal(array)
                 push(i)
-                if (paramTypes[i].descriptor.isObject() && Continuation::class.java.isAssignableFrom(Class.forName(paramTypes[i].className))) {
-                    // do not log continuation, because it has too ugly toString representation
-                    push("<cont>")
-                } else {
-                    loadLocal(params[i])
-                }
+                loadLocal(params[i])
                 box(paramTypes[i]) // in case it is a primitive type
                 arrayStore(OBJECT_TYPE)
             }
@@ -484,9 +474,10 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
         }
 
-        private fun invokeAfterMethodCall() {
+        private fun invokeAfterMethodCall(codeLocation: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
+            adapter.push(codeLocation)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
         }
     }
@@ -1173,5 +1164,12 @@ internal class ManagedStrategyTransformer(
                 } catch(e: Throwable) {
                     false
                 }
+
+
+        private fun isSuspendStateMachine(internalClassName: String): Boolean {
+            // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
+            // it is internal, so check by name
+            return Class.forName(internalClassName.toClassName()).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
+        }
     }
 }
