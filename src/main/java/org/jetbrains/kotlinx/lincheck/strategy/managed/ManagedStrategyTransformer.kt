@@ -267,7 +267,7 @@ internal class ManagedStrategyTransformer(
             checkCast(READ_CODELOCATION_TYPE)
             loadLocal(readValue)
             box(valueType)
-            invokeVirtual(READ_CODELOCATION_TYPE, ADD_READ_VALUE_METHOD)
+            invokeVirtual(READ_CODELOCATION_TYPE, INITIALIZE_READ_VALUE_METHOD)
         }
 
         // STACK: value to be written
@@ -288,7 +288,7 @@ internal class ManagedStrategyTransformer(
             checkCast(WRITE_CODELOCATION_TYPE)
             loadLocal(storedValue)
             box(valueType)
-            invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
+            invokeVirtual(WRITE_CODELOCATION_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
         }
 
         private fun getArrayStoreType(opcode: Int): Type = when (opcode) {
@@ -429,7 +429,7 @@ internal class ManagedStrategyTransformer(
                 checkCast(METHOD_CALL_CODELOCATION_TYPE)
                 loadLocal(returnedValue)
                 box(returnType)
-                invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_RETURNED_VALUE_METHOD)
+                invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, INITIALIZE_RETURNED_VALUE_METHOD)
             }
             invokeAfterMethodCall(codeLocation)
         }
@@ -464,7 +464,7 @@ internal class ManagedStrategyTransformer(
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
             checkCast(METHOD_CALL_CODELOCATION_TYPE)
             loadLocal(array)
-            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_PARAMETERS_METHOD)
+            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, INITIALIZE_PARAMETERS_METHOD)
         }
 
         private fun invokeBeforeMethodCall(methodName: String) {
@@ -1058,10 +1058,10 @@ internal class ManagedStrategyTransformer(
         private val ADD_DEPENDENCY_METHOD = Method.getMethod(LocalObjectManager::addDependency.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
         private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
-        private val ADD_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodeLocation::addWrittenValue.javaMethod)
-        private val ADD_READ_VALUE_METHOD = Method.getMethod(ReadCodeLocation::addReadValue.javaMethod)
-        private val ADD_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodeLocation::addReturnedValue.javaMethod)
-        private val ADD_PARAMETERS_METHOD = Method.getMethod(MethodCallCodeLocation::addParameters.javaMethod)
+        private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodeLocation::initializeWrittenValue.javaMethod)
+        private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadCodeLocation::initializeReadValue.javaMethod)
+        private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodeLocation::initializeReturnedValue.javaMethod)
+        private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallCodeLocation::initializeParameters.javaMethod)
 
         private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 
