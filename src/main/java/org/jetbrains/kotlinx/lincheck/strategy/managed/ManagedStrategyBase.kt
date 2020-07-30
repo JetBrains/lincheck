@@ -45,7 +45,7 @@ internal abstract class ManagedStrategyBase(
         validationFunctions: List<Method>,
         stateRepresentation: Method?,
         private val testCfg: ManagedCTestConfiguration
-) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, testCfg.guarantees, testCfg.timeoutMs) {
+) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, testCfg.guarantees, testCfg.timeoutMs, testCfg.eliminateLocalObjects) {
     // whether a thread finished all its operations
     private val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // what thread is currently allowed to perform operations

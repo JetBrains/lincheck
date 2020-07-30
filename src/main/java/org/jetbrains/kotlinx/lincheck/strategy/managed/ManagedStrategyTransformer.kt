@@ -45,7 +45,8 @@ internal class ManagedStrategyTransformer(
         cv: ClassVisitor?,
         val codeLocations: MutableList<CodeLocation>,
         private val guarantees: List<ManagedGuarantee>,
-        private val shouldMakeStateRepresentation: Boolean
+        private val shouldMakeStateRepresentation: Boolean,
+        private val shouldEliminateLocalObjects: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -147,7 +148,7 @@ internal class ManagedStrategyTransformer(
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = newLabel()
                     dup()
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
@@ -172,7 +173,7 @@ internal class ManagedStrategyTransformer(
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = newLabel()
                     dupOwnerOnPutField(desc)
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
@@ -198,7 +199,7 @@ internal class ManagedStrategyTransformer(
                     val skipCodeLocation = adapter.newLabel()
                     dup2() // arr, ind
                     pop() // arr, ind -> arr
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead()
@@ -209,7 +210,7 @@ internal class ManagedStrategyTransformer(
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = adapter.newLabel()
                     dupArrayOnArrayStore(opcode)
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
@@ -315,12 +316,17 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: object
-        private fun invokeOnLocalObjectCheck() {
-            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(objectLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(objectLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
+        private fun invokeIsLocalObject() {
+            if (shouldEliminateLocalObjects) {
+                val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(objectLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(objectLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
+            } else {
+                adapter.pop()
+                adapter.push(false)
+            }
         }
     }
 
@@ -944,32 +950,44 @@ internal class ManagedStrategyTransformer(
 
         // STACK: object
         private fun invokeOnNewLocalObject() {
-            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(objectLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(objectLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, NEW_LOCAL_OBJECT_METHOD)
+            if (shouldEliminateLocalObjects) {
+                val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(objectLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(objectLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, NEW_LOCAL_OBJECT_METHOD)
+            } else {
+                adapter.pop()
+            }
         }
 
         // STACK: object
         private fun invokeDeleteLocalObject() {
-            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(objectLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(objectLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, DELETE_LOCAL_OBJECT_METHOD)
+            if (shouldEliminateLocalObjects) {
+                val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(objectLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(objectLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, DELETE_LOCAL_OBJECT_METHOD)
+            } else {
+                adapter.pop()
+            }
         }
 
         // STACK: owner, dependant
         private fun invokeAddDependency() {
-            val ownerLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            val dependantLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(dependantLocal)
-            adapter.storeLocal(ownerLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(ownerLocal)
-            adapter.loadLocal(dependantLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY_METHOD)
+            if (shouldEliminateLocalObjects) {
+                val ownerLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                val dependantLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(dependantLocal)
+                adapter.storeLocal(ownerLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(ownerLocal)
+                adapter.loadLocal(dependantLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY_METHOD)
+            } else {
+                repeat(2) { adapter.pop() }
+            }
         }
     }
 

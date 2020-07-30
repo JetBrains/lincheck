@@ -34,6 +34,7 @@ import java.util.List;
  */
 public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
+    public static final boolean DEFAULT_ELIMINATE_LOCAL_OBJECTS = true;
     public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 30;
     public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final int LIVELOCK_EVENTS_THRESHOLD = 1_000;
@@ -53,6 +54,7 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     );
 
     public final boolean checkObstructionFreedom;
+    public final boolean eliminateLocalObjects;
     public final int hangingDetectionThreshold;
     public final int invocationsPerIteration;
     public final List<ManagedGuarantee> guarantees;
@@ -61,7 +63,7 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
                                            boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
                                            List<ManagedGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
-                                           Class<?> sequentialSpecification, long timeoutMs)
+                                           Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
@@ -69,5 +71,6 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
         this.hangingDetectionThreshold = hangingDetectionThreshold;
         this.invocationsPerIteration = invocationsPerIteration;
         this.guarantees = guarantees;
+        this.eliminateLocalObjects = eliminateLocalObjects;
     }
 }
