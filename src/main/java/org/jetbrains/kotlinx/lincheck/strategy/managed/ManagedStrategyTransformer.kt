@@ -101,15 +101,16 @@ internal class ManagedStrategyTransformer(
      */
     private class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            val normalizedName = name.toClassName()
-            // transformation of exceptions causes a lot of trouble with catching expected exceptions
-            val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
-            // transformation of java.util.function cause AFU update methods to fail, because AFU can not be transformed
-            val inFunctionPackage = name.startsWith("java/util/function/")
-            val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
-            // function package is not transformed, because AFU uses it and thus there will be transformation problems
-            if (name.startsWith("java/util/") && !isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
-                return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
+            if (name.startsWith("java/util/")) {
+                val normalizedName = name.toClassName()
+                // transformation of exceptions causes a lot of trouble with catching expected exceptions
+                val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
+                // function package is not transformed, because AFU uses it and thus there will be transformation problems
+                val inFunctionPackage = name.startsWith("java/util/function/")
+                val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
+                if (!isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
+                    return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
+            }
             return name
         }
     }
@@ -409,7 +410,7 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            beforeMethodCall(name, Type.getArgumentTypes(desc), isSuspend(owner, name, desc))
+            beforeMethodCall(owner, name, desc)
             val codeLocation = codeLocations.lastIndex // the code location that was created at the previous line
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             afterMethodCall(Method(name, desc).returnType, codeLocation)
@@ -418,9 +419,9 @@ internal class ManagedStrategyTransformer(
         private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
         // STACK: param_1 param_2 ... param_n
-        private fun beforeMethodCall(methodName: String, paramTypes: Array<Type>, isSuspend: Boolean) {
+        private fun beforeMethodCall(owner: String, methodName: String, desc: String) {
             invokeBeforeMethodCall(methodName)
-            captureParameters(paramTypes, isSuspend)
+            captureParameters(owner, methodName, desc)
         }
 
         // STACK: returned value (unless void)
@@ -441,11 +442,12 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: param_1 param_2 ... param_n
-        private fun captureParameters(paramTypes: Array<Type>, isSuspend: Boolean) = adapter.run {
+        private fun captureParameters(owner: String, methodName: String, desc: String) = adapter.run {
+            val paramTypes = Type.getArgumentTypes(desc)
             if (paramTypes.isEmpty()) return // nothing to capture
             val params = copyParameters(paramTypes)
             val paramCount: Int
-            if (isSuspend && paramTypes.last().internalName == "kotlin/coroutines/Continuation") {
+            if (paramTypes.last().internalName == "kotlin/coroutines/Continuation") {
                 // do not log last continuation in suspend functions
                 paramCount = paramTypes.size - 1
             } else {
@@ -1172,19 +1174,7 @@ internal class ManagedStrategyTransformer(
 
         private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
 
-        private fun String.isObject() = startsWith("L")
-
-        private fun String.toClassName() = this.replace("/", ".")
-
-        private fun isSuspend(owner: String, methodName: String, descriptor: String): Boolean =
-                try {
-                    Class.forName(owner.toClassName()).kotlin.declaredFunctions.any {
-                        it.isSuspend && it.name == methodName && Method.getMethod(it.javaMethod).descriptor == descriptor
-                    }
-                } catch(e: Throwable) {
-                    false
-                }
-
+        private fun String.toClassName() = this.replace('/', '.')
 
         private fun isSuspendStateMachine(internalClassName: String): Boolean {
             // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
