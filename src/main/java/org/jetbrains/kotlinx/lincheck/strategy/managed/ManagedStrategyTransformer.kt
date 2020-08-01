@@ -45,7 +45,8 @@ internal class ManagedStrategyTransformer(
         val codeLocations: MutableList<CodeLocation>,
         private val guarantees: List<ManagedGuarantee>,
         private val shouldMakeStateRepresentation: Boolean,
-        private val shouldEliminateLocalObjects: Boolean
+        private val shouldEliminateLocalObjects: Boolean,
+        private val loggingEnabled: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -82,7 +83,8 @@ internal class ManagedStrategyTransformer(
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
+        if (loggingEnabled)
+            mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -142,7 +144,7 @@ internal class ManagedStrategyTransformer(
                 GETSTATIC -> {
                     invokeBeforeSharedVariableRead(name)
                     super.visitFieldInsn(opcode, owner, name, desc)
-                    afterSharedVariableRead(Type.getType(desc))
+                    captureReadValue(desc)
                 }
                 GETFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
@@ -161,11 +163,11 @@ internal class ManagedStrategyTransformer(
                     loadLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
                     // initialize ReadCodeLocation only if is not a local object
-                    afterSharedVariableRead(Type.getType(desc))
+                    captureReadValue(desc)
                     visitLabel(skipCodeLocationAfter)
                 }
                 PUTSTATIC -> {
-                    beforeSharedVariableWrite(name, Type.getType(desc))
+                    beforeSharedVariableWrite(name, desc)
                     super.visitFieldInsn(opcode, owner, name, desc)
                     invokeMakeStateRepresentation()
                 }
@@ -177,7 +179,7 @@ internal class ManagedStrategyTransformer(
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    beforeSharedVariableWrite(name, Type.getType(desc))
+                    beforeSharedVariableWrite(name, desc)
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -214,7 +216,7 @@ internal class ManagedStrategyTransformer(
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    beforeSharedVariableWrite(null, getArrayStoreType(opcode))
+                    beforeSharedVariableWrite(null, getArrayStoreType(opcode).descriptor)
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitInsn(opcode)
@@ -257,7 +259,9 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: value that was read
-        private fun afterSharedVariableRead(valueType: Type) = adapter.run {
+        private fun captureReadValue(desc: String) = adapter.run {
+            if (!loggingEnabled) return // capture return values only when logging is enabled
+            val valueType = Type.getType(desc)
             val readValue = newLocal(valueType)
             copyLocal(readValue)
             // initialize ReadCodeLocation
@@ -272,13 +276,15 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: value to be written
-        private fun beforeSharedVariableWrite(fieldName: String? = null, valueType: Type) {
+        private fun beforeSharedVariableWrite(fieldName: String? = null, desc: String) {
             invokeBeforeSharedVariableWrite(fieldName)
-            captureWrittenValue(valueType)
+            captureWrittenValue(desc)
         }
 
         // STACK: value to be written
-        private fun captureWrittenValue(valueType: Type) = adapter.run {
+        private fun captureWrittenValue(desc: String) = adapter.run {
+            if (!loggingEnabled) return // capture written values only when logging is enabled
+            val valueType = Type.getType(desc)
             val storedValue = newLocal(valueType)
             copyLocal(storedValue) // save store value
             // initialize WriteCodeLocation with stored value
@@ -1008,7 +1014,7 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun invokeMakeStateRepresentation() {
-            if (shouldMakeStateRepresentation) {
+            if (shouldMakeStateRepresentation && loggingEnabled) {
                 loadStrategy()
                 loadCurrentThreadNumber()
                 adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, MAKE_STATE_REPRESENTATION_METHOD)

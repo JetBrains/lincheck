@@ -47,6 +47,7 @@ public abstract class ManagedStrategy extends Strategy {
     private final List<ManagedGuarantee> guarantees;
     private final boolean shouldMakeStateRepresentation;
     private final boolean eliminateLocalObjects;
+    protected boolean loggingEnabled = false;
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
                               Method stateRepresentation, List<ManagedGuarantee> guarantees, long timeoutMs, boolean eliminateLocalObjects) {
@@ -86,7 +87,7 @@ public abstract class ManagedStrategy extends Strategy {
                 super.beforeCoroutineResumed(threadId);
             }
         };
-        ManagedStateHolder.setState(runner.classLoader, this);
+        initializeManagedState();
     }
 
     @Override
@@ -97,7 +98,14 @@ public abstract class ManagedStrategy extends Strategy {
         } else {
             previousCodeLocations = transformer.getCodeLocations();
         }
-        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations, guarantees, shouldMakeStateRepresentation, eliminateLocalObjects);
+        return transformer = new ManagedStrategyTransformer(
+                cv,
+                previousCodeLocations,
+                guarantees,
+                shouldMakeStateRepresentation,
+                eliminateLocalObjects,
+                loggingEnabled
+        );
     }
 
     @Override
@@ -306,5 +314,9 @@ public abstract class ManagedStrategy extends Strategy {
         } else {
             return nThreads;
         }
+    }
+
+    protected void initializeManagedState() {
+        ManagedStateHolder.setState(runner.classLoader, this);
     }
 }

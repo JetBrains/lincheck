@@ -59,19 +59,17 @@ internal open class ParallelThreadsRunner(
         List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
     }
 
-    private val testThreadExecutions = Array(scenario.threads) { t ->
-        TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
-    }
-
-    init {
-        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
-    }
+    private lateinit var testThreadExecutions: Array<TestThreadExecution>
 
     private var suspensionPointResults = MutableList<Result>(scenario.threads) { NoResult }
 
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
+
+    init {
+        initializeTestThreadExecutions()
+    }
 
     /**
      * Passed as continuation to invoke the suspendable actor from [threadId].
@@ -299,6 +297,18 @@ internal open class ParallelThreadsRunner(
     override fun getStateRepresentation(): String? {
         stateRepresentation?.let { return getMethod(testInstance, it).invoke(testInstance) as String }
         return null
+    }
+
+    override fun transformTestClass() {
+        super.transformTestClass()
+        initializeTestThreadExecutions()
+    }
+
+    private fun initializeTestThreadExecutions() {
+        testThreadExecutions = Array(scenario.threads) { t ->
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
+        }
+        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }
 
      // For [TestThreadExecution] instances
