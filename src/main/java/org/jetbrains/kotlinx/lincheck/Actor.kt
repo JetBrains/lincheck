@@ -35,7 +35,8 @@ data class Actor @JvmOverloads constructor(
     val method: Method,
     val arguments: List<Any?>,
     val handledExceptions: List<Class<out Throwable>>,
-    val cancelOnSuspension: Boolean = false
+    val cancelOnSuspension: Boolean = false,
+    val allowExtraSuspension: Boolean = false
 ) {
     override fun toString() = cancellableMark + method.name + arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() }
     private val cancellableMark get() = (if (cancelOnSuspension) "*" else "")

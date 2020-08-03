@@ -60,4 +60,13 @@ public @interface Operation {
      * see {@link CancellableContinuation#cancel}; {@code true} by default.
      */
     boolean cancellableOnSuspension() default true;
+
+    /**
+     * The operation marked with [allowExtraSuspension] is allowed to
+     * suspend (and, therefore, be cancelled if [cancellableOnSuspension]
+     * is set to `true`) even if it should not according to the sequential
+     * specification. The one may consider this as a relaxation of the
+     * dual data structures formalism.
+     */
+    boolean allowExtraSuspension() default false;
 }

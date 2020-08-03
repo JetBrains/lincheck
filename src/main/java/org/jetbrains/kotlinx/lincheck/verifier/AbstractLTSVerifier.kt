@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import java.util.ArrayList
 
 /**
  * An abstraction for verifiers which use the labeled transition system (LTS) under the hood.
@@ -37,7 +38,42 @@ abstract class AbstractLTSVerifier(protected val sequentialSpecification: Class<
     abstract val lts: LTS
     abstract fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult): VerifierContext
 
-    override fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult) = createInitialContext(scenario, results).verify()
+    override fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
+        // Remove the actors marked with `allowExtraSuspension` and `CANCELLED` result.
+        val transformedScenarioParallel = ArrayList<MutableList<Actor>>()
+        val transformedResultsParallel = ArrayList<MutableList<ResultWithClock>>()
+        repeat(scenario.threads) {
+            transformedScenarioParallel.add(ArrayList())
+            transformedResultsParallel.add(ArrayList())
+        }
+        val clockMapping = Array(scenario.threads) { ArrayList<Int>() }
+        clockMapping.forEach { it.add(0) }
+        scenario.parallelExecution.forEachIndexed { t, threadActors ->
+            threadActors.forEachIndexed { i, a ->
+                val r = results.parallelResultsWithClock[t][i]
+                if (a.allowExtraSuspension && r.result == Cancelled) {
+                    clockMapping[t].add(clockMapping[t][i])
+                } else {
+                    clockMapping[t].add(clockMapping[t][i] + 1)
+                    val c = results.parallelResultsWithClock[t][i].clockOnStart.clock.copyOf()
+                    transformedResultsParallel[t].add(ResultWithClock(r.result, HBClock(c)))
+                    transformedScenarioParallel[t].add(a)
+                }
+            }
+        }
+        transformedResultsParallel.forEach { resultsWithClock ->
+            resultsWithClock.forEach { resWithClock ->
+                for (j in 0 until scenario.threads) {
+                    val old = resWithClock.clockOnStart.clock[j]
+                    resWithClock.clockOnStart.clock[j] = if (old == -1) -1 else clockMapping[j][old]
+                }
+            }
+        }
+        return createInitialContext(
+            ExecutionScenario(scenario.initExecution, transformedScenarioParallel, scenario.postExecution),
+            ExecutionResult(results.initResults, transformedResultsParallel, results.postResults)
+        ).verify()
+    }
 
     private fun VerifierContext.verify(): Boolean {
         // Check if a possible path is found.

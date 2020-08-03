@@ -42,20 +42,26 @@ public class ActorGenerator {
     private final List<Class<? extends Throwable>> handledExceptions;
     private final boolean useOnce;
     private final boolean cancellableOnSuspension;
+    private final boolean allowExtraSuspension;
 
     public ActorGenerator(Method method, List<ParameterGenerator<?>> parameterGenerators,
-        List<Class<? extends Throwable>> handledExceptions, boolean useOnce, boolean cancellableOnSuspension)
+        List<Class<? extends Throwable>> handledExceptions, boolean useOnce, boolean cancellableOnSuspension,
+        boolean allowExtraSuspension)
     {
         this.method = method;
         this.parameterGenerators = parameterGenerators;
         this.handledExceptions = handledExceptions;
         this.useOnce = useOnce;
         this.cancellableOnSuspension = cancellableOnSuspension && isSuspendable();
+        this.allowExtraSuspension = allowExtraSuspension;
     }
 
     public Actor generate() {
         List<Object> parameters = parameterGenerators.stream().map(ParameterGenerator::generate).collect(Collectors.toList());
-        return new Actor(method, parameters, handledExceptions, cancellableOnSuspension & Random.Default.nextBoolean());
+        return new Actor(method, parameters, handledExceptions,
+            cancellableOnSuspension & Random.Default.nextBoolean(),
+            allowExtraSuspension
+        );
     }
 
     public boolean useOnce() {
