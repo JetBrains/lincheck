@@ -33,6 +33,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD
     protected var invocationsPerIteration = ManagedCTestConfiguration.DEFAULT_INVOCATIONS
     protected val guarantees: MutableList<ManagedGuarantee> = ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
+    protected var eliminateLocalObjects: Boolean = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS;
 
     /**
      * Check obstruction freedom of the concurrent algorithm.
@@ -68,6 +69,13 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun addGuarantee(guarantee: ManagedGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
+    }
+
+    /**
+     * Internal, DO NOT USE.
+     */
+    internal fun eliminateLocalObjects(eliminateLocalObjects: Boolean) {
+        this.eliminateLocalObjects = eliminateLocalObjects;
     }
 
     companion object {

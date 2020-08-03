@@ -34,7 +34,6 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.stream.Collectors
-import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.javaMethod
 
 
@@ -45,7 +44,9 @@ internal class ManagedStrategyTransformer(
         cv: ClassVisitor?,
         val codeLocations: MutableList<CodeLocation>,
         private val guarantees: List<ManagedGuarantee>,
-        private val shouldMakeStateRepresentation: Boolean
+        private val shouldMakeStateRepresentation: Boolean,
+        private val shouldEliminateLocalObjects: Boolean,
+        private val loggingEnabled: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -82,7 +83,8 @@ internal class ManagedStrategyTransformer(
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
+        if (loggingEnabled)
+            mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -100,15 +102,16 @@ internal class ManagedStrategyTransformer(
      */
     private class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            val normalizedName = name.toClassName()
-            // transformation of exceptions causes a lot of trouble with catching expected exceptions
-            val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
-            // transformation of java.util.function cause AFU update methods to fail, because AFU can not be transformed
-            val inFunctionPackage = name.startsWith("java/util/function/")
-            val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
-            // function package is not transformed, because AFU uses it and thus there will be transformation problems
-            if (name.startsWith("java/util/") && !isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
-                return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
+            if (name.startsWith("java/util/")) {
+                val normalizedName = name.toClassName()
+                // transformation of exceptions causes a lot of trouble with catching expected exceptions
+                val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
+                // function package is not transformed, because AFU uses it and thus there will be transformation problems
+                val inFunctionPackage = name.startsWith("java/util/function/")
+                val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
+                if (!isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
+                    return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
+            }
             return name
         }
     }
@@ -141,13 +144,13 @@ internal class ManagedStrategyTransformer(
                 GETSTATIC -> {
                     invokeBeforeSharedVariableRead(name)
                     super.visitFieldInsn(opcode, owner, name, desc)
-                    afterSharedVariableRead(Type.getType(desc))
+                    captureReadValue(desc)
                 }
                 GETFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = newLabel()
                     dup()
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
@@ -160,11 +163,11 @@ internal class ManagedStrategyTransformer(
                     loadLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
                     // initialize ReadCodeLocation only if is not a local object
-                    afterSharedVariableRead(Type.getType(desc))
+                    captureReadValue(desc)
                     visitLabel(skipCodeLocationAfter)
                 }
                 PUTSTATIC -> {
-                    beforeSharedVariableWrite(name, Type.getType(desc))
+                    beforeSharedVariableWrite(name, desc)
                     super.visitFieldInsn(opcode, owner, name, desc)
                     invokeMakeStateRepresentation()
                 }
@@ -172,11 +175,11 @@ internal class ManagedStrategyTransformer(
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = newLabel()
                     dupOwnerOnPutField(desc)
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    beforeSharedVariableWrite(name, Type.getType(desc))
+                    beforeSharedVariableWrite(name, desc)
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -198,7 +201,7 @@ internal class ManagedStrategyTransformer(
                     val skipCodeLocation = adapter.newLabel()
                     dup2() // arr, ind
                     pop() // arr, ind -> arr
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocation)
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead()
@@ -209,11 +212,11 @@ internal class ManagedStrategyTransformer(
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = adapter.newLabel()
                     dupArrayOnArrayStore(opcode)
-                    invokeOnLocalObjectCheck()
+                    invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    beforeSharedVariableWrite(null, getArrayStoreType(opcode))
+                    beforeSharedVariableWrite(null, getArrayStoreType(opcode).descriptor)
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitInsn(opcode)
@@ -256,7 +259,9 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: value that was read
-        private fun afterSharedVariableRead(valueType: Type) = adapter.run {
+        private fun captureReadValue(desc: String) = adapter.run {
+            if (!loggingEnabled) return // capture return values only when logging is enabled
+            val valueType = Type.getType(desc)
             val readValue = newLocal(valueType)
             copyLocal(readValue)
             // initialize ReadCodeLocation
@@ -267,17 +272,19 @@ internal class ManagedStrategyTransformer(
             checkCast(READ_CODELOCATION_TYPE)
             loadLocal(readValue)
             box(valueType)
-            invokeVirtual(READ_CODELOCATION_TYPE, ADD_READ_VALUE_METHOD)
+            invokeVirtual(READ_CODELOCATION_TYPE, INITIALIZE_READ_VALUE_METHOD)
         }
 
         // STACK: value to be written
-        private fun beforeSharedVariableWrite(fieldName: String? = null, valueType: Type) {
+        private fun beforeSharedVariableWrite(fieldName: String? = null, desc: String) {
             invokeBeforeSharedVariableWrite(fieldName)
-            captureWrittenValue(valueType)
+            captureWrittenValue(desc)
         }
 
         // STACK: value to be written
-        private fun captureWrittenValue(valueType: Type) = adapter.run {
+        private fun captureWrittenValue(desc: String) = adapter.run {
+            if (!loggingEnabled) return // capture written values only when logging is enabled
+            val valueType = Type.getType(desc)
             val storedValue = newLocal(valueType)
             copyLocal(storedValue) // save store value
             // initialize WriteCodeLocation with stored value
@@ -288,7 +295,7 @@ internal class ManagedStrategyTransformer(
             checkCast(WRITE_CODELOCATION_TYPE)
             loadLocal(storedValue)
             box(valueType)
-            invokeVirtual(WRITE_CODELOCATION_TYPE, ADD_WRITTEN_VALUE_METHOD)
+            invokeVirtual(WRITE_CODELOCATION_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
         }
 
         private fun getArrayStoreType(opcode: Int): Type = when (opcode) {
@@ -315,12 +322,17 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: object
-        private fun invokeOnLocalObjectCheck() {
-            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(objectLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(objectLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
+        private fun invokeIsLocalObject() {
+            if (shouldEliminateLocalObjects) {
+                val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(objectLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(objectLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, IS_LOCAL_OBJECT_METHOD)
+            } else {
+                adapter.pop()
+                adapter.push(false)
+            }
         }
     }
 
@@ -403,7 +415,7 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            beforeMethodCall(name, Type.getArgumentTypes(desc), isSuspend(owner, name, desc))
+            beforeMethodCall(name, desc)
             val codeLocation = codeLocations.lastIndex // the code location that was created at the previous line
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             afterMethodCall(Method(name, desc).returnType, codeLocation)
@@ -412,9 +424,9 @@ internal class ManagedStrategyTransformer(
         private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
         // STACK: param_1 param_2 ... param_n
-        private fun beforeMethodCall(methodName: String, paramTypes: Array<Type>, isSuspend: Boolean) {
+        private fun beforeMethodCall(methodName: String, desc: String) {
             invokeBeforeMethodCall(methodName)
-            captureParameters(paramTypes, isSuspend)
+            captureParameters(desc)
         }
 
         // STACK: returned value (unless void)
@@ -429,17 +441,18 @@ internal class ManagedStrategyTransformer(
                 checkCast(METHOD_CALL_CODELOCATION_TYPE)
                 loadLocal(returnedValue)
                 box(returnType)
-                invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_RETURNED_VALUE_METHOD)
+                invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, INITIALIZE_RETURNED_VALUE_METHOD)
             }
             invokeAfterMethodCall(codeLocation)
         }
 
         // STACK: param_1 param_2 ... param_n
-        private fun captureParameters(paramTypes: Array<Type>, isSuspend: Boolean) = adapter.run {
+        private fun captureParameters(desc: String) = adapter.run {
+            val paramTypes = Type.getArgumentTypes(desc)
             if (paramTypes.isEmpty()) return // nothing to capture
             val params = copyParameters(paramTypes)
             val paramCount: Int
-            if (isSuspend && paramTypes.last().internalName == "kotlin/coroutines/Continuation") {
+            if (paramTypes.last().internalName == "kotlin/coroutines/Continuation") {
                 // do not log last continuation in suspend functions
                 paramCount = paramTypes.size - 1
             } else {
@@ -464,7 +477,7 @@ internal class ManagedStrategyTransformer(
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODELOCATION_DESCRIPTION_METHOD)
             checkCast(METHOD_CALL_CODELOCATION_TYPE)
             loadLocal(array)
-            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, ADD_PARAMETERS_METHOD)
+            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, INITIALIZE_PARAMETERS_METHOD)
         }
 
         private fun invokeBeforeMethodCall(methodName: String) {
@@ -491,6 +504,7 @@ internal class ManagedStrategyTransformer(
             if (owner == "sun/misc/Unsafe" && name == "getUnsafe") {
                 // load Unsafe
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
+                adapter.checkCast(UNSAFE_TYPE)
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -943,32 +957,44 @@ internal class ManagedStrategyTransformer(
 
         // STACK: object
         private fun invokeOnNewLocalObject() {
-            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(objectLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(objectLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, NEW_LOCAL_OBJECT_METHOD)
+            if (shouldEliminateLocalObjects) {
+                val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(objectLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(objectLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, NEW_LOCAL_OBJECT_METHOD)
+            } else {
+                adapter.pop()
+            }
         }
 
         // STACK: object
         private fun invokeDeleteLocalObject() {
-            val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(objectLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(objectLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, DELETE_LOCAL_OBJECT_METHOD)
+            if (shouldEliminateLocalObjects) {
+                val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(objectLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(objectLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, DELETE_LOCAL_OBJECT_METHOD)
+            } else {
+                adapter.pop()
+            }
         }
 
         // STACK: owner, dependant
         private fun invokeAddDependency() {
-            val ownerLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            val dependantLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(dependantLocal)
-            adapter.storeLocal(ownerLocal)
-            loadLocalObjectManager()
-            adapter.loadLocal(ownerLocal)
-            adapter.loadLocal(dependantLocal)
-            adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY_METHOD)
+            if (shouldEliminateLocalObjects) {
+                val ownerLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                val dependantLocal: Int = adapter.newLocal(OBJECT_TYPE)
+                adapter.storeLocal(dependantLocal)
+                adapter.storeLocal(ownerLocal)
+                loadLocalObjectManager()
+                adapter.loadLocal(ownerLocal)
+                adapter.loadLocal(dependantLocal)
+                adapter.invokeVirtual(LOCAL_OBJECT_MANAGER_TYPE, ADD_DEPENDENCY_METHOD)
+            } else {
+                repeat(2) { adapter.pop() }
+            }
         }
     }
 
@@ -988,7 +1014,7 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun invokeMakeStateRepresentation() {
-            if (shouldMakeStateRepresentation) {
+            if (shouldMakeStateRepresentation && loggingEnabled) {
                 loadStrategy()
                 loadCurrentThreadNumber()
                 adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, MAKE_STATE_REPRESENTATION_METHOD)
@@ -1030,6 +1056,7 @@ internal class ManagedStrategyTransformer(
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
+        private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
         private val WRITE_CODELOCATION_TYPE = Type.getType(WriteCodeLocation::class.java)
         private val READ_CODELOCATION_TYPE = Type.getType(ReadCodeLocation::class.java)
         private val METHOD_CALL_CODELOCATION_TYPE = Type.getType(MethodCallCodeLocation::class.java)
@@ -1056,10 +1083,10 @@ internal class ManagedStrategyTransformer(
         private val ADD_DEPENDENCY_METHOD = Method.getMethod(LocalObjectManager::addDependency.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
         private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
-        private val ADD_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodeLocation::addWrittenValue.javaMethod)
-        private val ADD_READ_VALUE_METHOD = Method.getMethod(ReadCodeLocation::addReadValue.javaMethod)
-        private val ADD_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodeLocation::addReturnedValue.javaMethod)
-        private val ADD_PARAMETERS_METHOD = Method.getMethod(MethodCallCodeLocation::addParameters.javaMethod)
+        private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodeLocation::initializeWrittenValue.javaMethod)
+        private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadCodeLocation::initializeReadValue.javaMethod)
+        private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodeLocation::initializeReturnedValue.javaMethod)
+        private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallCodeLocation::initializeParameters.javaMethod)
 
         private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 
@@ -1152,19 +1179,7 @@ internal class ManagedStrategyTransformer(
 
         private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
 
-        private fun String.isObject() = startsWith("L")
-
-        private fun String.toClassName() = this.replace("/", ".")
-
-        private fun isSuspend(owner: String, methodName: String, descriptor: String): Boolean =
-                try {
-                    Class.forName(owner.toClassName()).kotlin.declaredFunctions.any {
-                        it.isSuspend && it.name == methodName && Method.getMethod(it.javaMethod).descriptor == descriptor
-                    }
-                } catch(e: Throwable) {
-                    false
-                }
-
+        private fun String.toClassName() = this.replace('/', '.')
 
         private fun isSuspendStateMachine(internalClassName: String): Boolean {
             // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl

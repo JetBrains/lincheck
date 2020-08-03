@@ -45,7 +45,7 @@ internal abstract class ManagedStrategyBase(
         validationFunctions: List<Method>,
         stateRepresentation: Method?,
         private val testCfg: ManagedCTestConfiguration
-) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, testCfg.guarantees, testCfg.timeoutMs) {
+) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, testCfg.guarantees, testCfg.timeoutMs, testCfg.eliminateLocalObjects) {
     // whether a thread finished all its operations
     private val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // what thread is currently allowed to perform operations
@@ -59,8 +59,6 @@ internal abstract class ManagedStrategyBase(
     private lateinit var monitorTracker: MonitorTracker
     // random used for the generation of seeds and the execution tree
     protected val generationRandom = Random(0)
-    // should code locations be logged, disabled by default
-    private var loggingEnabled = false
     // is thread suspended
     private val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
     // the number of blocks that should be ignored by the strategy entered and not left for each thread
@@ -196,7 +194,8 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun beforeMethodCall(threadId: Int, codeLocation: Int) {
-        if (isTestThread(threadId) && loggingEnabled) {
+        if (isTestThread(threadId)) {
+            check(loggingEnabled) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[threadId]
             val suspendedMethodStack = suspendedMethodStack[threadId]
             val methodId = if (suspendedMethodStack.isNotEmpty()) {
@@ -213,7 +212,8 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun afterMethodCall(threadId: Int, codeLocation: Int) {
-        if (isTestThread(threadId) && loggingEnabled) {
+        if (isTestThread(threadId)) {
+            check(loggingEnabled) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[threadId]
             val methodCallCodeLocation = getLocationDescription(codeLocation) as MethodCallCodeLocation
             if (methodCallCodeLocation.returnedValue?.value == COROUTINE_SUSPENDED) {
@@ -225,8 +225,10 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun makeStateRepresentation(threadId: Int) {
-        if (isTestThread(threadId) && loggingEnabled && !shouldBeIgnored(threadId))
+        if (isTestThread(threadId) && !shouldBeIgnored(threadId)) {
+            check(loggingEnabled) { "This method should be called only when logging is enabled" }
             eventCollector.makeStateRepresentation(threadId)
+        }
     }
 
     private fun isTestThread(threadId: Int) = threadId < nThreads
@@ -364,7 +366,10 @@ internal abstract class ManagedStrategyBase(
             // do not try to log anything
             return null
         }
+        // retransform class with logging enabled
         loggingEnabled = true
+        runner.transformTestClass()
+        initializeManagedState()
         val loggedResults = doRunInvocation(true)
         val sameResultTypes = loggedResults.javaClass == previousResults.javaClass
         val sameExecutionResults = previousResults !is CompletedInvocationResult || loggedResults !is CompletedInvocationResult || previousResults.results == loggedResults.results
@@ -465,19 +470,19 @@ internal abstract class ManagedStrategyBase(
         private val interleavingEvents = mutableListOf<InterleavingEvent>()
 
         fun newSwitch(threadId: Int, reason: SwitchReason) {
-            if (!loggingEnabled) return // check that thread events
+            if (!loggingEnabled) return // check that should log thread events
             interleavingEvents.add(SwitchEvent(threadId, currentActorId[threadId], reason, callStackTrace[threadId].toList()))
             // check livelock after every switch
             checkLiveLockHappened(interleavingEvents.size)
         }
 
         fun finishThread(threadId: Int) {
-            if (!loggingEnabled) return // check that thread events
+            if (!loggingEnabled) return // check that should log thread events
             interleavingEvents.add(FinishEvent(threadId))
         }
 
         fun passCodeLocation(threadId: Int, codeLocation: Int) {
-            if (!loggingEnabled) return // check that thread events
+            if (!loggingEnabled) return // check that should log thread events
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
                 enterIgnoredSection(threadId)
                 interleavingEvents.add(PassCodeLocationEvent(

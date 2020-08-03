@@ -68,7 +68,6 @@ class SuspendExecutionReportingTest : VerifierState() {
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
-        println(log)
         check("label" !in log) { "suspend state machine related fields should not be reported" }
         check("L$0" !in log) { "suspend state machine related fields should not be reported" }
         check("operation1()".numberOfOccurencesIn(log) == 2) {

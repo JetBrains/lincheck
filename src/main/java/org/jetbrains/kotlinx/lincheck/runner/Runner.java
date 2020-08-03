@@ -40,20 +40,32 @@ import java.util.concurrent.atomic.*;
  */
 public abstract class Runner {
     protected final ExecutionScenario scenario;
-    protected final Class<?> testClass;
+    protected Class<?> testClass;
     protected final List<Method> validationFunctions;
     protected final Strategy strategy;
-    public final ExecutionClassLoader classLoader;
+    public ExecutionClassLoader classLoader;
 
     protected final AtomicInteger completedOrSuspendedThreads = new AtomicInteger(0);
 
     protected Runner(Strategy strategy, Class<?> testClass, List<Method> validationFunctions) {
         this.scenario = strategy.getScenario();
-        this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
-            new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
-        this.testClass = loadClass(testClass.getTypeName());
+        this.testClass = testClass;
         this.strategy = strategy;
         this.validationFunctions = validationFunctions;
+        doTransformTestClass();
+    }
+
+    public void transformTestClass() {
+        doTransformTestClass();
+    }
+
+    private void doTransformTestClass() {
+        this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
+                new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
+        this.testClass = loadClass(testClass.getTypeName());
+        this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
+                new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
+        this.testClass = loadClass(testClass.getTypeName());
     }
 
     /**

@@ -126,6 +126,12 @@ internal fun StringBuilder.appendExecution(
 
 private class InterleavingEventRepresentation(val threadId: Int, val representation: String)
 
+/**
+ * Events that are considered interesting:
+ * 1) All switch events
+ * 2) Last events in case of incomplete execution (i.e. because of exception)
+ * 3) Events in methods that were suspended
+ */
 private fun interestingEventStackTraces(
         scenario: ExecutionScenario,
         interleavingEvents: List<InterleavingEvent>,
@@ -144,8 +150,6 @@ private fun interestingEventStackTraces(
                         .filter { it.callStackTrace.lastOrNull()?.codeLocation?.returnedValue?.value == COROUTINE_SUSPENDED }
                         .map { it.callStackTrace }
         )
-
-        // last pass code location can also be interesting in case of incomplete execution
         if (actorId == lastExecutedActors[threadId]) {
             when (val lastEvent = eventsInThread.lastOrNull { it !is StateRepresentationEvent }) {
                 is PassCodeLocationEvent -> interestingCallStackTraces.add(lastEvent.callStackTrace)
@@ -156,7 +160,9 @@ private fun interestingEventStackTraces(
     }
 }
 
-// convert events that should be printed to the final form of a matrix of strings
+/**
+ * Convert events that should be printed to the final form of a matrix of strings
+ */
 private fun splitToColumns(nThreads: Int, execution: List<InterleavingEventRepresentation>): List<List<String>> {
     val result = List(nThreads) { mutableListOf<String>() }
     for (message in execution) {
@@ -171,13 +177,6 @@ private fun splitToColumns(nThreads: Int, execution: List<InterleavingEventRepre
     return result
 }
 
-private fun CallStackTrace.firstDifferPosition(callStackTrace: CallStackTrace): Int {
-    for (position in indices)
-        if (position >= callStackTrace.size || this[position].identifier != callStackTrace[position].identifier)
-            return position
-    return size
-}
-
 /**
  * Calculates how to compress call stack trace.
  * Picks the first different position with all interesting event call stack traces.
@@ -187,8 +186,20 @@ private fun CallStackTrace.firstDifferPosition(callStackTrace: CallStackTrace): 
 private fun CallStackTrace.calculateCompressionPoint(interestingEvents: List<CallStackTrace>): Int =
         interestingEvents.map { this.firstDifferPosition(it) }.max()!!
 
-private fun getActorRepresentation(threadId: Int, actorId: Int, scenario: ExecutionScenario, results: ExecutionResult?, isInteresting: Boolean) =
-        StringBuilder().apply {
+private fun CallStackTrace.firstDifferPosition(callStackTrace: CallStackTrace): Int {
+    for (position in indices)
+        if (position >= callStackTrace.size || this[position].identifier != callStackTrace[position].identifier)
+            return position
+    return size
+}
+
+private fun getActorRepresentation(
+        threadId: Int,
+        actorId: Int, scenario:
+        ExecutionScenario,
+        results: ExecutionResult?,
+        isInteresting: Boolean
+) = StringBuilder().apply {
     append(scenario.parallelExecution[threadId][actorId].toString())
     if (results != null && !isInteresting)
         append(": ${results.parallelResults[threadId][actorId]}")
@@ -197,6 +208,9 @@ private fun getActorRepresentation(threadId: Int, actorId: Int, scenario: Execut
 private fun isInterestingActor(threadId: Int, actorId: Int, interestingEvents: Array<Array<List<CallStackTrace>>>) =
         interestingEvents[threadId][actorId].isNotEmpty()
 
+/**
+ * Returns state representation if there was any immediately after [previousEventPosition].
+ */
 private fun nextStateRepresentaton(interleavingEvents: List<InterleavingEvent>, previousEventPosition: Int): String? {
     if (previousEventPosition + 1 >= interleavingEvents.size) return null
     val nextEvent = interleavingEvents[previousEventPosition + 1]
@@ -205,6 +219,9 @@ private fun nextStateRepresentaton(interleavingEvents: List<InterleavingEvent>, 
     return null
 }
 
+/**
+ * Finds last state representation that was made in [callIdentifier] call.
+ */
 private fun lastCompressedStateRepresentation(interleavingEvents: List<InterleavingEvent>, startPosition: Int, callIdentifier: Int, interestingEvents: List<CallStackTrace>): String? {
     var lastStateRepresentation: String? = null
     loop@for (position in startPosition until interleavingEvents.size) {
@@ -221,6 +238,9 @@ private fun lastCompressedStateRepresentation(interleavingEvents: List<Interleav
     return lastStateRepresentation
 }
 
+/**
+ * Find last state representation for a given [actorId] actor.
+ */
 private fun lastStateRepresentation(threadId: Int, actorId: Int, interleavingEvents: List<InterleavingEvent>, startPosition: Int): String? {
     var lastStateRepresentation: String? = null
     for (position in startPosition until interleavingEvents.size) {
@@ -233,4 +253,5 @@ private fun lastStateRepresentation(threadId: Int, actorId: Int, interleavingEve
     return lastStateRepresentation
 }
 
-private fun stateInterleavingEventRepresentation(threadId: Int, stateRepresentation: String) = InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: ${stateRepresentation}")
+private fun stateInterleavingEventRepresentation(threadId: Int, stateRepresentation: String) =
+        InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: $stateRepresentation")

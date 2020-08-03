@@ -46,13 +46,16 @@ public abstract class ManagedStrategy extends Strategy {
     private ManagedStrategyTransformer transformer;
     private final List<ManagedGuarantee> guarantees;
     private final boolean shouldMakeStateRepresentation;
+    private final boolean eliminateLocalObjects;
+    protected boolean loggingEnabled = false;
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
-                              Method stateRepresentation, List<ManagedGuarantee> guarantees, long timeoutMs) {
+                              Method stateRepresentation, List<ManagedGuarantee> guarantees, long timeoutMs, boolean eliminateLocalObjects) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
         this.guarantees = guarantees;
         this.shouldMakeStateRepresentation = stateRepresentation != null;
+        this.eliminateLocalObjects = eliminateLocalObjects;
         runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, true, timeoutMs) {
             @Override
             public void onStart(int threadId) {
@@ -84,7 +87,7 @@ public abstract class ManagedStrategy extends Strategy {
                 super.beforeCoroutineResumed(threadId);
             }
         };
-        ManagedStateHolder.setState(runner.classLoader, this);
+        initializeManagedState();
     }
 
     @Override
@@ -95,7 +98,14 @@ public abstract class ManagedStrategy extends Strategy {
         } else {
             previousCodeLocations = transformer.getCodeLocations();
         }
-        return transformer = new ManagedStrategyTransformer(cv, previousCodeLocations, guarantees, shouldMakeStateRepresentation);
+        return transformer = new ManagedStrategyTransformer(
+                cv,
+                previousCodeLocations,
+                guarantees,
+                shouldMakeStateRepresentation,
+                eliminateLocalObjects,
+                loggingEnabled
+        );
     }
 
     @Override
@@ -304,5 +314,9 @@ public abstract class ManagedStrategy extends Strategy {
         } else {
             return nThreads;
         }
+    }
+
+    protected void initializeManagedState() {
+        ManagedStateHolder.setState(runner.classLoader, this);
     }
 }

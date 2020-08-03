@@ -29,26 +29,34 @@ import org.junit.Test
 
 /**
  * This test checks that managed strategy do not try to switch
- * thread context at final field reads, because they are
+ * thread context at reads and writes of local objects, because they are
  * not interesting code locations for concurrent execution.
  * In case the strategy do try, the test will timeout, because
  * the number of invocations is set to Int.MAX_VALUE.
  */
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
-class FinalFieldReadingElisionTest : VerifierState() {
-    val value: Int = 32
-    val any: Any = this
-
+class LocalObjectEliminationTest : VerifierState() {
     @Operation
-    fun readValue() = value
-
-    @Operation
-    fun readAny() = any
+    fun operation() {
+        val a = A(0, this, IntArray(2))
+        a.any = a
+        a.value = 100
+        a.array[1] = 54
+        val b = A(a.value, a.any, a.array)
+        b.value = 65
+        b.array[0] = 4
+        if (a.value + b.value == 3) {
+            // to prevent compiler optimizations
+            println("!")
+        }
+    }
 
     @Test(timeout = 100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }
 
-    override fun extractState(): Any = value
+    override fun extractState(): Any = 54 // any constant value
+
+    private data class A(var value: Int, var any: Any, val array: IntArray)
 }

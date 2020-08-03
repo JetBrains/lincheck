@@ -40,7 +40,7 @@ internal class ReadCodeLocation(private val fieldName: String?, private val stac
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
-    fun addReadValue(value: Any?) {
+    fun initializeReadValue(value: Any?) {
         this.value = value
     }
 }
@@ -57,7 +57,7 @@ internal class WriteCodeLocation(private val fieldName: String?, private val sta
         append(") at ${stackTraceElement.shorten()}")
     }.toString()
 
-    fun addWrittenValue(value: Any?) {
+    fun initializeWrittenValue(value: Any?) {
         this.value = value
     }
 }
@@ -76,11 +76,11 @@ internal class MethodCallCodeLocation(private val methodName: String, private va
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
-    fun addReturnedValue(value: Any?) {
+    fun initializeReturnedValue(value: Any?) {
         this.returnedValue = ValueHolder(value)
     }
 
-    fun addParameters(parameters: Array<Any?>) {
+    fun initializeParameters(parameters: Array<Any?>) {
         this.parameters = parameters
     }
 
@@ -90,6 +90,9 @@ internal class MethodCallCodeLocation(private val methodName: String, private va
         return any.toString()
     }
 
+    /**
+     * This class is used to differentiate the cases of null value and no value (void).
+     */
     internal class ValueHolder(val value: Any?)
 }
 

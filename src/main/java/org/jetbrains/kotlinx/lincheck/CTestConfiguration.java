@@ -40,7 +40,9 @@ import java.util.stream.Stream;
 
 import static java.util.function.UnaryOperator.identity;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS;
 import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_GUARANTEES;
+import static org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration.DEFAULT_ADD_WAITS;
 
 /**
  * Configuration of an abstract concurrent test.
@@ -95,7 +97,7 @@ public abstract class CTestConfiguration {
         Stream<CTestConfiguration> stressConfigurations = Arrays.stream(testClass.getAnnotationsByType(StressCTest.class))
             .map(ann -> new StressCTestConfiguration(testClass, ann.iterations(),
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
-                    ann.generator(), ann.verifier(), ann.invocationsPerIteration(), true,
+                    ann.generator(), ann.verifier(), ann.invocationsPerIteration(), DEFAULT_ADD_WAITS,
                     ann.requireStateEquivalenceImplCheck(), ann.minimizeFailedScenario(),
                     chooseSequentialSpecification(ann.sequentialSpecification(), testClass), DEFAULT_TIMEOUT_MS));
         Stream<CTestConfiguration> modelCheckingConfigurations = Arrays.stream(testClass.getAnnotationsByType(ModelCheckingCTest.class))
@@ -103,7 +105,8 @@ public abstract class CTestConfiguration {
                     ann.threads(), ann.actorsPerThread(), ann.actorsBefore(), ann.actorsAfter(),
                     ann.generator(), ann.verifier(), ann.checkObstructionFreedom(), ann.hangingDetectionThreshold(),
                     ann.invocationsPerIteration(), DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck(),
-                    ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass), DEFAULT_TIMEOUT_MS));
+                    ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass),
+                    DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS));
 
         return Stream.of(stressConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());
     }

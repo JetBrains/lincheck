@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
  */
 open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
     protected var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
-    protected var addWaits = true
+    protected var addWaits = StressCTestConfiguration.DEFAULT_ADD_WAITS
 
     /**
      * Run each test scenario `invocations` times.
