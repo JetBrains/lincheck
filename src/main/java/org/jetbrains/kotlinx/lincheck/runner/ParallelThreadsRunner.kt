@@ -51,7 +51,7 @@ open class ParallelThreadsRunner(
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = newFixedThreadPool(scenario.threads) { TestThread(it, runnerHash) }
+    private val executor = ParallelThreadsExecutor(scenario.threads, runnerHash)
 
     private val completions = List(scenario.threads) { threadId ->
         List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
@@ -208,15 +208,13 @@ open class ParallelThreadsRunner(
                 }
             }
         }
-        testThreadExecutions.map { executor.submit(it) }.forEach { future ->
-            try {
-                future.get(timeoutMs, TimeUnit.MILLISECONDS)
-            } catch (e: TimeoutException) {
-                val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
-                return DeadlockInvocationResult(threadDump)
-            } catch (e: ExecutionException) {
-                return UnexpectedExceptionInvocationResult(e.cause!!)
-            }
+        try {
+            executor.submitAndAwaitExecutions(testThreadExecutions, timeoutMs)
+        } catch (e: TimeoutException) {
+            val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
+            return DeadlockInvocationResult(threadDump)
+        } catch (e: ExecutionException) {
+            return UnexpectedExceptionInvocationResult(e.cause!!)
         }
         val parallelResultsWithClock = testThreadExecutions.map { ex ->
             ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second)) }
@@ -257,7 +255,6 @@ open class ParallelThreadsRunner(
 
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
-        (Thread.currentThread() as TestThread).iThread = iThread
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1
@@ -282,8 +279,7 @@ open class ParallelThreadsRunner(
     }
 
      // For [TestThreadExecution] instances
-    class TestThread(r: Runnable, val runnerHash: Int) : Thread(r) {
-        var iThread: Int = 0
+    class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r) {
         var cont: CancellableContinuation<*>? = null
     }
 }
