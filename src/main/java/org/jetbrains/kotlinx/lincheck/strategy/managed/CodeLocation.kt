@@ -35,8 +35,7 @@ internal class ReadCodeLocation(private val fieldName: String?, private val stac
         if (fieldName != null)
             append("$fieldName.")
         append("READ")
-        if (value != null)
-            append(": $value")
+        append(": $value")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
@@ -52,8 +51,7 @@ internal class WriteCodeLocation(private val fieldName: String?, private val sta
         if (fieldName != null)
             append("$fieldName.")
         append("WRITE(")
-        if (value != null)
-            append("$value")
+        append("$value")
         append(") at ${stackTraceElement.shorten()}")
     }.toString()
 
