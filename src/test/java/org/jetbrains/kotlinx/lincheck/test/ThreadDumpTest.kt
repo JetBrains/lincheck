@@ -35,7 +35,11 @@ class ThreadDumpTest {
     fun test() {
         val iterations = 30
         repeat(iterations) {
-            val options = StressOptions().minimizeFailedScenario(false).invocationsPerIteration(1).invocationTimeout(100)
+            val options = StressOptions()
+                    .minimizeFailedScenario(false)
+                    .iterations(100_000)
+                    .invocationsPerIteration(1)
+                    .invocationTimeout(100)
             val failure = options.checkImpl(DeadlockOnSynchronizedTest::class.java)
             check(failure is DeadlockWithDumpFailure)
             check(failure.threadDump.size == 2) { "thread dump for 2 threads expected, but for ${failure.threadDump.size} threads found"}
