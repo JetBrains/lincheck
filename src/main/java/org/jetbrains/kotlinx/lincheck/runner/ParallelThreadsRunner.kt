@@ -21,14 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.*
-import java.util.concurrent.Executors.*
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -51,7 +50,7 @@ open class ParallelThreadsRunner(
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = ParallelThreadsExecutor(scenario.threads, runnerHash)
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
 
     private val completions = List(scenario.threads) { threadId ->
         List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
@@ -209,7 +208,7 @@ open class ParallelThreadsRunner(
             }
         }
         try {
-            executor.submitAndAwaitExecutions(testThreadExecutions, timeoutMs)
+            executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
             val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
             return DeadlockInvocationResult(threadDump)
@@ -276,11 +275,6 @@ open class ParallelThreadsRunner(
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor {
         return CancellabilitySupportClassTransformer(cv)
-    }
-
-     // For [TestThreadExecution] instances
-    class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r) {
-        var cont: CancellableContinuation<*>? = null
     }
 }
 

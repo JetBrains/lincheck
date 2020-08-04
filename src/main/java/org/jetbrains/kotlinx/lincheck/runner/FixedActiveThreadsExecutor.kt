@@ -22,26 +22,34 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.atomicfu.atomicArrayOfNulls
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.TestThread
+import kotlinx.coroutines.CancellableContinuation
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.LockSupport
 import kotlin.math.min
 
 /**
- * This class executes a set of test thread executions in an internal thread pool.
+ * This class executes a set of runnables in an internal thread pool.
  */
-class ParallelThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
-    // null, a waiting TestThread, TestThreadExecution or SHUTDOWN for each thread
+internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
+    // null, a waiting TestThread, Runnable or SHUTDOWN for each thread
     private val tasks = atomicArrayOfNulls<Any>(nThreads)
-    // null, a waiting submitting Thread, DONE or an exception for each thread
+    // null, the waiting in submitAndAwait thread, DONE or an exception for each thread
     private val results = atomicArrayOfNulls<Any>(nThreads)
     // how many iterations threads spend in active wait until parking
     private var spinCount = 40000
     // for adaptive spin count changing
+    // whether a thread was parked since the previous submitAndWait call
     @Volatile
     private var wasParked: Boolean = false
-    private var wasParkedBalance: Int = 0 // to negate dispersion because of i.e. verifier
+    // increases by 1 if wasParked is set and decreases otherwise.
+    // once the absolute value exceeds WAS_PARK_BALANCE_THRESHOLD,
+    // a decision is made either to double or to halve spinCount.
+    // this adaptiveness helps to use active waiting in case of multi-core processors
+    // and to use parking in case of single-core processors.
+    // WAS_PARK_BALANCE_THRESHOLD is used to negate dispersion between calls
+    // because of e.g. verification.
+    private var wasParkedBalance: Int = 0
 
     init {
         repeat(nThreads) { iThread ->
@@ -50,15 +58,15 @@ class ParallelThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
     }
 
     /**
-     * Submits a set of test thread executions to the thread pool and waits until all executions are completed.
-     * The number of executions should be equal to [nThreads].
+     * Submits a set of tasks to the thread pool and waits until all of them are completed.
+     * The number of tasks should be equal to [nThreads].
      * @throws TimeoutException if more than [timeoutMs] passed
      * @throws ExecutionException if an unexpected exception happened
      */
-    fun submitAndAwaitExecutions(executions: Array<TestThreadExecution>, timeoutMs: Long? = null) {
-        check(executions.size == nThreads)
-        submitExecutions(executions)
-        awaitExecutions(timeoutMs)
+    fun submitAndAwait(tasks: Array<out Runnable>, timeoutMs: Long? = null) {
+        check(tasks.size == nThreads)
+        submitTasks(tasks)
+        await(timeoutMs)
         updateAdaptiveSpinCount()
     }
 
@@ -67,13 +75,13 @@ class ParallelThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
      */
     fun shutdown() {
         // submit shutdown tasks unparking waiting threads
-        submitExecutions(Array(nThreads) { SHUTDOWN })
+        submitTasks(Array(nThreads) { SHUTDOWN })
     }
 
-    private fun submitExecutions(executions: Array<out Any>) {
+    private fun submitTasks(tasks: Array<out Any>) {
         for (i in 0 until nThreads) {
             results[i].value = null
-            submitExecution(i, executions[i])
+            submitTask(i, tasks[i])
         }
     }
 
@@ -82,7 +90,7 @@ class ParallelThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
             wasParked = false
             wasParkedBalance++
             if (wasParkedBalance >= WAS_PARK_BALANCE_THRESHOLD) {
-                spinCount = (spinCount + 1) / 2
+                spinCount /= 2
                 wasParkedBalance = 0
             }
         } else {
@@ -94,22 +102,22 @@ class ParallelThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
         }
     }
 
-    private fun submitExecution(iThread: Int, execution: Any) {
-        if (tasks[iThread].compareAndSet(null, execution)) return
+    private fun submitTask(iThread: Int, task: Any) {
+        if (tasks[iThread].compareAndSet(null, task)) return
         // the CAS failed, which means that a test thread is parked in waiting
         // submit the task and unpark the test thread
         val thread = tasks[iThread].value as TestThread
-        tasks[iThread].value = execution
+        tasks[iThread].value = task
         LockSupport.unpark(thread)
     }
 
-    private fun awaitExecutions(timeoutMs: Long?) {
+    private fun await(timeoutMs: Long?) {
         val deadline = if (timeoutMs != null) System.currentTimeMillis() + timeoutMs else null
         for (iThread in 0 until nThreads)
-            awaitExecution(iThread, deadline)
+            awaitTask(iThread, deadline)
     }
 
-    private fun awaitExecution(iThread: Int, deadline: Long?) {
+    private fun awaitTask(iThread: Int, deadline: Long?) {
         val result = getResult(iThread, deadline)
         // check whether there was an exception
         if (result != DONE)
@@ -142,9 +150,9 @@ class ParallelThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
             val task = getTask(iThread)
             if (task == SHUTDOWN) return@Runnable
             tasks[iThread].value = null // reset task
-            val execution = task as TestThreadExecution
+            val runnable = task as Runnable
             try {
-                execution.run()
+                runnable.run()
             } catch(e: Throwable) {
                 setResult(iThread, e)
                 continue@loop
@@ -185,6 +193,11 @@ class ParallelThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
         }
         wasParked = true
         return null
+    }
+
+    // For [TestThreadExecution] instances
+    class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r) {
+        var cont: CancellableContinuation<*>? = null
     }
 
     companion object {

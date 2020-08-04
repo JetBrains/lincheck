@@ -21,60 +21,59 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.runner
 
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsExecutor
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
 import org.junit.Test
 import java.util.concurrent.TimeoutException
 
-class ParallelThreadsExecutorTest {
+class FixedActiveThreadsExecutorTest {
     @Test
     fun testSubmit() {
-        val executor = ParallelThreadsExecutor(2, 0)
+        val executor = FixedActiveThreadsExecutor(2, 0)
         val executed = arrayOf(false, false)
-        val executions = Array<TestThreadExecution>(2) {
+        val tasks = Array<TestThreadExecution>(2) {
             object : TestThreadExecution() {
                 override fun run() {
                     executed[it] = true
                 }
             }
         }
-        executor.submitAndAwaitExecutions(executions)
+        executor.submitAndAwait(tasks)
         check(executed.all { it })
         executor.shutdown()
     }
 
     @Test
     fun testResubmit() {
-        val executor = ParallelThreadsExecutor(2, 0)
+        val executor = FixedActiveThreadsExecutor(2, 0)
         val executed = arrayOf(false, false)
-        val executions = Array<TestThreadExecution>(2) {
+        val tasks = Array<TestThreadExecution>(2) {
             object : TestThreadExecution() {
                 override fun run() {
                     executed[it] = true
                 }
             }
         }
-        executor.submitAndAwaitExecutions(executions)
+        executor.submitAndAwait(tasks)
         executed.fill(false)
-        executor.submitAndAwaitExecutions(executions)
+        executor.submitAndAwait(tasks)
         check(executed.all { it })
         executor.shutdown()
     }
 
-    @Test
+    @Test(timeout = 100_000)
     fun testSubmitTimeout() {
-        val executor = ParallelThreadsExecutor(2, 0)
-        val executions = Array<TestThreadExecution>(2) {
+        val executor = FixedActiveThreadsExecutor(2, 0)
+        val tasks = Array<TestThreadExecution>(2) { iThread ->
             object : TestThreadExecution() {
                 override fun run() {
-                    if (it == 1)
+                    if (iThread == 1)
                         while (true);
                 }
             }
         }
         try {
-            executor.submitAndAwaitExecutions(executions, 200)
+            executor.submitAndAwait(tasks, 200)
         } catch (e: TimeoutException) {
             return // TimeoutException is expected
         }
@@ -86,11 +85,11 @@ class ParallelThreadsExecutorTest {
     fun testShutdown() {
         // executor with unique runner hash
         val uniqueRunnerHash = 1337
-        val executor = ParallelThreadsExecutor(2, uniqueRunnerHash)
+        val executor = FixedActiveThreadsExecutor(2, uniqueRunnerHash)
         executor.shutdown()
         while (true) {
             // check that all test threads are finished
-            if (Thread.getAllStackTraces().keys.all { it !is ParallelThreadsRunner.TestThread || it.runnerHash != uniqueRunnerHash })
+            if (Thread.getAllStackTraces().keys.all { it !is FixedActiveThreadsExecutor.TestThread || it.runnerHash != uniqueRunnerHash })
                 return
         }
     }
