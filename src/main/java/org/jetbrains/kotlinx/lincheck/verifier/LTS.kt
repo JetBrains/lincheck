@@ -27,6 +27,10 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.CostWithNextCostCounter
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction
+import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxed
+import java.lang.reflect.Method
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.coroutines.*
@@ -56,7 +60,10 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: Class<*>) {
+class LTS(sequentialSpecification: Class<*>,
+          private val isQuantitativelyRelaxed: Boolean = false,
+          private val relaxationFactor: Int = 0
+) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
     private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
                                                     .loadClass(sequentialSpecification.name)!!
@@ -74,10 +81,11 @@ class LTS(sequentialSpecification: Class<*>) {
      * Every state stores possible transitions([transitionsByRequests] and [transitionsByFollowUps]) by actors which are computed lazily
      * by the corresponding [next] requests ([nextByRequest] and [nextByFollowUp] respectively).
      */
-    inner class State(val seqToCreate: List<Operation>) {
-        internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
+    inner class State(val seqToCreate: List<Operation>, val costCounter: Any?) {
+        internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo?>() }
         internal val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
         internal val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
+        internal val relaxedTransitions by lazy { mutableMapOf<Actor, List<RelaxedTransitionInfo>?>() }
 
         /**
          * Computes or gets the existing transition from the current state by the given [actor].
@@ -91,11 +99,26 @@ class LTS(sequentialSpecification: Class<*>) {
                     val ticket = findFirstAvailableTicket(suspendedOperations, resumedTicketsWithResults)
                     val op = Operation(actor, ticket, REQUEST)
                     // Invoke the given operation to count the next transition.
-                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
-                    createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
+                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
+                    val costCounterOrTestInstance =
+                            if (!isQuantitativelyRelaxed) instance
+                            else {
+                                if (result is ValueResult && result.value != null) {
+                                    // Standalone instance of CostCounter is returned.
+                                    check(result.value.javaClass == sequentialSpecification) {
+                                        "Non-relaxed ${op.actor} should store transitions within CostCounter instances, but ${result.value} is found"
+                                    }
+                                    result.value
+                                } else {
+                                    // The impossibility of this transition is already defined by CostCounter class.
+                                    return@computeIfAbsent null
+                                }
+                            }
+                    createTransition(op, result, costCounterOrTestInstance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
-            return if (transitionInfo.isLegalByRequest(expectedResult)) transitionInfo else null
+            if (isQuantitativelyRelaxed) return transitionInfo
+            return if (transitionInfo != null && transitionInfo.isLegalByRequest(expectedResult)) transitionInfo else null
         }
 
         private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
@@ -103,7 +126,7 @@ class LTS(sequentialSpecification: Class<*>) {
                 generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     // Invoke the given operation to count the next transition.
                     val op = Operation(actor, ticket, FOLLOW_UP)
-                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
+                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
                     createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
@@ -111,13 +134,30 @@ class LTS(sequentialSpecification: Class<*>) {
             return if (transitionInfo.isLegalByFollowUp(expectedResult)) transitionInfo else null
         }
 
-        fun nextByCancellation(actor: Actor, ticket: Int): TransitionInfo = transitionsByCancellations.computeIfAbsent(ticket) {
+        fun nextByCancellation(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? = transitionsByCancellations.computeIfAbsent(ticket) {
             generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                 // Invoke the given operation to count the next transition.
                 val op = Operation(actor, ticket, OperationType.CANCELLATION)
-                val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
+                val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
                 check(result === Cancelled)
                 createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
+            }
+        }
+
+        fun nextRelaxed(actor: Actor, ticket: Int, expectedResult: Result): List<RelaxedTransitionInfo>? = relaxedTransitions.computeIfAbsent(actor) {
+            generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
+                val op = Operation(actor, ticket, REQUEST)
+                val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
+                val nextCostCounterInstances = if (result is ValueResult && result.value != null) {
+                    // A list of CostWithNextCounter instances is returned.
+                    check(result.value is List<*>) {
+                        "Relaxed ${op.actor} should store transitions within a list of CostWithNextCostCounter, but ${result.value} is found"
+                    }
+                    result.value as List<CostWithNextCostCounter<*>>
+                } else {
+                    return@computeIfAbsent null
+                }
+                createRelaxedTransitions(op, result, nextCostCounterInstances, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
             }
         }
 
@@ -145,14 +185,16 @@ class LTS(sequentialSpecification: Class<*>) {
             ) -> T
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
-            val instance = createInitialStateInstance()
+            val instance = if (isQuantitativelyRelaxed) costCounter!! else createInitialStateInstance()
             val suspendedOperations = mutableListOf<Operation>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
             val continuationsMap = mutableMapOf<Operation, CancellableContinuation<*>>()
-            try {
-                seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap) }
-            } catch (e: Exception) {
-                throw  IllegalStateException(e)
+            if (!isQuantitativelyRelaxed) {
+                try {
+                    seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, null) } // todo because the state contains current counter state
+                } catch (e: Exception) {
+                    throw  IllegalStateException(e)
+                }
             }
             return action(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
         }
@@ -176,6 +218,29 @@ class LTS(sequentialSpecification: Class<*>) {
             }
         }
 
+        private fun createRelaxedTransitions(
+                actorWithTicket: Operation,
+                result: Result,
+                nextCostCounterInstances: List<CostWithNextCostCounter<*>>,
+                suspendedOperations: List<Operation>,
+                resumedOperations: List<ResumptionInfo>
+        ): List<RelaxedTransitionInfo> {
+            return nextCostCounterInstances.map { it ->
+                val stateInfo = StateInfo(this, it.nextCostCounter, suspendedOperations, resumedOperations)
+                stateInfo.intern(actorWithTicket) { nextStateInfo, rf ->
+                    RelaxedTransitionInfo(
+                            nextState = stateInfo.state,
+                            resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
+                            ticket = actorWithTicket.ticket,
+                            rf = rf,
+                            result = result,
+                            cost = it.cost,
+                            predicate = it.predicate
+                    )
+                }
+            }
+        }
+
         private fun getResumedOperations(resumedTicketsWithResults: Map<Int, ResumedResult>): List<ResumptionInfo> {
             val resumedOperations = mutableListOf<ResumptionInfo>()
             resumedTicketsWithResults.forEach { resumedTicket, res ->
@@ -190,12 +255,13 @@ class LTS(sequentialSpecification: Class<*>) {
         externalState: Any,
         suspendedOperations: MutableList<Operation>,
         resumedOperations: MutableMap<Int, ResumedResult>,
-        continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
+        continuationsMap: MutableMap<Operation, CancellableContinuation<*>>,
+        expectedResult: Result?
     ): Result {
         val prevResumedTickets = resumedOperations.keys.toMutableList()
         storedLastCancellableCont = null
         val res = when (type) {
-            REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations))
+            REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations), if (isQuantitativelyRelaxed) expectedResult else null)
             FOLLOW_UP -> {
                 val (cont, suspensionPointRes) = resumedOperations[ticket]!!.contWithSuspensionPointRes
                 val finalRes = (
@@ -242,14 +308,14 @@ class LTS(sequentialSpecification: Class<*>) {
             block(old, this.computeRemappingFunction(old))
         } else {
             val newSeqToCreate = if (curOperation != null) this.state.seqToCreate + curOperation else emptyList()
-            stateInfos[this] = this.also { it.state = State(newSeqToCreate) }
+            stateInfos[this] = this.also { it.state = State(newSeqToCreate, if (isQuantitativelyRelaxed) instance else null) }
             return block(stateInfos[this]!!, null)
         }
     }
 
     private fun createInitialState(): State {
         val instance = createInitialStateInstance()
-        val initialState = State(emptyList())
+        val initialState = State(emptyList(), if (isQuantitativelyRelaxed) instance else null)
         return StateInfo(
             state = initialState,
             instance = instance,
@@ -258,7 +324,8 @@ class LTS(sequentialSpecification: Class<*>) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.newInstance()
+    private fun createInitialStateInstance() = if (isQuantitativelyRelaxed) createCostCounterInstance(sequentialSpecification, relaxationFactor)
+                                               else sequentialSpecification.newInstance()
 
     fun checkStateEquivalenceImplementation() {
         val i1 = createInitialStateInstance()
@@ -310,8 +377,10 @@ class LTS(sequentialSpecification: Class<*>) {
 
     private fun StringBuilder.appendTransitions(state: State, visitedStates: IdentityHashMap<State, Unit>) {
         state.transitionsByRequests.forEach { actor, transition ->
-            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
-            if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
+            if (transition != null) {
+                appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+                if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
+            }
         }
         state.transitionsByFollowUps.forEach { ticket, transition ->
             appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<F,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
@@ -335,7 +404,7 @@ class LTS(sequentialSpecification: Class<*>) {
  */
 private class StateInfo(
     var state: State,
-    val instance: Any,
+    val instance: Any?,
     val suspendedOperations: List<Operation>,
     val resumedOperations: List<ResumptionInfo>
 ) {
@@ -358,6 +427,12 @@ private class StateInfo(
             resumedOperations.maxBy { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
         )
 }
+
+private val relaxedActors = IdentityHashMap<Method, Boolean>()
+val Actor.isRelaxed: Boolean
+    get() = relaxedActors.computeIfAbsent(this.method) {
+        this.method.isAnnotationPresent(QuantitativeRelaxed::class.java)
+    }
 
 /**
  * When suspended operation is resumed by another thread,
@@ -460,7 +535,7 @@ private data class ResumptionInfo(
     val resumedActorTicket: Int
 )
 
-class TransitionInfo(
+open class TransitionInfo(
     /**
      * The next LTS state.
      */
@@ -494,3 +569,22 @@ class TransitionInfo(
      */
     val wasSuspended: Boolean get() = result === Suspended
 }
+
+/**
+ * Describes relaxed transition.
+ */
+class RelaxedTransitionInfo(
+        nextState: State,
+        resumedTickets: Set<Int>,
+        ticket: Int,
+        rf: RemappingFunction?,
+        result: Result,
+        /**
+         * Transition cost
+         */
+        val cost: Int,
+        /**
+         * Transition predicate
+         */
+        val predicate: Boolean
+) : TransitionInfo(nextState, resumedTickets, ticket, rf, result)

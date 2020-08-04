@@ -45,8 +45,9 @@ abstract class AbstractLTSVerifier(protected val sequentialSpecification: Class<
         // Traverse through next possible transitions using depth-first search (DFS). Note that
         // initial and post parts are represented as threads with ids `0` and `threads + 1` respectively.
         for (threadId in threads) {
-            val nextContext = nextContext(threadId)
-            if (nextContext !== null && nextContext.verify()) return true
+            for (nextContext in nextContexts(threadId)) {
+                if (nextContext.verify()) return true
+            }
         }
         return false
     }
@@ -92,7 +93,7 @@ abstract class VerifierContext(
     /**
      * Counts next possible states and the corresponding contexts if the specified thread is executed.
      */
-    abstract fun nextContext(threadId: Int): VerifierContext?
+    abstract fun nextContexts(threadId: Int): List<VerifierContext>
 
     /**
      * Returns `true` if all actors in the specified thread are executed.

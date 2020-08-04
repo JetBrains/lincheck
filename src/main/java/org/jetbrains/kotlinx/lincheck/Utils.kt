@@ -66,7 +66,9 @@ fun createCostCounterInstance(costCounter: Class<*>, relaxationFactor: Int): Any
     }
 }
 
-internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
+internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null, null)
+internal fun executeActor(testInstance: Any, actor: Actor, completion: Continuation<Any?>?) =
+        executeActor(testInstance, actor, completion, null)
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.
@@ -74,11 +76,18 @@ internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testIn
 internal fun executeActor(
     instance: Any,
     actor: Actor,
-    completion: Continuation<Any?>?
+    completion: Continuation<Any?>?,
+    result: Result?
 ): Result {
     try {
-        val m = getMethod(instance, actor.method)
-        val args = if (actor.isSuspendable) actor.arguments + completion else actor.arguments
+        val m = if (result == null) getMethod(instance, actor.method)
+        else getRelaxedMethod(instance, actor.method)
+        val args = when {
+            actor.isSuspendable && result != null -> actor.arguments + result + completion
+            actor.isSuspendable -> actor.arguments + completion
+            result != null -> actor.arguments + result
+            else -> actor.arguments
+        }
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
@@ -127,6 +136,15 @@ private fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
     return methods[method]?.get() ?: run {
         val m = instance.javaClass.getMethod(method.name, *method.parameterTypes)
+        methods[method] = WeakReference(m)
+        m
+    }
+}
+
+private fun getRelaxedMethod(instance: Any, method: Method): Method {
+    val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
+    return methods[method]?.get() ?: run {
+        val m = instance.javaClass.getMethod(method.name, *(method.parameterTypes + Result::class.java))
         methods[method] = WeakReference(m)
         m
     }
