@@ -128,15 +128,14 @@ class LTS(sequentialSpecification: Class<*>) {
             isLegalByFollowUp(expectedResult, allowExtraSuspension) || (result == Suspended && expectedResult.wasSuspended)
                                                                     || (result == Suspended && allowExtraSuspension)
 
-
-                private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result, allowExtraSuspension: Boolean) =
+        private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result, allowExtraSuspension: Boolean) =
             (result == expectedResult) ||
             (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value &&
-                (expectedResult.wasSuspended && !result.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
+                (!result.wasSuspended && expectedResult.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
             (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz &&
-                (expectedResult.wasSuspended && !result.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
+                (!result.wasSuspended && expectedResult.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
             (result == VoidResult && expectedResult == SuspendedVoidResult) ||
-            (allowExtraSuspension && result == SuspendedVoidResult && expectedResult == VoidResult)
+            (result == SuspendedVoidResult && expectedResult == VoidResult && allowExtraSuspension)
 
         private inline fun <T> generateNextState(
             action: (
