@@ -195,7 +195,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         return null
     }
 
-    // For [TestThreadExecution] instances
     class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r) {
         var cont: CancellableContinuation<*>? = null
     }
