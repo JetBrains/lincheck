@@ -144,20 +144,23 @@ class LTS(sequentialSpecification: Class<*>,
             }
         }
 
-        fun nextRelaxed(actor: Actor, ticket: Int, expectedResult: Result): List<RelaxedTransitionInfo>? = relaxedTransitions.computeIfAbsent(actor) {
-            generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
-                val op = Operation(actor, ticket, REQUEST)
-                val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
-                val nextCostCounterInstances = if (result is ValueResult && result.value != null) {
-                    // A list of CostWithNextCounter instances is returned.
-                    check(result.value is List<*>) {
-                        "Relaxed ${op.actor} should store transitions within a list of CostWithNextCostCounter, but ${result.value} is found"
+        fun nextRelaxed(actor: Actor, ticket: Int, expectedResult: Result): List<RelaxedTransitionInfo>? {
+            return relaxedTransitions.computeIfAbsent(actor) {
+                generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
+                    val op = Operation(actor, ticket, REQUEST)
+                    val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
+                    val nextCostCounterInstances = if (result is ValueResult && result.value != null) {
+                        // A list of CostWithNextCounter instances is returned.
+                        check(result.value is List<*>) {
+                            "Relaxed ${op.actor} should store transitions within a list of CostWithNextCostCounter, but ${result.value} is found"
+                        }
+                        if (result.value.isEmpty()) return@computeIfAbsent null
+                        result.value as List<CostWithNextCostCounter<*>>
+                    } else {
+                        return@computeIfAbsent null
                     }
-                    result.value as List<CostWithNextCostCounter<*>>
-                } else {
-                    return@computeIfAbsent null
+                    createRelaxedTransitions(op, result, nextCostCounterInstances, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
-                createRelaxedTransitions(op, result, nextCostCounterInstances, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
             }
         }
 
@@ -229,7 +232,7 @@ class LTS(sequentialSpecification: Class<*>,
                 val stateInfo = StateInfo(this, it.nextCostCounter, suspendedOperations, resumedOperations)
                 stateInfo.intern(actorWithTicket) { nextStateInfo, rf ->
                     RelaxedTransitionInfo(
-                            nextState = stateInfo.state,
+                            nextState = nextStateInfo.state,
                             resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
                             ticket = actorWithTicket.ticket,
                             rf = rf,
