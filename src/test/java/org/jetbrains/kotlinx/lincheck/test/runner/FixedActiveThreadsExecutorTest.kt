@@ -21,10 +21,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.runner
 
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
-import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
-import org.junit.Test
-import java.util.concurrent.TimeoutException
+import org.jetbrains.kotlinx.lincheck.runner.*
+import org.junit.*
+import java.util.concurrent.*
 
 class FixedActiveThreadsExecutorTest {
     @Test
@@ -38,7 +37,7 @@ class FixedActiveThreadsExecutorTest {
                 }
             }
         }
-        executor.submitAndAwait(tasks)
+        executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
         check(executed.all { it })
         executor.shutdown()
     }
@@ -54,9 +53,9 @@ class FixedActiveThreadsExecutorTest {
                 }
             }
         }
-        executor.submitAndAwait(tasks)
+        executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
         executed.fill(false)
-        executor.submitAndAwait(tasks)
+        executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
         check(executed.all { it })
         executor.shutdown()
     }

@@ -21,60 +21,77 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.atomicfu.atomicArrayOfNulls
+import kotlinx.atomicfu.*
 import kotlinx.coroutines.CancellableContinuation
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeoutException
-import java.util.concurrent.locks.LockSupport
-import kotlin.math.min
+import org.jetbrains.kotlinx.lincheck.execution.*
+import java.lang.*
+import java.util.concurrent.*
+import java.util.concurrent.locks.*
+import kotlin.math.*
 
 /**
- * This class executes a set of runnables in an internal thread pool.
+ * This executor maintains the specified number of threads and is used by
+ * [ParallelThreadsRunner] to execute [ExecutionScenario]-s. The main feature
+ * is that this executor keeps the re-using threads "hot" (active) as long as
+ * possible, so that they should not be parked and unparked between invocations.
  */
 internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
-    // null, a waiting TestThread, Runnable or SHUTDOWN for each thread
+    /**
+     * null, waiting TestThread, Runnable task, or SHUTDOWN
+     */
     private val tasks = atomicArrayOfNulls<Any>(nThreads)
-    // null, the waiting in submitAndAwait thread, DONE or an exception for each thread
+    /**
+     * null, waiting in [submitAndAwait] thread, DONE, or exception
+     */
     private val results = atomicArrayOfNulls<Any>(nThreads)
-    // how many iterations threads spend in active wait until parking
+    /**
+     * Specifies the number of loop cycles for threads
+     * active waiting, after that they should be parked
+     */
     private var spinCount = 40000
-    // for adaptive spin count changing
-    // whether a thread was parked since the previous submitAndWait call
+    /**
+     * An adaptive active waiting strategy is used for the case when
+     * the number of threads is greater than the number of cores.
+     * This flag is set to `true` when any of the threads was parked
+     * during the previous [submitAndWait] call.
+     */
     @Volatile
     private var wasParked: Boolean = false
-    // increases by 1 if wasParked is set and decreases otherwise.
-    // once the absolute value exceeds WAS_PARK_BALANCE_THRESHOLD,
-    // a decision is made either to double or to halve spinCount.
-    // this adaptiveness helps to use active waiting in case of multi-core processors
-    // and to use parking in case of single-core processors.
-    // WAS_PARK_BALANCE_THRESHOLD is used to negate dispersion between calls
-    // because of e.g. verification.
+    /**
+     * This balance is either increased or decreased by 1 at the
+     * end of each invocation when [wasParked] is `true` or `false`
+     * correspondingly. When the balance achieves [WAS_PARK_BALANCE_THRESHOLD],
+     * [spinCount] is doubled, and when the balance achieves
+     * -[WAS_PARK_BALANCE_THRESHOLD], [spinCount] is halved.
+     */
     private var wasParkedBalance: Int = 0
 
     init {
         repeat(nThreads) { iThread ->
-            TestThread(iThread, runnerHash, testThreadRoutine(iThread)).start()
+            TestThread(iThread, runnerHash, testThreadRunnable(iThread)).start()
         }
     }
 
     /**
-     * Submits a set of tasks to the thread pool and waits until all of them are completed.
+     * Submits the specified set of [tasks] to this executor
+     * and waits until all of them are completed.
      * The number of tasks should be equal to [nThreads].
-     * @throws TimeoutException if more than [timeoutMs] passed
-     * @throws ExecutionException if an unexpected exception happened
+     *
+     * @throws TimeoutException if more than [timeoutMs] is passed.
+     * @throws ExecutionException if an unexpected exception is thrown during the execution.
      */
-    fun submitAndAwait(tasks: Array<out Runnable>, timeoutMs: Long? = null) {
-        check(tasks.size == nThreads)
+    fun submitAndAwait(tasks: Array<out Runnable>, timeoutMs: Long) {
+        require(tasks.size == nThreads)
         submitTasks(tasks)
         await(timeoutMs)
         updateAdaptiveSpinCount()
     }
 
     /**
-     * Initiates shutting down of all threads in the thread pool.
+     * Finishes all the threads that are used in this executor.
      */
     fun shutdown() {
-        // submit shutdown tasks unparking waiting threads
+        // submit the shutdown task.
         submitTasks(Array(nThreads) { SHUTDOWN })
     }
 
@@ -104,48 +121,43 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun submitTask(iThread: Int, task: Any) {
         if (tasks[iThread].compareAndSet(null, task)) return
-        // the CAS failed, which means that a test thread is parked in waiting
-        // submit the task and unpark the test thread
+        // CAS failed => a test thread is parked.
+        // Submit the task and unpark the waiting thread.
         val thread = tasks[iThread].value as TestThread
         tasks[iThread].value = task
         LockSupport.unpark(thread)
     }
 
-    private fun await(timeoutMs: Long?) {
-        val deadline = if (timeoutMs != null) System.currentTimeMillis() + timeoutMs else null
+    private fun await(timeoutMs: Long) {
+        val deadline = System.currentTimeMillis() + timeoutMs
         for (iThread in 0 until nThreads)
             awaitTask(iThread, deadline)
     }
 
-    private fun awaitTask(iThread: Int, deadline: Long?) {
+    private fun awaitTask(iThread: Int, deadline: Long) {
         val result = getResult(iThread, deadline)
-        // check whether there was an exception
-        if (result != DONE)
-            throw ExecutionException(result as Throwable)
+        // Check whether there was an exception during the execution.
+        if (result != DONE) throw ExecutionException(result as Throwable)
     }
 
-    private fun getResult(iThread: Int, deadline: Long?): Any {
-        // active wait until any result for a limited number of iterations
+    private fun getResult(iThread: Int, deadline: Long): Any {
+        // Active wait for a result during the limited number of loop cycles.
         spinWait { results[iThread].value }?.let {
             return it
         }
-        // park until timeout or a result
+        // Park with timeout until the result is set or the timeout is passed.
         val currentThread = Thread.currentThread()
         if (results[iThread].compareAndSet(null, Thread.currentThread())) {
             while (results[iThread].value === currentThread) {
-                if (deadline != null) {
-                    val timeLeft = deadline - System.currentTimeMillis()
-                    if (timeLeft <= 0) throw TimeoutException()
-                    LockSupport.parkNanos(timeLeft * 1_000_000)
-                } else {
-                    LockSupport.park()
-                }
+                val timeLeft = deadline - System.currentTimeMillis()
+                if (timeLeft <= 0) throw TimeoutException()
+                LockSupport.parkNanos(timeLeft * 1_000_000)
             }
         }
         return results[iThread].value!!
     }
 
-    private fun testThreadRoutine(iThread: Int) = Runnable {
+    private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@while (true) {
             val task = getTask(iThread)
             if (task == SHUTDOWN) return@Runnable
@@ -162,11 +174,11 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private fun getTask(iThread: Int): Any {
-        // active wait until any task for a limited number of iterations
+        // Active wait for a task for the limited number of loop cycles.
         spinWait { tasks[iThread].value }?.let {
             return it
         }
-        // park until any result
+        // Park until a task is stored into `tasks[iThread]`.
         val currentThread = Thread.currentThread()
         if (tasks[iThread].compareAndSet(null, Thread.currentThread())) {
             while (tasks[iThread].value === currentThread) {
@@ -178,8 +190,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun setResult(iThread: Int, any: Any) {
         if (results[iThread].compareAndSet(null, any)) return
-        // the CAS failed, which means that a thread is parked in waiting
-        // set the result and unpark the waiting thread
+        // CAS failed => a test thread is parked.
+        // Set the result and unpark the waiting thread.
         val thread = results[iThread].value as Thread
         results[iThread].value = any
         LockSupport.unpark(thread)
