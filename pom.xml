@@ -107,6 +107,24 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- transform classes with AtomicFU plugin -->
+            <plugin>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>atomicfu-maven-plugin</artifactId>
+                <version>${atomicfu.version}</version>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>transform</goal>
+                        </goals>
+                        <configuration>
+                            <input>${project.build.directory}/classes-pre-atomicfu</input>
+                            <variant>BOTH</variant>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -174,23 +192,6 @@
                     <pushChanges>false</pushChanges>
                     <localCheckout>true</localCheckout>
                 </configuration>
-            </plugin>
-            <!-- transform classes with AtomicFU plugin -->
-            <plugin>
-                <groupId>org.jetbrains.kotlinx</groupId>
-                <artifactId>atomicfu-maven-plugin</artifactId>
-                <version>${atomicfu.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>transform</goal>
-                        </goals>
-                        <configuration>
-                            <input>${project.build.directory}/classes-pre-atomicfu</input>
-                            <variant>BOTH</variant>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
