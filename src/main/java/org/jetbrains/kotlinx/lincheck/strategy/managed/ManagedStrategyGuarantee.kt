@@ -24,14 +24,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 /**
  * ManagedGuarantee will be constructed for classes with names [fullClassNames].
  */
-fun forClasses(vararg fullClassNames: String) = ManagedGuarantee.MethodBuilder { it in fullClassNames }
+fun forClasses(vararg fullClassNames: String) = ManagedStrategyGuarantee.MethodBuilder { it in fullClassNames }
 
 /**
  * ManagedGuarantee will be constructed for all classes satisfying [classPredicate].
  */
-fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedGuarantee.MethodBuilder(classPredicate)
+fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedStrategyGuarantee.MethodBuilder(classPredicate)
 
-class ManagedGuarantee private constructor(
+class ManagedStrategyGuarantee private constructor(
         val classPredicate: (fullClassName: String) -> Boolean,
         val methodPredicate: (methodName: String) -> Boolean,
         val type: ManagedGuaranteeType
@@ -63,7 +63,7 @@ class ManagedGuarantee private constructor(
          * The methods will be treated by model checking strategy as if they do not have
          * interesting code locations inside.
          */
-        fun ignore() = ManagedGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.IGNORE)
+        fun ignore() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.IGNORE)
 
         /**
          * The methods will be treated by model checking strategy as an atomic instruction.
@@ -71,7 +71,7 @@ class ManagedGuarantee private constructor(
          * Contrary to IGNORE mode, model checking strategy can add thread context switches
          * immediately before or after method invocations.
          */
-        fun treatAsAtomic() = ManagedGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
+        fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
     }
 }
 

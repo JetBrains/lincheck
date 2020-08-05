@@ -43,7 +43,7 @@ import kotlin.reflect.jvm.javaMethod
 internal class ManagedStrategyTransformer(
         cv: ClassVisitor?,
         val codeLocations: MutableList<CodeLocation>,
-        private val guarantees: List<ManagedGuarantee>,
+        private val guarantees: List<ManagedStrategyGuarantee>,
         private val shouldMakeStateRepresentation: Boolean,
         private val shouldEliminateLocalObjects: Boolean,
         private val loggingEnabled: Boolean
@@ -82,7 +82,7 @@ internal class ManagedStrategyTransformer(
             mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), className, access, classVersion)
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = ManagedGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (loggingEnabled)
             mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -341,7 +341,7 @@ internal class ManagedStrategyTransformer(
      * CallStackTraceTransformer should be an earlier transformer than this transformer, because
      * this transformer reuse code locations created by CallStackTraceTransformer for optimization purposes.
      */
-    private inner class ManagedGuaranteeTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class ManagedStrategyGuaranteeTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             when (classifyGuaranteeType(owner, name)) {
                 ManagedGuaranteeType.IGNORE -> {

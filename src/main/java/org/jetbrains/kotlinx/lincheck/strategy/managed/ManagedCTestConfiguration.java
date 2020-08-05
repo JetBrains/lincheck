@@ -38,17 +38,17 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 30;
     public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final int LIVELOCK_EVENTS_THRESHOLD = 1_000;
-    public static final List<ManagedGuarantee> DEFAULT_GUARANTEES = Arrays.asList(
+    public static final List<ManagedStrategyGuarantee> DEFAULT_GUARANTEES = Arrays.asList(
             // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
             // can be just ignored, so that no thread context switches are added inside their methods.
-            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses(
+            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuaranteeKt.forClasses(
                     kotlinx.coroutines.internal.StackTraceRecoveryKt.class.getName(),
                     kotlinx.coroutines.internal.ExceptionsConstuctorKt.class.getName()
             ).allMethods().ignore(),
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             // For this purpose they are treated as if they are atomic instructions.
-            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
+            org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuaranteeKt.forClasses(TrustedAtomicPrimitivesKt::isTrustedPrimitive)
                     .allMethods()
                     .treatAsAtomic()
     );
@@ -57,13 +57,13 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public final boolean eliminateLocalObjects;
     public final int hangingDetectionThreshold;
     public final int invocationsPerIteration;
-    public final List<ManagedGuarantee> guarantees;
+    public final List<ManagedStrategyGuarantee> guarantees;
 
     public ManagedCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
-                                           int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-                                           boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
-                                           List<ManagedGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
-                                           Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
+                                     int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
+                                     boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
+                                     List<ManagedStrategyGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
+                                     Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);

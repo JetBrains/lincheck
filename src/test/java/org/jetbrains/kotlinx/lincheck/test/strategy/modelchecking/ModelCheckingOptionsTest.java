@@ -31,7 +31,7 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuaranteeKt.forClasses;
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuaranteeKt.forClasses;
 
 
 public class ModelCheckingOptionsTest {

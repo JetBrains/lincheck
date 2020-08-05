@@ -21,17 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
-import kotlin.jvm.functions.Function0;
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -41,7 +37,7 @@ public class ModelCheckingCTestConfiguration extends ManagedCTestConfiguration {
     public ModelCheckingCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                            int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
                                            boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
-                                           List<ManagedGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
+                                           List<ManagedStrategyGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
                                            Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
