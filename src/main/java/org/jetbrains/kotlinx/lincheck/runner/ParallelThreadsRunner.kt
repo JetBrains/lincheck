@@ -21,14 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.*
-import java.util.concurrent.Executors.*
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -51,7 +50,7 @@ open class ParallelThreadsRunner(
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = newFixedThreadPool(scenario.threads) { TestThread(it, runnerHash) }
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
 
     private val completions = List(scenario.threads) { threadId ->
         List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
@@ -208,15 +207,13 @@ open class ParallelThreadsRunner(
                 }
             }
         }
-        testThreadExecutions.map { executor.submit(it) }.forEach { future ->
-            try {
-                future.get(timeoutMs, TimeUnit.MILLISECONDS)
-            } catch (e: TimeoutException) {
-                val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
-                return DeadlockInvocationResult(threadDump)
-            } catch (e: ExecutionException) {
-                return UnexpectedExceptionInvocationResult(e.cause!!)
-            }
+        try {
+            executor.submitAndAwait(testThreadExecutions, timeoutMs)
+        } catch (e: TimeoutException) {
+            val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
+            return DeadlockInvocationResult(threadDump)
+        } catch (e: ExecutionException) {
+            return UnexpectedExceptionInvocationResult(e.cause!!)
         }
         val parallelResultsWithClock = testThreadExecutions.map { ex ->
             ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second)) }
@@ -257,7 +254,6 @@ open class ParallelThreadsRunner(
 
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
-        (Thread.currentThread() as TestThread).iThread = iThread
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1
@@ -279,12 +275,6 @@ open class ParallelThreadsRunner(
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor {
         return CancellabilitySupportClassTransformer(cv)
-    }
-
-     // For [TestThreadExecution] instances
-    class TestThread(r: Runnable, val runnerHash: Int) : Thread(r) {
-        var iThread: Int = 0
-        var cont: CancellableContinuation<*>? = null
     }
 }
 

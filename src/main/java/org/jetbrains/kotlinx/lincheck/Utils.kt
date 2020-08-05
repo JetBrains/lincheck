@@ -205,7 +205,7 @@ object CancellableContinuationHolder {
 
 fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     val t = Thread.currentThread()
-    if (t is ParallelThreadsRunner.TestThread) {
+    if (t is FixedActiveThreadsExecutor.TestThread) {
         t.cont = cont
     } else {
         storedLastCancellableCont = cont
