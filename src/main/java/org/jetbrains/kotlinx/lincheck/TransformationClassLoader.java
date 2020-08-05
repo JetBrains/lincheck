@@ -79,8 +79,6 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
         if (TrustedAtomicPrimitivesKt.isImpossibleToTransformPrimitive(className)) return true;
 
-        if (className == null) System.out.println("WTF?!!");
-
         return className == null ||
             (
                 className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
@@ -193,7 +191,7 @@ class TransformationClassWriter extends ClassWriter {
 }
 
 /**
- * Visitor for retrieving infomation of class version needed for choosing between COMPUTE_FRAME and COMPUTE_MAXS
+ * Visitor for retrieving information of class version needed for choosing between COMPUTE_FRAME and COMPUTE_MAXS
  */
 class ClassVersionGetter extends ClassVisitor {
     private int classVersion;
