@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
-import java.lang.Exception
 import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.Executors.*

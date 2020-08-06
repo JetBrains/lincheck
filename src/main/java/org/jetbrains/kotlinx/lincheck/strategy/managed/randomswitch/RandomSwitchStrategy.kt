@@ -21,19 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyBase
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.lang.reflect.Method
-import kotlin.random.Random
-
-private const val startSwitchProbability = 0.05
-private const val endSwitchProbability = 0.99
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.lang.reflect.*
+import kotlin.random.*
 
 /**
  * RandomSwitchStrategy just switches at every code location to a random thread.
@@ -50,16 +44,16 @@ internal class RandomSwitchStrategy(
         testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg
 ) {
     // the number of invocations that the managed strategy may use to search for an incorrect execution
-    private val maxInvocations = testCfg.invocationsPerIteration
-    private var switchProbability = startSwitchProbability
+    private val invocations = testCfg.invocationsPerIteration
+    private var switchProbability = MIN_SWITCH_PROBABILITY
     private var executionRandomSeed: Long = 0
     private lateinit var executionRandom: Random
 
     @Throws(Exception::class)
     override fun runImpl(): LincheckFailure? {
-        repeat(maxInvocations){
-            // switch probability changes linearly from startSwitchProbability to endSwitchProbability
-            switchProbability = startSwitchProbability + it * (endSwitchProbability - startSwitchProbability) / maxInvocations
+        repeat(invocations){
+            // The switch probability increases linearly
+            switchProbability = MIN_SWITCH_PROBABILITY + it * (MAX_SWITCH_PROBABILITY - MIN_SWITCH_PROBABILITY) / invocations
             when (val ir = runInvocation()) {
                 is CompletedInvocationResult -> {
                     if (!verifier.verifyResults(scenario, ir.results))
@@ -72,7 +66,7 @@ internal class RandomSwitchStrategy(
     }
 
     override fun shouldSwitch(threadId: Int): Boolean {
-        // TODO: can reduce the number of random calls using geometric distribution
+        // TODO: the number of random calls can be reduced via the geometric distribution
         return executionRandom.nextDouble() < switchProbability
     }
 
@@ -82,8 +76,11 @@ internal class RandomSwitchStrategy(
         if (!repeatExecution)
             executionRandomSeed = generationRandom.nextLong()
         executionRandom = Random(executionRandomSeed)
-        // start from random thread
+        // start from a random thread.
         currentThread = executionRandom.nextInt(nThreads)
         super.initializeInvocation(repeatExecution)
     }
 }
+
+private const val MIN_SWITCH_PROBABILITY = 0.05
+private const val MAX_SWITCH_PROBABILITY = 0.99

@@ -23,11 +23,11 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_NAME
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.ref.WeakReference
+import java.lang.ref.*
 import java.lang.reflect.*
 import java.util.*
 import kotlin.coroutines.*
@@ -218,10 +218,9 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
 }
 
 /**
- * This class is used for getting Unsafe.
- * The reason why we need it is because in transformed java.util package some classes use Unsafe,
- * but they can not access it directly after the transformation.
- * It does not reference sun.misc.Unsafe directly so that it can be compiled even with jdk9+.
+ * This class is used for getting the [sun.misc.Unsafe] instance.
+ * We need it in some transformed classes from the `java.util.` package,
+ * and it cannot be accessed directly after the transformation.
  */
 internal object UnsafeHolder {
     @Volatile
@@ -238,15 +237,14 @@ internal object UnsafeHolder {
                 throw RuntimeException(e)
             }
         }
-
         return theUnsafe!!
     }
 }
 
 fun collectThreadDump(runnerHash: Int) = Thread.getAllStackTraces()
         .filter { (t, _) -> t is ParallelThreadsRunner.TestThread && t.runnerHash == runnerHash }
-        .mapValues { pair ->
-            pair.value.map {
+        .mapValues { (_, stackTrace)  ->
+            stackTrace.map {
                 StackTraceElement(it.className.removePrefix(TRANSFORMED_PACKAGE_NAME), it.methodName, it.fileName, it.lineNumber)
             }.toTypedArray()
         }

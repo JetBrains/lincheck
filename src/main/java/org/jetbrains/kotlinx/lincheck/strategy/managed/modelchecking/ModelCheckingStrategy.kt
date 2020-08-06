@@ -21,13 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyBase
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.lang.reflect.Method
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.random.Random
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.lang.reflect.*
+import java.util.concurrent.atomic.*
+import kotlin.random.*
 
 /**
  * ModelCheckingStrategy studies interesting code locations in the scenario

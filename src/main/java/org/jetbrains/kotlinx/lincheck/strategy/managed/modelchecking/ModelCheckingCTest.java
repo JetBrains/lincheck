@@ -21,19 +21,15 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
-import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification;
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
+import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
 
 import java.lang.annotation.*;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
-import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_INVOCATIONS;
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*;
 
 /**
  * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.
@@ -44,7 +40,7 @@ import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.Mode
 @Inherited
 public @interface ModelCheckingCTest {
     /**
-     * Number of different test scenarios to be executed
+     * The number of different test scenarios to be executed
      */
     int iterations() default CTestConfiguration.DEFAULT_ITERATIONS;
 
@@ -89,39 +85,37 @@ public @interface ModelCheckingCTest {
     int actorsAfter() default CTestConfiguration.DEFAULT_ACTORS_AFTER;
 
     /**
-     * Use the specified execution generator
+     * Use the specified execution generator.
      */
     Class<? extends ExecutionGenerator> generator() default RandomExecutionGenerator.class;
 
     /**
-     * Use the specified verifier
+     * Use the specified verifier.
      */
     Class<? extends Verifier> verifier() default LinearizabilityVerifier.class;
 
     /**
-     * Check obstruction freedom of the concurrent algorithm.
-     * In case of finding an obstruction lincheck will immediately stop and report it.
+     * Check the testing concurrent algorithm for obstruction freedom.
      */
     boolean checkObstructionFreedom() default false;
 
     /**
-     * Use the specified maximum number of repetitions to detect endless loops.
-     * A found loop will force managed execution to switch the executing thread.
-     * In case of checkObstructionFreedom enabled it will report the obstruction instead.
+     * Use the specified maximum number of the same event repetitions to detect "hangs".
+     * In this case, the strategy is either forced to switch the current thread, or report
+     * the obstruction-freedom violation if {@link ModelCheckingCTest#checkObstructionFreedom} is enabled.
      */
     int hangingDetectionThreshold() default DEFAULT_HANGING_DETECTION_THRESHOLD;
 
     /**
-     * The number of invocations that managed strategy may use to search for an incorrect execution.
-     * In case of small scenarios with only a few "interesting" code locations a lesser than this
-     * number of invocations will be used.
+     * The maximal number of invocations that the managed strategy can use to search for finding an incorrect execution.
+     * It is also possible that the strategy explores all the possible interleavings with fewer invocations.
      */
     int invocationsPerIteration() default DEFAULT_INVOCATIONS;
 
     /**
      * Require correctness check of test instance state equivalency relation, which is defined by the user.
      * Essentially, it checks whether two new instances of the test class are equal.
-     * If the check fails. an [{@link IllegalStateException}] is thrown.
+     * If the check fails, an {@link IllegalStateException} is thrown.
      */
     boolean requireStateEquivalenceImplCheck() default true;
 
@@ -144,7 +138,6 @@ public @interface ModelCheckingCTest {
 
     /**
      * Holder annotation for {@link ModelCheckingCTest}.
-     * Not a public API.
      */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
@@ -152,5 +145,4 @@ public @interface ModelCheckingCTest {
     @interface ModelCheckingCTests {
         ModelCheckingCTest[] value();
     }
-
 }

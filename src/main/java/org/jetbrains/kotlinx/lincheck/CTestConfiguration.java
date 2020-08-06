@@ -22,27 +22,22 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
-import kotlin.jvm.functions.Function0;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
 
 import java.lang.reflect.*;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.*;
+import java.util.stream.*;
 
-import static java.util.function.UnaryOperator.identity;
-import static org.jetbrains.kotlinx.lincheck.UtilsKt.chooseSequentialSpecification;
-import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS;
+import static java.util.function.UnaryOperator.*;
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.*;
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.*;
 import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.DEFAULT_GUARANTEES;
-import static org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration.DEFAULT_ADD_WAITS;
+import static org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration.*;
 
 /**
  * Configuration of an abstract concurrent test.
@@ -107,7 +102,6 @@ public abstract class CTestConfiguration {
                     ann.invocationsPerIteration(), DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck(),
                     ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass),
                     DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS));
-
         return Stream.of(stressConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());
     }
 }

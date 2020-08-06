@@ -21,14 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
-import org.objectweb.asm.commons.AdviceAdapter
-import org.objectweb.asm.commons.Method
-import kotlin.reflect.jvm.javaMethod
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.objectweb.asm.*
+import org.objectweb.asm.commons.*
+import kotlin.reflect.jvm.*
 
 internal class CancellabilitySupportClassTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
     override fun visitMethod(access: Int, methodName: String?, desc: String?, signature: String?, exceptions: Array<String>?): MethodVisitor {

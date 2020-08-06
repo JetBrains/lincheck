@@ -21,14 +21,15 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformer
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 /**
- * Checks that System.nanoTime() and System.currentTimeMillis() are made deterministic by the transformer.
+ * Checks that [System.nanoTime] and [System.currentTimeMillis] are
+ * replaced with deterministic implementations in the model checking mode.
  */
 @ModelCheckingCTest(iterations = 30, invocationsPerIteration = 1000)
 class TimeStubTest : VerifierState() {

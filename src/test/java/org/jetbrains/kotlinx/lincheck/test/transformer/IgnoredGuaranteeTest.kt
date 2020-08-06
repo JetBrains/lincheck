@@ -21,33 +21,32 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformer
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 /**
- * This test checks that managed strategy do not try to switch
- * thread context inside methods marked as ignored.
- * In case the strategy do try, the test will timeout, because
- * the number of invocations is set to Int.MAX_VALUE.
+ * This test checks that managed strategies do not try to switch
+ * thread context inside methods that are marked as ignored.
+ * The ignored method should not be considered as a one that
+ * performs reads or writes, so that there is no need to switch
+ * the execution after an ignored method invocation.
+ *
+ * If the ignored method is not processed properly, this test fails
+ * by timeout since the number of invocations is set to Int.MAX_VALUE.
  */
-@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
+@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 100, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
 class IgnoredGuaranteeTest : VerifierState() {
     var value: Int = 0
-    val any: Any = this
 
     @Operation
-    fun operation() {
-        inc()
-    }
+    fun operation() = inc()
 
-    private fun inc() {
-        value++
-        value++
+    private fun inc(): Int {
+        return value++
     }
 
     @Test(timeout = 100_000)
@@ -55,8 +54,8 @@ class IgnoredGuaranteeTest : VerifierState() {
         val options = ModelCheckingOptions()
                 .actorsBefore(0)
                 .actorsAfter(0)
-                .actorsPerThread(50)
-                .iterations(50)
+                .actorsPerThread(100)
+                .iterations(1)
                 .invocationsPerIteration(Int.MAX_VALUE)
                 .addGuarantee(forClasses(this::class.java.name).methods("inc").ignore())
         options.check(this::class.java)

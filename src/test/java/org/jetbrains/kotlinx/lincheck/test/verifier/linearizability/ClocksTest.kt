@@ -24,10 +24,8 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
-import org.junit.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import kotlin.reflect.jvm.*
 
 class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
@@ -49,16 +47,14 @@ class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
         while (!bStarted) {} // wait until `a()` is completed
     }
 
+    @Operation
     fun d(): Int {
         return 0 // cannot return 0, should fail
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        actorsBefore(0)
-        actorsAfter(0)
         executionGenerator(ClocksTestScenarioGenerator::class.java)
         iterations(1)
-        actorsPerThread(1)
         sequentialSpecification(ClocksTestSequential::class.java)
         requireStateEquivalenceImplCheck(false)
         minimizeFailedScenario(false)

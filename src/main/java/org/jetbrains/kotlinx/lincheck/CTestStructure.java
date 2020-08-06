@@ -22,21 +22,16 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
-import kotlin.jvm.functions.Function0;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
-import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator;
+import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.stream.*;
+
+import static org.jetbrains.kotlinx.lincheck.ActorKt.*;
 
 /**
  * Contains information about the provided operations (see {@link Operation}).
@@ -71,7 +66,11 @@ public class CTestStructure {
             readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions, stateRepresentations);
             clazz = clazz.getSuperclass();
         }
-
+        if (stateRepresentations.size() > 1) {
+            throw new IllegalStateException("Several functions marked with " + StateRepresentation.class.getSimpleName() +
+                " were found, while at most one should be specified: " +
+                stateRepresentations.stream().map(Method::getName).collect(Collectors.joining(", ")));
+        }
         Method stateRepresentation = null;
         if (!stateRepresentations.isEmpty())
             stateRepresentation = stateRepresentations.get(0);
@@ -139,8 +138,6 @@ public class CTestStructure {
                     throw new IllegalStateException("State representation function " + m.getName() + " should not have parameters");
                 if (m.getReturnType() != String.class)
                     throw new IllegalStateException("State representation function " + m.getName() + " should have String return type");
-                if (!stateRepresentations.isEmpty())
-                    throw new IllegalStateException("There should be at most one representation function");
                 stateRepresentations.add(m);
             }
         }

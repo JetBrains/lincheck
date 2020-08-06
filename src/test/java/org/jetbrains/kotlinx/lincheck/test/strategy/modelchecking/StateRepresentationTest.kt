@@ -29,9 +29,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.lang.StringBuilder
 
-class StateReportingTest : VerifierState() {
+open class StateReportingTest : VerifierState() {
     @Volatile
     var a = 0
 
@@ -42,6 +43,11 @@ class StateReportingTest : VerifierState() {
     }
 
     private fun inc(): Int = ++a
+
+    override fun extractState(): Any = a
+
+    @StateRepresentation
+    fun stateRepresentation() = a.toString()
 
     @Test
     fun test() {
@@ -57,9 +63,38 @@ class StateReportingTest : VerifierState() {
         check("STATE: 1" in log)
         check("STATE: 2" in log)
     }
+}
 
-    @StateRepresentation
-    fun stateRepresentation() = a.toString()
+class StateRepresentationInParentClassTest : StateReportingTest()
+
+class TwoStateRepresentationFunctionsTest : VerifierState() {
+    @Volatile
+    var a = 0
+
+    @Operation
+    fun operation(): Int {
+        ++a
+        return inc()
+    }
+
+    private fun inc(): Int = ++a
 
     override fun extractState(): Any = a
+
+
+    @StateRepresentation
+    fun stateRepresentation1() = a.toString()
+
+    @StateRepresentation
+    fun stateRepresentation2() = a.toString()
+
+    @Test(expected = IllegalStateException::class)
+    fun test() {
+        ModelCheckingOptions()
+            .actorsPerThread(1)
+            .actorsBefore(0)
+            .actorsAfter(0)
+            .addGuarantee(forClasses(this::class.java.name).methods("inc").treatAsAtomic())
+            .checkImpl(this::class.java)
+    }
 }

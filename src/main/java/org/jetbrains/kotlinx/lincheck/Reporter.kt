@@ -172,7 +172,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     appendln("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
     for ((t, stackTrace) in failure.threadDump) {
-        val threadNumber = if (t is ParallelThreadsRunner.TestThread) t.threadId else "?"
+        val threadNumber = if (t is ParallelThreadsRunner.TestThread) t.threadId.toString() else "?"
         appendln("Thread-$threadNumber:")
         for (ste in stackTrace) {
             if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break

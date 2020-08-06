@@ -21,10 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck.test;
 
-import kotlin.jvm.JvmClassMappingKt;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure;
+import kotlin.jvm.*;
+import org.jetbrains.annotations.*;
+import org.jetbrains.kotlinx.lincheck.annotations.*;
+import org.jetbrains.kotlinx.lincheck.strategy.*;
 
 public class UnexpectedExceptionTest extends AbstractLincheckTest {
     public UnexpectedExceptionTest() {
@@ -39,11 +39,9 @@ public class UnexpectedExceptionTest extends AbstractLincheckTest {
         canEnterForbiddenSection = false;
     }
 
-    @Operation(handleExceptionsAsResult = AssertionError.class)
+    @Operation(handleExceptionsAsResult = IllegalArgumentException.class)
     public void operation2() {
-        if (canEnterForbiddenSection) {
-            throw new IllegalStateException();
-        }
+        if (canEnterForbiddenSection) throw new IllegalStateException();
     }
 
     @NotNull

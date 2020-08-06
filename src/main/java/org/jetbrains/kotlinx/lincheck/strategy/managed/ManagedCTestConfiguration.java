@@ -21,13 +21,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed;
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy;
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
+import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /**
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
@@ -35,7 +34,7 @@ import java.util.List;
 public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
     public static final boolean DEFAULT_ELIMINATE_LOCAL_OBJECTS = true;
-    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 30;
+    public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 100;
     public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final int LIVELOCK_EVENTS_THRESHOLD = 1_000;
     public static final List<ManagedGuarantee> DEFAULT_GUARANTEES = Arrays.asList(

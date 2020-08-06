@@ -21,14 +21,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
 
-import kotlinx.coroutines.delay
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.appendFailure
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 class ExecutionReportingTest : VerifierState() {
     @Volatile
@@ -80,15 +78,15 @@ class ExecutionReportingTest : VerifierState() {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions()
-                .actorsAfter(0)
-                .actorsBefore(0)
-                .actorsPerThread(1)
-                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("treatedAsAtomic").treatAsAtomic())
-                .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("ignored").ignore())
-        val failure = options.checkImpl(this::class.java)
-        check(failure != null) { "test should fail" }
-        val log = StringBuilder().appendFailure(failure).toString()
+        val failure = ModelCheckingOptions()
+            .actorsAfter(0)
+            .actorsBefore(0)
+            .actorsPerThread(1)
+            .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("treatedAsAtomic").treatAsAtomic())
+            .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("ignored").ignore())
+            .checkImpl(this::class.java)
+        checkNotNull(failure) { "test should fail" }
+        val log = failure.toString()
         check("operation1" in log)
         check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag" in log)
         check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag" in log)

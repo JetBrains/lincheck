@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
@@ -36,10 +35,6 @@ abstract class AbstractCounterTest(
     fun incAndGet(): Int = counter.incAndGet()
 
     override fun extractState(): Any = counter.get()
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(5)
-    }
 }
 
 class CounterCorrectTest : AbstractCounterTest(CounterCorrect())

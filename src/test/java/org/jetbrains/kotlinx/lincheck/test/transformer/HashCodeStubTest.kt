@@ -21,14 +21,15 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformer
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 /**
- * Checks that Object.hashCode() is made deterministic by the transformer.
+ * Checks that [Object.hashCode] is replaced with a deterministic
+ * implementations in the model checking mode.
  */
 @ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
 class HashCodeStubTest : VerifierState() {

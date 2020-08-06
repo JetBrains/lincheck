@@ -21,24 +21,24 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_MS
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
  * Abstract class for test options.
  */
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal var logLevel = DEFAULT_LOG_LEVEL
-    protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
-    protected var threads = CTestConfiguration.DEFAULT_THREADS
-    protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
-    protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
-    protected var actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER
-    protected var executionGenerator = CTestConfiguration.DEFAULT_EXECUTION_GENERATOR
-    protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
+    protected var iterations = DEFAULT_ITERATIONS
+    protected var threads = DEFAULT_THREADS
+    protected var actorsPerThread = DEFAULT_ACTORS_PER_THREAD
+    protected var actorsBefore = DEFAULT_ACTORS_BEFORE
+    protected var actorsAfter = DEFAULT_ACTORS_AFTER
+    protected var executionGenerator = DEFAULT_EXECUTION_GENERATOR
+    protected var verifier = DEFAULT_VERIFIER
     protected var requireStateEquivalenceImplementationCheck = true
-    protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
+    protected var minimizeFailedScenario = DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = DEFAULT_TIMEOUT_MS
 
@@ -52,9 +52,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Use the specified number of threads for the parallel part of an execution.
      *
-     *
      * Note, that the the actual number of threads can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -65,9 +64,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Generate the specified number of operations for each thread of the parallel part of an execution.
      *
-     *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -78,9 +76,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Generate the specified number of operation for the initial sequential part of an execution.
      *
-     *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.initExecution
      */
@@ -91,9 +88,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Generate the specified number of operation for the last sequential part of an execution.
      *
-     *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.postExecution
      */
@@ -102,14 +98,14 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     }
 
     /**
-     * Use the specified execution generator
+     * Use the specified execution generator.
      */
     fun executionGenerator(executionGenerator: Class<out ExecutionGenerator?>): OPT = applyAndCast {
         this.executionGenerator = executionGenerator
     }
 
     /**
-     * Use the specified verifier
+     * Use the specified verifier.
      */
     fun verifier(verifier: Class<out Verifier?>): OPT = applyAndCast {
         this.verifier = verifier
@@ -164,7 +160,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     companion object {
         @Suppress("UNCHECKED_CAST")
         private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> Options<OPT, CTEST>.applyAndCast(
-                block: Options<OPT, CTEST>.() -> Unit
+            block: Options<OPT, CTEST>.() -> Unit
         ) = this.apply {
             block()
         } as OPT

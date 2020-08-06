@@ -21,8 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 /**
  * Options for [model checking][ModelCheckingStrategy] strategy.

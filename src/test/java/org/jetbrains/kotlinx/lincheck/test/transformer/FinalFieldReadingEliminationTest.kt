@@ -28,11 +28,11 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 /**
- * This test checks that managed strategy do not try to switch
- * thread context at final field reads, because they are
+ * This test checks that managed strategies do not switch
+ * the execution thread at final field reads since they are
  * not interesting code locations for concurrent execution.
- * In case the strategy do try, the test will timeout, because
- * the number of invocations is set to Int.MAX_VALUE.
+ * Otherwise, this test fails by timeout since
+ * the number of invocations is set to [Int.MAX_VALUE].
  */
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
 class FinalFieldReadingEliminationTest : VerifierState() {

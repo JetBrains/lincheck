@@ -22,27 +22,20 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.runner.Runner;
+import org.jetbrains.kotlinx.lincheck.runner.*;
+import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.*;
+import org.objectweb.asm.util.*;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.*;
 
-import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.JAVA_UTIL_PACKAGE;
-import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME;
-import static org.objectweb.asm.Opcodes.ASM7;
-import static org.objectweb.asm.Opcodes.V1_6;
+import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * This transformer applies required for {@link Strategy} and {@link Runner}
@@ -50,7 +43,7 @@ import static org.objectweb.asm.Opcodes.V1_6;
  */
 public class TransformationClassLoader extends ExecutionClassLoader {
     private final List<Function<ClassVisitor, ClassVisitor>> classTransformers;
-    // Cache for classloading and frames computing during the transformation
+    // Cache for classloading and frames computing during the transformation.
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
 
     public static final String JAVA_UTIL_PACKAGE = "java/util/";
@@ -60,7 +53,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         classTransformers = new ArrayList<>();
-        // apply the strategy's transformer at first, then the runner's one.
+        // Apply the strategy's transformer at first, then the runner's one.
         if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
         if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);
     }
@@ -70,30 +63,20 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     }
 
     /**
-     * Check if class should not be transformed
-     *
-     * @param className checking class name
-     * @return result of checking class
+     * Returns `true` if the specified class should not be transformed.
      */
     private static boolean doNotTransform(String className) {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
         if (TrustedAtomicPrimitivesKt.isImpossibleToTransformPrimitive(className)) return true;
 
-        if (className == null) System.out.println("WTF?!!");
-
-        return className == null ||
-            (
-                className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.equals(ManagedStateHolder.class.getName())
-            ) ||
-            className.startsWith("sun.") ||
+        return className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||
-            (
-                className.startsWith("kotlin.") &&
-                !className.startsWith("kotlin.collections.")
-            ) ||
+            (className.startsWith("kotlin.") &&
+                !className.startsWith("kotlin.collections.")) ||
+            (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+                !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
+                !className.equals(ManagedStateHolder.class.getName())) ||
             className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
             className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
     }
@@ -162,8 +145,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
 }
 
 /**
- * ClassWriter for classes transformed by LinCheck.
- * Overrides getCommonSuperClass method so that it could work correctly for classes transformed by LinCheck.
+ * ClassWriter for the classes transformed by *lincheck* with a correct
+ * {@link ClassWriter#getCommonSuperClass} implementation.
  */
 class TransformationClassWriter extends ClassWriter {
     public TransformationClassWriter(int classVersion) {
@@ -201,7 +184,6 @@ class ClassVersionGetter extends ClassVisitor {
     public ClassVersionGetter() {
         super(TransformationClassLoader.ASM_API);
     }
-
 
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
         this.classVersion = version;

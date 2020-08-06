@@ -21,30 +21,31 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformer;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError;
+import org.jetbrains.annotations.*;
+import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
-import org.junit.Test;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
+import org.junit.*;
 
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.*;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
- * This test checks that indirect writes via Unsafe still lead to local object leaking.
+ * This test checks that indirect writes via {@link AtomicIntegerFieldUpdater}-s
+ * are processed as normal writes.
  */
 @ModelCheckingCTest(actorsPerThread = 1, actorsBefore = 0, actorsAfter = 0, iterations = 1)
-public class IndirectLocalObjectLeakingTest extends VerifierState {
+public class WritesViaAtomicFieldUpdaterTest extends VerifierState {
+    private static final AtomicReferenceFieldUpdater<WritesViaAtomicFieldUpdaterTest, VariableHolder> afu = AtomicReferenceFieldUpdater.newUpdater(WritesViaAtomicFieldUpdaterTest.class, VariableHolder.class, "holder");
+
     private volatile VariableHolder holder = null;
 
     @Operation
     public int operation() {
         VariableHolder h = new VariableHolder();
-        AtomicReferenceFieldUpdater afu = AtomicReferenceFieldUpdater.newUpdater(this.getClass(), VariableHolder.class, "holder");
-        afu.compareAndSet(this, null, h); // initialize holder via CAS
+        afu.updateAndGet(this, cur -> h); // initialize holder via CAS
         return holder.variable++;
     }
 
@@ -66,7 +67,7 @@ public class IndirectLocalObjectLeakingTest extends VerifierState {
         return holder.variable;
     }
 
-    private class VariableHolder {
+    private static class VariableHolder {
         int variable = 0;
     }
 }

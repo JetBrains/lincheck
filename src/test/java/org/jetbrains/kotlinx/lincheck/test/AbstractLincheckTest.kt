@@ -50,8 +50,11 @@ abstract class AbstractLincheckTest(
 
     @Test(timeout = 100_000)
     fun testWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(10_000)
         iterations(30)
+        invocationsPerIteration(10_000)
+        actorsBefore(2)
+        actorsPerThread(4)
+        actorsAfter(2)
         minimizeFailedScenario(false)
         customize()
         runInternalTest()
@@ -59,8 +62,11 @@ abstract class AbstractLincheckTest(
 
     @Test(timeout = 100_000)
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(10_000)
         iterations(30)
+        invocationsPerIteration(10_000)
+        actorsBefore(2)
+        actorsPerThread(4)
+        actorsAfter(2)
         minimizeFailedScenario(false)
         customize()
         runInternalTest()

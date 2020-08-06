@@ -21,18 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
-import kotlin.jvm.functions.Function0;
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
+import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
+import org.jetbrains.kotlinx.lincheck.verifier.*;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.List;
+import java.lang.reflect.*;
+import java.util.*;
 
 /**
  * Configuration for {@link ModelCheckingStrategy random search} strategy.

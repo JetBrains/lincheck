@@ -21,16 +21,17 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformer
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 import java.util.*
-import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.*
 
 /**
- * Checks that default java.util.Random and java.util.concurrent.ThreadLocalRandom are made deterministic by the transformer.
+ * Checks that [Random] and [ThreadLocalRandom] are replaced
+ * with deterministic implementations in the model checking mode.
  */
 @ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
 class RandomTransformationTest : VerifierState() {

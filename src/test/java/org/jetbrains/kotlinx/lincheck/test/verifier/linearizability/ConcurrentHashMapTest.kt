@@ -21,12 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
-import java.util.concurrent.ConcurrentHashMap
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.test.*
+import java.util.concurrent.*
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
 class ConcurrentHashMapTest : AbstractLincheckTest() {
@@ -39,8 +37,4 @@ class ConcurrentHashMapTest : AbstractLincheckTest() {
     operator fun get(@Param(name = "key") key: Int?): Int? = map[key]
 
     override fun extractState(): Any = map
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(3)
-    }
 }

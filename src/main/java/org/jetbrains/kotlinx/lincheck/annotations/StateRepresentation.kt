@@ -22,10 +22,12 @@
 package org.jetbrains.kotlinx.lincheck.annotations
 
 /**
- * It is possible in **lincheck** to add test class state logging for managed strategies to simplify debugging.
- * If it is used, then **lincheck** will add state info in managed strategy traces after every switch point.
- * At most one function in the test class should have his annotation.
- * If there are more than one annotated function, **lincheck** will throw [IllegalStateException].
+ * In order to simplify understanding traces produced by managed strategies,
+ * *lincheck* can print the current state of the testing data structure after
+ * each meaningful event (e.g., write to atomic variable or function that potentially
+ * changes the data structure call). In order to specify the way for representing
+ * the data structure state, a public no-argument function that returns [String]
+ * should be marked with this annotation. 
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)

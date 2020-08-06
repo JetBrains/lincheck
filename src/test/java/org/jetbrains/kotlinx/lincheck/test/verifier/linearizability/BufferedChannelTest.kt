@@ -47,7 +47,6 @@ class BufferedChannelTest : AbstractLincheckTest() {
 
     override fun <O : Options<O, *>> O.customize() {
         sequentialSpecification(SequentiaBuffered2IntChannel::class.java)
-        iterations(2)
     }
 }
 

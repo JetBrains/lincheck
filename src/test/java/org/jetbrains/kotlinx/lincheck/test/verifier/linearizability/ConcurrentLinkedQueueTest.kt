@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.test.*
@@ -44,8 +43,4 @@ class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
     fun poll() = queue.poll()
 
     override fun extractState() = queue.toList()
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(3)
-    }
 }
