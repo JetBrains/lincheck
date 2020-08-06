@@ -561,13 +561,18 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
                 return
             }
-            // there is also a static method in ThreadLocalRandom that is used inside java.util.concurrent.
-            // it is replaced with nextInt method.
+            // there are also static methods in ThreadLocalRandom that are used inside java.util.concurrent.
+            // they are replaced with nextInt method.
             val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
-            if (isThreadLocalRandomMethod && name == "nextSecondarySeed") {
+            if (isThreadLocalRandomMethod && (name == "nextSecondarySeed" || name == "getProbe")) {
                 loadRandom()
-                adapter.visitMethodInsn(INVOKEVIRTUAL, "java/util/Random", "nextInt", desc, itf)
+                adapter.invokeVirtual(RANDOM_TYPE, NEXT_INT_METHOD)
                 return
+            }
+            if (isThreadLocalRandomMethod && name == "advanceProbe") {
+                adapter.pop() // pop parameter
+                loadRandom()
+                adapter.invokeVirtual(RANDOM_TYPE, NEXT_INT_METHOD)
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
         }
@@ -1088,6 +1093,7 @@ internal class ManagedStrategyTransformer(
         private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadCodeLocation::initializeReadValue.javaMethod)
         private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodeLocation::initializeReturnedValue.javaMethod)
         private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallCodeLocation::initializeParameters.javaMethod)
+        private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
 
         private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 
