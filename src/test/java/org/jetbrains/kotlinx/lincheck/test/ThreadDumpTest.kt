@@ -37,8 +37,8 @@ class ThreadDumpTest {
         repeat(iterations) {
             val options = StressOptions()
                 .minimizeFailedScenario(false)
-                .iterations(100000)
-                .invocationsPerIteration(5)
+                .iterations(100_000)
+                .invocationsPerIteration(1)
                 .invocationTimeout(100)
             val failure = options.checkImpl(DeadlockOnSynchronizedTest::class.java)
             check(failure is DeadlockWithDumpFailure)

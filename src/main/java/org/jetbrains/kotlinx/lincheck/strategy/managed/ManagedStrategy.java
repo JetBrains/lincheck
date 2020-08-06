@@ -44,13 +44,13 @@ public abstract class ManagedStrategy extends Strategy {
 
     protected final Runner runner;
     private ManagedStrategyTransformer transformer;
-    private final List<ManagedGuarantee> guarantees;
+    private final List<ManagedStrategyGuarantee> guarantees;
     private final boolean shouldMakeStateRepresentation;
     private final boolean eliminateLocalObjects;
     protected boolean loggingEnabled = false;
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
-                              Method stateRepresentation, List<ManagedGuarantee> guarantees, long timeoutMs, boolean eliminateLocalObjects) {
+                              Method stateRepresentation, List<ManagedStrategyGuarantee> guarantees, long timeoutMs, boolean eliminateLocalObjects) {
         super(scenario);
         nThreads = scenario.parallelExecution.size();
         this.guarantees = guarantees;
@@ -309,8 +309,8 @@ public abstract class ManagedStrategy extends Strategy {
      */
     public int currentThreadNumber() {
         Thread t = Thread.currentThread();
-        if (t instanceof ParallelThreadsRunner.TestThread) {
-            return ((ParallelThreadsRunner.TestThread) t).getThreadId();
+        if (t instanceof FixedActiveThreadsExecutor.TestThread) {
+            return ((FixedActiveThreadsExecutor.TestThread) t).getThreadId();
         } else {
             return nThreads;
         }

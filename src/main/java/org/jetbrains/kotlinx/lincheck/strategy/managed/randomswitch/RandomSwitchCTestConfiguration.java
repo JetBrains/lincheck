@@ -22,12 +22,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch;
  * #L%
  */
 
-import kotlin.jvm.functions.Function0;
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedGuarantee;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuarantee;
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
 
 import java.lang.reflect.*;
@@ -39,7 +37,7 @@ import java.util.*;
 public class RandomSwitchCTestConfiguration extends ManagedCTestConfiguration {
     public RandomSwitchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
         int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        boolean checkObstructionFreedom, int hangingDetectionThreshold,  int invocationsPerIteration, List<ManagedGuarantee> guarantees,
+        boolean checkObstructionFreedom, int hangingDetectionThreshold,  int invocationsPerIteration, List<ManagedStrategyGuarantee> guarantees,
         boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,  Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,

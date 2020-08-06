@@ -176,7 +176,7 @@ class TransformationClassWriter extends ClassWriter {
 }
 
 /**
- * Visitor for retrieving infomation of class version needed for choosing between COMPUTE_FRAME and COMPUTE_MAXS
+ * Visitor for retrieving information of class version needed for choosing between COMPUTE_FRAME and COMPUTE_MAXS
  */
 class ClassVersionGetter extends ClassVisitor {
     private int classVersion;

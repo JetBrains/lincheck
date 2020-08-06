@@ -32,7 +32,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var checkObstructionFreedom = ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD
     protected var invocationsPerIteration = ManagedCTestConfiguration.DEFAULT_INVOCATIONS
-    protected val guarantees: MutableList<ManagedGuarantee> = ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
+    protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
     protected var eliminateLocalObjects: Boolean = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS;
 
     /**
@@ -67,7 +67,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      * in java.util.concurrent.ConcurrentHashMap are correct and then managed strategies will not try to switch threads
      * inside the methods. We can also mark methods in logging classes irrelevant if they do influence execution result.
      */
-    fun addGuarantee(guarantee: ManagedGuarantee): OPT = applyAndCast {
+    fun addGuarantee(guarantee: ManagedStrategyGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
     }
 

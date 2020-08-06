@@ -28,7 +28,7 @@
         <kotlinx.coroutines.version>1.3.5</kotlinx.coroutines.version>
         <dokka.version>0.9.17</dokka.version>
         <asm.version>7.1</asm.version>
-        <atomicfu.version>0.13.1</atomicfu.version>
+        <atomicfu.version>0.12.11</atomicfu.version>
     </properties>
 
     <build>
@@ -86,11 +86,13 @@
                 <executions>
                     <execution>
                         <id>compile</id>
+                        <phase>compile</phase>
                         <goals> <goal>compile</goal> </goals>
                         <configuration>
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/src/main/java</sourceDir>
                             </sourceDirs>
+                            <output>${project.build.directory}/classes-pre-atomicfu</output>
                         </configuration>
                     </execution>
                     <execution>
@@ -101,6 +103,24 @@
                                 <!--<sourceDir>${project.basedir}/src/test/kotlin</sourceDir>-->
                                 <sourceDir>${project.basedir}/src/test/java</sourceDir>
                             </sourceDirs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- transform classes with AtomicFU plugin -->
+            <plugin>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>atomicfu-maven-plugin</artifactId>
+                <version>${atomicfu.version}</version>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>transform</goal>
+                        </goals>
+                        <configuration>
+                            <input>${project.build.directory}/classes-pre-atomicfu</input>
+                            <variant>BOTH</variant>
                         </configuration>
                     </execution>
                 </executions>
@@ -253,11 +273,6 @@
             <version>${kotlinx.coroutines.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.kotlinx</groupId>
-            <artifactId>atomicfu</artifactId>
-            <version>${atomicfu.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-commons</artifactId>
             <version>${asm.version}</version>
@@ -280,6 +295,12 @@
             <version>2.1.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>atomicfu</artifactId>
+            <version>${atomicfu.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <pluginRepositories>
@@ -287,6 +308,11 @@
             <id>jcenter</id>
             <name>JCenter</name>
             <url>https://jcenter.bintray.com/</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>bintray-kotlin-kotlinx</id>
+            <name>bintray-plugins</name>
+            <url>https://kotlin.bintray.com/kotlinx</url>
         </pluginRepository>
     </pluginRepositories>
 

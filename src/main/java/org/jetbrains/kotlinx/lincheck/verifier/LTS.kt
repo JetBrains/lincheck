@@ -95,7 +95,7 @@ class LTS(sequentialSpecification: Class<*>) {
                     createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
-            return if (transitionInfo.isLegalByRequest(expectedResult)) transitionInfo else null
+            return if (transitionInfo.isLegalByRequest(expectedResult, actor.allowExtraSuspension)) transitionInfo else null
         }
 
         private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
@@ -108,7 +108,7 @@ class LTS(sequentialSpecification: Class<*>) {
                 }
             }
             if (transitionInfo.wasSuspended) error("Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported")
-            return if (transitionInfo.isLegalByFollowUp(expectedResult)) transitionInfo else null
+            return if (transitionInfo.isLegalByFollowUp(expectedResult, actor.allowExtraSuspension)) transitionInfo else null
         }
 
         fun nextByCancellation(actor: Actor, ticket: Int): TransitionInfo = transitionsByCancellations.computeIfAbsent(ticket) {
@@ -121,20 +121,21 @@ class LTS(sequentialSpecification: Class<*>) {
             }
         }
 
-        private fun TransitionInfo.isLegalByRequest(expectedResult: Result) =
+        private fun TransitionInfo.isLegalByRequest(expectedResult: Result, allowExtraSuspension: Boolean) =
             // Allow transition with a suspended result
             // regardless whether the operation was suspended during test running or not,
             // thus allowing elimination of interblocking operations in the implementation.
-            isLegalByFollowUp(expectedResult) || (expectedResult != NoResult && result == Suspended)
+            isLegalByFollowUp(expectedResult, allowExtraSuspension) || (result == Suspended && expectedResult.wasSuspended)
+                                                                    || (result == Suspended && allowExtraSuspension)
 
-
-        private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result) =
-            // We allow extra suspensions since the dual data structures formalism is too strict in this place
+        private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result, allowExtraSuspension: Boolean) =
             (result == expectedResult) ||
-            (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value) ||
-            (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz) ||
-            (result == SuspendedVoidResult && expectedResult == VoidResult) ||
-            (result == VoidResult && expectedResult == SuspendedVoidResult)
+            (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value &&
+                (!result.wasSuspended && expectedResult.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
+            (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz &&
+                (!result.wasSuspended && expectedResult.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
+            (result == VoidResult && expectedResult == SuspendedVoidResult) ||
+            (result == SuspendedVoidResult && expectedResult == VoidResult && allowExtraSuspension)
 
         private inline fun <T> generateNextState(
             action: (

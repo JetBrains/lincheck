@@ -210,7 +210,7 @@ object CancellableContinuationHolder {
 
 fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     val t = Thread.currentThread()
-    if (t is ParallelThreadsRunner.TestThread) {
+    if (t is FixedActiveThreadsExecutor.TestThread) {
         t.cont = cont
     } else {
         storedLastCancellableCont = cont
@@ -241,9 +241,9 @@ internal object UnsafeHolder {
     }
 }
 
-fun collectThreadDump(runnerHash: Int) = Thread.getAllStackTraces()
-        .filter { (t, _) -> t is ParallelThreadsRunner.TestThread && t.runnerHash == runnerHash }
-        .mapValues { (_, stackTrace)  ->
+fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces()
+        .filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode() }
+        .mapValues { (_, stackTrace) ->
             stackTrace.map {
                 StackTraceElement(it.className.removePrefix(TRANSFORMED_PACKAGE_NAME), it.methodName, it.fileName, it.lineNumber)
             }.toTypedArray()

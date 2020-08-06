@@ -61,6 +61,7 @@ class ExecutionReportingTest : VerifierState() {
     @Synchronized
     private fun resetFlag() {
         canEnterForbiddenSection = true
+        ignored()
         canEnterForbiddenSection = false
     }
 
