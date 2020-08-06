@@ -31,6 +31,8 @@ Table of contents
    * [Execution strategies](#execution-strategies)
       * [Stress strategy](#stress-strategy)
       * [Model checking strategy](#model-checking-strategy)
+        * [State representation](#state-representation)
+        * [Incremental testing](#incremental-testing)
    * [Correctness contracts](#correctness-contracts)
       * [Linearizability](#linearizability)
       * [Serializability](#serializability)
@@ -206,15 +208,29 @@ In order to use this strategy, just `@StressCTest` annotation should be added to
 ## Model checking strategy
 For the case of sequential consistency memory model, which is a common case, model checking strategy was developed. This mode was originally inspired by the `CHESS` framework for C#, which studies all possible schedules with a bounded number of context switches. It ignores weak memory model effects, so it is recommended to use both stress strategy and model checking strategy.
 
-Similarly to the stress strategies, this strategy can be used by `@ModelCheckingCTest` annotation or `ModelCheckingOptions`.
+Similarly to stress strategiy, this strategy can be used via `@ModelCheckingCTest` annotation or `ModelCheckingOptions`.
 
 It has the same parameters as stress strategy plus the following ones:
 * **checkObstructionFreedom** - specify, whether the strategy should also check obstruction freedom of the algorithm.
-* **hangingDetectionThreshold** - the maximum number of times that a thread can visit a certain code location without switching to another thread that is still not recognized as hanging (i.e. because of spin lock).
+* **hangingDetectionThreshold** - the maximum number of times that a thread can visit a certain code location without switching to another thread that is still not recognized as hanging (e.g., because of spin lock).
 
-In comparison to the stress strategy the model checking strategy can also print the trace that led to incorrect results, not just the incorrect results.
+In comparison to stress strategy, model checking strategy can also provide the trace that led to incorrect results, not just the incorrect results. Model checking strategy is deterministic and return the same test results for the same test classes and parameters.
 
-It is critical that the testing data structure should be deterministic, and as a result, must not use `WeakReference`, `WeakHashMap` or globally changing state. However, standard java and kotlin `Random` and `ThreadLocalRandom` are supported in **lincheck** and can be used safely.  
+It is critical that the test data structure should be deterministic, and as a result, must not use `WeakReference`, `WeakHashMap` or globally changing state. However, standard java and kotlin `Random` and `ThreadLocalRandom` have special support in **lincheck** and can be used safely.  
+
+### State representation
+
+It is possible to enable state reporting after every thread event in the trace. For this purpose, a method that can return `String` with the state representation should be annotated with `@StateRepresentation`. This method should be thread-safe. For example, this method cannot iterate over an `ArrayList`, because the method can be invoked while the list is being reallocated. The method should also be non-blocking, so that not to cause deadlocks. The correct usage of this feature include, but not restricted to, reading fields of the test class and internal *concurrent* data structures.
+
+### Incremental testing
+
+For complex concurrent data structures a large number of interleavings are not interesting. For instance, it is not useful to switch in an internal data structure if all its methods are synchronized. 
+With model checking strategy you can design separate tests for your inner data structures and then in the main test treat these structures as if they are correct.
+
+This can be done only via `ModelCheckingOptions` (see [Configuration via options](#configuration-via-options)). The guarantees of structure correctness can be added using the following syntax: 
+`options.addGuarantee(forClasses(ConcurrentHashMap.javaClass.name).methods("put", "get").treatAsAtomic())`. This guarantee will force the strategy not to try to add switches inside specified methods, significantly reducing the total number of interleavings and increasing the quality of testing. 
+
+Alternatively, `ignored` guarantee can be used instead of `treatAsAtomic`. The difference between these two guarantees is that `treatAsAtomic` methods are important for the concurrent execution and model checking strategy can add switches before or after their invocations, while `ignored` methods do not cause any additional switches. The most common applications for `ignored` are logging methods or debug checks .
 
 # Correctness contracts
 Once the generated scenario is executed using the specified strategy, it is needed to verify the operation results for correctness. By default **lincheck** checks the result for linearizability, which is de-facto a standard type of correctness. However, there are also verifiers for some relaxed contracts, which should be set via `@..CTest(verifier = ..Verifier.class)` option.
@@ -456,29 +472,31 @@ in each of the parallel threads seen at the beginning of the current operation
 ---
 ```
 
-If we used `@ModelCheckingCTest` instead of `@StressCTest` and `minimizeScenario = true`, we could get:
+If `@ModelCheckingCTest` was used instead of `@StressCTest` with `minimizeScenario = true`, the output would be:
 ```
-java.lang.AssertionError: Invalid interleaving found:
-= Invalid execution results: =
+= Invalid execution results =
 Parallel part:
-| put(5,-8): null | put(5,4): null |
+| put(4, -4): null | put(-8, -8): null |
+Post part:
+[get(-8): null]
+= The execution that led to this result =
 = Parallel part execution: =
-|                              | put(5,4) *                                           |
-|                              |          pass: HashMap.putVal(HashMap.java:628)      |
-|                              |          pass: HashMap.resize(HashMap.java:678)      |
-|                              |          pass: HashMap.resize(HashMap.java:680)      |
-|                              |          pass: HashMap.resize(HashMap.java:702)      |
-|                              |          switch at: HashMap.resize(HashMap.java:705) |
-| put(5,-8) * result: null     |                                                      |
-|           thread is finished |                                                      |
-|                              |          pass: HashMap.resize(HashMap.java:705)      |
-|                              |          pass: HashMap.putVal(HashMap.java:630)      |
-|                              |          pass: HashMap.putVal(HashMap.java:631)      |
-|                              |          pass: HashMap.putVal(HashMap.java:661)      |
-|                              |          pass: HashMap.putVal(HashMap.java:661)      |
-|                              |          pass: HashMap.putVal(HashMap.java:662)      |
-|                              |          pass: HashMap.putVal(HashMap.java:662)      |
-|                              |          pass: HashMap.putVal(HashMap.java:662)      |
-|                              |          * result: null                              |
-|                              |          thread is finished                          |
+| put(4, -4)                                                   |                      |
+|   table.READ: null at HashMap.putVal(HashMap.java:628)       |                      |
+|   table.READ: null at HashMap.resize(HashMap.java:678)       |                      |
+|   switch                                                     |                      |
+|                                                              | put(-8, -8): null    |
+|                                                              |   thread is finished |
+|   threshold.READ: 12 at HashMap.resize(HashMap.java:680)     |                      |
+|   threshold.WRITE(9) at HashMap.resize(HashMap.java:702)     |                      |
+|   table.WRITE(@20b5762f) at HashMap.resize(HashMap.java:705) |                      |
+|   READ: null at HashMap.putVal(HashMap.java:630)             |                      |
+|   WRITE(4=-4) at HashMap.putVal(HashMap.java:631)            |                      |
+|   modCount.READ: 1 at HashMap.putVal(HashMap.java:661)       |                      |
+|   modCount.WRITE(2) at HashMap.putVal(HashMap.java:661)      |                      |
+|   size.READ: 1 at HashMap.putVal(HashMap.java:662)           |                      |
+|   size.WRITE(2) at HashMap.putVal(HashMap.java:662)          |                      |
+|   threshold.READ: 9 at HashMap.putVal(HashMap.java:662)      |                      |
+|   result: null                                               |                      |
+|   thread is finished                                         |                      |                                                                                                 |                      |
 ```
