@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import jdk.nashorn.internal.codegen.types.Type
 import kotlin.coroutines.Continuation
 
 internal sealed class CodeLocation {
@@ -35,7 +36,7 @@ internal class ReadCodeLocation(private val fieldName: String?, private val stac
         if (fieldName != null)
             append("$fieldName.")
         append("READ")
-        append(": $value")
+        append(": ${adornedStringRepresentation(value)}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
@@ -51,7 +52,7 @@ internal class WriteCodeLocation(private val fieldName: String?, private val sta
         if (fieldName != null)
             append("$fieldName.")
         append("WRITE(")
-        append("$value")
+        append("${adornedStringRepresentation(value)}")
         append(") at ${stackTraceElement.shorten()}")
     }.toString()
 
@@ -80,12 +81,6 @@ internal class MethodCallCodeLocation(private val methodName: String, private va
 
     fun initializeParameters(parameters: Array<Any?>) {
         this.parameters = parameters
-    }
-
-    private fun adornedStringRepresentation(any: Any?): String {
-        if (any is Continuation<*>)
-            return "<cont>" // Continuation.toString looks ugly, so show this instead
-        return any.toString()
     }
 
     /**
@@ -127,4 +122,17 @@ private fun StackTraceElement.shorten(): String {
         if (stackTraceElement[i] == '/')
             return stackTraceElement.substring(i + 1 until stackTraceElement.length)
     return stackTraceElement
+}
+
+private fun adornedStringRepresentation(any: Any?): String {
+    if (any is Continuation<*>)
+        return "<cont>" // Continuation.toString looks ugly, so show this instead
+    val result = any.toString()
+    // to remove information about class in default toString implementation
+    if (any != null) {
+        val internalName = Type.getInternalName(any::class.java).replace('/', '.')
+        if (result.startsWith(internalName))
+            return result.removePrefix(internalName)
+    }
+    return result
 }
