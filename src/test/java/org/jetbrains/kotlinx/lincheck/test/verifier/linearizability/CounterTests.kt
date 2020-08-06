@@ -36,10 +36,6 @@ abstract class AbstractCounterTest(
     fun incAndGet(): Int = counter.incAndGet()
 
     override fun extractState(): Any = counter.get()
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(5)
-    }
 }
 
 class CounterCorrectTest : AbstractCounterTest(CounterCorrect())

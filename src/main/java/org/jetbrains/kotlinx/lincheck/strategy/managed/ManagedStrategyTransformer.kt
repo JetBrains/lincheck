@@ -34,6 +34,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.stream.Collectors
+import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.javaMethod
 
 
@@ -415,7 +416,7 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            beforeMethodCall(name, desc)
+            beforeMethodCall(owner, name, desc)
             val codeLocation = codeLocations.lastIndex // the code location that was created at the previous line
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             afterMethodCall(Method(name, desc).returnType, codeLocation)
@@ -424,9 +425,9 @@ internal class ManagedStrategyTransformer(
         private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
         // STACK: param_1 param_2 ... param_n
-        private fun beforeMethodCall(methodName: String, desc: String) {
+        private fun beforeMethodCall(owner: String, methodName: String, desc: String) {
             invokeBeforeMethodCall(methodName)
-            captureParameters(desc)
+            captureParameters(owner, methodName, desc)
         }
 
         // STACK: returned value (unless void)
@@ -447,12 +448,12 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: param_1 param_2 ... param_n
-        private fun captureParameters(desc: String) = adapter.run {
+        private fun captureParameters(owner: String, methodName: String, desc: String) = adapter.run {
             val paramTypes = Type.getArgumentTypes(desc)
             if (paramTypes.isEmpty()) return // nothing to capture
             val params = copyParameters(paramTypes)
             val paramCount: Int
-            if (paramTypes.last().internalName == "kotlin/coroutines/Continuation") {
+            if (paramTypes.last().internalName == "kotlin/coroutines/Continuation" && isSuspend(owner, methodName, desc)) {
                 // do not log last continuation in suspend functions
                 paramCount = paramTypes.size - 1
             } else {
@@ -1178,6 +1179,16 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
+
+        private fun isSuspend(owner: String, methodName: String, descriptor: String): Boolean =
+            try {
+                Class.forName(owner.toClassName()).kotlin.declaredFunctions.any {
+                    it.isSuspend && it.name == methodName && Method.getMethod(it.javaMethod).descriptor == descriptor
+                }
+            } catch(e: Throwable) {
+                // kotlin reflection is not available for some functions
+                false
+            }
 
         private fun String.toClassName() = this.replace('/', '.')
 
