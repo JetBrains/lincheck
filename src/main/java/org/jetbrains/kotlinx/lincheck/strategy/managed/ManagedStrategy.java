@@ -309,8 +309,8 @@ public abstract class ManagedStrategy extends Strategy {
      */
     public int currentThreadNumber() {
         Thread t = Thread.currentThread();
-        if (t instanceof ParallelThreadsRunner.TestThread) {
-            return ((ParallelThreadsRunner.TestThread) t).getThreadId();
+        if (t instanceof FixedActiveThreadsExecutor.TestThread) {
+            return ((FixedActiveThreadsExecutor.TestThread) t).getThreadId();
         } else {
             return nThreads;
         }

@@ -91,7 +91,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
             threadClocks.forEachIndexed { i, c ->
                 for (j in 0 until originalScenario.threads) {
                     val old = parallelResultsWithClock[t][i].clockOnStart[j]
-                    c[j] = clockMapping[j][old]
+                    c[j] = if (old == -1) -1 else clockMapping[j][old]
                 }
             }
         }

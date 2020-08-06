@@ -281,7 +281,7 @@ internal abstract class ManagedStrategyBase(
                 val nextThread = (0 until nThreads).firstOrNull { !finished[it].get() && isSuspended[it].get() }
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
-                    suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner.hashCode()))
+                    suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
                     // forcibly finish execution by throwing an exception.
                     throw ForcibleExecutionFinishException()
                 }
@@ -425,7 +425,7 @@ internal abstract class ManagedStrategyBase(
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > LIVELOCK_EVENTS_THRESHOLD) {
-            suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner.hashCode()))
+            suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
             // forcibly finish execution by throwing an exception.
             throw ForcibleExecutionFinishException()
         }
