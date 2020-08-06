@@ -28,25 +28,25 @@ import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.math.min
 
-private val EXECUTION_INDENTATION = "  "
+private const val EXECUTION_INDENTATION = "  "
 
 internal fun StringBuilder.appendExecution(
         scenario: ExecutionScenario,
         results: ExecutionResult?,
-        interleavingEvents: List<InterleavingEvent>
+        interleaving: List<InterleavingEvent>
 ) {
     val nThreads = scenario.threads
     // last actor that was appended for each thread
     val lastLoggedActor = IntArray(nThreads) { -1 }
     // what actors started, but did not finish in each thread
-    val lastExecutedActors = IntArray(nThreads) { threadId -> interleavingEvents.filter { it.threadId == threadId}.map { it.actorId }.max() ?: -1 }
+    val lastExecutedActors = IntArray(nThreads) { threadId -> interleaving.filter { it.threadId == threadId}.map { it.actorId }.max() ?: -1 }
     // call stack traces of all interesting events for each thread and actor
-    val interestingEvents = interestingEventStackTraces(scenario, interleavingEvents, lastExecutedActors)
+    val interestingEvents = interestingEventStackTraces(scenario, interleaving, lastExecutedActors)
     // set of identifiers which were appended
     val loggedMethodCalls = mutableSetOf<Int>()
     val execution = mutableListOf<InterleavingEventRepresentation>()
-    eventLoop@for (eventId in interleavingEvents.indices) {
-        val event = interleavingEvents[eventId]
+    eventLoop@for (eventId in interleaving.indices) {
+        val event = interleaving[eventId]
         val threadId = event.threadId
         val actorId = event.actorId
         // print all actors that started since the last event
@@ -62,7 +62,7 @@ internal fun StringBuilder.appendExecution(
                 val actorRepresentation = getActorRepresentation(threadId, nextActor, scenario, results, isInterestingActor)
                 execution.add(InterleavingEventRepresentation(threadId, actorRepresentation))
                 if (!isInterestingActor) {
-                    val stateRepresentation = lastStateRepresentation(threadId, actorId, interleavingEvents, eventId)
+                    val stateRepresentation = lastStateRepresentation(threadId, actorId, interleaving, eventId)
                     if (stateRepresentation != null)
                         execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
                 }
@@ -84,7 +84,7 @@ internal fun StringBuilder.appendExecution(
                     if (compressionPoint == callStackTrace.size) {
                         // no compression
                         execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + event.codeLocation.toString()))
-                        val stateRepresentation = nextStateRepresentaton(interleavingEvents, eventId)
+                        val stateRepresentation = nextStateRepresentaton(interleaving, eventId)
                         if (stateRepresentation != null)
                             execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
                     } else {
@@ -97,7 +97,7 @@ internal fun StringBuilder.appendExecution(
                                 threadId,
                                 EXECUTION_INDENTATION + call.codeLocation.toString()
                         ))
-                        val stateRepresentation = lastCompressedStateRepresentation(interleavingEvents, eventId, callIdentifier, interestingEvents[threadId][actorId])
+                        val stateRepresentation = lastCompressedStateRepresentation(interleaving, eventId, callIdentifier, interestingEvents[threadId][actorId])
                         if (stateRepresentation != null)
                             execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
                     }

@@ -63,9 +63,6 @@ public abstract class Runner {
         this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
                 new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
         this.testClass = loadClass(testClass.getTypeName());
-        this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
-                new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
-        this.testClass = loadClass(testClass.getTypeName());
     }
 
     /**

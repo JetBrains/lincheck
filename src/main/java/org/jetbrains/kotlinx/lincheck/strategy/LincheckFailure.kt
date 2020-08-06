@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
-    val execution: List<InterleavingEvent>?
+    val interleaving: List<InterleavingEvent>?
 ) {
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
@@ -36,33 +36,33 @@ sealed class LincheckFailure(
 internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     val results: ExecutionResult,
-    execution: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, execution)
+    interleaving: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, interleaving)
 
 internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
     val threadDump: Map<Thread, Array<StackTraceElement>>,
-    execution: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, execution)
+    interleaving: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, interleaving)
 
 internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     val exception: Throwable,
-    execution: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, execution)
+    interleaving: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, interleaving)
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
     val functionName: String,
     val exception: Throwable,
-    execution: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, execution)
+    interleaving: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, interleaving)
 
 internal class ObstructionFreedomViolationFailure(
-        scenario: ExecutionScenario,
-        val reason: String,
-        execution: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, execution)
+    scenario: ExecutionScenario,
+    val reason: String,
+    interleaving: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, interleaving)
 
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, execution: List<InterleavingEvent>? = null) = when (this) {
     is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, execution)
