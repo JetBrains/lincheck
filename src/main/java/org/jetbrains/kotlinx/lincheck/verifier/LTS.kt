@@ -85,7 +85,7 @@ class LTS(sequentialSpecification: Class<*>,
         internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo?>() }
         internal val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
         internal val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
-        internal val relaxedTransitions by lazy { mutableMapOf<Actor, List<RelaxedTransitionInfo>?>() }
+        internal val relaxedTransitions by lazy { mutableMapOf<ActorWithResult, List<RelaxedTransitionInfo>?>() }
 
         /**
          * Computes or gets the existing transition from the current state by the given [actor].
@@ -145,7 +145,7 @@ class LTS(sequentialSpecification: Class<*>,
         }
 
         fun nextRelaxed(actor: Actor, ticket: Int, expectedResult: Result): List<RelaxedTransitionInfo>? {
-            return relaxedTransitions.computeIfAbsent(actor) {
+            return relaxedTransitions.computeIfAbsent(ActorWithResult(actor, expectedResult)) {
                 generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     val op = Operation(actor, ticket, REQUEST)
                     val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
@@ -525,6 +525,11 @@ data class Operation(
     val actor: Actor,
     val ticket: Int,
     val type: OperationType
+)
+
+internal data class ActorWithResult(
+    val actor: Actor,
+    val result: Result
 )
 
 enum class OperationType { REQUEST, FOLLOW_UP, CANCELLATION }
