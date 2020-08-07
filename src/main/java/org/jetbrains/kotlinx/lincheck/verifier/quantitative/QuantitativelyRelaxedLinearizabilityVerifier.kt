@@ -23,10 +23,7 @@ package org.jetbrains.kotlinx.lincheck.verifier.quantitative
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.AbstractLTSVerifier
-import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
-import org.jetbrains.kotlinx.lincheck.verifier.LTS
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
+import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
  * This verifier checks for quantitative relaxation contracts, which are introduced
@@ -66,7 +63,7 @@ class QuantitativelyRelaxedLinearizabilityVerifier(sequentialSpecification: Clas
     override val lts: LTS
 
     override fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult) =
-            QuantitativelyRelaxedLinearizabilityContext(scenario, results, lts.initialState,  pathCostFunc.createIterativePathCostFunctionCounter(relaxationFactor))
+            QuantitativelyRelaxedLinearizabilityContext(scenario, results, lts.initialState, pathCostFunc.createIterativePathCostFunctionCounter(relaxationFactor))
 
     init {
         val conf = sequentialSpecification.getAnnotation(QuantitativeRelaxationVerifierConf::class.java)
@@ -76,7 +73,7 @@ class QuantitativelyRelaxedLinearizabilityVerifier(sequentialSpecification: Clas
         pathCostFunc = conf.pathCostFunc
         lts = LTS(
             sequentialSpecification = sequentialSpecification,
-            isQuantitativelyRelaxed = true,
+            relaxationType = RelaxationType.QUANTITATIVE,
             relaxationFactor = relaxationFactor
         )
     }

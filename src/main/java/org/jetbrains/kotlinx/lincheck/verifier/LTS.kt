@@ -27,8 +27,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
+import org.jetbrains.kotlinx.lincheck.verifier.RelaxationType.*
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.CostWithNextCostCounter
-import org.jetbrains.kotlinx.lincheck.verifier.quantitative.PathCostFunction
 import org.jetbrains.kotlinx.lincheck.verifier.quantitative.QuantitativeRelaxed
 import java.lang.reflect.Method
 import java.util.*
@@ -61,7 +61,7 @@ typealias ResumedTickets = Set<Int>
  */
 
 class LTS(sequentialSpecification: Class<*>,
-          private val isQuantitativelyRelaxed: Boolean = false,
+          private val relaxationType: RelaxationType = NO_RELAXATION,
           private val relaxationFactor: Int = 0
 ) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
@@ -101,7 +101,7 @@ class LTS(sequentialSpecification: Class<*>,
                     // Invoke the given operation to count the next transition.
                     val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, expectedResult)
                     val costCounterOrTestInstance =
-                            if (!isQuantitativelyRelaxed) instance
+                            if (relaxationType !== QUANTITATIVE) instance
                             else {
                                 if (result is ValueResult && result.value != null) {
                                     // Standalone instance of CostCounter is returned.
@@ -117,7 +117,7 @@ class LTS(sequentialSpecification: Class<*>,
                     createTransition(op, result, costCounterOrTestInstance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
-            if (isQuantitativelyRelaxed) return transitionInfo
+            if (relaxationType === QUANTITATIVE) return transitionInfo
             return if (transitionInfo != null && transitionInfo.isLegalByRequest(expectedResult)) transitionInfo else null
         }
 
@@ -188,11 +188,11 @@ class LTS(sequentialSpecification: Class<*>,
             ) -> T
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
-            val instance = if (isQuantitativelyRelaxed) costCounter!! else createInitialStateInstance()
+            val instance = if (relaxationType === QUANTITATIVE) costCounter!! else createInitialStateInstance()
             val suspendedOperations = mutableListOf<Operation>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
             val continuationsMap = mutableMapOf<Operation, CancellableContinuation<*>>()
-            if (!isQuantitativelyRelaxed) {
+            if (relaxationType === QUANTITATIVE) {
                 try {
                     seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, null) } // todo because the state contains current counter state
                 } catch (e: Exception) {
@@ -264,7 +264,7 @@ class LTS(sequentialSpecification: Class<*>,
         val prevResumedTickets = resumedOperations.keys.toMutableList()
         storedLastCancellableCont = null
         val res = when (type) {
-            REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations), if (isQuantitativelyRelaxed) expectedResult else null)
+            REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations), if (relaxationType === QUANTITATIVE) expectedResult else null)
             FOLLOW_UP -> {
                 val (cont, suspensionPointRes) = resumedOperations[ticket]!!.contWithSuspensionPointRes
                 val finalRes = (
@@ -311,14 +311,14 @@ class LTS(sequentialSpecification: Class<*>,
             block(old, this.computeRemappingFunction(old))
         } else {
             val newSeqToCreate = if (curOperation != null) this.state.seqToCreate + curOperation else emptyList()
-            stateInfos[this] = this.also { it.state = State(newSeqToCreate, if (isQuantitativelyRelaxed) instance else null) }
+            stateInfos[this] = this.also { it.state = State(newSeqToCreate, if (relaxationType === QUANTITATIVE) instance else null) }
             return block(stateInfos[this]!!, null)
         }
     }
 
     private fun createInitialState(): State {
         val instance = createInitialStateInstance()
-        val initialState = State(emptyList(), if (isQuantitativelyRelaxed) instance else null)
+        val initialState = State(emptyList(), if (relaxationType === QUANTITATIVE) instance else null)
         return StateInfo(
             state = initialState,
             instance = instance,
@@ -327,7 +327,7 @@ class LTS(sequentialSpecification: Class<*>,
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = if (isQuantitativelyRelaxed) createCostCounterInstance(sequentialSpecification, relaxationFactor)
+    private fun createInitialStateInstance() = if (relaxationType === QUANTITATIVE) createCostCounterInstance(sequentialSpecification, relaxationFactor)
                                                else sequentialSpecification.newInstance()
 
     fun checkStateEquivalenceImplementation() {
@@ -395,6 +395,8 @@ class LTS(sequentialSpecification: Class<*>,
         }
     }
 }
+
+enum class RelaxationType { NO_RELAXATION, QUANTITATIVE, QUASI }
 
 /**
  * Defines equivalency relation among LTS states (see [LTS.State]).
