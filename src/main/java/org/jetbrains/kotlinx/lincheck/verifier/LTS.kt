@@ -192,7 +192,7 @@ class LTS(sequentialSpecification: Class<*>,
             val suspendedOperations = mutableListOf<Operation>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
             val continuationsMap = mutableMapOf<Operation, CancellableContinuation<*>>()
-            if (relaxationType === QUANTITATIVE) {
+            if (relaxationType !== QUANTITATIVE) {
                 try {
                     seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap, null) } // todo because the state contains current counter state
                 } catch (e: Exception) {

@@ -21,10 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.quantitative
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.Result
-import org.jetbrains.kotlinx.lincheck.ValueResult
-import org.jetbrains.kotlinx.lincheck.VoidResult
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
@@ -38,8 +36,9 @@ import org.junit.Test
 
 @StressCTest(sequentialSpecification = KPriorityQueueTest.CostCounter::class,
              verifier = QuantitativelyRelaxedLinearizabilityVerifier::class,
-             threads = 2, actorsPerThread = 2, actorsAfter = 0, actorsBefore = 0)
+             threads = 3, actorsPerThread = 3, actorsAfter = 3, actorsBefore = 3)
 @Param(name = "push-value", gen = IntGen::class, conf = "1:20")
+@LogLevel(LoggingLevel.INFO)
 class KPriorityQueueTest {
     private val pq = KPriorityQueueSimulation(2)
 

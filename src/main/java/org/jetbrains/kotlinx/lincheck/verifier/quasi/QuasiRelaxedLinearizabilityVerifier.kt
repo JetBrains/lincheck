@@ -50,44 +50,51 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
     constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
                 quasiFactor: Int) : super(scenario, results, state) {
         this.quasiFactor = quasiFactor
+        this.executedActors = Array(scenario.threads + 2) { mutableSetOf<Int>() }
+        this.last = IntArray(scenario.threads + 2) { -1 }
+        this.skipped = Array(scenario.threads + 2) { mutableMapOf<Int, Int>() }
     }
     constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
                 executed: IntArray, suspended: BooleanArray, tickets: IntArray,
                 executedActors: Array<MutableSet<Int>>, last: IntArray, skipped: Array<MutableMap<Int, Int>>, quasiFactor: Int) :
             super(scenario, results, state, executed) {
         this.quasiFactor = quasiFactor
+        this.executedActors = executedActors
+        this.last = last
+        this.skipped = skipped
     }
 
     /**
-     * The set of executed actors' indices for every thread
+     * Sets of indices of executed actors for every thread
      */
-    private val executedActors = Array(scenario.threads + 2) { mutableSetOf<Int>() }
+    private val executedActors: Array<MutableSet<Int>>
     /**
      * Indices of the last executed actors for every thread
      */
-    private val last = IntArray(scenario.threads + 2) { -1 }
+    private val last: IntArray
     /**
-     * Latenesses of skipped actors for every thread
+     * Lateness of skipped actors for every thread
      */
-    private val skipped = Array(scenario.threads + 2) { mutableMapOf<Int, Int>() }
+    private val skipped: Array<MutableMap<Int, Int>>
 
     private fun executedInRange(from: Int, to: Int) = executed.slice(from .. to).sum()
 
     override fun nextContexts(threadId: Int): List<VerifierContext> {
+        if (isCompleted(threadId)) return emptyList()
         val legalTransitions = mutableListOf<VerifierContext>()
         for (e in skipped[0]) {
             if (e.value == quasiFactor) {
                 val actorId = e.key
-                // initial part actor has maximal lateness -> it is the only one to executed
+                // the actor from initial part has maximal lateness -> it is the only one to executed
                 val nextContext = state.nextContext(0, actorId)
                 return if (nextContext != null) listOf(nextContext) else emptyList()
             }
         }
-        // jump forward
+        // try to execute actors located within quasiFactor positions in execution scenario for this thread
         for (jump in 1..quasiFactor + 1) {
             // thread local position of a potential actor to be executed
             val localPos = last[threadId] + jump
-            // check whether this actor is located within quasi-factor distance from its non-relaxed position of execution
+            // check whether this actor is located within quasiFactor distance from its non-relaxed position of execution
             val nonRelaxedPos = getNonRelaxedActorPosition(threadId, localPos)
             val lateness = getGlobalLateness(threadId, nonRelaxedPos)
             if (lateness <= quasiFactor && localPos < scenario[threadId].size) {
@@ -103,8 +110,9 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
             val nextContext = state.nextContext(threadId, actorId)
             if (nextContext != null) {
                 if (e.value == quasiFactor) {
+                    val nextContext = state.nextContext(threadId, actorId)
                     // this skipped actor has maximal lateness -> it is the only one to be executed
-                    return listOf(nextContext)
+                    return if (nextContext != null) listOf(nextContext) else emptyList()
                 }
                 legalTransitions.add(nextContext)
             }
@@ -126,6 +134,7 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
         nextExecuted[threadId]++
         nextExecutedActors[threadId].add(actorId)
         nextLast[threadId] = actorId
+        if (nextSkipped[0].contains(actorId)) nextSkipped[0].remove(actorId)
         // update skipped actors
         if (actorId < last[threadId]) {
             // previously skipped actor was executed, so we can remove it from skipped actors
@@ -135,7 +144,9 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
             for (skippedActorId in last[threadId] + 1 until actorId) {
                 // if an actor was executed out-of-order skipping some actors located after the last executed actor, than all these actors should be added to skipped
                 // actual latenesses for these actors are counted below
-                nextSkipped[threadId][skippedActorId] = 0
+                if (!nextExecutedActors[threadId].contains(skippedActorId)) {
+                    nextSkipped[threadId][skippedActorId] = 0
+                }
             }
         }
         // now update latenesses of skipped actors
@@ -145,7 +156,7 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
         while (it.hasNext()) {
             val skippedActorId = it.next()
             val nonRelaxedPos = getNonRelaxedActorPosition(threadId, skippedActorId)
-            // latenesses are only counted for actors that are behind the current global position of execution
+            // lateness is only counted for actors that are behind the current global position of execution
             // others can still be executed in order and are not late now
             if (nonRelaxedPos < globalPos) {
                 nextSkipped[threadId][skippedActorId] = getGlobalLateness(threadId, nonRelaxedPos)
@@ -154,13 +165,13 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
         if (threadId == scenario.threads + 1) {
             // post part actor executed
             // in every thread the number of skipped actors equals the number of actors executed in post part
-            // latenesses of all these parallel part actors should be incremented
+            // lateness of all these parallel part actors should be incremented
             for (t in 1..scenario.threads) {
-                val lastSkippedActor = min(executedActors[scenario.threads + 1].size, scenario[t].size)
+                val lastSkippedActor = min(nextExecutedActors[scenario.threads + 1].size, scenario[t].size)
                 for (skippedActorId in 0 until lastSkippedActor) {
-                    if (!executedActors[t].contains(skippedActorId)) {
-                        skipped[t].putIfAbsent(skippedActorId, 0)
-                        skipped[t][skippedActorId]!!.inc()
+                    if (!nextExecutedActors[t].contains(skippedActorId)) {
+                        nextSkipped[t].putIfAbsent(skippedActorId, 0)
+                        nextSkipped[t][skippedActorId]!!.inc()
                     }
                 }
             }
@@ -169,11 +180,11 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
             // actor from non-initial part is executed
             // in initial thread the number of skipped actors equals the number of actors executed in parallel post parts
             // latenesses of all these initial part actors should be incremented
-            val lastSkippedActor = min(executedActors[scenario.threads + 1].size, scenario[0].size)
+            val lastSkippedActor = min(nextExecutedActors[scenario.threads + 1].size, scenario[0].size)
             for (skippedActorId in 0 until lastSkippedActor) {
-                if (!executedActors[0].contains(skippedActorId)) {
-                    skipped[0].putIfAbsent(skippedActorId, 0)
-                    skipped[0][skippedActorId]!!.inc()
+                if (!nextExecutedActors[0].contains(skippedActorId)) {
+                    nextSkipped[0].putIfAbsent(skippedActorId, 0)
+                    nextSkipped[0][skippedActorId]!!.inc()
                 }
             }
         }
@@ -215,13 +226,6 @@ class QuasiRelaxedLinearizabilityContext : VerifierContext {
         }
     }
 
-    private fun LTS.State.nextContext(threadId: Int, actorId: Int): QuasiRelaxedLinearizabilityContext? {
-        val actor = scenario[threadId][actorId]
-        val result = results[threadId][actorId]
-        val nextResState = next(actor, result, NO_TICKET)
-        if (nextResState?.result == result) {
-            return nextResState.createContext(threadId, actorId)
-        }
-        return null
-    }
+    private fun LTS.State.nextContext(threadId: Int, actorId: Int): QuasiRelaxedLinearizabilityContext? =
+            next(scenario[threadId][actorId], results[threadId][actorId], NO_TICKET)?.createContext(threadId, actorId)
 }
