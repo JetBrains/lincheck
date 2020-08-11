@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 import org.objectweb.asm.*;
+import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.util.*;
 
 import java.io.*;
@@ -45,8 +46,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private final List<Function<ClassVisitor, ClassVisitor>> classTransformers;
     // Cache for classloading and frames computing during the transformation.
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
+    private final Remapper remapper;
 
-    public static final String JAVA_UTIL_PACKAGE = "java/util/";
     public static final String TRANSFORMED_PACKAGE_INTERNAL_NAME = "org/jetbrains/kotlinx/lincheck/tran$f*rmed/";
     public static final String TRANSFORMED_PACKAGE_NAME = TRANSFORMED_PACKAGE_INTERNAL_NAME.replace('/', '.');
     public static final int ASM_API = ASM7;
@@ -56,10 +57,12 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // Apply the strategy's transformer at first, then the runner's one.
         if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
         if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);
+        remapper = strategy.createRemapper();
     }
 
     public TransformationClassLoader(Function<ClassVisitor, ClassVisitor> classTransformer) {
         this.classTransformers = Collections.singletonList(classTransformer);
+        remapper = null;
     }
 
     /**
@@ -120,7 +123,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // then the runner's one.
         ClassVersionGetter infoGetter = new ClassVersionGetter();
         cr.accept(infoGetter, 0);
-        ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion());
+        ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), remapper);
         ClassVisitor cv = new CheckClassAdapter(cw, false); // for debug
         for (Function<ClassVisitor, ClassVisitor> ct : classTransformers)
             cv = ct.apply(cv);
@@ -149,8 +152,11 @@ public class TransformationClassLoader extends ExecutionClassLoader {
  * {@link ClassWriter#getCommonSuperClass} implementation.
  */
 class TransformationClassWriter extends ClassWriter {
-    public TransformationClassWriter(int classVersion) {
+    private final Remapper remapper;
+
+    public TransformationClassWriter(int classVersion, Remapper remapper) {
         super(classVersion > V1_6 ? COMPUTE_FRAMES : COMPUTE_MAXS);
+        this.remapper = remapper;
     }
 
     /**
@@ -160,8 +166,8 @@ class TransformationClassWriter extends ClassWriter {
     @Override
     protected String getCommonSuperClass(final String type1, final String type2) {
         String result = super.getCommonSuperClass(originalInternalName(type1), originalInternalName(type2));
-        if (result.startsWith(JAVA_UTIL_PACKAGE))
-            return TRANSFORMED_PACKAGE_INTERNAL_NAME + result;
+        if (remapper != null)
+            return remapper.map(result);
         return result;
     }
 

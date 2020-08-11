@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME
 import org.jetbrains.kotlinx.lincheck.UnsafeHolder
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
@@ -101,8 +102,9 @@ internal class ManagedStrategyTransformer(
     /**
      * Changes package of transformed classes from java/util package, excluding some
      */
-    private class JavaUtilRemapper : Remapper() {
+    internal class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
+            // remap java.util package
             if (name.startsWith("java/util/")) {
                 val normalizedName = name.toClassName()
                 // transformation of exceptions causes a lot of trouble with catching expected exceptions
@@ -111,8 +113,12 @@ internal class ManagedStrategyTransformer(
                 val inFunctionPackage = name.startsWith("java/util/function/")
                 val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
                 if (!isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
-                    return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
+                    return TRANSFORMED_PACKAGE_INTERNAL_NAME + name
             }
+            // remap java.lang.Iterable, because its only method returns an object from java.util package
+            // that will not work if not transformed
+            if (name == "java/lang/Iterable")
+                return TRANSFORMED_PACKAGE_INTERNAL_NAME + name;
             return name
         }
     }
@@ -1145,8 +1151,8 @@ internal class ManagedStrategyTransformer(
          */
         private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
             var ownerInternal = ownerInternal
-            if (ownerInternal.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
-                ownerInternal = ownerInternal.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
+            if (ownerInternal.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+                ownerInternal = ownerInternal.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
                 val clazz = Class.forName(ownerInternal.toClassName())
@@ -1161,8 +1167,8 @@ internal class ManagedStrategyTransformer(
 
         private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
             var internalName = ownerInternal
-            if (internalName.startsWith(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
-                internalName = internalName.substring(TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
+            if (internalName.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
+                internalName = internalName.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
                 val clazz = Class.forName(internalName.toClassName())

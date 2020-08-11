@@ -372,8 +372,9 @@ internal abstract class ManagedStrategyBase(
         initializeManagedState()
         val loggedResults = doRunInvocation(true)
         val sameResultTypes = loggedResults.javaClass == previousResults.javaClass
-        val sameExecutionResults = previousResults !is CompletedInvocationResult || loggedResults !is CompletedInvocationResult || previousResults.results == loggedResults.results
-        check(sameResultTypes && sameExecutionResults) {
+        // cannot check whether the results are exactly the same because of retransformation
+        // so just check that types are the same
+        check(sameResultTypes) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendln("Reporting scenario without execution trace.")

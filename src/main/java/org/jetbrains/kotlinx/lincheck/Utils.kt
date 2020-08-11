@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.objectweb.asm.commons.Remapper
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.util.*
@@ -241,7 +242,7 @@ internal object UnsafeHolder {
     }
 }
 
-fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces()
+internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces()
         .filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode() }
         .mapValues { (_, stackTrace) ->
             stackTrace.map {

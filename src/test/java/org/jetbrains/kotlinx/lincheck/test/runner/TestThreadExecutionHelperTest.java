@@ -62,7 +62,7 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("element"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("peek"), emptyList(), emptyList())
-            ), emptyList(), false);
+            ), emptyList(), false, null);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[5];
         ex.run();
@@ -83,7 +83,7 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("add", Object.class), asList(2), emptyList())
-            ), emptyList(), false);
+            ), emptyList(), false, null);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
         ex.run();
@@ -97,7 +97,7 @@ public class TestThreadExecutionHelperTest {
                 new Actor(Queue.class.getMethod("remove"), emptyList(), emptyList()),
                 new Actor(Queue.class.getMethod("remove"), emptyList(), asList(NoSuchElementException.class)),
                 new Actor(Queue.class.getMethod("remove"), emptyList(), asList(Exception.class, NoSuchElementException.class))
-            ), emptyList(), false);
+            ), emptyList(), false, null);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
         ex.clocks = new int[4][1];

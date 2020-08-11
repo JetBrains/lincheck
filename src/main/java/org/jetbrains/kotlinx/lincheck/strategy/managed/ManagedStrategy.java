@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.objectweb.asm.*;
+import org.objectweb.asm.commons.Remapper;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -106,6 +107,11 @@ public abstract class ManagedStrategy extends Strategy {
                 eliminateLocalObjects,
                 loggingEnabled
         );
+    }
+
+    @Override
+    public Remapper createRemapper() {
+        return new ManagedStrategyTransformer.JavaUtilRemapper();
     }
 
     @Override

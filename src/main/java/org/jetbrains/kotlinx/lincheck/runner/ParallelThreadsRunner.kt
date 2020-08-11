@@ -301,7 +301,7 @@ internal open class ParallelThreadsRunner(
 
     private fun initializeTestThreadExecutions() {
         testThreadExecutions = Array(scenario.threads) { t ->
-            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), strategy.createRemapper())
         }
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }
