@@ -63,11 +63,11 @@ class RecoverableRegisterTest : VerifierState() {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions().recoverable(mode = ManagedCTestConfiguration.RecoverableMode.DETECTABLE_EXECUTION).actorsPerThread(1).actorsBefore(0).actorsAfter(0).minimizeFailedScenario(false)
+        val options = ModelCheckingOptions().recoverable(mode = ManagedCTestConfiguration.RecoverableMode.DETECTABLE_EXECUTION).iterations(50)
         LinChecker.check(this::class.java, options)
     }
 
-    override fun extractState(): Any = register.get()
+    override fun extractState(): Any = Pair(register.get(), r.map { it.map { it.get() }})
 
     private data class Record(val value: Int, val threadId: Int, val operationId: Int)
 }
