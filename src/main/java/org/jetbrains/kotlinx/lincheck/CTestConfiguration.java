@@ -101,7 +101,7 @@ public abstract class CTestConfiguration {
                     ann.generator(), ann.verifier(), ann.checkObstructionFreedom(), ann.hangingDetectionThreshold(),
                     ann.invocationsPerIteration(), DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck(),
                     ann.minimizeFailedScenario(),  chooseSequentialSpecification(ann.sequentialSpecification(), testClass),
-                    DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS));
+                    DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_RECOVERABLE_MODE));
         return Stream.of(stressConfigurations, modelCheckingConfigurations).flatMap(identity()).collect(Collectors.toList());
     }
 }

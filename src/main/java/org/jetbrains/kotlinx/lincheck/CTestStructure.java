@@ -57,6 +57,8 @@ public class CTestStructure {
      */
     public static CTestStructure getFromTestClass(Class<?> testClass) {
         Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
+        namedGens.put("operationId", new OperationIdGen());
+        namedGens.put("threadId", new ThreadIdGen());
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
         List<Method> validationFunctions = new ArrayList<>();

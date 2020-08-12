@@ -26,7 +26,9 @@ import kotlin.random.Random;
 import org.jetbrains.kotlinx.lincheck.Actor;
 
 import org.jetbrains.kotlinx.lincheck.ActorKt;
+import org.jetbrains.kotlinx.lincheck.paramgen.OperationIdGen;
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
+import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -56,8 +58,18 @@ public class ActorGenerator {
         this.allowExtraSuspension = allowExtraSuspension;
     }
 
-    public Actor generate() {
-        List<Object> parameters = parameterGenerators.stream().map(ParameterGenerator::generate).collect(Collectors.toList());
+    public Actor generate(int threadId, int operationId) {
+        List<Object> parameters = parameterGenerators.stream().map(gen -> {
+            Object result;
+            if (gen instanceof OperationIdGen) {
+                result = operationId;
+            } else if (gen instanceof ThreadIdGen) {
+                result = threadId;
+            } else {
+                result = gen.generate();
+            }
+            return result;
+        }).collect(Collectors.toList());
         return new Actor(method, parameters, handledExceptions,
             cancellableOnSuspension & Random.Default.nextBoolean(),
             allowExtraSuspension

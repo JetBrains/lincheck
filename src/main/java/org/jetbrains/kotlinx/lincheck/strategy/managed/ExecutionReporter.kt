@@ -71,8 +71,12 @@ internal fun StringBuilder.appendExecution(
         // print the event itself
         when (event) {
             is SwitchEvent -> {
-                val reason = if (event.reason.toString().isEmpty()) "" else " (reason: ${event.reason})"
-                execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "switch" + reason))
+                if (event.reason == SwitchReason.CRASH) {
+                    execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "crash"))
+                } else {
+                    val reason = if (event.reason.toString().isEmpty()) "" else " (reason: ${event.reason})"
+                    execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "switch" + reason))
+                }
             }
             is FinishEvent -> {
                 execution.add(InterleavingEventRepresentation(threadId,  EXECUTION_INDENTATION + "thread is finished"))

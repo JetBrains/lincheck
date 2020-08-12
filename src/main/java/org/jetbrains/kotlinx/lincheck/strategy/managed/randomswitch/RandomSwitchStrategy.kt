@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.randomswitch
 
+import com.sun.org.apache.bcel.internal.generic.SWITCH
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -65,9 +66,9 @@ internal class RandomSwitchStrategy(
         return null
     }
 
-    override fun shouldSwitch(threadId: Int): Boolean {
+    override fun shouldSwitch(threadId: Int): StrategyEvent {
         // TODO: the number of random calls can be reduced via the geometric distribution
-        return executionRandom.nextDouble() < switchProbability
+        return if (executionRandom.nextDouble() < switchProbability) StrategyEvent.SWITCH else StrategyEvent.NONE
     }
 
     override fun chooseThread(switchableThreads: Int): Int = executionRandom.nextInt(switchableThreads)

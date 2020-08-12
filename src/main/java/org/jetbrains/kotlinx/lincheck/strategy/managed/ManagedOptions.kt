@@ -33,7 +33,8 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD
     protected var invocationsPerIteration = ManagedCTestConfiguration.DEFAULT_INVOCATIONS
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
-    protected var eliminateLocalObjects: Boolean = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS;
+    protected var eliminateLocalObjects: Boolean = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS
+    protected var mode = ManagedCTestConfiguration.DEFAULT_RECOVERABLE_MODE
 
     /**
      * Check obstruction freedom of the concurrent algorithm.
@@ -69,6 +70,14 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun addGuarantee(guarantee: ManagedStrategyGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
+    }
+
+    /**
+     * Set mode for testing recoverable algorithms.
+     * If not NONE, then crashes will be added to the execution.
+     */
+    fun recoverable(mode: ManagedCTestConfiguration.RecoverableMode): OPT = applyAndCast {
+        this.mode = mode;
     }
 
     /**

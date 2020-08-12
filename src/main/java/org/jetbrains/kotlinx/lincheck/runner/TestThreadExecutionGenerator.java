@@ -25,6 +25,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.CrashException;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
@@ -206,6 +207,14 @@ public class TestThreadExecutionGenerator {
             mv.push(iThread);
             mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_START);
 
+            Label beforeActor = mv.newLabel();
+            mv.visitLabel(beforeActor);
+            Label actorStart = mv.newLabel();
+            Label theActorEnd = mv.newLabel();
+            Label crashHandler = mv.newLabel();
+            mv.visitTryCatchBlock(actorStart, theActorEnd, crashHandler, Type.getType(CrashException.class).getInternalName());
+            mv.visitLabel(actorStart);
+
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
             mv.push(i);
@@ -234,6 +243,16 @@ public class TestThreadExecutionGenerator {
             if (remapper != null)
                 actorMethod = new Method(actorMethod.getName(), remapper.mapMethodDesc(actorMethod.getDescriptor()));
             mv.invokeVirtual(testType, actorMethod);
+            mv.visitLabel(theActorEnd);
+            Label afterActor = mv.newLabel();
+            mv.goTo(afterActor);
+            mv.visitLabel(crashHandler);
+            // Pop CrashException
+            mv.pop();
+            // Restart Actor
+            mv.goTo(beforeActor);
+            mv.visitLabel(afterActor);
+
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {
                 // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, threadId, i)

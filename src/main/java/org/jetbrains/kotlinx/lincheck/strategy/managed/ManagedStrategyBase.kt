@@ -248,10 +248,15 @@ internal abstract class ManagedStrategyBase(
             checkCanHaveObstruction { "At least obstruction freedom required, but an active lock found" }
             isLoop = true
         }
-        val shouldSwitch = shouldSwitch(threadId) or isLoop
+        val strategyEvent = shouldSwitch(threadId)
+        val shouldSwitch = (strategyEvent == StrategyEvent.SWITCH) or isLoop
         if (shouldSwitch) {
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(threadId, reason)
+        } else if (strategyEvent == StrategyEvent.CRASH) {
+            onNewSwitch(threadId)
+            eventCollector.newSwitch(threadId, SwitchReason.CRASH)
+            throw CrashException()
         }
         eventCollector.passCodeLocation(threadId, codeLocation)
         // continue operation
@@ -260,7 +265,7 @@ internal abstract class ManagedStrategyBase(
     /**
      * Returns whether thread should switch at the suspension point
      */
-    protected abstract fun shouldSwitch(threadId: Int): Boolean
+    protected abstract fun shouldSwitch(threadId: Int): StrategyEvent
 
     /**
      * A regular switch on another thread
@@ -555,6 +560,12 @@ internal abstract class ManagedStrategyBase(
                 if (acquiringMonitor[threadId] === monitor)
                     needsNotification[threadId] = false
         }
+    }
+
+    protected enum class StrategyEvent {
+        SWITCH,
+        NONE,
+        CRASH
     }
 }
 

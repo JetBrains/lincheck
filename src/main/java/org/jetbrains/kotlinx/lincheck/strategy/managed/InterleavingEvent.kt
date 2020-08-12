@@ -43,7 +43,8 @@ internal enum class SwitchReason(private val reason: String) {
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),
     SUSPENDED("coroutine is suspended"),
-    STRATEGY_SWITCH("");
+    STRATEGY_SWITCH(""),
+    CRASH("crash"); // TODO: it is not a switch
 
     override fun toString() = reason
 }

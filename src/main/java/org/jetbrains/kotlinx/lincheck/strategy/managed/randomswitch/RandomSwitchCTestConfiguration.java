@@ -38,11 +38,12 @@ public class RandomSwitchCTestConfiguration extends ManagedCTestConfiguration {
     public RandomSwitchCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
         int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
         boolean checkObstructionFreedom, int hangingDetectionThreshold,  int invocationsPerIteration, List<ManagedStrategyGuarantee> guarantees,
-        boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,  Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
+        boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,  Class<?> sequentialSpecification, long timeoutMs,
+        boolean eliminateLocalObjects, RecoverableMode mode)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees,
-                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects);
+                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, mode);
     }
 
     @Override

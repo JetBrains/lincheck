@@ -24,7 +24,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.RecoverableMode
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.lang.IllegalStateException
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
 import kotlin.random.*
@@ -51,7 +53,7 @@ internal class ModelCheckingStrategy(
     // an increasing id of code locations in the execution
     private val executionPosition = AtomicInteger(0)
     // ids of code locations where a thread should be switched
-    private val switchPositions = mutableListOf<Int>()
+    private val switchPositions = mutableListOf<Pair<Int, StrategyEvent>>()
     // ids of threads to which the executing thread should switch at the corresponding choices
     private val threadSwitchChoices = mutableListOf<Int>()
     // the number of invocations that the managed strategy may use to search for an incorrect execution
@@ -60,6 +62,7 @@ internal class ModelCheckingStrategy(
     private var usedInvocations = 0
     // the maximum number of switches that strategy tries to use currently
     private var maxNumberOfSwitches = 1
+    private val mode: RecoverableMode = testCfg.mode
     // the root for the interleaving tree
     private var root: InterleavingNode = ThreadChoosingNode(nThreads)
     // a thread choosing node of the interleaving tree that should be initialized on the next run
@@ -118,12 +121,12 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    override fun shouldSwitch(threadId: Int): Boolean {
+    override fun shouldSwitch(threadId: Int): StrategyEvent {
         // the increment of the current position is made in the same place as where the check is,
         // because the position check and the position increment are dual operations
         check(threadId == currentThread)
-        executionPosition.incrementAndGet()
-        return executionPosition.get() in switchPositions
+        val executionPosition = executionPosition.incrementAndGet()
+        return switchPositions.find { it.first == executionPosition }?.second ?: StrategyEvent.NONE
     }
 
     override fun initializeInvocation(repeatExecution: Boolean) {
@@ -143,7 +146,7 @@ internal class ModelCheckingStrategy(
             executionFinishingRandom.nextInt(switchableThreads)
     }
 
-    private fun lastSwitchPosition() = switchPositions.lastOrNull() ?: -1
+    private fun lastSwitchPosition() = switchPositions.lastOrNull { it.first >= 0 }?.first ?: -1
 
     /**
      * An abstract node with an execution choice in the interleaving tree.
@@ -205,7 +208,7 @@ internal class ModelCheckingStrategy(
     private inner class ThreadChoosingNode(threadsToSwitch: Int? = null) : InterleavingNode() {
         init {
             if (threadsToSwitch != null)
-                choices = Array(threadsToSwitch) { SwitchChoosingNode() }
+                choices = Array(threadsToSwitch) { StrategyEventChoosingNode() }
         }
 
         override fun exploreChild(): LincheckFailure? {
@@ -216,7 +219,7 @@ internal class ModelCheckingStrategy(
                 check(notInitializedThreadChoice == null)
                 notInitializedThreadChoice = this
                 // suppose that the node will have a child, but we do not know yet which one it will be
-                child = SwitchChoosingNode()
+                child = StrategyEventChoosingNode()
             } else {
                 val nextThread = chooseUnexploredChild()
                 threadSwitchChoices.add(nextThread)
@@ -238,7 +241,7 @@ internal class ModelCheckingStrategy(
         }
 
         fun initialize(switchableThreads: Int) {
-            choices = Array(switchableThreads) { SwitchChoosingNode() }
+            choices = Array(switchableThreads) { StrategyEventChoosingNode() }
             if (switchableThreads == 0) return
             // add the choice of the initialized node.
             val nextThread = chooseUnexploredChild()
@@ -255,7 +258,7 @@ internal class ModelCheckingStrategy(
         var startPosition = 0
 
         override fun exploreChild(): LincheckFailure? {
-            val shouldBeLeaf = maxNumberOfSwitches == switchPositions.size
+            val shouldBeLeaf = maxNumberOfSwitches + 1 == switchPositions.size
             if (shouldBeLeaf) {
                 checkResults(runInvocation())?.let { return it }
                 finishExploration()
@@ -274,16 +277,37 @@ internal class ModelCheckingStrategy(
             }
             val child = chooseUnexploredChild()
             val position = startPosition + child
-            switchPositions.add(position)
+            switchPositions[switchPositions.lastIndex] = Pair(position, switchPositions.last().second)
             choices[child].exploreChild()?.let { return it }
             updateExplorationStatistics()
-            switchPositions.removeAt(switchPositions.lastIndex)
             return null
         }
 
         fun initialize(finishPosition: Int) {
             startPosition = lastSwitchPosition() + 1
             choices = Array(finishPosition - startPosition + 1) { ThreadChoosingNode() }
+        }
+    }
+
+    private inner class StrategyEventChoosingNode : InterleavingNode() {
+        init {
+            choices = when (mode) {
+                RecoverableMode.NONE -> Array(1) { SwitchChoosingNode() }
+                RecoverableMode.DETECTABLE_EXECUTION -> Array(2) { SwitchChoosingNode() }
+            }
+        }
+
+        override fun exploreChild(): LincheckFailure? {
+            val child = chooseUnexploredChild()
+            when (child) {
+                0 -> switchPositions.add(Pair(Int.MIN_VALUE, StrategyEvent.SWITCH))
+                1 -> switchPositions.add(Pair(Int.MIN_VALUE, StrategyEvent.CRASH))
+                else -> throw IllegalStateException()
+            }
+            choices[child].exploreChild()?.let { return it }
+            updateExplorationStatistics()
+            switchPositions.removeAt(switchPositions.lastIndex)
+            return null
         }
     }
 }

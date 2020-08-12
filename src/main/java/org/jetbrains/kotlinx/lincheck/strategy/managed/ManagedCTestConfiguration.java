@@ -51,18 +51,20 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
                     .allMethods()
                     .treatAsAtomic()
     );
+    public static final RecoverableMode DEFAULT_RECOVERABLE_MODE = RecoverableMode.NONE;
 
     public final boolean checkObstructionFreedom;
     public final boolean eliminateLocalObjects;
     public final int hangingDetectionThreshold;
     public final int invocationsPerIteration;
     public final List<ManagedStrategyGuarantee> guarantees;
+    public final RecoverableMode mode;
 
     public ManagedCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
                                      int actorsAfter, Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
                                      boolean checkObstructionFreedom, int hangingDetectionThreshold, int invocationsPerIteration,
                                      List<ManagedStrategyGuarantee> guarantees, boolean requireStateEquivalenceCheck, boolean minimizeFailedScenario,
-                                     Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
+                                     Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects, RecoverableMode mode)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
                 requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
@@ -71,5 +73,11 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
         this.invocationsPerIteration = invocationsPerIteration;
         this.guarantees = guarantees;
         this.eliminateLocalObjects = eliminateLocalObjects;
+        this.mode = mode;
+    }
+
+    public enum RecoverableMode {
+        DETECTABLE_EXECUTION,
+        NONE
     }
 }
