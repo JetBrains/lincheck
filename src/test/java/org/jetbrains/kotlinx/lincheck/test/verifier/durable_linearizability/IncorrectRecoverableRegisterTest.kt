@@ -24,7 +24,9 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.durable_linearizability
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.RecoverableMode.DETECTABLE_EXECUTION
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -48,7 +50,8 @@ class IncorrectRecoverableRegisterTest : VerifierState() {
     @Test
     fun test() {
         val options = ModelCheckingOptions().recoverable(mode = DETECTABLE_EXECUTION)
-        LinChecker.check(this::class.java, options)
+        val failure = options.checkImpl(this::class.java)
+        check(failure is IncorrectResultsFailure) { "this test should fail" }
     }
 
     override fun extractState(): Any = register.get()

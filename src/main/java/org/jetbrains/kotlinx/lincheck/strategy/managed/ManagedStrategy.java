@@ -57,7 +57,7 @@ public abstract class ManagedStrategy extends Strategy {
         this.guarantees = guarantees;
         this.shouldMakeStateRepresentation = stateRepresentation != null;
         this.eliminateLocalObjects = eliminateLocalObjects;
-        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, false, timeoutMs) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, true, timeoutMs) {
             @Override
             public void onStart(int threadId) {
                 super.onStart(threadId);

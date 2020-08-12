@@ -67,7 +67,7 @@ class RecoverableRegisterTest : VerifierState() {
         LinChecker.check(this::class.java, options)
     }
 
-    override fun extractState(): Any = register.get().value
+    override fun extractState(): Any = register.get()
 
     private data class Record(val value: Int, val threadId: Int, val operationId: Int)
 }
