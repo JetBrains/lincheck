@@ -21,8 +21,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import jdk.nashorn.internal.codegen.types.Type
 import kotlin.coroutines.Continuation
+
+internal val objectNumeration = mutableMapOf<Class<Any>, MutableMap<Any, Int>>()
 
 internal sealed class CodeLocation {
     protected abstract fun toStringImpl(): String
@@ -52,7 +53,7 @@ internal class WriteCodeLocation(private val fieldName: String?, private val sta
         if (fieldName != null)
             append("$fieldName.")
         append("WRITE(")
-        append("${adornedStringRepresentation(value)}")
+        append(adornedStringRepresentation(value))
         append(") at ${stackTraceElement.shorten()}")
     }.toString()
 
@@ -127,12 +128,19 @@ private fun StackTraceElement.shorten(): String {
 private fun adornedStringRepresentation(any: Any?): String {
     if (any is Continuation<*>)
         return "<cont>" // Continuation.toString looks ugly, so show this instead
-    val result = any.toString()
-    // to remove information about class in default toString implementation
+    val representation = any.toString()
+    // instead of java.util.HashMap$Node@3e2a56 show Node@1 for default toString implementation
     if (any != null) {
-        val internalName = Type.getInternalName(any::class.java).replace('/', '.')
-        if (result.startsWith(internalName))
-            return result.removePrefix(internalName)
+        val isDefaultToString = representation == "${any.javaClass.name}@${Integer.toHexString(any.hashCode())}"
+        if (isDefaultToString) {
+            val id = getId(any.javaClass, any)
+            return "${any.javaClass.simpleName}@$id"
+        }
     }
-    return result
+    return representation
 }
+
+private fun getId(clazz: Class<Any>, obj: Any): Int =
+    objectNumeration
+        .computeIfAbsent(clazz) { mutableMapOf() }
+        .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }

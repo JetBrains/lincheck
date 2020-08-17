@@ -45,6 +45,7 @@ internal fun StringBuilder.appendExecution(
     // set of identifiers which were appended
     val loggedMethodCalls = mutableSetOf<Int>()
     val execution = mutableListOf<InterleavingEventRepresentation>()
+    objectNumeration.clear()
     eventLoop@for (eventId in interleaving.indices) {
         val event = interleaving[eventId]
         val threadId = event.threadId
