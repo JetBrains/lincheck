@@ -77,12 +77,10 @@ public class TestThreadExecutionGenerator {
 
     private static final String INSTANCE = "INSTANCE";
 
-    private static final Type VALUE_RESULT_TYPE = getType(ValueResult.class);
-    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
-
     private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
     private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
     private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
+    private static final Method RESULT_KT_CREATE_RESULT_FROM_OBJECT_METHOD = new Method("createResultFromObject", RESULT_TYPE, new Type[] {OBJECT_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
 
@@ -212,13 +210,6 @@ public class TestThreadExecutionGenerator {
                 mv.loadThis();
                 mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
                 mv.checkCast(PARALLEL_THREADS_RUNNER_TYPE);
-            } else {
-                // Prepare to create non-processed value result of actor invocation (in case of no suspendable actors in scenario)
-                // Load type of result
-                if (actor.getMethod().getReturnType() != void.class) {
-                    mv.newInstance(VALUE_RESULT_TYPE);
-                    mv.visitInsn(DUP);
-                }
             }
             // Load test instance
             mv.loadThis();
@@ -243,7 +234,8 @@ public class TestThreadExecutionGenerator {
                 if (actor.getMethod().getReturnType() == void.class) {
                     createVoidResult(actor, mv);
                 } else {
-                    mv.invokeConstructor(VALUE_RESULT_TYPE, VALUE_RESULT_TYPE_CONSTRUCTOR);
+                    // Create result of actor invocation (in case of no suspendable actors in scenario)
+                    mv.invokeStatic(RESULT_KT_TYPE, RESULT_KT_CREATE_RESULT_FROM_OBJECT_METHOD);
                 }
             }
             // Store result to array

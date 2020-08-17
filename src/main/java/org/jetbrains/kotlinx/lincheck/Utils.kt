@@ -150,7 +150,7 @@ internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = wh
     res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
-    else -> ValueResult(res, wasSuspended)
+    else -> createResultFromObject(res, wasSuspended)
 }
 
 private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
@@ -159,10 +159,9 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
             // Throwable was returned as a successful result
             is Throwable -> ValueResult(value::class.java, wasSuspended)
-            else -> ValueResult(value, wasSuspended)
+            else -> createResultFromObject(value, wasSuspended)
         }
     } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
-
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {

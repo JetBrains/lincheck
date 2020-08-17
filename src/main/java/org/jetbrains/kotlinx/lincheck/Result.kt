@@ -1,5 +1,8 @@
 package org.jetbrains.kotlinx.lincheck
 
+import java.io.ByteArrayOutputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
 import kotlin.coroutines.*
 
 /*
@@ -49,6 +52,38 @@ data class ValueResult @JvmOverloads constructor(val value: Any?, override val w
 }
 
 /**
+ * Type of result used if the actor invocation returns a transformed object that implements Serializable.
+ */
+class SerializedResult(private val value: Any, override val wasSuspended: Boolean) : Result() {
+    private lateinit var serializedObject: ByteArray
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        // check class equality by names, because classes can be loaded via different loaders
+        if (javaClass.name != other?.javaClass?.name) return false
+        other as SerializedResult
+        if (wasSuspended != other.wasSuspended) return false
+        if (!getSerializedObject().contentEquals(other.getSerializedObject())) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return (if (wasSuspended) 1 else 0) + 2 * getSerializedObject().hashCode()
+    }
+
+    private fun getSerializedObject(): ByteArray {
+        if (!::serializedObject.isInitialized) {
+            val byteArrayStream = ByteArrayOutputStream()
+            ObjectOutputStream(byteArrayStream).use {
+                it.writeObject(value)
+            }
+            serializedObject = byteArrayStream.toByteArray()
+        }
+        return serializedObject
+    }
+}
+
+/**
  * Type of result used if the actor invocation does not return value.
  */
 object VoidResult : Result() {
@@ -84,6 +119,15 @@ data class ExceptionResult private constructor(val tClazz: Class<out Throwable>,
 // for byte-code generation
 @JvmSynthetic
 fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
+
+@JvmOverloads
+@JvmSynthetic
+fun createResultFromObject(res: Any?, wasSuspended: Boolean = false) = when {
+    res == null || TransformationClassLoader.doNotTransform(res.javaClass.name) -> ValueResult(res, wasSuspended)
+    res is Serializable -> SerializedResult(res, wasSuspended)
+    else -> throw IllegalArgumentException("Actor results should either be basic " +
+        "(java.lang.String, int, Integer, etc, and corresponding classes in other JVM languages) or implement Serializable")
+}
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet

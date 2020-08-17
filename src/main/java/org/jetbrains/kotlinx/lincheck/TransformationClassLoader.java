@@ -65,7 +65,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * @param className checking class name
      * @return result of checking class
      */
-    private static boolean doNotTransform(String className) {
+    static boolean doNotTransform(String className) {
         return className == null ||
             (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
