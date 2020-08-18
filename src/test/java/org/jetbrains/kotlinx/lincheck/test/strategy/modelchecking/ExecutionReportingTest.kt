@@ -46,7 +46,9 @@ class ExecutionReportingTest : VerifierState() {
 
     @Operation
     fun operation2() {
-        b++
+        repeat(2) {
+            a++
+        }
         treatedAsAtomic()
         uselessIncrements(2)
         intermediateMethod()
@@ -91,8 +93,10 @@ class ExecutionReportingTest : VerifierState() {
         check("operation1" in log)
         check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag" in log)
         check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag" in log)
-        check("b.READ: 0 at ExecutionReportingTest.operation2" in log)
-        check("b.WRITE(1) at ExecutionReportingTest.operation2" in log)
+        check("a.READ: 0 at ExecutionReportingTest.operation2" in log)
+        check("a.WRITE(1) at ExecutionReportingTest.operation2" in log)
+        check("a.READ: 1 at ExecutionReportingTest.operation2" in log)
+        check("a.WRITE(2) at ExecutionReportingTest.operation2" in log)
         check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
         check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)
         check("uselessIncrements(2): false at" in log) { "increments in uselessIncrements method should be compressed" }

@@ -445,6 +445,7 @@ internal abstract class ManagedStrategyBase(
         private val operationCounts = mutableMapOf<Int, Int>()
 
         fun newOperation(threadId: Int, codeLocation: Int): Boolean {
+            val codeLocation = 0 // TODO is a temporal fix
             if (lastThreadId != threadId) {
                 // if we switched threads then reset counts
                 operationCounts.clear()

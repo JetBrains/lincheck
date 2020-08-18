@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed;
  * #L%
  */
 
+import kotlin.jvm.functions.Function0;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
@@ -44,11 +45,12 @@ public abstract class ManagedStrategy extends Strategy {
     protected final int nThreads;
 
     protected final Runner runner;
-    private ManagedStrategyTransformer transformer;
     private final List<ManagedStrategyGuarantee> guarantees;
     private final boolean shouldMakeStateRepresentation;
     private final boolean eliminateLocalObjects;
     protected boolean loggingEnabled = false;
+    private final List<Function0<CodeLocation>> codeLocationConstructors = new ArrayList<>(); // for trace construction
+    private final List<CodeLocation> codeLocations = new ArrayList<>();
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
                               Method stateRepresentation, List<ManagedStrategyGuarantee> guarantees, long timeoutMs, boolean eliminateLocalObjects) {
@@ -93,15 +95,9 @@ public abstract class ManagedStrategy extends Strategy {
 
     @Override
     public ClassVisitor createTransformer(ClassVisitor cv) {
-        List<CodeLocation> previousCodeLocations;
-        if (transformer == null) {
-            previousCodeLocations = new ArrayList<>();
-        } else {
-            previousCodeLocations = transformer.getCodeLocations();
-        }
-        return transformer = new ManagedStrategyTransformer(
+        return new ManagedStrategyTransformer(
                 cv,
-                previousCodeLocations,
+                codeLocationConstructors,
                 guarantees,
                 shouldMakeStateRepresentation,
                 eliminateLocalObjects,
@@ -126,15 +122,6 @@ public abstract class ManagedStrategy extends Strategy {
         } finally {
             runner.close();
         }
-    }
-
-    /**
-     * Returns a {@link StackTraceElement} described the specified code location
-     *
-     * @param codeLocation code location identifier which is inserted by transformer
-     */
-    public final CodeLocation getLocationDescription(int codeLocation) {
-        return transformer.getCodeLocations().get(codeLocation);
     }
 
     /**
@@ -261,12 +248,6 @@ public abstract class ManagedStrategy extends Strategy {
     public void beforeCoroutineResumed(int threadId) {}
 
     /**
-     * This method is invoked before start of each actor.
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
-     */
-    public void startNewActor(int threadId) {}
-
-    /**
      * This method is invoked by a test thread
      * before each ignored section start.
      * These sections are determined by Strategy.ignoredEntryPoints()
@@ -305,7 +286,37 @@ public abstract class ManagedStrategy extends Strategy {
      */
     public void makeStateRepresentation(int threadId) {}
 
-    // == UTILITY METHODS
+    // == LOGGING METHODS ==
+
+    /**
+     * Returns a {@link CodeLocation} which describes the specified code location
+     *
+     * @param codeLocation code location identifier which is inserted by transformer
+     */
+    public final CodeLocation getLocationDescription(int codeLocation) {
+        return codeLocations.get(codeLocation);
+    }
+
+    /**
+     * Creates a new {@link CodeLocation}.
+     * The type of the created code location is defined by the used constructor.
+     * @param constructorId which constructor to use for createing code location
+     * @return index of the created code location
+     */
+    public final int createCodeLocation(int constructorId) {
+        codeLocations.add(codeLocationConstructors.get(constructorId).invoke());
+        return codeLocations.size() - 1;
+    }
+
+    /**
+     * Returns index of the last code location.
+     */
+    public final int lastCodeLocationIndex() {
+        return codeLocations.size() - 1;
+    }
+
+
+    // == UTILITY METHODS ==
 
     /**
      * This method is invoked by transformed via {@link ManagedStrategyTransformer} code,
