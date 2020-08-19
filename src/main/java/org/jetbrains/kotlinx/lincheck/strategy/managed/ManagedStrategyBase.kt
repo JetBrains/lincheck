@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -240,7 +241,7 @@ internal abstract class ManagedStrategyBase(
      * Create a new switch point, where a thread context switch can occur
      */
     protected fun newSwitchPoint(threadId: Int, codeLocation: Int) {
-        if (threadId == nThreads) return // can suspend only test threads
+        if (threadId == nThreads) return // can switch only test threads
         check(threadId == currentThread)
         if (ignoredSectionDepth[threadId] != 0) return // can not suspend in ignored sections
         // save code location description corresponding to the current switch point,

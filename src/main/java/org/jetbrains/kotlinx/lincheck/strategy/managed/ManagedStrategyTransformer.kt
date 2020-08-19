@@ -84,8 +84,7 @@ internal class ManagedStrategyTransformer(
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (loggingEnabled)
-            mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -405,7 +404,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeAtomicMethodCall() {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadLastCodeLocationId() // re-use code location
+            adapter.push(codeLocationsConstructors.lastIndex) // re-use code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
@@ -446,6 +445,13 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
+            if (!loggingEnabled) {
+                // just add null to increase code location id
+                codeLocationsConstructors.add(null)
+                adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                return
+            }
+
             val codeLocationLocal = adapter.newLocal(Type.INT_TYPE)
             beforeMethodCall(owner, name, desc, codeLocationLocal)
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -1090,11 +1096,6 @@ internal class ManagedStrategyTransformer(
             adapter.push(codeLocationsConstructors.lastIndex)
         }
 
-        protected fun loadLastCodeLocationId() {
-            loadStrategy()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LAST_CODELOCATION_INDEX_METHOD)
-        }
-
         protected fun newCodeLocationLocal(): Int? =
             if (loggingEnabled) {
                 val codeLocationLocal = adapter.newLocal(Type.INT_TYPE)
@@ -1147,7 +1148,6 @@ internal class ManagedStrategyTransformer(
         private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::makeStateRepresentation.javaMethod)
         private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
         private val GET_CODELOCATION_DESCRIPTION_METHOD = Method.getMethod(ManagedStrategy::getLocationDescription.javaMethod)
-        private val LAST_CODELOCATION_INDEX_METHOD = Method.getMethod(ManagedStrategy::lastCodeLocationIndex.javaMethod)
         private val CREATE_CODELOCATION_METHOD = Method.getMethod(ManagedStrategy::createCodeLocation.javaMethod)
         private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::newLocalObject.javaMethod)
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(LocalObjectManager::deleteLocalObject.javaMethod)

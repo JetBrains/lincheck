@@ -308,14 +308,6 @@ public abstract class ManagedStrategy extends Strategy {
         return codeLocations.size() - 1;
     }
 
-    /**
-     * Returns index of the last code location.
-     */
-    public final int lastCodeLocationIndex() {
-        return codeLocations.size() - 1;
-    }
-
-
     // == UTILITY METHODS ==
 
     /**
