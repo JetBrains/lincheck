@@ -21,17 +21,20 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
+import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
+import java.io.*
+import java.lang.IllegalArgumentException
 import java.lang.ref.WeakReference
-import java.lang.reflect.*
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 import java.util.*
-import kotlin.coroutines.*
-import kotlin.coroutines.intrinsics.*
-
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 @Volatile
 private var consumedCPU = System.currentTimeMillis().toInt()
@@ -78,7 +81,8 @@ internal fun executeActor(
 ): Result {
     try {
         val m = getMethod(instance, actor.method)
-        val args = if (actor.isSuspendable) actor.arguments + completion else actor.arguments
+        val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
+            .map { it.transportToLoader(instance.javaClass.classLoader) }
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
@@ -126,10 +130,24 @@ private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReferen
 private fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
     return methods[method]?.get() ?: run {
-        val m = instance.javaClass.getMethod(method.name, *method.parameterTypes)
+        val m = instance.javaClass.getMethod(method.name, method.parameterTypes)
         methods[method] = WeakReference(m)
         m
     }
+}
+
+/**
+ * Finds a method corresponding to [name] and [parameterTypes] ignoring difference in loaders for [parameterTypes].
+ */
+private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method {
+    this.methods.forEach {
+        if (it.name == name && it.parameterTypes.size == parameterTypes.size) {
+            val sameParameters = parameterTypes.indices.all  { i -> it.parameterTypes[i].name == parameterTypes[i].name }
+            if (sameParameters)
+                return it
+        }
+    }
+    throw NoSuchMethodException("${getName()}.$name(${parameterTypes.joinToString(",")})");
 }
 
 /**
@@ -209,4 +227,43 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     } else {
         storedLastCancellableCont = cont
     }
+}
+
+internal fun transportScenarioToLoader(scenario: ExecutionScenario, loader: ClassLoader) =
+    ExecutionScenario(
+        scenario.initExecution,
+        scenario.parallelExecution.map { it.map { actor ->
+            Actor(
+                actor.method,
+                actor.arguments.map { it.transportToLoader(loader) },
+                actor.handledExceptions,
+                actor.cancelOnSuspension,
+                actor.allowExtraSuspension
+            )
+        } },
+        scenario.postExecution
+    )
+
+private fun Any?.transportToLoader(loader: ClassLoader): Any? =
+    when {
+        this == null || TransformationClassLoader.doNotTransform(this.javaClass.name) -> this
+        this is Serializable -> {
+            val outputStream = ByteArrayOutputStream()
+            ObjectOutputStream(outputStream).use {
+                it.writeObject(this)
+            }
+            val inputStream = ByteArrayInputStream(outputStream.toByteArray())
+            CustomObjectInputStream(loader, inputStream).use {
+                it.readObject()
+            }
+        }
+        else -> throw IllegalArgumentException("Actor parameters should either be basic" +
+            "(java.lang.String, int, Integer, etc, and corresponding classes in other JVM languages) or implement Serializable")
+    }
+
+/**
+ * ObjectInputStream that uses custom class loader.
+ */
+private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
+    override fun resolveClass(desc: ObjectStreamClass): Class<*> = Class.forName(desc.name, true, loader)
 }

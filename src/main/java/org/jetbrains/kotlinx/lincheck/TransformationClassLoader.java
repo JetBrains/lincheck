@@ -69,7 +69,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         return className == null ||
             (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.endsWith("ManagedStrategyHolder")) ||
+                !className.endsWith("ManagedStrategyHolder") &&
+                !className.endsWith("TransformableUtils")) ||
             className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||

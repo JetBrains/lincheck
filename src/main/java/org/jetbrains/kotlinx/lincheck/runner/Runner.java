@@ -47,9 +47,9 @@ public abstract class Runner {
     protected final AtomicInteger completedOrSuspendedThreads = new AtomicInteger(0);
 
     protected Runner(Strategy strategy, Class<?> testClass, List<Method> validationFunctions) {
-        this.scenario = strategy.getScenario();
         this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
             new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
+        this.scenario = UtilsKt.transportScenarioToLoader(strategy.getScenario(), classLoader);
         this.testClass = loadClass(testClass.getTypeName());
         this.validationFunctions = validationFunctions;
     }

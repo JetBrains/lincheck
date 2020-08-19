@@ -57,6 +57,8 @@ data class ValueResult @JvmOverloads constructor(val value: Any?, override val w
 class SerializedResult(private val value: Any, override val wasSuspended: Boolean) : Result() {
     private lateinit var serializedObject: ByteArray
 
+    override fun toString() = wasSuspendedPrefix + "$value"
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         // check class equality by names, because classes can be loaded via different loaders
