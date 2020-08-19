@@ -131,7 +131,7 @@ internal abstract class ManagedStrategyBase(
     override fun beforeLockRelease(threadId: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(threadId)) return true
         monitorTracker.releaseMonitor(monitor)
-        eventCollector.passCodeLocation(threadId, codeLocation)
+        eventCollector.passCodeLocation(threadId, codeLocation, codeLocations.lastIndex)
         return false
     }
 
@@ -142,7 +142,7 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun afterUnpark(threadId: Int, codeLocation: Int, thread: Any) {
-        eventCollector.passCodeLocation(threadId, codeLocation)
+        eventCollector.passCodeLocation(threadId, codeLocation, codeLocations.lastIndex)
     }
 
     override fun beforeWait(threadId: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
@@ -162,7 +162,7 @@ internal abstract class ManagedStrategyBase(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        eventCollector.passCodeLocation(threadId, codeLocation)
+        eventCollector.passCodeLocation(threadId, codeLocation, codeLocations.lastIndex)
     }
 
     override fun afterCoroutineSuspended(threadId: Int) {
@@ -207,7 +207,8 @@ internal abstract class ManagedStrategyBase(
             } else {
                 methodIdentifier++
             }
-            callStackTrace.add(CallStackTraceElement(getLocationDescription(codeLocation) as MethodCallCodeLocation, methodId))
+            // code location of the new method call is currently the last
+            callStackTrace.add(CallStackTraceElement(codeLocations.last() as MethodCallCodeLocation, methodId))
         }
     }
 
@@ -242,7 +243,9 @@ internal abstract class ManagedStrategyBase(
         if (threadId == nThreads) return // can suspend only test threads
         check(threadId == currentThread)
         if (ignoredSectionDepth[threadId] != 0) return // can not suspend in ignored sections
-        awaitTurn(threadId)
+        // save code location description corresponding to the current switch point,
+        // it is last code location now, but will be not last after a possible switch
+        val codeLocationDescriptionId = codeLocations.lastIndex
         var isLoop = false
         if (loopDetector.newOperation(threadId, codeLocation)) {
             checkCanHaveObstruction { "At least obstruction freedom required, but an active lock found" }
@@ -253,7 +256,7 @@ internal abstract class ManagedStrategyBase(
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(threadId, reason)
         }
-        eventCollector.passCodeLocation(threadId, codeLocation)
+        eventCollector.passCodeLocation(threadId, codeLocation, codeLocationDescriptionId)
         // continue operation
     }
 
@@ -445,7 +448,6 @@ internal abstract class ManagedStrategyBase(
         private val operationCounts = mutableMapOf<Int, Int>()
 
         fun newOperation(threadId: Int, codeLocation: Int): Boolean {
-            val codeLocation = 0 // TODO is a temporal fix
             if (lastThreadId != threadId) {
                 // if we switched threads then reset counts
                 operationCounts.clear()
@@ -483,13 +485,13 @@ internal abstract class ManagedStrategyBase(
             interleavingEvents.add(FinishEvent(threadId))
         }
 
-        fun passCodeLocation(threadId: Int, codeLocation: Int) {
+        fun passCodeLocation(threadId: Int, codeLocation: Int, codeLocationDescriptionId: Int) {
             if (!loggingEnabled) return // check that should log thread events
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
                 enterIgnoredSection(threadId)
                 interleavingEvents.add(PassCodeLocationEvent(
                         threadId, currentActorId[threadId],
-                        getLocationDescription(codeLocation),
+                        getLocationDescription(codeLocationDescriptionId),
                         callStackTrace[threadId].toList()
                 ))
                 leaveIgnoredSection(threadId)

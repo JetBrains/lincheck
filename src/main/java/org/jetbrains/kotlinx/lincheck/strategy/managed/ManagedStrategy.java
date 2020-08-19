@@ -50,7 +50,7 @@ public abstract class ManagedStrategy extends Strategy {
     private final boolean eliminateLocalObjects;
     protected boolean loggingEnabled = false;
     private final List<Function0<CodeLocation>> codeLocationConstructors = new ArrayList<>(); // for trace construction
-    private final List<CodeLocation> codeLocations = new ArrayList<>();
+    protected final List<CodeLocation> codeLocations = new ArrayList<>();
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
                               Method stateRepresentation, List<ManagedStrategyGuarantee> guarantees, long timeoutMs, boolean eliminateLocalObjects) {

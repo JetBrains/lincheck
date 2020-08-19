@@ -43,7 +43,7 @@ import kotlin.reflect.jvm.javaMethod
  */
 internal class ManagedStrategyTransformer(
         cv: ClassVisitor?,
-        private val codeLocationsConstructors: MutableList<() -> CodeLocation>,
+        private val codeLocationsConstructors: MutableList<(() -> CodeLocation)?>,
         private val guarantees: List<ManagedStrategyGuarantee>,
         private val shouldMakeStateRepresentation: Boolean,
         private val shouldEliminateLocalObjects: Boolean,
@@ -348,9 +348,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeSharedVariableReadOrWrite(method: Method, codeLocationLocal: Int?, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(codeLocationConstructor)
-            if (codeLocationLocal != null)
-                adapter.copyLocal(codeLocationLocal)
+            loadNewCodeLocation(codeLocationLocal, codeLocationConstructor)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
 
@@ -515,8 +513,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeMethodCall(methodName: String, codeLocationLocal: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation { ste -> MethodCallCodeLocation(methodName, ste) }
-            adapter.copyLocal(codeLocationLocal)
+            loadNewCodeLocation(codeLocationLocal) { ste -> MethodCallCodeLocation(methodName, ste) }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
         }
 
@@ -673,7 +670,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(codeLocationConstructor)
+            loadNewCodeLocation(null, codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
@@ -808,7 +805,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(codeLocationConstructor)
+            loadNewCodeLocation(null, codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.push(flag)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
@@ -866,7 +863,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(::ParkCodeLocation)
+            loadNewCodeLocation(null, ::ParkCodeLocation)
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
         }
@@ -877,7 +874,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(threadLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(::UnparkCodeLocation)
+            loadNewCodeLocation(null, ::UnparkCodeLocation)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
         }
@@ -1072,16 +1069,25 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD)
         }
 
-        protected fun loadNewCodeLocation(codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
+        protected fun loadNewCodeLocation(codeLocationLocal: Int?, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             if (loggingEnabled) {
+                // add constructor for the code location
                 codeLocationsConstructors.add { codeLocationConstructor(StackTraceElement(className, methodName, fileName, lineNumber)) }
+                // invoke the constructor
                 loadStrategy()
                 adapter.push(codeLocationsConstructors.lastIndex)
                 adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CREATE_CODELOCATION_METHOD)
+                // the id of created code location is either stored to codeLocationLocal or popped
+                if (codeLocationLocal != null)
+                    adapter.storeLocal(codeLocationLocal)
+                else
+                    adapter.pop()
             } else {
-                // push any value, because without logging enabled code locations are not used
-                adapter.push(-100)
+                // code locations are not used when logging is disabled
+                // just add null, because size of codeLocationsConstructors helps to numerate code locations
+                codeLocationsConstructors.add(null)
             }
+            adapter.push(codeLocationsConstructors.lastIndex)
         }
 
         protected fun loadLastCodeLocationId() {
