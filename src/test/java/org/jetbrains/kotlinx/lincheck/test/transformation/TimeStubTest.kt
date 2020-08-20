@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.transformer
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -28,23 +28,30 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
 /**
- * Checks that [Object.hashCode] is replaced with a deterministic
- * implementations in the model checking mode.
+ * Checks that [System.nanoTime] and [System.currentTimeMillis] are
+ * replaced with deterministic implementations in the model checking mode.
  */
-@ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
-class HashCodeStubTest : VerifierState() {
+@ModelCheckingCTest(iterations = 30, invocationsPerIteration = 1000)
+class TimeStubTest : VerifierState() {
     @Volatile
     private var a: Any = Any()
 
     @Operation
-    fun operation() {
-        val newA = Any()
-        if (newA.hashCode() % 3 == 2) {
+    fun nanoTime() {
+        if (System.nanoTime() % 3L == 2L) {
             // just add some code locations
             a = Any()
             a = Any()
         }
-        a = newA // to prevent stack allocation
+    }
+
+    @Operation
+    fun currentTimeMillis() {
+        if (System.currentTimeMillis() % 3L == 2L) {
+            // just add some code locations
+            a = Any()
+            a = Any()
+        }
     }
 
     @Test
@@ -53,4 +60,5 @@ class HashCodeStubTest : VerifierState() {
     }
 
     override fun extractState(): Any = 543
+
 }

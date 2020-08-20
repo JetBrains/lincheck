@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.transformer;
+package org.jetbrains.kotlinx.lincheck.test.transformation;
 
 import org.jetbrains.annotations.*;
 import org.jetbrains.kotlinx.lincheck.*;

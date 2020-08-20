@@ -19,47 +19,46 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.transformer
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
-import java.util.*
-import java.util.concurrent.*
 
 /**
- * Checks that [Random] and [ThreadLocalRandom] are replaced
- * with deterministic implementations in the model checking mode.
+ * This test checks that managed strategies do not try to switch
+ * thread context at reads and writes of local objects.
+ * In case a strategy does not have this optimization,
+ * this test fails by timeout since the number of
+ * invocations is set to [Int.MAX_VALUE].
  */
-@ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
-class RandomTransformationTest : VerifierState() {
-    @Volatile
-    private var a: Any = Any()
-
+@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
+class LocalObjectEliminationTest : VerifierState() {
     @Operation
-    fun random() {
-        if (Random().nextInt() % 3 == 2) {
-            // just add some code locations
-            a = Any()
-            a = Any()
+    fun operation(): Int {
+        val a = A(0, this, IntArray(2))
+        a.any = a
+        repeat(20) {
+            a.value = it
         }
+        a.array[1] = 54
+        val b = A(a.value, a.any, a.array)
+        b.value = 65
+        repeat(20) {
+            b.array[0] = it
+        }
+        a.any = b
+        return (a.any as A).array.sum()
     }
 
-    @Operation
-    fun threadLocalRandom() {
-        if (ThreadLocalRandom.current().nextInt() % 3 == 2) {
-            // just add some code locations
-            a = Any()
-            a = Any()
-        }
-    }
-
-    @Test
+    @Test(timeout = 100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }
 
-    override fun extractState(): Any = 543
+    override fun extractState(): Any = 54 // any constant value
+
+    private data class A(var value: Int, var any: Any, val array: IntArray)
 }

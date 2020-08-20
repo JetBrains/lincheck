@@ -19,26 +19,28 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.transformer
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
+import java.util.*
+import java.util.concurrent.*
 
 /**
- * Checks that [System.nanoTime] and [System.currentTimeMillis] are
- * replaced with deterministic implementations in the model checking mode.
+ * Checks that [Random] and [ThreadLocalRandom] are replaced
+ * with deterministic implementations in the model checking mode.
  */
-@ModelCheckingCTest(iterations = 30, invocationsPerIteration = 1000)
-class TimeStubTest : VerifierState() {
+@ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
+class RandomTransformationTest : VerifierState() {
     @Volatile
     private var a: Any = Any()
 
     @Operation
-    fun nanoTime() {
-        if (System.nanoTime() % 3L == 2L) {
+    fun random() {
+        if (Random().nextInt() % 3 == 2) {
             // just add some code locations
             a = Any()
             a = Any()
@@ -46,8 +48,8 @@ class TimeStubTest : VerifierState() {
     }
 
     @Operation
-    fun currentTimeMillis() {
-        if (System.currentTimeMillis() % 3L == 2L) {
+    fun threadLocalRandom() {
+        if (ThreadLocalRandom.current().nextInt() % 3 == 2) {
             // just add some code locations
             a = Any()
             a = Any()
@@ -60,5 +62,4 @@ class TimeStubTest : VerifierState() {
     }
 
     override fun extractState(): Any = 543
-
 }

@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.transformer
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -28,25 +28,27 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 /**
- * Tests that java.lang.Iterable is transformed and
- * iterator() method returns transformed java.util.Iterator
+ * This test checks that managed strategies do not switch
+ * the execution thread at final field reads since they are
+ * not interesting code locations for concurrent execution.
+ * Otherwise, this test fails by timeout since
+ * the number of invocations is set to [Int.MAX_VALUE].
  */
-@ModelCheckingCTest(iterations = 1, actorsBefore = 1, actorsAfter = 1, actorsPerThread = 1)
-class IterableTransformationTest : VerifierState() {
-    private var sum = 0
+@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
+class FinalFieldReadingEliminationTest : VerifierState() {
+    val value: Int = 32
+    val any: Any = this
 
     @Operation
-    fun operation() {
-        val iterable: Iterable<Int> = listOf(1, 2, 3)
-        for (i in iterable) {
-            sum += i
-        }
-    }
+    fun readValue() = value
 
-    @Test
+    @Operation
+    fun readAny() = any
+
+    @Test(timeout = 100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }
 
-    override fun extractState(): Any = 54 // any constant value
+    override fun extractState(): Any = value
 }
