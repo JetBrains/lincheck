@@ -174,7 +174,9 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     for ((t, stackTrace) in failure.threadDump) {
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.threadId.toString() else "?"
         appendln("Thread-$threadNumber:")
-        for (ste in stackTrace) {
+        for (s in stackTrace) {
+            // remove transformation package predix
+            val ste = StackTraceElement(s.className.removePrefix(TransformationClassLoader.TRANSFORMED_PACKAGE_NAME), s.methodName, s.fileName, s.lineNumber)
             if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
             // omit information about strategy code insertions
             if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.strategy.")) continue

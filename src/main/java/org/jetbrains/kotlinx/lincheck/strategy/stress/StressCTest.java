@@ -49,7 +49,7 @@ public @interface StressCTest {
     /**
      * Run each test scenario {@code invocations} times.
      */
-    int invocationsPerIteration() default StressCTestConfiguration.DEFAULT_INVOCATIONS;
+    int invocationsPerIteration() default CTestConfiguration.DEFAULT_INVOCATIONS_PER_ITERATION;
 
     /**
      * Use the specified number of threads for the parallel part of an execution.

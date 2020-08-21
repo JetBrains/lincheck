@@ -55,7 +55,6 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
     public final boolean checkObstructionFreedom;
     public final boolean eliminateLocalObjects;
     public final int hangingDetectionThreshold;
-    public final int invocationsPerIteration;
     public final List<ManagedStrategyGuarantee> guarantees;
 
     public ManagedCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore,
@@ -65,10 +64,9 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
                                      Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
+                invocationsPerIteration, requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
         this.checkObstructionFreedom = checkObstructionFreedom;
         this.hangingDetectionThreshold = hangingDetectionThreshold;
-        this.invocationsPerIteration = invocationsPerIteration;
         this.guarantees = guarantees;
         this.eliminateLocalObjects = eliminateLocalObjects;
     }

@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -41,12 +43,20 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var minimizeFailedScenario = DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = DEFAULT_TIMEOUT_MS
+    protected var invocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION
 
     /**
      * Number of different test scenarios to be executed
      */
     fun iterations(iterations: Int): OPT = applyAndCast {
         this.iterations = iterations
+    }
+
+    /**
+     * Run each test scenario `invocations` times.
+     */
+    fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
+        this.invocationsPerIteration = invocations
     }
 
     /**

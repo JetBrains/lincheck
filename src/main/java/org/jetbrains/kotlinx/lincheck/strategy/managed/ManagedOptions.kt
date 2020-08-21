@@ -31,7 +31,6 @@ import java.util.*
 abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
     protected var checkObstructionFreedom = ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD
-    protected var invocationsPerIteration = ManagedCTestConfiguration.DEFAULT_INVOCATIONS
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
     protected var eliminateLocalObjects: Boolean = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS;
 
@@ -50,15 +49,6 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun hangingDetectionThreshold(hangingDetectionThreshold: Int): OPT = applyAndCast {
         this.hangingDetectionThreshold = hangingDetectionThreshold
-    }
-
-    /**
-     * The number of invocations that managed strategy may use to search for an incorrect execution.
-     * In case of small scenarios with only a few "interesting" code locations a lesser than this
-     * number of invocations will be used.
-     */
-    fun invocationsPerIteration(invocationsPerIteration: Int): OPT = applyAndCast {
-        this.invocationsPerIteration = invocationsPerIteration
     }
 
     /**

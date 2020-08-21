@@ -244,8 +244,3 @@ internal object UnsafeHolder {
 
 internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces()
         .filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode() }
-        .mapValues { (_, stackTrace) ->
-            stackTrace.map {
-                StackTraceElement(it.className.removePrefix(TRANSFORMED_PACKAGE_NAME), it.methodName, it.fileName, it.lineNumber)
-            }.toTypedArray()
-        }
