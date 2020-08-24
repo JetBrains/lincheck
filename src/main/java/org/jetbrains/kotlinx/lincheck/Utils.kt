@@ -23,15 +23,13 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
 import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
 import java.io.*
-import java.lang.IllegalArgumentException
-import java.lang.ref.WeakReference
-import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.Method
+import java.lang.*
+import java.lang.ref.*
+import java.lang.reflect.*
 import java.util.*
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
@@ -82,7 +80,7 @@ internal fun executeActor(
     try {
         val m = getMethod(instance, actor.method)
         val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
-            .map { it.transportToLoader(instance.javaClass.classLoader) }
+            .map { it.convertForLoader(instance.javaClass.classLoader) }
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
@@ -103,7 +101,7 @@ internal fun executeActor(
 }
 
 internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
-                                        onError: (functionName: String, exception: Throwable) -> Unit) {
+                                               onError: (functionName: String, exception: Throwable) -> Unit) {
     for (f in validationFunctions) {
         val validationException = executeValidationFunction(instance, f)
         if (validationException != null) {
@@ -139,16 +137,10 @@ private fun getMethod(instance: Any, method: Method): Method {
 /**
  * Finds a method corresponding to [name] and [parameterTypes] ignoring difference in loaders for [parameterTypes].
  */
-private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method {
-    this.methods.forEach {
-        if (it.name == name && it.parameterTypes.size == parameterTypes.size) {
-            val sameParameters = parameterTypes.indices.all  { i -> it.parameterTypes[i].name == parameterTypes[i].name }
-            if (sameParameters)
-                return it
-        }
-    }
-    throw NoSuchMethodException("${getName()}.$name(${parameterTypes.joinToString(",")})");
-}
+private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method =
+    methods.find { method ->
+        method.name == name && method.parameterTypes.map { it.name } == parameterTypes.map { it.name }
+    } ?: throw NoSuchMethodException("${getName()}.$name(${parameterTypes.joinToString(",")})")
 
 /**
  * Creates [Result] of corresponding type from any given value.
@@ -168,7 +160,7 @@ internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = wh
     res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
-    else -> createResultFromObject(res, wasSuspended)
+    else -> ValueResult(res, wasSuspended)
 }
 
 private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
@@ -177,7 +169,7 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
             // Throwable was returned as a successful result
             is Throwable -> ValueResult(value::class.java, wasSuspended)
-            else -> createResultFromObject(value, wasSuspended)
+            else -> ValueResult(value, wasSuspended)
         }
     } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
 
@@ -229,13 +221,13 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     }
 }
 
-internal fun transportScenarioToLoader(scenario: ExecutionScenario, loader: ClassLoader) =
+internal fun convertForLoader(scenario: ExecutionScenario, loader: ClassLoader) =
     ExecutionScenario(
         scenario.initExecution,
         scenario.parallelExecution.map { it.map { actor ->
             Actor(
                 actor.method,
-                actor.arguments.map { it.transportToLoader(loader) },
+                actor.arguments.map { it.convertForLoader(loader) },
                 actor.handledExceptions,
                 actor.cancelOnSuspension,
                 actor.allowExtraSuspension
@@ -244,7 +236,7 @@ internal fun transportScenarioToLoader(scenario: ExecutionScenario, loader: Clas
         scenario.postExecution
     )
 
-private fun Any?.transportToLoader(loader: ClassLoader): Any? =
+private fun Any?.convertForLoader(loader: ClassLoader): Any? =
     when {
         this == null || TransformationClassLoader.doNotTransform(this.javaClass.name) -> this
         this is Serializable -> {

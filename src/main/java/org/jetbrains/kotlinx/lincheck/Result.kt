@@ -1,8 +1,6 @@
 package org.jetbrains.kotlinx.lincheck
 
-import java.io.ByteArrayOutputStream
-import java.io.ObjectOutputStream
-import java.io.Serializable
+import java.io.*
 import kotlin.coroutines.*
 
 /*
@@ -47,34 +45,36 @@ sealed class Result {
 /**
  * Type of result used if the actor invocation returns any value.
  */
-data class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
-    override fun toString() = wasSuspendedPrefix + "$value"
-}
-
-/**
- * Type of result used if the actor invocation returns a transformed object that implements Serializable.
- */
-class SerializedResult(private val value: Any, override val wasSuspended: Boolean) : Result() {
+class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
     private lateinit var serializedObject: ByteArray
+    private val valueTransformed: Boolean
+        get() = value?.javaClass?.classLoader is TransformationClassLoader
 
     override fun toString() = wasSuspendedPrefix + "$value"
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
         // check class equality by names, because classes can be loaded via different loaders
         if (javaClass.name != other?.javaClass?.name) return false
-        other as SerializedResult
+        other as ValueResult
         if (wasSuspended != other.wasSuspended) return false
-        if (!getSerializedObject().contentEquals(other.getSerializedObject())) return false
+        val valueTransformed = valueTransformed
+        if (valueTransformed != other.valueTransformed) return false
+        if (valueTransformed) {
+            if (!getSerializedObject().contentEquals(other.getSerializedObject())) return false
+        } else {
+            if (value != other.value) return false
+        }
         return true
     }
 
-    override fun hashCode(): Int {
-        return (if (wasSuspended) 1 else 0) + 2 * getSerializedObject().hashCode()
-    }
+    override fun hashCode(): Int = (if (wasSuspended) 1 else 0) + 2 * value.hashCode()
 
     private fun getSerializedObject(): ByteArray {
         if (!::serializedObject.isInitialized) {
+            if (value !is Serializable) {
+                throw IllegalArgumentException("Actor results should either be basic " +
+                    "(java.lang.String, int, Integer, etc, and corresponding classes in other JVM languages) or implement Serializable")
+            }
             val byteArrayStream = ByteArrayOutputStream()
             ObjectOutputStream(byteArrayStream).use {
                 it.writeObject(value)
@@ -121,15 +121,6 @@ data class ExceptionResult private constructor(val tClazz: Class<out Throwable>,
 // for byte-code generation
 @JvmSynthetic
 fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
-
-@JvmOverloads
-@JvmSynthetic
-fun createResultFromObject(res: Any?, wasSuspended: Boolean = false) = when {
-    res == null || TransformationClassLoader.doNotTransform(res.javaClass.name) -> ValueResult(res, wasSuspended)
-    res is Serializable -> SerializedResult(res, wasSuspended)
-    else -> throw IllegalArgumentException("Actor results should either be basic " +
-        "(java.lang.String, int, Integer, etc, and corresponding classes in other JVM languages) or implement Serializable")
-}
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet

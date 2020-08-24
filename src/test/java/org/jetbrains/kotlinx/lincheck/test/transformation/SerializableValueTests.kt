@@ -22,12 +22,27 @@
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import java.io.Serializable
 import java.util.concurrent.atomic.*
+
+class SerializableResultTest : AbstractLincheckTest() {
+    private val counter = AtomicReference(ValueHolder(0))
+
+    @Operation
+    fun getAndSet(key: Int) = counter.getAndSet(ValueHolder(key))
+
+    override fun extractState(): Any = counter.get().value
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(1)
+        actorsBefore(0)
+        actorsAfter(0)
+    }
+}
+
 
 @Param(name = "key", gen = ValueHolderGen::class)
 class SerializableParameterTest : AbstractLincheckTest() {
@@ -43,12 +58,13 @@ class SerializableParameterTest : AbstractLincheckTest() {
     }
 
     override fun extractState(): Any = counter.get()
-
-    class ValueHolder(val value: Int) : Serializable
 }
 
-class ValueHolderGen(conf: String) : ParameterGenerator<SerializableParameterTest.ValueHolder> {
-    override fun generate(): SerializableParameterTest.ValueHolder {
-        return listOf(SerializableParameterTest.ValueHolder(1), SerializableParameterTest.ValueHolder(2)).random()
+
+class ValueHolder(val value: Int) : Serializable
+
+class ValueHolderGen(conf: String) : ParameterGenerator<ValueHolder> {
+    override fun generate(): ValueHolder {
+        return listOf(ValueHolder(1), ValueHolder(2)).random()
     }
 }

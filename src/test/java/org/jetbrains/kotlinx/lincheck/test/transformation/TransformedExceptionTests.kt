@@ -23,23 +23,34 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.consumeCPU
-import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
+
+class ExpectedTransformedExceptionTest : AbstractLincheckTest() {
+    @Operation(handleExceptionsAsResult = [CustomException::class])
+    fun operation(): Unit = throw CustomException()
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(1)
+    }
+
+    override fun extractState(): Any = 0 // constant state
+}
 
 class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
     @Volatile
-    var canEnterForbiddenBlock = false
+    var throwException = false
 
     @Operation
     fun operation(): Int {
-        canEnterForbiddenBlock = true
-        consumeCPU(2000)
-        canEnterForbiddenBlock = false
-        if (canEnterForbiddenBlock)
+        throwException = true
+        throwException = false
+        if (throwException)
             throw CustomException()
         return 0
     }
 
-    override fun extractState(): Any = canEnterForbiddenBlock
+    override fun extractState(): Any = 0 // constant state
 }
+
+internal class CustomException : Throwable()
