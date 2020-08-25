@@ -179,7 +179,7 @@ internal abstract class ManagedStrategyBase(
         }
     }
 
-    override fun beforeCoroutineResumed(threadId: Int) {
+    override fun afterCoroutineResumed(threadId: Int) {
         check(currentThread == threadId)
         isSuspended[threadId].set(false)
     }

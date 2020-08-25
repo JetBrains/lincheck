@@ -86,7 +86,7 @@ public abstract class ManagedStrategy extends Strategy {
 
             @Override
             public void beforeCoroutineResumed(int threadId) {
-                ManagedStrategy.this.beforeCoroutineResumed(threadId);
+                ManagedStrategy.this.afterCoroutineResumed(threadId);
                 super.beforeCoroutineResumed(threadId);
             }
         };
@@ -245,7 +245,7 @@ public abstract class ManagedStrategy extends Strategy {
      * if a coroutine was resumed
      * @param threadId number of invoking thread
      */
-    public void beforeCoroutineResumed(int threadId) {}
+    public void afterCoroutineResumed(int threadId) {}
 
     /**
      * This method is invoked by a test thread
