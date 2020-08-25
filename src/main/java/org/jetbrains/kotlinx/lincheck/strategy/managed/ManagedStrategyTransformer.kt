@@ -1078,6 +1078,9 @@ internal class ManagedStrategyTransformer(
         protected fun loadNewCodeLocation(codeLocationLocal: Int?, codeLocationConstructor: (StackTraceElement) -> CodeLocation) {
             if (loggingEnabled) {
                 // add constructor for the code location
+                val className = className  // for capturing by value in lambda constructor
+                val fileName = fileName
+                val lineNumber = lineNumber
                 codeLocationsConstructors.add { codeLocationConstructor(StackTraceElement(className, methodName, fileName, lineNumber)) }
                 // invoke the constructor
                 loadStrategy()

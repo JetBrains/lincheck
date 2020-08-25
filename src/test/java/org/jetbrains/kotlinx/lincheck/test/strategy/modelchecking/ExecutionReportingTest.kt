@@ -91,8 +91,8 @@ class ExecutionReportingTest : VerifierState() {
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
         check("operation1" in log)
-        check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag" in log)
-        check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag" in log)
+        check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:65)" in log)
+        check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:67)" in log)
         check("a.READ: 0 at ExecutionReportingTest.operation2" in log)
         check("a.WRITE(1) at ExecutionReportingTest.operation2" in log)
         check("a.READ: 1 at ExecutionReportingTest.operation2" in log)
