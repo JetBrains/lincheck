@@ -72,7 +72,7 @@ internal class MethodCallCodeLocation(private val methodName: String, private va
             append(parameters!!.joinToString(",", transform = ::adornedStringRepresentation))
         append(")")
         if (returnedValue != null)
-            append(": ${returnedValue!!.value}")
+            append(": ${adornedStringRepresentation(returnedValue!!.value)}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
