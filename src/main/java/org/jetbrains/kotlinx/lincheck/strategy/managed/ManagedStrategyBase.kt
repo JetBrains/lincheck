@@ -87,7 +87,7 @@ internal abstract class ManagedStrategyBase(
         awaitTurn(threadId)
         finished[threadId].set(true)
         eventCollector.finishThread(threadId)
-        onNewSwitch(threadId)
+        onNewSwitch(threadId, true)
         doSwitchCurrentThread(threadId, true)
     }
 
@@ -99,7 +99,7 @@ internal abstract class ManagedStrategyBase(
     /**
      * Is executed before any thread switch
      */
-    protected open fun onNewSwitch(threadId: Int) {}
+    protected open fun onNewSwitch(threadId: Int, mustSwitch: Boolean) {}
 
     override fun beforeSharedVariableRead(threadId: Int, codeLocation: Int) {
         newSwitchPoint(threadId, codeLocation)
@@ -271,7 +271,7 @@ internal abstract class ManagedStrategyBase(
      */
     protected fun switchCurrentThread(threadId: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         eventCollector.newSwitch(threadId, reason)
-        onNewSwitch(threadId)
+        onNewSwitch(threadId, mustSwitch)
         doSwitchCurrentThread(threadId, mustSwitch)
         awaitTurn(threadId)
     }

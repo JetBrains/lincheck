@@ -482,21 +482,20 @@ Post part:
 = The execution that led to this result =
 = Parallel part execution: =
 | put(4, -4)                                                  |                      |
-|   table.READ: null at HashMap.putVal(HashMap.java:665)      |                      |
-|   table.READ: null at HashMap.resize(HashMap.java:748)      |                      |
+|   table.READ: null at HashMap.putVal(HashMap.java:628)      |                      |
+|   table.READ: null at HashMap.resize(HashMap.java:678)      |                      |
 |   switch                                                    |                      |
 |                                                             | put(-8, -8): null    |
 |                                                             |   thread is finished |
-|   threshold.READ: 12 at HashMap.resize(HashMap.java:748)    |                      |
-|   threshold.WRITE(9) at HashMap.resize(HashMap.java:748)    |                      |
-|   table.WRITE(Node[]@1) at HashMap.resize(HashMap.java:748) |                      |
-|   READ: null at HashMap.putVal(HashMap.java:665)            |                      |
-|   WRITE(4=-4) at HashMap.putVal(HashMap.java:665)           |                      |
-|   modCount.READ: 1 at HashMap.putVal(HashMap.java:665)      |                      |
-|   modCount.WRITE(2) at HashMap.putVal(HashMap.java:665)     |                      |
-|   size.READ: 1 at HashMap.putVal(HashMap.java:665)          |                      |
-|   size.WRITE(2) at HashMap.putVal(HashMap.java:665)         |                      |
-|   threshold.READ: 9 at HashMap.putVal(HashMap.java:665)     |                      |
+|   threshold.READ: 12 at HashMap.resize(HashMap.java:680)    |                      |
+|   threshold.WRITE(9) at HashMap.resize(HashMap.java:702)    |                      |
+|   table.WRITE(Node[]@1) at HashMap.resize(HashMap.java:705) |                      |
+|   READ: null at HashMap.putVal(HashMap.java:630)            |                      |
+|   WRITE(4=-4) at HashMap.putVal(HashMap.java:631)           |                      |
+|   modCount.READ: 1 at HashMap.putVal(HashMap.java:661)      |                      |
+|   modCount.WRITE(2) at HashMap.putVal(HashMap.java:661)     |                      |
+|   size.READ: 1 at HashMap.putVal(HashMap.java:662)          |                      |
+|   size.WRITE(2) at HashMap.putVal(HashMap.java:662)         |                      |
+|   threshold.READ: 9 at HashMap.putVal(HashMap.java:662)     |                      |
 |   result: null                                              |                      |
-|   thread is finished                                        |                      |
-```
+|   thread is finished                                        |                      |```

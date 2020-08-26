@@ -88,16 +88,10 @@ internal class ModelCheckingStrategy(
         return null
     }
 
-    override fun onFinish(threadId: Int) {
-        // the reason to increment execution position here is to
-        // add possibility not to add a switch between the previous thread switch and
-        // the moment when we must switch
-        check(threadId == currentThread)
-        executionPosition.incrementAndGet()
-        super.onFinish(threadId)
-    }
-
-    override fun onNewSwitch(threadId: Int) {
+    override fun onNewSwitch(threadId: Int, mustSwitch: Boolean) {
+        // increment position if is a forced switch, not a one decided by shouldSwitch method
+        if (mustSwitch)
+            executionPosition.incrementAndGet()
         val position = executionPosition.get()
         // check whether a switch choice node should be initialized here
         if (lastSwitchPosition() < position) {
