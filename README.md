@@ -18,27 +18,33 @@ This is a fork of [Lin-Check framework by Devexperts](https://github.com/Devexpe
 
 Table of contents
 =================
-   * [Test structure](#test-structure)
-      * [Initial state](#initial-state)
-      * [Operations and groups](#operations-and-groups)
-         * [Calling at most once](#calling-at-most-once)
-         * [Exception as a result](#exception-as-a-result)
-         * [Operation groups](#operation-groups)
-      * [Parameter generators](#parameter-generators)
-         * [Binding parameter and generator names](#binding-parameter-and-generator-names)
-      * [Sequential specification](#sequential-specification)
-      * [Run test](#run-test)
-   * [Execution strategies](#execution-strategies)
-      * [Stress strategy](#stress-strategy)
-   * [Correctness contracts](#correctness-contracts)
-      * [Linearizability](#linearizability)
-      * [Serializability](#serializability)
-      * [Quiescent consistency](#quiescent-consistency)
-   * [Blocking data structures](#blocking-data-structures)   
-   * [Configuration via options](#configuration-via-options)
-   * [Sample](#sample)
-   * [Contacts](#contacts)
-
+- [Test structure](#test-structure)
+  * [Initial state](#initial-state)
+  * [Operations and groups](#operations-and-groups)
+    + [Calling at most once](#calling-at-most-once)
+    + [Exception as a result](#exception-as-a-result)
+    + [Operation groups](#operation-groups)
+  * [Parameter generators](#parameter-generators)
+    + [Binding parameter and generator names](#binding-parameter-and-generator-names)
+  * [Sequential specification](#sequential-specification)
+  * [Validation functions](#validation-functions)
+  * [Parameter and result types](#parameter-and-result-types)
+  * [Run test](#run-test)
+- [Execution strategies](#execution-strategies)
+  * [Stress strategy](#stress-strategy)
+- [Correctness contracts](#correctness-contracts)
+  * [Linearizability](#linearizability)
+    + [States equivalency](#states-equivalency)
+    + [Test example](#test-example)
+  * [Serializability](#serializability)
+  * [Quiescent consistency](#quiescent-consistency)
+    + [Test example](#test-example-1)
+- [Blocking data structures](#blocking-data-structures)
+    + [Example with a rendezvous channel](#example-with-a-rendezvous-channel)
+    + [States equivalency](#states-equivalency-1)
+    + [Test example](#test-example-2)
+- [Configuration via options](#configuration-via-options)
+- [Example](#example)
 
 
 
@@ -164,6 +170,16 @@ class MyLockFreeListTest {
   ...
 }
 ```
+
+## Parameter and result types
+The standard parameter generators are provided for the basic types like `Int`, `Float`, or `String`. 
+However, it is also possible to implement a custom generator for any parameter type.
+Nevertheless, not all types are supported since **lincheck** performs the byte-code transformation, 
+and the same by name classes can differ during the scenario generation phase and the running or verification one.
+However, it is still possible to use non-trivial custom parameters if the corresponding types implement
+`Serializable` interface; this way, **lincheck** transfers the generated parameter between different class loaders
+using the serialization-deserialization mechanism.
+The same problem occurs with non-trivial result types, which should also implement the `Serializable` interface.
  
 ## Run test
 In order to run a test, `LinChecker.check(...)` method should be executed with the provided test class as a parameter. Then **lincheck** looks at execution strategies to be used, which can be provided using annotations or options (see [Configuration via options](#configuration-via-options) for details), and runs a test with each of provided strategies. If an error is found, an `AssertionError` is thrown and the detailed error information is printed to the standard output. It is recommended to use **JUnit** or similar testing library to run `LinChecker.check(...)` method. 

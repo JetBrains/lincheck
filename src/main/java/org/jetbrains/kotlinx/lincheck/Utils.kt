@@ -26,12 +26,13 @@ import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCa
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.ref.WeakReference
+import java.io.*
+import java.lang.ClassLoader.*
+import java.lang.ref.*
 import java.lang.reflect.*
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
-
 
 @Volatile
 private var consumedCPU = System.currentTimeMillis().toInt()
@@ -78,7 +79,8 @@ internal fun executeActor(
 ): Result {
     try {
         val m = getMethod(instance, actor.method)
-        val args = if (actor.isSuspendable) actor.arguments + completion else actor.arguments
+        val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
+            .map { it.convertForLoader(instance.javaClass.classLoader) }
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
@@ -99,7 +101,7 @@ internal fun executeActor(
 }
 
 internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
-                                        onError: (functionName: String, exception: Throwable) -> Unit) {
+                                               onError: (functionName: String, exception: Throwable) -> Unit) {
     for (f in validationFunctions) {
         val validationException = executeValidationFunction(instance, f)
         if (validationException != null) {
@@ -126,11 +128,19 @@ private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReferen
 private fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
     return methods[method]?.get() ?: run {
-        val m = instance.javaClass.getMethod(method.name, *method.parameterTypes)
+        val m = instance.javaClass.getMethod(method.name, method.parameterTypes)
         methods[method] = WeakReference(m)
         m
     }
 }
+
+/**
+ * Finds a method corresponding to [name] and [parameterTypes] ignoring difference in loaders for [parameterTypes].
+ */
+private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method =
+    methods.find { method ->
+        method.name == name && method.parameterTypes.map { it.name } == parameterTypes.map { it.name }
+    } ?: throw NoSuchMethodException("${getName()}.$name(${parameterTypes.joinToString(",")})")
 
 /**
  * Creates [Result] of corresponding type from any given value.
@@ -162,7 +172,6 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             else -> ValueResult(value, wasSuspended)
         }
     } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
-
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
@@ -210,4 +219,39 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     } else {
         storedLastCancellableCont = cont
     }
+}
+
+internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = ExecutionScenario(
+    initExecution,
+    parallelExecution.map { actors ->
+        actors.map { a ->
+            val args = a.arguments.map { it.convertForLoader(loader) }
+            Actor(a.method, args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension)
+        }
+    },
+    postExecution
+)
+
+private fun Any?.convertForLoader(loader: ClassLoader) = when {
+    this == null || TransformationClassLoader.doNotTransform(this.javaClass.name) -> this
+    this is Serializable -> serialize().run { deserialize(loader) }
+    else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
+                  " or implement Serializable interface.")
+}
+
+internal fun Any?.serialize(): ByteArray = ByteArrayOutputStream().use {
+    val oos = ObjectOutputStream(it)
+    oos.writeObject(this)
+    it.toByteArray()
+}
+
+internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(this).use {
+    CustomObjectInputStream(loader, it).run { readObject() }
+}
+
+/**
+ * ObjectInputStream that uses custom class loader.
+ */
+private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
+    override fun resolveClass(desc: ObjectStreamClass): Class<*> = Class.forName(desc.name, true, loader)
 }

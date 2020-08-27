@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck;
  */
 
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedStrategyHolder;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -65,11 +66,11 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * @param className checking class name
      * @return result of checking class
      */
-    private static boolean doNotTransform(String className) {
+    static boolean doNotTransform(String className) {
         return className == null ||
             (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.endsWith("ManagedStrategyHolder")) ||
+                !className.equals(ManagedStrategyHolder.class.getName())) ||
             className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||
