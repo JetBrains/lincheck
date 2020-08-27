@@ -28,7 +28,6 @@ import kotlin.coroutines.*
 /**
  * The instance of this class represents a result of actor invocation.
  *
-
  * <p> If the actor invocation suspended the thread and did not get the final result yet
  * though it can be resumed later, then the {@link Type#NO_RESULT no_result result type} is used.
  *
@@ -46,43 +45,33 @@ sealed class Result {
  * Type of result used if the actor invocation returns any value.
  */
 class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
-    private lateinit var serializedObject: ByteArray
-    private val valueTransformed: Boolean
-        get() = value?.javaClass?.classLoader is TransformationClassLoader
+    private val valueClassTransformed: Boolean get() = value?.javaClass?.classLoader is TransformationClassLoader
+    private val serializedObject: ByteArray by lazy(LazyThreadSafetyMode.NONE) {
+        check(valueClassTransformed) { "The result value class should be loaded not by the system class loader and be transformed" }
+        check(value is Serializable) {
+            "The result should either be a type always loaded by the system class loader " +
+                "(e.g., Int, String, List<T>) or implement Serializable interface; " +
+                "the actual class is ${value?.javaClass}."
+        }
+        value.serialize()
+    }
 
     override fun toString() = wasSuspendedPrefix + "$value"
 
     override fun equals(other: Any?): Boolean {
-        // check class equality by names, because classes can be loaded via different loaders
+        // Check that the classes are equal by names
+        // since they can be loaded via different class loaders.
         if (javaClass.name != other?.javaClass?.name) return false
         other as ValueResult
+        // Is `wasSuspended` flag the same?
         if (wasSuspended != other.wasSuspended) return false
-        val valueTransformed = valueTransformed
-        if (valueTransformed != other.valueTransformed) return false
-        if (valueTransformed) {
-            if (!getSerializedObject().contentEquals(other.getSerializedObject())) return false
-        } else {
-            if (value != other.value) return false
-        }
-        return true
+        // Do the values coincide ignoring the difference in class loaders?
+        if (valueClassTransformed != other.valueClassTransformed) return false
+        return if (!valueClassTransformed) value == other.value
+               else serializedObject.contentEquals(other.serializedObject)
     }
 
-    override fun hashCode(): Int = (if (wasSuspended) 1 else 0) + 2 * value.hashCode()
-
-    private fun getSerializedObject(): ByteArray {
-        if (!::serializedObject.isInitialized) {
-            if (value !is Serializable) {
-                throw IllegalArgumentException("Actor results should either be basic " +
-                    "(java.lang.String, int, Integer, etc, and corresponding classes in other JVM languages) or implement Serializable")
-            }
-            val byteArrayStream = ByteArrayOutputStream()
-            ObjectOutputStream(byteArrayStream).use {
-                it.writeObject(value)
-            }
-            serializedObject = byteArrayStream.toByteArray()
-        }
-        return serializedObject
-    }
+    override fun hashCode(): Int = if (wasSuspended) 0 else 1  // we cannot use the value here
 }
 
 /**

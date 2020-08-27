@@ -21,18 +21,18 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
-import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
+import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.io.*
-import java.lang.*
+import java.lang.ClassLoader.*
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.util.*
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.coroutines.*
+import kotlin.coroutines.intrinsics.*
 
 @Volatile
 private var consumedCPU = System.currentTimeMillis().toInt()
@@ -221,37 +221,33 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     }
 }
 
-internal fun convertForLoader(scenario: ExecutionScenario, loader: ClassLoader) =
-    ExecutionScenario(
-        scenario.initExecution,
-        scenario.parallelExecution.map { it.map { actor ->
-            Actor(
-                actor.method,
-                actor.arguments.map { it.convertForLoader(loader) },
-                actor.handledExceptions,
-                actor.cancelOnSuspension,
-                actor.allowExtraSuspension
-            )
-        } },
-        scenario.postExecution
-    )
-
-private fun Any?.convertForLoader(loader: ClassLoader): Any? =
-    when {
-        this == null || TransformationClassLoader.doNotTransform(this.javaClass.name) -> this
-        this is Serializable -> {
-            val outputStream = ByteArrayOutputStream()
-            ObjectOutputStream(outputStream).use {
-                it.writeObject(this)
-            }
-            val inputStream = ByteArrayInputStream(outputStream.toByteArray())
-            CustomObjectInputStream(loader, inputStream).use {
-                it.readObject()
-            }
+internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = ExecutionScenario(
+    initExecution,
+    parallelExecution.map { actors ->
+        actors.map { a ->
+            val args = a.arguments.map { it.convertForLoader(loader) }
+            Actor(a.method, args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension)
         }
-        else -> throw IllegalArgumentException("Actor parameters should either be basic" +
-            "(java.lang.String, int, Integer, etc, and corresponding classes in other JVM languages) or implement Serializable")
-    }
+    },
+    postExecution
+)
+
+private fun Any?.convertForLoader(loader: ClassLoader) = when {
+    this == null || TransformationClassLoader.doNotTransform(this.javaClass.name) -> this
+    this is Serializable -> serialize().run { deserialize(loader) }
+    else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
+                  " or implement Serializable interface.")
+}
+
+internal fun Any?.serialize(): ByteArray = ByteArrayOutputStream().use {
+    val oos = ObjectOutputStream(it)
+    oos.writeObject(this)
+    it.toByteArray()
+}
+
+internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(this).use {
+    CustomObjectInputStream(loader, it).run { readObject() }
+}
 
 /**
  * ObjectInputStream that uses custom class loader.
