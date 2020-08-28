@@ -39,10 +39,8 @@ open class StateReportingTest : VerifierState() {
     @Operation
     fun operation(): Int {
         ++a
-        return inc()
+        return ++a
     }
-
-    private fun inc(): Int = ++a
 
     override fun extractState(): Any = a
 
@@ -94,7 +92,6 @@ class TwoStateRepresentationFunctionsTest : VerifierState() {
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
-            .addGuarantee(forClasses(this::class.java.name).methods("inc").treatAsAtomic())
             .checkImpl(this::class.java)
     }
 }

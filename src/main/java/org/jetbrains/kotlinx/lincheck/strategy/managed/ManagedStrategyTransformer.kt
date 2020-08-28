@@ -140,7 +140,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name) || isTrustedPrimitive(owner.toClassName()) || isSuspendStateMachine(owner)) {
+            if (isFinalField(owner, name) || isTrustedPrimitive(owner.toClassName()) || isSuspendStateMachine(owner) || isStrategyCall(owner)) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
             }
@@ -457,8 +457,6 @@ internal class ManagedStrategyTransformer(
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             afterMethodCall(Method(name, desc).returnType, codeLocationLocal)
         }
-
-        private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
         // STACK: param_1 param_2 ... param_n
         private fun beforeMethodCall(owner: String, methodName: String, desc: String, codeLocationLocal: Int) {
@@ -1272,5 +1270,7 @@ internal class ManagedStrategyTransformer(
             // it is internal, so check by name
             return Class.forName(internalClassName.toClassName()).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
         }
+
+        private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
     }
 }

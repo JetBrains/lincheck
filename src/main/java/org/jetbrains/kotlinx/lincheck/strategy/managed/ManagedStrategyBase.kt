@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -87,7 +86,6 @@ internal abstract class ManagedStrategyBase(
         awaitTurn(threadId)
         finished[threadId].set(true)
         eventCollector.finishThread(threadId)
-        onNewSwitch(threadId, true)
         doSwitchCurrentThread(threadId, true)
     }
 
@@ -148,7 +146,6 @@ internal abstract class ManagedStrategyBase(
 
     override fun beforeWait(threadId: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(threadId)) return true
-
         checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
         newSwitchPoint(threadId, codeLocation)
         if (withTimeout) return false // timeouts occur instantly
@@ -227,7 +224,7 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun makeStateRepresentation(threadId: Int) {
-        if (isTestThread(threadId) && !shouldBeIgnored(threadId)) {
+        if (!inIgnoredSection(threadId)) {
             check(loggingEnabled) { "This method should be called only when logging is enabled" }
             eventCollector.makeStateRepresentation(threadId)
         }
@@ -235,7 +232,7 @@ internal abstract class ManagedStrategyBase(
 
     private fun isTestThread(threadId: Int) = threadId < nThreads
 
-    private fun shouldBeIgnored(threadId: Int) = ignoredSectionDepth[threadId] > 0
+    private fun inIgnoredSection(threadId: Int): Boolean = !isTestThread(threadId) || ignoredSectionDepth[threadId] > 0
 
     /**
      * Create a new switch point, where a thread context switch can occur
@@ -271,12 +268,12 @@ internal abstract class ManagedStrategyBase(
      */
     protected fun switchCurrentThread(threadId: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         eventCollector.newSwitch(threadId, reason)
-        onNewSwitch(threadId, mustSwitch)
         doSwitchCurrentThread(threadId, mustSwitch)
         awaitTurn(threadId)
     }
 
     protected fun doSwitchCurrentThread(threadId: Int, mustSwitch: Boolean = false) {
+        onNewSwitch(threadId, mustSwitch)
         val switchableThreads = switchableThreads(threadId)
         if (switchableThreads.isEmpty()) {
             if (mustSwitch && !finished.all { it.get() }) {

@@ -37,7 +37,7 @@ class ExecutionReportingTest : VerifierState() {
     var canEnterForbiddenSection = false
 
     @Operation
-    fun operation1(): Int {
+    fun foo(): Int {
         if (canEnterForbiddenSection) {
             return 1
         }
@@ -45,11 +45,10 @@ class ExecutionReportingTest : VerifierState() {
     }
 
     @Operation
-    fun operation2() {
+    fun bar() {
         repeat(2) {
             a++
         }
-        treatedAsAtomic()
         uselessIncrements(2)
         intermediateMethod()
     }
@@ -58,12 +57,9 @@ class ExecutionReportingTest : VerifierState() {
         resetFlag()
     }
 
-    private fun treatedAsAtomic() {}
-
     @Synchronized
     private fun resetFlag() {
         canEnterForbiddenSection = true
-        ignored()
         canEnterForbiddenSection = false
     }
 
@@ -74,34 +70,24 @@ class ExecutionReportingTest : VerifierState() {
         return false
     }
 
-    private fun ignored() {
-        b++
-        b++
-    }
-
     @Test
     fun test() {
         val failure = ModelCheckingOptions()
             .actorsAfter(0)
             .actorsBefore(0)
             .actorsPerThread(1)
-            .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("treatedAsAtomic").treatAsAtomic())
-            .addGuarantee(forClasses(ExecutionReportingTest::class.java.name).methods("ignored").ignore())
             .checkImpl(this::class.java)
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
-        check("operation1" in log)
-        check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:65)" in log)
-        check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:67)" in log)
-        check("a.READ: 0 at ExecutionReportingTest.operation2" in log)
-        check("a.WRITE(1) at ExecutionReportingTest.operation2" in log)
-        check("a.READ: 1 at ExecutionReportingTest.operation2" in log)
-        check("a.WRITE(2) at ExecutionReportingTest.operation2" in log)
+        check("foo" in log)
+        check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:62)" in log)
+        check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:63)" in log)
+        check("a.READ: 0 at ExecutionReportingTest.bar" in log)
+        check("a.WRITE(1) at ExecutionReportingTest.bar" in log)
+        check("a.READ: 1 at ExecutionReportingTest.bar" in log)
+        check("a.WRITE(2) at ExecutionReportingTest.bar" in log)
         check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
         check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)
-        check("uselessIncrements(2): false at" in log) { "increments in uselessIncrements method should be compressed" }
-        check("treatedAsAtomic() at" in log) { "treated as atomic methods should be reported" }
-        check("ignored" !in log) { "ignored methods should not be present in log" }
     }
 
     override fun extractState() = "$a $b $canEnterForbiddenSection"

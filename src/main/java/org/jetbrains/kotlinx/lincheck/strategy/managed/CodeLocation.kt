@@ -126,21 +126,32 @@ private fun StackTraceElement.shorten(): String {
 }
 
 private fun adornedStringRepresentation(any: Any?): String {
+    // primitive types are immutable and have trivial toString,
+    // so their string representation is used
+    if (any == null || any.javaClass.isPrimitiveWrapper())
+        return any.toString()
+    // simplified representation for Continuations
     if (any is Continuation<*>)
-        return "<cont>" // Continuation.toString looks ugly, so show this instead
-    val representation = any.toString()
-    // instead of java.util.HashMap$Node@3e2a56 show Node@1 for default toString implementation
-    if (any != null) {
-        val isDefaultToString = representation == "${any.javaClass.name}@${Integer.toHexString(any.hashCode())}"
-        if (isDefaultToString) {
-            val id = getId(any.javaClass, any)
-            return "${any.javaClass.simpleName}@$id"
-        }
-    }
-    return representation
+        return "<cont>"
+    // instead of java.util.HashMap$Node@3e2a56 show Node@1
+    val id = getId(any.javaClass, any)
+    return "${any.javaClass.simpleName}@$id"
 }
 
 private fun getId(clazz: Class<Any>, obj: Any): Int =
     objectNumeration
         .computeIfAbsent(clazz) { mutableMapOf() }
         .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
+
+private fun Class<out Any>?.isPrimitiveWrapper() =
+    this in listOf(
+        java.lang.Integer::class.java,
+        java.lang.Long::class.java,
+        java.lang.Short::class.java,
+        java.lang.Double::class.java,
+        java.lang.Float::class.java,
+        java.lang.Character::class.java,
+        java.lang.Byte::class.java,
+        java.lang.Boolean::class.java,
+        java.lang.String::class.java
+    )
