@@ -52,8 +52,8 @@ open class ParallelThreadsRunner(
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
 
-    private val completions = List(scenario.threads) { threadId ->
-        List(scenario.parallelExecution[threadId].size) { Completion(threadId) }
+    private val completions = List(scenario.threads) { t ->
+        List(scenario.parallelExecution[t].size) { Completion(t) }
     }
 
     private val testThreadExecutions = Array(scenario.threads) { t ->

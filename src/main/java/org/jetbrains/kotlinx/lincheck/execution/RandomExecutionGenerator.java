@@ -44,11 +44,11 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
     public ExecutionScenario nextExecution() {
         // Create init execution part
         List<ActorGenerator> validActorGeneratorsForInit = testStructure.actorGenerators.stream()
-            .filter(ag -> !ag.useOnce() && !ag.isSuspendable()).collect(Collectors.toList());
+            .filter(ag -> !ag.getUseOnce() && !ag.isSuspendable()).collect(Collectors.toList());
         List<Actor> initExecution = new ArrayList<>();
         for (int i = 0; i < testConfiguration.actorsBefore && !validActorGeneratorsForInit.isEmpty(); i++) {
             ActorGenerator ag = validActorGeneratorsForInit.get(random.nextInt(validActorGeneratorsForInit.size()));
-            initExecution.add(ag.generate());
+            initExecution.add(ag.generate(0));
         }
         // Create parallel execution part
         // Construct non-parallel groups and parallel one
@@ -61,9 +61,9 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
 
         List<List<Actor>> parallelExecution = new ArrayList<>();
         List<ThreadGen> threadGens = new ArrayList<>();
-        for (int i = 0; i < testConfiguration.threads; i++) {
+        for (int t = 0; t < testConfiguration.threads; t++) {
             parallelExecution.add(new ArrayList<>());
-            threadGens.add(new ThreadGen(i, testConfiguration.actorsPerThread));
+            threadGens.add(new ThreadGen(t, testConfiguration.actorsPerThread));
         }
         for (int i = 0; i < nonParallelGroups.size(); i++) {
             threadGens.get(i % threadGens.size()).nonParallelActorGenerators
@@ -86,7 +86,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
                     agen = getActorGenFromGroup(parallelGroup,
                         aGenIndex - threadGen.nonParallelActorGenerators.size());
                 }
-                parallelExecution.get(threadGen.threadNumber).add(agen.generate());
+                parallelExecution.get(threadGen.iThread).add(agen.generate(threadGen.iThread + 1));
                 if (--threadGen.left == 0)
                     it.remove();
             }
@@ -101,7 +101,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
                 leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
             for (int i = 0; i < testConfiguration.actorsAfter && !leftActorGenerators.isEmpty(); i++) {
                 ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
-                postExecution.add(agen.generate());
+                postExecution.add(agen.generate(testConfiguration.threads));
             }
         } else {
             postExecution = Collections.emptyList();
@@ -111,18 +111,18 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
 
     private ActorGenerator getActorGenFromGroup(List<ActorGenerator> aGens, int index) {
         ActorGenerator aGen = aGens.get(index);
-        if (aGen.useOnce())
+        if (aGen.getUseOnce())
             aGens.remove(index);
         return aGen;
     }
 
-    private class ThreadGen {
+    private static class ThreadGen {
         final List<ActorGenerator> nonParallelActorGenerators = new ArrayList<>();
-        int threadNumber;
+        int iThread;
         int left;
 
-        ThreadGen(int threadNumber, int nActors) {
-            this.threadNumber = threadNumber;
+        ThreadGen(int iThread, int nActors) {
+            this.iThread = iThread;
             this.left = nActors;
         }
     }

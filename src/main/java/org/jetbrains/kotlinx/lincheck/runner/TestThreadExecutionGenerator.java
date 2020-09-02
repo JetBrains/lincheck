@@ -34,7 +34,6 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 import static org.objectweb.asm.Opcodes.*;
 import static org.objectweb.asm.Type.*;
 
@@ -225,7 +224,7 @@ public class TestThreadExecutionGenerator {
             mv.getField(TEST_THREAD_EXECUTION_TYPE, "testInstance", OBJECT_TYPE);
             mv.checkCast(testType);
             // Load arguments for operation
-            loadArguments(mv, actor, objArgs, actor.isSuspendable() ? completions.get(i) : null);
+            loadArguments(mv, actor, objArgs, iThread + 1, actor.isSuspendable() ? completions.get(i) : null);
             // Invoke operation
             Method actorMethod = Method.getMethod(actor.getMethod());
             mv.invokeVirtual(testType, actorMethod);
@@ -346,12 +345,12 @@ public class TestThreadExecutionGenerator {
         mv.arrayStore(RESULT_TYPE);
     }
 
-    private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, Completion completion) {
+    private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, int threadId, Completion completion) {
         int nArguments = actor.getArguments().size();
         for (int j = 0; j < nArguments; j++) {
             pushArgumentOnStack(mv, objArgs, actor.getArguments().toArray()[j], actor.getMethod().getParameterTypes()[j]);
         }
-        if (isSuspendable(actor.getMethod())) {
+        if (actor.isSuspendable()) {
             pushArgumentOnStack(mv, objArgs, completion, Continuation.class);
         }
     }

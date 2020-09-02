@@ -49,24 +49,6 @@ fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, test
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
     else sequentialSpecificationByUser
 
-/**
- * Creates instance of cost counter class using the (int relaxationFactor) constructor.
- */
-fun createCostCounterInstance(costCounter: Class<*>, relaxationFactor: Int): Any {
-    try {
-        return costCounter.getDeclaredConstructor(Int::class.javaPrimitiveType).newInstance(relaxationFactor)
-    } catch (e: Exception) {
-        e.catch(
-            IllegalStateException::class.java,
-            IllegalAccessException::class.java,
-            NoSuchMethodException::class.java,
-            InvocationTargetException::class.java
-        ) {
-            throw IllegalStateException("Cost counter class should have '(relaxationFactor: Int)' constructor", e)
-        }
-    }
-}
-
 internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
 
 /**
