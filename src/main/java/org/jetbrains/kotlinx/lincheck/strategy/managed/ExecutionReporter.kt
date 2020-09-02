@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
@@ -53,8 +54,11 @@ internal fun StringBuilder.appendExecution(
         // print all actors that started since the last event
         while (lastLoggedActor[threadId] < min(actorId, scenario.parallelExecution[threadId].size)) {
             val lastActor = lastLoggedActor[threadId]
-            if (lastActor >= 0 && isInterestingActor(threadId, lastActor, interestingEvents) && results != null)
+            if (lastActor >= 0 && isInterestingActor(threadId, lastActor, interestingEvents) && results != null) {
+                if (results.parallelResults[threadId][lastActor] is Cancelled)
+                    execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "CONTINUATION CANCELLED"))
                 execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "result: ${results.parallelResults[threadId][lastActor]}"))
+            }
             val nextActor = ++lastLoggedActor[threadId]
             if (nextActor != scenario.parallelExecution[threadId].size) {
                 // print actor

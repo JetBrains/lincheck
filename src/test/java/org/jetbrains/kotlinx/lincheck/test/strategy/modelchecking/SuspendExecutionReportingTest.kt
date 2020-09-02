@@ -72,3 +72,30 @@ class SuspendExecutionReportingTest : VerifierState() {
 
     private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
 }
+
+class CancellableSuspendExecutionTest : VerifierState() {
+    private val lock = Mutex()
+    private var counter: Int = 0
+
+    @Operation(cancellableOnSuspension = true)
+    suspend fun foo() = lock.withLock {
+        counter++
+        counter++
+    }
+
+    override fun extractState(): Any = counter
+
+    @Test
+    fun test() {
+        val failure = ModelCheckingOptions()
+            .actorsPerThread(1)
+            .actorsBefore(0)
+            .actorsAfter(0)
+            .checkImpl(this::class.java)
+        checkNotNull(failure) { "the test should fail" }
+        val log = failure.toString()
+        check("CONTINUATION CANCELLED" in log)
+        check("CancellableContinuationImpl.cancel" !in log) { "CancellableContinuationImpl.cancel is not supposed " +
+            "to be invoked by a test thread (pre, post or parallel), so should not be reported" }
+    }
+}

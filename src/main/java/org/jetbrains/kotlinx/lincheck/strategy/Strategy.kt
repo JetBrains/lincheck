@@ -56,6 +56,11 @@ abstract class Strategy protected constructor(
     }
 
     /**
+     * Is invoked when continuation is cancelled by lincheck.
+     */
+    open fun onContinuationCancel(threadId: Int) {}
+
+    /**
      * Is invoked before each actor execution in a thread.
      */
     open fun onActorStart(threadId: Int) {}
