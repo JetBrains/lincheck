@@ -224,7 +224,7 @@ public class TestThreadExecutionGenerator {
             mv.getField(TEST_THREAD_EXECUTION_TYPE, "testInstance", OBJECT_TYPE);
             mv.checkCast(testType);
             // Load arguments for operation
-            loadArguments(mv, actor, objArgs, iThread + 1, actor.isSuspendable() ? completions.get(i) : null);
+            loadArguments(mv, actor, objArgs, actor.isSuspendable() ? completions.get(i) : null);
             // Invoke operation
             Method actorMethod = Method.getMethod(actor.getMethod());
             mv.invokeVirtual(testType, actorMethod);
@@ -327,7 +327,7 @@ public class TestThreadExecutionGenerator {
         mv.arrayStore(RESULT_TYPE);
     }
 
-    private static void storeExceptionResultFromSuspendableThrowable(GeneratorAdapter mv, int resLocal, int iLocal, int threadId, int actorId) {
+    private static void storeExceptionResultFromSuspendableThrowable(GeneratorAdapter mv, int resLocal, int iLocal, int iThread, int actorId) {
         int eLocal = mv.newLocal(THROWABLE_TYPE);
         mv.storeLocal(eLocal);
         mv.loadLocal(resLocal);
@@ -338,14 +338,14 @@ public class TestThreadExecutionGenerator {
         mv.checkCast(PARALLEL_THREADS_RUNNER_TYPE);
         // Load exception result
         mv.loadLocal(eLocal);
-        mv.push(threadId);
+        mv.push(iThread);
         mv.push(actorId);
         // Process result
         mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
         mv.arrayStore(RESULT_TYPE);
     }
 
-    private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, int threadId, Completion completion) {
+    private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, Completion completion) {
         int nArguments = actor.getArguments().size();
         for (int j = 0; j < nArguments; j++) {
             pushArgumentOnStack(mv, objArgs, actor.getArguments().toArray()[j], actor.getMethod().getParameterTypes()[j]);

@@ -26,4 +26,4 @@ import java.lang.AssertionError
 
 class LincheckAssertionError(
     failure: LincheckFailure
-) : AssertionError(failure)
+) : AssertionError("\n" + failure)
