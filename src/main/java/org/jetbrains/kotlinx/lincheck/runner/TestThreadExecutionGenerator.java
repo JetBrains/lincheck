@@ -162,7 +162,7 @@ public class TestThreadExecutionGenerator {
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "results", RESULT_ARRAY_TYPE);
         mv.storeLocal(resLocal);
-        // Call runner's onStart(threadId) method
+        // Call runner's onStart(iThread) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
@@ -236,7 +236,7 @@ public class TestThreadExecutionGenerator {
             mv.invokeVirtual(testType, actorMethod);
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {
-                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, threadId, i)
+                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, iThread, i)
                 mv.push(iThread);
                 mv.push(i);
                 mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
@@ -296,7 +296,7 @@ public class TestThreadExecutionGenerator {
             mv.visitJumpInsn(GOTO, launchNextActor);
             mv.visitLabel(launchNextActor);
         }
-        // Call runner's onFinish(threadId) method
+        // Call runner's onFinish(iThread) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
@@ -347,7 +347,7 @@ public class TestThreadExecutionGenerator {
         mv.arrayStore(RESULT_TYPE);
     }
 
-    private static void storeExceptionResultFromSuspendableThrowable(GeneratorAdapter mv, int resLocal, int iLocal, int threadId, int actorId) {
+    private static void storeExceptionResultFromSuspendableThrowable(GeneratorAdapter mv, int resLocal, int iLocal, int iThread, int actorId) {
         int eLocal = mv.newLocal(THROWABLE_TYPE);
         mv.storeLocal(eLocal);
         mv.loadLocal(resLocal);
@@ -358,7 +358,7 @@ public class TestThreadExecutionGenerator {
         mv.checkCast(PARALLEL_THREADS_RUNNER_TYPE);
         // Load exception result
         mv.loadLocal(eLocal);
-        mv.push(threadId);
+        mv.push(iThread);
         mv.push(actorId);
         // Process result
         mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);

@@ -109,57 +109,57 @@ public abstract class Runner {
 
     /**
      * This method is invoked by every test thread as the first operation.
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void onStart(int threadId) {}
+    public void onStart(int iThread) {}
 
     /**
      * This method is invoked by every test thread as the last operation
      * if no exception has been thrown.
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void onFinish(int threadId) {}
+    public void onFinish(int iThread) {}
 
     /**
      * This method is invoked by a test thread
      * if an exception has been thrown.
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void onFailure(int threadId, Throwable e) {}
+    public void onFailure(int iThread, Throwable e) {}
 
     /**
      * This method is invoked by a test thread
      * if a coroutine was suspended
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    void afterCoroutineSuspended(int threadId) {
+    void afterCoroutineSuspended(int iThread) {
         throw new UnsupportedOperationException("Coroutines are not supported");
     }
 
     /**
      * This method is invoked by a test thread
      * if a coroutine was resumed
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    void beforeCoroutineResumed(int threadId) {
+    void beforeCoroutineResumed(int iThread) {
         throw new UnsupportedOperationException("Coroutines are not supported");
     }
 
     /**
      * This method is invoked by a test thread
      * if the current coroutine can be resumed
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      * @param iActor number of actor invoked
      */
-    public boolean canResumeCoroutine(int threadId, int iActor) {
+    public boolean canResumeCoroutine(int iThread, int iActor) {
         throw new UnsupportedOperationException("Coroutines are not supported");
     }
 
     /**
      * Is invoked before each actor execution in a thread.
      */
-    public void onActorStart(int threadId) {
-        strategy.onActorStart(threadId);
+    public void onActorStart(int iThread) {
+        strategy.onActorStart(iThread);
     }
 
     /**

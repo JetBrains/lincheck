@@ -88,7 +88,7 @@ internal class ModelCheckingStrategy(
         return null
     }
 
-    override fun onNewSwitch(threadId: Int, mustSwitch: Boolean) {
+    override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
         // increment position if is a forced switch, not a one decided by shouldSwitch method
         if (mustSwitch)
             executionPosition.incrementAndGet()
@@ -107,15 +107,15 @@ internal class ModelCheckingStrategy(
             val node = notInitializedThreadChoice!!
             notInitializedThreadChoice = null
             // initialize node with the choice of the next thread
-            val switchableThreads = switchableThreads(threadId)
+            val switchableThreads = switchableThreads(iThread)
             node.initialize(switchableThreads.size)
         }
     }
 
-    override fun shouldSwitch(threadId: Int): Boolean {
+    override fun shouldSwitch(iThread: Int): Boolean {
         // the increment of the current position is made in the same place as where the check is,
         // because the position check and the position increment are dual operations
-        check(threadId == currentThread)
+        check(iThread == currentThread)
         executionPosition.incrementAndGet()
         return executionPosition.get() in switchPositions
     }

@@ -172,7 +172,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     appendln("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
     for ((t, stackTrace) in failure.threadDump) {
-        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.threadId.toString() else "?"
+        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendln("Thread-$threadNumber:")
         for (s in stackTrace) {
             // remove transformation package predix

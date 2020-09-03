@@ -61,33 +61,33 @@ public abstract class ManagedStrategy extends Strategy {
         this.eliminateLocalObjects = eliminateLocalObjects;
         runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, true, timeoutMs) {
             @Override
-            public void onStart(int threadId) {
-                super.onStart(threadId);
-                ManagedStrategy.this.onStart(threadId);
+            public void onStart(int iThread) {
+                super.onStart(iThread);
+                ManagedStrategy.this.onStart(iThread);
             }
 
             @Override
-            public void onFinish(int threadId) {
-                ManagedStrategy.this.onFinish(threadId);
-                super.onFinish(threadId);
+            public void onFinish(int iThread) {
+                ManagedStrategy.this.onFinish(iThread);
+                super.onFinish(iThread);
             }
 
             @Override
-            public void onFailure(int threadId, Throwable e) {
-                ManagedStrategy.this.onFailure(threadId, e);
-                super.onFailure(threadId, e);
+            public void onFailure(int iThread, Throwable e) {
+                ManagedStrategy.this.onFailure(iThread, e);
+                super.onFailure(iThread, e);
             }
 
             @Override
-            public void afterCoroutineSuspended(int threadId) {
-                super.afterCoroutineSuspended(threadId);
-                ManagedStrategy.this.afterCoroutineSuspended(threadId);
+            public void afterCoroutineSuspended(int iThread) {
+                super.afterCoroutineSuspended(iThread);
+                ManagedStrategy.this.afterCoroutineSuspended(iThread);
             }
 
             @Override
-            public void beforeCoroutineResumed(int threadId) {
-                ManagedStrategy.this.afterCoroutineResumed(threadId);
-                super.beforeCoroutineResumed(threadId);
+            public void beforeCoroutineResumed(int iThread) {
+                ManagedStrategy.this.afterCoroutineResumed(iThread);
+                super.beforeCoroutineResumed(iThread);
             }
         };
         initializeManagedState();
@@ -133,158 +133,158 @@ public abstract class ManagedStrategy extends Strategy {
 
     /**
      * This method is executed as the first thread action.
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      */
-    public void onStart(int threadId) {}
+    public void onStart(int iThread) {}
 
     /**
      * This method is executed as the last thread action if no exception has been thrown.
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      */
-    public void onFinish(int threadId) {}
+    public void onFinish(int iThread) {}
 
     /**
      * This method is executed if an exception has been thrown.
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      */
-    public void onFailure(int threadId, Throwable e) {}
+    public void onFailure(int iThread, Throwable e) {}
 
     /**
      * This method is executed before a shared variable read operation.
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      */
-    public void beforeSharedVariableRead(int threadId, int codeLocation) {}
+    public void beforeSharedVariableRead(int iThread, int codeLocation) {}
 
     /**
      * This method is executed before a shared variable write operation.
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      */
-    public void beforeSharedVariableWrite(int threadId, int codeLocation) {}
+    public void beforeSharedVariableWrite(int iThread, int codeLocation) {}
 
     /**
      * This method is executed before an atomic method call.
      * Atomic method is a method that is marked by ManagedGuarantee to be treated as atomic.
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      */
-    public void beforeAtomicMethodCall(int threadId, int codeLocation) {}
+    public void beforeAtomicMethodCall(int iThread, int codeLocation) {}
 
     /**
      *
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param monitor
      * @return whether lock should be actually acquired
      */
-    public boolean beforeLockAcquire(int threadId, int codeLocation, Object monitor) {
+    public boolean beforeLockAcquire(int iThread, int codeLocation, Object monitor) {
         return true;
     }
 
     /**
      *
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param monitor
      * @return whether lock should be actually released
      */
-    public boolean beforeLockRelease(int threadId, int codeLocation, Object monitor) {
+    public boolean beforeLockRelease(int iThread, int codeLocation, Object monitor) {
         return true;
     }
 
     /**
      *
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param withTimeout {@code true} if is invoked with timeout, {@code false} otherwise.
      * @return whether park should be executed
      */
-    public boolean beforePark(int threadId, int codeLocation, boolean withTimeout) {
+    public boolean beforePark(int iThread, int codeLocation, boolean withTimeout) {
         return true;
     }
 
     /**
      *
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param thread
      */
-    public void afterUnpark(int threadId, int codeLocation, Object thread) {}
+    public void afterUnpark(int iThread, int codeLocation, Object thread) {}
 
     /**
      *
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param monitor
      * @param withTimeout {@code true} if is invoked with timeout, {@code false} otherwise.
      * @return whether wait should be executed
      */
-    public boolean beforeWait(int threadId, int codeLocation, Object monitor, boolean withTimeout) {
+    public boolean beforeWait(int iThread, int codeLocation, Object monitor, boolean withTimeout) {
         return true;
     }
 
     /**
      *
-     * @param threadId the number of the executed thread according to the {@link ExecutionScenario scenario}.
+     * @param iThread the number of the executed thread according to the {@link ExecutionScenario scenario}.
      * @param codeLocation the byte-code location identifier of this operation.
      * @param monitor
      * @param notifyAll
      */
-    public void afterNotify(int threadId, int codeLocation, Object monitor, boolean notifyAll) {}
+    public void afterNotify(int iThread, int codeLocation, Object monitor, boolean notifyAll) {}
 
     /**
      * This method is invoked by a test thread
      * if a coroutine was suspended
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void afterCoroutineSuspended(int threadId) {}
+    public void afterCoroutineSuspended(int iThread) {}
 
     /**
      * This method is invoked by a test thread
      * if a coroutine was resumed
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void afterCoroutineResumed(int threadId) {}
+    public void afterCoroutineResumed(int iThread) {}
 
     /**
      * This method is invoked by a test thread
      * before each ignored section start.
      * These sections are determined by Strategy.ignoredEntryPoints()
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void enterIgnoredSection(int threadId) {}
+    public void enterIgnoredSection(int iThread) {}
 
     /**
      * This method is invoked by a test thread
      * after each ignored section end.
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void leaveIgnoredSection(int threadId) {}
+    public void leaveIgnoredSection(int iThread) {}
 
     /**
      * This method is invoked by a test thread
      * before each method invocation.
      * @param codeLocation the byte-code location identifier of this invocation
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      */
-    public void beforeMethodCall(int threadId, int codeLocation) {}
+    public void beforeMethodCall(int iThread, int codeLocation) {}
 
     /**
      * This method is invoked by a test thread
      * after each method invocation.
-     * @param threadId number of invoking thread
+     * @param iThread number of invoking thread
      * @param codeLocation the byte-code location identifier of this invocation
      */
-    public void afterMethodCall(int threadId, int codeLocation) {}
+    public void afterMethodCall(int iThread, int codeLocation) {}
 
 
     /**
      * This method is invoked by a test thread
      * after each write or atomic method invocation
-     * @param threadId
+     * @param iThread
      */
-    public void makeStateRepresentation(int threadId) {}
+    public void makeStateRepresentation(int iThread) {}
 
     // == LOGGING METHODS ==
 
@@ -319,7 +319,7 @@ public abstract class ManagedStrategy extends Strategy {
     public int currentThreadNumber() {
         Thread t = Thread.currentThread();
         if (t instanceof FixedActiveThreadsExecutor.TestThread) {
-            return ((FixedActiveThreadsExecutor.TestThread) t).getThreadId();
+            return ((FixedActiveThreadsExecutor.TestThread) t).getIThread();
         } else {
             return nThreads;
         }

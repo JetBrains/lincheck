@@ -40,7 +40,7 @@ internal fun StringBuilder.appendExecution(
     // last actor that was appended for each thread
     val lastLoggedActor = IntArray(nThreads) { -1 }
     // what actors started, but did not finish in each thread
-    val lastExecutedActors = IntArray(nThreads) { threadId -> interleaving.filter { it.threadId == threadId}.map { it.actorId }.max() ?: -1 }
+    val lastExecutedActors = IntArray(nThreads) { iThread -> interleaving.filter { it.iThread == iThread}.map { it.actorId }.max() ?: -1 }
     // call stack traces of all interesting events for each thread and actor
     val interestingEvents = interestingEventStackTraces(scenario, interleaving, lastExecutedActors)
     // set of identifiers which were appended
@@ -49,27 +49,27 @@ internal fun StringBuilder.appendExecution(
     objectNumeration.clear()
     eventLoop@for (eventId in interleaving.indices) {
         val event = interleaving[eventId]
-        val threadId = event.threadId
+        val iThread = event.iThread
         val actorId = event.actorId
         // print all actors that started since the last event
-        while (lastLoggedActor[threadId] < min(actorId, scenario.parallelExecution[threadId].size)) {
-            val lastActor = lastLoggedActor[threadId]
-            if (lastActor >= 0 && isInterestingActor(threadId, lastActor, interestingEvents) && results != null) {
-                if (results.parallelResults[threadId][lastActor] is Cancelled)
-                    execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "CONTINUATION CANCELLED"))
-                execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "result: ${results.parallelResults[threadId][lastActor]}"))
+        while (lastLoggedActor[iThread] < min(actorId, scenario.parallelExecution[iThread].size)) {
+            val lastActor = lastLoggedActor[iThread]
+            if (lastActor >= 0 && isInterestingActor(iThread, lastActor, interestingEvents) && results != null) {
+                if (results.parallelResults[iThread][lastActor] is Cancelled)
+                    execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "CONTINUATION CANCELLED"))
+                execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "result: ${results.parallelResults[iThread][lastActor]}"))
             }
-            val nextActor = ++lastLoggedActor[threadId]
-            if (nextActor != scenario.parallelExecution[threadId].size) {
+            val nextActor = ++lastLoggedActor[iThread]
+            if (nextActor != scenario.parallelExecution[iThread].size) {
                 // print actor
                 // if it is not interesting then print with the result in the same line
-                val isInterestingActor = isInterestingActor(threadId, nextActor, interestingEvents)
-                val actorRepresentation = getActorRepresentation(threadId, nextActor, scenario, results, isInterestingActor)
-                execution.add(InterleavingEventRepresentation(threadId, actorRepresentation))
+                val isInterestingActor = isInterestingActor(iThread, nextActor, interestingEvents)
+                val actorRepresentation = getActorRepresentation(iThread, nextActor, scenario, results, isInterestingActor)
+                execution.add(InterleavingEventRepresentation(iThread, actorRepresentation))
                 if (!isInterestingActor) {
-                    val stateRepresentation = lastStateRepresentation(threadId, actorId, interleaving, eventId)
+                    val stateRepresentation = lastStateRepresentation(iThread, actorId, interleaving, eventId)
                     if (stateRepresentation != null)
-                        execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
+                        execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))
                 }
             }
         }
@@ -77,21 +77,21 @@ internal fun StringBuilder.appendExecution(
         when (event) {
             is SwitchEvent -> {
                 val reason = if (event.reason.toString().isEmpty()) "" else " (reason: ${event.reason})"
-                execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "switch" + reason))
+                execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "switch" + reason))
             }
             is FinishEvent -> {
-                execution.add(InterleavingEventRepresentation(threadId,  EXECUTION_INDENTATION + "thread is finished"))
+                execution.add(InterleavingEventRepresentation(iThread,  EXECUTION_INDENTATION + "thread is finished"))
             }
             is PassCodeLocationEvent -> {
-                if (isInterestingActor(threadId, actorId, interestingEvents)) {
+                if (isInterestingActor(iThread, actorId, interestingEvents)) {
                     val callStackTrace = event.callStackTrace
-                    val compressionPoint = callStackTrace.calculateCompressionPoint(interestingEvents[threadId][actorId])
+                    val compressionPoint = callStackTrace.calculateCompressionPoint(interestingEvents[iThread][actorId])
                     if (compressionPoint == callStackTrace.size) {
                         // no compression
-                        execution.add(InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + event.codeLocation.toString()))
+                        execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + event.codeLocation.toString()))
                         val stateRepresentation = nextStateRepresentaton(interleaving, eventId)
                         if (stateRepresentation != null)
-                            execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
+                            execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))
                     } else {
                         val call = callStackTrace[compressionPoint]
                         val callIdentifier = call.identifier
@@ -99,12 +99,12 @@ internal fun StringBuilder.appendExecution(
                             continue@eventLoop // this method call was already logged
                         loggedMethodCalls += callIdentifier
                         execution.add(InterleavingEventRepresentation(
-                                threadId,
+                                iThread,
                                 EXECUTION_INDENTATION + call.codeLocation.toString()
                         ))
-                        val stateRepresentation = lastCompressedStateRepresentation(interleaving, eventId, callIdentifier, interestingEvents[threadId][actorId])
+                        val stateRepresentation = lastCompressedStateRepresentation(interleaving, eventId, callIdentifier, interestingEvents[iThread][actorId])
                         if (stateRepresentation != null)
-                            execution.add(stateInterleavingEventRepresentation(threadId, stateRepresentation))
+                            execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))
                     }
                 }
             }
@@ -129,7 +129,7 @@ internal fun StringBuilder.appendExecution(
     })
 }
 
-private class InterleavingEventRepresentation(val threadId: Int, val representation: String)
+private class InterleavingEventRepresentation(val iThread: Int, val representation: String)
 
 /**
  * Events that are considered interesting:
@@ -141,9 +141,9 @@ private fun interestingEventStackTraces(
         scenario: ExecutionScenario,
         interleavingEvents: List<InterleavingEvent>,
         lastExecutedActors: IntArray
-): Array<Array<List<CallStackTrace>>> = Array(scenario.parallelExecution.size) { threadId ->
-    val eventsInThread = interleavingEvents.filter { it.threadId == threadId}
-    Array(scenario.parallelExecution[threadId].size) { actorId ->
+): Array<Array<List<CallStackTrace>>> = Array(scenario.parallelExecution.size) { iThread ->
+    val eventsInThread = interleavingEvents.filter { it.iThread == iThread}
+    Array(scenario.parallelExecution[iThread].size) { actorId ->
         val interestingCallStackTraces = mutableListOf<CallStackTrace>()
         interestingCallStackTraces.addAll(
                 eventsInThread.filter { it.actorId == actorId }.filterIsInstance<SwitchEvent>().map { it.callStackTrace }
@@ -155,7 +155,7 @@ private fun interestingEventStackTraces(
                         .filter { it.callStackTrace.lastOrNull()?.codeLocation?.returnedValue?.value == COROUTINE_SUSPENDED }
                         .map { it.callStackTrace }
         )
-        if (actorId == lastExecutedActors[threadId]) {
+        if (actorId == lastExecutedActors[iThread]) {
             when (val lastEvent = eventsInThread.lastOrNull { it !is StateRepresentationEvent }) {
                 is PassCodeLocationEvent -> interestingCallStackTraces.add(lastEvent.callStackTrace)
                 else -> {}
@@ -171,7 +171,7 @@ private fun interestingEventStackTraces(
 private fun splitToColumns(nThreads: Int, execution: List<InterleavingEventRepresentation>): List<List<String>> {
     val result = List(nThreads) { mutableListOf<String>() }
     for (message in execution) {
-        val columnId = message.threadId
+        val columnId = message.iThread
         // write messages in appropriate columns
         result[columnId].add(message.representation)
         val neededSize = result[columnId].size
@@ -199,19 +199,19 @@ private fun CallStackTrace.firstDifferPosition(callStackTrace: CallStackTrace): 
 }
 
 private fun getActorRepresentation(
-        threadId: Int,
+        iThread: Int,
         actorId: Int, scenario:
         ExecutionScenario,
         results: ExecutionResult?,
         isInteresting: Boolean
 ) = StringBuilder().apply {
-    append(scenario.parallelExecution[threadId][actorId].toString())
+    append(scenario.parallelExecution[iThread][actorId].toString())
     if (results != null && !isInteresting)
-        append(": ${results.parallelResults[threadId][actorId]}")
+        append(": ${results.parallelResults[iThread][actorId]}")
 }.toString()
 
-private fun isInterestingActor(threadId: Int, actorId: Int, interestingEvents: Array<Array<List<CallStackTrace>>>) =
-        interestingEvents[threadId][actorId].isNotEmpty()
+private fun isInterestingActor(iThread: Int, actorId: Int, interestingEvents: Array<Array<List<CallStackTrace>>>) =
+        interestingEvents[iThread][actorId].isNotEmpty()
 
 /**
  * Returns state representation if there was any immediately after [previousEventPosition].
@@ -246,11 +246,11 @@ private fun lastCompressedStateRepresentation(interleavingEvents: List<Interleav
 /**
  * Find last state representation for a given [actorId] actor.
  */
-private fun lastStateRepresentation(threadId: Int, actorId: Int, interleavingEvents: List<InterleavingEvent>, startPosition: Int): String? {
+private fun lastStateRepresentation(iThread: Int, actorId: Int, interleavingEvents: List<InterleavingEvent>, startPosition: Int): String? {
     var lastStateRepresentation: String? = null
     for (position in startPosition until interleavingEvents.size) {
         val event = interleavingEvents[position]
-        if (event.threadId != threadId || event.actorId != actorId)
+        if (event.iThread != iThread || event.actorId != actorId)
             return lastStateRepresentation
         if (event is StateRepresentationEvent)
             lastStateRepresentation = event.stateRepresentation
@@ -258,5 +258,5 @@ private fun lastStateRepresentation(threadId: Int, actorId: Int, interleavingEve
     return lastStateRepresentation
 }
 
-private fun stateInterleavingEventRepresentation(threadId: Int, stateRepresentation: String) =
-        InterleavingEventRepresentation(threadId, EXECUTION_INDENTATION + "STATE: $stateRepresentation")
+private fun stateInterleavingEventRepresentation(iThread: Int, stateRepresentation: String) =
+        InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "STATE: $stateRepresentation")

@@ -151,39 +151,39 @@ internal open class ParallelThreadsRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, threadId: Int, actorId: Int): Result {
+    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
         val finalResult = if (res === COROUTINE_SUSPENDED) {
-            val actor = scenario.parallelExecution[threadId][actorId]
+            val actor = scenario.parallelExecution[iThread][actorId]
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
             if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) Cancelled
-            else waitAndInvokeFollowUp(threadId, actorId)
+            else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
-        if (isLastActor(threadId, actorId) && finalResult !== Suspended)
+        if (isLastActor(iThread, actorId) && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()
-        suspensionPointResults[threadId] = NoResult
+        suspensionPointResults[iThread] = NoResult
         return finalResult
     }
 
-    private fun waitAndInvokeFollowUp(threadId: Int, actorId: Int): Result {
+    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
         // Coroutine is suspended. Call method so that strategy can learn it.
-        afterCoroutineSuspended(threadId)
+        afterCoroutineSuspended(iThread)
         // Tf the suspended method call has a follow-up part after this suspension point,
         // then wait for the resuming thread to write a result of this suspension point
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.
-        val completion = completions[threadId][actorId]
+        val completion = completions[iThread][actorId]
         var i = 1
-        while (!canResumeCoroutine(threadId, actorId) || !strategy.canResumeCoroutine(threadId)) {
+        while (!canResumeCoroutine(iThread, actorId) || !strategy.canResumeCoroutine(iThread)) {
             // Check whether the scenario is completed and the current suspended operation cannot be resumed.
             if (completedOrSuspendedThreads.get() == scenario.threads) {
-                suspensionPointResults[threadId] = NoResult
+                suspensionPointResults[iThread] = NoResult
                 return Suspended
             }
             if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
-        beforeCoroutineResumed(threadId)
+        beforeCoroutineResumed(iThread)
         // Check whether the result of the suspension point with the continuation has been stored
         // by the resuming thread, and invoke the follow-up part in this case
         if (completion.resWithCont.get() !== null) {
@@ -191,18 +191,18 @@ internal open class ParallelThreadsRunner(
             val resumedValue = completion.resWithCont.get().first
             completion.resWithCont.get().second.resumeWith(resumedValue)
         }
-        return suspensionPointResults[threadId]
+        return suspensionPointResults[iThread]
     }
 
-    override fun afterCoroutineSuspended(threadId: Int) {
+    override fun afterCoroutineSuspended(iThread: Int) {
         completedOrSuspendedThreads.incrementAndGet()
     }
 
-    override fun beforeCoroutineResumed(threadId: Int) {}
+    override fun beforeCoroutineResumed(iThread: Int) {}
 
-    override fun canResumeCoroutine(threadId: Int, actorId: Int): Boolean {
-        val completion = completions[threadId][actorId]
-        return completion.resWithCont.get() != null || suspensionPointResults[threadId] !== NoResult
+    override fun canResumeCoroutine(iThread: Int, actorId: Int): Boolean {
+        val completion = completions[iThread][actorId]
+        return completion.resWithCont.get() != null || suspensionPointResults[iThread] !== NoResult
     }
 
     override fun run(): InvocationResult {
@@ -264,8 +264,8 @@ internal open class ParallelThreadsRunner(
         return CompletedInvocationResult(results)
     }
 
-    override fun onStart(threadId: Int) {
-        super.onStart(threadId)
+    override fun onStart(iThread: Int) {
+        super.onStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1
