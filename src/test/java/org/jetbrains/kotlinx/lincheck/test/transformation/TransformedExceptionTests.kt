@@ -23,41 +23,12 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
-/**
- * This test checks that some methods in kotlin stdlib connected to
- * java.util collections are transformed correctly.
- */
-class KotlinStdlibTransformationTest : AbstractLincheckTest() {
-    var hashCode = 0
-
-    @Operation
-    fun operation() {
-        val intArray = IntArray(2)
-        val objectArray = Array<String>(2) { "" }
-        val intProgression = (1..2)
-        intArray.iterator()
-        intArray.forEach {
-            // do something
-            hashCode = it.hashCode()
-        }
-        objectArray.iterator()
-        objectArray.forEach {
-            // do something
-            hashCode = it.hashCode()
-        }
-        intProgression.iterator()
-        intProgression.forEach {
-            // do something
-            hashCode = it.hashCode()
-        }
-        intArray.toList().toTypedArray()
-        objectArray.toList().toTypedArray()
-        intArray.toHashSet()
-        objectArray.toSortedSet()
-        intProgression.toSet()
-    }
+class ExpectedTransformedExceptionTest : AbstractLincheckTest() {
+    @Operation(handleExceptionsAsResult = [CustomException::class])
+    fun operation(): Unit = throw CustomException()
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
@@ -65,3 +36,21 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
 
     override fun extractState(): Any = 0 // constant state
 }
+
+class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
+    @Volatile
+    var throwException = false
+
+    @Operation
+    fun operation(): Int {
+        throwException = true
+        throwException = false
+        if (throwException)
+            throw CustomException()
+        return 0
+    }
+
+    override fun extractState(): Any = 0 // constant state
+}
+
+internal class CustomException : Throwable()

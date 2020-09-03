@@ -32,6 +32,8 @@ import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.convertForLoader;
+
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
  * like fibers, it may require code transformation, so {@link #needsTransformation()}
@@ -39,7 +41,7 @@ import java.util.concurrent.atomic.*;
  * one has to be implemented.
  */
 public abstract class Runner {
-    protected final ExecutionScenario scenario;
+    protected ExecutionScenario scenario;
     protected Class<?> testClass;
     protected final List<Method> validationFunctions;
     protected final Strategy strategy;
@@ -48,7 +50,6 @@ public abstract class Runner {
     protected final AtomicInteger completedOrSuspendedThreads = new AtomicInteger(0);
 
     protected Runner(Strategy strategy, Class<?> testClass, List<Method> validationFunctions) {
-        this.scenario = strategy.getScenario();
         this.testClass = testClass;
         this.strategy = strategy;
         this.validationFunctions = validationFunctions;
@@ -62,6 +63,7 @@ public abstract class Runner {
     private void doTransformTestClass() {
         this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
                 new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
+        this.scenario = convertForLoader(strategy.getScenario(), classLoader);
         this.testClass = loadClass(testClass.getTypeName());
     }
 

@@ -36,19 +36,19 @@ import org.junit.Test
  */
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
 class FinalFieldReadingEliminationTest : VerifierState() {
-    val value: Int = 32
-    val any: Any = this
+    val primitiveValue: Int = 32
+    val nonPrimitiveValue = listOf(1, 2)
 
     @Operation
-    fun readValue() = value
+    fun readPrimitive() = primitiveValue
 
     @Operation
-    fun readAny() = any
+    fun readNonPrimitive() = nonPrimitiveValue
 
     @Test(timeout = 100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }
 
-    override fun extractState(): Any = value
+    override fun extractState(): Any = 0 // constant state
 }

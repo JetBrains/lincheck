@@ -59,6 +59,6 @@ class TimeStubTest : VerifierState() {
         LinChecker.check(this::class.java)
     }
 
-    override fun extractState(): Any = 543
+    override fun extractState(): Any = 0 // constant state
 
 }

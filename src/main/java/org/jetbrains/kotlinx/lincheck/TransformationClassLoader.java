@@ -68,7 +68,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     /**
      * Returns `true` if the specified class should not be transformed.
      */
-    private static boolean doNotTransform(String className) {
+    static boolean doNotTransform(String className) {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
         if (TrustedAtomicPrimitivesKt.isImpossibleToTransformPrimitive(className)) return true;
 

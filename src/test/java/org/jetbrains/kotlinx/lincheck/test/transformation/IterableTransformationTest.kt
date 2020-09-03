@@ -48,5 +48,5 @@ class IterableTransformationTest : VerifierState() {
         LinChecker.check(this::class.java)
     }
 
-    override fun extractState(): Any = 54 // any constant value
+    override fun extractState(): Any = 0 // constant state
 }
