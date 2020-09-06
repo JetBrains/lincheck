@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
+import java.io.Serializable
 
 /**
  * This test checks that managed strategies do not switch
@@ -34,10 +35,10 @@ import org.junit.Test
  * Otherwise, this test fails by timeout since
  * the number of invocations is set to [Int.MAX_VALUE].
  */
-@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
+@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50, minimizeFailedScenario = false)
 class FinalFieldReadingEliminationTest : VerifierState() {
     val primitiveValue: Int = 32
-    val nonPrimitiveValue = listOf(1, 2)
+    val nonPrimitiveValue = ValueHolder(2)
 
     @Operation
     fun readPrimitive() = primitiveValue
@@ -51,4 +52,6 @@ class FinalFieldReadingEliminationTest : VerifierState() {
     }
 
     override fun extractState(): Any = 0 // constant state
+
+    class ValueHolder(val value: Int) : Serializable
 }

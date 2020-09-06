@@ -43,6 +43,20 @@ class SerializableResultTest : AbstractLincheckTest() {
     }
 }
 
+class SerializableJavaUtilResultTest : AbstractLincheckTest() {
+    private val value = listOf(1, 2)
+
+    @Operation
+    fun get(key: Int) = value
+
+    override fun extractState(): Any = value
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(1)
+        actorsBefore(0)
+        actorsAfter(0)
+    }
+}
 
 @Param(name = "key", gen = ValueHolderGen::class)
 class SerializableParameterTest : AbstractLincheckTest() {
@@ -51,20 +65,37 @@ class SerializableParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: ValueHolder): Int = counter.addAndGet(key.value)
 
+    override fun extractState(): Any = counter.get()
+
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
     }
-
-    override fun extractState(): Any = counter.get()
 }
-
-
-class ValueHolder(val value: Int) : Serializable
 
 class ValueHolderGen(conf: String) : ParameterGenerator<ValueHolder> {
     override fun generate(): ValueHolder {
         return listOf(ValueHolder(1), ValueHolder(2)).random()
     }
 }
+
+@Param(name = "key", gen = JavaUtilGen::class)
+class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
+    @Operation
+    fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
+
+    override fun extractState(): Any = 0 // constant state
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(1)
+        actorsBefore(0)
+        actorsAfter(0)
+    }
+}
+
+class JavaUtilGen(conf: String) : ParameterGenerator<List<Int>> {
+    override fun generate() = listOf(1, 2)
+}
+
+class ValueHolder(val value: Int) : Serializable
