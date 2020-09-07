@@ -101,7 +101,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
                 leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
             for (int i = 0; i < testConfiguration.actorsAfter && !leftActorGenerators.isEmpty(); i++) {
                 ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
-                postExecution.add(agen.generate(testConfiguration.threads));
+                postExecution.add(agen.generate(testConfiguration.threads + 1));
             }
         } else {
             postExecution = Collections.emptyList();
