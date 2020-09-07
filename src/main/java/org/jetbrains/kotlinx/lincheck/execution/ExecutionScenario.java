@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import java.util.*;
 import java.util.stream.*;
 
-import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 import static org.jetbrains.kotlinx.lincheck.ReporterKt.appendExecutionScenario;
 
 /**
@@ -76,7 +75,7 @@ public class ExecutionScenario {
      * Returns `true` if there is at least one suspendable actor in the generated scenario
      */
     public boolean hasSuspendableActors() {
-        return Stream.concat(parallelExecution.stream().flatMap(Collection::stream), postExecution.stream()).anyMatch(actor -> isSuspendable(actor.getMethod()));
+        return Stream.concat(parallelExecution.stream().flatMap(Collection::stream), postExecution.stream()).anyMatch(Actor::isSuspendable);
     }
 
     @Override

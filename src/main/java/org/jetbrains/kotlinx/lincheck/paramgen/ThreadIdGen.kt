@@ -19,11 +19,20 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.kotlinx.lincheck.paramgen
 
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import java.lang.AssertionError
+/**
+ * This generator puts the number of the
+ * executing thread as the parameter value.
+ * The `0`-th thread specifies the init part
+ * of the execution, while the `t+1`-th thread
+ * references the post part (here we assume that
+ * the parallel part has `t` threads).
+ *
+ * Note, that this API is unstable and is subject to change.
+ */
+class ThreadIdGen(configuration: String) : ParameterGenerator<Any> {
+    override fun generate() = THREAD_ID_TOKEN
+}
 
-class LincheckAssertionError(
-    failure: LincheckFailure
-) : AssertionError("\n" + failure)
+internal val THREAD_ID_TOKEN = Any()
