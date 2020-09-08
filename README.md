@@ -31,8 +31,8 @@ Table of contents
   * [Parameter and result types](#parameter-and-result-types)
   * [Run test](#run-test)
 - [Execution strategies](#execution-strategies)
-  * [Stress strategy](#stress-strategy)
-  * [Model checking strategy](#model-checking-strategy)
+  * [Stress testing](#stress-testing)
+  * [Model checking](#model-checking)
     * [State representation](#state-representation)
     * [Incremental testing](#incremental-testing)
 - [Correctness contracts](#correctness-contracts)
@@ -208,8 +208,8 @@ public class MyConcurrentTest {
 # Execution strategies
 The section above describes how to specify the operations and the initial state, whereas this section is about executing the test. Using the provided operations **lincheck** generates several random scenarios and then executes them using the specified execution strategy. At this moment, only stress strategy is implemented, but a model checking one will be added soon.
 
-## Stress strategy
-The first implemented in **lincheck** execution strategy is stress testing strategy. This strategy uses the same idea as `JCStress` tool - it executes the generated scenario in parallel a lot of times in hope to hit on an interleaving which produces incorrect results. This strategy is pretty useful for finding bugs related to low-level effects (like a forgotten volatile modifier), but, unfortunately, does not guarantee any coverage. It is also recommended to use not only Intel processors with this strategy because its internal memory model is quite strong and cannot produce a lot of behaviors which are possible with ARM, for example. 
+## Stress testing
+The first implemented in **lincheck** strategy is stress testing. This strategy uses the same idea as `JCStress` tool - it executes the generated scenario in parallel a lot of times in hope to hit on an interleaving which produces incorrect results. This strategy is pretty useful for finding bugs related to low-level effects (like a forgotten volatile modifier), but, unfortunately, does not guarantee any coverage. It is also recommended to use not only Intel processors with this strategy because its internal memory model is quite strong and cannot produce a lot of behaviors which are possible with ARM, for example. 
 
 In order to use this strategy, just `@StressCTest` annotation should be added to the test class or `StressOptions` should be used if the test uses options to run (see [Configuration via options](#configuration-via-options) for details). Both of them are configured with the following options:
 
@@ -221,32 +221,29 @@ In order to use this strategy, just `@StressCTest` annotation should be added to
 * **actorsAfter** - number of operations to be executed after the concurrent part, helps to verify that a data structure is still correct;
 * **verifier** - verifier for an expected correctness contract (see [Correctness contracts](#correctness-contracts) for details).
 
-## Model checking strategy
-For the case of sequential consistency memory model, which is a common case, model checking strategy was developed. This mode was originally inspired by the `CHESS` framework for C#, which studies all possible schedules with a bounded number of context switches. It ignores weak memory model effects, so it is recommended to use both stress strategy and model checking strategy.
+## Model checking
+Most of the complicated concurrent algorithms either use the sequentially consistent memory model under the hood, or bugs in their implementations can be re-produced under it. 
+Therefore, in **lincheck** we have a model checking mode that works under the sequentially consistent memory model. Intuitively, it studies all possible schedules with a bounded number of context switches by fully controlling the execution and putting context switches in different locations in threads. Similarly to the stress testing, it is possible to bound the number of schedules (invocations) to be studied -- this way, the test time is predictable independently on the scenario size and the algorithm complexity. To be short, **lincheck** starts with studying all interleavings with one context switch, but does this evenly, trying to explore different interleavings at first -- this way, we increase the total coverage if the number of available invocations is not enough to study all the interleavings. Once all the interleavings with one context switch are reviewed, it starts examining interleavings with two context switches, and so on, until the available invocations exceed the maximum or all interleavings are covered. This strategy helps not only to increase the testing coverage but also to find an incorrect schedule with the lowest number of context switches possible as well -- this is significant for further bug investigation. Since **lincheck** controls the execution, it also provides a trace that leads to the found incorrect result. It is worth noting that our model checking implementation is deterministic if the testing data structure is, so that errors are reproducible. Thus, it is recommended not to use `WeakHashMap` or so, but using `Random` provided by Java or Kotlin is fine since we always replace it with a deterministic implementation. 
 
-Similarly to stress strategiy, this strategy can be used via `@ModelCheckingCTest` annotation or `ModelCheckingOptions`.
+Similarly to the stress strategy, model checking can be activated via `@ModelCheckingCTest` annotation or using `ModelCheckingOptions`. The model checking strategy has the same parameters as the stress strategy and the following additional ones:
+* **checkObstructionFreedom** - specifies whether **lincheck** should check the testing algorithm for obstruction-freedom;
+* **hangingDetectionThreshold** - specifies the maximum number of the same code location visits without thread switches that should be considered as hanging (e.g., due to an active lock).
 
-It has the same parameters as stress strategy plus the following ones:
-* **checkObstructionFreedom** - specify, whether the strategy should also check obstruction freedom of the algorithm.
-* **hangingDetectionThreshold** - the maximum number of times that a thread can visit a certain code location without switching to another thread that is still not recognized as hanging (e.g., because of spin lock).
-
-In comparison to stress strategy, model checking strategy can also provide the trace that led to incorrect results, not just the incorrect results. Model checking strategy is deterministic and return the same test results for the same test classes and parameters.
-
-It is critical that the test data structure should be deterministic, and as a result, must not use `WeakReference`, `WeakHashMap` or globally changing state. However, standard java and kotlin `Random` and `ThreadLocalRandom` have special support in **lincheck** and can be used safely.  
-
-### State representation
-
-It is possible to enable state reporting after every thread event in the trace. For this purpose, a method that can return `String` with the state representation should be annotated with `@StateRepresentation`. This method should be thread-safe. For example, this method cannot iterate over an `ArrayList`, because the method can be invoked while the list is being reallocated. The method should also be non-blocking, so that not to cause deadlocks. The correct usage of this feature include, but not restricted to, reading fields of the test class and internal *concurrent* data structures.
-
-### Incremental testing
-
-For complex concurrent data structures a large number of interleavings are not interesting. For instance, it is not useful to switch in an internal data structure if all its methods are synchronized. 
+### Modular testing
+It is a common pattern to use linearizable data structures as building blocks of other ones. 
+At the same time, the number of all possible interleavings for non-trivial algorithms usually is enormous. 
+This leads us to add a way of *modular* testing, so that the internal data structures are tested separately, and the operations in them are considered as `atomic` -- only one switch point is inserted for each atomic function invocation then. This feature significantly reduces the number of redundant interleavings and increases coverage at the same time. Moreover, it is also usual to have some debug code that manipulates with the shared memory but does not affect the testing data structure. In **lincheck**, it is possible to ignore such functions for the analysis, so that no switch point is inserted.
+For complex concurrent data structures, a large number of interleavings are not interesting. For instance, it is not useful to switch in an internal data structure if all its methods are synchronized. 
 With model checking strategy you can design separate tests for your inner data structures and then in the main test treat these structures as if they are correct.
 
-This can be done only via `ModelCheckingOptions` (see [Configuration via options](#configuration-via-options)). The guarantees of structure correctness can be added using the following syntax: 
-`options.addGuarantee(forClasses(ConcurrentHashMap.javaClass.name).methods("put", "get").treatAsAtomic())`. This guarantee will force the strategy not to try to add switches inside specified methods, significantly reducing the total number of interleavings and increasing the quality of testing. 
+The atomicity contracts can be specified via `ModelCheckingOptions` (see [Configuration via options](#configuration-via-options)), the following syntax is used: 
+`options.addGuarantee(forClasses(ConcurrentHashMap.javaClass.name).methods("put", "get").treatAsAtomic())`. 
+The specified guarantee forces **lincheck** not to switch threads inside these `put` and `get` methods, executing them atomically. Thus, the total number of possible interleavings is significantly decreased, and the testing quality is improved. 
 
-Alternatively, `ignored` guarantee can be used instead of `treatAsAtomic`. The difference between these two guarantees is that `treatAsAtomic` methods are important for the concurrent execution and model checking strategy can add switches before or after their invocations, while `ignored` methods do not cause any additional switches. The most common applications for `ignored` are logging methods or debug checks .
+Additionally to marking methods as atomic, it is possible to ignore them for the analysis; this is extremely useful for logging and debugging methods.  For such methods, `ignored` guarantee should be used instead of `treatAsAtomic`, and **lincheck** will not add switch points before or after these method calls, considering them in the same way as thread-local operations.
+
+## State representation
+For both the stress testing and the model checking strategies, it is possible to enable state reporting. For this purpose, a method that returns `String` state representation should be annotated with `@StateRepresentation` and be located in the testing class. This method should be thread-safe, non-blocking, and should not modify the data structure. In case of the stress testing, the state representation is printed after each operation in the init and post execution parts as well as after the parallel part. In contrast, for model checking it is possible print the current state representation after each read or write event.
 
 # Correctness contracts
 Once the generated scenario is executed using the specified strategy, it is needed to verify the operation results for correctness. By default **lincheck** checks the result for linearizability, which is de-facto a standard type of correctness. However, there are also verifiers for some relaxed contracts, which should be set via `@..CTest(verifier = ..Verifier.class)` option.
