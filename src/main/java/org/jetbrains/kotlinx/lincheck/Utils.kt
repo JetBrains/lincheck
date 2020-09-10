@@ -245,7 +245,7 @@ private fun Method.convertForLoader(loader: ClassLoader): Method {
     return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
 }
 
-private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = loader.loadClass(loader.remapClassName(name))
+private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
 
 private fun Any?.convertForLoader(loader: ClassLoader) = when {
     this == null -> this
