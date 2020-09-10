@@ -52,17 +52,25 @@ public abstract class Runner {
     protected Runner(Strategy strategy, Class<?> testClass, List<Method> validationFunctions) {
         this.testClass = testClass;
         this.strategy = strategy;
+        this.scenario = strategy.getScenario();
         this.validationFunctions = validationFunctions;
-        doTransformTestClass();
+        createClassLoader();
     }
 
-    public void transformTestClass() {
-        doTransformTestClass();
-    }
-
-    private void doTransformTestClass() {
+    /**
+     * Create a new class loader according to strategy and runner.
+     */
+    public final void createClassLoader() {
         this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
                 new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
+    }
+
+    /**
+     * This method is a part of Runner initialization.
+     * It should be invoked after the constructor.
+     * It is separated from constructor to allow initialization in the class loader before the transformation.
+     */
+    public void transformTestClass() {
         this.scenario = convertForLoader(strategy.getScenario(), classLoader);
         this.testClass = loadClass(testClass.getTypeName());
     }

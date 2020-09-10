@@ -105,13 +105,13 @@ public class TestThreadExecutionGenerator {
      * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#run()} implementation.
      */
     public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions,
-                                             boolean scenarioContainsSuspendableActors, Remapper remapper)
+                                             boolean scenarioContainsSuspendableActors)
     {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
         Class<? extends TestThreadExecution> clz = runner.classLoader.defineClass(className,
-                generateClass(internalClassName, getType(runner.testClass), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, remapper));
+                generateClass(internalClassName, getType(runner.testClass), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
@@ -124,13 +124,13 @@ public class TestThreadExecutionGenerator {
 
     private static byte[] generateClass(String internalClassName, Type testClassType, int iThread, List<Actor> actors,
                                         List<Object> objArgs, List<ParallelThreadsRunner.Completion> completions,
-                                        boolean scenarioContainsSuspendableActors, Remapper remapper)
+                                        boolean scenarioContainsSuspendableActors)
     {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
         cca.visit(52, ACC_PUBLIC + ACC_SUPER, internalClassName, null, TEST_THREAD_EXECUTION_TYPE.getInternalName(), null);
         generateConstructor(cca);
-        generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, remapper);
+        generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors);
         cca.visitEnd();
         return cw.toByteArray();
     }
@@ -147,7 +147,7 @@ public class TestThreadExecutionGenerator {
 
     private static void generateRun(ClassVisitor cv, Type testType, int iThread, List<Actor> actors,
                                     List<Object> objArgs, List<Completion> completions,
-                                    boolean scenarioContainsSuspendableActors, Remapper remapper)
+                                    boolean scenarioContainsSuspendableActors)
     {
         int access = ACC_PUBLIC;
         Method m = new Method("run", VOID_TYPE, NO_ARGS);
@@ -230,9 +230,6 @@ public class TestThreadExecutionGenerator {
             loadArguments(mv, actor, objArgs, actor.isSuspendable() ? completions.get(i) : null);
             // Invoke operation
             Method actorMethod = Method.getMethod(actor.getMethod());
-            // Remap method descriptor if needed
-            if (remapper != null)
-                actorMethod = new Method(actorMethod.getName(), remapper.mapMethodDesc(actorMethod.getDescriptor()));
             mv.invokeVirtual(testType, actorMethod);
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {

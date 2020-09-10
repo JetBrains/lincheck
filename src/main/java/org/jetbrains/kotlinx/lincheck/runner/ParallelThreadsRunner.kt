@@ -65,10 +65,6 @@ internal open class ParallelThreadsRunner(
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
 
-    init {
-        initializeTestThreadExecutions()
-    }
-
     /**
      * Passed as continuation to invoke the suspendable actor from [threadId].
      *
@@ -301,7 +297,7 @@ internal open class ParallelThreadsRunner(
 
     private fun initializeTestThreadExecutions() {
         testThreadExecutions = Array(scenario.threads) { t ->
-            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), strategy.createRemapper())
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
         }
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }

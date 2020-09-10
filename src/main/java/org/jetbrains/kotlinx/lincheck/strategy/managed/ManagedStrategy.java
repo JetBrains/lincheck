@@ -90,7 +90,9 @@ public abstract class ManagedStrategy extends Strategy {
                 super.beforeCoroutineResumed(iThread);
             }
         };
+        // Managed state should be initialized before test class transformation
         initializeManagedState();
+        runner.transformTestClass();
     }
 
     @Override

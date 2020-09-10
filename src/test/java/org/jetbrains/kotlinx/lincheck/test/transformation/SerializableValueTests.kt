@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import java.io.Serializable
+import java.util.*
 import java.util.concurrent.atomic.*
 
 class SerializableResultTest : AbstractLincheckTest() {

@@ -369,8 +369,9 @@ internal abstract class ManagedStrategyBase(
         }
         // retransform class with logging enabled
         loggingEnabled = true
-        runner.transformTestClass()
+        runner.createClassLoader()
         initializeManagedState()
+        runner.transformTestClass()
         val loggedResults = doRunInvocation(true)
         val sameResultTypes = loggedResults.javaClass == previousResults.javaClass
         // cannot check whether the results are exactly the same because of retransformation

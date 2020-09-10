@@ -68,7 +68,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     /**
      * Returns `true` if the specified class should not be transformed.
      */
-    static boolean doNotTransform(String className) {
+    private static boolean doNotTransform(String className) {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
         if (TrustedAtomicPrimitivesKt.isImpossibleToTransformPrimitive(className)) return true;
 
@@ -84,6 +84,26 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 !className.equals(ManagedStateHolder.class.getName())) ||
             className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
             className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
+    }
+
+    /**
+     * Returns `true` if the specified class should not be transformed.
+     * Note that this method takes into consideration whether class name will be remapped.
+     */
+    boolean shouldBeTransformed(Class<?> clazz) {
+        return !doNotTransform(remapClassName(clazz.getName()));
+    }
+
+    /**
+     * Remaps [className] if needed for transformation
+     */
+    String remapClassName(String className) {
+        if (remapper != null) {
+            String internalName = className.replace('.', '/');
+            String remappedInternalName = remapper.mapType(internalName);
+            return remappedInternalName.replace('/', '.');
+        }
+        return className;
     }
 
     @Override
@@ -176,10 +196,10 @@ class TransformationClassWriter extends ClassWriter {
     /**
      * Returns name of class the moment before it was transformed
      */
-    private String originalInternalName(String className) {
-        if (className.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME))
-            return className.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length());
-        return className;
+    private String originalInternalName(String internalName) {
+        if (internalName.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME))
+            return internalName.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length());
+        return internalName;
     }
 }
 

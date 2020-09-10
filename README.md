@@ -504,7 +504,7 @@ Post part:
 |   threshold.WRITE(9) at HashMap.resize(HashMap.java:702)    |                      |
 |   table.WRITE(Node[]@1) at HashMap.resize(HashMap.java:705) |                      |
 |   READ: null at HashMap.putVal(HashMap.java:630)            |                      |
-|   WRITE(4=-4) at HashMap.putVal(HashMap.java:631)           |                      |
+|   WRITE(Node@1) at HashMap.putVal(HashMap.java:631)         |                      |
 |   modCount.READ: 1 at HashMap.putVal(HashMap.java:661)      |                      |
 |   modCount.WRITE(2) at HashMap.putVal(HashMap.java:661)     |                      |
 |   size.READ: 1 at HashMap.putVal(HashMap.java:662)          |                      |

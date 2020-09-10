@@ -229,14 +229,27 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     parallelExecution.map { actors ->
         actors.map { a ->
             val args = a.arguments.map { it.convertForLoader(loader) }
-            Actor(a.method, args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension)
+            Actor(a.method.convertForLoader(loader), args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension)
         }
     },
     postExecution
 )
 
+/**
+ * Fixes method signature according to TransformationClassLoader remapper.
+ */
+private fun Method.convertForLoader(loader: ClassLoader): Method {
+    if (loader !is TransformationClassLoader) return this
+    val clazz = declaringClass.convertForLoader(loader)
+    val parameterTypes = parameterTypes.map { it.convertForLoader(loader) }
+    return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
+}
+
+private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = loader.loadClass(loader.remapClassName(name))
+
 private fun Any?.convertForLoader(loader: ClassLoader) = when {
-    this == null || TransformationClassLoader.doNotTransform(this.javaClass.name) -> this
+    this == null -> this
+    loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
     this is Serializable -> serialize().run { deserialize(loader) }
     else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
                   " or implement Serializable interface.")
@@ -256,7 +269,10 @@ internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(t
  * ObjectInputStream that uses custom class loader.
  */
 private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
-    override fun resolveClass(desc: ObjectStreamClass): Class<*> = Class.forName(desc.name, true, loader)
+    override fun resolveClass(desc: ObjectStreamClass): Class<*> {
+        val className = if (loader is TransformationClassLoader) loader.remapClassName(desc.name) else desc.name
+        return Class.forName(className, true, loader)
+    }
 }
 
 /**
