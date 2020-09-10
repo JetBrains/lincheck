@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
+package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
@@ -27,12 +27,13 @@ import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.IllegalStateException
 import java.lang.StringBuilder
 
-open class StateReportingTest : VerifierState() {
+open class ModelCheckingStateReportingTest : VerifierState() {
     @Volatile
     var a = 0
 
@@ -53,17 +54,46 @@ open class StateReportingTest : VerifierState() {
                 .actorsPerThread(1)
                 .actorsBefore(0)
                 .actorsAfter(0)
-                .addGuarantee(forClasses(this::class.java.name)
-                .methods("inc").treatAsAtomic())
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
+        check("STATE: 0" in log)
         check("STATE: 1" in log)
         check("STATE: 2" in log)
     }
 }
 
-class StateRepresentationInParentClassTest : StateReportingTest()
+class StressStateReportingTest : VerifierState() {
+    @Volatile
+    var a = 0
+
+    @Operation
+    fun operation(): Int {
+        ++a
+        return ++a
+    }
+
+    override fun extractState(): Any = a
+
+    @StateRepresentation
+    fun stateRepresentation() = a.toString()
+
+    @Test
+    fun test() {
+        val options = StressOptions()
+            .actorsPerThread(1)
+            .actorsBefore(0)
+            .actorsAfter(0)
+        val failure = options.checkImpl(this::class.java)
+        check(failure != null) { "the test should fail" }
+        val log = StringBuilder().appendFailure(failure).toString()
+        println(log)
+        check("STATE: 0" in log)
+        check("STATE: 2" in log || "STATE: 3" in log)
+    }
+}
+
+class StateRepresentationInParentClassTest : ModelCheckingStateReportingTest()
 
 class TwoStateRepresentationFunctionsTest : VerifierState() {
     @Volatile

@@ -192,13 +192,23 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
         appendln("Init part:")
         appendln(uniteActorsAndResultsLinear(failure.scenario.initExecution, failure.results.initResults))
     }
+    if (failure.results.afterInitState != null)
+        appendln("STATE: ${failure.results.afterInitState}")
     appendln("Parallel part:")
     val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
     append(printInColumns(parallelExecutionData))
+    if (failure.results.afterParallelState != null) {
+        appendln()
+        append("STATE: ${failure.results.afterParallelState}")
+    }
     if (failure.scenario.postExecution.isNotEmpty()) {
         appendln()
         appendln("Post part:")
         append(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
+    }
+    if (failure.results.afterPostState != null && failure.scenario.postExecution.isNotEmpty()) {
+        appendln()
+        append("STATE: ${failure.results.afterPostState}")
     }
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
         appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
