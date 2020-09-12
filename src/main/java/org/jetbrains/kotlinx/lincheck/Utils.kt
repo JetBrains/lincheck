@@ -247,7 +247,7 @@ private fun Method.convertForLoader(loader: ClassLoader): Method {
 
 private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
 
-private fun Any?.convertForLoader(loader: ClassLoader) = when {
+internal fun Any?.convertForLoader(loader: ClassLoader) = when {
     this == null -> this
     loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
     this is Serializable -> serialize().run { deserialize(loader) }

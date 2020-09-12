@@ -1,6 +1,6 @@
 package org.jetbrains.kotlinx.lincheck
 
-import java.io.*
+import java.io.Serializable
 import kotlin.coroutines.*
 
 /*
@@ -46,15 +46,7 @@ sealed class Result {
  */
 class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
     private val valueClassTransformed: Boolean get() = value?.javaClass?.classLoader is TransformationClassLoader
-    private val serializedObject: ByteArray by lazy(LazyThreadSafetyMode.NONE) {
-        check(valueClassTransformed) { "The result value class should be loaded not by the system class loader and be transformed" }
-        check(value is Serializable) {
-            "The result should either be a type always loaded by the system class loader " +
-                "(e.g., Int, String, List<T>) or implement Serializable interface; " +
-                "the actual class is ${value?.javaClass}."
-        }
-        value.serialize()
-    }
+    private lateinit var serializedObject: ByteArray
 
     override fun toString() = wasSuspendedPrefix + "$value"
 
@@ -66,12 +58,39 @@ class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSus
         // Is `wasSuspended` flag the same?
         if (wasSuspended != other.wasSuspended) return false
         // Do the values coincide ignoring the difference in class loaders?
-        if (valueClassTransformed != other.valueClassTransformed) return false
+        if (valueClassTransformed != other.valueClassTransformed) {
+            // When one value is transformed and another is not,
+            // serialize the other value too if it can be transformed.
+            val transformationLoader =
+                if (valueClassTransformed) value!!.javaClass.classLoader
+                else other.value!!.javaClass.classLoader
+            transformationLoader as TransformationClassLoader
+            return getSerializedObject(transformationLoader).contentEquals(other.getSerializedObject(transformationLoader))
+        }
         return if (!valueClassTransformed) value == other.value
-               else serializedObject.contentEquals(other.serializedObject)
+               else getSerializedObject().contentEquals(other.getSerializedObject())
     }
 
     override fun hashCode(): Int = if (wasSuspended) 0 else 1  // we cannot use the value here
+
+    private fun getSerializedObject(classLoader: TransformationClassLoader? = null): ByteArray {
+        if (!::serializedObject.isInitialized) {
+            check(value is Serializable) {
+                "The result should either be a type always loaded by the system class loader " +
+                    "(e.g., Int, String, List<T>) or implement Serializable interface; " +
+                    "the actual class is ${value?.javaClass}."
+            }
+            serializedObject = if (valueClassTransformed) {
+                // The object is transformed
+                value.serialize()
+            } else {
+                check(classLoader != null) { "Non-transformed objects should be provided with TransformationClassLoader for serialization" }
+                // The object is not transformed and should be converted beforehand
+                value.convertForLoader(classLoader).serialize()
+            }
+        }
+        return serializedObject
+    }
 }
 
 /**
