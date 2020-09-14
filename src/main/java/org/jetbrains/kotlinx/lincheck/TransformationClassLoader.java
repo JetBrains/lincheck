@@ -182,8 +182,8 @@ class TransformationClassWriter extends ClassWriter {
     }
 
     /**
-     * ASM uses Class.forName for given types, however it can lead to cyclic dependencies when loading transformed classes.
-     * Thus, we call original method for not-transformed class names and then just fix it if needed.
+     * ASM uses `Class.forName` for given types, however it can lead to cyclic dependencies when loading transformed classes.
+     * Thus, we call the original method for non-transformed class names and then just fix it if needed.
      */
     @Override
     protected String getCommonSuperClass(final String type1, final String type2) {
@@ -194,7 +194,9 @@ class TransformationClassWriter extends ClassWriter {
     }
 
     /**
-     * Returns name of class the moment before it was transformed
+     * Returns the name of class before it was transformed.
+     * Classes from java.util package are moved to [TRANSFORMED_PACKAGE_NAME] after transformetion,
+     * this method ignores the change.
      */
     private String originalInternalName(String internalName) {
         if (internalName.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME))
@@ -204,7 +206,8 @@ class TransformationClassWriter extends ClassWriter {
 }
 
 /**
- * Visitor for retrieving information of class version needed for choosing between COMPUTE_FRAME and COMPUTE_MAXS
+ * Visitor for retrieving information of class version needed for choosing between COMPUTE_FRAMES and COMPUTE_MAXS.
+ * COMPUTE_FRAMES implies COMPUTE_MAXS, but is more expensive, so it is used only for classes with version 1.7 or more.
  */
 class ClassVersionGetter extends ClassVisitor {
     private int classVersion;

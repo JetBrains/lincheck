@@ -29,6 +29,10 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.lang.StringBuilder
 
+/**
+ * This test check interleaving reporting features related to methods, such as reporting of atomic functions with
+ * and their parameters and results compression of calls that are executed without a context switch in the middle.
+ */
 class MethodReportingTest : VerifierState() {
     @Volatile
     var a = 0

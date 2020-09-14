@@ -28,7 +28,11 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
-class ExecutionReportingTest : VerifierState() {
+/**
+ * This test check basic interleaving reporting features,
+ * including reporting of lock acquiring/releasing, reads/writes with parameter/result capturing.
+ */
+class InterleavingReportingTest : VerifierState() {
     @Volatile
     var a = 0
     @Volatile
@@ -80,8 +84,8 @@ class ExecutionReportingTest : VerifierState() {
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
         check("foo" in log)
-        check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:62)" in log)
-        check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:63)" in log)
+        check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:66)" in log)
+        check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:67)" in log)
         check("a.READ: 0 at ExecutionReportingTest.bar" in log)
         check("a.WRITE(1) at ExecutionReportingTest.bar" in log)
         check("a.READ: 1 at ExecutionReportingTest.bar" in log)

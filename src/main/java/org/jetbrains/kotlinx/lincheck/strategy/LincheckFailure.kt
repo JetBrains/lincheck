@@ -64,10 +64,10 @@ internal class ObstructionFreedomViolationFailure(
     interleaving: List<InterleavingEvent>? = null
 ) : LincheckFailure(scenario, interleaving)
 
-internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, execution: List<InterleavingEvent>? = null) = when (this) {
-    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, execution)
-    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, execution)
-    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, execution)
-    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, execution)
+internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, interleaving: List<InterleavingEvent>? = null) = when (this) {
+    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, interleaving)
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, interleaving)
+    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, interleaving)
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, interleaving)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

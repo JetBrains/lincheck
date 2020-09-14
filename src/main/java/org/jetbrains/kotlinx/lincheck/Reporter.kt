@@ -153,8 +153,8 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.interleaving != null) {
         appendln()
-        appendln("= The execution that led to this result =")
-        appendExecution(failure.scenario, results, failure.interleaving)
+        appendln("= The interleaving that led to this result =")
+        appendInterleaving(failure.scenario, results, failure.interleaving)
         if (failure is DeadlockWithDumpFailure)
             appendln("All threads are in deadlock")
     }

@@ -29,9 +29,9 @@ import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.math.min
 
-private const val EXECUTION_INDENTATION = "  "
+private const val INTERLEAVING_INDENTATION = "  "
 
-internal fun StringBuilder.appendExecution(
+internal fun StringBuilder.appendInterleaving(
         scenario: ExecutionScenario,
         results: ExecutionResult?,
         interleaving: List<InterleavingEvent>
@@ -56,8 +56,8 @@ internal fun StringBuilder.appendExecution(
             val lastActor = lastLoggedActor[iThread]
             if (lastActor >= 0 && isInterestingActor(iThread, lastActor, interestingEvents) && results != null) {
                 if (results.parallelResults[iThread][lastActor] is Cancelled)
-                    execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "CONTINUATION CANCELLED"))
-                execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "result: ${results.parallelResults[iThread][lastActor]}"))
+                    execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "CONTINUATION CANCELLED"))
+                execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "result: ${results.parallelResults[iThread][lastActor]}"))
             }
             val nextActor = ++lastLoggedActor[iThread]
             if (nextActor != scenario.parallelExecution[iThread].size) {
@@ -77,10 +77,10 @@ internal fun StringBuilder.appendExecution(
         when (event) {
             is SwitchEvent -> {
                 val reason = if (event.reason.toString().isEmpty()) "" else " (reason: ${event.reason})"
-                execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "switch" + reason))
+                execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "switch" + reason))
             }
             is FinishEvent -> {
-                execution.add(InterleavingEventRepresentation(iThread,  EXECUTION_INDENTATION + "thread is finished"))
+                execution.add(InterleavingEventRepresentation(iThread,  INTERLEAVING_INDENTATION + "thread is finished"))
             }
             is PassCodeLocationEvent -> {
                 if (isInterestingActor(iThread, actorId, interestingEvents)) {
@@ -88,7 +88,7 @@ internal fun StringBuilder.appendExecution(
                     val compressionPoint = callStackTrace.calculateCompressionPoint(interestingEvents[iThread][actorId])
                     if (compressionPoint == callStackTrace.size) {
                         // no compression
-                        execution.add(InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + event.codeLocation.toString()))
+                        execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + event.codeLocation.toString()))
                         val stateRepresentation = nextStateRepresentaton(interleaving, eventId)
                         if (stateRepresentation != null)
                             execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))
@@ -100,7 +100,7 @@ internal fun StringBuilder.appendExecution(
                         loggedMethodCalls += callIdentifier
                         execution.add(InterleavingEventRepresentation(
                                 iThread,
-                                EXECUTION_INDENTATION + call.codeLocation.toString()
+                                INTERLEAVING_INDENTATION + call.codeLocation.toString()
                         ))
                         val stateRepresentation = lastCompressedStateRepresentation(interleaving, eventId, callIdentifier, interestingEvents[iThread][actorId])
                         if (stateRepresentation != null)
@@ -259,4 +259,4 @@ private fun lastStateRepresentation(iThread: Int, actorId: Int, interleavingEven
 }
 
 private fun stateInterleavingEventRepresentation(iThread: Int, stateRepresentation: String) =
-        InterleavingEventRepresentation(iThread, EXECUTION_INDENTATION + "STATE: $stateRepresentation")
+        InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "STATE: $stateRepresentation")

@@ -35,7 +35,7 @@ import java.lang.StringBuilder
 
 open class ModelCheckingStateReportingTest : VerifierState() {
     @Volatile
-    var a = 0
+    private var a = 0
 
     @Operation
     fun operation(): Int {
@@ -65,7 +65,7 @@ open class ModelCheckingStateReportingTest : VerifierState() {
 
 class StressStateReportingTest : VerifierState() {
     @Volatile
-    var a = 0
+    private var a = 0
 
     @Operation
     fun operation(): Int {
@@ -97,7 +97,7 @@ class StateRepresentationInParentClassTest : ModelCheckingStateReportingTest()
 
 class TwoStateRepresentationFunctionsTest : VerifierState() {
     @Volatile
-    var a = 0
+    private var a = 0
 
     @Operation
     fun operation(): Int {
@@ -109,7 +109,6 @@ class TwoStateRepresentationFunctionsTest : VerifierState() {
 
     override fun extractState(): Any = a
 
-
     @StateRepresentation
     fun stateRepresentation1() = a.toString()
 
@@ -117,11 +116,9 @@ class TwoStateRepresentationFunctionsTest : VerifierState() {
     fun stateRepresentation2() = a.toString()
 
     @Test(expected = IllegalStateException::class)
-    fun test() {
-        ModelCheckingOptions()
+    fun test() = ModelCheckingOptions()
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
             .checkImpl(this::class.java)
-    }
 }

@@ -187,19 +187,19 @@ public class TestThreadExecutionGenerator {
             }
             Actor actor = actors.get(i);
             // Start of try-catch block for exceptions which this actor should handle
-            Label handler = null;
             Label actorEnd = mv.newLabel();
-            Label start = mv.newLabel();
-            Label end = mv.newLabel();
+            Label handledExpectionHandler = null;
+            Label actorCatchBlockStart = mv.newLabel();
+            Label actorCatchBlockEnd = mv.newLabel();
             if (actor.getHandlesExceptions()) {
-                handler = mv.newLabel();
+                handledExpectionHandler = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(start, end, handler, getType(ec).getInternalName());
+                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExpectionHandler, getType(ec).getInternalName());
             }
             // Catch those exceptions that has not been caught yet
             Label unexpectedExceptionHandler = mv.newLabel();
-            mv.visitTryCatchBlock(start, end, unexpectedExceptionHandler, THROWABLE_TYPE.getInternalName());
-            mv.visitLabel(start);
+            mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, unexpectedExceptionHandler, THROWABLE_TYPE.getInternalName());
+            mv.visitLabel(actorCatchBlockStart);
             // onActorStart call
             mv.loadThis();
             mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
@@ -251,10 +251,10 @@ public class TestThreadExecutionGenerator {
             // Store result to array
             mv.arrayStore(RESULT_TYPE);
             // End of try-catch block for handled exceptions
-            mv.visitLabel(end);
+            mv.visitLabel(actorCatchBlockEnd);
             mv.goTo(actorEnd);
             if (actor.getHandlesExceptions()) {
-                mv.visitLabel(handler);
+                mv.visitLabel(handledExpectionHandler);
                 if (scenarioContainsSuspendableActors) {
                     storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
                 } else {

@@ -23,8 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -53,7 +52,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     }
 
     /**
-     * Run each test scenario `invocations` times.
+     * Run each test scenario the specified number of times.
      */
     fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
         this.invocationsPerIteration = invocations
@@ -63,7 +62,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Use the specified number of threads for the parallel part of an execution.
      *
      * Note, that the the actual number of threads can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -75,7 +74,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Generate the specified number of operations for each thread of the parallel part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -87,7 +86,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Generate the specified number of operation for the initial sequential part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [Operation.runOnce].
      *
      * @see ExecutionScenario.initExecution
      */
@@ -99,7 +98,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Generate the specified number of operation for the last sequential part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [Operation.runOnce].
      *
      * @see ExecutionScenario.postExecution
      */
