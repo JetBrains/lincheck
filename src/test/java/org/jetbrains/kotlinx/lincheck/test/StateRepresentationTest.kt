@@ -116,9 +116,11 @@ class TwoStateRepresentationFunctionsTest : VerifierState() {
     fun stateRepresentation2() = a.toString()
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions()
+    fun test() {
+        ModelCheckingOptions()
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
             .checkImpl(this::class.java)
+    }
 }
