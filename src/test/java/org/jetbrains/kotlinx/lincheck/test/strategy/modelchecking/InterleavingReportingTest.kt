@@ -84,8 +84,8 @@ class InterleavingReportingTest : VerifierState() {
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
         check("foo" in log)
-        check("canEnterForbiddenSection.WRITE(true) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:66)" in log)
-        check("canEnterForbiddenSection.WRITE(false) at ExecutionReportingTest.resetFlag(ExecutionReportingTest.kt:67)" in log)
+        check("canEnterForbiddenSection.WRITE(true) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:66)" in log)
+        check("canEnterForbiddenSection.WRITE(false) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:67)" in log)
         check("a.READ: 0 at ExecutionReportingTest.bar" in log)
         check("a.WRITE(1) at ExecutionReportingTest.bar" in log)
         check("a.READ: 1 at ExecutionReportingTest.bar" in log)
