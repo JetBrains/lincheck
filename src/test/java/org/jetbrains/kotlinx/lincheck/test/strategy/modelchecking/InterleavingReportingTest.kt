@@ -86,12 +86,12 @@ class InterleavingReportingTest : VerifierState() {
         check("foo" in log)
         check("canEnterForbiddenSection.WRITE(true) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:66)" in log)
         check("canEnterForbiddenSection.WRITE(false) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:67)" in log)
-        check("a.READ: 0 at ExecutionReportingTest.bar" in log)
-        check("a.WRITE(1) at ExecutionReportingTest.bar" in log)
-        check("a.READ: 1 at ExecutionReportingTest.bar" in log)
-        check("a.WRITE(2) at ExecutionReportingTest.bar" in log)
-        check("MONITOR ENTER at ExecutionReportingTest.resetFlag" in log)
-        check("MONITOR EXIT at ExecutionReportingTest.resetFlag" in log)
+        check("a.READ: 0 at InterleavingReportingTest.bar" in log)
+        check("a.WRITE(1) at InterleavingReportingTest.bar" in log)
+        check("a.READ: 1 at InterleavingReportingTest.bar" in log)
+        check("a.WRITE(2) at InterleavingReportingTest.bar" in log)
+        check("MONITOR ENTER at InterleavingReportingTest.resetFlag" in log)
+        check("MONITOR EXIT at InterleavingReportingTest.resetFlag" in log)
     }
 
     override fun extractState() = "$a $b $canEnterForbiddenSection"
