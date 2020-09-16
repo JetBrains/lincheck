@@ -19,16 +19,21 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
+package org.jetbrains.kotlinx.lincheck.test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-class ToStringRepresentationTest : VerifierState() {
+/**
+ * This test check that values captured in an incorrect interleaving have proper representation.
+ * `toString` method is used only for primitive types and their wrappers.
+ * For other classes we use simplified representation to avoid problems with concurrent modification or
+ * not completely initialized objects (e.g, with `ConcurrentModificationException`)
+ */
+class CapturedValueRepresentationTest : VerifierState() {
     private var counter = 0
     private var outerClass = OuterClass()
     private var innerClass = InnerClass()
@@ -59,9 +64,10 @@ class ToStringRepresentationTest : VerifierState() {
         check(" OuterClass@1" in log)
         check(" InnerClass@1" in log)
         check(log.split(" InnerClass@1").size - 1 == 2) { "two reads of innerClass should return same result" }
-        check(" InnerClass@2" in log)
+        check(" InnerClass@2" in log) { "Two different InnerClass objects were read, but the same was reported" }
         check(" int[]@1" in log)
         check(" String[]@1" in log)
+        check(" 0" in log)
     }
 
     override fun extractState(): Any = counter

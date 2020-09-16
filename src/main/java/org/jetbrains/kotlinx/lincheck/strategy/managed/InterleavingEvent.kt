@@ -26,7 +26,7 @@ internal typealias CallStackTrace = List<CallStackTraceElement>
 /**
  * Stores information about events occurring during managed execution
  */
-sealed class InterleavingEvent(val iThread: Int, val actorId: Int)
+internal sealed class InterleavingEvent(val iThread: Int, val actorId: Int)
 
 internal class SwitchEvent(iThread: Int, actorId: Int, val reason: SwitchReason, val callStackTrace: CallStackTrace) : InterleavingEvent(iThread, actorId)
 internal class FinishEvent(iThread: Int) : InterleavingEvent(iThread, Int.MAX_VALUE)

@@ -19,11 +19,10 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
+package org.jetbrains.kotlinx.lincheck.test.representation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -84,8 +83,8 @@ class InterleavingReportingTest : VerifierState() {
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
         check("foo" in log)
-        check("canEnterForbiddenSection.WRITE(true) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:66)" in log)
-        check("canEnterForbiddenSection.WRITE(false) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:67)" in log)
+        check("canEnterForbiddenSection.WRITE(true) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:65)" in log)
+        check("canEnterForbiddenSection.WRITE(false) at InterleavingReportingTest.resetFlag(InterleavingReportingTest.kt:66)" in log)
         check("a.READ: 0 at InterleavingReportingTest.bar" in log)
         check("a.WRITE(1) at InterleavingReportingTest.bar" in log)
         check("a.READ: 1 at InterleavingReportingTest.bar" in log)

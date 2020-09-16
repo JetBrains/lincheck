@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test
+package org.jetbrains.kotlinx.lincheck.test.representation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.test.runner.*
 import org.junit.*
 
 /**
- * This test checks that there are now odd threads in thread dumps.
+ * This test checks that there are no odd threads in thread dumps.
  */
 class ThreadDumpTest {
     @Test

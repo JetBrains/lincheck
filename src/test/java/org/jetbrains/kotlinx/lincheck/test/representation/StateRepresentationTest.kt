@@ -19,13 +19,12 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test
+package org.jetbrains.kotlinx.lincheck.test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -33,6 +32,9 @@ import org.junit.Test
 import java.lang.IllegalStateException
 import java.lang.StringBuilder
 
+/**
+ * This test checks that there are states in reported interleavings for model checking strategy.
+ */
 open class ModelCheckingStateReportingTest : VerifierState() {
     @Volatile
     private var a = 0
@@ -63,6 +65,10 @@ open class ModelCheckingStateReportingTest : VerifierState() {
     }
 }
 
+/**
+ * This test checks for incorrect scenarios states are reported.
+ * States should be present after every part of the scenario (init, parallel, post).
+ */
 class StressStateReportingTest : VerifierState() {
     @Volatile
     private var a = 0

@@ -39,11 +39,11 @@ internal fun StringBuilder.appendInterleaving(
     val nThreads = scenario.threads
     // last actor that was appended for each thread
     val lastLoggedActor = IntArray(nThreads) { -1 }
-    // what actors started, but did not finish in each thread
+    // what actors started, but did not finish, for each thread
     val lastExecutedActors = IntArray(nThreads) { iThread -> interleaving.filter { it.iThread == iThread}.map { it.actorId }.max() ?: -1 }
     // call stack traces of all interesting events for each thread and actor
     val interestingEvents = interestingEventStackTraces(scenario, interleaving, lastExecutedActors)
-    // set of identifiers which were appended
+    // set of identifiers of methods that were reported
     val loggedMethodCalls = mutableSetOf<Int>()
     val execution = mutableListOf<InterleavingEventRepresentation>()
     objectNumeration.clear()
@@ -117,7 +117,7 @@ internal fun StringBuilder.appendInterleaving(
     val executionData = splitToColumns(nThreads, execution)
 
     appendln("= Parallel part execution: =")
-    appendln(printInColumnsCustom(executionData) {
+    append(printInColumnsCustom(executionData) {
         val builder = StringBuilder()
         for (i in it.indices) {
             builder.append(if (i == 0) "| " else " | ")
@@ -134,7 +134,7 @@ private class InterleavingEventRepresentation(val iThread: Int, val representati
 /**
  * Events that are considered interesting:
  * 1) All switch events
- * 2) Last events in case of incomplete execution (i.e. because of exception)
+ * 2) Last events in case of incomplete execution (e.g. because of exception)
  * 3) Events in methods that were suspended
  */
 private fun interestingEventStackTraces(
@@ -145,9 +145,11 @@ private fun interestingEventStackTraces(
     val eventsInThread = interleavingEvents.filter { it.iThread == iThread}
     Array(scenario.parallelExecution[iThread].size) { actorId ->
         val interestingCallStackTraces = mutableListOf<CallStackTrace>()
+        // add all switch events
         interestingCallStackTraces.addAll(
                 eventsInThread.filter { it.actorId == actorId }.filterIsInstance<SwitchEvent>().map { it.callStackTrace }
         )
+        // add all events in a suspended method
         interestingCallStackTraces.addAll(
                 eventsInThread
                         .filter { it.actorId == actorId }
@@ -155,6 +157,7 @@ private fun interestingEventStackTraces(
                         .filter { it.callStackTrace.lastOrNull()?.codeLocation?.returnedValue?.value == COROUTINE_SUSPENDED }
                         .map { it.callStackTrace }
         )
+        // add last events in case of incomplete execution
         if (actorId == lastExecutedActors[iThread]) {
             when (val lastEvent = eventsInThread.lastOrNull { it !is StateRepresentationEvent }) {
                 is PassCodeLocationEvent -> interestingCallStackTraces.add(lastEvent.callStackTrace)
@@ -214,7 +217,7 @@ private fun isInterestingActor(iThread: Int, actorId: Int, interestingEvents: Ar
         interestingEvents[iThread][actorId].isNotEmpty()
 
 /**
- * Returns state representation if there was any immediately after [previousEventPosition].
+ * Returns a state representation, if there was any immediately after [previousEventPosition].
  */
 private fun nextStateRepresentaton(interleavingEvents: List<InterleavingEvent>, previousEventPosition: Int): String? {
     if (previousEventPosition + 1 >= interleavingEvents.size) return null
@@ -225,7 +228,7 @@ private fun nextStateRepresentaton(interleavingEvents: List<InterleavingEvent>, 
 }
 
 /**
- * Finds last state representation that was made in [callIdentifier] call.
+ * Finds the last state representation that was made in [callIdentifier] call.
  */
 private fun lastCompressedStateRepresentation(interleavingEvents: List<InterleavingEvent>, startPosition: Int, callIdentifier: Int, interestingEvents: List<CallStackTrace>): String? {
     var lastStateRepresentation: String? = null
@@ -244,7 +247,7 @@ private fun lastCompressedStateRepresentation(interleavingEvents: List<Interleav
 }
 
 /**
- * Find last state representation for a given [actorId] actor.
+ * Find the last state representation for a given [actorId] actor.
  */
 private fun lastStateRepresentation(iThread: Int, actorId: Int, interleavingEvents: List<InterleavingEvent>, startPosition: Int): String? {
     var lastStateRepresentation: String? = null

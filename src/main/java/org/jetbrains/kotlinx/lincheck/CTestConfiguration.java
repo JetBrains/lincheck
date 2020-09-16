@@ -45,7 +45,6 @@ import static org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfigur
  */
 public abstract class CTestConfiguration {
     public static final int DEFAULT_ITERATIONS = 200;
-    public static final int DEFAULT_INVOCATIONS_PER_ITERATION = 10_000;
     public static final int DEFAULT_THREADS = 2;
     public static final int DEFAULT_ACTORS_PER_THREAD = 5;
     public static final int DEFAULT_ACTORS_BEFORE = 5;
@@ -57,7 +56,6 @@ public abstract class CTestConfiguration {
 
     public final Class<?> testClass;
     public final int iterations;
-    public final int invocationsPerIteration;
     public final int threads;
     public final int actorsPerThread;
     public final int actorsBefore;
@@ -71,11 +69,10 @@ public abstract class CTestConfiguration {
 
     protected CTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
         Class<? extends ExecutionGenerator> generatorClass, Class<? extends Verifier> verifierClass,
-        int invocationsPerIteration, boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification, long timeoutMs)
+        boolean requireStateEquivalenceImplCheck, boolean minimizeFailedScenario, Class<?> sequentialSpecification, long timeoutMs)
     {
         this.testClass = testClass;
         this.iterations = iterations;
-        this.invocationsPerIteration = invocationsPerIteration;
         this.threads = threads;
         this.actorsPerThread = actorsPerThread;
         this.actorsBefore = actorsBefore;

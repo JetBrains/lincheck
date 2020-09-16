@@ -137,7 +137,7 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
     }
     if (scenario.postExecution.isNotEmpty()) {
         appendln("Execution scenario (post part):")
-        appendln(scenario.postExecution)
+        append(scenario.postExecution)
     }
     return this
 }
@@ -155,8 +155,10 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         appendln()
         appendln("= The interleaving that led to this result =")
         appendInterleaving(failure.scenario, results, failure.interleaving)
-        if (failure is DeadlockWithDumpFailure)
-            appendln("All threads are in deadlock")
+        if (failure is DeadlockWithDumpFailure) {
+            appendln()
+            append("All threads are in deadlock")
+        }
     }
     return this
 }

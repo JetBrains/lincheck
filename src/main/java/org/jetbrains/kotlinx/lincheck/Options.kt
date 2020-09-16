@@ -42,20 +42,12 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var minimizeFailedScenario = DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = DEFAULT_TIMEOUT_MS
-    protected var invocationsPerIteration = DEFAULT_INVOCATIONS_PER_ITERATION
 
     /**
      * Number of different test scenarios to be executed
      */
     fun iterations(iterations: Int): OPT = applyAndCast {
         this.iterations = iterations
-    }
-
-    /**
-     * Run each test scenario the specified number of times.
-     */
-    fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
-        this.invocationsPerIteration = invocations
     }
 
     /**

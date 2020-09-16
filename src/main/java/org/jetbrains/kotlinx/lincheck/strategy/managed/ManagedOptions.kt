@@ -23,16 +23,27 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import java.util.*
 
 /**
  * Options for managed strategies.
  */
 abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
-    protected var checkObstructionFreedom = ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
-    protected var hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD
-    protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
-    protected var eliminateLocalObjects: Boolean = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS;
+    protected var invocationsPerIteration = DEFAULT_INVOCATIONS
+    protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
+    protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
+    protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
+    protected var eliminateLocalObjects: Boolean = DEFAULT_ELIMINATE_LOCAL_OBJECTS;
+
+    /**
+     * Use the specified number of scenario invocations to study possible interleavings in each iteration.
+     * Can use less than the specified number of invocations in case of fully studied interleavings.
+     */
+    fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
+        invocationsPerIteration = invocations
+    }
 
     /**
      * Check obstruction freedom of the concurrent algorithm.

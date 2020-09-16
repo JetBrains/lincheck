@@ -32,10 +32,10 @@ import java.util.*;
  * Configuration for {@link ModelCheckingStrategy random search} strategy.
  */
 public abstract class ManagedCTestConfiguration extends CTestConfiguration {
+    public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final boolean DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false;
     public static final boolean DEFAULT_ELIMINATE_LOCAL_OBJECTS = true;
     public static final int DEFAULT_HANGING_DETECTION_THRESHOLD = 100;
-    public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final int LIVELOCK_EVENTS_THRESHOLD = 1_000;
     public static final List<ManagedStrategyGuarantee> DEFAULT_GUARANTEES = Arrays.asList(
             // These classes use WeakHashMap, and thus, their code is non-deterministic.
@@ -52,6 +52,7 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
                     .treatAsAtomic()
     );
 
+    public final int invocationsPerIteration;
     public final boolean checkObstructionFreedom;
     public final boolean eliminateLocalObjects;
     public final int hangingDetectionThreshold;
@@ -64,7 +65,8 @@ public abstract class ManagedCTestConfiguration extends CTestConfiguration {
                                      Class<?> sequentialSpecification, long timeoutMs, boolean eliminateLocalObjects)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-                invocationsPerIteration, requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
+                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
+        this.invocationsPerIteration = invocationsPerIteration;
         this.checkObstructionFreedom = checkObstructionFreedom;
         this.hangingDetectionThreshold = hangingDetectionThreshold;
         this.guarantees = guarantees;

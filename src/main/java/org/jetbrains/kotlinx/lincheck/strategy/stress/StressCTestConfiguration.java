@@ -35,8 +35,10 @@ import java.util.*;
  * Configuration for {@link StressStrategy stress} strategy.
  */
 public class StressCTestConfiguration extends CTestConfiguration {
+    public static final int DEFAULT_INVOCATIONS = 10_000;
     public static final boolean DEFAULT_ADD_WAITS = true;
 
+    public final int invocationsPerIteration;
     public final boolean addWaits;
 
     public StressCTestConfiguration(Class<?> testClass, int iterations, int threads, int actorsPerThread, int actorsBefore, int actorsAfter,
@@ -45,7 +47,8 @@ public class StressCTestConfiguration extends CTestConfiguration {
         Class<?> sequentialSpecification, long timeoutMs)
     {
         super(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-                invocationsPerIteration, requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
+                requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs);
+        this.invocationsPerIteration = invocationsPerIteration;
         this.addWaits = addWaits;
     }
 

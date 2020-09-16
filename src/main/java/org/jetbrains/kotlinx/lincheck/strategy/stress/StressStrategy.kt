@@ -100,4 +100,4 @@ class StressStrategy(
     }
 }
 
-private const val MAX_WAIT = 100
+private const val MAX_WAIT = 1000
