@@ -259,7 +259,7 @@ internal abstract class ManagedStrategyBase(
     }
 
     /**
-     * Returns whether thread should switch at the suspension point
+     * Returns whether thread should switch at the switch point
      */
     protected abstract fun shouldSwitch(iThread: Int): Boolean
 
@@ -443,16 +443,16 @@ internal abstract class ManagedStrategyBase(
      * Detects loop when visiting a codeLocation too often.
      */
     private class LoopDetector(private val hangingDetectionThreshold: Int) {
-        private var lastiThread = -1 // no last thread
+        private var lastIThread = -1 // no last thread
         private val operationCounts = mutableMapOf<Int, Int>()
 
         fun newOperation(iThread: Int, codeLocation: Int): Boolean {
-            if (lastiThread != iThread) {
+            if (lastIThread != iThread) {
                 // if we switched threads then reset counts
                 operationCounts.clear()
-                lastiThread = iThread
+                lastIThread = iThread
             }
-            if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false;
+            if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false
             // increment the number of times that we visited a codelocation
             val count = (operationCounts[codeLocation] ?: 0) + 1
             operationCounts[codeLocation] = count
@@ -462,7 +462,7 @@ internal abstract class ManagedStrategyBase(
 
         fun reset(iThread: Int) {
             operationCounts.clear()
-            lastiThread = iThread
+            lastIThread = iThread
         }
     }
 
