@@ -31,10 +31,10 @@ internal sealed class InterleavingEvent(val iThread: Int, val actorId: Int)
 internal class SwitchEvent(iThread: Int, actorId: Int, val reason: SwitchReason, val callStackTrace: CallStackTrace) : InterleavingEvent(iThread, actorId)
 internal class FinishEvent(iThread: Int) : InterleavingEvent(iThread, Int.MAX_VALUE)
 internal class PassCodeLocationEvent(
-        iThread: Int,
-        actorId: Int,
-        val codeLocation: CodeLocation,
-        val callStackTrace: CallStackTrace
+    iThread: Int,
+    actorId: Int,
+    val codePoint: CodePoint,
+    val callStackTrace: CallStackTrace
 ) : InterleavingEvent(iThread, actorId)
 internal class StateRepresentationEvent(iThread: Int, actorId: Int, val stateRepresentation: String) : InterleavingEvent(iThread, actorId)
 
@@ -52,4 +52,4 @@ internal enum class SwitchReason(private val reason: String) {
  * Info about a [methodName] method call.
  * [identifier] helps to distinguish two different calls of the same method.
  */
-internal class CallStackTraceElement(val codeLocation: MethodCallCodeLocation, val identifier: Int)
+internal class CallStackTraceElement(val codeLocation: MethodCallCodePoint, val identifier: Int)

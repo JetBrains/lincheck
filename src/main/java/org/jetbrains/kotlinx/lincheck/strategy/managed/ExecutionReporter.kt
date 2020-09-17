@@ -88,7 +88,7 @@ internal fun StringBuilder.appendInterleaving(
                     val compressionPoint = callStackTrace.calculateCompressionPoint(interestingEvents[iThread][actorId])
                     if (compressionPoint == callStackTrace.size) {
                         // no compression
-                        execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + event.codeLocation.toString()))
+                        execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + event.codePoint.toString()))
                         val stateRepresentation = nextStateRepresentaton(interleaving, eventId)
                         if (stateRepresentation != null)
                             execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))

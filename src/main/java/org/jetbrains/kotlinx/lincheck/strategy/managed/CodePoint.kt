@@ -25,12 +25,16 @@ import kotlin.coroutines.Continuation
 
 internal val objectNumeration = mutableMapOf<Class<Any>, MutableMap<Any, Int>>()
 
-internal sealed class CodeLocation {
+/**
+ * While code locations just define certain bytecode instructions,
+ * code points correspond to visits of these bytecode instructions.
+ */
+internal sealed class CodePoint {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
 
-internal class ReadCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class ReadCodePoint(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodePoint() {
     private var value: Any? = null
 
     override fun toStringImpl(): String = StringBuilder().apply {
@@ -46,7 +50,7 @@ internal class ReadCodeLocation(private val fieldName: String?, private val stac
     }
 }
 
-internal class WriteCodeLocation(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class WriteCodePoint(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodePoint() {
     private var value: Any? = null
 
     override fun toStringImpl(): String  = StringBuilder().apply {
@@ -62,7 +66,7 @@ internal class WriteCodeLocation(private val fieldName: String?, private val sta
     }
 }
 
-internal class MethodCallCodeLocation(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class MethodCallCodePoint(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodePoint() {
     var returnedValue: ValueHolder? = null
     private var parameters: Array<Any?>? = null
 
@@ -90,27 +94,27 @@ internal class MethodCallCodeLocation(private val methodName: String, private va
     internal class ValueHolder(val value: Any?)
 }
 
-internal class MonitorEnterCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class MonitorEnterCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
     override fun toStringImpl(): String = "MONITOR ENTER at " + stackTraceElement.shorten()
 }
 
-internal class MonitorExitCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class MonitorExitCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
     override fun toStringImpl(): String = "MONITOR EXIT at " + stackTraceElement.shorten()
 }
 
-internal class WaitCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class WaitCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
     override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
 }
 
-internal class NotifyCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class NotifyCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
     override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
 }
 
-internal class ParkCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class ParkCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
     override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
 }
 
-internal class UnparkCodeLocation(private val stackTraceElement: StackTraceElement) : CodeLocation() {
+internal class UnparkCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
     override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
 }
 

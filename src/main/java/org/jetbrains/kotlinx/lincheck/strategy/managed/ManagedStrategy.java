@@ -49,8 +49,8 @@ public abstract class ManagedStrategy extends Strategy {
     private final boolean shouldMakeStateRepresentation;
     private final boolean eliminateLocalObjects;
     protected boolean loggingEnabled = false;
-    private final List<Function0<CodeLocation>> codeLocationConstructors = new ArrayList<>(); // for trace construction
-    protected final List<CodeLocation> codeLocations = new ArrayList<>();
+    private final List<Function0<CodePoint>> codeLocationConstructors = new ArrayList<>(); // for trace construction
+    protected final List<CodePoint> codePoints = new ArrayList<>();
 
     protected ManagedStrategy(Class<?> testClass, ExecutionScenario scenario, List<Method> validationFunctions,
                               Method stateRepresentation, List<ManagedStrategyGuarantee> guarantees, long timeoutMs, boolean eliminateLocalObjects) {
@@ -291,23 +291,23 @@ public abstract class ManagedStrategy extends Strategy {
     // == LOGGING METHODS ==
 
     /**
-     * Returns a {@link CodeLocation} which describes the specified code location
+     * Returns a {@link CodePoint} which describes the specified visit to a code location
      *
-     * @param codeLocation code location identifier which is inserted by transformer
+     * @param codePoint code location identifier which is inserted by transformer
      */
-    public final CodeLocation getLocationDescription(int codeLocation) {
-        return codeLocations.get(codeLocation);
+    public final CodePoint getCodePoint(int codePoint) {
+        return codePoints.get(codePoint);
     }
 
     /**
-     * Creates a new {@link CodeLocation}.
+     * Creates a new {@link CodePoint}.
      * The type of the created code location is defined by the used constructor.
      * @param constructorId which constructor to use for createing code location
      * @return index of the created code location
      */
-    public final int createCodeLocation(int constructorId) {
-        codeLocations.add(codeLocationConstructors.get(constructorId).invoke());
-        return codeLocations.size() - 1;
+    public final int createCodePoint(int constructorId) {
+        codePoints.add(codeLocationConstructors.get(constructorId).invoke());
+        return codePoints.size() - 1;
     }
 
     // == UTILITY METHODS ==

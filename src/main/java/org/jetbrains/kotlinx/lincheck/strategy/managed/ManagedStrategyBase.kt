@@ -130,7 +130,7 @@ internal abstract class ManagedStrategyBase(
     override fun beforeLockRelease(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
-        eventCollector.passCodeLocation(iThread, codeLocation, codeLocations.lastIndex)
+        eventCollector.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
         return false
     }
 
@@ -141,7 +141,7 @@ internal abstract class ManagedStrategyBase(
     }
 
     override fun afterUnpark(iThread: Int, codeLocation: Int, thread: Any) {
-        eventCollector.passCodeLocation(iThread, codeLocation, codeLocations.lastIndex)
+        eventCollector.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
     }
 
     override fun beforeWait(iThread: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
@@ -160,7 +160,7 @@ internal abstract class ManagedStrategyBase(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        eventCollector.passCodeLocation(iThread, codeLocation, codeLocations.lastIndex)
+        eventCollector.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
     }
 
     override fun afterCoroutineSuspended(iThread: Int) {
@@ -206,7 +206,7 @@ internal abstract class ManagedStrategyBase(
                 methodIdentifier++
             }
             // code location of the new method call is currently the last
-            callStackTrace.add(CallStackTraceElement(codeLocations.last() as MethodCallCodeLocation, methodId))
+            callStackTrace.add(CallStackTraceElement(codePoints.last() as MethodCallCodePoint, methodId))
         }
     }
 
@@ -214,7 +214,7 @@ internal abstract class ManagedStrategyBase(
         if (isTestThread(iThread)) {
             check(loggingEnabled) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
-            val methodCallCodeLocation = getLocationDescription(codeLocation) as MethodCallCodeLocation
+            val methodCallCodeLocation = getCodePoint(codeLocation) as MethodCallCodePoint
             if (methodCallCodeLocation.returnedValue?.value == COROUTINE_SUSPENDED) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
                 suspendedMethodStack[iThread].add(callStackTrace.lastIndex)
@@ -242,8 +242,8 @@ internal abstract class ManagedStrategyBase(
         check(iThread == currentThread)
         if (ignoredSectionDepth[iThread] != 0) return // can not suspend in ignored sections
         // save code location description corresponding to the current switch point,
-        // it is last code location now, but will be not last after a possible switch
-        val codeLocationDescriptionId = codeLocations.lastIndex
+        // it is last code point now, but will be not last after a possible switch
+        val codePointId = codePoints.lastIndex
         var isLoop = false
         if (loopDetector.newOperation(iThread, codeLocation)) {
             checkCanHaveObstruction { "At least obstruction freedom required, but an active lock found" }
@@ -254,7 +254,7 @@ internal abstract class ManagedStrategyBase(
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(iThread, reason)
         }
-        eventCollector.passCodeLocation(iThread, codeLocation, codeLocationDescriptionId)
+        eventCollector.passCodeLocation(iThread, codeLocation, codePointId)
         // continue operation
     }
 
@@ -484,13 +484,13 @@ internal abstract class ManagedStrategyBase(
             interleavingEvents.add(FinishEvent(iThread))
         }
 
-        fun passCodeLocation(iThread: Int, codeLocation: Int, codeLocationDescriptionId: Int) {
+        fun passCodeLocation(iThread: Int, codeLocation: Int, codePoint: Int) {
             if (!loggingEnabled) return // check that should log thread events
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
                 enterIgnoredSection(iThread)
                 interleavingEvents.add(PassCodeLocationEvent(
                         iThread, currentActorId[iThread],
-                        getLocationDescription(codeLocationDescriptionId),
+                        getCodePoint(codePoint),
                         callStackTrace[iThread].toList()
                 ))
                 leaveIgnoredSection(iThread)
