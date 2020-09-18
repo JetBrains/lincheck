@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import java.lang.reflect.Method
-import kotlin.coroutines.Continuation
+import kotlin.reflect.jvm.*
 
 /**
  * The actor entity describe the operation with its parameters
@@ -46,4 +46,4 @@ data class Actor @JvmOverloads constructor(
     val isSuspendable = method.isSuspendable()
 }
 
-fun Method.isSuspendable() = parameterTypes.isNotEmpty() && (kotlin.coroutines.Continuation::class.java).isAssignableFrom(parameterTypes.last())
+fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false

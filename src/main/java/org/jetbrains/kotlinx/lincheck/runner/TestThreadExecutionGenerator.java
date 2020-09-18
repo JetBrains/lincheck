@@ -35,7 +35,6 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
 import static org.objectweb.asm.Opcodes.*;
 import static org.objectweb.asm.Type.*;
 
@@ -371,7 +370,7 @@ public class TestThreadExecutionGenerator {
         for (int j = 0; j < nArguments; j++) {
             pushArgumentOnStack(mv, objArgs, actor.getArguments().toArray()[j], actor.getMethod().getParameterTypes()[j]);
         }
-        if (isSuspendable(actor.getMethod())) {
+        if (actor.isSuspendable()) {
             pushArgumentOnStack(mv, objArgs, completion, Continuation.class);
         }
     }
