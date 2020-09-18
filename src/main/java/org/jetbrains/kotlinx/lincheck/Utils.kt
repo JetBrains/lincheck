@@ -211,7 +211,7 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     parallelExecution.map { actors ->
         actors.map { a ->
             val args = a.arguments.map { it.convertForLoader(loader) }
-            Actor(a.method.convertForLoader(loader), args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension)
+            Actor(a.method.convertForLoader(loader), args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension, a.isSuspendable)
         }
     },
     postExecution
