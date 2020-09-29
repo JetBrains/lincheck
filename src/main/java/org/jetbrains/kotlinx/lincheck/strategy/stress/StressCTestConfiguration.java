@@ -36,7 +36,7 @@ import java.util.*;
  */
 public class StressCTestConfiguration extends CTestConfiguration {
     public static final int DEFAULT_INVOCATIONS = 10_000;
-    public static final boolean DEFAULT_ADD_WAITS = true;
+    public static final boolean DEFAULT_ADD_WAITS = false;
 
     public final int invocationsPerIteration;
     public final boolean addWaits;

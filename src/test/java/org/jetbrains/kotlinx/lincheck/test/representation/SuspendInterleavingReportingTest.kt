@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
 
-class SuspendExecutionReportingTest : VerifierState() {
+class SuspendInterleavingReportingTest : VerifierState() {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false
     private var barStarted: Boolean = false
@@ -73,7 +73,7 @@ class SuspendExecutionReportingTest : VerifierState() {
     private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
 }
 
-class CancellableSuspendExecutionTest : VerifierState() {
+class CancellableSuspendInterleavingReportingTest : VerifierState() {
     private val lock = Mutex()
     private var counter: Int = 0
 

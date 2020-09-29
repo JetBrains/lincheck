@@ -356,7 +356,7 @@ internal abstract class ManagedStrategyBase(
     private fun collectExecutionEvents(previousResults: InvocationResult): List<InterleavingEvent>? {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectExecutionEvents = when {
-            detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult, UnexpectedExceptionInvocationResult or
+            detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
             previousResults is CompletedInvocationResult -> true
             previousResults is ValidationFailureInvocationResult -> true
             else -> false
@@ -498,11 +498,12 @@ internal abstract class ManagedStrategyBase(
         }
 
         fun makeStateRepresentation(iThread: Int) {
+            if (!loggingEnabled) return // check that should log thread events
             // enter ignored section, because stateRepresentation invokes transformed method with switch points
             enterIgnoredSection(iThread)
             val stateRepresentation = runner.stateRepresentation
             leaveIgnoredSection(iThread)
-            interleavingEvents.add(StateRepresentationEvent(iThread, currentActorId[iThread], stateRepresentation))
+            interleavingEvents.add(StateRepresentationEvent(iThread, currentActorId[iThread], stateRepresentation, callStackTrace[iThread].toList()))
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents

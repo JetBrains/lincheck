@@ -93,7 +93,6 @@ class StressStateReportingTest : VerifierState() {
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
-        println(log)
         check("STATE: 0" in log)
         check("STATE: 2" in log || "STATE: 3" in log)
     }

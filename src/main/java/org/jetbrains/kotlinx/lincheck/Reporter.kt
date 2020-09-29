@@ -166,6 +166,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
 private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
     appendln("= The execution failed with an unexpected exception =")
     appendExecutionScenario(failure.scenario)
+    appendln()
     appendException(failure.exception)
     return this
 }

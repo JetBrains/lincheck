@@ -32,150 +32,35 @@ import kotlin.math.min
 private const val INTERLEAVING_INDENTATION = "  "
 
 internal fun StringBuilder.appendInterleaving(
-        scenario: ExecutionScenario,
-        results: ExecutionResult?,
-        interleaving: List<InterleavingEvent>
+    scenario: ExecutionScenario,
+    results: ExecutionResult?,
+    interleavingEvents: List<InterleavingEvent>
 ) {
-    val nThreads = scenario.threads
-    // last actor that was appended for each thread
-    val lastLoggedActor = IntArray(nThreads) { -1 }
-    // what actors started, but did not finish, for each thread
-    val lastExecutedActors = IntArray(nThreads) { iThread -> interleaving.filter { it.iThread == iThread}.map { it.actorId }.max() ?: -1 }
-    // call stack traces of all interesting events for each thread and actor
-    val interestingEvents = interestingEventStackTraces(scenario, interleaving, lastExecutedActors)
-    // set of identifiers of methods that were reported
-    val loggedMethodCalls = mutableSetOf<Int>()
-    val execution = mutableListOf<InterleavingEventRepresentation>()
+    // clear object numeration that is used by `CodePoint.toString` for better representation
     objectNumeration.clear()
-    eventLoop@for (eventId in interleaving.indices) {
-        val event = interleaving[eventId]
-        val iThread = event.iThread
-        val actorId = event.actorId
-        // print all actors that started since the last event
-        while (lastLoggedActor[iThread] < min(actorId, scenario.parallelExecution[iThread].size)) {
-            val lastActor = lastLoggedActor[iThread]
-            if (lastActor >= 0 && isInterestingActor(iThread, lastActor, interestingEvents) && results != null) {
-                if (results.parallelResults[iThread][lastActor] is Cancelled)
-                    execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "CONTINUATION CANCELLED"))
-                execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "result: ${results.parallelResults[iThread][lastActor]}"))
-            }
-            val nextActor = ++lastLoggedActor[iThread]
-            if (nextActor != scenario.parallelExecution[iThread].size) {
-                // print actor
-                // if it is not interesting then print with the result in the same line
-                val isInterestingActor = isInterestingActor(iThread, nextActor, interestingEvents)
-                val actorRepresentation = getActorRepresentation(iThread, nextActor, scenario, results, isInterestingActor)
-                execution.add(InterleavingEventRepresentation(iThread, actorRepresentation))
-                if (!isInterestingActor) {
-                    val stateRepresentation = lastStateRepresentation(iThread, actorId, interleaving, eventId)
-                    if (stateRepresentation != null)
-                        execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))
-                }
-            }
-        }
-        // print the event itself
-        when (event) {
-            is SwitchEvent -> {
-                val reason = if (event.reason.toString().isEmpty()) "" else " (reason: ${event.reason})"
-                execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "switch" + reason))
-            }
-            is FinishEvent -> {
-                execution.add(InterleavingEventRepresentation(iThread,  INTERLEAVING_INDENTATION + "thread is finished"))
-            }
-            is PassCodeLocationEvent -> {
-                if (isInterestingActor(iThread, actorId, interestingEvents)) {
-                    val callStackTrace = event.callStackTrace
-                    val compressionPoint = callStackTrace.calculateCompressionPoint(interestingEvents[iThread][actorId])
-                    if (compressionPoint == callStackTrace.size) {
-                        // no compression
-                        execution.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + event.codePoint.toString()))
-                        val stateRepresentation = nextStateRepresentaton(interleaving, eventId)
-                        if (stateRepresentation != null)
-                            execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))
-                    } else {
-                        val call = callStackTrace[compressionPoint]
-                        val callIdentifier = call.identifier
-                        if (callIdentifier in loggedMethodCalls)
-                            continue@eventLoop // this method call was already logged
-                        loggedMethodCalls += callIdentifier
-                        execution.add(InterleavingEventRepresentation(
-                                iThread,
-                                INTERLEAVING_INDENTATION + call.codeLocation.toString()
-                        ))
-                        val stateRepresentation = lastCompressedStateRepresentation(interleaving, eventId, callIdentifier, interestingEvents[iThread][actorId])
-                        if (stateRepresentation != null)
-                            execution.add(stateInterleavingEventRepresentation(iThread, stateRepresentation))
-                    }
-                }
-            }
-            is StateRepresentationEvent -> {
-                // state representation event are logged immediately after pass code location events instead
-            }
-        }
-    }
-
-    val executionData = splitToColumns(nThreads, execution)
-
+    val graphStart = constructInterleavingGraph(scenario, results, interleavingEvents)
+    val interleaving = interleavingGraphToRepresentation(graphStart)
+    val interleavingRepresentation = splitToColumns(scenario.threads, interleaving)
     appendln("= Parallel part execution: =")
-    append(printInColumnsCustom(executionData) {
-        val builder = StringBuilder()
-        for (i in it.indices) {
-            builder.append(if (i == 0) "| " else " | ")
-            builder.append(it[i])
-        }
-        builder.append(" |")
-
-        builder.toString()
+    append(printInColumnsCustom(interleavingRepresentation) {
+        StringBuilder().apply {
+            for (i in it.indices) {
+                append(if (i == 0) "| " else " | ")
+                append(it[i])
+            }
+            append(" |")
+        }.toString()
     })
 }
 
-private class InterleavingEventRepresentation(val iThread: Int, val representation: String)
-
 /**
- * Events that are considered interesting:
- * 1) All switch events
- * 2) Last events in case of incomplete execution (e.g. because of exception)
- * 3) Events in methods that were suspended
+ * Convert interleaving events to the final form of a matrix of strings
  */
-private fun interestingEventStackTraces(
-        scenario: ExecutionScenario,
-        interleavingEvents: List<InterleavingEvent>,
-        lastExecutedActors: IntArray
-): Array<Array<List<CallStackTrace>>> = Array(scenario.parallelExecution.size) { iThread ->
-    val eventsInThread = interleavingEvents.filter { it.iThread == iThread}
-    Array(scenario.parallelExecution[iThread].size) { actorId ->
-        val interestingCallStackTraces = mutableListOf<CallStackTrace>()
-        // add all switch events
-        interestingCallStackTraces.addAll(
-                eventsInThread.filter { it.actorId == actorId }.filterIsInstance<SwitchEvent>().map { it.callStackTrace }
-        )
-        // add all events in a suspended method
-        interestingCallStackTraces.addAll(
-                eventsInThread
-                        .filter { it.actorId == actorId }
-                        .filterIsInstance<PassCodeLocationEvent>()
-                        .filter { it.callStackTrace.lastOrNull()?.codeLocation?.returnedValue?.value == COROUTINE_SUSPENDED }
-                        .map { it.callStackTrace }
-        )
-        // add last events in case of incomplete execution
-        if (actorId == lastExecutedActors[iThread]) {
-            when (val lastEvent = eventsInThread.lastOrNull { it !is StateRepresentationEvent }) {
-                is PassCodeLocationEvent -> interestingCallStackTraces.add(lastEvent.callStackTrace)
-                else -> {}
-            }
-        }
-        interestingCallStackTraces as List<CallStackTrace>
-    }
-}
-
-/**
- * Convert events that should be printed to the final form of a matrix of strings
- */
-private fun splitToColumns(nThreads: Int, execution: List<InterleavingEventRepresentation>): List<List<String>> {
+private fun splitToColumns(nThreads: Int, interleaving: List<InterleavingEventRepresentation>): List<List<String>> {
     val result = List(nThreads) { mutableListOf<String>() }
-    for (message in execution) {
+    for (message in interleaving) {
         val columnId = message.iThread
-        // write messages in appropriate columns
+        // write message in an appropriate column
         result[columnId].add(message.representation)
         val neededSize = result[columnId].size
         for (column in result)
@@ -186,80 +71,203 @@ private fun splitToColumns(nThreads: Int, execution: List<InterleavingEventRepre
 }
 
 /**
- * Calculates how to compress call stack trace.
- * Picks the first different position with all interesting event call stack traces.
- * For example, for call stack trace (a -> b -> c) with an interesting event at (a -> b -> d)
- * compression point will be "c" and its index (2) will be returned.
+ * Construct an interleaving graph based on provided [interleavingEvents].
+ * Returns the node corresponding to the first interleaving event.
+ * An interleaving graph consists of two types of edges:
+ * `next` edges form a single-directed list in which the order of events is the same as in [interleavingEvents].
+ * `internalEvents` edges form a directed forest.
+ * The root of each tree is an actor.
+ * Its children are events and method invocations.
  */
-private fun CallStackTrace.calculateCompressionPoint(interestingEvents: List<CallStackTrace>): Int =
-        interestingEvents.map { this.firstDifferPosition(it) }.max()!!
+private fun constructInterleavingGraph(scenario: ExecutionScenario, results: ExecutionResult?, interleavingEvents: List<InterleavingEvent>): InterleavingNode? {
+    // last events that were executed for each thread. It is either thread finish events or events before crash
+    val lastExecutedEvents = IntArray(scenario.threads) { iThread ->
+        interleavingEvents.mapIndexed { i, e -> Pair(i, e) }.lastOrNull { it.second.iThread == iThread }?.first ?: -1
+    }
+    // last actor that was handled for each thread
+    val lastHandledActor = IntArray(scenario.threads) { -1 }
+    // actor nodes for each actor in each thread
+    val actorNodes = Array(scenario.threads) { Array<ActorNode?>(scenario.parallelExecution[it].size) { null } }
+    // call nodes for each method call
+    val callNodes = mutableMapOf<Int, CallNode>()
+    // all interleaving nodes in order corresponding to interleavingEvents
+    val interleavingNodes = mutableListOf<InterleavingNode>()
 
-private fun CallStackTrace.firstDifferPosition(callStackTrace: CallStackTrace): Int {
-    for (position in indices)
-        if (position >= callStackTrace.size || this[position].identifier != callStackTrace[position].identifier)
-            return position
-    return size
-}
-
-private fun getActorRepresentation(
-        iThread: Int,
-        actorId: Int, scenario:
-        ExecutionScenario,
-        results: ExecutionResult?,
-        isInteresting: Boolean
-) = StringBuilder().apply {
-    append(scenario.parallelExecution[iThread][actorId].toString())
-    if (results != null && !isInteresting)
-        append(": ${results.parallelResults[iThread][actorId]}")
-}.toString()
-
-private fun isInterestingActor(iThread: Int, actorId: Int, interestingEvents: Array<Array<List<CallStackTrace>>>) =
-        interestingEvents[iThread][actorId].isNotEmpty()
-
-/**
- * Returns a state representation, if there was any immediately after [previousEventPosition].
- */
-private fun nextStateRepresentaton(interleavingEvents: List<InterleavingEvent>, previousEventPosition: Int): String? {
-    if (previousEventPosition + 1 >= interleavingEvents.size) return null
-    val nextEvent = interleavingEvents[previousEventPosition + 1]
-    if (nextEvent is StateRepresentationEvent)
-        return nextEvent.stateRepresentation
-    return null
-}
-
-/**
- * Finds the last state representation that was made in [callIdentifier] call.
- */
-private fun lastCompressedStateRepresentation(interleavingEvents: List<InterleavingEvent>, startPosition: Int, callIdentifier: Int, interestingEvents: List<CallStackTrace>): String? {
-    var lastStateRepresentation: String? = null
-    loop@for (position in startPosition until interleavingEvents.size) {
-        when (val event = interleavingEvents[position]) {
-            is PassCodeLocationEvent -> {
-                val compressionPoint = event.callStackTrace.calculateCompressionPoint(interestingEvents)
-                if (compressionPoint == event.callStackTrace.size || event.callStackTrace[compressionPoint].identifier != callIdentifier)
-                    break@loop // compressed method ended
+    for (eventId in interleavingEvents.indices) {
+        val event = interleavingEvents[eventId]
+        val iThread = event.iThread
+        val actorId = event.actorId
+        // add all actors that started since the last event
+        while (lastHandledActor[iThread] < min(actorId, scenario.parallelExecution[iThread].lastIndex)) {
+            val nextActor = ++lastHandledActor[iThread]
+            // create new actor node actor
+            val actorNode = interleavingNodes.allocate { ActorNode(iThread, it, scenario.parallelExecution[iThread][nextActor], results[iThread, nextActor]) }
+            actorNodes[iThread][nextActor] = actorNode
+            interleavingNodes.add(actorNode)
+        }
+        // add the event
+        when (event) {
+            // simpler code for FinishEvent, because it does not have actorId or callStackTrace
+            is FinishEvent -> interleavingNodes.allocate { InterleavingLeafEvent(iThread, it, event) }
+            else -> {
+                var innerNode: InterleavingInnerNode = actorNodes[iThread][actorId]!!
+                for (call in event.callStackTrace) {
+                    val callId = call.identifier
+                    val callNode = callNodes.computeIfAbsent(callId) {
+                        // create a new call node if needed
+                        val result = interleavingNodes.allocate { CallNode(iThread, it, call.call) }
+                        // make it a child of the previous node
+                        innerNode.addInternalEvent(result)
+                        result
+                    }
+                    innerNode = callNode
+                }
+                val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
+                val node = interleavingNodes.allocate { InterleavingLeafEvent(iThread, it, event, isLastExecutedEvent) }
+                innerNode.addInternalEvent(node)
             }
-            is StateRepresentationEvent -> lastStateRepresentation = event.stateRepresentation
-            else -> break@loop
         }
     }
-    return lastStateRepresentation
+    // add an ActorResultNode to each actor, because did not know where actor ends before
+    for (iThread in actorNodes.indices)
+        for (actorId in actorNodes[iThread].indices) {
+            actorNodes[iThread][actorId]?.let {
+                // insert an ActorResultNode between the last actor event and the next event after it
+                val lastEvent = it.lastInternalEvent
+                val lastEventNext = lastEvent.next
+                val resultNode = ActorResultNode(iThread, lastEvent, results[iThread, actorId])
+                it.addInternalEvent(resultNode)
+                resultNode.next = lastEventNext
+            }
+        }
+    return interleavingNodes.firstOrNull()
 }
+
+private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
+    if (this == null) null else this.parallelResults[iThread][actorId]
 
 /**
- * Find the last state representation for a given [actorId] actor.
+ * Create a new interleaving node and add it to the end of the list.
  */
-private fun lastStateRepresentation(iThread: Int, actorId: Int, interleavingEvents: List<InterleavingEvent>, startPosition: Int): String? {
-    var lastStateRepresentation: String? = null
-    for (position in startPosition until interleavingEvents.size) {
-        val event = interleavingEvents[position]
-        if (event.iThread != iThread || event.actorId != actorId)
-            return lastStateRepresentation
-        if (event is StateRepresentationEvent)
-            lastStateRepresentation = event.stateRepresentation
-    }
-    return lastStateRepresentation
+private fun <T : InterleavingNode> MutableList<InterleavingNode>.allocate(constructor: (lastNode: InterleavingNode?) -> T): T {
+    val node = constructor(lastOrNull())
+    add(node)
+    return node
 }
 
-private fun stateInterleavingEventRepresentation(iThread: Int, stateRepresentation: String) =
-        InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "STATE: $stateRepresentation")
+private fun interleavingGraphToRepresentation(firstNode: InterleavingNode?): List<InterleavingEventRepresentation> {
+    var currentNode: InterleavingNode? = firstNode
+    val interleaving = mutableListOf<InterleavingEventRepresentation>()
+    while (currentNode != null) {
+        currentNode = currentNode.addRepresentationTo(interleaving)
+    }
+    return interleaving
+}
+
+private sealed class InterleavingNode(protected val iThread: Int, last: InterleavingNode?) {
+    // `next` edges form an ordered single-directed event list
+    var next: InterleavingNode? = null
+    // `lastInternalEvent` helps to skip internal events if an actor or a method call can be compressed
+    abstract val lastInternalEvent: InterleavingNode
+    // `lastState` helps to find the last state needed for the compression
+    abstract val lastState: String?
+    // whether the internal events should be reported
+    abstract val shouldBeExpanded: Boolean
+
+    init {
+        last?.let {
+            it.next = this
+        }
+    }
+
+    /**
+     * Adds node representation and returns next node to be processed.
+     */
+    abstract fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode?
+}
+
+private class InterleavingLeafEvent(iThread: Int, last: InterleavingNode?, private val event: InterleavingEvent, lastExecutedEvent: Boolean = false)
+    : InterleavingNode(iThread, last) {
+    override val lastState: String? = if (event is StateRepresentationEvent) event.stateRepresentation else null
+    override val lastInternalEvent: InterleavingNode = this
+    override val shouldBeExpanded: Boolean = lastExecutedEvent || event is SwitchEvent // switch events should be reported
+
+    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
+        val representation = INTERLEAVING_INDENTATION + when(event) {
+            is SwitchEvent -> {
+                val reason = event.reason.toString()
+                "switch" + if (reason.isEmpty()) "" else " (reason: $reason)"
+            }
+            is PassCodeLocationEvent -> event.codePoint.toString()
+            is StateRepresentationEvent -> "STATE: " + event.stateRepresentation
+            is FinishEvent -> "thread is finished"
+        }
+        interleaving.add(InterleavingEventRepresentation(iThread, representation))
+        return next
+    }
+}
+
+private abstract class InterleavingInnerNode(iThread: Int, last: InterleavingNode?) : InterleavingNode(iThread, last) {
+    override val lastState: String?
+        get() {
+            for (event in internalEvent.reversed())
+                if (event.lastState != null)
+                    return event.lastState
+            return null
+        }
+    override val lastInternalEvent: InterleavingNode
+        get() = if (internalEvent.isEmpty()) this else internalEvent.last().lastInternalEvent
+    override val shouldBeExpanded: Boolean by lazy { internalEvent.any { it.shouldBeExpanded } }
+    private val internalEvent = mutableListOf<InterleavingNode>()
+
+    fun addInternalEvent(node: InterleavingNode) {
+        internalEvent.add(node)
+    }
+}
+
+private class CallNode(iThread: Int, last: InterleavingNode?, private val call: MethodCallCodePoint) : InterleavingInnerNode(iThread, last) {
+    private val wasSuspended: Boolean = call.returnedValue?.value == COROUTINE_SUSPENDED
+    // suspended method contents should be reported
+    override val shouldBeExpanded: Boolean by lazy { wasSuspended || super.shouldBeExpanded }
+
+    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? =
+        if (!shouldBeExpanded) {
+            interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "$call"))
+            lastState?.let { interleaving.add(stateEventRepresentation(iThread, it)) }
+            lastInternalEvent.next
+        } else {
+            next
+        }
+}
+
+private class ActorNode(iThread: Int, last: InterleavingNode?, private val actor: Actor, private val result: Result?) : InterleavingInnerNode(iThread, last) {
+    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? =
+        if (!shouldBeExpanded) {
+            val representation = "$actor" + if (result != null) ": $result" else ""
+            interleaving.add(InterleavingEventRepresentation(iThread, representation))
+            lastState?.let { interleaving.add(stateEventRepresentation(iThread, it)) }
+            lastInternalEvent.next
+        } else {
+            interleaving.add(InterleavingEventRepresentation(iThread, "$actor"))
+            next
+        }
+}
+
+private class ActorResultNode(iThread: Int, last: InterleavingNode?, private val result: Result?) : InterleavingNode(iThread, last) {
+    override val lastState: String? = null
+    override val lastInternalEvent: InterleavingNode = this
+    override val shouldBeExpanded: Boolean = false
+
+    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
+        if (result is Cancelled)
+            interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "CONTINUATION CANCELLED"))
+        if (result != null)
+            interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "result: $result"))
+        return next
+    }
+}
+
+private fun stateEventRepresentation(iThread: Int, stateRepresentation: String) =
+    InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "STATE: $stateRepresentation")
+
+private class InterleavingEventRepresentation(val iThread: Int, val representation: String)
