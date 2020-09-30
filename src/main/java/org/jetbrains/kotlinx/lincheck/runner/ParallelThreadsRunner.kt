@@ -72,7 +72,7 @@ open class ParallelThreadsRunner(
     private var yieldInvokedInOnStart = false
 
     /**
-     * Passed as continuation to invoke the suspendable actor from [threadId].
+     * Passed as continuation to invoke the suspendable actor from [iThread].
      *
      * If the suspendable actor has follow-up then it's continuation is intercepted after resumption
      * by [ParallelThreadRunnerInterceptor] stored in [context]
@@ -80,7 +80,7 @@ open class ParallelThreadsRunner(
      *
      * [resumeWith] is invoked when the coroutine running this actor completes with result or exception.
      */
-    protected inner class Completion(private val threadId: Int) : Continuation<Any?> {
+    protected inner class Completion(private val iThread: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
         override val context: CoroutineContext
@@ -93,7 +93,7 @@ open class ParallelThreadsRunner(
                 if (resWithCont.get() === null)
                     completedOrSuspendedThreads.decrementAndGet()
                 // write function's final result
-                suspensionPointResults[threadId] = createLincheckResult(result, wasSuspended = true)
+                suspensionPointResults[iThread] = createLincheckResult(result, wasSuspended = true)
             }
         }
     }
@@ -153,17 +153,17 @@ open class ParallelThreadsRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, threadId: Int, actorId: Int): Result {
+    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
         val finalResult = if (res === COROUTINE_SUSPENDED) {
-            val actor = scenario.parallelExecution[threadId][actorId]
+            val actor = scenario.parallelExecution[iThread][actorId]
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
             if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) Cancelled
-            else waitAndInvokeFollowUp(threadId, actorId)
+            else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
-        if (isLastActor(threadId, actorId) && finalResult !== Suspended)
+        if (isLastActor(iThread, actorId) && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()
-        suspensionPointResults[threadId] = NoResult
+        suspensionPointResults[iThread] = NoResult
         return finalResult
     }
 
