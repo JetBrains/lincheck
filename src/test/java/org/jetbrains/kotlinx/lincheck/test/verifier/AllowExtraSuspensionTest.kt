@@ -21,6 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier
 
+import kotlinx.atomicfu.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -60,6 +62,36 @@ class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest(IncorrectResultsF
 
     override fun <O : Options<O, *>> O.customize() {
         sequentialSpecification(CounterSequential::class.java)
+    }
+}
+
+// One of the operations should always succeed without suspension
+class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
+    private val c = atomic(0)
+
+    @InternalCoroutinesApi
+    @Operation(cancellableOnSuspension = true)
+    suspend fun operation1() {
+        val c = c.incrementAndGet()
+        if (c == 6) return
+        suspendAtomicCancellableCoroutine<Unit> {  }
+    }
+
+    @InternalCoroutinesApi
+    @Operation(allowExtraSuspension = true)
+    suspend fun operation2() {
+        val c = c.incrementAndGet()
+        if (c == 6) return
+        suspendAtomicCancellableCoroutine<Unit> {  }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(10)
+        actorsBefore(0)
+        threads(2)
+        actorsPerThread(3)
+        actorsAfter(0)
+        requireStateEquivalenceImplCheck(false)
     }
 }
 

@@ -31,7 +31,6 @@ import java.util.*
 import kotlin.collections.HashMap
 import kotlin.coroutines.*
 import kotlin.math.*
-import kotlin.text.StringBuilder
 
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
@@ -78,66 +77,82 @@ class LTS(sequentialSpecification: Class<*>) {
         internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
         internal val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
         internal val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
+        private val atomicallySuspendedAndCancelledTransition: TransitionInfo by lazy {
+            createAtomicallySuspendedAndCancelledTransition()
+        }
 
         /**
          * Computes or gets the existing transition from the current state by the given [actor].
          */
-        fun next(actor: Actor, expectedResult: Result, ticket: Int) =
-           if (ticket == NO_TICKET) nextByRequest(actor, expectedResult) else nextByFollowUp(actor, ticket, expectedResult)
+        fun next(actor: Actor, expectedResult: Result, ticket: Int) = when(ticket) {
+            NO_TICKET -> nextByRequest(actor, expectedResult)
+            else -> nextByFollowUp(actor, ticket, expectedResult)
+        }
+
+        private fun createAtomicallySuspendedAndCancelledTransition() =  copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
+            TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null, Cancelled)
+        }
 
         private fun nextByRequest(actor: Actor, expectedResult: Result): TransitionInfo? {
-            val transitionInfo = transitionsByRequests.computeIfAbsent(actor) {
-                generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
+            // Compute the transition following the sequential specification.
+            val transitionInfo = transitionsByRequests.computeIfAbsent(actor) { a ->
+                copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     val ticket = findFirstAvailableTicket(suspendedOperations, resumedTicketsWithResults)
-                    val op = Operation(actor, ticket, REQUEST)
+                    val op = Operation(a, ticket, REQUEST)
                     // Invoke the given operation to count the next transition.
                     val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
                     createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
-            return if (transitionInfo.isLegalByRequest(expectedResult, actor.allowExtraSuspension)) transitionInfo else null
+            // Check whether the current actor allows an extra suspension and the the expected result is `Cancelled` while the
+            // constructed transition does not suspend -- we can simply consider that this cancelled invocation does not take
+            // any effect and remove it from the history.
+            if (actor.allowExtraSuspension && expectedResult == Cancelled && transitionInfo.result != Suspended)
+                return atomicallySuspendedAndCancelledTransition
+            return if (expectedResult.isLegalByRequest(transitionInfo, actor.allowExtraSuspension)) transitionInfo else null
         }
 
         private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
             val transitionInfo = transitionsByFollowUps.computeIfAbsent(ticket) {
-                generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
+                copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     // Invoke the given operation to count the next transition.
                     val op = Operation(actor, ticket, FOLLOW_UP)
                     val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
                     createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
-            if (transitionInfo.wasSuspended) error("Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported")
-            return if (transitionInfo.isLegalByFollowUp(expectedResult, actor.allowExtraSuspension)) transitionInfo else null
+            check(transitionInfo.result != Suspended) {
+                "Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported"
+            }
+            return if (expectedResult.isLegalByFollowUp(transitionInfo, actor.allowExtraSuspension)) transitionInfo else null
         }
 
         fun nextByCancellation(actor: Actor, ticket: Int): TransitionInfo = transitionsByCancellations.computeIfAbsent(ticket) {
-            generateNextState { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
+            copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                 // Invoke the given operation to count the next transition.
-                val op = Operation(actor, ticket, OperationType.CANCELLATION)
+                val op = Operation(actor, ticket, CANCELLATION)
                 val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
                 check(result === Cancelled)
                 createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
             }
         }
 
-        private fun TransitionInfo.isLegalByRequest(expectedResult: Result, allowExtraSuspension: Boolean) =
-            // Allow transition with a suspended result
-            // regardless whether the operation was suspended during test running or not,
-            // thus allowing elimination of interblocking operations in the implementation.
-            isLegalByFollowUp(expectedResult, allowExtraSuspension) || (result == Suspended && expectedResult.wasSuspended)
-                                                                    || (result == Suspended && allowExtraSuspension)
+        private fun Result.isLegalByRequest(transitionInfo: TransitionInfo, allowExtraSuspension: Boolean) =
+            isLegalByFollowUp(transitionInfo, allowExtraSuspension) ||
+            this.wasSuspended && (transitionInfo.result == Suspended || allowExtraSuspension) ||
+            !this.wasSuspended && transitionInfo.result == Suspended
 
-        private fun TransitionInfo.isLegalByFollowUp(expectedResult: Result, allowExtraSuspension: Boolean) =
-            (result == expectedResult) ||
-            (result is ValueResult && expectedResult is ValueResult && result.value == expectedResult.value &&
-                (!result.wasSuspended && expectedResult.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
-            (result is ExceptionResult && expectedResult is ExceptionResult && result.tClazz == expectedResult.tClazz &&
-                (!result.wasSuspended && expectedResult.wasSuspended || result.wasSuspended && allowExtraSuspension)) ||
-            (result == VoidResult && expectedResult == SuspendedVoidResult) ||
-            (result == SuspendedVoidResult && expectedResult == VoidResult && allowExtraSuspension)
+        private fun Result.isLegalByFollowUp(transitionInfo: TransitionInfo, allowExtraSuspension: Boolean) =
+            this == transitionInfo.result ||
+            this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value &&
+                (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended && allowExtraSuspension) ||
+            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClazz == transitionInfo.result.tClazz &&
+                (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended && allowExtraSuspension) ||
+            this == VoidResult && transitionInfo.result == SuspendedVoidResult ||
+            this == SuspendedVoidResult && transitionInfo.result == VoidResult && allowExtraSuspension
 
-        private inline fun <T> generateNextState(
+
+        private inline fun <T> copyAndApply(
             action: (
                 instance: Any,
                 suspendedOperations: MutableList<Operation>,
@@ -491,7 +506,7 @@ class TransitionInfo(
     val result: Result
 ) {
     /**
-     * Whether the current transition was made by the suspended request.
+     * Returns `true` if the currently invoked operation is completed.
      */
-    val wasSuspended: Boolean get() = result === Suspended
+    val operationCompleted: Boolean get() = result != NoResult && result != Suspended
 }

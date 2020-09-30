@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.util.*
 
 /**
  * This verifier checks that the specified results could happen if the testing operations are linearizable.
@@ -88,7 +87,7 @@ class LinearizabilityContext : VerifierContext {
         val nextSuspended = suspended.copyOf()
         val nextTickets = tickets.copyOf()
         // update tickets
-        nextTickets[threadId] = if (wasSuspended) ticket else NO_TICKET
+        nextTickets[threadId] = if (result == Suspended) ticket else NO_TICKET
         if (rf != null) { // remapping
             nextTickets.forEachIndexed { tid, ticket ->
                 if (tid != threadId && ticket != NO_TICKET)
@@ -96,13 +95,13 @@ class LinearizabilityContext : VerifierContext {
             }
         }
         // update "suspended" statuses
-        nextSuspended[threadId] = wasSuspended
+        nextSuspended[threadId] = result == Suspended
         for (tid in threads) {
             if (nextTickets[tid] in resumedTickets) // note, that we have to use remapped tickets here!
                 nextSuspended[tid] = false
         }
-        // mark this step as "executed" if the operation was not suspended
-        if (!wasSuspended) nextExecuted[threadId]++
+        // mark this step as "executed" if the operation was not suspended or is cancelled
+        if (operationCompleted) nextExecuted[threadId]++
         // create new context
         return LinearizabilityContext(
             scenario = scenario,

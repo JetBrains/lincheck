@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.io.*
-import java.lang.ClassLoader.*
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.util.*
