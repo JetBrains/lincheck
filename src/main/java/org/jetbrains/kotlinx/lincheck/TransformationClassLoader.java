@@ -95,9 +95,9 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     }
 
     /**
-     * Remaps [className] if needed for transformation
+     * Remaps class name if needed for transformation
      */
-    String remapClassName(String className) {
+    public String remapClassName(String className) {
         if (remapper != null) {
             String internalName = className.replace('.', '/');
             String remappedInternalName = remapper.mapType(internalName);

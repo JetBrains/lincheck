@@ -37,18 +37,18 @@ import java.lang.StringBuilder
  */
 open class ModelCheckingStateReportingTest : VerifierState() {
     @Volatile
-    private var a = 0
+    private var counter = 0
 
     @Operation
     fun operation(): Int {
-        ++a
-        return ++a
+        ++counter
+        return ++counter
     }
 
-    override fun extractState(): Any = a
+    override fun extractState(): Any = counter
 
     @StateRepresentation
-    fun stateRepresentation() = a.toString()
+    fun stateRepresentation() = counter.toString()
 
     @Test
     fun test() {
@@ -71,18 +71,18 @@ open class ModelCheckingStateReportingTest : VerifierState() {
  */
 class StressStateReportingTest : VerifierState() {
     @Volatile
-    private var a = 0
+    private var counter = 0
 
     @Operation
     fun operation(): Int {
-        ++a
-        return ++a
+        ++counter
+        return ++counter
     }
 
-    override fun extractState(): Any = a
+    override fun extractState(): Any = counter
 
     @StateRepresentation
-    fun stateRepresentation() = a.toString()
+    fun stateRepresentation() = counter.toString()
 
     @Test
     fun test() {
@@ -94,7 +94,7 @@ class StressStateReportingTest : VerifierState() {
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("STATE: 0" in log)
-        check("STATE: 2" in log || "STATE: 3" in log)
+        check("STATE: 2" in log || "STATE: 3" in log || "STATE: 4" in log)
     }
 }
 
@@ -102,23 +102,23 @@ class StateRepresentationInParentClassTest : ModelCheckingStateReportingTest()
 
 class TwoStateRepresentationFunctionsTest : VerifierState() {
     @Volatile
-    private var a = 0
+    private var counter = 0
 
     @Operation
     fun operation(): Int {
-        ++a
+        ++counter
         return inc()
     }
 
-    private fun inc(): Int = ++a
+    private fun inc(): Int = ++counter
 
-    override fun extractState(): Any = a
-
-    @StateRepresentation
-    fun stateRepresentation1() = a.toString()
+    override fun extractState(): Any = counter
 
     @StateRepresentation
-    fun stateRepresentation2() = a.toString()
+    fun stateRepresentation1() = counter.toString()
+
+    @StateRepresentation
+    fun stateRepresentation2() = counter.toString()
 
     @Test(expected = IllegalStateException::class)
     fun test() {
