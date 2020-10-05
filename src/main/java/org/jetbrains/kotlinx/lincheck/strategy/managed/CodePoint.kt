@@ -69,8 +69,11 @@ internal class WriteCodePoint(private val fieldName: String?, private val stackT
 internal class MethodCallCodePoint(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodePoint() {
     var returnedValue: ValueHolder? = null
     private var parameters: Array<Any?>? = null
+    private var ownerName: String? = null
 
     override fun toStringImpl(): String = StringBuilder().apply {
+        if (ownerName != null)
+            append("$ownerName.")
         append("$methodName(")
         if (parameters != null)
             append(parameters!!.joinToString(",", transform = ::adornedStringRepresentation))
@@ -86,6 +89,10 @@ internal class MethodCallCodePoint(private val methodName: String, private val s
 
     fun initializeParameters(parameters: Array<Any?>) {
         this.parameters = parameters
+    }
+
+    fun initializeOwnerName(ownerName: String?) {
+        this.ownerName = ownerName
     }
 
     /**

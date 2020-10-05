@@ -24,11 +24,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import java.util.*
 
 /**
+ * Object manager holds information about some object characteristics.
  * Tracks the creation of local objects and leaks of their references to non-local objects.
  */
-internal class LocalObjectManager {
+internal class ObjectManager {
     // for each local object store all objects that depend on it (e.g, are referenced by it)
     private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
+    // some objects can have a name associated to them
+    private val objectNames = IdentityHashMap<Any, String>()
 
     fun newLocalObject(o: Any) {
         localObjects[o] = mutableListOf()
@@ -43,6 +46,10 @@ internal class LocalObjectManager {
 
     fun isLocalObject(o: Any?) = localObjects.containsKey(o)
 
+    /**
+     * Adds a new "has reference to" dependency.
+     * A dependent is either stored in a field of a owner or is an element in an owner array.
+     */
     fun addDependency(owner: Any, dependent: Any?) {
         if (dependent == null) return
         val ownerObjects = localObjects[owner]
@@ -55,7 +62,14 @@ internal class LocalObjectManager {
         }
     }
 
+    fun registerObjectName(o: Any, name: String) {
+        objectNames[o] = name
+    }
+
+    fun getObjectName(o: Any) = objectNames[o]
+
     fun reset() {
         localObjects.clear()
+        objectNames.clear()
     }
 }
