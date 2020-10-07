@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.test.runner.*
 import org.junit.*
 
 /**
- * This test checks that there are no odd threads in thread dumps.
+ * This test checks that there is no old thread in thread dump.
  */
 class ThreadDumpTest {
     @Test
