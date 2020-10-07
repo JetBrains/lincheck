@@ -41,7 +41,7 @@ internal fun StringBuilder.appendInterleaving(
     val graphStart = constructInterleavingGraph(scenario, results, interleavingEvents)
     val interleaving = interleavingGraphToRepresentation(graphStart)
     val interleavingRepresentation = splitToColumns(scenario.threads, interleaving)
-    appendln("= Parallel part execution: =")
+    appendln("Parallel part interleaving:")
     append(printInColumnsCustom(interleavingRepresentation) {
         StringBuilder().apply {
             for (i in it.indices) {

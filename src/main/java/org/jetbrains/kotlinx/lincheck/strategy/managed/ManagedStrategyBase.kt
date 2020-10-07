@@ -114,7 +114,7 @@ internal abstract class ManagedStrategyBase(
 
     override fun beforeLockAcquire(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
-        checkCanHaveObstruction { "At least obstruction freedom required, but a lock found" }
+        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
         newSwitchPoint(iThread, codeLocation)
         // check if can acquire required monitor
         if (!monitorTracker.canAcquireMonitor(monitor)) {
@@ -147,7 +147,7 @@ internal abstract class ManagedStrategyBase(
 
     override fun beforeWait(iThread: Int, codeLocation: Int, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
-        checkCanHaveObstruction { "At least obstruction freedom required but a waiting on monitor found" }
+        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on monitor block has been found" }
         newSwitchPoint(iThread, codeLocation)
         if (withTimeout) return false // timeouts occur instantly
         monitorTracker.waitMonitor(iThread, monitor)
@@ -171,8 +171,7 @@ internal abstract class ManagedStrategyBase(
             // COROUTINE_SUSPENSION_CODELOCATION, because we do not know the actual code location
             newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION)
         } else {
-            // currently a coroutine suspension  is not supposed to violate obstruction-freedom
-            // checkCanHaveObstruction { "At least obstruction freedom required but a loop found" }
+            // coroutine suspension does not violate obstruction-freedom
             switchCurrentThread(iThread, SwitchReason.SUSPENDED, true)
         }
     }
@@ -254,7 +253,7 @@ internal abstract class ManagedStrategyBase(
         val codePointId = codePoints.lastIndex
         var isLoop = false
         if (loopDetector.newOperation(iThread, codeLocation)) {
-            checkCanHaveObstruction { "At least obstruction freedom required, but an active lock found" }
+            failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
             isLoop = true
         }
         val shouldSwitch = shouldSwitch(iThread) or isLoop
@@ -426,7 +425,7 @@ internal abstract class ManagedStrategyBase(
         ManagedStateHolder.resetState(runner.classLoader)
     }
 
-    private fun checkCanHaveObstruction(lazyMessage: () -> String) {
+    private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
         if (testCfg.checkObstructionFreedom) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // forcibly finish execution by throwing an exception.

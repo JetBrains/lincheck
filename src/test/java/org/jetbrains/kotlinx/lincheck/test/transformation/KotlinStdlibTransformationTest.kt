@@ -26,8 +26,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
 /**
- * This test checks that some methods in kotlin stdlib, connected to
- * java.util collections, are transformed correctly.
+ * This test checks that some methods in kotlin stdlib related to
+ * `java.util` are correctly transformed.
  */
 class KotlinStdlibTransformationTest : AbstractLincheckTest() {
     var hashCode = 0
@@ -35,7 +35,7 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
     @Operation
     fun operation() {
         val intArray = IntArray(2)
-        val objectArray = Array<String>(2) { "" }
+        val objectArray = Array(2) { "" }
         val intProgression = (1..2)
         intArray.iterator()
         intArray.forEach {

@@ -153,7 +153,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.interleaving != null) {
         appendln()
-        appendln("= The interleaving that led to this result =")
+        appendln("= The following interleaving leads to the error =")
         appendInterleaving(failure.scenario, results, failure.interleaving)
         if (failure is DeadlockWithDumpFailure) {
             appendln()
@@ -227,7 +227,7 @@ private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): S
 }
 
 private fun StringBuilder.appendObstructionFreedomViolationFailure(failure: ObstructionFreedomViolationFailure): StringBuilder {
-    appendln("= Obstruction freedom check was required, but has failed. Reason: ${failure.reason} =")
+    appendln("= ${failure.reason} =")
     appendExecutionScenario(failure.scenario)
     return this
 }
