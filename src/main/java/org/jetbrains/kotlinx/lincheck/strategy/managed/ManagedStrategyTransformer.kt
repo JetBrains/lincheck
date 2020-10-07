@@ -105,6 +105,8 @@ internal class ManagedStrategyTransformer(
      */
     internal class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
+            // Do not remap List and Map since they are used in Kotlin reflection
+            if (name == "java/util/List" || name == "java/util/Map") return name
             // remap java.util package
             if (name.startsWith("java/util/")) {
                 val normalizedName = name.toClassName()
@@ -118,8 +120,7 @@ internal class ManagedStrategyTransformer(
             }
             // remap java.lang.Iterable, because its only method returns an object from java.util package
             // that will not work if not transformed
-            if (name == "java/lang/Iterable")
-                return TRANSFORMED_PACKAGE_INTERNAL_NAME + name;
+            if (name == "java/lang/Iterable") return TRANSFORMED_PACKAGE_INTERNAL_NAME + name;
             return name
         }
     }

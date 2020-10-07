@@ -69,9 +69,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * Returns `true` if the specified class should not be transformed.
      */
     private static boolean doNotTransform(String className) {
+        // Do not transform List and Map since they are used in Kotlin reflection
+        if (className.equals("kotlin.collections.List") || className.equals("kotlin.collections.Map")) return true;
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
         if (TrustedAtomicPrimitivesKt.isImpossibleToTransformPrimitive(className)) return true;
-
         return className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||
