@@ -60,11 +60,9 @@ class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSus
         // Do the values coincide ignoring the difference in class loaders?
         if (valueClassTransformed != other.valueClassTransformed) {
             // When one value is transformed and another is not,
-            // serialize the other value too if it can be transformed.
-            val transformationLoader =
-                if (valueClassTransformed) value!!.javaClass.classLoader
-                else other.value!!.javaClass.classLoader
-            transformationLoader as TransformationClassLoader
+            // serialize them to compare correctly.
+            val transformationLoader = (if (valueClassTransformed) value else other.value)!!
+                .javaClass.classLoader as TransformationClassLoader
             return getSerializedObject(transformationLoader).contentEquals(other.getSerializedObject(transformationLoader))
         }
         return if (!valueClassTransformed) value == other.value
