@@ -50,7 +50,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
 
     public static final String TRANSFORMED_PACKAGE_INTERNAL_NAME = "org/jetbrains/kotlinx/lincheck/tran$f*rmed/";
     public static final String TRANSFORMED_PACKAGE_NAME = TRANSFORMED_PACKAGE_INTERNAL_NAME.replace('/', '.');
-    public static final int ASM_API = ASM7;
+    public static final int ASM_API = ASM9;
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         classTransformers = new ArrayList<>();

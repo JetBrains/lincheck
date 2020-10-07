@@ -44,7 +44,7 @@ import static org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfigur
  * Should be overridden for every strategy.
  */
 public abstract class CTestConfiguration {
-    public static final int DEFAULT_ITERATIONS = 200;
+    public static final int DEFAULT_ITERATIONS = 100;
     public static final int DEFAULT_THREADS = 2;
     public static final int DEFAULT_ACTORS_PER_THREAD = 5;
     public static final int DEFAULT_ACTORS_BEFORE = 5;
