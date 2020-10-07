@@ -89,6 +89,12 @@ public abstract class ManagedStrategy extends Strategy {
                 ManagedStrategy.this.afterCoroutineResumed(iThread);
                 super.afterCoroutineResumed(iThread);
             }
+
+            @Override
+            public void afterCoroutineCancelled(int iThread) {
+                ManagedStrategy.this.afterCoroutineCancelled(iThread);
+                super.afterCoroutineCancelled(iThread);
+            }
         };
         // Managed state should be initialized before test class transformation
         initializeManagedState();

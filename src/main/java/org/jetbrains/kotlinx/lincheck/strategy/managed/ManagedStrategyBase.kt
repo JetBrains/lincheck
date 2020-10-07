@@ -114,10 +114,10 @@ internal abstract class ManagedStrategyBase(
 
     override fun beforeLockAcquire(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
-        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
         newSwitchPoint(iThread, codeLocation)
         // check if can acquire required monitor
         if (!monitorTracker.canAcquireMonitor(monitor)) {
+            failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
             monitorTracker.awaitAcquiringMonitor(iThread, monitor)
             // switch to another thread and wait for a moment the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
@@ -207,7 +207,7 @@ internal abstract class ManagedStrategyBase(
                 // if there was a suspension before, then instead of creating a new identifier
                 // use the one that the suspended call had
                 val lastId = suspendedMethodStack.last()
-                suspendedMethodStack.remove(suspendedMethodStack.lastIndex)
+                suspendedMethodStack.removeAt(suspendedMethodStack.lastIndex)
                 lastId
             } else {
                 methodIdentifier++
@@ -224,7 +224,7 @@ internal abstract class ManagedStrategyBase(
             val methodCallCodeLocation = getCodePoint(codeLocation) as MethodCallCodePoint
             if (methodCallCodeLocation.returnedValue?.value == COROUTINE_SUSPENDED) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
-                suspendedMethodStack[iThread].add(callStackTrace.lastIndex)
+                suspendedMethodStack[iThread].add(callStackTrace.last().identifier)
             }
             callStackTrace.removeAt(callStackTrace.lastIndex)
         }
@@ -443,6 +443,8 @@ internal abstract class ManagedStrategyBase(
 
     override fun onActorStart(iThread: Int) {
         currentActorId[iThread]++
+        callStackTrace[iThread].clear()
+        suspendedMethodStack[iThread].clear()
         loopDetector.reset(iThread) // visiting same code location in different actors is ok
     }
 

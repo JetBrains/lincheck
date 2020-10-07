@@ -442,10 +442,10 @@ internal class ManagedStrategyTransformer(
      * Adds strategy method invocations before and after method calls.
      */
     private inner class CallStackTraceLoggingTransformer(className: String, methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
-        private val isSuspendStateMachine = isSuspendStateMachine(className)
+        private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            if (isSuspendStateMachine || isStrategyCall(owner)) {
+            if (isSuspendStateMachine || isStrategyCall(owner) || isInternalCoroutineCall(owner, name)) {
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
@@ -562,6 +562,9 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(codePointLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
         }
+
+        private fun isInternalCoroutineCall(owner: String, name: String) =
+            owner == "kotlin/coroutines/intrinsics/IntrinsicsKt" && name == "getCOROUTINE_SUSPENDED"
     }
 
     /**

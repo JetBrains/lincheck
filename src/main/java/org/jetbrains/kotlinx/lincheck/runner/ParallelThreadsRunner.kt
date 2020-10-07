@@ -152,8 +152,10 @@ internal open class ParallelThreadsRunner(
             val actor = scenario.parallelExecution[iThread][actorId]
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) Cancelled
-            else waitAndInvokeFollowUp(iThread, actorId)
+            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) {
+                afterCoroutineCancelled(iThread)
+                Cancelled
+            } else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
         if (isLastActor(iThread, actorId) && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()

@@ -51,17 +51,17 @@ abstract class Strategy protected constructor(
     /**
      * Check if Strategy allows to resume the coroutine.
      */
-    open fun canResumeCoroutine(threadId: Int): Boolean {
+    open fun canResumeCoroutine(iThread: Int): Boolean {
         return true
     }
 
     /**
      * Is invoked when continuation is cancelled by lincheck.
      */
-    open fun onContinuationCancel(threadId: Int) {}
+    open fun onContinuationCancel(iThread: Int) {}
 
     /**
      * Is invoked before each actor execution in a thread.
      */
-    open fun onActorStart(threadId: Int) {}
+    open fun onActorStart(iThread: Int) {}
 }
