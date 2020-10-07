@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -60,7 +61,7 @@ internal abstract class ManagedStrategyBase(
     // random used for the generation of seeds and the execution tree
     protected val generationRandom = Random(0)
     // is thread suspended
-    private val isSuspended: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
+    private val isSuspended = AtomicBooleanArray(nThreads)
     // the number of blocks that should be ignored by the strategy entered and not left for each thread
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // current actor id for each thread
@@ -165,7 +166,7 @@ internal abstract class ManagedStrategyBase(
 
     override fun afterCoroutineSuspended(iThread: Int) {
         check(currentThread == iThread)
-        isSuspended[iThread].set(true)
+        isSuspended[iThread].value = true
         if (runner.canResumeCoroutine(iThread, currentActorId[iThread])) {
             // COROUTINE_SUSPENSION_CODELOCATION, because we do not know the actual code location
             newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION)
@@ -178,7 +179,14 @@ internal abstract class ManagedStrategyBase(
 
     override fun afterCoroutineResumed(iThread: Int) {
         check(currentThread == iThread)
-        isSuspended[iThread].set(false)
+        isSuspended[iThread].value = false
+    }
+
+    override fun afterCoroutineCancelled(iThread: Int) {
+        check(currentThread == iThread)
+        isSuspended[iThread].value = false
+        // method will not be resumed after suspension, so clear prepared for resume call stack
+        suspendedMethodStack[iThread].clear()
     }
 
     override fun enterIgnoredSection(iThread: Int) {
@@ -279,7 +287,7 @@ internal abstract class ManagedStrategyBase(
             if (mustSwitch && !finished.all { it.get() }) {
                 // all threads are suspended
                 // then switch on any suspended thread to finish it and get SuspendedResult
-                val nextThread = (0 until nThreads).firstOrNull { !finished[it].get() && isSuspended[it].get() }
+                val nextThread = (0 until nThreads).firstOrNull { !finished[it].get() && isSuspended[it].value }
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
                     suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
@@ -309,7 +317,7 @@ internal abstract class ManagedStrategyBase(
      */
     protected fun canResume(iThread: Int): Boolean {
         var canResume = !finished[iThread].get() && monitorTracker.canResume(iThread)
-        if (isSuspended[iThread].get())
+        if (isSuspended[iThread].value)
             canResume = canResume && runner.canResumeCoroutine(iThread, currentActorId[iThread])
         return canResume
     }
@@ -406,7 +414,7 @@ internal abstract class ManagedStrategyBase(
      */
     protected open fun initializeInvocation(repeatExecution: Boolean = false) {
         finished.forEach { it.set(false) }
-        isSuspended.forEach { it.set(false) }
+        (0 until nThreads).forEach { isSuspended[it].value = false }
         currentActorId.fill(-1)
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)

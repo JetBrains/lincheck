@@ -85,9 +85,9 @@ public abstract class ManagedStrategy extends Strategy {
             }
 
             @Override
-            public void beforeCoroutineResumed(int iThread) {
+            public void afterCoroutineResumed(int iThread) {
                 ManagedStrategy.this.afterCoroutineResumed(iThread);
-                super.beforeCoroutineResumed(iThread);
+                super.afterCoroutineResumed(iThread);
             }
         };
         // Managed state should be initialized before test class transformation
@@ -248,6 +248,13 @@ public abstract class ManagedStrategy extends Strategy {
      * @param iThread number of invoking thread
      */
     public void afterCoroutineResumed(int iThread) {}
+
+    /**
+     * This method is invoked by a test thread
+     * if a coroutine was cancelled
+     * @param iThread number of invoking thread
+     */
+    public void afterCoroutineCancelled(int iThread) {}
 
     /**
      * This method is invoked by a test thread

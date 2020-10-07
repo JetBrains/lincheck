@@ -151,7 +151,16 @@ public abstract class Runner {
      * if a coroutine was resumed
      * @param iThread number of invoking thread
      */
-    void beforeCoroutineResumed(int iThread) {
+    void afterCoroutineResumed(int iThread) {
+        throw new UnsupportedOperationException("Coroutines are not supported");
+    }
+
+    /**
+     * This method is invoked by a test thread
+     * if a coroutine was cancelled
+     * @param iThread number of invoking thread
+     */
+    void afterCoroutineCancelled(int iThread) {
         throw new UnsupportedOperationException("Coroutines are not supported");
     }
 

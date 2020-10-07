@@ -210,18 +210,18 @@ private class InterleavingLeafEvent(iThread: Int, last: InterleavingNode?, priva
 private abstract class InterleavingInnerNode(iThread: Int, last: InterleavingNode?) : InterleavingNode(iThread, last) {
     override val lastState: String?
         get() {
-            for (event in internalEvent.reversed())
+            for (event in internalEvents.reversed())
                 if (event.lastState != null)
                     return event.lastState
             return null
         }
     override val lastInternalEvent: InterleavingNode
-        get() = if (internalEvent.isEmpty()) this else internalEvent.last().lastInternalEvent
-    override val shouldBeExpanded: Boolean by lazy { internalEvent.any { it.shouldBeExpanded } }
-    private val internalEvent = mutableListOf<InterleavingNode>()
+        get() = if (internalEvents.isEmpty()) this else internalEvents.last().lastInternalEvent
+    override val shouldBeExpanded: Boolean by lazy { internalEvents.any { it.shouldBeExpanded } }
+    private val internalEvents = mutableListOf<InterleavingNode>()
 
     fun addInternalEvent(node: InterleavingNode) {
-        internalEvent.add(node)
+        internalEvents.add(node)
     }
 }
 

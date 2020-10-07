@@ -179,7 +179,7 @@ internal open class ParallelThreadsRunner(
             if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
-        beforeCoroutineResumed(iThread)
+        afterCoroutineResumed(iThread)
         // Check whether the result of the suspension point with the continuation has been stored
         // by the resuming thread, and invoke the follow-up part in this case
         if (completion.resWithCont.get() !== null) {
@@ -194,7 +194,9 @@ internal open class ParallelThreadsRunner(
         completedOrSuspendedThreads.incrementAndGet()
     }
 
-    override fun beforeCoroutineResumed(iThread: Int) {}
+    override fun afterCoroutineResumed(iThread: Int) {}
+
+    override fun afterCoroutineCancelled(iThread: Int) {}
 
     override fun canResumeCoroutine(iThread: Int, actorId: Int): Boolean {
         val completion = completions[iThread][actorId]
