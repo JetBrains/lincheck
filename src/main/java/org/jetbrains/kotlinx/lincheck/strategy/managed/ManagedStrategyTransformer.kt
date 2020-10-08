@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME
-import org.jetbrains.kotlinx.lincheck.UnsafeHolder
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
@@ -1374,5 +1373,29 @@ internal class ManagedStrategyTransformer(
 
         private fun isAFUMethodCall(opcode: Int, owner: String, methodName: String, desc: String) =
             opcode == INVOKEVIRTUAL && isAFU(owner) && isClassMethod(owner, methodName, desc)
+    }
+}
+
+/**
+ * This class is used for getting the [sun.misc.Unsafe] instance.
+ * We need it in some transformed classes from the `java.util.` package,
+ * and it cannot be accessed directly after the transformation.
+ */
+internal object UnsafeHolder {
+    @Volatile
+    private var theUnsafe: Any? = null
+
+    @JvmStatic
+    fun getUnsafe(): Any {
+        if (theUnsafe == null) {
+            try {
+                val f = Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe")
+                f.isAccessible = true
+                theUnsafe = f.get(null)
+            } catch (e: Exception) {
+                throw RuntimeException(e)
+            }
+        }
+        return theUnsafe!!
     }
 }

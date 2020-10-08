@@ -107,8 +107,7 @@ internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadC
 private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
 
 /**
- * Get a method corresponding to [method] in [instance] methods.
- * Solves problems with different class loaders of [method] and [instance].
+ * Get the same [method] for [instance] solving the different class loaders problem.
  */
 internal fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
@@ -120,7 +119,8 @@ internal fun getMethod(instance: Any, method: Method): Method {
 }
 
 /**
- * Finds a method corresponding to [name] and [parameterTypes] ignoring difference in loaders for [parameterTypes].
+ * Finds a method withe the specified [name] and (parameters)[parameterTypes]
+ * ignoring the difference in class loaders for these parameter types.
  */
 private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method =
     methods.find { method ->
@@ -218,7 +218,8 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
 )
 
 /**
- * Fixes method signature according to TransformationClassLoader remapper.
+ * Finds the same method but loaded by the specified (class loader)[loader],
+ * the signature can be changed according to the [TransformationClassLoader]'s remapper.
  */
 private fun Method.convertForLoader(loader: ClassLoader): Method {
     if (loader !is TransformationClassLoader) return this
@@ -258,28 +259,9 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
 }
 
 /**
- * This class is used for getting the [sun.misc.Unsafe] instance.
- * We need it in some transformed classes from the `java.util.` package,
- * and it cannot be accessed directly after the transformation.
+ * Collects the current thread dump and keeps only those
+ * threads that are related to the specified [runner].
  */
-internal object UnsafeHolder {
-    @Volatile
-    private var theUnsafe: Any? = null
-
-    @JvmStatic
-    fun getUnsafe(): Any {
-        if (theUnsafe == null) {
-            try {
-                val f = Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe")
-                f.isAccessible = true
-                theUnsafe = f.get(null)
-            } catch (e: Exception) {
-                throw RuntimeException(e)
-            }
-        }
-        return theUnsafe!!
-    }
+internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
+    t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
 }
-
-internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces()
-        .filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode() }

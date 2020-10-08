@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 import org.objectweb.asm.*;
-import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.commons.*;
 import org.objectweb.asm.util.*;
 
 import java.io.*;
