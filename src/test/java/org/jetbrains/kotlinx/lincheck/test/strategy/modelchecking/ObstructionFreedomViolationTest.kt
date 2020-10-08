@@ -41,7 +41,7 @@ class ObstructionFreedomViolationTest : VerifierState() {
     @Test
     fun test() {
         val options = ModelCheckingOptions()
-            .checkObstructionFreedom(true)
+            .checkObstructionFreedom()
             .minimizeFailedScenario(false)
         val failure = options.checkImpl(ObstructionFreedomViolationTest::class.java)
         check(failure is ObstructionFreedomViolationFailure)

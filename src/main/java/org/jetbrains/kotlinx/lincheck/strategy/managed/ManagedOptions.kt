@@ -24,11 +24,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import java.util.*
 
 /**
- * Options for managed strategies.
+ * Common options for all managed strategies.
  */
 abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
     protected var invocationsPerIteration = DEFAULT_INVOCATIONS
@@ -39,24 +38,24 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
 
     /**
      * Use the specified number of scenario invocations to study possible interleavings in each iteration.
-     * Can use less than the specified number of invocations in case of fully studied interleavings.
+     * Lincheck can use less invocation if it requires less one to study all possible interleavings.
      */
     fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
         invocationsPerIteration = invocations
     }
 
     /**
-     * Check obstruction freedom of the concurrent algorithm.
-     * In case of finding an obstruction lincheck will immediately stop and report it.
+     * Set to `true` to check the testing algorithm for obstruction-freedom.
+     * It also extremely useful for lock-free and wait-free algorithms.
      */
-    fun checkObstructionFreedom(checkObstructionFreedom: Boolean): OPT = applyAndCast {
+    fun checkObstructionFreedom(checkObstructionFreedom: Boolean = true): OPT = applyAndCast {
         this.checkObstructionFreedom = checkObstructionFreedom
     }
 
     /**
-     * Use the specified maximum number of repetitions to detect endless loops.
-     * A found loop will force managed execution to switch the executing thread.
-     * In case of checkObstructionFreedom enabled it will report the obstruction instead.
+     * Use the specified maximum number of repetitions to detect endless loops (hangs).
+     * A found loop will force managed execution to switch the executing thread or report
+     * ab obstruction-freedom violation if [checkObstructionFreedom] is set.
      */
     fun hangingDetectionThreshold(hangingDetectionThreshold: Int): OPT = applyAndCast {
         this.hangingDetectionThreshold = hangingDetectionThreshold
@@ -64,9 +63,10 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
 
     /**
      * Add a guarantee that methods in some classes are either correct in terms of concurrent execution or irrelevant.
-     * These guarantees can be used for optimization. For example, we can add a guarantee that all methods
-     * in java.util.concurrent.ConcurrentHashMap are correct and then managed strategies will not try to switch threads
-     * inside the methods. We can also mark methods in logging classes irrelevant if they do influence execution result.
+     * These guarantees can be used for optimization. For example, we can add a guarantee that all the methods
+     * in `java.util.concurrent.ConcurrentHashMap` are correct and this way the strategy will not try to switch threads
+     * inside these methods. We can also mark methods in logging classes irrelevant so that they will be completely
+     * ignored while studying all possible interleavings.
      */
     fun addGuarantee(guarantee: ManagedStrategyGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
