@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.annotations;
  * #L%
  */
 
-import kotlin.reflect.*;
 import kotlinx.coroutines.*;
 import java.lang.annotation.*;
 
