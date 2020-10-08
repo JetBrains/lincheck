@@ -93,11 +93,6 @@ private fun constructInterleavingGraph(scenario: ExecutionScenario, results: Exe
     // all interleaving nodes in order corresponding to interleavingEvents
     val interleavingNodes = mutableListOf<InterleavingNode>()
 
-    interleavingEvents.forEach {
-        println("${it.iThread} ${it.actorId} ${it.javaClass.name}")
-        if (it is PassCodeLocationEvent)
-            println(it.codePoint)
-    }
     for (eventId in interleavingEvents.indices) {
         val event = interleavingEvents[eventId]
         val iThread = event.iThread
