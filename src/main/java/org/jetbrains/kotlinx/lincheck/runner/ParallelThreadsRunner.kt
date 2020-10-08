@@ -296,10 +296,8 @@ internal open class ParallelThreadsRunner(
         return CancellabilitySupportClassTransformer(cv)
     }
 
-    override fun getStateRepresentation(): String? {
-        stateRepresentation?.let { return getMethod(testInstance, it).invoke(testInstance) as String }
-        return null
-    }
+    override fun getStateRepresentation(): String? =
+        stateRepresentation?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String
 
     override fun transformTestClass() {
         super.transformTestClass()
