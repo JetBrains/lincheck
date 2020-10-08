@@ -21,13 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
-import org.jetbrains.kotlinx.lincheck.consumeCPU
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
-import java.util.*
 
 class StressStrategy(
     testCfg: StressCTestConfiguration,
@@ -37,23 +35,18 @@ class StressStrategy(
     stateRepresentation: Method?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
-    private val random = Random(0)
     private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
-    private val waits: Array<IntArray>?
-    private val nextWaits: Array<IntIterator>?
 
     init {
-        // Create waits if needed
-        waits = if (testCfg.addWaits)
-            Array(scenario.parallelExecution.size) {
-                IntArray(scenario.parallelExecution[it].size)
-            }
-        else
-            null
-        nextWaits = waits?.map { it.iterator() }?.toTypedArray()
-        // Create runner
-        runner = ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, null, testCfg.timeoutMs)
+        runner = ParallelThreadsRunner(
+            strategy = this,
+            testClass = testClass,
+            validationFunctions = validationFunctions,
+            stateRepresentation = stateRepresentation,
+            timeoutMs = testCfg.timeoutMs,
+            useClocks = UseClocks.RANDOM
+        )
         runner.transformTestClass()
     }
 
@@ -61,7 +54,6 @@ class StressStrategy(
         try {
             // Run invocations
             for (invocation in 0 until invocations) {
-                initializeInvocation(invocation)
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results))
@@ -75,29 +67,4 @@ class StressStrategy(
             runner.close()
         }
     }
-
-    override fun onActorStart(threadId: Int) {
-        nextWaits?.let {
-            val wait = it[threadId].nextInt()
-            if (wait != 0)
-                consumeCPU(wait)
-        }
-    }
-
-    private fun initializeInvocation(invocation: Int) {
-        // Specify waits if needed
-        if (waits != null) {
-            val maxWait = (invocation.toFloat() * MAX_WAIT / invocations).toInt() + 1
-            for (waitsForThread in waits) {
-                for (i in waitsForThread.indices) {
-                    // no wait before the first actor, otherwise a random wait
-                    waitsForThread[i] = if (i == 0) 0 else random.nextInt(maxWait)
-                }
-            }
-            for (i in waits.indices)
-                nextWaits!![i] = waits[i].iterator()
-        }
-    }
 }
-
-private const val MAX_WAIT = 1000

@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
@@ -46,8 +47,8 @@ internal open class ParallelThreadsRunner(
     testClass: Class<*>,
     validationFunctions: List<Method>,
     private val stateRepresentation: Method?,
-    private val useClocks: Boolean? = null,
-    private val timeoutMs: Long // for deadlock recognition
+    private val timeoutMs: Long, // for deadlock recognition
+    private val useClocks: UseClocks
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
@@ -116,12 +117,11 @@ internal open class ParallelThreadsRunner(
 
     private fun reset() {
         testInstance = testClass.newInstance()
-        val useClocks = useClocks ?: Random.nextBoolean()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
             val threads = scenario.threads
             val actors = scenario.parallelExecution[t].size
-            ex.useClocks = useClocks
+            ex.useClocks = if (useClocks == ALWAYS) true else Random.nextBoolean()
             ex.curClock = 0
             ex.clocks = Array(actors) { emptyClockArray(threads) }
             ex.results = arrayOfNulls(actors)
@@ -311,5 +311,7 @@ internal open class ParallelThreadsRunner(
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }
 }
+
+internal enum class UseClocks { ALWAYS, RANDOM }
 
 private const val MAX_SPINNING_TIME_BEFORE_YIELD = 2_000_000

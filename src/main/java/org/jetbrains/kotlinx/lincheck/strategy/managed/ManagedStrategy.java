@@ -32,6 +32,8 @@ import org.objectweb.asm.commons.Remapper;
 import java.lang.reflect.*;
 import java.util.*;
 
+import static org.jetbrains.kotlinx.lincheck.runner.UseClocks.ALWAYS;
+
 /**
  * This is an abstract class for all managed strategies.
  * This abstraction helps to choose a proper {@link Runner},
@@ -59,7 +61,7 @@ public abstract class ManagedStrategy extends Strategy {
         this.guarantees = guarantees;
         this.shouldMakeStateRepresentation = stateRepresentation != null;
         this.eliminateLocalObjects = eliminateLocalObjects;
-        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, true, timeoutMs) {
+        runner = new ParallelThreadsRunner(this, testClass, validationFunctions, stateRepresentation, timeoutMs, ALWAYS) {
             @Override
             public void onStart(int iThread) {
                 super.onStart(iThread);
