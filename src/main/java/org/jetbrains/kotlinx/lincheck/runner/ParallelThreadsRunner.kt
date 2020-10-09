@@ -297,7 +297,7 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun getStateRepresentation(): String? =
-        stateRepresentation?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String
+        stateRepresentation?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
 
     override fun transformTestClass() {
         super.transformTestClass()

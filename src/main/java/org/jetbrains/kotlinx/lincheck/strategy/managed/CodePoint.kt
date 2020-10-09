@@ -68,6 +68,7 @@ internal class WriteCodePoint(private val fieldName: String?, private val stackT
 
 internal class MethodCallCodePoint(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodePoint() {
     var returnedValue: ValueHolder? = null
+    private var thrownException: Throwable? = null
     private var parameters: Array<Any?>? = null
     private var ownerName: String? = null
 
@@ -80,11 +81,17 @@ internal class MethodCallCodePoint(private val methodName: String, private val s
         append(")")
         if (returnedValue != null)
             append(": ${adornedStringRepresentation(returnedValue!!.value)}")
+        else if (thrownException != null)
+            append(": threw ${thrownException!!.javaClass.simpleName}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
         this.returnedValue = ValueHolder(value)
+    }
+
+    fun initializeThrownException(exception: Throwable) {
+        this.thrownException = exception
     }
 
     fun initializeParameters(parameters: Array<Any?>) {

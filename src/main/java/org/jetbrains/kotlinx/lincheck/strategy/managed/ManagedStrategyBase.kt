@@ -217,11 +217,11 @@ internal abstract class ManagedStrategyBase(
         }
     }
 
-    override fun afterMethodCall(iThread: Int, codeLocation: Int) {
+    override fun afterMethodCall(iThread: Int, codePoint: Int) {
         if (isTestThread(iThread)) {
             check(loggingEnabled) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
-            val methodCallCodeLocation = getCodePoint(codeLocation) as MethodCallCodePoint
+            val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallCodePoint
             if (methodCallCodeLocation.returnedValue?.value == COROUTINE_SUSPENDED) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
                 suspendedMethodStack[iThread].add(callStackTrace.last().identifier)

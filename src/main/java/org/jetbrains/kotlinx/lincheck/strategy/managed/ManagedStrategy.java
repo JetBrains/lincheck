@@ -291,9 +291,9 @@ public abstract class ManagedStrategy extends Strategy {
      * This method is invoked by a test thread
      * after each method invocation.
      * @param iThread number of invoking thread
-     * @param codeLocation the byte-code location identifier of this invocation
+     * @param codePoint the identifier of the call code point for the invocation
      */
-    public void afterMethodCall(int iThread, int codeLocation) {}
+    public void afterMethodCall(int iThread, int codePoint) {}
 
 
     /**

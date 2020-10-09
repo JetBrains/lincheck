@@ -36,7 +36,6 @@ import java.util.stream.Collectors
 import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.javaMethod
 
-
 /**
  * This transformer inserts [ManagedStrategy] methods invocations.
  */
@@ -76,6 +75,7 @@ internal class ManagedStrategyTransformer(
         }
         var mv = super.visitMethod(access, mname, desc, signature, exceptions)
         mv = JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions)
+        mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         mv = SynchronizedBlockTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (isSynchronized) {
             // synchronized method is replaced with synchronized lock
@@ -95,7 +95,6 @@ internal class ManagedStrategyTransformer(
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         return mv
     }
 
@@ -288,10 +287,10 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             loadLocal(codePointLocal!!)
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(READ_CODELOCATION_TYPE)
+            checkCast(READ_CODE_POINT_TYPE)
             loadLocal(readValue)
             box(valueType)
-            invokeVirtual(READ_CODELOCATION_TYPE, INITIALIZE_READ_VALUE_METHOD)
+            invokeVirtual(READ_CODE_POINT_TYPE, INITIALIZE_READ_VALUE_METHOD)
         }
 
         // STACK: value to be written
@@ -311,10 +310,10 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             loadLocal(codePointLocal!!)
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(WRITE_CODELOCATION_TYPE)
+            checkCast(WRITE_CODE_POINT_TYPE)
             loadLocal(storedValue)
             box(valueType)
-            invokeVirtual(WRITE_CODELOCATION_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
+            invokeVirtual(WRITE_CODE_POINT_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
         }
 
         private fun getArrayStoreType(opcode: Int): Type = when (opcode) {
@@ -443,22 +442,40 @@ internal class ManagedStrategyTransformer(
     private inner class CallStackTraceLoggingTransformer(className: String, methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
             if (isSuspendStateMachine || isStrategyCall(owner) || isInternalCoroutineCall(owner, name)) {
-                adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
             if (!loggingEnabled) {
                 // just add null to increase code location id
                 codeLocationsConstructors.add(null)
-                adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
+            val callStart = newLabel()
+            val callEnd = newLabel()
+            val exceptionHandler = newLabel()
+            val skipHandler = newLabel()
 
-            val codePointLocal = adapter.newLocal(Type.INT_TYPE)
+            val codePointLocal = newLocal(Type.INT_TYPE)
             beforeMethodCall(opcode, owner, name, desc, codePointLocal)
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            if (name != "<init>") {
+                // just hope that constructors do not throw exceptions.
+                // we can not handle this case, because uninitialized values are not allowed by jvm
+                visitTryCatchBlock(callStart, callEnd, exceptionHandler, null)
+            }
+            visitLabel(callStart)
+            visitMethodInsn(opcode, owner, name, desc, itf)
+            visitLabel(callEnd)
             afterMethodCall(Method(name, desc).returnType, codePointLocal)
+
+            goTo(skipHandler)
+            visitLabel(exceptionHandler)
+            onException(codePointLocal)
+            invokeAfterMethodCall(codePointLocal) // notify strategy that the method finished
+            throwException() // throw the exception further
+            visitLabel(skipHandler)
         }
 
         // STACK: param_1 param_2 ... param_n
@@ -473,16 +490,29 @@ internal class ManagedStrategyTransformer(
             if (returnType != Type.VOID_TYPE) {
                 val returnedValue = newLocal(returnType)
                 copyLocal(returnedValue)
-                // initialize MethodCallCodeLocation return value
+                // initialize MethodCallCodePoint return value
                 loadStrategy()
                 loadLocal(codePointLocal)
                 invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-                checkCast(METHOD_CALL_CODELOCATION_TYPE)
+                checkCast(METHOD_CALL_CODE_POINT_TYPE)
                 loadLocal(returnedValue)
                 box(returnType)
-                invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, INITIALIZE_RETURNED_VALUE_METHOD)
+                invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_RETURNED_VALUE_METHOD)
             }
             invokeAfterMethodCall(codePointLocal)
+        }
+
+        // STACK: exception
+        private fun onException(codePointLocal: Int) = adapter.run {
+            val exceptionLocal = newLocal(THROWABLE_TYPE)
+            copyLocal(exceptionLocal)
+            // initialize MethodCallCodePoint thrown exception
+            loadStrategy()
+            loadLocal(codePointLocal)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
+            checkCast(METHOD_CALL_CODE_POINT_TYPE)
+            loadLocal(exceptionLocal)
+            invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_THROWN_EXCEPTION_METHOD)
         }
 
         // STACK: param_1 param_2 ... param_n
@@ -518,9 +548,9 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             loadLocal(codePointLocal)
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(METHOD_CALL_CODELOCATION_TYPE)
+            checkCast(METHOD_CALL_CODE_POINT_TYPE)
             loadLocal(parameterValuesLocal)
-            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, INITIALIZE_PARAMETERS_METHOD)
+            invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_PARAMETERS_METHOD)
         }
 
         // STACK: owner param_1 param_2 ... param_n
@@ -540,12 +570,12 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             loadLocal(codePointLocal)
             invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(METHOD_CALL_CODELOCATION_TYPE)
+            checkCast(METHOD_CALL_CODE_POINT_TYPE)
             // get afu name
             loadObjectManager()
             loadLocal(afuLocal)
             invokeVirtual(OBJECT_MANAGER_TYPE, GET_OBJECT_NAME)
-            invokeVirtual(METHOD_CALL_CODELOCATION_TYPE, INITIALIZE_OWNER_NAME_METHOD)
+            invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_OWNER_NAME_METHOD)
         }
 
         private fun invokeBeforeMethodCall(methodName: String, codePointLocal: Int) {
@@ -1206,6 +1236,7 @@ internal class ManagedStrategyTransformer(
 
     companion object {
         private val OBJECT_TYPE = Type.getType(Any::class.java)
+        private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
         private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStateHolder::class.java)
         private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
         private val OBJECT_MANAGER_TYPE = Type.getType(ObjectManager::class.java)
@@ -1215,9 +1246,9 @@ internal class ManagedStrategyTransformer(
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
         private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
-        private val WRITE_CODELOCATION_TYPE = Type.getType(WriteCodePoint::class.java)
-        private val READ_CODELOCATION_TYPE = Type.getType(ReadCodePoint::class.java)
-        private val METHOD_CALL_CODELOCATION_TYPE = Type.getType(MethodCallCodePoint::class.java)
+        private val WRITE_CODE_POINT_TYPE = Type.getType(WriteCodePoint::class.java)
+        private val READ_CODE_POINT_TYPE = Type.getType(ReadCodePoint::class.java)
+        private val METHOD_CALL_CODE_POINT_TYPE = Type.getType(MethodCallCodePoint::class.java)
 
         private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
         private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -1247,6 +1278,7 @@ internal class ManagedStrategyTransformer(
         private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodePoint::initializeWrittenValue.javaMethod)
         private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadCodePoint::initializeReadValue.javaMethod)
         private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodePoint::initializeReturnedValue.javaMethod)
+        private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallCodePoint::initializeThrownException.javaMethod)
         private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallCodePoint::initializeParameters.javaMethod)
         private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallCodePoint::initializeOwnerName.javaMethod)
         private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
