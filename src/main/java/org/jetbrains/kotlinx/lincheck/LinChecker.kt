@@ -40,7 +40,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
         reporter = Reporter(logLevel)
         testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
-                             else createFromTestClassAnnotations(testClass)
+                             else CTestConfiguration.createFromTestClassAnnotations(testClass)
     }
 
     /**

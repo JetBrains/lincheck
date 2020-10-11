@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.runner
 import org.junit.Test
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.DEFAULT_TIMEOUT_MS
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
@@ -111,7 +111,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
-            stateRepresentation = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationMethod = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         )
         runner.transformTestClass()
         val results = (runner.run() as CompletedInvocationResult).results
@@ -134,7 +134,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
-            stateRepresentation = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationMethod = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         )
         runner.transformTestClass()
         val results = (runner.run() as CompletedInvocationResult).results
@@ -152,7 +152,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
-            stateRepresentation = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationMethod = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         )
         runner.transformTestClass()
         val results = (runner.run() as CompletedInvocationResult).results

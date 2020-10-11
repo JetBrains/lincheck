@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 
-class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class.java.kotlin) {
+class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
     private var canEnterForbiddenSection = false
 
     @Operation

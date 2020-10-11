@@ -29,7 +29,7 @@ internal val objectNumeration = mutableMapOf<Class<Any>, MutableMap<Any, Int>>()
  * While code locations just define certain bytecode instructions,
  * code points correspond to visits of these bytecode instructions.
  */
-internal sealed class CodePoint {
+sealed class CodePoint {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }

@@ -46,7 +46,7 @@ internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
-    private val stateRepresentation: Method?,
+    private val stateRepresentationMethod: Method?,
     private val timeoutMs: Long, // for deadlock recognition
     private val useClocks: UseClocks
 ) : Runner(strategy, testClass, validationFunctions) {
@@ -297,7 +297,7 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun getStateRepresentation(): String? =
-        stateRepresentation?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
+        stateRepresentationMethod?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
 
     override fun transformTestClass() {
         super.transformTestClass()

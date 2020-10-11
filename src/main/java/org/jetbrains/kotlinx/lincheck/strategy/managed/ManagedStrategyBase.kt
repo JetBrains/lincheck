@@ -27,8 +27,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.LIVELOCK_EVENTS_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -496,13 +497,11 @@ internal abstract class ManagedStrategyBase(
         fun passCodeLocation(iThread: Int, codeLocation: Int, codePoint: Int) {
             if (!loggingEnabled) return // check that should log thread events
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
-                enterIgnoredSection(iThread)
                 interleavingEvents.add(PassCodeLocationEvent(
                         iThread, currentActorId[iThread],
                         getCodePoint(codePoint),
                         callStackTrace[iThread].toList()
                 ))
-                leaveIgnoredSection(iThread)
             }
         }
 
@@ -585,5 +584,13 @@ internal abstract class ManagedStrategyBase(
         private class LockAcquiringInfo(val iThread: Int, var timesAcquired: Int)
     }
 }
+
+/**
+ * This exception is used to finish the execution correctly for managed strategies.
+ * Otherwise, there is no way to do it in case of (e.g.) deadlocks.
+ * If we just leave it, then the execution will not be halted.
+ * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
+ */
+internal class ForcibleExecutionFinishException : RuntimeException()
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1; // currently the exact place of coroutine suspension is not known

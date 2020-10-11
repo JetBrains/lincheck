@@ -32,7 +32,6 @@ class ObstructionFreedomViolationTest : VerifierState() {
     private var c: Int = 0
 
     @Operation
-    @Synchronized
     fun incAndGet(): Int = synchronized(this) { ++c }
 
     @Operation

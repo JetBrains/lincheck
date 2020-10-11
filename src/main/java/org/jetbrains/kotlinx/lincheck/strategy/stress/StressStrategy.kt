@@ -43,7 +43,7 @@ class StressStrategy(
             strategy = this,
             testClass = testClass,
             validationFunctions = validationFunctions,
-            stateRepresentation = stateRepresentation,
+            stateRepresentationMethod = stateRepresentation,
             timeoutMs = testCfg.timeoutMs,
             useClocks = UseClocks.RANDOM
         )

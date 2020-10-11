@@ -97,7 +97,7 @@ class MethodReportingTest : VerifierState() {
 /**
  * This test checks that exceptions that are caught in other methods do not corrupt internal call stack.
  */
-class CatchedExceptionMethodReportingTest : VerifierState() {
+class CaughtExceptionMethodReportingTest : VerifierState() {
     @Volatile
     private var counter = 0
     private var useless = 0
