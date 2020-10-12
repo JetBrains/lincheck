@@ -24,6 +24,7 @@
 package org.jetbrains.kotlinx.lincheck.runner;
 
 import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.objectweb.asm.*;
@@ -76,10 +77,11 @@ public abstract class Runner {
     }
 
     /**
-     * Returns current state representation of the test instance based on provided via StateRepresentation annotation function.
-     * Returns null if StateRepresentation annotation was not used.
+     * Returns the current state representation of the test instance constructed via
+     * the function marked with {@link StateRepresentation} annotation, or {@code null}
+     * if no such function is provided.
      */
-    public String getStateRepresentation() {
+    public String constructStateRepresentation() {
         return null;
     }
 

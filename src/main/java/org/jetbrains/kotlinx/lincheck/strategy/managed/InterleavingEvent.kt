@@ -48,7 +48,6 @@ internal class StateRepresentationEvent(
 
 internal class FinishEvent(iThread: Int) : InterleavingEvent(iThread, Int.MAX_VALUE, emptyList())
 
-
 internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
@@ -60,7 +59,9 @@ internal enum class SwitchReason(private val reason: String) {
 }
 
 /**
- * Info about a [methodName] method call.
- * [identifier] helps to distinguish two different calls of the same method.
+ * Info about a method call.
+ * All methods calls are enumerated to make it possible to distinguish different calls of a method.
+ * A suspended method calls before and after resume have the same [identifier], but different [call], because
+ * logically they are the parts of the same code, but internally the suspended method finishes and then restarts again.
  */
 internal class CallStackTraceElement(val call: MethodCallCodePoint, val identifier: Int)

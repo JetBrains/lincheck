@@ -29,7 +29,7 @@ internal val objectNumeration = mutableMapOf<Class<Any>, MutableMap<Any, Int>>()
  * While code locations just define certain bytecode instructions,
  * code points correspond to visits of these bytecode instructions.
  */
-internal sealed class CodePoint {
+sealed class CodePoint {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
@@ -68,6 +68,7 @@ internal class WriteCodePoint(private val fieldName: String?, private val stackT
 
 internal class MethodCallCodePoint(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodePoint() {
     var returnedValue: ValueHolder? = null
+    private var thrownException: Throwable? = null
     private var parameters: Array<Any?>? = null
     private var ownerName: String? = null
 
@@ -80,11 +81,17 @@ internal class MethodCallCodePoint(private val methodName: String, private val s
         append(")")
         if (returnedValue != null)
             append(": ${adornedStringRepresentation(returnedValue!!.value)}")
+        else if (thrownException != null)
+            append(": threw ${thrownException!!.javaClass.simpleName}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
         this.returnedValue = ValueHolder(value)
+    }
+
+    fun initializeThrownException(exception: Throwable) {
+        this.thrownException = exception
     }
 
     fun initializeParameters(parameters: Array<Any?>) {

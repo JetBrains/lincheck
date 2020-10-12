@@ -93,3 +93,42 @@ class MethodReportingTest : VerifierState() {
         override fun toString(): String = value.toString()
     }
 }
+
+/**
+ * This test checks that exceptions that are caught in other methods do not corrupt internal call stack.
+ */
+class CaughtExceptionMethodReportingTest : VerifierState() {
+    @Volatile
+    private var counter = 0
+    private var useless = 0
+
+    @Operation
+    fun operation(): Int {
+        try {
+            return badMethod()
+        } catch(e: Throwable) {
+            counter++
+            return counter++
+        }
+    }
+
+    private fun badMethod(): Int {
+        useless++
+        TODO()
+    }
+
+    override fun extractState(): Any = counter
+
+    @Test
+    fun test() {
+        val options = ModelCheckingOptions()
+            .actorsPerThread(1)
+            .actorsBefore(0)
+            .actorsAfter(0)
+        val failure = options.checkImpl(this::class.java)
+        check(failure != null) { "the test should fail" }
+        val log = StringBuilder().appendFailure(failure).toString()
+        check("useless" !in log) { "Due to bad call stack these accesses appear to be in the same method as thread switches" }
+        check("badMethod(): threw NotImplementedError" in log) { "thrown exception is not shown properly" }
+    }
+}

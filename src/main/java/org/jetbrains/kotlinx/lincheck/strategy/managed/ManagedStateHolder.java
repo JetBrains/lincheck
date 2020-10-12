@@ -68,6 +68,6 @@ public class ManagedStateHolder {
     @SuppressWarnings("unused")
     public static void resetStateImpl() {
         random.setSeed(INITIAL_SEED);
-        objectManager.reset();
+        objectManager = new ObjectManager();
     }
 }

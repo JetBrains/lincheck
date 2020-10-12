@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -31,17 +30,17 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
  */
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal var logLevel = DEFAULT_LOG_LEVEL
-    protected var iterations = DEFAULT_ITERATIONS
-    protected var threads = DEFAULT_THREADS
-    protected var actorsPerThread = DEFAULT_ACTORS_PER_THREAD
-    protected var actorsBefore = DEFAULT_ACTORS_BEFORE
-    protected var actorsAfter = DEFAULT_ACTORS_AFTER
-    protected var executionGenerator = DEFAULT_EXECUTION_GENERATOR
-    protected var verifier = DEFAULT_VERIFIER
+    protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
+    protected var threads = CTestConfiguration.DEFAULT_THREADS
+    protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
+    protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
+    protected var actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER
+    protected var executionGenerator = CTestConfiguration.DEFAULT_EXECUTION_GENERATOR
+    protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
     protected var requireStateEquivalenceImplementationCheck = true
-    protected var minimizeFailedScenario = DEFAULT_MINIMIZE_ERROR
+    protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
-    protected var timeoutMs: Long = DEFAULT_TIMEOUT_MS
+    protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
 
     /**
      * Number of different test scenarios to be executed
@@ -131,7 +130,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
         this.minimizeFailedScenario = minimizeFailedScenario
     }
 
-    abstract fun createTestConfigurations(testClass: Class<*>?): CTEST
+    abstract fun createTestConfigurations(testClass: Class<*>): CTEST
 
     /**
      * Set logging level, [DEFAULT_LOG_LEVEL] is used by default.

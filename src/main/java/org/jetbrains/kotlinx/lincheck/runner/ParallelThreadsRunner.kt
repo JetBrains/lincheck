@@ -46,7 +46,7 @@ internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
-    private val stateRepresentation: Method?,
+    private val stateRepresentationMethod: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions) {
@@ -219,7 +219,7 @@ internal open class ParallelThreadsRunner(
                 }
             }
         }
-        val afterInitStateRepresentation = getStateRepresentation()
+        val afterInitStateRepresentation = constructStateRepresentation()
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
@@ -239,7 +239,7 @@ internal open class ParallelThreadsRunner(
             )
             return ValidationFailureInvocationResult(s, functionName, exception)
         }
-        val afterParallelStateRepresentation = getStateRepresentation()
+        val afterParallelStateRepresentation = constructStateRepresentation()
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
@@ -262,7 +262,7 @@ internal open class ParallelThreadsRunner(
             }
             result
         }
-        val afterPostStateRepresentation = getStateRepresentation()
+        val afterPostStateRepresentation = constructStateRepresentation()
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,
@@ -296,8 +296,8 @@ internal open class ParallelThreadsRunner(
         return CancellabilitySupportClassTransformer(cv)
     }
 
-    override fun getStateRepresentation(): String? =
-        stateRepresentation?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String
+    override fun constructStateRepresentation(): String? =
+        stateRepresentationMethod?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String
 
     override fun transformTestClass() {
         super.transformTestClass()

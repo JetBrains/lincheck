@@ -97,7 +97,7 @@ public class CTestStructure {
                     opGroupConfigAnn.nonParallel()));
         }
         // Create actor paramgen
-        for (Method m : clazz.getDeclaredMethods()) {
+        for (Method m : getDeclaredMethodSorted(clazz)) {
             // Operation
             if (m.isAnnotationPresent(Operation.class)) {
                 Operation operationAnn = m.getAnnotation(Operation.class);
@@ -142,6 +142,20 @@ public class CTestStructure {
                 stateRepresentations.add(m);
             }
         }
+    }
+
+    /**
+     * Sort methods by name so that to make scenario generation deterministic
+     */
+    private static Method[] getDeclaredMethodSorted(Class<?> clazz) {
+        Method[] methods = clazz.getDeclaredMethods();
+        Comparator<Method> comparator = Comparator
+                // compare by method name
+                .comparing(Method::getName)
+                // then compare by parameter class names
+                .thenComparing(m -> Arrays.stream(m.getParameterTypes()).map(Class::getName).collect(Collectors.joining(":")));
+        Arrays.sort(methods, comparator);
+        return methods;
     }
 
     private static ParameterGenerator<?> getOrCreateGenerator(Method m, Parameter p, String nameInOperation,

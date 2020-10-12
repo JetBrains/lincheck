@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -71,4 +72,36 @@ class SuspendInterleavingReportingTest : VerifierState() {
     }
 
     private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
+}
+
+class CancelledSuspendInterleavingReportingTest : VerifierState() {
+    @Volatile
+    var correct = true
+
+    @InternalCoroutinesApi
+    @Operation(cancellableOnSuspension = true)
+    suspend fun cancelledOp() {
+        suspendAtomicCancellableCoroutine<Unit> { cont ->
+            cont.invokeOnCancellation {
+                correct = false
+            }
+        }
+    }
+
+    @Operation
+    fun isAbsurd(): Boolean = correct && !correct
+
+    override fun extractState(): Any = correct
+
+    @Test
+    fun test() {
+        val failure = ModelCheckingOptions()
+            .actorsPerThread(1)
+            .actorsBefore(0)
+            .actorsAfter(0)
+            .checkImpl(this::class.java)
+        checkNotNull(failure) { "the test should fail" }
+        val log = failure.toString()
+        check("CONTINUATION CANCELLED" in log)
+    }
 }

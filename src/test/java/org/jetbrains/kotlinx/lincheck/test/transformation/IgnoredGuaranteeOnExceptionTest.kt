@@ -19,32 +19,38 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
-class ObstructionFreedomViolationTest : VerifierState() {
-    private var c: Int = 0
+/**
+ * This test checks methods with `ignored` guarantee are handled correctly when exception occurs,
+ * i.e. ignored section ends.
+ */
+class IgnoredGuaranteeOnExceptionTest : VerifierState() {
+    private var counter = 0
 
     @Operation
-    fun incAndGet(): Int = synchronized(this) { ++c }
+    fun inc() = try {
+        badMethod()
+    } catch(e: Throwable) {
+        counter++
+        counter++
+    }
 
-    @Operation
-    fun get(): Int = synchronized(this) { c }
+    private fun badMethod(): Int = TODO()
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions()
-            .checkObstructionFreedom()
-            .minimizeFailedScenario(false)
-        val failure = options.checkImpl(ObstructionFreedomViolationTest::class.java)
-        check(failure is ObstructionFreedomViolationFailure)
+        val options = ModelCheckingOptions().addGuarantee(forClasses(this.javaClass.name).methods("badMethod").ignore())
+        val failure = options.checkImpl(this.javaClass)
+        check(failure != null) { "This test should fail" }
     }
 
-    override fun extractState(): Any = c
+    override fun extractState(): Any = counter
 }

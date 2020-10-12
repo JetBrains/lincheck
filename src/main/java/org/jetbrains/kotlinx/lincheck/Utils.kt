@@ -211,7 +211,8 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     parallelExecution.map { actors ->
         actors.map { a ->
             val args = a.arguments.map { it.convertForLoader(loader) }
-            Actor(a.method.convertForLoader(loader), args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension)
+            // previous isSuspendable is used here, is not computed again, because kotlin reflection can fail for transformed classes
+            Actor(a.method.convertForLoader(loader), args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension, a.isSuspendable)
         }
     },
     postExecution

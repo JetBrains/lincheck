@@ -28,9 +28,10 @@ import java.util.*
  * Tracks the creation of local objects and leaks of their references to non-local objects.
  */
 internal class ObjectManager {
-    // for each local object store all objects that depend on it (e.g, are referenced by it)
+    // For each local object store all objects that depend on it (e.g, are referenced by it).
+    // Non-local objects are not present in the map.
     private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
-    // some objects can have a name associated to them
+    // Some objects can have a name associated with them
     private val objectNames = IdentityHashMap<Any, String>()
 
     fun newLocalObject(o: Any) {
@@ -40,7 +41,7 @@ internal class ObjectManager {
     fun deleteLocalObject(o: Any?) {
         if (o == null) return
         val objects = localObjects.remove(o) ?: return
-        // when an object stops being local, all dependent objects stop too
+        // when an object stops being local, all dependent objects stop as well
         objects.forEach { deleteLocalObject(it) }
     }
 
@@ -48,7 +49,7 @@ internal class ObjectManager {
 
     /**
      * Adds a new "has reference to" dependency.
-     * A dependent is either stored in a field of a owner or is an element in an owner array.
+     * A [dependent] is either stored in a field of an [owner] or is an element in an [owner]'s array.
      */
     fun addDependency(owner: Any, dependent: Any?) {
         if (dependent == null) return
@@ -67,9 +68,4 @@ internal class ObjectManager {
     }
 
     fun getObjectName(o: Any) = objectNames[o]
-
-    fun reset() {
-        localObjects.clear()
-        objectNames.clear()
-    }
 }

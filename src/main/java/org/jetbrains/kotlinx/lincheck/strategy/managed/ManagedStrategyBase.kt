@@ -27,8 +27,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.LIVELOCK_EVENTS_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -116,7 +117,7 @@ internal abstract class ManagedStrategyBase(
         if (!isTestThread(iThread)) return true
         newSwitchPoint(iThread, codeLocation)
         // check if can acquire required monitor
-        if (!monitorTracker.canAcquireMonitor(monitor)) {
+        if (!monitorTracker.canAcquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
             monitorTracker.awaitAcquiringMonitor(iThread, monitor)
             // switch to another thread and wait for a moment the monitor can be acquired
@@ -217,11 +218,11 @@ internal abstract class ManagedStrategyBase(
         }
     }
 
-    override fun afterMethodCall(iThread: Int, codeLocation: Int) {
+    override fun afterMethodCall(iThread: Int, codePoint: Int) {
         if (isTestThread(iThread)) {
             check(loggingEnabled) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
-            val methodCallCodeLocation = getCodePoint(codeLocation) as MethodCallCodePoint
+            val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallCodePoint
             if (methodCallCodeLocation.returnedValue?.value == COROUTINE_SUSPENDED) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
                 suspendedMethodStack[iThread].add(callStackTrace.last().identifier)
@@ -496,13 +497,11 @@ internal abstract class ManagedStrategyBase(
         fun passCodeLocation(iThread: Int, codeLocation: Int, codePoint: Int) {
             if (!loggingEnabled) return // check that should log thread events
             if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
-                enterIgnoredSection(iThread)
                 interleavingEvents.add(PassCodeLocationEvent(
                         iThread, currentActorId[iThread],
                         getCodePoint(codePoint),
                         callStackTrace[iThread].toList()
                 ))
-                leaveIgnoredSection(iThread)
             }
         }
 
@@ -510,7 +509,7 @@ internal abstract class ManagedStrategyBase(
             if (!loggingEnabled) return // check that should log thread events
             // enter ignored section, because stateRepresentation invokes transformed method with switch points
             enterIgnoredSection(iThread)
-            val stateRepresentation = runner.stateRepresentation
+            val stateRepresentation = runner.constructStateRepresentation()
             leaveIgnoredSection(iThread)
             interleavingEvents.add(StateRepresentationEvent(iThread, currentActorId[iThread], stateRepresentation, callStackTrace[iThread].toList()))
         }
@@ -523,26 +522,37 @@ internal abstract class ManagedStrategyBase(
      */
     private class MonitorTracker(nThreads: Int) {
         // which monitors are held by test threads
-        private val acquiredMonitors = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+        private val acquiredMonitors = IdentityHashMap<Any, LockAcquiringInfo>()
         // which monitor a thread want to acquire (or null)
         private val acquiringMonitor = Array<Any?>(nThreads) { null }
         // whether thread is waiting for notify on the corresponding monitor
         private val needsNotification = BooleanArray(nThreads) { false }
 
-        fun canAcquireMonitor(monitor: Any) = monitor !in acquiredMonitors
+        fun canAcquireMonitor(iThread: Int, monitor: Any) = acquiredMonitors[monitor]?.iThread?.equals(iThread) ?: true
 
         fun acquireMonitor(iThread: Int, monitor: Any) {
-            acquiredMonitors.add(monitor)
+            // increment the number of times the monitor was acquired
+            acquiredMonitors.compute(monitor) { _, previousValue ->
+                previousValue?.apply { timesAcquired++ } ?: LockAcquiringInfo(iThread, 1)
+            }
             acquiringMonitor[iThread] = null
         }
 
         fun releaseMonitor(monitor: Any) {
-            acquiredMonitors.remove(monitor)
+            // decrement the number of times the monitor was acquired
+            // remove if necessary
+            acquiredMonitors.compute(monitor) { _, previousValue ->
+                check(previousValue != null) { "Tried to release not acquired lock" }
+                if (previousValue.timesAcquired == 1)
+                    null
+                else
+                    previousValue.apply { timesAcquired-- }
+            }
         }
 
         fun canResume(iThread: Int): Boolean {
             val monitor = acquiringMonitor[iThread] ?: return true
-            return !needsNotification[iThread] && canAcquireMonitor(monitor)
+            return !needsNotification[iThread] && canAcquireMonitor(iThread, monitor)
         }
 
         fun awaitAcquiringMonitor(iThread: Int, monitor: Any) {
@@ -558,7 +568,7 @@ internal abstract class ManagedStrategyBase(
         }
 
         fun notify(monitor: Any) {
-            // just notify all. odd threads will have a spurious wakeup
+            // just notify all thread. Odd threads will have a spurious wakeup
             notifyAll(monitor)
         }
 
@@ -567,7 +577,20 @@ internal abstract class ManagedStrategyBase(
                 if (acquiringMonitor[iThread] === monitor)
                     needsNotification[iThread] = false
         }
+
+        /**
+         * Info about a certain monitor with who and how many times acquired it without releasing.
+         */
+        private class LockAcquiringInfo(val iThread: Int, var timesAcquired: Int)
     }
 }
+
+/**
+ * This exception is used to finish the execution correctly for managed strategies.
+ * Otherwise, there is no way to do it in case of (e.g.) deadlocks.
+ * If we just leave it, then the execution will not be halted.
+ * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
+ */
+internal class ForcibleExecutionFinishException : RuntimeException()
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1; // currently the exact place of coroutine suspension is not known

@@ -245,7 +245,6 @@ public class TestThreadExecutionGenerator {
             }
             // Store result to array
             mv.arrayStore(RESULT_TYPE);
-
             // End of try-catch block for handled exceptions
             mv.visitLabel(actorCatchBlockEnd);
             Label skipHandlers = mv.newLabel();

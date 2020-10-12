@@ -32,7 +32,7 @@ class StressStrategy(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
-    stateRepresentation: Method?,
+    stateRepresentationMethod: Method?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
@@ -43,7 +43,7 @@ class StressStrategy(
             strategy = this,
             testClass = testClass,
             validationFunctions = validationFunctions,
-            stateRepresentation = stateRepresentation,
+            stateRepresentationMethod = stateRepresentationMethod,
             timeoutMs = testCfg.timeoutMs,
             useClocks = UseClocks.RANDOM
         )

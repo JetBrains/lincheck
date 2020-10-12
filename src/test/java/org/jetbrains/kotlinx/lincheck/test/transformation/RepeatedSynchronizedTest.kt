@@ -19,24 +19,32 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
-class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
-    private var canEnterForbiddenSection = false
+/**
+ * This test checks that transformed code supports reentrant synchronized locking.
+ */
+@ModelCheckingCTest(iterations = 1)
+class RepeatedSynchronizedTest : VerifierState() {
+    private var counter = 0
 
     @Operation
-    fun operation1() {
-        canEnterForbiddenSection = true
-        canEnterForbiddenSection = false
+    fun inc() = synchronized(this) {
+            synchronized(this) {
+                counter++
+            }
+        }
+
+    @Test
+    fun test() {
+        LinChecker.check(this::class.java)
     }
 
-    @Operation(handleExceptionsAsResult = [IllegalArgumentException::class])
-    fun operation2() {
-        check(!canEnterForbiddenSection)
-    }
-
-    override fun extractState(): Any = canEnterForbiddenSection
+    override fun extractState(): Any = counter
 }

@@ -37,6 +37,7 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
         val intArray = IntArray(2)
         val objectArray = Array(2) { "" }
         val intProgression = (1..2)
+        val objectList: List<String> = listOf("a", "b")
         intArray.iterator()
         intArray.forEach {
             // do something
@@ -51,6 +52,10 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
         intProgression.forEach {
             // do something
             hashCode = it.hashCode()
+        }
+        for (string in objectList) {
+            // do something
+            hashCode = string.hashCode()
         }
         intArray.toList().toTypedArray()
         objectArray.toList().toTypedArray()
