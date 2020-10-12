@@ -25,8 +25,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 private val trustedAtomicPrimitives = listOf<(className: String) -> Boolean>(
         { it == "java.lang.invoke.VarHandle" },
         { it == "sun.misc.Unsafe" },
-        { it.startsWith("java.util.concurrent.atomic.Atomic")}, // AFUs and Atomic[Integer/Long/...]
-        { it.startsWith("kotlinx.atomicfu.Atomic")}
+        { it.startsWith("java.util.concurrent.atomic.Atomic") }, // AFUs and Atomic[Integer/Long/...]
+        { it.startsWith("kotlinx.atomicfu.Atomic") }
 )
 
 
@@ -40,8 +40,8 @@ private val trustedAtomicPrimitives = listOf<(className: String) -> Boolean>(
 fun isTrustedPrimitive(className: String) = trustedAtomicPrimitives.any { it(className) }
 
 /**
- * Some primitives can not be transformed due to the CallerSensitive annotation.
- * These primitives are a subset of trusted ones.
+ * Some primitives cannot be transformed due to the [sun.reflect.CallerSensitive]
+ * annotation. These primitives are a subset of trusted ones.
  */
 fun isImpossibleToTransformPrimitive(className: String) =
         className == "sun.misc.Unsafe" ||

@@ -40,15 +40,15 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  * This runner executes parallel scenario part in different threads.
  * Supports running scenarios with `suspend` functions.
  *
- * It is pretty useful for stress testing or if you do not care about context switches.
+ * It is pretty useful for stress testing or if you do not care about context switch expenses.
  */
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
     private val stateRepresentation: Method?,
-    private val timeoutMs: Long, // for deadlock recognition
-    private val useClocks: UseClocks
+    private val timeoutMs: Long, // for deadlock or livelock detection
+    private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions) {
     private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
