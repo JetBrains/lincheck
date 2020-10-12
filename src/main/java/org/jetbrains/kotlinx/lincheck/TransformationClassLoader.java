@@ -154,7 +154,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     }
 
     /**
-     * Returns name of class the moment before it was transformed
+     * Returns the original name of the specified class before transformation.
      */
     private String originalName(String className) {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME))
@@ -193,9 +193,10 @@ class TransformationClassWriter extends ClassWriter {
     }
 
     /**
-     * Returns the name of class before it was transformed.
-     * Classes from java.util package are moved to [TRANSFORMED_PACKAGE_NAME] after transformetion,
-     * this method ignores the change.
+     * Returns the name of the specified class before it was transformed.
+     *
+     * Classes from `java.util` package are moved to [TRANSFORMED_PACKAGE_NAME] during transformation,
+     * this method changes the package to the original one.
      */
     private String originalInternalName(String internalName) {
         if (internalName.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME))
@@ -205,8 +206,8 @@ class TransformationClassWriter extends ClassWriter {
 }
 
 /**
- * Visitor for retrieving information of class version needed for choosing between COMPUTE_FRAMES and COMPUTE_MAXS.
- * COMPUTE_FRAMES implies COMPUTE_MAXS, but is more expensive, so it is used only for classes with version 1.7 or more.
+ * Visitor for retrieving information of class version needed for making a choice between COMPUTE_FRAMES and COMPUTE_MAXS.
+ * COMPUTE_FRAMES implies COMPUTE_MAXS, but is more expensive, so it is used only for classes with version 1.7 or higher.
  */
 class ClassVersionGetter extends ClassVisitor {
     private int classVersion;
