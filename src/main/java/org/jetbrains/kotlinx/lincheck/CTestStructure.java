@@ -82,8 +82,7 @@ public class CTestStructure {
                                                    Map<String, OperationGroup> groupConfigs,
                                                    List<ActorGenerator> actorGenerators,
                                                    List<Method> validationFunctions,
-                                                   List<Method> stateRepresentations
-    ) {
+                                                   List<Method> stateRepresentations) {
         // Read named parameter paramgen (declared for class)
         for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
             if (paramAnn.name().isEmpty()) {
@@ -145,7 +144,7 @@ public class CTestStructure {
     }
 
     /**
-     * Sort methods by name so that to make scenario generation deterministic
+     * Sort methods by name to make scenario generation deterministic.
      */
     private static Method[] getDeclaredMethodSorted(Class<?> clazz) {
         Method[] methods = clazz.getDeclaredMethods();
