@@ -701,7 +701,7 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun loadRandom() {
-            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::random.name, RANDOM_TYPE)
+            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::random.name, RANDOM_TYPE)
         }
 
         private fun extendsRandom(className: String) = java.util.Random::class.java.isAssignableFrom(Class.forName(className))
@@ -1175,11 +1175,11 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun loadStrategy() {
-            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
+            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
         }
 
         protected fun loadObjectManager() {
-            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStateHolder::objectManager.name, OBJECT_MANAGER_TYPE)
+            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::objectManager.name, OBJECT_MANAGER_TYPE)
         }
 
         protected fun loadCurrentThreadNumber() {
@@ -1269,7 +1269,7 @@ internal class ManagedStrategyTransformer(
     companion object {
         private val OBJECT_TYPE = Type.getType(Any::class.java)
         private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
-        private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStateHolder::class.java)
+        private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStrategyStateHolder::class.java)
         private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
         private val OBJECT_MANAGER_TYPE = Type.getType(ObjectManager::class.java)
         private val RANDOM_TYPE = Type.getType(Random::class.java)

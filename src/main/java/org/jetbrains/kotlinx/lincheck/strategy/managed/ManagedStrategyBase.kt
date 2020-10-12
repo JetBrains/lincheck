@@ -423,7 +423,7 @@ internal abstract class ManagedStrategyBase(
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
         suspendedMethodStack.forEach { it.clear() }
-        ManagedStateHolder.resetState(runner.classLoader)
+        ManagedStrategyStateHolder.resetState(runner.classLoader)
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {

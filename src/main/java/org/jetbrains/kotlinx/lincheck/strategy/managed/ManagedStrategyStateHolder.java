@@ -28,21 +28,22 @@ import java.util.Random;
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.TRANSFORMED_PACKAGE_NAME;
 
 /**
- * This utility class helps to hold the current strategy and its state. In order to run several tests in parallel,
- * every iteration has to use its own class loader, thus this holder is not shared between them.
+ * This utility class stores the current strategy and its state. In order to run several tests in parallel,
+ * each iteration should use its own class loader so that the state is unique for each class loader and, therefore,
+ * for each iteration.
  */
-public class ManagedStateHolder {
+public class ManagedStrategyStateHolder {
     public static ManagedStrategy strategy;
     public static ObjectManager objectManager;
     public static Random random;
     private static final long INITIAL_SEED = 1337;
 
     /**
-     * Sets the specified strategy and its initial state in the specified class loader.
+     * Sets the strategy and its initial state for the specified class loader.
      */
     public static void setState(ClassLoader loader, ManagedStrategy strategy) {
         try {
-            Class<?> clazz = loader.loadClass(ManagedStateHolder.class.getCanonicalName());
+            Class<?> clazz = loader.loadClass(ManagedStrategyStateHolder.class.getCanonicalName());
             clazz.getField("strategy").set(null, strategy);
             clazz.getField("objectManager").set(null, new ObjectManager());
             // load transformed java.util.Random class
@@ -54,11 +55,11 @@ public class ManagedStateHolder {
     }
 
     /**
-     * Prepare state for the new invocation.
+     * Prepare the state for the specified class loader for the next invocation.
      */
     public static void resetState(ClassLoader loader) {
         try {
-            Class<?> clazz = loader.loadClass(ManagedStateHolder.class.getCanonicalName());
+            Class<?> clazz = loader.loadClass(ManagedStrategyStateHolder.class.getCanonicalName());
             clazz.getMethod("resetStateImpl").invoke(null);
         } catch (Exception e) {
             throw new IllegalStateException("Cannot set state to ManagedStateHolder", e);

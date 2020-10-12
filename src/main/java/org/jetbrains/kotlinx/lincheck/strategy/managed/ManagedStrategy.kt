@@ -267,7 +267,7 @@ abstract class ManagedStrategy(testClass: Class<*>, scenario: ExecutionScenario,
     }
 
     protected fun initializeManagedState() {
-        ManagedStateHolder.setState(runner.classLoader, this)
+        ManagedStrategyStateHolder.setState(runner.classLoader, this)
     }
 }
 

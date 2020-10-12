@@ -80,7 +80,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 !className.startsWith("kotlin.ranges")) || // transform kotlin ranges
             (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                 !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.equals(ManagedStateHolder.class.getName())) ||
+                !className.equals(ManagedStrategyStateHolder.class.getName())) ||
             className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
             className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
     }
