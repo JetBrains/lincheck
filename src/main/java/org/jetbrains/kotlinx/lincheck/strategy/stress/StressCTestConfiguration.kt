@@ -23,26 +23,23 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
 /**
  * Configuration for [stress][StressStrategy] strategy.
  */
-class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
+internal class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
                                generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-                               val invocationsPerIteration: Int, val addWaits: Boolean, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
+                               val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
                                sequentialSpecification: Class<*>?, timeoutMs: Long
 ) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-                                stateRepresentationMethod: Method?, verifier: Verifier): Strategy {
-        return StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
-    }
+                                stateRepresentationMethod: Method?, verifier: Verifier) =
+        StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
-        const val DEFAULT_ADD_WAITS = false
     }
 }

@@ -21,9 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -31,16 +33,24 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import java.lang.reflect.*
 
 /**
- * Configuration of an abstract concurrent test.
- * Should be overridden for every strategy.
+ * Abstract configuration for different lincheck modes.
  */
-abstract class CTestConfiguration(val testClass: Class<*>, val iterations: Int, val threads: Int, val actorsPerThread: Int,
-                                  val actorsBefore: Int, val actorsAfter: Int, val generatorClass: Class<out ExecutionGenerator>,
-                                  val verifierClass: Class<out Verifier>, val requireStateEquivalenceImplCheck: Boolean,
-                                  val minimizeFailedScenario: Boolean, val sequentialSpecification: Class<*>?, val timeoutMs: Long) {
+abstract class CTestConfiguration(
+    val testClass: Class<*>,
+    val iterations: Int,
+    val threads: Int,
+    val actorsPerThread: Int,
+    val actorsBefore: Int,
+    val actorsAfter: Int,
+    val generatorClass: Class<out ExecutionGenerator>,
+    val verifierClass: Class<out Verifier>,
+    val requireStateEquivalenceImplCheck: Boolean,
+    val minimizeFailedScenario: Boolean,
+    val sequentialSpecification: Class<*>?,
+    val timeoutMs: Long
+) {
     abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
-
     companion object {
         const val DEFAULT_ITERATIONS = 100
         const val DEFAULT_THREADS = 2
@@ -51,26 +61,28 @@ abstract class CTestConfiguration(val testClass: Class<*>, val iterations: Int, 
         val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
         const val DEFAULT_MINIMIZE_ERROR = true
         const val DEFAULT_TIMEOUT_MS: Long = 10000
-        
-        fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
-            val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
-                .map { ann: StressCTest ->
-                    StressCTestConfiguration(testClass, ann.iterations,
-                        ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                        ann.generator.java, ann.verifier.java, ann.invocationsPerIteration, StressCTestConfiguration.DEFAULT_ADD_WAITS,
-                        ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
-                        chooseSequentialSpecification(ann.sequentialSpecification.java, testClass), DEFAULT_TIMEOUT_MS)
-                }
-            val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
-                .map { ann: ModelCheckingCTest ->
-                    ModelCheckingCTestConfiguration(testClass, ann.iterations,
-                        ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                        ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
-                        ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
-                        ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                        DEFAULT_TIMEOUT_MS, ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS)
-                }
-            return listOf(*stressConfigurations.toTypedArray(), *modelCheckingConfigurations.toTypedArray())
-        }
     }
+}
+
+internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
+    val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
+        .map { ann: StressCTest ->
+            StressCTestConfiguration(testClass, ann.iterations,
+                ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
+                ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
+                ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
+                chooseSequentialSpecification(ann.sequentialSpecification.java, testClass), DEFAULT_TIMEOUT_MS
+            )
+        }
+    val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
+        .map { ann: ModelCheckingCTest ->
+            ModelCheckingCTestConfiguration(testClass, ann.iterations,
+                ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
+                ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
+                ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
+                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
+                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS
+            )
+        }
+    return stressConfigurations + modelCheckingConfigurations
 }
