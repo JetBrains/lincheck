@@ -29,7 +29,7 @@ import java.lang.reflect.*
 /**
  * Configuration for [stress][StressStrategy] strategy.
  */
-internal class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
+class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
                                generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
                                val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
                                sequentialSpecification: Class<*>?, timeoutMs: Long

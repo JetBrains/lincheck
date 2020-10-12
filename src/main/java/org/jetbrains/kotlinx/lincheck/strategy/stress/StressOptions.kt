@@ -29,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
  */
 open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
     private var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
-    private var addWaits = true
 
     /**
      * Run each test scenario the specified number of times.
@@ -38,16 +37,9 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
         invocationsPerIteration = invocations
     }
 
-    /**
-     * Set this to `false` to disable random waits between operations, enabled by default.
-     */
-    fun addWaits(value: Boolean): StressOptions = apply {
-        addWaits = value
-    }
-
     override fun createTestConfigurations(testClass: Class<*>): StressCTestConfiguration {
         return StressCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator,
-                verifier, invocationsPerIteration, addWaits, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+                verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs)
     }
 }
