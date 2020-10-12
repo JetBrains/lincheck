@@ -103,9 +103,10 @@ public class TestThreadExecutionGenerator {
     /**
      * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#run()} implementation.
      */
-    public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions,
-                                             boolean scenarioContainsSuspendableActors)
-    {
+    public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors,
+                                             List<ParallelThreadsRunner.Completion> completions,
+                                             boolean scenarioContainsSuspendableActors
+    ) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
@@ -170,6 +171,7 @@ public class TestThreadExecutionGenerator {
         int iLocal = mv.newLocal(INT_TYPE);
         mv.push(0);
         mv.storeLocal(iLocal);
+
         // Invoke actors
         for (int i = 0; i < actors.size(); i++) {
             readClocksIfNeeded(i, mv);
@@ -250,6 +252,7 @@ public class TestThreadExecutionGenerator {
             Label skipHandlers = mv.newLabel();
             mv.goTo(skipHandlers);
 
+            // Handle exceptions that are valid results
             if (actor.getHandlesExceptions()) {
                 // Handled exception handler
                 mv.visitLabel(handledExpectionHandler);
