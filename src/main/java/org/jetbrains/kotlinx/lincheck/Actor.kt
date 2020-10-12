@@ -37,7 +37,7 @@ data class Actor @JvmOverloads constructor(
     val handledExceptions: List<Class<out Throwable>>,
     val cancelOnSuspension: Boolean = false,
     val allowExtraSuspension: Boolean = false,
-    // we have to specify `isSuspendable` property explicitly for transformed classes  since
+    // we have to specify `isSuspendable` property explicitly for transformed classes since
     // `isSuspendable` implementation produces a circular dependency and, therefore, fails.
     val isSuspendable: Boolean = method.isSuspendable()
 ) {

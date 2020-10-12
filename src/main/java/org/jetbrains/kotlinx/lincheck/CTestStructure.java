@@ -175,7 +175,7 @@ public class CTestStructure {
             if (defaultGenerator != null)
                 return defaultGenerator;
             // Cannot create default parameter generator, throw an exception
-            throw new IllegalStateException("Generator for parameter \'" + p + "\" in method \""
+            throw new IllegalStateException("Generator for parameter \"" + p + "\" in method \""
                 + m.getName() + "\" should be specified.");
         }
         // If the @Param annotation is presented check it's correctness firstly
