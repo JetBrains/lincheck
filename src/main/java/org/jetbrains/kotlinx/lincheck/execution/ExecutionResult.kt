@@ -38,7 +38,7 @@ data class ExecutionResult(
     /**
      * State representation at the end of the init part.
      */
-    val afterInitState: String?,
+    val afterInitStateRepresentation: String?,
     /**
      * Results of the parallel part of the execution with the clock values at the beginning of each one.
      * @see ExecutionScenario.parallelExecution
@@ -47,7 +47,7 @@ data class ExecutionResult(
     /**
      * State representation at the end of the parallel part.
      */
-    val afterParallelState: String?,
+    val afterParallelStateRepresentation: String?,
     /**
      * Results of the last sequential part of the execution.
      * @see ExecutionScenario.postExecution
@@ -56,7 +56,7 @@ data class ExecutionResult(
     /**
      * State representation at the end of the scenario.
      */
-    val afterPostState: String?
+    val afterPostStateRepresentation: String?
 ) {
     constructor(initResults: List<Result>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<Result>) :
         this(initResults, null, parallelResultsWithClock, null, postResults, null)
@@ -64,11 +64,11 @@ data class ExecutionResult(
 
 val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
     this.initResults,
-    this.afterInitState,
+    this.afterInitStateRepresentation,
     this.parallelResultsWithClock.map { it.withEmptyClock() },
-    this.afterParallelState,
+    this.afterParallelStateRepresentation,
     this.postResults,
-    this.afterPostState
+    this.afterPostStateRepresentation
 )
 
 val ExecutionResult.parallelResults: List<List<Result>> get() = parallelResultsWithClock.map { it.map { r -> r.result } }

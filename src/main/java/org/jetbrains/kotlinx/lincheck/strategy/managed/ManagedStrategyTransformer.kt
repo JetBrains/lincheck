@@ -99,18 +99,17 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Changes package of transformed classes from java/util package, excluding some
+     * Changes package of transformed classes from `java.util` package, excluding some,
+     * because transformed classes can not lie in `java.util`
      */
     internal class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            // Do not remap List and Map since they are used in Kotlin reflection
-            if (name == "java/util/List" || name == "java/util/Map") return name
-            // remap java.util package
+            // remap `java.util` package
             if (name.startsWith("java/util/")) {
                 val normalizedName = name.toClassName()
                 // transformation of exceptions causes a lot of trouble with catching expected exceptions
                 val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
-                // function package is not transformed, because AFU uses it and thus there will be transformation problems
+                // function package is not transformed, because AFU uses it, and thus, there will be transformation problems
                 val inFunctionPackage = name.startsWith("java/util/function/")
                 val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
                 if (!isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
