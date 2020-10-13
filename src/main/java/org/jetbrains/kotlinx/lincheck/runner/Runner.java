@@ -80,6 +80,9 @@ public abstract class Runner {
      * Returns the current state representation of the test instance constructed via
      * the function marked with {@link StateRepresentation} annotation, or {@code null}
      * if no such function is provided.
+     *
+     * Please not, that it is unsafe to call this method concurrently with the running scenario.
+     * However, it is fine to call it if the execution is paused somewhere in the middle.
      */
     public String constructStateRepresentation() {
         return null;
