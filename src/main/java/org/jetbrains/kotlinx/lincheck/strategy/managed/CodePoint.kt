@@ -21,13 +21,15 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlin.coroutines.Continuation
-
-internal val objectNumeration = mutableMapOf<Class<Any>, MutableMap<Any, Int>>()
+import java.math.*
+import java.util.*
+import kotlin.coroutines.*
+import kotlin.coroutines.intrinsics.*
 
 /**
  * While code locations just define certain bytecode instructions,
- * code points correspond to visits of these bytecode instructions.
+ * code points correspond to visits of these bytecode instructions
+ * and are used for constructing a readable interleaving trace.
  */
 sealed class CodePoint {
     protected abstract fun toStringImpl(): String
@@ -67,10 +69,12 @@ internal class WriteCodePoint(private val fieldName: String?, private val stackT
 }
 
 internal class MethodCallCodePoint(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodePoint() {
-    var returnedValue: ValueHolder? = null
+    private var returnedValue: Any? = NO_VALUE
     private var thrownException: Throwable? = null
     private var parameters: Array<Any?>? = null
     private var ownerName: String? = null
+
+    val wasSuspended get() = returnedValue === COROUTINE_SUSPENDED
 
     override fun toStringImpl(): String = StringBuilder().apply {
         if (ownerName != null)
@@ -79,15 +83,15 @@ internal class MethodCallCodePoint(private val methodName: String, private val s
         if (parameters != null)
             append(parameters!!.joinToString(",", transform = ::adornedStringRepresentation))
         append(")")
-        if (returnedValue != null)
-            append(": ${adornedStringRepresentation(returnedValue!!.value)}")
+        if (returnedValue != NO_VALUE)
+            append(": ${adornedStringRepresentation(returnedValue)}")
         else if (thrownException != null)
             append(": threw ${thrownException!!.javaClass.simpleName}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
-        this.returnedValue = ValueHolder(value)
+        this.returnedValue = value
     }
 
     fun initializeThrownException(exception: Throwable) {
@@ -101,19 +105,15 @@ internal class MethodCallCodePoint(private val methodName: String, private val s
     fun initializeOwnerName(ownerName: String?) {
         this.ownerName = ownerName
     }
-
-    /**
-     * This class is used to differentiate the cases of null value and no value (void).
-     */
-    internal class ValueHolder(val value: Any?)
 }
+private val NO_VALUE = Any()
 
 internal class MonitorEnterCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
-    override fun toStringImpl(): String = "MONITOR ENTER at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
 }
 
 internal class MonitorExitCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
-    override fun toStringImpl(): String = "MONITOR EXIT at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
 }
 
 internal class WaitCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
@@ -133,7 +133,7 @@ internal class UnparkCodePoint(private val stackTraceElement: StackTraceElement)
 }
 
 /**
- * Removes info about package in a stack trace element representation
+ * Removes package info in the stack trace element representation.
  */
 private fun StackTraceElement.shorten(): String {
     val stackTraceElement = this.toString()
@@ -144,32 +144,38 @@ private fun StackTraceElement.shorten(): String {
 }
 
 private fun adornedStringRepresentation(any: Any?): String {
-    // primitive types are immutable and have trivial toString,
-    // so their string representation is used
-    if (any == null || any.javaClass.isPrimitiveWrapper())
+    // Primitive types (and several others) are immutable and
+    // have trivial `toString` implementation, which is used here.
+    if (any == null || any.javaClass.isImmutableWithNiceToString())
         return any.toString()
     // simplified representation for Continuations
+    // (we usually do not really care about details).
     if (any is Continuation<*>)
         return "<cont>"
-    // instead of java.util.HashMap$Node@3e2a56 show Node@1
-    val id = getId(any.javaClass, any)
+    // Instead of java.util.HashMap$Node@3e2a56 show Node@1.
+    // It is better not to use `toString` in general since
+    // we usually care about references to certain objects,
+    // not about the content inside them.
+    val id = getObjectNumber(any.javaClass, any)
     return "${any.javaClass.simpleName}@$id"
 }
 
-private fun getId(clazz: Class<Any>, obj: Any): Int =
-    objectNumeration
-        .computeIfAbsent(clazz) { mutableMapOf() }
-        .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
+private fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
+    .computeIfAbsent(clazz) { mutableMapOf() }
+    .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
-private fun Class<out Any>?.isPrimitiveWrapper() =
-    this in listOf(
-        java.lang.Integer::class.java,
-        java.lang.Long::class.java,
-        java.lang.Short::class.java,
-        java.lang.Double::class.java,
-        java.lang.Float::class.java,
-        java.lang.Character::class.java,
-        java.lang.Byte::class.java,
-        java.lang.Boolean::class.java,
-        java.lang.String::class.java
-    )
+internal val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
+
+private fun Class<out Any>?.isImmutableWithNiceToString() = this in listOf(
+    java.lang.Integer::class.java,
+    java.lang.Long::class.java,
+    java.lang.Short::class.java,
+    java.lang.Double::class.java,
+    java.lang.Float::class.java,
+    java.lang.Character::class.java,
+    java.lang.Byte::class.java,
+    java.lang.Boolean::class.java,
+    java.lang.String::class.java,
+    BigInteger::class.java,
+    BigDecimal::class.java
+)

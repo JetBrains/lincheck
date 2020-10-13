@@ -226,9 +226,8 @@ private abstract class InterleavingInnerNode(iThread: Int, last: InterleavingNod
 }
 
 private class CallNode(iThread: Int, last: InterleavingNode?, private val call: MethodCallCodePoint) : InterleavingInnerNode(iThread, last) {
-    private val wasSuspended: Boolean = call.returnedValue?.value == COROUTINE_SUSPENDED
     // suspended method contents should be reported
-    override val shouldBeExpanded: Boolean by lazy { wasSuspended || super.shouldBeExpanded }
+    override val shouldBeExpanded: Boolean by lazy { call.wasSuspended || super.shouldBeExpanded }
 
     override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? =
         if (!shouldBeExpanded) {

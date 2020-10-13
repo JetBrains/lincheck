@@ -168,7 +168,7 @@ internal abstract class ManagedStrategyBase(
     override fun afterCoroutineSuspended(iThread: Int) {
         check(currentThread == iThread)
         isSuspended[iThread].value = true
-        if (runner.canResumeCoroutine(iThread, currentActorId[iThread])) {
+        if (runner.isCoroutineResumed(iThread, currentActorId[iThread])) {
             // COROUTINE_SUSPENSION_CODELOCATION, because we do not know the actual code location
             newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION)
         } else {
@@ -223,7 +223,7 @@ internal abstract class ManagedStrategyBase(
             check(loggingEnabled) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
             val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallCodePoint
-            if (methodCallCodeLocation.returnedValue?.value == COROUTINE_SUSPENDED) {
+            if (methodCallCodeLocation.wasSuspended) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
                 suspendedMethodStack[iThread].add(callStackTrace.last().identifier)
             }
@@ -318,7 +318,7 @@ internal abstract class ManagedStrategyBase(
     protected fun canResume(iThread: Int): Boolean {
         var canResume = !finished[iThread].get() && monitorTracker.canResume(iThread)
         if (isSuspended[iThread].value)
-            canResume = canResume && runner.canResumeCoroutine(iThread, currentActorId[iThread])
+            canResume = canResume && runner.isCoroutineResumed(iThread, currentActorId[iThread])
         return canResume
     }
 

@@ -167,18 +167,17 @@ public abstract class Runner {
     }
 
     /**
-     * This method is invoked by a test thread
-     * if the current coroutine can be resumed
-     * @param iThread number of invoking thread
-     * @param iActor number of actor invoked
+     * Returns `true` if the coroutine corresponding to
+     * the actor `iActor` in the thread `iThread` is resumed.
      */
-    public boolean canResumeCoroutine(int iThread, int iActor) {
+    public boolean isCoroutineResumed(int iThread, int iActor) {
         throw new UnsupportedOperationException("Coroutines are not supported");
     }
 
     /**
      * Is invoked before each actor execution in a thread.
      */
+    @SuppressWarnings("unused") // used by generated code
     public void onActorStart(int iThread) {
         strategy.onActorStart(iThread);
     }
@@ -191,6 +190,7 @@ public abstract class Runner {
     /**
      * @return whether all scenario threads are completed or suspended
      */
+    @SuppressWarnings("unused") // used by generated code
     public boolean isParallelExecutionCompleted() {
         return completedOrSuspendedThreads.get() == scenario.getThreads();
     }
