@@ -21,8 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration
-import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_GUARANTEES
@@ -41,8 +40,8 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var eliminateLocalObjects: Boolean = DEFAULT_ELIMINATE_LOCAL_OBJECTS;
 
     /**
-     * Use the specified number of scenario invocations to study possible interleavings in each iteration.
-     * Lincheck can use less invocation if it requires less one to study all possible interleavings.
+     * Use the specified number of scenario invocations to study interleavings in each iteration.
+     * Lincheck can use less invocations if it requires less ones to study all possible interleavings.
      */
     fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
         invocationsPerIteration = invocations
@@ -69,8 +68,9 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      * Add a guarantee that methods in some classes are either correct in terms of concurrent execution or irrelevant.
      * These guarantees can be used for optimization. For example, we can add a guarantee that all the methods
      * in `java.util.concurrent.ConcurrentHashMap` are correct and this way the strategy will not try to switch threads
-     * inside these methods. We can also mark methods in logging classes irrelevant so that they will be completely
-     * ignored while studying all possible interleavings.
+     * inside these methods. We can also mark methods irrelevant (e.g., in logging classes) so that they will be
+     * completely ignored (so that they will neither be treated as atomic nor interrupted in the middle) while
+     * studying possible interleavings.
      */
     fun addGuarantee(guarantee: ManagedStrategyGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
