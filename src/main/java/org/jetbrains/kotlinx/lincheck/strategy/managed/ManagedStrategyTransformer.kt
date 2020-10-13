@@ -141,7 +141,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name) || isTrustedPrimitive(owner.toClassName()) || isSuspendStateMachine(owner) || isStrategyCall(owner)) {
+            if (isFinalField(owner, name) || isSuspendStateMachine(owner) || isStrategyCall(owner)) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
             }
@@ -1006,7 +1006,7 @@ internal class ManagedStrategyTransformer(
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
             val isObjectCreation = opcode == INVOKESPECIAL && name == "<init>" && owner == "java/lang/Object"
             val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(owner.toClassName())
-            val lowerCaseName = name.toLowerCase()
+            val lowerCaseName = name.toLowerCase(Locale.US)
             val isPrimitiveWrite = isImpossibleToTransformPrimitive && WRITE_KEYWORDS.any { it in lowerCaseName }
             val isObjectPrimitiveWrite = isPrimitiveWrite && Type.getArgumentTypes(descriptor).lastOrNull()?.descriptor?.isNotPrimitiveType() ?: false
 
