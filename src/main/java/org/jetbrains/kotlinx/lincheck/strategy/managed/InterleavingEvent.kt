@@ -24,7 +24,15 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 internal typealias CallStackTrace = List<CallStackTraceElement>
 
 /**
- * Stores information about events occurring during managed execution
+ * Method call info.
+ *
+ * All methods calls are enumerated to make it possible to distinguish different calls of the same method.
+ * Suspended method calls have the same [identifier] before and after suspension, but different [call] points.
+ */
+internal class CallStackTraceElement(val call: MethodCallCodePoint, val identifier: Int)
+
+/**
+ * Stores information about events occurred in managed execution.
  */
 internal sealed class InterleavingEvent(val iThread: Int, val actorId: Int, val callStackTrace: CallStackTrace)
 
@@ -57,11 +65,3 @@ internal enum class SwitchReason(private val reason: String) {
 
     override fun toString() = reason
 }
-
-/**
- * Info about a method call.
- * All methods calls are enumerated to make it possible to distinguish different calls of a method.
- * A suspended method calls before and after resume have the same [identifier], but different [call], because
- * logically they are the parts of the same code, but internally the suspended method finishes and then restarts again.
- */
-internal class CallStackTraceElement(val call: MethodCallCodePoint, val identifier: Int)
