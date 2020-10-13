@@ -26,15 +26,19 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
- * Configuration for [random search][ModelCheckingStrategy] strategy.
+ * A common configuration for managed strategies.
  */
-abstract class ManagedCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
-                                         actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-                                         val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
-                                         val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                                         sequentialSpecification: Class<*>?, timeoutMs: Long, val eliminateLocalObjects: Boolean
-) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass,
-    verifierClass, requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
+abstract class ManagedCTestConfiguration(
+    testClass: Class<*>, iterations: Int,
+    threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
+    generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
+    val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
+    val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>?, timeoutMs: Long, val eliminateLocalObjects: Boolean
+) : CTestConfiguration(
+    testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
+    requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs
+) {
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
@@ -44,13 +48,9 @@ abstract class ManagedCTestConfiguration(testClass: Class<*>, iterations: Int, t
         val DEFAULT_GUARANTEES = listOf( // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
             // can be just ignored, so that no thread context switches are added inside their methods.
-            forClasses(
-                "kotlinx.coroutines.internal.StackTraceRecoveryKt"
-            ).allMethods().ignore(),  // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
-            // For this purpose they are treated as if they are atomic instructions.
-            forClasses { className: String -> isTrustedPrimitive(className) }
-                .allMethods()
-                .treatAsAtomic()
+            forClasses("kotlinx.coroutines.internal.StackTraceRecoveryKt").allMethods().ignore(),
+            // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
+            forClasses { className: String -> isTrustedPrimitive(className) }.allMethods().treatAsAtomic()
         )
     }
 }
