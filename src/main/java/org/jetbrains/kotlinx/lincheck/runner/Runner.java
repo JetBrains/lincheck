@@ -45,16 +45,18 @@ public abstract class Runner {
     protected ExecutionScenario scenario;
     protected Class<?> testClass;
     protected final List<Method> validationFunctions;
+    public final Method stateRepresentationFunction;
     protected final Strategy strategy;
     public ExecutionClassLoader classLoader;
 
     protected final AtomicInteger completedOrSuspendedThreads = new AtomicInteger(0);
 
-    protected Runner(Strategy strategy, Class<?> testClass, List<Method> validationFunctions) {
+    protected Runner(Strategy strategy, Class<?> testClass, List<Method> validationFunctions, Method stateRepresentationFunction) {
         this.testClass = testClass;
         this.strategy = strategy;
         this.scenario = strategy.getScenario();
         this.validationFunctions = validationFunctions;
+        this.stateRepresentationFunction = stateRepresentationFunction;
         createClassLoader();
     }
 

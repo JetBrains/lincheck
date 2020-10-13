@@ -46,10 +46,10 @@ internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
-    private val stateRepresentationMethod: Method?,
+    stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
-) : Runner(strategy, testClass, validationFunctions) {
+) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
@@ -297,7 +297,7 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun constructStateRepresentation(): String? =
-        stateRepresentationMethod?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
+        stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
 
     override fun transformTestClass() {
         super.transformTestClass()
