@@ -628,7 +628,7 @@ internal class ManagedStrategyTransformer(
                     loadObjectManager()
                     loadLocal(afuLocal)
                     loadLocal(nameLocal)
-                    invokeVirtual(OBJECT_MANAGER_TYPE, REGISTER_OBJECT_NAME)
+                    invokeVirtual(OBJECT_MANAGER_TYPE, SET_OBJECT_NAME)
                 }
                 else -> visitMethodInsn(opcode, owner, mname, desc, isInterface)
             }
@@ -1303,7 +1303,7 @@ internal class ManagedStrategyTransformer(
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::deleteLocalObject.javaMethod)
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::isLocalObject.javaMethod)
         private val ADD_DEPENDENCY_METHOD = Method.getMethod(ObjectManager::addDependency.javaMethod)
-        private val REGISTER_OBJECT_NAME = Method.getMethod(ObjectManager::registerObjectName.javaMethod)
+        private val SET_OBJECT_NAME = Method.getMethod(ObjectManager::setObjectName.javaMethod)
         private val GET_OBJECT_NAME = Method.getMethod(ObjectManager::getObjectName.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
         private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods

@@ -24,14 +24,21 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import java.util.*
 
 /**
- * Object manager holds information about some object characteristics.
- * Tracks the creation of local objects and leaks of their references to non-local objects.
+ * First of all, the object manager keeps information of locally accessible objects
+ * (e.g., locally created but not shared objects yet) by tracking their creations
+ * and leaks for avoiding useless interleavings - accessing such objects should not
+ * create switch points in managed strategies.
+ *
+ * Secondly, this manager keeps names for some objects, and these names are used
+ * in trace representations. For example, `j.u.c.atomic.AtomicXXX` objects are
+ * associated with the corresponding field names, so that in the trace users see
+ * the field names instead of something like `AtomicInteger@100500`.
  */
 internal class ObjectManager {
     // For each local object store all objects that depend on it (e.g, are referenced by it).
-    // Non-local objects are not present in the map.
+    // Non-local objects are not presented in this map.
     private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
-    // Some objects can have a name associated with them
+    // Stores object names (typically, the corresponding field names where they are uniquely stored).
     private val objectNames = IdentityHashMap<Any, String>()
 
     fun newLocalObject(o: Any) {
@@ -41,7 +48,8 @@ internal class ObjectManager {
     fun deleteLocalObject(o: Any?) {
         if (o == null) return
         val objects = localObjects.remove(o) ?: return
-        // when an object stops being local, all dependent objects stop as well
+        // When an object becomes shared, all dependent objects
+        // should be deleted from the local ones as well
         objects.forEach { deleteLocalObject(it) }
     }
 
@@ -49,21 +57,21 @@ internal class ObjectManager {
 
     /**
      * Adds a new "has reference to" dependency.
-     * A [dependent] is either stored in a field of an [owner] or is an element in an [owner]'s array.
+     * A [dependent] is either stored in a field of [owner] or is an element in [owner]'s array.
      */
     fun addDependency(owner: Any, dependent: Any?) {
         if (dependent == null) return
         val ownerObjects = localObjects[owner]
         if (ownerObjects != null) {
-            // actually save the dependency
+            // Save the dependency
             ownerObjects.add(dependent)
         } else {
-            // a link to the dependent leaked to a non-local object
+            // A link to the dependent references a non-local object
             deleteLocalObject(dependent)
         }
     }
 
-    fun registerObjectName(o: Any, name: String) {
+    fun setObjectName(o: Any, name: String) {
         objectNames[o] = name
     }
 
