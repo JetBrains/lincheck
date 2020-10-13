@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.math.min
 
 private const val INTERLEAVING_INDENTATION = "  "

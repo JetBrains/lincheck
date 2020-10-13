@@ -21,8 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.runner
 
-import org.junit.Test
-import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -30,9 +28,11 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.verifier.*
+import org.junit.*
 import org.junit.Assert.*
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
+import kotlin.coroutines.intrinsics.*
 
 /**
  * Defines suspend-resume cases with exceptions.
@@ -111,7 +111,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
-            stateRepresentationMethod = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         )
         runner.transformTestClass()
         val results = (runner.run() as CompletedInvocationResult).results
@@ -134,7 +134,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
-            stateRepresentationMethod = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         )
         runner.transformTestClass()
         val results = (runner.run() as CompletedInvocationResult).results
@@ -152,7 +152,7 @@ class ParallelThreadsRunnerExceptionTest {
         }
         val runner = ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
-            stateRepresentationMethod = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         )
         runner.transformTestClass()
         val results = (runner.run() as CompletedInvocationResult).results
