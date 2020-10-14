@@ -47,8 +47,8 @@ internal class ModelCheckingStrategy(
         verifier: Verifier
 ) : ManagedStrategyBase(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
     // an increasing id of code locations in the execution
-    private val executionPosition = AtomicInteger(0)
-    // ids of code locations where a thread should be switched
+    private var executionPosition = 0
+    // ids of points in the execution where a thread should be switched
     private val switchPositions = mutableListOf<Int>()
     // ids of threads to which the executing thread should switch at the corresponding choices
     private val threadSwitchChoices = mutableListOf<Int>()
@@ -88,8 +88,8 @@ internal class ModelCheckingStrategy(
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
         // increment position if is a forced switch, not a one decided by shouldSwitch method
         if (mustSwitch)
-            executionPosition.incrementAndGet()
-        val position = executionPosition.get()
+            executionPosition++
+        val position = executionPosition
         // check whether a switch choice node should be initialized here
         if (lastSwitchPosition() < position) {
             // strictly after the last switch.
@@ -100,7 +100,7 @@ internal class ModelCheckingStrategy(
         }
 
         // check whether a thread choice node should be initialized here
-        if (notInitializedThreadChoice != null && executionPosition.get() == lastSwitchPosition()) {
+        if (notInitializedThreadChoice != null && executionPosition == lastSwitchPosition()) {
             val node = notInitializedThreadChoice!!
             notInitializedThreadChoice = null
             // initialize node with the choice of the next thread
@@ -113,14 +113,14 @@ internal class ModelCheckingStrategy(
         // the increment of the current position is made in the same place as where the check is,
         // because the position check and the position increment are dual operations
         check(iThread == currentThread)
-        executionPosition.incrementAndGet()
-        return executionPosition.get() in switchPositions
+        executionPosition++
+        return executionPosition in switchPositions
     }
 
     override fun initializeInvocation(repeatExecution: Boolean) {
         nextThreadToSwitch = threadSwitchChoices.listIterator()
         currentThread = nextThreadToSwitch.next() // the root chooses the first thread to execute
-        executionPosition.set(-1) // one step before zero
+        executionPosition = -1 // one step before zero
         usedInvocations++
         executionFinishingRandom = Random(1) // random with any constant seed
         super.initializeInvocation(repeatExecution)

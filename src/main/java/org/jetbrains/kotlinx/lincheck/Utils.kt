@@ -244,7 +244,11 @@ internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(t
  */
 private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
     override fun resolveClass(desc: ObjectStreamClass): Class<*> {
-        val className = if (loader is TransformationClassLoader) loader.remapClassName(desc.name) else desc.name
+        // add `TRANSFORMED_PACKAGE_NAME` prefix in case of TransformationClassLoader and remove otherwise
+        val className = if (loader is TransformationClassLoader)
+            loader.remapClassName(desc.name)
+        else
+            desc.name.removePrefix(TransformationClassLoader.TRANSFORMED_PACKAGE_NAME)
         return Class.forName(className, true, loader)
     }
 }
