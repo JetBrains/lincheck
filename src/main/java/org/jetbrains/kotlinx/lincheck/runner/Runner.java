@@ -57,23 +57,15 @@ public abstract class Runner {
         this.scenario = strategy.getScenario();
         this.validationFunctions = validationFunctions;
         this.stateRepresentationFunction = stateRepresentationFunction;
-        createClassLoader();
-    }
-
-    /**
-     * Create a new class loader according to strategy and runner.
-     */
-    public final void createClassLoader() {
         this.classLoader = (this.needsTransformation() || strategy.needsTransformation()) ?
-                new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();
-    }
+                new TransformationClassLoader(strategy, this) : new ExecutionClassLoader();    }
 
     /**
      * This method is a part of Runner initialization.
-     * It should be invoked after the constructor.
-     * It is separated from constructor to allow initialization in the class loader before the transformation.
+     * It is separated from constructor to allow certain strategy initialization steps in between.
+     * That may be needed, for example, for transformation logic and `ManagedStateHolder` initialization.
      */
-    public void transformTestClass() {
+    public void initialize() {
         this.scenario = convertForLoader(strategy.getScenario(), classLoader);
         this.testClass = loadClass(testClass.getTypeName());
     }

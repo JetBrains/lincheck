@@ -36,25 +36,27 @@ import java.util.*
  * to transform byte-code in order to insert required for managing instructions,
  * and to hide class loading problems from the strategy algorithm.
  */
-abstract class ManagedStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-                               stateRepresentation: Method?, private val guarantees: List<ManagedStrategyGuarantee>,
-                               timeoutMs: Long, private val eliminateLocalObjects: Boolean) : Strategy(scenario) {
+abstract class ManagedStrategy(private val testClass: Class<*>, scenario: ExecutionScenario, private val validationFunctions: List<Method>,
+                               private val stateRepresentation: Method?, private val guarantees: List<ManagedStrategyGuarantee>,
+                               private val timeoutMs: Long, private val eliminateLocalObjects: Boolean) : Strategy(scenario) {
     /**
      * Number of threads
      */
     protected val nThreads: Int = scenario.parallelExecution.size
-    protected val runner: Runner
+    protected var runner: Runner
     private val collectStateRepresentation: Boolean = stateRepresentation != null
     protected var constructTraceRepresentation = false
     private val codeLocationConstructors: MutableList<(() -> CodePoint)?> = ArrayList() // for trace construction
     protected val codePoints: MutableList<CodePoint> = ArrayList()
 
     init {
-        runner = ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentation, timeoutMs, UseClocks.ALWAYS)
+        runner = createRunner()
         // Managed state should be initialized before test class transformation
         initializeManagedState()
-        runner.transformTestClass()
+        runner.initialize()
     }
+
+    protected fun createRunner(): Runner = ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentation, timeoutMs, UseClocks.ALWAYS)
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,

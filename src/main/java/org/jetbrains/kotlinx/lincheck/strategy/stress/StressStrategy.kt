@@ -47,7 +47,7 @@ class StressStrategy(
             timeoutMs = testCfg.timeoutMs,
             useClocks = UseClocks.RANDOM
         )
-        runner.transformTestClass()
+        runner.initialize()
     }
 
     override fun run(): LincheckFailure? {

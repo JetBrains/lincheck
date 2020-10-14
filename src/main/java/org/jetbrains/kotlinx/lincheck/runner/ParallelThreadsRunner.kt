@@ -299,12 +299,8 @@ internal open class ParallelThreadsRunner(
     override fun constructStateRepresentation(): String? =
         stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
 
-    override fun transformTestClass() {
-        super.transformTestClass()
-        initializeTestThreadExecutions()
-    }
-
-    private fun initializeTestThreadExecutions() {
+    override fun initialize() {
+        super.initialize()
         testThreadExecutions = Array(scenario.threads) { t ->
             TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
         }

@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -32,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.collections.*
 
 /**
@@ -48,7 +46,7 @@ internal abstract class ManagedStrategyBase(
         private val testCfg: ManagedCTestConfiguration
 ) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentation, testCfg.guarantees, testCfg.timeoutMs, testCfg.eliminateLocalObjects) {
     // whether a thread finished all its operations
-    private val finished: Array<AtomicBoolean> = Array(nThreads) { AtomicBoolean(false) }
+    private val finished = BooleanArray(nThreads) { false }
     // what thread is currently allowed to perform operations
     @Volatile
     protected var currentThread: Int = 0
@@ -61,7 +59,7 @@ internal abstract class ManagedStrategyBase(
     // random used for the generation of seeds and the execution tree
     protected val generationRandom = Random(0)
     // is thread suspended
-    private val isSuspended = AtomicBooleanArray(nThreads)
+    private val isSuspended = BooleanArray(nThreads) { false }
     // the number of blocks that should be ignored by the strategy entered and not left for each thread
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // current actor id for each thread
@@ -85,7 +83,7 @@ internal abstract class ManagedStrategyBase(
 
     override fun onFinish(iThread: Int) {
         awaitTurn(iThread)
-        finished[iThread].set(true)
+        finished[iThread] = true
         eventCollector.finishThread(iThread)
         doSwitchCurrentThread(iThread, true)
     }
@@ -166,9 +164,9 @@ internal abstract class ManagedStrategyBase(
 
     override fun afterCoroutineSuspended(iThread: Int) {
         check(currentThread == iThread)
-        isSuspended[iThread].value = true
+        isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread])) {
-            // COROUTINE_SUSPENSION_CODELOCATION, because we do not know the actual code location
+            // `COROUTINE_SUSPENSION_CODE_LOCATION`, because we do not know the actual code location
             newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION)
         } else {
             // coroutine suspension does not violate obstruction-freedom
@@ -178,12 +176,12 @@ internal abstract class ManagedStrategyBase(
 
     override fun afterCoroutineResumed(iThread: Int) {
         check(currentThread == iThread)
-        isSuspended[iThread].value = false
+        isSuspended[iThread] = false
     }
 
     override fun afterCoroutineCancelled(iThread: Int) {
         check(currentThread == iThread)
-        isSuspended[iThread].value = false
+        isSuspended[iThread] = false
         // method will not be resumed after suspension, so clear prepared for resume call stack
         suspendedMethodStack[iThread].clear()
     }
@@ -283,10 +281,10 @@ internal abstract class ManagedStrategyBase(
         onNewSwitch(iThread, mustSwitch)
         val switchableThreads = switchableThreads(iThread)
         if (switchableThreads.isEmpty()) {
-            if (mustSwitch && !finished.all { it.get() }) {
+            if (mustSwitch && !finished.all { it }) {
                 // all threads are suspended
                 // then switch on any suspended thread to finish it and get SuspendedResult
-                val nextThread = (0 until nThreads).firstOrNull { !finished[it].get() && isSuspended[it].value }
+                val nextThread = (0 until nThreads).firstOrNull { !finished[it] && isSuspended[it] }
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
                     suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
@@ -315,8 +313,8 @@ internal abstract class ManagedStrategyBase(
      * Returns whether the thread could continue its execution
      */
     protected fun canResume(iThread: Int): Boolean {
-        var canResume = !finished[iThread].get() && monitorTracker.canResume(iThread)
-        if (isSuspended[iThread].value)
+        var canResume = !finished[iThread] && monitorTracker.canResume(iThread)
+        if (isSuspended[iThread])
             canResume = canResume && runner.isCoroutineResumed(iThread, currentActorId[iThread])
         return canResume
     }
@@ -362,23 +360,23 @@ internal abstract class ManagedStrategyBase(
      */
     private fun collectExecutionEvents(previousResults: InvocationResult): List<InterleavingEvent>? {
         val detectedByStrategy = suddenInvocationResult != null
-        val canCollectExecutionEvents = when {
+        val canCollectInterleavingEvents = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
             previousResults is CompletedInvocationResult -> true
             previousResults is ValidationFailureInvocationResult -> true
             else -> false
         }
 
-        if (!canCollectExecutionEvents) {
-            // runner can be broken during previous run
-            // do not try to log anything
+        if (!canCollectInterleavingEvents) {
+            // interleaving events can be collected almost always,
+            // except for strange cases such as Runner timeout or LinChecker exceptions.
             return null
         }
         // retransform class with logging enabled
         constructTraceRepresentation = true
-        runner.createClassLoader()
+        runner = createRunner()
         initializeManagedState()
-        runner.transformTestClass()
+        runner.initialize()
         val loggedResults = doRunInvocation(true)
         val sameResultTypes = loggedResults.javaClass == previousResults.javaClass
         // cannot check whether the results are exactly the same because of retransformation
@@ -412,8 +410,8 @@ internal abstract class ManagedStrategyBase(
      * Returns all data to the initial state before invocation.
      */
     protected open fun initializeInvocation(repeatExecution: Boolean = false) {
-        finished.forEach { it.set(false) }
-        (0 until nThreads).forEach { isSuspended[it].value = false }
+        finished.fill(false)
+        isSuspended.fill(false)
         currentActorId.fill(-1)
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
