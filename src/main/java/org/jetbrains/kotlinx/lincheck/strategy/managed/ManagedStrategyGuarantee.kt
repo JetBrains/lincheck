@@ -22,9 +22,9 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 /**
- * ManagedGuarantee will be constructed for classes with names [fullClassNames].
+ * ManagedGuarantee will be constructed for classes with a name listed in [fullClassNames].
  */
-fun forClasses(vararg fullClassNames: String) = ManagedStrategyGuarantee.MethodBuilder { it in fullClassNames }
+fun forClasses(vararg fullClassNames: String) = forClasses { it in fullClassNames }
 
 /**
  * ManagedGuarantee will be constructed for all classes satisfying [classPredicate].
@@ -32,50 +32,53 @@ fun forClasses(vararg fullClassNames: String) = ManagedStrategyGuarantee.MethodB
 fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedStrategyGuarantee.MethodBuilder(classPredicate)
 
 class ManagedStrategyGuarantee private constructor(
-        val classPredicate: (fullClassName: String) -> Boolean,
-        val methodPredicate: (methodName: String) -> Boolean,
-        val type: ManagedGuaranteeType
+    internal val classPredicate: (fullClassName: String) -> Boolean,
+    internal val methodPredicate: (methodName: String) -> Boolean,
+    internal val type: ManagedGuaranteeType
 ) {
     class MethodBuilder internal constructor(
-            private val classPredicate: (fullClassName: String) -> Boolean
+        private val classPredicate: (fullClassName: String) -> Boolean
     ) {
         /**
          * ManagedGuarantee will be constructed for methods with names [methodNames]
          */
-        fun methods(vararg methodNames: String) = TypeBuilder(classPredicate) { it in methodNames }
+        fun methods(vararg methodNames: String) = methods { it in methodNames }
 
         /**
          * ManagedGuarantee will be constructed for all methods
          */
-        fun allMethods() = TypeBuilder(classPredicate) { true }
+        fun allMethods() = methods { true }
 
         /**
          * ManagedGuarantee will be constructed for all methods satisfying [methodPredicate]
          */
-        fun methods(methodPredicate: (methodName: String) -> Boolean) = TypeBuilder(classPredicate, methodPredicate)
+        fun methods(methodPredicate: (methodName: String) -> Boolean) = GuaranteeBuilder(classPredicate, methodPredicate)
     }
 
-    class TypeBuilder internal constructor(
-            private val classPredicate: (fullClassName: String) -> Boolean,
-            private val methodPredicate: (methodName: String) -> Boolean
+    class GuaranteeBuilder internal constructor(
+        private val classPredicate: (fullClassName: String) -> Boolean,
+        private val methodPredicate: (methodName: String) -> Boolean
     ) {
         /**
          * The methods will be treated by model checking strategy as if they do not have
-         * interesting code locations inside.
+         * interesting code locations inside, and no switch point will be added due to the
+         * specified method calls.
          */
         fun ignore() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.IGNORE)
 
         /**
-         * The methods will be treated by model checking strategy as an atomic instruction.
-         * No thread context switches are possible inside these methods.
-         * Contrary to IGNORE mode, model checking strategy can add thread context switches
-         * immediately before or after method invocations.
+         * The methods will be treated by model checking strategy as an atomic operation, so that
+         * context switches will not happen inside these methods, what significantly reduces the
+         * number of possible interleavings and makes it possible to test data structures modularly.
+         *
+         * In contract with the [ignore] mode, switch points are added right before and after the
+         * specified method calls.
          */
         fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
     }
 }
 
-enum class ManagedGuaranteeType {
+internal enum class ManagedGuaranteeType {
     IGNORE,
     TREAT_AS_ATOMIC
 }
