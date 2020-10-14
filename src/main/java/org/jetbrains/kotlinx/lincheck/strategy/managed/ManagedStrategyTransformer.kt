@@ -446,7 +446,8 @@ internal class ManagedStrategyTransformer(
                 return
             }
             if (!constructTraceRepresentation) {
-                // just add null to increase code location id
+                // just add null to increase code location id to keep ids consistent with the ones
+                // when `constructTraceRepresentation` is disabled
                 codeLocationsConstructors.add(null)
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
@@ -1209,7 +1210,7 @@ internal class ManagedStrategyTransformer(
                 codeLocationsConstructors.add(null)
             }
             adapter.push(codeLocationsConstructors.lastIndex)
-        }
+    }
 
         protected fun newCodePointLocal(): Int? =
             if (constructTraceRepresentation) {
