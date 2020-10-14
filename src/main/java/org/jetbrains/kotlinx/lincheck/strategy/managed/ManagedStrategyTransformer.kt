@@ -43,9 +43,9 @@ internal class ManagedStrategyTransformer(
     cv: ClassVisitor?,
     private val codeLocationsConstructors: MutableList<(() -> CodePoint)?>,
     private val guarantees: List<ManagedStrategyGuarantee>,
-    private val shouldMakeStateRepresentation: Boolean,
-    private val shouldEliminateLocalObjects: Boolean,
-    private val loggingEnabled: Boolean
+    private val eliminateLocalObjects: Boolean,
+    private val collectStateRepresentation: Boolean,
+    private val constructTraceRepresentation: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -82,7 +82,7 @@ internal class ManagedStrategyTransformer(
             mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), className, access, classVersion)
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (loggingEnabled)
+        if (constructTraceRepresentation)
             mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
@@ -278,7 +278,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: value that was read
         private fun captureReadValue(desc: String, codePointLocal: Int?) = adapter.run {
-            if (!loggingEnabled) return // capture return values only when logging is enabled
+            if (!constructTraceRepresentation) return // capture return values only when logging is enabled
             val valueType = Type.getType(desc)
             val readValue = newLocal(valueType)
             copyLocal(readValue)
@@ -301,7 +301,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: value to be written
         private fun captureWrittenValue(desc: String, codePointLocal: Int?) = adapter.run {
-            if (!loggingEnabled) return // capture written values only when logging is enabled
+            if (!constructTraceRepresentation) return // capture written values only when logging is enabled
             val valueType = Type.getType(desc)
             val storedValue = newLocal(valueType)
             copyLocal(storedValue) // save store value
@@ -354,7 +354,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: object
         private fun invokeIsLocalObject() {
-            if (shouldEliminateLocalObjects) {
+            if (eliminateLocalObjects) {
                 val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
                 adapter.storeLocal(objectLocal)
                 loadObjectManager()
@@ -445,7 +445,7 @@ internal class ManagedStrategyTransformer(
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            if (!loggingEnabled) {
+            if (!constructTraceRepresentation) {
                 // just add null to increase code location id
                 codeLocationsConstructors.add(null)
                 visitMethodInsn(opcode, owner, name, desc, itf)
@@ -1110,7 +1110,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: object
         private fun invokeOnNewLocalObject() {
-            if (shouldEliminateLocalObjects) {
+            if (eliminateLocalObjects) {
                 val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
                 adapter.storeLocal(objectLocal)
                 loadObjectManager()
@@ -1123,7 +1123,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: object
         private fun invokeDeleteLocalObject() {
-            if (shouldEliminateLocalObjects) {
+            if (eliminateLocalObjects) {
                 val objectLocal: Int = adapter.newLocal(OBJECT_TYPE)
                 adapter.storeLocal(objectLocal)
                 loadObjectManager()
@@ -1136,7 +1136,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: owner, dependant
         private fun invokeAddDependency() {
-            if (shouldEliminateLocalObjects) {
+            if (eliminateLocalObjects) {
                 val ownerLocal: Int = adapter.newLocal(OBJECT_TYPE)
                 val dependantLocal: Int = adapter.newLocal(OBJECT_TYPE)
                 adapter.storeLocal(dependantLocal)
@@ -1167,7 +1167,7 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun invokeMakeStateRepresentation() {
-            if (shouldMakeStateRepresentation && loggingEnabled) {
+            if (collectStateRepresentation && constructTraceRepresentation) {
                 loadStrategy()
                 loadCurrentThreadNumber()
                 adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, MAKE_STATE_REPRESENTATION_METHOD)
@@ -1188,7 +1188,7 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun loadNewCodeLocation(codePointLocal: Int?, codeLocationConstructor: (StackTraceElement) -> CodePoint) {
-            if (loggingEnabled) {
+            if (constructTraceRepresentation) {
                 // add constructor for the code location
                 val className = className  // for capturing by value in lambda constructor
                 val fileName = fileName
@@ -1212,7 +1212,7 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun newCodePointLocal(): Int? =
-            if (loggingEnabled) {
+            if (constructTraceRepresentation) {
                 val codePointLocal = adapter.newLocal(Type.INT_TYPE)
                 // initialize codePointLocal, because otherwise transformed code such as
                 // if (b) write(local, value)

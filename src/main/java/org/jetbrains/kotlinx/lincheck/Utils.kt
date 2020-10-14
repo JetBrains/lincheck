@@ -33,16 +33,6 @@ import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
-@Volatile
-private var consumedCPU = System.currentTimeMillis().toInt()
-
-fun consumeCPU(tokens: Int) {
-    var t = consumedCPU // volatile read
-    for (i in tokens downTo 1)
-        t += (t * 0x5DEECE66DL + 0xBL + i.toLong() and 0xFFFFFFFFFFFFL).toInt()
-    if (t == 42)
-        consumedCPU += t
-}
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass

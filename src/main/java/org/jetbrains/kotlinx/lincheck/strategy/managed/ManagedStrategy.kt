@@ -44,8 +44,8 @@ abstract class ManagedStrategy(testClass: Class<*>, scenario: ExecutionScenario,
      */
     protected val nThreads: Int = scenario.parallelExecution.size
     protected val runner: Runner
-    private val shouldMakeStateRepresentation: Boolean = stateRepresentation != null
-    protected var loggingEnabled = false
+    private val collectStateRepresentation: Boolean = stateRepresentation != null
+    protected var constructTraceRepresentation = false
     private val codeLocationConstructors: MutableList<(() -> CodePoint)?> = ArrayList() // for trace construction
     protected val codePoints: MutableList<CodePoint> = ArrayList()
 
@@ -56,15 +56,14 @@ abstract class ManagedStrategy(testClass: Class<*>, scenario: ExecutionScenario,
         runner.transformTestClass()
     }
 
-    override fun createTransformer(cv: ClassVisitor?): ClassVisitor
-        = ManagedStrategyTransformer(
-            cv,
-            codeLocationConstructors,
-            guarantees,
-            shouldMakeStateRepresentation,
-            eliminateLocalObjects,
-            loggingEnabled
-        )
+    override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
+        cv = cv,
+        codeLocationsConstructors = codeLocationConstructors,
+        guarantees = guarantees,
+        eliminateLocalObjects = eliminateLocalObjects,
+        collectStateRepresentation = collectStateRepresentation,
+        constructTraceRepresentation = constructTraceRepresentation
+    )
 
     override fun createRemapper(): Remapper? = JavaUtilRemapper()
 

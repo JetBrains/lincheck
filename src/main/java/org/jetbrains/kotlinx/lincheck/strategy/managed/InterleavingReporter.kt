@@ -257,7 +257,7 @@ private class ActorResultNode(iThread: Int, last: InterleavingNode?, private val
     override val shouldBeExpanded: Boolean = false
 
     override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
-        if (result is Cancelled)
+        if (result == Cancelled)
             interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "CONTINUATION CANCELLED"))
         if (result != null)
             interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "result: $result"))

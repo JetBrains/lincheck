@@ -36,7 +36,7 @@ abstract class Strategy protected constructor(
     val scenario: ExecutionScenario
 ) {
     open fun needsTransformation() = false
-    open fun createTransformer(cv: ClassVisitor?): ClassVisitor {
+    open fun createTransformer(cv: ClassVisitor): ClassVisitor {
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
