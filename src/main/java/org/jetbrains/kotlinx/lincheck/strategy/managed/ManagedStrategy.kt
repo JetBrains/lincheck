@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -30,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransforme
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
+import java.lang.Exception
 import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
@@ -445,7 +445,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
      * @return whether park should be executed
      */
-    fun beforePark(iThread: Int, codeLocation: Int, withTimeout: Boolean): Boolean {
+    fun beforePark(iThread: Int, codeLocation: Int, @Suppress("UNUSED_PARAMETER") withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
         newSwitchPoint(iThread, codeLocation)
         return false
@@ -455,7 +455,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
      */
-    fun afterUnpark(iThread: Int, codeLocation: Int, thread: Any) {
+    fun afterUnpark(iThread: Int, codeLocation: Int, @Suppress("UNUSED_PARAMETER") thread: Any) {
         eventCollector.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
     }
 
@@ -554,7 +554,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * @param codeLocation the byte-code location identifier of this invocation
      * @param iThread number of invoking thread
      */
-    fun beforeMethodCall(iThread: Int, codeLocation: Int) {
+    fun beforeMethodCall(iThread: Int, @Suppress("UNUSED_PARAMETER") codeLocation: Int) {
         if (isTestThread(iThread)) {
             check(constructTraceRepresentation) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
@@ -689,7 +689,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
             enterIgnoredSection(iThread)
             val stateRepresentation = runner.constructStateRepresentation()
             leaveIgnoredSection(iThread)
-            interleavingEvents.add(StateRepresentationEvent(iThread, currentActorId[iThread], stateRepresentation, callStackTrace[iThread].toList()))
+            interleavingEvents.add(StateRepresentationEvent(iThread, currentActorId[iThread], stateRepresentation!!, callStackTrace[iThread].toList()))
         }
 
         fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
@@ -700,8 +700,9 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
  * to strategy so that strategy can learn about execution events.
  */
-private class ManagedStrategyRunner(private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
-                                    stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
+private class ManagedStrategyRunner(
+    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
+    stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
@@ -718,17 +719,17 @@ private class ManagedStrategyRunner(private val managedStrategy: ManagedStrategy
         super.onFailure(iThread, e)
     }
 
-    public override fun afterCoroutineSuspended(iThread: Int) {
+    override fun afterCoroutineSuspended(iThread: Int) {
         super.afterCoroutineSuspended(iThread)
         managedStrategy.afterCoroutineSuspended(iThread)
     }
 
-    public override fun afterCoroutineResumed(iThread: Int) {
+    override fun afterCoroutineResumed(iThread: Int) {
         super.afterCoroutineResumed(iThread)
         managedStrategy.afterCoroutineResumed(iThread)
     }
 
-    public override fun afterCoroutineCancelled(iThread: Int) {
+    override fun afterCoroutineCancelled(iThread: Int) {
         super.afterCoroutineCancelled(iThread)
         managedStrategy.afterCoroutineCancelled(iThread)
     }
@@ -748,7 +749,7 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
             lastIThread = iThread
         }
         if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false
-        // increment the number of times that we visited a codelocation
+        // increment the number of times that we visited a code location
         val count = (operationCounts[codeLocation] ?: 0) + 1
         operationCounts[codeLocation] = count
         // return true if the thread exceeded the maximum number of repetitions that we can have
@@ -836,4 +837,4 @@ private class MonitorTracker(nThreads: Int) {
  */
 internal class ForcibleExecutionFinishException : RuntimeException()
 
-private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1; // currently the exact place of coroutine suspension is not known
+private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known

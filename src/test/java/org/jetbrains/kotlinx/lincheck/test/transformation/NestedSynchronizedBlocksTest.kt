@@ -19,14 +19,32 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.strategy.managed
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 /**
- * Some primitives cannot be transformed due to the [sun.reflect.CallerSensitive]
- * annotation. These primitives are a subset of trusted ones.
+ * This test checks that transformed code supports reentrant synchronized locking.
  */
-fun isImpossibleToTransformPrimitive(className: String) =
-        className == "sun.misc.Unsafe" ||
-        className == "java.lang.invoke.VarHandle" ||
-        (className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater"))
+@ModelCheckingCTest(iterations = 1)
+class NestedSynchronizedBlocksTest : VerifierState() {
+    private var counter = 0
+
+    @Operation
+    fun inc() = synchronized(this) {
+            synchronized(this) {
+                counter++
+            }
+        }
+
+    @Test
+    fun test() {
+        LinChecker.check(this::class.java)
+    }
+
+    override fun extractState(): Any = counter
+}

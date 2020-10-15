@@ -70,7 +70,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     private static boolean doNotTransform(String className) {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
-        if (TrustedAtomicPrimitivesKt.isImpossibleToTransformPrimitive(className)) return true;
+        if (ManagedStrategyTransformerKt.isImpossibleToTransformApiClass(className)) return true;
         return className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||

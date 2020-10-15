@@ -113,7 +113,7 @@ internal class ManagedStrategyTransformer(
                 val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))
                 // function package is not transformed, because AFU uses it, and thus, there will be transformation problems
                 val inFunctionPackage = name.startsWith("java/util/function/")
-                val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(normalizedName)
+                val isImpossibleToTransformPrimitive = isImpossibleToTransformApiClass(normalizedName)
                 if (!isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
                     return TRANSFORMED_PACKAGE_INTERNAL_NAME + name
             }
@@ -1008,7 +1008,7 @@ internal class ManagedStrategyTransformer(
     private inner class LocalObjectManagingTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
             val isObjectCreation = opcode == INVOKESPECIAL && name == "<init>" && owner == "java/lang/Object"
-            val isImpossibleToTransformPrimitive = isImpossibleToTransformPrimitive(owner.toClassName())
+            val isImpossibleToTransformPrimitive = isImpossibleToTransformApiClass(owner.toClassName())
             val lowerCaseName = name.toLowerCase(Locale.US)
             val isPrimitiveWrite = isImpossibleToTransformPrimitive && WRITE_KEYWORDS.any { it in lowerCaseName }
             val isObjectPrimitiveWrite = isPrimitiveWrite && Type.getArgumentTypes(descriptor).lastOrNull()?.descriptor?.isNotPrimitiveType() ?: false
@@ -1207,7 +1207,7 @@ internal class ManagedStrategyTransformer(
                 else
                     adapter.pop()
             }
-            adapter.push(codeLocationsConstructors.lastIndex)
+            adapter.push(nextCodeLocationId)
             nextCodeLocationId++
         }
 
@@ -1463,3 +1463,11 @@ internal object UnsafeHolder {
         return theUnsafe!!
     }
 }
+
+/**
+ * Some api classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation
+ */
+internal fun isImpossibleToTransformApiClass(className: String) =
+    className == "sun.misc.Unsafe" ||
+    className == "java.lang.invoke.VarHandle" ||
+    (className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater"))

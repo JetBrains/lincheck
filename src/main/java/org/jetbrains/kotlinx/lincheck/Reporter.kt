@@ -174,6 +174,7 @@ private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedEx
 private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
     appendln("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
+    appendln()
     for ((t, stackTrace) in failure.threadDump) {
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendln("Thread-$threadNumber:")
