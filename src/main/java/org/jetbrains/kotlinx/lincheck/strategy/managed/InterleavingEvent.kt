@@ -56,7 +56,7 @@ internal class StateRepresentationEvent(
 
 internal class FinishEvent(iThread: Int) : InterleavingEvent(iThread, Int.MAX_VALUE, emptyList())
 
-enum class SwitchReason(private val reason: String) {
+internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),

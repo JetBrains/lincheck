@@ -79,7 +79,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     private val collectStateRepresentation: Boolean
         get() = stateRepresentation != null
     // code location constructors for trace construction, which are invoked by transformer
-    private val codeLocationConstructors: MutableList<(() -> CodePoint)?> = ArrayList()
+    private val codeLocationConstructors: MutableList<() -> CodePoint> = ArrayList()
     // code points for trace construction
     private val codePoints: MutableList<CodePoint> = ArrayList()
     // logger of all events in the execution such as thread switches
@@ -90,6 +90,8 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     private var methodIdentifier = 0
     // stack with info about suspended method invocations for each thread
     private val suspendedMethodStack = Array(nThreads) { mutableListOf<Int>() }
+    // store previous created transformer to make code location ids different for different classes
+    private var previousTransformer: ManagedStrategyTransformer? = null
 
     init {
         runner = createRunner()
@@ -104,8 +106,9 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
         guarantees = testCfg.guarantees,
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
-        constructTraceRepresentation = constructTraceRepresentation
-    )
+        constructTraceRepresentation = constructTraceRepresentation,
+        previousTransformer = previousTransformer
+    ).also { previousTransformer = it }
 
     override fun createRemapper(): Remapper? = JavaUtilRemapper()
 
@@ -251,7 +254,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    protected fun newSwitchPoint(iThread: Int, codeLocation: Int) {
+    private fun newSwitchPoint(iThread: Int, codeLocation: Int) {
         if (iThread == nThreads) return // can switch only test threads
         check(iThread == currentThread)
         if (ignoredSectionDepth[iThread] != 0) return // can not suspend in ignored sections
@@ -337,7 +340,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     /**
      * A regular context thread switch to another thread.
      */
-    protected fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+    private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         eventCollector.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
@@ -606,7 +609,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * @return index of the created code location
      */
     fun createCodePoint(constructorId: Int): Int {
-        codePoints.add(codeLocationConstructors[constructorId]!!.invoke())
+        codePoints.add(codeLocationConstructors[constructorId]())
         return codePoints.size - 1
     }
 

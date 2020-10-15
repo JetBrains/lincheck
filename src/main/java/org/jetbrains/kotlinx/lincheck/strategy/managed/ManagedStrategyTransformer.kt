@@ -41,15 +41,17 @@ import kotlin.reflect.jvm.javaMethod
  */
 internal class ManagedStrategyTransformer(
     cv: ClassVisitor?,
-    private val codeLocationsConstructors: MutableList<(() -> CodePoint)?>,
+    private val codeLocationsConstructors: MutableList<(() -> CodePoint)>,
     private val guarantees: List<ManagedStrategyGuarantee>,
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
-    private val constructTraceRepresentation: Boolean
+    private val constructTraceRepresentation: Boolean,
+    previousTransformer: ManagedStrategyTransformer?
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
+    private var nextCodeLocationId: Int = previousTransformer?.nextCodeLocationId ?: 0
 
     override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name
@@ -446,9 +448,9 @@ internal class ManagedStrategyTransformer(
                 return
             }
             if (!constructTraceRepresentation) {
-                // just add null to increase code location id to keep ids consistent with the ones
+                // just increase code location id to keep ids consistent with the ones
                 // when `constructTraceRepresentation` is disabled
-                codeLocationsConstructors.add(null)
+                nextCodeLocationId++
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
@@ -1204,13 +1206,10 @@ internal class ManagedStrategyTransformer(
                     adapter.storeLocal(codePointLocal)
                 else
                     adapter.pop()
-            } else {
-                // code locations are not used when logging is disabled
-                // just add null, because size of codeLocationsConstructors helps to numerate code locations
-                codeLocationsConstructors.add(null)
             }
             adapter.push(codeLocationsConstructors.lastIndex)
-    }
+            nextCodeLocationId++
+        }
 
         protected fun newCodePointLocal(): Int? =
             if (constructTraceRepresentation) {
