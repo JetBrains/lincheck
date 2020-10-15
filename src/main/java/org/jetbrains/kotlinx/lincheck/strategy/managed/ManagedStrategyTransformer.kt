@@ -65,6 +65,9 @@ internal class ManagedStrategyTransformer(
     }
 
     override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
+        // do not really transform strategy methods
+        if (isStrategyMethod(className))
+            return super.visitMethod(access, mname, desc, signature, exceptions)
         var access = access
         // replace native method VMSupportsCS8 in AtomicLong with stub
         if (access and ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
@@ -81,19 +84,19 @@ internal class ManagedStrategyTransformer(
         mv = SynchronizedBlockTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (isSynchronized) {
             // synchronized method is replaced with synchronized lock
-            mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), className, access, classVersion)
+            mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (constructTraceRepresentation)
             mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CallStackTraceLoggingTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CancellabilitySupportMethodTransformer(className, mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = CancellabilitySupportMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -143,7 +146,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name) || isSuspendStateMachine(owner) || isStrategyCall(owner)) {
+            if (isFinalField(owner, name) || isSuspendStateMachine(owner)) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
             }
@@ -417,16 +420,16 @@ internal class ManagedStrategyTransformer(
      * beforeIgnoredSectionEntering invocations.
      */
     private inner class ClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter)  {
-        private val isClinit = methodName == "<clinit>"
+        private val isRegularClinit = methodName == "<clinit>"
 
         override fun visitCode() {
-            if (isClinit)
+            if (isRegularClinit)
                 invokeBeforeIgnoredSectionEntering()
             mv.visitCode()
         }
 
         override fun visitInsn(opcode: Int) {
-            if (isClinit) {
+            if (isRegularClinit) {
                 when (opcode) {
                     ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
                     else -> { }
@@ -439,11 +442,11 @@ internal class ManagedStrategyTransformer(
     /**
      * Adds strategy method invocations before and after method calls.
      */
-    private inner class CallStackTraceLoggingTransformer(className: String, methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class CallStackTraceLoggingTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            if (isSuspendStateMachine || isStrategyCall(owner) || isInternalCoroutineCall(owner, name)) {
+            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name)) {
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
@@ -776,7 +779,7 @@ internal class ManagedStrategyTransformer(
     /**
      * Replace "method(...) {...}" with "method(...) {synchronized(this) {...} }"
      */
-    private inner class SynchronizedBlockAddingTransformer(methodName: String, mv: GeneratorAdapter, private val className: String?, access: Int, private val classVersion: Int) : ManagedStrategyMethodVisitor(methodName, mv) {
+    private inner class SynchronizedBlockAddingTransformer(methodName: String, mv: GeneratorAdapter, access: Int, private val classVersion: Int) : ManagedStrategyMethodVisitor(methodName, mv) {
         private val isStatic: Boolean = access and ACC_STATIC != 0
         private val tryLabel = Label()
         private val catchLabel = Label()
@@ -981,7 +984,7 @@ internal class ManagedStrategyTransformer(
      * Removes switch points in CancellableContinuationImpl.cancel, so that they will not be reported
      * when a continuation is cancelled by lincheck
      */
-    private inner class CancellabilitySupportMethodTransformer(className: String, methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
+    private inner class CancellabilitySupportMethodTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         private val isCancel = className == "kotlinx/coroutines/CancellableContinuationImpl" && methodName == "cancel"
 
         override fun visitCode() {
@@ -1424,7 +1427,7 @@ internal class ManagedStrategyTransformer(
             return Class.forName(internalClassName.toClassName()).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
         }
 
-        private fun isStrategyCall(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
+        private fun isStrategyMethod(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
         private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 

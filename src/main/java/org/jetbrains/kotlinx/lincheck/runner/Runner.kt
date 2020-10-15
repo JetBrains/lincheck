@@ -37,7 +37,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
  */
 abstract class Runner protected constructor(protected val strategy: Strategy, protected var testClass: Class<*>,
                                             protected val validationFunctions: List<Method>, protected val stateRepresentationFunction: Method?) {
-    protected lateinit var scenario: ExecutionScenario
+    protected var scenario: ExecutionScenario = strategy.scenario // will be transformed later
     @Suppress("LeakingThis")
     val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this) else ExecutionClassLoader()
     protected val completedOrSuspendedThreads = AtomicInteger(0)
