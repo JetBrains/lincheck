@@ -409,7 +409,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeAtomicMethodCall() {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(codeLocationsConstructors.lastIndex) // re-use code location
+            adapter.push(nextCodeLocationId - 1) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
