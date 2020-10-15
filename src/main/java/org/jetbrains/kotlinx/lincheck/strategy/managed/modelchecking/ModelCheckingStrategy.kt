@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
-import java.util.concurrent.atomic.*
 import kotlin.random.*
 
 /**
@@ -45,7 +44,7 @@ internal class ModelCheckingStrategy(
         validationFunctions: List<Method>,
         stateRepresentation: Method?,
         verifier: Verifier
-) : ManagedStrategyBase(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
+) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
     // an increasing id of code locations in the execution
     private var executionPosition = 0
     // ids of points in the execution where a thread should be switched
@@ -66,6 +65,8 @@ internal class ModelCheckingStrategy(
     private var notInitializedSwitchChoice: SwitchChoosingNode? = null
     // an iterator over threadSwitchChoices with information about what thread should be next
     private lateinit var nextThreadToSwitch: MutableListIterator<Int>
+    // random used for the generation of seeds and the execution tree
+    protected val generationRandom = Random(0)
     private lateinit var executionFinishingRandom: Random
 
     override fun runImpl(): LincheckFailure? {
@@ -117,13 +118,13 @@ internal class ModelCheckingStrategy(
         return executionPosition in switchPositions
     }
 
-    override fun initializeInvocation(repeatExecution: Boolean) {
+    override fun initializeInvocation() {
         nextThreadToSwitch = threadSwitchChoices.listIterator()
         currentThread = nextThreadToSwitch.next() // the root chooses the first thread to execute
         executionPosition = -1 // one step before zero
         usedInvocations++
         executionFinishingRandom = Random(1) // random with any constant seed
-        super.initializeInvocation(repeatExecution)
+        super.initializeInvocation()
     }
 
     override fun chooseThread(switchableThreads: Int): Int {
