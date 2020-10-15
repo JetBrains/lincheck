@@ -420,16 +420,16 @@ internal class ManagedStrategyTransformer(
      * beforeIgnoredSectionEntering invocations.
      */
     private inner class ClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter)  {
-        private val isRegularClinit = methodName == "<clinit>"
+        private val isClinit = methodName == "<clinit>"
 
         override fun visitCode() {
-            if (isRegularClinit)
+            if (isClinit)
                 invokeBeforeIgnoredSectionEntering()
             mv.visitCode()
         }
 
         override fun visitInsn(opcode: Int) {
-            if (isRegularClinit) {
+            if (isClinit) {
                 when (opcode) {
                     ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
                     else -> { }
@@ -1427,7 +1427,7 @@ internal class ManagedStrategyTransformer(
             return Class.forName(internalClassName.toClassName()).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
         }
 
-        private fun isStrategyMethod(owner: String) = owner.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
+        private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
         private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 
