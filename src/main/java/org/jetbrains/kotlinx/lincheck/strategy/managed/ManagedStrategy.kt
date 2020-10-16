@@ -263,6 +263,7 @@ abstract class ManagedStrategy(
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
+            checkLiveLockHappened(loopDetector.totalOperations)
             isLoop = true
         }
         val shouldSwitch = shouldSwitch(iThread) or isLoop
@@ -655,8 +656,6 @@ abstract class ManagedStrategy(
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
             _interleavingEvents += SwitchEvent(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
-            // check livelock after every switch
-            checkLiveLockHappened(_interleavingEvents.size)
         }
 
         fun finishThread(iThread: Int) {
@@ -723,17 +722,21 @@ private class ManagedStrategyRunner(
 }
 
 /**
- * Detects loops ans active locks when the same code location is visited too often.
+ * Detects loops, active locks and live locks when the same code location is visited too often.
  */
 private class LoopDetector(private val hangingDetectionThreshold: Int) {
     private var lastIThread = -1 // no last thread
     private val operationCounts = mutableMapOf<Int, Int>()
+    var totalOperations = 0
+        private set
 
     /**
      * Returns `true` if a loop or a hang is detected,
      * `false` otherwise.
      */
     fun visitCodeLocation(iThread: Int, codeLocation: Int): Boolean {
+        // Increase the total number of happened operations for live-lock detection
+        totalOperations++
         // Have the thread changed? Reset the counters in this case.
         if (lastIThread != iThread) reset(iThread)
         // Ignore coroutine suspension code locations.
