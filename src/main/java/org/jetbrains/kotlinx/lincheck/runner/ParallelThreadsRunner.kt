@@ -50,7 +50,6 @@ internal open class ParallelThreadsRunner(
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
-    private lateinit var testInstance: Any
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
 
@@ -58,6 +57,7 @@ internal open class ParallelThreadsRunner(
         List(scenario.parallelExecution[t].size) { Completion(t) }
     }
 
+    private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
 
     private var suspensionPointResults = MutableList<Result>(scenario.threads) { NoResult }
@@ -65,6 +65,14 @@ internal open class ParallelThreadsRunner(
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
+
+    override fun initialize() {
+        super.initialize()
+        testThreadExecutions = Array(scenario.threads) { t ->
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
+        }
+        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
+    }
 
     /**
      * Passed as continuation to invoke the suspendable actor from [iThread].
@@ -113,8 +121,6 @@ internal open class ParallelThreadsRunner(
         }
     }
 
-    private fun isLastActor(threadId: Int, actorId: Int) = actorId == scenario.parallelExecution[threadId].size - 1
-
     private fun reset() {
         testInstance = testClass.newInstance()
         testThreadExecutions.forEachIndexed { t, ex ->
@@ -157,7 +163,8 @@ internal open class ParallelThreadsRunner(
                 Cancelled
             } else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
-        if (isLastActor(iThread, actorId) && finalResult !== Suspended)
+        val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
+        if (isLastActor && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()
         suspensionPointResults[iThread] = NoResult
         return finalResult
@@ -200,10 +207,8 @@ internal open class ParallelThreadsRunner(
 
     override fun afterCoroutineCancelled(iThread: Int) {}
 
-    override fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
-        val completion = completions[iThread][actorId]
-        return completion.resWithCont.get() != null || suspensionPointResults[iThread] !== NoResult
-    }
+    override fun isCoroutineResumed(iThread: Int, actorId: Int) =
+        suspensionPointResults[iThread] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
         reset()
@@ -285,26 +290,15 @@ internal open class ParallelThreadsRunner(
         }
     }
 
+    override fun needsTransformation() = true
+    override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
+
+    override fun constructStateRepresentation() =
+        stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
+
     override fun close() {
         super.close()
         executor.shutdown()
-    }
-
-    override fun needsTransformation() = true
-
-    override fun createTransformer(cv: ClassVisitor): ClassVisitor {
-        return CancellabilitySupportClassTransformer(cv)
-    }
-
-    override fun constructStateRepresentation(): String? =
-        stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
-
-    override fun initialize() {
-        super.initialize()
-        testThreadExecutions = Array(scenario.threads) { t ->
-            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
-        }
-        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }
 }
 

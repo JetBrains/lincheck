@@ -51,6 +51,7 @@ public class TestThreadExecutionHelperTest {
                 throw new UnsupportedOperationException();
             }
         };
+        runner.initialize();
     }
 
     @Test

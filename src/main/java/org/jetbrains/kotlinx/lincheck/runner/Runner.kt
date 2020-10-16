@@ -40,7 +40,7 @@ abstract class Runner protected constructor(
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?
 ) {
-    protected lateinit var scenario: ExecutionScenario // `strategy.scenario` will be transformed later
+    protected var scenario = strategy.scenario // `strategy.scenario` will be transformed later
     protected lateinit var testClass: Class<*> // will be transformed later
     @Suppress("LeakingThis")
     val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
@@ -53,7 +53,7 @@ abstract class Runner protected constructor(
      */
     open fun initialize() {
         scenario = strategy.scenario.convertForLoader(classLoader)
-        testClass = loadClass(testClass.canonicalName)
+        testClass = loadClass(_testClass.typeName)
     }
 
     /**
@@ -130,9 +130,9 @@ abstract class Runner protected constructor(
 
     /**
      * Returns `true` if the coroutine corresponding to
-     * the actor `iActor` in the thread `iThread` is resumed.
+     * the actor `actorId` in the thread `iThread` is resumed.
      */
-    open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean = throw UnsupportedOperationException("Coroutines are not supported")
 
     /**
      * Is invoked before each actor execution from the specified thread.
