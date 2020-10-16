@@ -29,7 +29,7 @@ internal typealias CallStackTrace = List<CallStackTraceElement>
  * All methods calls are enumerated to make it possible to distinguish different calls of the same method.
  * Suspended method calls have the same [identifier] before and after suspension, but different [call] points.
  */
-internal class CallStackTraceElement(val call: MethodCallInterleavingPoint, val identifier: Int)
+internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
 
 /**
  * Stores information about events occurred in managed execution.
@@ -44,7 +44,7 @@ internal class SwitchEvent(
 
 internal class PassCodeLocationEvent(
     iThread: Int, actorId: Int,
-    val interleavingPoint: InterleavingPoint,
+    val tracePoint: TracePoint,
     callStackTrace: CallStackTrace
 ) : InterleavingEvent(iThread, actorId, callStackTrace)
 

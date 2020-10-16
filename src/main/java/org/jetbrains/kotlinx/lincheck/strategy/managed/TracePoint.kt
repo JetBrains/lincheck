@@ -31,15 +31,15 @@ import kotlin.coroutines.intrinsics.*
  * interleaving points correspond to visits of these bytecode instructions
  * and are used for constructing a readable interleaving trace.
  */
-sealed class InterleavingPoint {
+sealed class TracePoint {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
 
-internal class ReadInterleavingPoint(
+internal class ReadTracePoint(
     private val fieldName: String?,
     private val stackTraceElement: StackTraceElement
-) : InterleavingPoint() {
+) : TracePoint() {
     private var value: Any? = null
 
     override fun toStringImpl(): String = StringBuilder().apply {
@@ -55,10 +55,10 @@ internal class ReadInterleavingPoint(
     }
 }
 
-internal class WriteInterleavingPoint(
+internal class WriteTracePoint(
     private val fieldName: String?,
     private val stackTraceElement: StackTraceElement
-) : InterleavingPoint() {
+) : TracePoint() {
     private var value: Any? = null
 
     override fun toStringImpl(): String  = StringBuilder().apply {
@@ -74,10 +74,10 @@ internal class WriteInterleavingPoint(
     }
 }
 
-internal class MethodCallInterleavingPoint(
+internal class MethodCallTracePoint(
     private val methodName: String,
     private val stackTraceElement: StackTraceElement
-) : InterleavingPoint() {
+) : TracePoint() {
     private var returnedValue: Any? = NO_VALUE
     private var thrownException: Throwable? = null
     private var parameters: Array<Any?>? = null
@@ -117,27 +117,27 @@ internal class MethodCallInterleavingPoint(
 }
 private val NO_VALUE = Any()
 
-internal class MonitorEnterInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
+internal class MonitorEnterTracePoint(private val stackTraceElement: StackTraceElement) : TracePoint() {
     override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
 }
 
-internal class MonitorExitInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
+internal class MonitorExitTracePoint(private val stackTraceElement: StackTraceElement) : TracePoint() {
     override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
 }
 
-internal class WaitInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
+internal class WaitTracePoint(private val stackTraceElement: StackTraceElement) : TracePoint() {
     override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
 }
 
-internal class NotifyInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
+internal class NotifyTracePoint(private val stackTraceElement: StackTraceElement) : TracePoint() {
     override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
 }
 
-internal class ParkInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
+internal class ParkTracePoint(private val stackTraceElement: StackTraceElement) : TracePoint() {
     override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
 }
 
-internal class UnparkInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
+internal class UnparkTracePoint(private val stackTraceElement: StackTraceElement) : TracePoint() {
     override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
 }
 

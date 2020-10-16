@@ -84,9 +84,9 @@ abstract class ManagedStrategy(
     private val collectStateRepresentation get() = constructTraceRepresentation && stateRepresentationFunction != null
     // interleaving point constructors, where `interleavingPointConstructors[id]` stores
     // a constructor for the corresponding code location.
-    private val interleavingPointConstructors: MutableList<() -> InterleavingPoint> = ArrayList()
+    private val tracePointConstructors: MutableList<() -> TracePoint> = ArrayList()
     // code points for trace construction
-    private val interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED: MutableList<InterleavingPoint> = ArrayList()
+    private val tracePoints_USELESS_AND_SHOULD_BE_REMOVED: MutableList<TracePoint> = ArrayList()
     // logger of all events in the execution such as thread switches
     private var eventCollector: InterleavingEventCollector? = null // null when `constructStateRepresentation` is false
     // stack with info about method invocations in current stack trace for each thread
@@ -114,7 +114,7 @@ abstract class ManagedStrategy(
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
-        codeLocationsConstructors = interleavingPointConstructors,
+        codeLocationsConstructors = tracePointConstructors,
         guarantees = testCfg.guarantees,
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
@@ -264,7 +264,7 @@ abstract class ManagedStrategy(
         if (ignoredSectionDepth[iThread] != 0) return // can not suspend in ignored sections
         // save code location description corresponding to the current switch point,
         // it is last code point now, but will be not last after a possible switch
-        val codePointId = interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex
+        val codePointId = tracePoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
@@ -439,7 +439,7 @@ abstract class ManagedStrategy(
     fun beforeLockRelease(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
-        eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, tracePoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
         return false
     }
 
@@ -460,7 +460,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      */
     fun afterUnpark(iThread: Int, codeLocation: Int, @Suppress("UNUSED_PARAMETER") thread: Any) {
-        eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, tracePoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
     }
 
     /**
@@ -489,7 +489,7 @@ abstract class ManagedStrategy(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, tracePoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
     }
 
     /**
@@ -573,7 +573,7 @@ abstract class ManagedStrategy(
                 methodIdentifier++
             }
             // code location of the new method call is currently the last
-            callStackTrace.add(CallStackTraceElement(interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.last() as MethodCallInterleavingPoint, methodId))
+            callStackTrace.add(CallStackTraceElement(tracePoints_USELESS_AND_SHOULD_BE_REMOVED.last() as MethodCallTracePoint, methodId))
         }
     }
 
@@ -587,7 +587,7 @@ abstract class ManagedStrategy(
         if (isTestThread(iThread)) {
             check(constructTraceRepresentation) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
-            val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallInterleavingPoint
+            val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallTracePoint
             if (methodCallCodeLocation.wasSuspended) {
                 // If the method call is suspended, save its identifier and
                 // reuse for the corresponding continuation resumption.
@@ -600,22 +600,22 @@ abstract class ManagedStrategy(
     // == LOGGING METHODS ==
 
     /**
-     * Returns a [InterleavingPoint] which describes the specified visit to a code location.
+     * Returns a [TracePoint] which describes the specified visit to a code location.
      * This method's invocations are inserted by transformer for adding non-trivial code point information.
      * @param codePoint code point identifier
      */
-    fun getCodePoint(codePoint: Int): InterleavingPoint = interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED[codePoint]
+    fun getCodePoint(codePoint: Int): TracePoint = tracePoints_USELESS_AND_SHOULD_BE_REMOVED[codePoint]
 
     /**
-     * Creates a new [InterleavingPoint].
+     * Creates a new [TracePoint].
      * The type of the created code location is defined by the used constructor.
      * This method's invocations are inserted by transformer at each code location.
      * @param constructorId which constructor to use for createing code location
      * @return index of the created code location
      */
     fun createCodePoint(constructorId: Int): Int {
-        interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.add(interleavingPointConstructors[constructorId]())
-        return interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.size - 1
+        tracePoints_USELESS_AND_SHOULD_BE_REMOVED.add(tracePointConstructors[constructorId]())
+        return tracePoints_USELESS_AND_SHOULD_BE_REMOVED.size - 1
     }
 
     /**
