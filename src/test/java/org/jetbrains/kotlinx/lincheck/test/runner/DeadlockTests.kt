@@ -58,7 +58,7 @@ class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure:
     override fun extractState(): Any = counter
 }
 
-class LiveLockTest : AbstractLincheckTest() {
+class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     private var counter = 0
     private val lock1 = AtomicBoolean(false)
     private val lock2 = AtomicBoolean(false)
