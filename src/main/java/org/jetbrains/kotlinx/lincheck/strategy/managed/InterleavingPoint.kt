@@ -28,15 +28,18 @@ import kotlin.coroutines.intrinsics.*
 
 /**
  * While code locations just define certain bytecode instructions,
- * code points correspond to visits of these bytecode instructions
+ * interleaving points correspond to visits of these bytecode instructions
  * and are used for constructing a readable interleaving trace.
  */
-sealed class CodePoint {
+sealed class InterleavingPoint {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
 
-internal class ReadCodePoint(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class ReadInterleavingPoint(
+    private val fieldName: String?,
+    private val stackTraceElement: StackTraceElement
+) : InterleavingPoint() {
     private var value: Any? = null
 
     override fun toStringImpl(): String = StringBuilder().apply {
@@ -52,7 +55,10 @@ internal class ReadCodePoint(private val fieldName: String?, private val stackTr
     }
 }
 
-internal class WriteCodePoint(private val fieldName: String?, private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class WriteInterleavingPoint(
+    private val fieldName: String?,
+    private val stackTraceElement: StackTraceElement
+) : InterleavingPoint() {
     private var value: Any? = null
 
     override fun toStringImpl(): String  = StringBuilder().apply {
@@ -68,7 +74,10 @@ internal class WriteCodePoint(private val fieldName: String?, private val stackT
     }
 }
 
-internal class MethodCallCodePoint(private val methodName: String, private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class MethodCallInterleavingPoint(
+    private val methodName: String,
+    private val stackTraceElement: StackTraceElement
+) : InterleavingPoint() {
     private var returnedValue: Any? = NO_VALUE
     private var thrownException: Throwable? = null
     private var parameters: Array<Any?>? = null
@@ -108,27 +117,27 @@ internal class MethodCallCodePoint(private val methodName: String, private val s
 }
 private val NO_VALUE = Any()
 
-internal class MonitorEnterCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class MonitorEnterInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
     override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
 }
 
-internal class MonitorExitCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class MonitorExitInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
     override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
 }
 
-internal class WaitCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class WaitInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
     override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
 }
 
-internal class NotifyCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class NotifyInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
     override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
 }
 
-internal class ParkCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class ParkInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
     override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
 }
 
-internal class UnparkCodePoint(private val stackTraceElement: StackTraceElement) : CodePoint() {
+internal class UnparkInterleavingPoint(private val stackTraceElement: StackTraceElement) : InterleavingPoint() {
     override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
 }
 

@@ -197,7 +197,7 @@ private class InterleavingLeafEvent(iThread: Int, last: InterleavingNode?, priva
                 val reason = event.reason.toString()
                 "switch" + if (reason.isEmpty()) "" else " (reason: $reason)"
             }
-            is PassCodeLocationEvent -> event.codePoint.toString()
+            is PassCodeLocationEvent -> event.interleavingPoint.toString()
             is StateRepresentationEvent -> "STATE: " + event.stateRepresentation
             is FinishEvent -> "thread is finished"
         }
@@ -224,7 +224,7 @@ private abstract class InterleavingInnerNode(iThread: Int, last: InterleavingNod
     }
 }
 
-private class CallNode(iThread: Int, last: InterleavingNode?, private val call: MethodCallCodePoint) : InterleavingInnerNode(iThread, last) {
+private class CallNode(iThread: Int, last: InterleavingNode?, private val call: MethodCallInterleavingPoint) : InterleavingInnerNode(iThread, last) {
     // suspended method contents should be reported
     override val shouldBeExpanded: Boolean by lazy { call.wasSuspended || super.shouldBeExpanded }
 

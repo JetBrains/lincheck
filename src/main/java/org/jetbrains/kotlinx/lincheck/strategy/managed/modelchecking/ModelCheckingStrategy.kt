@@ -105,7 +105,7 @@ internal class ModelCheckingStrategy(
             val node = notInitializedThreadChoice!!
             notInitializedThreadChoice = null
             // initialize node with the choice of the next thread
-            val switchableThreads = switchableThreads(iThread)
+            val switchableThreads = threadsToSwitch(iThread)
             node.initialize(switchableThreads.size)
         }
     }

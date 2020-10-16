@@ -42,9 +42,12 @@ import kotlin.collections.set
  * and to hide class loading problems from the strategy algorithm.
  */
 abstract class ManagedStrategy(
-    private val testClass: Class<*>, scenario: ExecutionScenario,
-    private val verifier: Verifier, private val validationFunctions: List<Method>,
-    private val stateRepresentation: Method?, private val testCfg: ManagedCTestConfiguration
+    private val testClass: Class<*>,
+    scenario: ExecutionScenario,
+    private val verifier: Verifier,
+    private val validationFunctions: List<Method>,
+    private val stateRepresentationFunction: Method?,
+    private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario) {
     // the number of parallel threads
     protected val nThreads: Int = scenario.parallelExecution.size
@@ -76,14 +79,14 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // whether additional information about events in the interleaving should be collected
-    protected var constructTraceRepresentation = false
+    private var constructTraceRepresentation = false
     // whether additional information about states after interleaving events should be collected
-    private val collectStateRepresentation: Boolean
-        get() = stateRepresentation != null
-    // code location constructors for trace construction, which are invoked by transformer
-    private val codeLocationConstructors: MutableList<() -> CodePoint> = ArrayList()
+    private val collectStateRepresentation get() = constructTraceRepresentation && stateRepresentationFunction != null
+    // interleaving point constructors, where `interleavingPointConstructors[id]` stores
+    // a constructor for the corresponding code location.
+    private val interleavingPointConstructors: MutableList<() -> InterleavingPoint> = ArrayList()
     // code points for trace construction
-    private val codePoints: MutableList<CodePoint> = ArrayList()
+    private val trace: MutableList<InterleavingPoint> = ArrayList()
     // logger of all events in the execution such as thread switches
     private var eventCollector: InterleavingEventCollector? = null // null when `constructStateRepresentation` is false
     // stack with info about method invocations in current stack trace for each thread
@@ -102,7 +105,7 @@ abstract class ManagedStrategy(
     }
 
     private fun createRunner(): Runner =
-        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentation, testCfg.timeoutMs, UseClocks.ALWAYS)
+        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
     private fun initializeManagedState() {
         ManagedStrategyStateHolder.setState(runner.classLoader, this)
@@ -110,7 +113,7 @@ abstract class ManagedStrategy(
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
-        codeLocationsConstructors = codeLocationConstructors,
+        codeLocationsConstructors = interleavingPointConstructors,
         guarantees = testCfg.guarantees,
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
@@ -224,8 +227,7 @@ abstract class ManagedStrategy(
         initializeInvocation()
         val result = runner.run()
         // if strategy already determined invocation result, then return it instead
-        if (suddenInvocationResult != null)
-            return suddenInvocationResult!!
+        suddenInvocationResult?.let { return it  }
         return result
     }
 
@@ -233,7 +235,7 @@ abstract class ManagedStrategy(
         if (testCfg.checkObstructionFreedom) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // forcibly finish execution by throwing an exception.
-            throw ForcibleExecutionFinishException()
+            throw ForcibleExecutionFinishException
         }
     }
 
@@ -241,7 +243,7 @@ abstract class ManagedStrategy(
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
             suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
             // forcibly finish execution by throwing an exception.
-            throw ForcibleExecutionFinishException()
+            throw ForcibleExecutionFinishException
         }
     }
 
@@ -259,7 +261,7 @@ abstract class ManagedStrategy(
         if (ignoredSectionDepth[iThread] != 0) return // can not suspend in ignored sections
         // save code location description corresponding to the current switch point,
         // it is last code point now, but will be not last after a possible switch
-        val codePointId = codePoints.lastIndex
+        val codePointId = trace.lastIndex
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
@@ -299,14 +301,13 @@ abstract class ManagedStrategy(
      * @param exception the exception that was thrown
      */
     open fun onFailure(iThread: Int, exception: Throwable) {
-        if (suddenInvocationResult == null) // not a forcible execution finish
-            suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
+        // Despite the fact that the corresponding failure will be detected by the runner,
+        // the managed strategy can construct an interleaving to produce the error. Let's
+        // then store the corresponding failing result and construct the trace then.
+        if (exception is ForcibleExecutionFinishException) return // not a forcible execution finish
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
     }
 
-    /**
-     * This method is executed before each actor.
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     */
     override fun onActorStart(iThread: Int) {
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
@@ -315,23 +316,23 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * Returns whether the thread can continue its execution (i.e. is not blocked/finished)
+     * Returns whether the specified thread is active and
+     * can continue its execution (i.e. is not blocked/finished).
      */
-    protected fun canResume(iThread: Int): Boolean {
-        var canResume = !finished[iThread] && !monitorTracker.isWaiting(iThread)
-        if (isSuspended[iThread])
-            canResume = canResume && runner.isCoroutineResumed(iThread, currentActorId[iThread])
-        return canResume
-    }
+    private fun isActive(iThread: Int): Boolean =
+        !finished[iThread] &&
+        !monitorTracker.isWaiting(iThread) &&
+        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
 
     /**
-     * Waits until this thread is allowed to be executed by the strategy.
+     * Waits until the specified thread can continue
+     * the execution according to the strategy decision.
      */
     private fun awaitTurn(iThread: Int) {
-        // wait actively until the thread is allow to execute
+        // Wait actively until the thread is allowed to continue
         while (currentThread != iThread) {
-            // finish forcibly if an error occured and we already have an InvocationResult.
-            if (suddenInvocationResult != null) throw ForcibleExecutionFinishException()
+            // Finish forcibly if an error was occured and we already have an `InvocationResult`.
+            if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
             Thread.yield()
         }
     }
@@ -347,7 +348,7 @@ abstract class ManagedStrategy(
 
     private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
         onNewSwitch(iThread, mustSwitch)
-        val switchableThreads = switchableThreads(iThread)
+        val switchableThreads = threadsToSwitch(iThread)
         if (switchableThreads.isEmpty()) {
             if (mustSwitch && !finished.all { it }) {
                 // all threads are suspended
@@ -357,7 +358,7 @@ abstract class ManagedStrategy(
                     // must switch not to get into a deadlock, but there are no threads to switch.
                     suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
                     // forcibly finish execution by throwing an exception.
-                    throw ForcibleExecutionFinishException()
+                    throw ForcibleExecutionFinishException
                 }
                 currentThread = nextThread
             }
@@ -370,7 +371,7 @@ abstract class ManagedStrategy(
     /**
      * Threads to which a thread [iThread] can switch
      */
-    protected fun switchableThreads(iThread: Int) = (0 until nThreads).filter { it != iThread && canResume(it) }
+    protected fun threadsToSwitch(iThread: Int) = (0 until nThreads).filter { it != iThread && isActive(it) }
 
     private fun isTestThread(iThread: Int) = iThread < nThreads
 
@@ -434,7 +435,7 @@ abstract class ManagedStrategy(
     fun beforeLockRelease(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
-        eventCollector?.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, trace.lastIndex)
         return false
     }
 
@@ -455,7 +456,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      */
     fun afterUnpark(iThread: Int, codeLocation: Int, @Suppress("UNUSED_PARAMETER") thread: Any) {
-        eventCollector?.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, trace.lastIndex)
     }
 
     /**
@@ -484,7 +485,7 @@ abstract class ManagedStrategy(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        eventCollector?.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, trace.lastIndex)
     }
 
     /**
@@ -568,7 +569,7 @@ abstract class ManagedStrategy(
                 methodIdentifier++
             }
             // code location of the new method call is currently the last
-            callStackTrace.add(CallStackTraceElement(codePoints.last() as MethodCallCodePoint, methodId))
+            callStackTrace.add(CallStackTraceElement(trace.last() as MethodCallInterleavingPoint, methodId))
         }
     }
 
@@ -582,7 +583,7 @@ abstract class ManagedStrategy(
         if (isTestThread(iThread)) {
             check(constructTraceRepresentation) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
-            val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallCodePoint
+            val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallInterleavingPoint
             if (methodCallCodeLocation.wasSuspended) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
                 suspendedMethodStack[iThread].add(callStackTrace.last().identifier)
@@ -594,27 +595,28 @@ abstract class ManagedStrategy(
     // == LOGGING METHODS ==
 
     /**
-     * Returns a [CodePoint] which describes the specified visit to a code location.
+     * Returns a [InterleavingPoint] which describes the specified visit to a code location.
      * This method's invocations are inserted by transformer for adding non-trivial code point information.
      * @param codePoint code point identifier
      */
-    fun getCodePoint(codePoint: Int): CodePoint = codePoints[codePoint]
+    fun getCodePoint(codePoint: Int): InterleavingPoint = trace[codePoint]
 
     /**
-     * Creates a new [CodePoint].
+     * Creates a new [InterleavingPoint].
      * The type of the created code location is defined by the used constructor.
      * This method's invocations are inserted by transformer at each code location.
      * @param constructorId which constructor to use for createing code location
      * @return index of the created code location
      */
     fun createCodePoint(constructorId: Int): Int {
-        codePoints.add(codeLocationConstructors[constructorId]())
-        return codePoints.size - 1
+        trace.add(interleavingPointConstructors[constructorId]())
+        return trace.size - 1
     }
 
     /**
      * Creates a state representation and logs it.
-     * This method are inserted by transformer after each write or atomic method invocation.
+     * This method invocations are inserted by transformer
+     * after each write operation and atomic method invocation.
      */
     fun addStateRepresentation(iThread: Int) {
         if (!inIgnoredSection(iThread)) {
@@ -850,6 +852,6 @@ private class MonitorTracker(nThreads: Int) {
  * If we just leave it, then the execution will not be halted.
  * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
  */
-internal class ForcibleExecutionFinishException : RuntimeException()
+internal object ForcibleExecutionFinishException : RuntimeException()
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known

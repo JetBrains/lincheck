@@ -41,7 +41,7 @@ import kotlin.reflect.jvm.javaMethod
  */
 internal class ManagedStrategyTransformer(
     cv: ClassVisitor?,
-    private val codeLocationsConstructors: MutableList<(() -> CodePoint)>,
+    private val codeLocationsConstructors: MutableList<(() -> InterleavingPoint)>,
     private val guarantees: List<ManagedStrategyGuarantee>,
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
@@ -343,12 +343,12 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeSharedVariableRead(fieldName: String? = null, codePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, codePointLocal) { ste -> ReadCodePoint(fieldName, ste)}
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, codePointLocal) { ste -> ReadInterleavingPoint(fieldName, ste)}
 
         private fun invokeBeforeSharedVariableWrite(fieldName: String? = null, codePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, codePointLocal) { ste -> WriteCodePoint(fieldName, ste)}
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, codePointLocal) { ste -> WriteInterleavingPoint(fieldName, ste)}
 
-        private fun invokeBeforeSharedVariableReadOrWrite(method: Method, codePointLocal: Int?, codeLocationConstructor: (StackTraceElement) -> CodePoint) {
+        private fun invokeBeforeSharedVariableReadOrWrite(method: Method, codePointLocal: Int?, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint) {
             loadStrategy()
             loadCurrentThreadNumber()
             loadNewCodeLocation(codePointLocal, codeLocationConstructor)
@@ -583,7 +583,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeMethodCall(methodName: String, codePointLocal: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(codePointLocal) { ste -> MethodCallCodePoint(methodName, ste) }
+            loadNewCodeLocation(codePointLocal) { ste -> MethodCallInterleavingPoint(methodName, ste) }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
         }
 
@@ -754,16 +754,16 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeLockAcquire() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterCodePoint)
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterInterleavingPoint)
         }
 
         // STACK: monitor
         private fun invokeBeforeLockRelease() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitCodePoint)
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitInterleavingPoint)
         }
 
         // STACK: monitor
-        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> CodePoint) {
+        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -889,16 +889,16 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeWait(withTimeout: Boolean) {
-            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitCodePoint)
+            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitInterleavingPoint)
         }
 
         // STACK: monitor
         private fun invokeAfterNotify(notifyAll: Boolean) {
-            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyCodePoint)
+            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyInterleavingPoint)
         }
 
         // STACK: monitor
-        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> CodePoint) {
+        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -961,7 +961,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(null, ::ParkCodePoint)
+            loadNewCodeLocation(null, ::ParkInterleavingPoint)
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
         }
@@ -972,7 +972,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(threadLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(null, ::UnparkCodePoint)
+            loadNewCodeLocation(null, ::UnparkInterleavingPoint)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
         }
@@ -1171,7 +1171,7 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun invokeMakeStateRepresentation() {
-            if (collectStateRepresentation && constructTraceRepresentation) {
+            if (collectStateRepresentation) {
                 loadStrategy()
                 loadCurrentThreadNumber()
                 adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, MAKE_STATE_REPRESENTATION_METHOD)
@@ -1191,7 +1191,7 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD)
         }
 
-        protected fun loadNewCodeLocation(codePointLocal: Int?, codeLocationConstructor: (StackTraceElement) -> CodePoint) {
+        protected fun loadNewCodeLocation(codePointLocal: Int?, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint) {
             if (constructTraceRepresentation) {
                 // add constructor for the code location
                 val className = className  // for capturing by value in lambda constructor
@@ -1279,9 +1279,9 @@ internal class ManagedStrategyTransformer(
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
         private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
-        private val WRITE_CODE_POINT_TYPE = Type.getType(WriteCodePoint::class.java)
-        private val READ_CODE_POINT_TYPE = Type.getType(ReadCodePoint::class.java)
-        private val METHOD_CALL_CODE_POINT_TYPE = Type.getType(MethodCallCodePoint::class.java)
+        private val WRITE_CODE_POINT_TYPE = Type.getType(WriteInterleavingPoint::class.java)
+        private val READ_CODE_POINT_TYPE = Type.getType(ReadInterleavingPoint::class.java)
+        private val METHOD_CALL_CODE_POINT_TYPE = Type.getType(MethodCallInterleavingPoint::class.java)
 
         private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
         private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -1308,12 +1308,12 @@ internal class ManagedStrategyTransformer(
         private val GET_OBJECT_NAME = Method.getMethod(ObjectManager::getObjectName.javaMethod)
         private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
         private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
-        private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteCodePoint::initializeWrittenValue.javaMethod)
-        private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadCodePoint::initializeReadValue.javaMethod)
-        private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallCodePoint::initializeReturnedValue.javaMethod)
-        private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallCodePoint::initializeThrownException.javaMethod)
-        private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallCodePoint::initializeParameters.javaMethod)
-        private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallCodePoint::initializeOwnerName.javaMethod)
+        private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteInterleavingPoint::initializeWrittenValue.javaMethod)
+        private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadInterleavingPoint::initializeReadValue.javaMethod)
+        private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallInterleavingPoint::initializeReturnedValue.javaMethod)
+        private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallInterleavingPoint::initializeThrownException.javaMethod)
+        private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallInterleavingPoint::initializeParameters.javaMethod)
+        private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallInterleavingPoint::initializeOwnerName.javaMethod)
         private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
 
         private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
