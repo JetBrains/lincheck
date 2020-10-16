@@ -86,7 +86,7 @@ abstract class ManagedStrategy(
     // a constructor for the corresponding code location.
     private val interleavingPointConstructors: MutableList<() -> InterleavingPoint> = ArrayList()
     // code points for trace construction
-    private val trace: MutableList<InterleavingPoint> = ArrayList()
+    private val interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED: MutableList<InterleavingPoint> = ArrayList()
     // logger of all events in the execution such as thread switches
     private var eventCollector: InterleavingEventCollector? = null // null when `constructStateRepresentation` is false
     // stack with info about method invocations in current stack trace for each thread
@@ -263,7 +263,7 @@ abstract class ManagedStrategy(
         if (ignoredSectionDepth[iThread] != 0) return // can not suspend in ignored sections
         // save code location description corresponding to the current switch point,
         // it is last code point now, but will be not last after a possible switch
-        val codePointId = trace.lastIndex
+        val codePointId = interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
@@ -438,7 +438,7 @@ abstract class ManagedStrategy(
     fun beforeLockRelease(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
-        eventCollector?.passCodeLocation(iThread, codeLocation, trace.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
         return false
     }
 
@@ -459,7 +459,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      */
     fun afterUnpark(iThread: Int, codeLocation: Int, @Suppress("UNUSED_PARAMETER") thread: Any) {
-        eventCollector?.passCodeLocation(iThread, codeLocation, trace.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
     }
 
     /**
@@ -488,7 +488,7 @@ abstract class ManagedStrategy(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        eventCollector?.passCodeLocation(iThread, codeLocation, trace.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.lastIndex)
     }
 
     /**
@@ -572,7 +572,7 @@ abstract class ManagedStrategy(
                 methodIdentifier++
             }
             // code location of the new method call is currently the last
-            callStackTrace.add(CallStackTraceElement(trace.last() as MethodCallInterleavingPoint, methodId))
+            callStackTrace.add(CallStackTraceElement(interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.last() as MethodCallInterleavingPoint, methodId))
         }
     }
 
@@ -588,7 +588,8 @@ abstract class ManagedStrategy(
             val callStackTrace = callStackTrace[iThread]
             val methodCallCodeLocation = getCodePoint(codePoint) as MethodCallInterleavingPoint
             if (methodCallCodeLocation.wasSuspended) {
-                // if a method call is suspended, save its identifier to reuse for continuation resuming
+                // If the method call is suspended, save its identifier and
+                // reuse for the corresponding continuation resumption.
                 suspendedMethodStack[iThread].add(callStackTrace.last().identifier)
             }
             callStackTrace.removeAt(callStackTrace.lastIndex)
@@ -602,7 +603,7 @@ abstract class ManagedStrategy(
      * This method's invocations are inserted by transformer for adding non-trivial code point information.
      * @param codePoint code point identifier
      */
-    fun getCodePoint(codePoint: Int): InterleavingPoint = trace[codePoint]
+    fun getCodePoint(codePoint: Int): InterleavingPoint = interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED[codePoint]
 
     /**
      * Creates a new [InterleavingPoint].
@@ -612,8 +613,8 @@ abstract class ManagedStrategy(
      * @return index of the created code location
      */
     fun createCodePoint(constructorId: Int): Int {
-        trace.add(interleavingPointConstructors[constructorId]())
-        return trace.size - 1
+        interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.add(interleavingPointConstructors[constructorId]())
+        return interleavingPoints_USELESS_AND_SHOULD_BE_REMOVED.size - 1
     }
 
     /**
