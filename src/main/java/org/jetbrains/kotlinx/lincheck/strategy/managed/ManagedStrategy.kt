@@ -93,6 +93,7 @@ abstract class ManagedStrategy(
     // stack with info about suspended method invocations for each thread
     private val suspendedMethodStack = Array(nThreads) { mutableListOf<Int>() }
     // store previous created transformer to make code location ids different for different classes
+    private var previousTransformer: ManagedStrategyTransformer? = null
 
     init {
         runner = createRunner()
@@ -114,8 +115,9 @@ abstract class ManagedStrategy(
         guarantees = testCfg.guarantees,
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
-        constructTraceRepresentation = constructTraceRepresentation
-    )
+        constructTraceRepresentation = constructTraceRepresentation,
+        previousTransformer = previousTransformer
+    ).also { previousTransformer = it }
 
     override fun needsTransformation(): Boolean = true
 
