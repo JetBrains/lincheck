@@ -45,12 +45,13 @@ internal class ManagedStrategyTransformer(
     private val guarantees: List<ManagedStrategyGuarantee>,
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
-    private val constructTraceRepresentation: Boolean
+    private val constructTraceRepresentation: Boolean,
+    previousTransformer: ManagedStrategyTransformer?
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
-    private var nextCodeLocationId: Int = 0
+    private var nextCodeLocationId: Int = previousTransformer?.nextCodeLocationId ?: 0
 
     override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name

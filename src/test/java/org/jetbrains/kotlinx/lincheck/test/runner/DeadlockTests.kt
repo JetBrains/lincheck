@@ -79,7 +79,6 @@ class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
 
     override fun extractState(): Any = counter
 
-
     override fun <O : Options<O, *>> O.customize() {
         minimizeFailedScenario(false)
         invocationTimeout(200)
