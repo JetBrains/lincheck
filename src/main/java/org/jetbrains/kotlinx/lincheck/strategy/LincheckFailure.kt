@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
-    val interleaving: List<InterleavingEvent>?
+    val trace: List<InterleavingEvent>?
 ) {
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
@@ -36,38 +36,38 @@ sealed class LincheckFailure(
 internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     val results: ExecutionResult,
-    interleaving: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, interleaving)
+    trace: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, trace)
 
 internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
     val threadDump: Map<Thread, Array<StackTraceElement>>,
-    interleaving: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, interleaving)
+    trace: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, trace)
 
 internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     val exception: Throwable,
-    interleaving: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, interleaving)
+    trace: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, trace)
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
     val functionName: String,
     val exception: Throwable,
-    interleaving: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, interleaving)
+    trace: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, trace)
 
 internal class ObstructionFreedomViolationFailure(
     scenario: ExecutionScenario,
     val reason: String,
-    interleaving: List<InterleavingEvent>? = null
-) : LincheckFailure(scenario, interleaving)
+    trace: List<InterleavingEvent>? = null
+) : LincheckFailure(scenario, trace)
 
-internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, interleaving: List<InterleavingEvent>? = null) = when (this) {
-    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, interleaving)
-    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, interleaving)
-    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, interleaving)
-    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, interleaving)
+internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: List<InterleavingEvent>? = null) = when (this) {
+    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
+    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, trace)
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

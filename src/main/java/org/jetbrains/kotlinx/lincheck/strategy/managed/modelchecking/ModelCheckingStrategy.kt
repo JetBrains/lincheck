@@ -249,7 +249,7 @@ internal class ModelCheckingStrategy(
         override fun exploreChild(): LincheckFailure? {
             val shouldBeLeaf = maxNumberOfSwitches == switchPositions.size
             if (shouldBeLeaf) {
-                checkResults(runInvocation())?.let { return it }
+                checkResult(runInvocation())?.let { return it }
                 finishExploration()
                 return null
             }
@@ -257,7 +257,7 @@ internal class ModelCheckingStrategy(
                 check(notInitializedSwitchChoice == null)
                 notInitializedSwitchChoice = this
                 // initialize during the next run
-                checkResults(runInvocation())?.let { return it }
+                checkResult(runInvocation())?.let { return it }
             }
             if (choices.isEmpty()) {
                 // no children => should be a leaf node.

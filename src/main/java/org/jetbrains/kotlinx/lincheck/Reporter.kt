@@ -151,10 +151,10 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
-    if (failure.interleaving != null) {
+    if (failure.trace != null) {
         appendln()
         appendln("= The following interleaving leads to the error =")
-        appendInterleaving(failure.scenario, results, failure.interleaving)
+        appendTrace(failure.scenario, results, failure.trace)
         if (failure is DeadlockWithDumpFailure) {
             appendln()
             append("All threads are in deadlock")

@@ -30,14 +30,14 @@ import kotlin.math.min
 
 private const val INTERLEAVING_INDENTATION = "  "
 
-internal fun StringBuilder.appendInterleaving(
+internal fun StringBuilder.appendTrace(
     scenario: ExecutionScenario,
     results: ExecutionResult?,
-    interleavingEvents: List<InterleavingEvent>
+    trace: List<InterleavingEvent>
 ) {
     // clear object numeration that is used by `CodePoint.toString` for better representation
     objectNumeration.clear()
-    val graphStart = constructInterleavingGraph(scenario, results, interleavingEvents)
+    val graphStart = constructInterleavingGraph(scenario, results, trace)
     val interleaving = interleavingGraphToRepresentation(graphStart)
     val interleavingRepresentation = splitToColumns(scenario.threads, interleaving)
     appendln("Parallel part interleaving:")

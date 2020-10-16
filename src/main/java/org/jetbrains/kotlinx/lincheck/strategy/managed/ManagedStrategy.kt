@@ -174,21 +174,22 @@ abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     /**
-     * Verifies results and if there are incorrect results then re-runs with
-     * logging of all thread events.
+     * Checks whether the [result] is a failing one or is [CompletedInvocationResult]
+     * but the verification fails, and return the corresponding failure.
+     * Returns `null` if the result is correct.
      */
-    protected fun checkResults(result: InvocationResult): LincheckFailure? = when (result) {
+    protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
         is CompletedInvocationResult -> {
             if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectExecutionEvents(result))
+            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
         }
-        else -> result.toLincheckFailure(scenario, collectExecutionEvents(result))
+        else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
 
     /**
      * Reruns previous invocation to log all its execution events.
      */
-    private fun collectExecutionEvents(previousResults: InvocationResult): List<InterleavingEvent>? {
+    private fun collectTrace(previousResults: InvocationResult): List<InterleavingEvent>? {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectInterleavingEvents = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
