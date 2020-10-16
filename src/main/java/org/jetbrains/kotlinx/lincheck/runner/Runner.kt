@@ -31,25 +31,29 @@ import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
- * like fibers, it may require code transformation, so [.needsTransformation]
- * method has to return `true` and [.createTransformer]
- * one has to be implemented.
+ * like fibers, it may require code transformation, so that [createTransformer] should
+ * provide the corresponding transformer and [needsTransformation] should return `true`.
  */
-abstract class Runner protected constructor(protected val strategy: Strategy, protected var testClass: Class<*>,
-                                            protected val validationFunctions: List<Method>, protected val stateRepresentationFunction: Method?) {
-    protected var scenario: ExecutionScenario = strategy.scenario // will be transformed later
+abstract class Runner protected constructor(
+    protected val strategy: Strategy,
+    private val _testClass: Class<*>, // will be transformed later
+    protected val validationFunctions: List<Method>,
+    protected val stateRepresentationFunction: Method?
+) {
+    protected lateinit var scenario: ExecutionScenario // `strategy.scenario` will be transformed later
+    protected lateinit var testClass: Class<*> // will be transformed later
     @Suppress("LeakingThis")
-    val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this) else ExecutionClassLoader()
+    val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
+                                            else ExecutionClassLoader()
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 
     /**
-     * This method is a part of Runner initialization.
-     * It is separated from constructor to allow certain strategy initialization steps in between.
-     * That may be needed, for example, for transformation logic and `ManagedStateHolder` initialization.
+     * This method is a part of `Runner` initialization and should be invoked after this runner
+     * creation. It is separated from the constructor to perform the strategy initialization at first.
      */
     open fun initialize() {
         scenario = strategy.scenario.convertForLoader(classLoader)
-        testClass = loadClass(testClass.typeName)
+        testClass = loadClass(testClass.canonicalName)
     }
 
     /**
@@ -57,33 +61,27 @@ abstract class Runner protected constructor(protected val strategy: Strategy, pr
      * the function marked with [StateRepresentation] annotation, or `null`
      * if no such function is provided.
      *
-     * Please not, that it is unsafe to call this method concurrently with the running scenario.
+     * Please note, that it is unsafe to call this method concurrently with the running scenario.
      * However, it is fine to call it if the execution is paused somewhere in the middle.
      */
     open fun constructStateRepresentation(): String? = null
 
     /**
-     * Loads class using runner's class loader
+     * Loads the specified class via this runner' class loader.
      */
-    private fun loadClass(className: String): Class<*> {
-        return try {
-            classLoader.loadClass(className)
-        } catch (e: ClassNotFoundException) {
-            throw IllegalStateException("Cannot load class $className", e)
-        }
-    }
+    private fun loadClass(className: String): Class<*> = classLoader.loadClass(className)
 
     /**
-     * Creates required for this runner transformer.
+     * Creates a transformer required for this runner.
      * Throws [UnsupportedOperationException] by default.
      *
      * @return class visitor which transform the code due to support this runner.
      */
-    open fun createTransformer(cv: ClassVisitor): ClassVisitor = throw UnsupportedOperationException("$javaClass runner does not transform classes")
+    open fun createTransformer(cv: ClassVisitor): ClassVisitor? = null
 
     /**
-     * This method has to return `true` if code transformation is required for runner.
-     * Returns `false` by default.
+     * This method should return `true` if code transformation
+     * is required for this runner; returns `false` by default.
      */
     open fun needsTransformation(): Boolean = false
 
@@ -106,30 +104,27 @@ abstract class Runner protected constructor(protected val strategy: Strategy, pr
     open fun onFinish(iThread: Int) {}
 
     /**
-     * This method is invoked by a test thread
-     * if an exception has been thrown.
-     * @param iThread number of invoking thread
+     * This method is invoked by the corresponding test thread
+     * when an unexpected exception is thrown.
      */
     open fun onFailure(iThread: Int, e: Throwable) {}
 
     /**
-     * This method is invoked by a test thread
-     * if a coroutine was suspended
+     * This method is invoked by the corresponding test thread
+     * when the current coroutine suspends.
      * @param iThread number of invoking thread
      */
     open fun afterCoroutineSuspended(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
 
     /**
-     * This method is invoked by a test thread
-     * if a coroutine was resumed
-     * @param iThread number of invoking thread
+     * This method is invoked by the corresponding test thread
+     * when the current coroutine is resumed.
      */
     open fun afterCoroutineResumed(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
 
     /**
-     * This method is invoked by a test thread
-     * if a coroutine was cancelled
-     * @param iThread number of invoking thread
+     * This method is invoked by the corresponding test thread
+     * when the current coroutine is cancelled.
      */
     open fun afterCoroutineCancelled(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
 
@@ -140,15 +135,15 @@ abstract class Runner protected constructor(protected val strategy: Strategy, pr
     open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean = throw UnsupportedOperationException("Coroutines are not supported")
 
     /**
-     * Is invoked before each actor execution in a thread.
-     * Its invocations are inserted into generated code.
+     * Is invoked before each actor execution from the specified thread.
+     * The invocations are inserted into the generated code.
      */
     fun onActorStart(iThread: Int) {
         strategy.onActorStart(iThread)
     }
 
     /**
-     * Closes used for this runner resources.
+     * Closes the resources used in this runner.
      */
     open fun close() {}
 
