@@ -45,13 +45,12 @@ internal class ManagedStrategyTransformer(
     private val guarantees: List<ManagedStrategyGuarantee>,
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
-    private val constructTraceRepresentation: Boolean,
-    previousTransformer: ManagedStrategyTransformer?
+    private val constructTraceRepresentation: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
-    private var nextCodeLocationId: Int = previousTransformer?.nextCodeLocationId ?: 0
+    private var nextCodeLocationId: Int = 0
 
     override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name
@@ -66,8 +65,7 @@ internal class ManagedStrategyTransformer(
 
     override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
         // do not really transform strategy methods
-        if (isStrategyMethod(className))
-            return super.visitMethod(access, mname, desc, signature, exceptions)
+        if (isStrategyMethod(className)) return super.visitMethod(access, mname, desc, signature, exceptions)
         var access = access
         // replace native method VMSupportsCS8 in AtomicLong with stub
         if (access and ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
@@ -1298,7 +1296,7 @@ internal class ManagedStrategyTransformer(
         private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
         private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
         private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
-        private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::makeStateRepresentation.javaMethod)
+        private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
         private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
         private val GET_CODE_POINT_METHOD = Method.getMethod(ManagedStrategy::getCodePoint.javaMethod)
         private val CREATE_CODE_POINT_METHOD = Method.getMethod(ManagedStrategy::createCodePoint.javaMethod)

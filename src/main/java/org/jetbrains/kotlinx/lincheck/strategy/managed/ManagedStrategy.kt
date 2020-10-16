@@ -1,4 +1,4 @@
-/*-
+/*
  * #%L
  * Lincheck
  * %%
@@ -21,7 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.collectThreadDump
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -29,10 +29,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransforme
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
-import java.lang.Exception
-import java.lang.RuntimeException
 import java.lang.reflect.Method
 import java.util.*
+import kotlin.collections.set
 
 /**
  * This is an abstract class for all managed strategies.
@@ -42,9 +41,11 @@ import java.util.*
  * to support constructing interleaving trace,
  * and to hide class loading problems from the strategy algorithm.
  */
-abstract class ManagedStrategy(private val testClass: Class<*>, scenario: ExecutionScenario, private val verifier: Verifier,
-                               private val validationFunctions: List<Method>, private val stateRepresentation: Method?,
-                               private val testCfg: ManagedCTestConfiguration) : Strategy(scenario) {
+abstract class ManagedStrategy(
+    private val testClass: Class<*>, scenario: ExecutionScenario,
+    private val verifier: Verifier, private val validationFunctions: List<Method>,
+    private val stateRepresentation: Method?, private val testCfg: ManagedCTestConfiguration
+) : Strategy(scenario) {
     // the number of parallel threads
     protected val nThreads: Int = scenario.parallelExecution.size
     // runner for scenario invocations
@@ -52,21 +53,22 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
 
     // == EXECUTION CONTROL FIELDS ==
 
-    // whether a thread finished all its operations
-    private val finished = BooleanArray(nThreads) { false }
     // what thread is currently allowed to perform operations
     @Volatile
     protected var currentThread: Int = 0
+    // whether a thread finished all its operations
+    private val finished = BooleanArray(nThreads) { false }
+    // is thread suspended
+    private val isSuspended = BooleanArray(nThreads) { false }
+    // current actor id for each thread
+    protected val currentActorId = IntArray(nThreads)
+    // the number of blocks that should be ignored by the strategy entered and not left for each thread
+    private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // detector of loops (i.e. active locks)
     private lateinit var loopDetector: LoopDetector
     // tracker of acquisitions and releases of monitors
     private lateinit var monitorTracker: MonitorTracker
-    // is thread suspended
-    private val isSuspended = BooleanArray(nThreads) { false }
-    // the number of blocks that should be ignored by the strategy entered and not left for each thread
-    private val ignoredSectionDepth = IntArray(nThreads) { 0 }
-    // current actor id for each thread
-    protected val currentActorId = IntArray(nThreads)
+
     // InvocationResult that was observed by the strategy in the execution (e.g. deadlock)
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -83,7 +85,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     // code points for trace construction
     private val codePoints: MutableList<CodePoint> = ArrayList()
     // logger of all events in the execution such as thread switches
-    private lateinit var eventCollector: InterleavingEventCollector
+    private var eventCollector: InterleavingEventCollector? = null // null when `constructStateRepresentation` is false
     // stack with info about method invocations in current stack trace for each thread
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
     // an increasing id all method invocations
@@ -91,7 +93,6 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     // stack with info about suspended method invocations for each thread
     private val suspendedMethodStack = Array(nThreads) { mutableListOf<Int>() }
     // store previous created transformer to make code location ids different for different classes
-    private var previousTransformer: ManagedStrategyTransformer? = null
 
     init {
         runner = createRunner()
@@ -100,26 +101,27 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
         runner.initialize()
     }
 
+    private fun createRunner(): Runner =
+        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentation, testCfg.timeoutMs, UseClocks.ALWAYS)
+
+    private fun initializeManagedState() {
+        ManagedStrategyStateHolder.setState(runner.classLoader, this)
+    }
+
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
         codeLocationsConstructors = codeLocationConstructors,
         guarantees = testCfg.guarantees,
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
-        constructTraceRepresentation = constructTraceRepresentation,
-        previousTransformer = previousTransformer
-    ).also { previousTransformer = it }
-
-    override fun createRemapper(): Remapper? = JavaUtilRemapper()
+        constructTraceRepresentation = constructTraceRepresentation
+    )
 
     override fun needsTransformation(): Boolean = true
 
-    override fun run(): LincheckFailure?
-        = try {
-            runImpl()
-        } finally {
-            runner.close()
-        }
+    override fun createRemapper(): Remapper? = JavaUtilRemapper()
+
+    override fun run(): LincheckFailure? = runner.use { runImpl() }
 
     // == STRATEGY INTERFACE METHODS ==
 
@@ -156,7 +158,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
         currentActorId.fill(-1)
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
-        eventCollector = InterleavingEventCollector()
+        eventCollector = if (constructTraceRepresentation) InterleavingEventCollector() else null
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
@@ -170,15 +172,12 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * Verifies results and if there are incorrect results then re-runs with
      * logging of all thread events.
      */
-    protected fun checkResults(results: InvocationResult): LincheckFailure? {
-        when (results) {
-            is CompletedInvocationResult -> {
-                if (!verifier.verifyResults(scenario, results.results))
-                    return IncorrectResultsFailure(scenario, results.results, collectExecutionEvents(results))
-            }
-            else -> return results.toLincheckFailure(scenario, collectExecutionEvents(results))
+    protected fun checkResults(result: InvocationResult): LincheckFailure? = when (result) {
+        is CompletedInvocationResult -> {
+            if (verifier.verifyResults(scenario, result.results)) null
+            else IncorrectResultsFailure(scenario, result.results, collectExecutionEvents(result))
         }
-        return null
+        else -> result.toLincheckFailure(scenario, collectExecutionEvents(result))
     }
 
     /**
@@ -214,7 +213,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
                 appendln(loggedResults.asLincheckFailureWithoutTrace().toString())
             }.toString()
         }
-        return eventCollector.interleavingEvents()
+        return eventCollector!!.interleavingEvents
     }
 
     /**
@@ -262,7 +261,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
         // it is last code point now, but will be not last after a possible switch
         val codePointId = codePoints.lastIndex
         var isLoop = false
-        if (loopDetector.newOperation(iThread, codeLocation)) {
+        if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
             isLoop = true
         }
@@ -271,7 +270,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(iThread, reason)
         }
-        eventCollector.passCodeLocation(iThread, codeLocation, codePointId)
+        eventCollector?.passCodeLocation(iThread, codeLocation, codePointId)
         // continue operation
     }
 
@@ -290,7 +289,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     open fun onFinish(iThread: Int) {
         awaitTurn(iThread)
         finished[iThread] = true
-        eventCollector.finishThread(iThread)
+        eventCollector?.finishThread(iThread)
         doSwitchCurrentThread(iThread, true)
     }
 
@@ -312,14 +311,14 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedMethodStack[iThread].clear()
-        loopDetector.reset(iThread) // visiting same code location in different actors is ok
+        loopDetector.reset(iThread)
     }
 
     /**
      * Returns whether the thread can continue its execution (i.e. is not blocked/finished)
      */
     protected fun canResume(iThread: Int): Boolean {
-        var canResume = !finished[iThread] && monitorTracker.canResume(iThread)
+        var canResume = !finished[iThread] && !monitorTracker.isWaiting(iThread)
         if (isSuspended[iThread])
             canResume = canResume && runner.isCoroutineResumed(iThread, currentActorId[iThread])
         return canResume
@@ -341,7 +340,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * A regular context thread switch to another thread.
      */
     private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
-        eventCollector.newSwitch(iThread, reason)
+        eventCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
     }
@@ -415,15 +414,15 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     fun beforeLockAcquire(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         newSwitchPoint(iThread, codeLocation)
-        // check if can acquire required monitor
-        if (!monitorTracker.canAcquireMonitor(iThread, monitor)) {
+        // Try to acquire the monitor
+        if (!monitorTracker.acquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
-            monitorTracker.awaitAcquiringMonitor(iThread, monitor)
-            // switch to another thread and wait for a moment the monitor can be acquired
+            // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
+            // Now it is possible to acquire the monitor, do it then.
+            monitorTracker.acquireMonitor(iThread, monitor)
         }
-        // can acquire monitor now. actually does it
-        monitorTracker.acquireMonitor(iThread, monitor)
+        // The monitor is acquired, finish.
         return false
     }
 
@@ -435,7 +434,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
     fun beforeLockRelease(iThread: Int, codeLocation: Int, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
-        eventCollector.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
         return false
     }
 
@@ -456,7 +455,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * @param codeLocation the byte-code location identifier of this operation.
      */
     fun afterUnpark(iThread: Int, codeLocation: Int, @Suppress("UNUSED_PARAMETER") thread: Any) {
-        eventCollector.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
     }
 
     /**
@@ -470,7 +469,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
         failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on monitor block has been found" }
         newSwitchPoint(iThread, codeLocation)
         if (withTimeout) return false // timeouts occur instantly
-        monitorTracker.waitMonitor(iThread, monitor)
+        monitorTracker.waitOnMonitor(iThread, monitor)
         // switch to another thread and wait till a notify event happens
         switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, true)
         return false
@@ -485,7 +484,7 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        eventCollector.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
+        eventCollector?.passCodeLocation(iThread, codeLocation, codePoints.lastIndex)
     }
 
     /**
@@ -617,10 +616,10 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * Creates a state representation and logs it.
      * This method are inserted by transformer after each write or atomic method invocation.
      */
-    fun makeStateRepresentation(iThread: Int) {
+    fun addStateRepresentation(iThread: Int) {
         if (!inIgnoredSection(iThread)) {
             check(constructTraceRepresentation) { "This method should be called only when logging is enabled" }
-            eventCollector.makeStateRepresentation(iThread)
+            eventCollector?.addStateRepresentation(iThread)
         }
     }
 
@@ -641,13 +640,6 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
         }
     }
 
-    private fun createRunner(): Runner =
-        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentation, testCfg.timeoutMs, UseClocks.ALWAYS)
-
-    private fun initializeManagedState() {
-        ManagedStrategyStateHolder.setState(runner.classLoader, this)
-    }
-
     private fun InvocationResult.asLincheckFailureWithoutTrace(): LincheckFailure {
         if (this is CompletedInvocationResult)
             return IncorrectResultsFailure(scenario, results, null)
@@ -658,47 +650,42 @@ abstract class ManagedStrategy(private val testClass: Class<*>, scenario: Execut
      * Logs thread events such as thread switches and passed code locations.
      */
     private inner class InterleavingEventCollector {
-        private val interleavingEvents = mutableListOf<InterleavingEvent>()
+        private val _interleavingEvents = mutableListOf<InterleavingEvent>()
+        val interleavingEvents: List<InterleavingEvent> = _interleavingEvents
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
-            if (!constructTraceRepresentation) return // check that should log thread events
-            interleavingEvents.add(SwitchEvent(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList()))
+            _interleavingEvents += SwitchEvent(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
             // check livelock after every switch
-            checkLiveLockHappened(interleavingEvents.size)
+            checkLiveLockHappened(_interleavingEvents.size)
         }
 
         fun finishThread(iThread: Int) {
-            if (!constructTraceRepresentation) return // check that should log thread events
-            interleavingEvents.add(FinishEvent(iThread))
+            _interleavingEvents += FinishEvent(iThread)
         }
 
         fun passCodeLocation(iThread: Int, codeLocation: Int, codePoint: Int) {
-            if (!constructTraceRepresentation) return // check that should log thread events
-            if (codeLocation != COROUTINE_SUSPENSION_CODE_LOCATION) {
-                interleavingEvents.add(PassCodeLocationEvent(
-                    iThread, currentActorId[iThread],
-                    getCodePoint(codePoint),
-                    callStackTrace[iThread].toList()
-                ))
-            }
+            // Ignore coroutine suspensions - they are processed in another place.
+            if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return
+            _interleavingEvents += PassCodeLocationEvent(
+                iThread, currentActorId[iThread],
+                getCodePoint(codePoint),
+                callStackTrace[iThread].toList() // we need a copy of the current call stack.
+            )
         }
 
-        fun makeStateRepresentation(iThread: Int) {
-            if (!constructTraceRepresentation) return // check that should log thread events
+        fun addStateRepresentation(iThread: Int) {
             // enter ignored section, because stateRepresentation invokes transformed method with switch points
             enterIgnoredSection(iThread)
-            val stateRepresentation = runner.constructStateRepresentation()
+            val stateRepresentation = runner.constructStateRepresentation()!!
             leaveIgnoredSection(iThread)
-            interleavingEvents.add(StateRepresentationEvent(iThread, currentActorId[iThread], stateRepresentation!!, callStackTrace[iThread].toList()))
+            _interleavingEvents += StateRepresentationEvent(iThread, currentActorId[iThread], stateRepresentation, callStackTrace[iThread].toList())
         }
-
-        fun interleavingEvents(): List<InterleavingEvent> = interleavingEvents
     }
 }
 
 /**
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
- * to strategy so that strategy can learn about execution events.
+ * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
@@ -736,26 +723,31 @@ private class ManagedStrategyRunner(
 }
 
 /**
- * Detects loop when visiting a codeLocation too often.
+ * Detects loops ans active locks when the same code location is visited too often.
  */
 private class LoopDetector(private val hangingDetectionThreshold: Int) {
     private var lastIThread = -1 // no last thread
     private val operationCounts = mutableMapOf<Int, Int>()
 
-    fun newOperation(iThread: Int, codeLocation: Int): Boolean {
-        if (lastIThread != iThread) {
-            // if we switched threads then reset counts
-            operationCounts.clear()
-            lastIThread = iThread
-        }
+    /**
+     * Returns `true` if a loop or a hang is detected,
+     * `false` otherwise.
+     */
+    fun visitCodeLocation(iThread: Int, codeLocation: Int): Boolean {
+        // Have the thread changed? Reset the counters in this case.
+        if (lastIThread != iThread) reset(iThread)
+        // Ignore coroutine suspension code locations.
         if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false
-        // increment the number of times that we visited a code location
-        val count = (operationCounts[codeLocation] ?: 0) + 1
+        // Increment the number of times the specified code location is visited.
+        val count = operationCounts.getOrDefault(codeLocation, 0) + 1
         operationCounts[codeLocation] = count
-        // return true if the thread exceeded the maximum number of repetitions that we can have
+        // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
         return count > hangingDetectionThreshold
     }
 
+    /**
+     * Resets the counters for the specified thread.
+     */
     fun reset(iThread: Int) {
         operationCounts.clear()
         lastIThread = iThread
@@ -763,70 +755,93 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
 }
 
 /**
- * Track operations with monitor (acquire/release, wait/notify) to tell whether a thread can be executed.
+ * Tracks synchronization operations with monitors (acquire/release, wait/notify) to maintain a set of active threads.
  */
 private class MonitorTracker(nThreads: Int) {
-    // which monitors are held by test threads
-    private val acquiredMonitors = IdentityHashMap<Any, LockAcquiringInfo>()
-    // which monitor a thread want to acquire (or null)
-    private val acquiringMonitor = Array<Any?>(nThreads) { null }
-    // whether thread is waiting for notify on the corresponding monitor
-    private val needsNotification = BooleanArray(nThreads) { false }
+    // Maintains a set of acquired monitors with an information on which thread
+    // performed the acquisition and the the reentrancy depth.
+    private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
+    // Maintains a set of monitors on which each thread is waiting.
+    // Note, that a thread can wait on a free monitor if it is waiting for
+    // a `notify` call.
+    // Stores `null` if thread is not waiting on any monitor.
+    private val acquiringMonitors = Array<Any?>(nThreads) { null }
+    // Stores `true` for the threads which are waiting for a
+    // `notify` call on the monitor stored in `acquiringMonitor`.
+    private val waitForNotify = BooleanArray(nThreads) { false }
 
-    fun canAcquireMonitor(iThread: Int, monitor: Any) = acquiredMonitors[monitor]?.iThread?.equals(iThread) ?: true
-
-    fun acquireMonitor(iThread: Int, monitor: Any) {
-        // increment the number of times the monitor was acquired
-        acquiredMonitors.compute(monitor) { _, previousValue ->
-            previousValue?.apply { timesAcquired++ } ?: LockAcquiringInfo(iThread, 1)
+    /**
+     * Performs a logical acquisition.
+     */
+    fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
+        // Increment the reentrant depth and store the
+        // acquisition info if needed.
+        val ai = acquiredMonitors.computeIfAbsent(monitor) { MonitorAcquiringInfo(iThread, 0) }
+        if (ai.iThread != iThread) {
+            acquiringMonitors[iThread] = monitor
+            return false
         }
-        acquiringMonitor[iThread] = null
-    }
-
-    fun releaseMonitor(monitor: Any) {
-        // decrement the number of times the monitor was acquired
-        // remove if necessary
-        acquiredMonitors.compute(monitor) { _, previousValue ->
-            check(previousValue != null) { "Tried to release not acquired lock" }
-            if (previousValue.timesAcquired == 1)
-                null
-            else
-                previousValue.apply { timesAcquired-- }
-        }
-    }
-
-    fun canResume(iThread: Int): Boolean {
-        val monitor = acquiringMonitor[iThread] ?: return true
-        return !needsNotification[iThread] && canAcquireMonitor(iThread, monitor)
-    }
-
-    fun awaitAcquiringMonitor(iThread: Int, monitor: Any) {
-        acquiringMonitor[iThread] = monitor
-    }
-
-    fun waitMonitor(iThread: Int, monitor: Any) {
-        // TODO: can add spurious wakeups
-        check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
-        releaseMonitor(monitor)
-        needsNotification[iThread] = true
-        awaitAcquiringMonitor(iThread, monitor)
-    }
-
-    fun notify(monitor: Any) {
-        // just notify all thread. Odd threads will have a spurious wakeup
-        notifyAll(monitor)
-    }
-
-    fun notifyAll(monitor: Any) {
-        for (iThread in needsNotification.indices)
-            if (acquiringMonitor[iThread] === monitor)
-                needsNotification[iThread] = false
+        ai.timesAcquired++
+        acquiringMonitors[iThread] = null // re-set
+        return true
     }
 
     /**
-     * Info about a certain monitor with who and how many times acquired it without releasing.
+     * Performs a logical release.
      */
-    private class LockAcquiringInfo(val iThread: Int, var timesAcquired: Int)
+    fun releaseMonitor(monitor: Any) {
+        // Decrement the reentrancy depth and remove the acquisition info
+        // if the monitor becomes free to acquire by another thread.
+        val ai = acquiredMonitors[monitor]!!
+        ai.timesAcquired--
+        if (ai.timesAcquired == 0) acquiredMonitors.remove(monitor)
+    }
+
+    /**
+     * Returns `true` if the corresponding threads is waiting on some monitor.
+     */
+    fun isWaiting(iThread: Int): Boolean {
+        val monitor = acquiringMonitors[iThread] ?: return false
+        return waitForNotify[iThread] || !canAcquireMonitor(iThread, monitor)
+    }
+
+    /**
+     * Returns `true` if the monitor is already acquired by
+     * the thread [iThread], or if this monitor is free to acquire.
+     */
+    private fun canAcquireMonitor(iThread: Int, monitor: Any) =
+        acquiredMonitors[monitor]?.iThread?.equals(iThread) ?: true
+
+    /**
+     * Performs a logical wait, [isWaiting] for the specified thread
+     * returns `true` until the corresponding [notify] or [notifyAll]
+     * is invoked.
+     */
+    fun waitOnMonitor(iThread: Int, monitor: Any) {
+        // TODO: we can add spurious wakeups here
+        check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
+        releaseMonitor(monitor)
+        waitForNotify[iThread] = true
+        acquiringMonitors[iThread] = monitor
+    }
+
+    /**
+     * Just notify all thread. Odd threads will have a spurious wakeup
+     */
+    fun notify(monitor: Any) = notifyAll(monitor)
+
+    /**
+     * Performs the logical `notifyAll`.
+     */
+    fun notifyAll(monitor: Any): Unit = acquiringMonitors.forEachIndexed { iThread, m ->
+        if (monitor === m) waitForNotify[iThread] = false
+    }
+
+    /**
+     * Stores the number of reentrant acquisitions ([timesAcquired])
+     * and the number of thread ([iThread]) that holds the monitor.
+     */
+    private class MonitorAcquiringInfo(val iThread: Int, var timesAcquired: Int)
 }
 
 /**

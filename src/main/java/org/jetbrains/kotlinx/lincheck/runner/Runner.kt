@@ -28,6 +28,7 @@ import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
+import java.io.*
 
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
@@ -39,7 +40,7 @@ abstract class Runner protected constructor(
     private val _testClass: Class<*>, // will be transformed later
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?
-) {
+) : Closeable {
     protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     protected lateinit var testClass: Class<*> // not available before `initialize` call
     @Suppress("LeakingThis")
@@ -145,7 +146,7 @@ abstract class Runner protected constructor(
     /**
      * Closes the resources used in this runner.
      */
-    open fun close() {}
+    override fun close() {}
 
     /**
      * @return whether all scenario threads are completed or suspended
