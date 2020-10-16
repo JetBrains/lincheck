@@ -51,7 +51,7 @@ internal class ManagedStrategyTransformer(
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
-    private var nextCodeLocationId: Int = previousTransformer?.nextCodeLocationId ?: 0
+    private var nextCodeLocation: Int = previousTransformer?.nextCodeLocation ?: 0
 
     override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name
@@ -152,21 +152,21 @@ internal class ManagedStrategyTransformer(
 
             when (opcode) {
                 GETSTATIC -> {
-                    val codePointLocal = newCodePointLocal()
-                    invokeBeforeSharedVariableRead(name, codePointLocal)
+                    val tracePointLocal = newTracePointLocal()
+                    invokeBeforeSharedVariableRead(name, tracePointLocal)
                     super.visitFieldInsn(opcode, owner, name, desc)
-                    captureReadValue(desc, codePointLocal)
+                    captureReadValue(desc, tracePointLocal)
                 }
                 GETFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = newLabel()
-                    val codePointLocal = newCodePointLocal()
+                    val tracePointLocal = newTracePointLocal()
                     dup()
                     invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    invokeBeforeSharedVariableRead(name, codePointLocal)
+                    invokeBeforeSharedVariableRead(name, tracePointLocal)
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -175,7 +175,7 @@ internal class ManagedStrategyTransformer(
                     loadLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
                     // initialize ReadCodeLocation only if is not a local object
-                    captureReadValue(desc, codePointLocal)
+                    captureReadValue(desc, tracePointLocal)
                     visitLabel(skipCodeLocationAfter)
                 }
                 PUTSTATIC -> {
@@ -212,14 +212,14 @@ internal class ManagedStrategyTransformer(
                 AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = adapter.newLabel()
-                    val codePointLocal = newCodePointLocal()
+                    val tracePointLocal = newTracePointLocal()
                     dup2() // arr, ind
                     pop() // arr, ind -> arr
                     invokeIsLocalObject()
                     copyLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
-                    invokeBeforeSharedVariableRead(null, codePointLocal)
+                    invokeBeforeSharedVariableRead(null, tracePointLocal)
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitInsn(opcode)
@@ -227,7 +227,7 @@ internal class ManagedStrategyTransformer(
                     val skipCodeLocationAfter = newLabel()
                     loadLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
-                    captureReadValue(getArrayLoadType(opcode).descriptor, codePointLocal)
+                    captureReadValue(getArrayLoadType(opcode).descriptor, tracePointLocal)
                     visitLabel(skipCodeLocationAfter)
                 }
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
@@ -281,42 +281,38 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: value that was read
-        private fun captureReadValue(desc: String, codePointLocal: Int?) = adapter.run {
+        private fun captureReadValue(desc: String, tracePointLocal: Int?) = adapter.run {
             if (!constructTraceRepresentation) return // capture return values only when logging is enabled
             val valueType = Type.getType(desc)
             val readValue = newLocal(valueType)
             copyLocal(readValue)
             // initialize ReadCodeLocation
-            loadStrategy()
-            loadLocal(codePointLocal!!)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(READ_CODE_POINT_TYPE)
+            loadLocal(tracePointLocal!!)
+            checkCast(READ_TRACE_POINT_TYPE)
             loadLocal(readValue)
             box(valueType)
-            invokeVirtual(READ_CODE_POINT_TYPE, INITIALIZE_READ_VALUE_METHOD)
+            invokeVirtual(READ_TRACE_POINT_TYPE, INITIALIZE_READ_VALUE_METHOD)
         }
 
         // STACK: value to be written
         private fun beforeSharedVariableWrite(fieldName: String? = null, desc: String) {
-            val codePointLocal = newCodePointLocal()
-            invokeBeforeSharedVariableWrite(fieldName, codePointLocal)
-            captureWrittenValue(desc, codePointLocal)
+            val tracePointLocal = newTracePointLocal()
+            invokeBeforeSharedVariableWrite(fieldName, tracePointLocal)
+            captureWrittenValue(desc, tracePointLocal)
         }
 
         // STACK: value to be written
-        private fun captureWrittenValue(desc: String, codePointLocal: Int?) = adapter.run {
+        private fun captureWrittenValue(desc: String, tracePointLocal: Int?) = adapter.run {
             if (!constructTraceRepresentation) return // capture written values only when logging is enabled
             val valueType = Type.getType(desc)
             val storedValue = newLocal(valueType)
             copyLocal(storedValue) // save store value
             // initialize WriteCodeLocation with stored value
-            loadStrategy()
-            loadLocal(codePointLocal!!)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(WRITE_CODE_POINT_TYPE)
+            loadLocal(tracePointLocal!!)
+            checkCast(WRITE_TRACE_POINT_TYPE)
             loadLocal(storedValue)
             box(valueType)
-            invokeVirtual(WRITE_CODE_POINT_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
+            invokeVirtual(WRITE_TRACE_POINT_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
         }
 
         private fun getArrayStoreType(opcode: Int): Type = when (opcode) {
@@ -343,16 +339,22 @@ internal class ManagedStrategyTransformer(
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
         }
 
-        private fun invokeBeforeSharedVariableRead(fieldName: String? = null, codePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, codePointLocal) { ste -> ReadTracePoint(fieldName, ste)}
+        private fun invokeBeforeSharedVariableRead(fieldName: String? = null, tracePointLocal: Int?) =
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, tracePointLocal, READ_TRACE_POINT_TYPE) {
+                ste -> ReadTracePoint(fieldName, ste)
+            }
 
-        private fun invokeBeforeSharedVariableWrite(fieldName: String? = null, codePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, codePointLocal) { ste -> WriteTracePoint(fieldName, ste)}
+        private fun invokeBeforeSharedVariableWrite(fieldName: String? = null, tracePointLocal: Int?) =
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, tracePointLocal, WRITE_TRACE_POINT_TYPE) {
+                ste -> WriteTracePoint(fieldName, ste)
+            }
 
-        private fun invokeBeforeSharedVariableReadOrWrite(method: Method, codePointLocal: Int?, codeLocationConstructor: (StackTraceElement) -> TracePoint) {
+        private fun invokeBeforeSharedVariableReadOrWrite(
+            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint
+        ) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(codePointLocal, codeLocationConstructor)
+            loadNewCodeLocationAndTracePoint(tracePointLocal, tracePointType, codeLocationConstructor)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
 
@@ -408,7 +410,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeAtomicMethodCall() {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(nextCodeLocationId - 1) // re-use previous code location
+            adapter.push(nextCodeLocation - 1) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
@@ -452,7 +454,7 @@ internal class ManagedStrategyTransformer(
             if (!constructTraceRepresentation) {
                 // just increase code location id to keep ids consistent with the ones
                 // when `constructTraceRepresentation` is disabled
-                nextCodeLocationId++
+                nextCodeLocation++
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
@@ -461,8 +463,8 @@ internal class ManagedStrategyTransformer(
             val exceptionHandler = newLabel()
             val skipHandler = newLabel()
 
-            val codePointLocal = newLocal(Type.INT_TYPE)
-            beforeMethodCall(opcode, owner, name, desc, codePointLocal)
+            val tracePointLocal = newTracePointLocal()!!
+            beforeMethodCall(opcode, owner, name, desc, tracePointLocal)
             if (name != "<init>") {
                 // just hope that constructors do not throw exceptions.
                 // we can not handle this case, because uninitialized values are not allowed by jvm
@@ -471,55 +473,51 @@ internal class ManagedStrategyTransformer(
             visitLabel(callStart)
             visitMethodInsn(opcode, owner, name, desc, itf)
             visitLabel(callEnd)
-            afterMethodCall(Method(name, desc).returnType, codePointLocal)
+            afterMethodCall(Method(name, desc).returnType, tracePointLocal)
 
             goTo(skipHandler)
             visitLabel(exceptionHandler)
-            onException(codePointLocal)
-            invokeAfterMethodCall(codePointLocal) // notify strategy that the method finished
+            onException(tracePointLocal)
+            invokeAfterMethodCall(tracePointLocal) // notify strategy that the method finished
             throwException() // throw the exception further
             visitLabel(skipHandler)
         }
 
         // STACK: param_1 param_2 ... param_n
-        private fun beforeMethodCall(opcode: Int, owner: String, methodName: String, desc: String, codePointLocal: Int) {
-            invokeBeforeMethodCall(methodName, codePointLocal)
-            captureParameters(opcode, owner, methodName, desc, codePointLocal)
-            captureOwnerName(opcode, owner, methodName, desc, codePointLocal)
+        private fun beforeMethodCall(opcode: Int, owner: String, methodName: String, desc: String, tracePointLocal: Int) {
+            invokeBeforeMethodCall(methodName, tracePointLocal)
+            captureParameters(opcode, owner, methodName, desc, tracePointLocal)
+            captureOwnerName(opcode, owner, methodName, desc, tracePointLocal)
         }
 
         // STACK: returned value (unless void)
-        private fun afterMethodCall(returnType: Type, codePointLocal: Int) = adapter.run {
+        private fun afterMethodCall(returnType: Type, tracePointLocal: Int) = adapter.run {
             if (returnType != Type.VOID_TYPE) {
                 val returnedValue = newLocal(returnType)
                 copyLocal(returnedValue)
                 // initialize MethodCallCodePoint return value
-                loadStrategy()
-                loadLocal(codePointLocal)
-                invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-                checkCast(METHOD_CALL_CODE_POINT_TYPE)
+                loadLocal(tracePointLocal)
+                checkCast(METHOD_TRACE_POINT_TYPE)
                 loadLocal(returnedValue)
                 box(returnType)
-                invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_RETURNED_VALUE_METHOD)
+                invokeVirtual(METHOD_TRACE_POINT_TYPE, INITIALIZE_RETURNED_VALUE_METHOD)
             }
-            invokeAfterMethodCall(codePointLocal)
+            invokeAfterMethodCall(tracePointLocal)
         }
 
         // STACK: exception
-        private fun onException(codePointLocal: Int) = adapter.run {
+        private fun onException(tracePointLocal: Int) = adapter.run {
             val exceptionLocal = newLocal(THROWABLE_TYPE)
             copyLocal(exceptionLocal)
             // initialize MethodCallCodePoint thrown exception
-            loadStrategy()
-            loadLocal(codePointLocal)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(METHOD_CALL_CODE_POINT_TYPE)
+            loadLocal(tracePointLocal)
+            checkCast(METHOD_TRACE_POINT_TYPE)
             loadLocal(exceptionLocal)
-            invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_THROWN_EXCEPTION_METHOD)
+            invokeVirtual(METHOD_TRACE_POINT_TYPE, INITIALIZE_THROWN_EXCEPTION_METHOD)
         }
 
         // STACK: param_1 param_2 ... param_n
-        private fun captureParameters(opcode: Int, owner: String, methodName: String, desc: String, codePointLocal: Int) = adapter.run {
+        private fun captureParameters(opcode: Int, owner: String, methodName: String, desc: String, tracePointLocal: Int) = adapter.run {
             val paramTypes = Type.getArgumentTypes(desc)
             if (paramTypes.isEmpty()) return // nothing to capture
             val params = copyParameters(paramTypes)
@@ -548,16 +546,14 @@ internal class ManagedStrategyTransformer(
                 arrayStore(OBJECT_TYPE)
             }
             // initialize MethodCallCodePoint parameter values
-            loadStrategy()
-            loadLocal(codePointLocal)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(METHOD_CALL_CODE_POINT_TYPE)
+            loadLocal(tracePointLocal)
+            checkCast(METHOD_TRACE_POINT_TYPE)
             loadLocal(parameterValuesLocal)
-            invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_PARAMETERS_METHOD)
+            invokeVirtual(METHOD_TRACE_POINT_TYPE, INITIALIZE_PARAMETERS_METHOD)
         }
 
         // STACK: owner param_1 param_2 ... param_n
-        private fun captureOwnerName(opcode: Int, owner: String, methodName: String, desc: String, codePointLocal: Int) = adapter.run {
+        private fun captureOwnerName(opcode: Int, owner: String, methodName: String, desc: String, tracePointLocal: Int) = adapter.run {
             if (!isAFUMethodCall(opcode, owner, methodName, desc)) {
                 // currently object name labels are used only for AFUs
                 return
@@ -570,28 +566,26 @@ internal class ManagedStrategyTransformer(
             for (param in params)
                 loadLocal(param)
             // initialize MethodCallCodePoint owner name
-            loadStrategy()
-            loadLocal(codePointLocal)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, GET_CODE_POINT_METHOD)
-            checkCast(METHOD_CALL_CODE_POINT_TYPE)
+            loadLocal(tracePointLocal)
+            checkCast(METHOD_TRACE_POINT_TYPE)
             // get afu name
             loadObjectManager()
             loadLocal(afuLocal)
             invokeVirtual(OBJECT_MANAGER_TYPE, GET_OBJECT_NAME)
-            invokeVirtual(METHOD_CALL_CODE_POINT_TYPE, INITIALIZE_OWNER_NAME_METHOD)
+            invokeVirtual(METHOD_TRACE_POINT_TYPE, INITIALIZE_OWNER_NAME_METHOD)
         }
 
-        private fun invokeBeforeMethodCall(methodName: String, codePointLocal: Int) {
+        private fun invokeBeforeMethodCall(methodName: String, tracePointLocal: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(codePointLocal) { ste -> MethodCallTracePoint(methodName, ste) }
+            loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { ste -> MethodCallInterleavingPoint(methodName, ste) }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
         }
 
-        private fun invokeAfterMethodCall(codePointLocal: Int) {
+        private fun invokeAfterMethodCall(tracePointLocal: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.loadLocal(codePointLocal)
+            adapter.loadLocal(tracePointLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
         }
 
@@ -755,21 +749,21 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeLockAcquire() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterTracePoint)
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterInterleavingPoint, MONITORENTER_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
         private fun invokeBeforeLockRelease() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitTracePoint)
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitInterleavingPoint, MONITOREXIT_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
-        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> TracePoint) {
+        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint, tracePointType: Type) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(null, codeLocationConstructor)
+            loadNewCodeLocationAndTracePoint(null, tracePointType, codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
@@ -890,21 +884,21 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeWait(withTimeout: Boolean) {
-            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitTracePoint)
+            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitInterleavingPoint, WAIT_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
         private fun invokeAfterNotify(notifyAll: Boolean) {
-            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyTracePoint)
+            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyInterleavingPoint, NOTIFY_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
-        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> TracePoint) {
+        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint, tracePointType: Type) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(null, codeLocationConstructor)
+            loadNewCodeLocationAndTracePoint(null, tracePointType, codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.push(flag)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
@@ -962,7 +956,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(null, ::ParkTracePoint)
+            loadNewCodeLocationAndTracePoint(null, PARK_TRACE_POINT_TYPE, ::ParkInterleavingPoint)
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
         }
@@ -973,7 +967,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(threadLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocation(null, ::UnparkTracePoint)
+            loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, ::UnparkInterleavingPoint)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
         }
@@ -1192,7 +1186,12 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD)
         }
 
-        protected fun loadNewCodeLocation(codePointLocal: Int?, codeLocationConstructor: (StackTraceElement) -> TracePoint) {
+        // STACK: (empty) -> code location, trace point
+        protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint) {
+            // push the codeLocation on stack
+            adapter.push(nextCodeLocation)
+            nextCodeLocation++
+            // push the corresponding trace point
             if (constructTraceRepresentation) {
                 // add constructor for the code location
                 val className = className  // for capturing by value in lambda constructor
@@ -1203,26 +1202,25 @@ internal class ManagedStrategyTransformer(
                 loadStrategy()
                 adapter.push(codeLocationsConstructors.lastIndex)
                 adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CREATE_CODE_POINT_METHOD)
-                // the id of created code location is either stored to codePointLocal or popped
-                if (codePointLocal != null)
-                    adapter.storeLocal(codePointLocal)
-                else
-                    adapter.pop()
+                adapter.checkCast(tracePointType)
+                // the created trace point is stored to tracePointLocal
+                if (tracePointLocal != null) adapter.copyLocal(tracePointLocal)
+            } else {
+                // null instead of trace point when should not construct trace
+                adapter.push(null as Type?)
             }
-            adapter.push(nextCodeLocationId)
-            nextCodeLocationId++
         }
 
-        protected fun newCodePointLocal(): Int? =
+        protected fun newTracePointLocal(): Int? =
             if (constructTraceRepresentation) {
-                val codePointLocal = adapter.newLocal(Type.INT_TYPE)
+                val tracePointLocal = adapter.newLocal(INTERLEAVING_POINT_TYPE)
                 // initialize codePointLocal, because otherwise transformed code such as
                 // if (b) write(local, value)
                 // if (b) read(local)
                 // causes bytecode verification exception
-                adapter.push(0)
-                adapter.storeLocal(codePointLocal)
-                codePointLocal
+                adapter.push(null as Type?)
+                adapter.storeLocal(tracePointLocal)
+                tracePointLocal
             } else {
                 // code locations are not used without logging enabled, so just return null
                 null
@@ -1280,9 +1278,16 @@ internal class ManagedStrategyTransformer(
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
         private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
-        private val WRITE_CODE_POINT_TYPE = Type.getType(WriteTracePoint::class.java)
-        private val READ_CODE_POINT_TYPE = Type.getType(ReadTracePoint::class.java)
-        private val METHOD_CALL_CODE_POINT_TYPE = Type.getType(MethodCallTracePoint::class.java)
+        private val INTERLEAVING_POINT_TYPE = Type.getType(InterleavingPoint::class.java)
+        private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteInterleavingPoint::class.java)
+        private val READ_TRACE_POINT_TYPE = Type.getType(ReadInterleavingPoint::class.java)
+        private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallInterleavingPoint::class.java)
+        private val MONITORENTER_TRACE_POINT_TYPE = Type.getType(MonitorEnterInterleavingPoint::class.java)
+        private val MONITOREXIT_TRACE_POINT_TYPE = Type.getType(MonitorExitInterleavingPoint::class.java)
+        private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitInterleavingPoint::class.java)
+        private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyInterleavingPoint::class.java)
+        private val PARK_TRACE_POINT_TYPE = Type.getType(ParkInterleavingPoint::class.java)
+        private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkInterleavingPoint::class.java)
 
         private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
         private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -1299,8 +1304,7 @@ internal class ManagedStrategyTransformer(
         private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
         private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
         private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
-        private val GET_CODE_POINT_METHOD = Method.getMethod(ManagedStrategy::getCodePoint.javaMethod)
-        private val CREATE_CODE_POINT_METHOD = Method.getMethod(ManagedStrategy::createCodePoint.javaMethod)
+        private val CREATE_CODE_POINT_METHOD = Method.getMethod(ManagedStrategy::createInterleavingPoint.javaMethod)
         private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::newLocalObject.javaMethod)
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::deleteLocalObject.javaMethod)
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::isLocalObject.javaMethod)
