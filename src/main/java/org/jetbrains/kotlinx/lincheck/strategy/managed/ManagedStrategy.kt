@@ -256,7 +256,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    private fun newSwitchPoint(iThread: Int, codeLocation: Int, interleavingPoint: InterleavingPoint?) {
+    private fun newSwitchPoint(iThread: Int, codeLocation: Int, interleavingPoint: TracePoint?) {
         if (iThread == nThreads) return // can switch only test threads
         check(iThread == currentThread)
         if (ignoredSectionDepth[iThread] != 0) return // can not suspend in ignored sections
@@ -385,7 +385,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
      */
-    internal fun beforeSharedVariableRead(iThread: Int, codeLocation: Int, interleavingPoint: ReadInterleavingPoint?) {
+    internal fun beforeSharedVariableRead(iThread: Int, codeLocation: Int, interleavingPoint: ReadTracePoint?) {
         newSwitchPoint(iThread, codeLocation, interleavingPoint)
     }
 
@@ -394,7 +394,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
      */
-    internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, interleavingPoint: WriteInterleavingPoint?) {
+    internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, interleavingPoint: WriteTracePoint?) {
         newSwitchPoint(iThread, codeLocation, interleavingPoint)
     }
 
@@ -415,7 +415,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually acquired
      */
-    internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, interleavingPoint: MonitorEnterInterleavingPoint?, monitor: Any): Boolean {
+    internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, interleavingPoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         newSwitchPoint(iThread, codeLocation, interleavingPoint)
         // Try to acquire the monitor
@@ -435,7 +435,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually released
      */
-    internal fun beforeLockRelease(iThread: Int, codeLocation: Int, interleavingPoint: MonitorExitInterleavingPoint?, monitor: Any): Boolean {
+    internal fun beforeLockRelease(iThread: Int, codeLocation: Int, interleavingPoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
         eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoint)
@@ -449,7 +449,7 @@ abstract class ManagedStrategy(
      * @return whether park should be executed
      */
     @Suppress("UNUSED_PARAMETER")
-    internal fun beforePark(iThread: Int, codeLocation: Int, interleavingPoint: ParkInterleavingPoint?, withTimeout: Boolean): Boolean {
+    internal fun beforePark(iThread: Int, codeLocation: Int, interleavingPoint: ParkTracePoint?, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
         newSwitchPoint(iThread, codeLocation, interleavingPoint)
         return false
@@ -460,7 +460,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      */
     @Suppress("UNUSED_PARAMETER")
-    internal fun afterUnpark(iThread: Int, codeLocation: Int, interleavingPoint: UnparkInterleavingPoint?, thread: Any) {
+    internal fun afterUnpark(iThread: Int, codeLocation: Int, interleavingPoint: UnparkTracePoint?, thread: Any) {
         eventCollector?.passCodeLocation(iThread, codeLocation, interleavingPoint)
     }
 
@@ -470,7 +470,7 @@ abstract class ManagedStrategy(
      * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
      * @return whether wait should be executed
      */
-    internal fun beforeWait(iThread: Int, codeLocation: Int, interleavingPoint: WaitInterleavingPoint?, monitor: Any, withTimeout: Boolean): Boolean {
+    internal fun beforeWait(iThread: Int, codeLocation: Int, interleavingPoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
         failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on monitor block has been found" }
         newSwitchPoint(iThread, codeLocation, interleavingPoint)
@@ -485,7 +485,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
      */
-    internal fun afterNotify(iThread: Int, codeLocation: Int, interleavingPoint: NotifyInterleavingPoint?, monitor: Any, notifyAll: Boolean) {
+    internal fun afterNotify(iThread: Int, codeLocation: Int, interleavingPoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean) {
         if (notifyAll)
             monitorTracker.notifyAll(monitor)
         else
@@ -560,7 +560,7 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      */
     @Suppress("UNUSED_PARAMETER")
-    internal fun beforeMethodCall(iThread: Int, codeLocation: Int, interleavingPoint: MethodCallInterleavingPoint) {
+    internal fun beforeMethodCall(iThread: Int, codeLocation: Int, interleavingPoint: MethodCallTracePoint) {
         if (isTestThread(iThread)) {
             check(constructTraceRepresentation) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
@@ -585,7 +585,7 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      * @param interleavingPoint the corresponding trace point for the invocation
      */
-    internal fun afterMethodCall(iThread: Int, interleavingPoint: MethodCallInterleavingPoint) {
+    internal fun afterMethodCall(iThread: Int, interleavingPoint: MethodCallTracePoint) {
         if (isTestThread(iThread)) {
             check(constructTraceRepresentation) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
@@ -606,7 +606,7 @@ abstract class ManagedStrategy(
      * @param constructorId which constructor to use for creating code location
      * @return the created interleaving point
      */
-    fun createInterleavingPoint(constructorId: Int): InterleavingPoint = interleavingPointConstructors[constructorId]()
+    fun createInterleavingPoint(constructorId: Int): TracePoint = tracePointConstructors[constructorId]()
 
     /**
      * Creates a state representation and logs it.
@@ -658,7 +658,7 @@ abstract class ManagedStrategy(
             _interleavingEvents += FinishEvent(iThread)
         }
 
-        fun passCodeLocation(iThread: Int, codeLocation: Int, interleavingPoint: InterleavingPoint?) {
+        fun passCodeLocation(iThread: Int, codeLocation: Int, interleavingPoint: TracePoint?) {
             // Ignore coroutine suspensions - they are processed in another place.
             if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return
             _interleavingEvents += PassCodeLocationEvent(

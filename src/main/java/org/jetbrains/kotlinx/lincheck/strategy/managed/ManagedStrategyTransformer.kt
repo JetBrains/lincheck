@@ -350,7 +350,7 @@ internal class ManagedStrategyTransformer(
             }
 
         private fun invokeBeforeSharedVariableReadOrWrite(
-            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint
+            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> TracePoint
         ) {
             loadStrategy()
             loadCurrentThreadNumber()
@@ -578,7 +578,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeMethodCall(methodName: String, tracePointLocal: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { ste -> MethodCallInterleavingPoint(methodName, ste) }
+            loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { ste -> MethodCallTracePoint(methodName, ste) }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
         }
 
@@ -749,16 +749,16 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeLockAcquire() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterInterleavingPoint, MONITORENTER_TRACE_POINT_TYPE)
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterTracePoint, MONITORENTER_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
         private fun invokeBeforeLockRelease() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitInterleavingPoint, MONITOREXIT_TRACE_POINT_TYPE)
+            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitTracePoint, MONITOREXIT_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
-        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint, tracePointType: Type) {
+        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> TracePoint, tracePointType: Type) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -884,16 +884,16 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeWait(withTimeout: Boolean) {
-            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitInterleavingPoint, WAIT_TRACE_POINT_TYPE)
+            invokeOnWaitOrNotify(BEFORE_WAIT_METHOD, withTimeout, ::WaitTracePoint, WAIT_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
         private fun invokeAfterNotify(notifyAll: Boolean) {
-            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyInterleavingPoint, NOTIFY_TRACE_POINT_TYPE)
+            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyTracePoint, NOTIFY_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
-        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint, tracePointType: Type) {
+        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> TracePoint, tracePointType: Type) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -956,7 +956,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(null, PARK_TRACE_POINT_TYPE, ::ParkInterleavingPoint)
+            loadNewCodeLocationAndTracePoint(null, PARK_TRACE_POINT_TYPE, ::ParkTracePoint)
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
         }
@@ -967,7 +967,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(threadLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, ::UnparkInterleavingPoint)
+            loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, ::UnparkTracePoint)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
         }
@@ -1187,7 +1187,7 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> code location, trace point
-        protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> InterleavingPoint) {
+        protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> TracePoint) {
             // push the codeLocation on stack
             adapter.push(nextCodeLocation)
             nextCodeLocation++
@@ -1213,7 +1213,7 @@ internal class ManagedStrategyTransformer(
 
         protected fun newTracePointLocal(): Int? =
             if (constructTraceRepresentation) {
-                val tracePointLocal = adapter.newLocal(INTERLEAVING_POINT_TYPE)
+                val tracePointLocal = adapter.newLocal(TRACE_POINT_TYPE)
                 // initialize codePointLocal, because otherwise transformed code such as
                 // if (b) write(local, value)
                 // if (b) read(local)
@@ -1278,16 +1278,16 @@ internal class ManagedStrategyTransformer(
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
         private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
-        private val INTERLEAVING_POINT_TYPE = Type.getType(InterleavingPoint::class.java)
-        private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteInterleavingPoint::class.java)
-        private val READ_TRACE_POINT_TYPE = Type.getType(ReadInterleavingPoint::class.java)
-        private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallInterleavingPoint::class.java)
-        private val MONITORENTER_TRACE_POINT_TYPE = Type.getType(MonitorEnterInterleavingPoint::class.java)
-        private val MONITOREXIT_TRACE_POINT_TYPE = Type.getType(MonitorExitInterleavingPoint::class.java)
-        private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitInterleavingPoint::class.java)
-        private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyInterleavingPoint::class.java)
-        private val PARK_TRACE_POINT_TYPE = Type.getType(ParkInterleavingPoint::class.java)
-        private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkInterleavingPoint::class.java)
+        private val TRACE_POINT_TYPE = Type.getType(TracePoint::class.java)
+        private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteTracePoint::class.java)
+        private val READ_TRACE_POINT_TYPE = Type.getType(ReadTracePoint::class.java)
+        private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallTracePoint::class.java)
+        private val MONITORENTER_TRACE_POINT_TYPE = Type.getType(MonitorEnterTracePoint::class.java)
+        private val MONITOREXIT_TRACE_POINT_TYPE = Type.getType(MonitorExitTracePoint::class.java)
+        private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitTracePoint::class.java)
+        private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
+        private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
+        private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 
         private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
         private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
