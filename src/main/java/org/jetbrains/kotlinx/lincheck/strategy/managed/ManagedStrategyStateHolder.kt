@@ -30,7 +30,7 @@ import java.util.*
  * each iteration should use its own class loader so that the state is unique for each class loader and, therefore,
  * for each iteration.
  */
-object ManagedStrategyStateHolder {
+internal object ManagedStrategyStateHolder {
     @JvmField
     var strategy: ManagedStrategy? = null
     @JvmField

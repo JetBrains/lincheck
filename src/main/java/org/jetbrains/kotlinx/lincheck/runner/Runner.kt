@@ -40,8 +40,8 @@ abstract class Runner protected constructor(
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?
 ) {
-    protected var scenario = strategy.scenario // `strategy.scenario` will be transformed later
-    protected lateinit var testClass: Class<*> // will be transformed later
+    protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
+    protected lateinit var testClass: Class<*> // not available before `initialize` call
     @Suppress("LeakingThis")
     val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
                                             else ExecutionClassLoader()

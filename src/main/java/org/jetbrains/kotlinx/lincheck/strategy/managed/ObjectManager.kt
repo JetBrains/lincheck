@@ -34,7 +34,7 @@ import java.util.*
  * associated with the corresponding field names, so that in the trace users see
  * the field names instead of something like `AtomicInteger@100500`.
  */
-class ObjectManager {
+internal class ObjectManager {
     // For each local object store all objects that depend on it (e.g, are referenced by it).
     // Non-local objects are not presented in this map.
     private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
