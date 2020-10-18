@@ -28,12 +28,12 @@ import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
 import kotlin.math.min
 
-private const val INTERLEAVING_INDENTATION = "  "
+private const val TRACE_INDENTATION = "  "
 
 internal fun StringBuilder.appendTrace(
     scenario: ExecutionScenario,
     results: ExecutionResult?,
-    trace: List<InterleavingEvent>
+    trace: List<TracePoint>
 ) {
     // clear object numeration that is used by `CodePoint.toString` for better representation
     objectNumeration.clear()
@@ -70,18 +70,18 @@ private fun splitToColumns(nThreads: Int, interleaving: List<InterleavingEventRe
 }
 
 /**
- * Construct an interleaving graph based on provided [interleavingEvents].
+ * Construct an interleaving graph based on provided [tracePoints].
  * Returns the node corresponding to the first interleaving event.
  * An interleaving graph consists of two types of edges:
- * `next` edges form a single-directed list in which the order of events is the same as in [interleavingEvents].
+ * `next` edges form a single-directed list in which the order of events is the same as in [tracePoints].
  * `internalEvents` edges form a directed forest.
  * The root of each tree is an actor.
  * Its children are events and method invocations.
  */
-private fun constructInterleavingGraph(scenario: ExecutionScenario, results: ExecutionResult?, interleavingEvents: List<InterleavingEvent>): InterleavingNode? {
+private fun constructInterleavingGraph(scenario: ExecutionScenario, results: ExecutionResult?, tracePoints: List<TracePoint>): InterleavingNode? {
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.threads) { iThread ->
-        interleavingEvents.mapIndexed { i, e -> Pair(i, e) }.lastOrNull { it.second.iThread == iThread }?.first ?: -1
+        tracePoints.mapIndexed { i, e -> Pair(i, e) }.lastOrNull { it.second.iThread == iThread }?.first ?: -1
     }
     // last actor that was handled for each thread
     val lastHandledActor = IntArray(scenario.threads) { -1 }
@@ -92,8 +92,8 @@ private fun constructInterleavingGraph(scenario: ExecutionScenario, results: Exe
     // all interleaving nodes in order corresponding to interleavingEvents
     val interleavingNodes = mutableListOf<InterleavingNode>()
 
-    for (eventId in interleavingEvents.indices) {
-        val event = interleavingEvents[eventId]
+    for (eventId in tracePoints.indices) {
+        val event = tracePoints[eventId]
         val iThread = event.iThread
         val actorId = event.actorId
         // add all actors that started since the last event
@@ -107,7 +107,7 @@ private fun constructInterleavingGraph(scenario: ExecutionScenario, results: Exe
         // add the event
         when (event) {
             // simpler code for FinishEvent, because it does not have actorId or callStackTrace
-            is FinishEvent -> interleavingNodes.allocate { InterleavingLeafEvent(iThread, it, event) }
+            is FinishThreadTracePoint -> interleavingNodes.allocate { InterleavingLeafEvent(iThread, it, event) }
             else -> {
                 var innerNode: InterleavingInnerNode = actorNodes[iThread][actorId]!!
                 for (call in event.callStackTrace) {
@@ -185,22 +185,14 @@ private sealed class InterleavingNode(protected val iThread: Int, last: Interlea
     abstract fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode?
 }
 
-private class InterleavingLeafEvent(iThread: Int, last: InterleavingNode?, private val event: InterleavingEvent, lastExecutedEvent: Boolean = false)
+private class InterleavingLeafEvent(iThread: Int, last: InterleavingNode?, private val event: TracePoint, lastExecutedEvent: Boolean = false)
     : InterleavingNode(iThread, last) {
-    override val lastState: String? = if (event is StateRepresentationEvent) event.stateRepresentation else null
+    override val lastState: String? = if (event is StateRepresentationTracePoint) event.stateRepresentation else null
     override val lastInternalEvent: InterleavingNode = this
     override val shouldBeExpanded: Boolean = lastExecutedEvent || event is SwitchEvent // switch events should be reported
 
     override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
-        val representation = INTERLEAVING_INDENTATION + when(event) {
-            is SwitchEvent -> {
-                val reason = event.reason.toString()
-                "switch" + if (reason.isEmpty()) "" else " (reason: $reason)"
-            }
-            is PassCodeLocationEvent -> event.tracePoint.toString()
-            is StateRepresentationEvent -> "STATE: " + event.stateRepresentation
-            is FinishEvent -> "thread is finished"
-        }
+        val representation = TRACE_INDENTATION + event.toString()
         interleaving.add(InterleavingEventRepresentation(iThread, representation))
         return next
     }
@@ -230,7 +222,7 @@ private class CallNode(iThread: Int, last: InterleavingNode?, private val call: 
 
     override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? =
         if (!shouldBeExpanded) {
-            interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "$call"))
+            interleaving.add(InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "$call"))
             lastState?.let { interleaving.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
@@ -258,14 +250,14 @@ private class ActorResultNode(iThread: Int, last: InterleavingNode?, private val
 
     override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
         if (result == Cancelled)
-            interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "CONTINUATION CANCELLED"))
+            interleaving.add(InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "CONTINUATION CANCELLED"))
         if (result != null)
-            interleaving.add(InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "result: $result"))
+            interleaving.add(InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "result: $result"))
         return next
     }
 }
 
 private fun stateEventRepresentation(iThread: Int, stateRepresentation: String) =
-    InterleavingEventRepresentation(iThread, INTERLEAVING_INDENTATION + "STATE: $stateRepresentation")
+    InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "STATE: $stateRepresentation")
 
 private class InterleavingEventRepresentation(val iThread: Int, val representation: String)

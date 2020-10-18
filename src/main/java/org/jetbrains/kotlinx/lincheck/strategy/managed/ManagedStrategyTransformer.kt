@@ -41,7 +41,7 @@ import kotlin.reflect.jvm.javaMethod
  */
 internal class ManagedStrategyTransformer(
     cv: ClassVisitor?,
-    private val codeLocationsConstructors: MutableList<(() -> TracePoint)>,
+    private val tracePointConstructors: MutableList<TracePointConstructor>,
     private val guarantees: List<ManagedStrategyGuarantee>,
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
@@ -341,16 +341,16 @@ internal class ManagedStrategyTransformer(
 
         private fun invokeBeforeSharedVariableRead(fieldName: String? = null, tracePointLocal: Int?) =
             invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, tracePointLocal, READ_TRACE_POINT_TYPE) {
-                ste -> ReadTracePoint(fieldName, ste)
+                iThread, actorId, callStackTrace, ste -> ReadTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
             }
 
         private fun invokeBeforeSharedVariableWrite(fieldName: String? = null, tracePointLocal: Int?) =
             invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, tracePointLocal, WRITE_TRACE_POINT_TYPE) {
-                ste -> WriteTracePoint(fieldName, ste)
+                iThread, actorId, callStackTrace, ste -> WriteTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
             }
 
         private fun invokeBeforeSharedVariableReadOrWrite(
-            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> TracePoint
+            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor
         ) {
             loadStrategy()
             loadCurrentThreadNumber()
@@ -578,7 +578,9 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeMethodCall(methodName: String, tracePointLocal: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { ste -> MethodCallTracePoint(methodName, ste) }
+            loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste ->
+                MethodCallTracePoint(iThread, actorId, callStackTrace, methodName, ste)
+            }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
         }
 
@@ -758,7 +760,7 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: monitor
-        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: (StackTraceElement) -> TracePoint, tracePointType: Type) {
+        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -893,7 +895,7 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: monitor
-        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: (StackTraceElement) -> TracePoint, tracePointType: Type) {
+        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -1187,7 +1189,7 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> code location, trace point
-        protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: (StackTraceElement) -> TracePoint) {
+        protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor) {
             // push the codeLocation on stack
             adapter.push(nextCodeLocation)
             nextCodeLocation++
@@ -1197,11 +1199,14 @@ internal class ManagedStrategyTransformer(
                 val className = className  // for capturing by value in lambda constructor
                 val fileName = fileName
                 val lineNumber = lineNumber
-                codeLocationsConstructors.add { codeLocationConstructor(StackTraceElement(className, methodName, fileName, lineNumber)) }
+                tracePointConstructors.add { iThread, actorId, callStackTrace ->
+                    val ste = StackTraceElement(className, methodName, fileName, lineNumber)
+                    codeLocationConstructor(iThread, actorId, callStackTrace, ste)
+                }
                 // invoke the constructor
                 loadStrategy()
-                adapter.push(codeLocationsConstructors.lastIndex)
-                adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CREATE_CODE_POINT_METHOD)
+                adapter.push(tracePointConstructors.lastIndex)
+                adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CREATE_TRACE_POINT_METHOD)
                 adapter.checkCast(tracePointType)
                 // the created trace point is stored to tracePointLocal
                 if (tracePointLocal != null) adapter.copyLocal(tracePointLocal)
@@ -1304,7 +1309,7 @@ internal class ManagedStrategyTransformer(
         private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
         private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
         private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
-        private val CREATE_CODE_POINT_METHOD = Method.getMethod(ManagedStrategy::createInterleavingPoint.javaMethod)
+        private val CREATE_TRACE_POINT_METHOD = Method.getMethod(ManagedStrategy::createTracePoint.javaMethod)
         private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::newLocalObject.javaMethod)
         private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::deleteLocalObject.javaMethod)
         private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::isLocalObject.javaMethod)

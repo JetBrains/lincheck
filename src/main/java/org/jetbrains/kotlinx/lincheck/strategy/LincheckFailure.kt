@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
-    val trace: List<InterleavingEvent>?
+    val trace: List<TracePoint>?
 ) {
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
@@ -36,35 +36,35 @@ sealed class LincheckFailure(
 internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     val results: ExecutionResult,
-    trace: List<InterleavingEvent>? = null
+    trace: List<TracePoint>? = null
 ) : LincheckFailure(scenario, trace)
 
 internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
     val threadDump: Map<Thread, Array<StackTraceElement>>,
-    trace: List<InterleavingEvent>? = null
+    trace: List<TracePoint>? = null
 ) : LincheckFailure(scenario, trace)
 
 internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     val exception: Throwable,
-    trace: List<InterleavingEvent>? = null
+    trace: List<TracePoint>? = null
 ) : LincheckFailure(scenario, trace)
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
     val functionName: String,
     val exception: Throwable,
-    trace: List<InterleavingEvent>? = null
+    trace: List<TracePoint>? = null
 ) : LincheckFailure(scenario, trace)
 
 internal class ObstructionFreedomViolationFailure(
     scenario: ExecutionScenario,
     val reason: String,
-    trace: List<InterleavingEvent>? = null
+    trace: List<TracePoint>? = null
 ) : LincheckFailure(scenario, trace)
 
-internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: List<InterleavingEvent>? = null) = when (this) {
+internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: List<TracePoint>? = null) = when (this) {
     is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, trace)
