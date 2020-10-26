@@ -40,12 +40,6 @@ abstract class Strategy protected constructor(
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    /**
-     * Returns remapper that is used for transformation.
-     * null if there is no need in renamings.
-     */
-    open fun createRemapper(): Remapper? = null
-
     abstract fun run(): LincheckFailure?
 
     /**

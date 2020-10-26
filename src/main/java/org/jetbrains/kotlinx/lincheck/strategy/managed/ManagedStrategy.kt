@@ -126,8 +126,6 @@ abstract class ManagedStrategy(
 
     override fun needsTransformation(): Boolean = true
 
-    override fun createRemapper(): Remapper? = JavaUtilRemapper()
-
     override fun run(): LincheckFailure? = runner.use { runImpl() }
 
     // == STRATEGY INTERFACE METHODS ==
