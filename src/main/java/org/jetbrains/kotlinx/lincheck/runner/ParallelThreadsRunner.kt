@@ -179,7 +179,7 @@ internal open class ParallelThreadsRunner(
         // wait for the final result of the method call otherwise.
         val completion = completions[iThread][actorId]
         var i = 1
-        while (!isCoroutineResumed(iThread, actorId) || !strategy.canResumeCoroutine(iThread)) {
+        while (!isCoroutineResumed(iThread, actorId)) {
             // Check whether the scenario is completed and the current suspended operation cannot be resumed.
             if (completedOrSuspendedThreads.get() == scenario.threads) {
                 suspensionPointResults[iThread] = NoResult

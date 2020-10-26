@@ -53,6 +53,8 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.parallelExecution.size
     // runner for scenario invocations
     protected var runner: Runner
+    // provides Transformer with gradually increasing disjoint code location ids
+    private val codeLocationIdProvider = IdProvider()
 
     // == EXECUTION CONTROL FIELDS ==
 
@@ -91,10 +93,12 @@ abstract class ManagedStrategy(
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
     // an increasing id all method invocations
     private var methodIdentifier = 0
-    // stack with info about suspended method invocations for each thread
+    // stack with info about suspended method invocations for each thread.
+    // upon suspension a method identifier is added to the stack,
+    // so that the same identifier is used after coroutine resuming.
+    // this way trace points before suspension and after resuming correspond
+    // to the same method invocation in the trace
     private val suspendedMethodStack = Array(nThreads) { mutableListOf<Int>() }
-    // store previous created transformer to make code location ids different for different classes
-    private var previousTransformer: ManagedStrategyTransformer? = null
 
     init {
         runner = createRunner()
@@ -117,8 +121,8 @@ abstract class ManagedStrategy(
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
-        previousTransformer = previousTransformer
-    ).also { previousTransformer = it }
+        codeLocationIdProvider = codeLocationIdProvider
+    )
 
     override fun needsTransformation(): Boolean = true
 
@@ -210,9 +214,8 @@ abstract class ManagedStrategy(
         runner.initialize()
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        // cannot check whether the results are exactly the same because of re-transformation
-        // so just check that types are the same
-        check(sameResultTypes) {
+        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendln("Reporting scenario without execution trace.")
@@ -843,6 +846,15 @@ private class MonitorTracker(nThreads: Int) {
      * and the number of thread ([iThread]) that holds the monitor.
      */
     private class MonitorAcquiringInfo(val iThread: Int, var timesAcquired: Int)
+}
+
+/**
+ * Counter that helps to assign gradually increasing disjoint ids to code locations
+ */
+internal class IdProvider {
+    var previousId = -1 // the first id will be zero
+        private set
+    fun getNewId() = ++previousId
 }
 
 /**

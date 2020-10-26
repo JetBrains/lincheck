@@ -49,13 +49,6 @@ abstract class Strategy protected constructor(
     abstract fun run(): LincheckFailure?
 
     /**
-     * Check if Strategy allows to resume the coroutine.
-     */
-    open fun canResumeCoroutine(iThread: Int): Boolean {
-        return true
-    }
-
-    /**
      * Is invoked before each actor execution.
      */
     open fun onActorStart(iThread: Int) {}

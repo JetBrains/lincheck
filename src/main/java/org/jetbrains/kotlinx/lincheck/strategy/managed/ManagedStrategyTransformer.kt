@@ -46,12 +46,11 @@ internal class ManagedStrategyTransformer(
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
-    previousTransformer: ManagedStrategyTransformer?
+    private val codeLocationIdProvider: IdProvider
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
-    private var nextCodeLocation: Int = previousTransformer?.nextCodeLocation ?: 0
 
     override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name
@@ -410,7 +409,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeAtomicMethodCall() {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(nextCodeLocation - 1) // re-use previous code location
+            adapter.push(codeLocationIdProvider.previousId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
@@ -454,7 +453,7 @@ internal class ManagedStrategyTransformer(
             if (!constructTraceRepresentation) {
                 // just increase code location id to keep ids consistent with the ones
                 // when `constructTraceRepresentation` is disabled
-                nextCodeLocation++
+                codeLocationIdProvider.getNewId()
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
@@ -1191,8 +1190,7 @@ internal class ManagedStrategyTransformer(
         // STACK: (empty) -> code location, trace point
         protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor) {
             // push the codeLocation on stack
-            adapter.push(nextCodeLocation)
-            nextCodeLocation++
+            adapter.push(codeLocationIdProvider.getNewId())
             // push the corresponding trace point
             if (constructTraceRepresentation) {
                 // add constructor for the code location

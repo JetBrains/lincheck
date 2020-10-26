@@ -51,7 +51,7 @@ class StressStrategy(
     }
 
     override fun run(): LincheckFailure? {
-        try {
+        runner.use {
             // Run invocations
             for (invocation in 0 until invocations) {
                 when (val ir = runner.run()) {
@@ -63,8 +63,6 @@ class StressStrategy(
                 }
             }
             return null
-        } finally {
-            runner.close()
         }
     }
 }
