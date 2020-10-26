@@ -269,6 +269,6 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
  */
 internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
     when {
-        classTransformers.any { it is TransformationClassLoader } -> ManagedStrategyTransformer.JavaUtilRemapper()
+        classTransformers.any { it is ManagedStrategyTransformer } -> ManagedStrategyTransformer.JavaUtilRemapper()
         else -> null
     }
