@@ -107,8 +107,9 @@ internal class ManagedStrategyTransformer(
      */
     internal class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            // remap `java.util` package
-            if (name.startsWith("java/util/")) {
+            if (name.startsWith("java/util/") && name != "java/util/ServiceLoader" &&
+                !ClassLoader.getSystemClassLoader().loadClass(name.toClassName()).isInterface
+            ) {
                 val normalizedName = name.toClassName()
                 // transformation of exceptions causes a lot of trouble with catching expected exceptions
                 val isException = Throwable::class.java.isAssignableFrom(Class.forName(normalizedName))

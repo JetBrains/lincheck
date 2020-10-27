@@ -79,17 +79,19 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
         if (ManagedStrategyTransformerKt.isImpossibleToTransformApiClass(className)) return true;
         return className.startsWith("sun.") ||
-            className.startsWith("java.") ||
-            className.startsWith("jdk.internal.") ||
-            (className.startsWith("kotlin.") &&
-                !className.startsWith("kotlin.collections.") && // transform kotlin collections
-                !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) && // transform kotlin iterator classes
-                !className.startsWith("kotlin.ranges")) || // transform kotlin ranges
-            (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                !className.equals(ManagedStrategyStateHolder.class.getName())) ||
-            className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
-            className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
+               className.startsWith("java.") ||
+               className.startsWith("jdk.internal.") ||
+               (className.startsWith("kotlin.") &&
+                   !className.startsWith("kotlin.collections.") && // transform kotlin collections
+                   !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) && // transform kotlin iterator classes
+                   !className.startsWith("kotlin.ranges.") // transform kotlin ranges
+               ) ||
+               (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+                   !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
+                   !className.equals(ManagedStrategyStateHolder.class.getName())
+               ) ||
+               className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
+               className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
     }
 
     /**

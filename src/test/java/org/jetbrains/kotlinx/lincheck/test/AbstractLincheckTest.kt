@@ -29,12 +29,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import kotlin.reflect.*
 
-private const val ITERATIONS = 30
-private const val ACTORS_BEFORE = 2
-private const val ACTORS_PER_THREAD = 4
-private const val ACTORS_AFTER = 2
-private const val TIMEOUT = 100_000L
-
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) : VerifierState() {
@@ -56,25 +50,27 @@ abstract class AbstractLincheckTest(
 
     @Test(timeout = TIMEOUT)
     fun testWithStressStrategy(): Unit = StressOptions().run {
-        iterations(ITERATIONS)
+        commonConfiguration()
         invocationsPerIteration(10_000)
-        actorsBefore(ACTORS_BEFORE)
-        actorsPerThread(ACTORS_PER_THREAD)
-        actorsAfter(ACTORS_AFTER)
-        minimizeFailedScenario(false)
-        customize()
         runInternalTest()
     }
 
     @Test(timeout = TIMEOUT)
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        iterations(ITERATIONS)
+        commonConfiguration()
         invocationsPerIteration(5_000)
-        actorsBefore(ACTORS_BEFORE)
-        actorsPerThread(ACTORS_PER_THREAD)
-        actorsAfter(ACTORS_AFTER)
-        minimizeFailedScenario(false)
-        customize()
         runInternalTest()
     }
+
+    private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
+        iterations(30)
+        actorsBefore(2)
+        threads(3)
+        actorsPerThread(2)
+        actorsAfter(2)
+        minimizeFailedScenario(false)
+        customize()
+    }
 }
+
+private const val TIMEOUT = 100_000L

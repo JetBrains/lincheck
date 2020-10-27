@@ -53,7 +53,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
      * An adaptive active waiting strategy is used for the case when
      * the number of threads is greater than the number of cores.
      * This flag is set to `true` when any of the threads was parked
-     * during the previous [submitAndWait] call.
+     * during the previous [submitAndAwait] call.
      */
     @Volatile
     private var wasParked: Boolean = false
