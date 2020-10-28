@@ -25,10 +25,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
-import org.objectweb.asm.commons.*
 import java.lang.reflect.Method
 import java.util.*
 import kotlin.collections.set
@@ -149,10 +147,10 @@ abstract class ManagedStrategy(
     protected abstract fun shouldSwitch(iThread: Int): Boolean
 
     /**
-     * Choose a thread to switch among [switchableThreads] variants.
-     * @return id the chosen variant
+     * Choose a thread to switch from thread [iThread].
+     * @return id the chosen thread
      */
-    protected abstract fun chooseThread(switchableThreads: Int): Int
+    protected abstract fun chooseThread(iThread: Int): Int
 
     /**
      * Returns all data to the initial state.
@@ -321,7 +319,7 @@ abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e. is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
+    protected fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
         !monitorTracker.isWaiting(iThread) &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
@@ -350,7 +348,7 @@ abstract class ManagedStrategy(
 
     private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
         onNewSwitch(iThread, mustSwitch)
-        val switchableThreads = threadsToSwitch(iThread)
+        val switchableThreads = switchableThreads(iThread)
         if (switchableThreads.isEmpty()) {
             if (mustSwitch && !finished.all { it }) {
                 // all threads are suspended
@@ -366,14 +364,14 @@ abstract class ManagedStrategy(
             }
             return // ignore switch, because there is no one to switch to
         }
-        val nextThreadNumber = chooseThread(switchableThreads.size)
-        currentThread = switchableThreads[nextThreadNumber]
+        val nextThreadId = chooseThread(iThread)
+        currentThread = nextThreadId
     }
 
     /**
-     * Threads to which a thread [iThread] can switch
+     * Threads to which an execution can be switched from thread [iThread].
      */
-    protected fun threadsToSwitch(iThread: Int) = (0 until nThreads).filter { it != iThread && isActive(it) }
+    protected fun switchableThreads(iThread: Int) = (0 until nThreads).filter { it != iThread && isActive(it) }
 
     private fun isTestThread(iThread: Int) = iThread < nThreads
 
