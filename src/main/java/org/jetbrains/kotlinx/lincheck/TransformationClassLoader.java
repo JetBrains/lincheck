@@ -91,6 +91,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                    !className.equals(ManagedStrategyStateHolder.class.getName())
                ) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
+               className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
     }
 

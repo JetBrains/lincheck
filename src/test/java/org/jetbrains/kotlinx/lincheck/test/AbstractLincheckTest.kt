@@ -51,14 +51,14 @@ abstract class AbstractLincheckTest(
     @Test(timeout = TIMEOUT)
     fun testWithStressStrategy(): Unit = StressOptions().run {
         commonConfiguration()
-        invocationsPerIteration(10_000)
+        invocationsPerIteration(5_000)
         runInternalTest()
     }
 
     @Test(timeout = TIMEOUT)
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
         commonConfiguration()
-        invocationsPerIteration(5_000)
+        invocationsPerIteration(1_000)
         runInternalTest()
     }
 

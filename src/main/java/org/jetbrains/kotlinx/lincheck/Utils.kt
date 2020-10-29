@@ -178,7 +178,20 @@ internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (t
     else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
-fun <T> CancellableContinuation<T>.cancelByLincheck() = cancel(cancellationByLincheckException)
+internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
+    var exception: Throwable? = null
+
+    override fun handleException(context: CoroutineContext, exception: Throwable) {
+        this.exception = exception
+    }
+}
+fun <T> CancellableContinuation<T>.cancelByLincheck(): Boolean {
+    val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
+    exceptionHandler.exception = null
+    val cancelled = cancel(cancellationByLincheckException)
+    exceptionHandler.exception?.let { throw it }
+    return cancelled
+}
 
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].

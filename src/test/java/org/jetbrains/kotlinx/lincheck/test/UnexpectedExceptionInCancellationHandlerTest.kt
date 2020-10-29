@@ -27,15 +27,17 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 
 class UnexpectedExceptionInCancellationHandlerTest: AbstractLincheckTest(UnexpectedExceptionFailure::class) {
-    @Operation
+    @Operation(cancellableOnSuspension = true)
     suspend fun foo() {
-        suspendCancellableCoroutine<Unit> {
-            throw AssertionError("This exception is unexpected")
+        suspendCancellableCoroutine<Unit> { cont ->
+            cont.invokeOnCancellation {
+                throw AssertionError("This exception is unexpected")
+            }
         }
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
+        iterations(100)
         actorsBefore(0)
         actorsAfter(0)
         threads(1)

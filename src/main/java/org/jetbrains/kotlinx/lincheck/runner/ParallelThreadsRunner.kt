@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
@@ -86,8 +87,7 @@ internal open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override val context: CoroutineContext
-            get() = ParallelThreadRunnerInterceptor(resWithCont)
+        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler()
 
         override fun resumeWith(result: kotlin.Result<Any?>) {
             // decrement completed or suspended threads only if the operation was not cancelled and
@@ -111,7 +111,7 @@ internal open class ParallelThreadsRunner(
         private var resWithCont: SuspensionPointResultWithContinuation
     ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
         override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
-            return Continuation(EmptyCoroutineContext) { result ->
+            return Continuation(StoreExceptionHandler()) { result ->
                 // decrement completed or suspended threads only if the operation was not cancelled
                 if (!result.cancelledByLincheck()) {
                     completedOrSuspendedThreads.decrementAndGet()
