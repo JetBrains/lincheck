@@ -107,8 +107,12 @@ internal class ManagedStrategyTransformer(
      */
     internal class JavaUtilRemapper : Remapper() {
         override fun map(name: String): String {
-            if (name.startsWith("java/util/") && name != "java/util/ServiceLoader" &&
-                !ClassLoader.getSystemClassLoader().loadClass(name.toClassName()).isInterface
+            val originalClass = ClassLoader.getSystemClassLoader().loadClass(name.toClassName())
+            if (name.startsWith("java/util/") &&
+                name != "java/util/ServiceLoader" &&
+                name != "java/util/concurrent/TimeUnit" &&
+                name != "java/util/concurrent/ThreadLocalRandom" &&
+                !originalClass.isInterface
             ) {
                 val normalizedName = name.toClassName()
                 // transformation of exceptions causes a lot of trouble with catching expected exceptions
@@ -119,9 +123,6 @@ internal class ManagedStrategyTransformer(
                 if (!isImpossibleToTransformPrimitive && !isException && !inFunctionPackage)
                     return TRANSFORMED_PACKAGE_INTERNAL_NAME + name
             }
-            // remap java.lang.Iterable, because its only method returns an object from java.util package
-            // that will not work if not transformed
-            if (name == "java/lang/Iterable") return TRANSFORMED_PACKAGE_INTERNAL_NAME + name;
             return name
         }
     }
