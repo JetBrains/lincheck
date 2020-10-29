@@ -189,7 +189,9 @@ fun <T> CancellableContinuation<T>.cancelByLincheck(): Boolean {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
     val cancelled = cancel(cancellationByLincheckException)
-    exceptionHandler.exception?.let { throw it }
+    exceptionHandler.exception?.let {
+        throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
+    }
     return cancelled
 }
 
