@@ -51,7 +51,7 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
 
     private val completions = List(scenario.threads) { t ->
         List(scenario.parallelExecution[t].size) { Completion(t) }
@@ -298,7 +298,7 @@ internal open class ParallelThreadsRunner(
 
     override fun close() {
         super.close()
-        executor.shutdown()
+        executor.close()
     }
 }
 

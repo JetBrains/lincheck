@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.kotlinx.lincheck.execution.*
+import java.io.*
 import java.lang.*
 import java.util.concurrent.*
 import java.util.concurrent.locks.*
@@ -35,7 +36,9 @@ import kotlin.math.*
  * is that this executor keeps the re-using threads "hot" (active) as long as
  * possible, so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
+internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
+    // Threads used in this runner.
+    private val threads: List<TestThread>
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
@@ -67,8 +70,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private var wasParkedBalance: Int = 0
 
     init {
-        repeat(nThreads) { iThread ->
-            TestThread(iThread, runnerHash, testThreadRunnable(iThread)).start()
+        threads = (0 until nThreads).map { iThread ->
+            TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
         }
     }
 
@@ -85,14 +88,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         submitTasks(tasks)
         await(timeoutMs)
         updateAdaptiveSpinCount()
-    }
-
-    /**
-     * Finishes all the threads that are used in this executor.
-     */
-    fun shutdown() {
-        // submit the shutdown task.
-        submitTasks(Array(nThreads) { SHUTDOWN })
     }
 
     private fun submitTasks(tasks: Array<out Any>) {
@@ -205,6 +200,12 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         }
         wasParked = true
         return null
+    }
+
+    override fun close() {
+        // submit the shutdown task.
+        submitTasks(Array(nThreads) { SHUTDOWN })
+        for (t in threads) t.stop()
     }
 
     class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {

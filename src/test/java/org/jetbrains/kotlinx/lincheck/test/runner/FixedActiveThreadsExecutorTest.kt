@@ -27,8 +27,7 @@ import java.util.concurrent.*
 
 class FixedActiveThreadsExecutorTest {
     @Test
-    fun testSubmit() {
-        val executor = FixedActiveThreadsExecutor(2, 0)
+    fun testSubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
         val executed = arrayOf(false, false)
         val tasks = Array<TestThreadExecution>(2) {
             object : TestThreadExecution() {
@@ -39,12 +38,10 @@ class FixedActiveThreadsExecutorTest {
         }
         executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
         check(executed.all { it })
-        executor.shutdown()
     }
 
     @Test
-    fun testResubmit() {
-        val executor = FixedActiveThreadsExecutor(2, 0)
+    fun testResubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
         val executed = arrayOf(false, false)
         val tasks = Array<TestThreadExecution>(2) {
             object : TestThreadExecution() {
@@ -57,12 +54,10 @@ class FixedActiveThreadsExecutorTest {
         executed.fill(false)
         executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
         check(executed.all { it })
-        executor.shutdown()
     }
 
     @Test(timeout = 100_000)
-    fun testSubmitTimeout() {
-        val executor = FixedActiveThreadsExecutor(2, 0)
+    fun testSubmitTimeout() = FixedActiveThreadsExecutor(2, 0).use { executor ->
         val tasks = Array<TestThreadExecution>(2) { iThread ->
             object : TestThreadExecution() {
                 override fun run() {
@@ -77,15 +72,13 @@ class FixedActiveThreadsExecutorTest {
             return // TimeoutException is expected
         }
         check(false) { "TimeoutException was expected" }
-        executor.shutdown()
     }
 
     @Test(timeout = 100_000)
     fun testShutdown() {
         // executor with unique runner hash
         val uniqueRunnerHash = 1337
-        val executor = FixedActiveThreadsExecutor(2, uniqueRunnerHash)
-        executor.shutdown()
+        FixedActiveThreadsExecutor(2, uniqueRunnerHash).close()
         while (true) {
             // check that all test threads are finished
             if (Thread.getAllStackTraces().keys.all { it !is FixedActiveThreadsExecutor.TestThread || it.runnerHash != uniqueRunnerHash })

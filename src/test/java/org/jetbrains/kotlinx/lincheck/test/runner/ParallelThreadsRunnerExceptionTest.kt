@@ -109,13 +109,15 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner = ParallelThreadsRunner(
+        ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
-        )
-        runner.initialize()
-        val results = (runner.run() as CompletedInvocationResult).results
-        assertTrue(results.equalsIgnoringClocks(expectedResults))
+        ).use { runner ->
+            runner.initialize()
+            val results = (runner.run() as CompletedInvocationResult).results
+            assertTrue(results.equalsIgnoringClocks(expectedResults))
+        }
+
     }
 
     @Test
@@ -132,13 +134,14 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner = ParallelThreadsRunner(
+        ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
-        )
-        runner.initialize()
-        val results = (runner.run() as CompletedInvocationResult).results
-        assertTrue(results.equalsIgnoringClocks(expectedResults))
+        ).use { runner ->
+            runner.initialize()
+            val results = (runner.run() as CompletedInvocationResult).results
+            assertTrue(results.equalsIgnoringClocks(expectedResults))
+        }
     }
 
     @Test
@@ -150,13 +153,14 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        val runner = ParallelThreadsRunner(
+        ParallelThreadsRunner(
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
-        )
-        runner.initialize()
-        val results = (runner.run() as CompletedInvocationResult).results
-        assertTrue(results.equalsIgnoringClocks(expectedResults))
+        ).use { runner ->
+            runner.initialize()
+            val results = (runner.run() as CompletedInvocationResult).results
+            assertTrue(results.equalsIgnoringClocks(expectedResults))
+        }
     }
 }
 

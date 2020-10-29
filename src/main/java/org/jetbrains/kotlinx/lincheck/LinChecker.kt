@@ -116,10 +116,14 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, verifier: Verifier) =
         if (isValid) run(testCfg, verifier) else null
 
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? {
-        val strategy = testCfg.createStrategy(testClass, this, testStructure.validationFunctions, testStructure.stateRepresentation, verifier)
-        return strategy.run()
-    }
+    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
+        testCfg.createStrategy(
+            testClass = testClass,
+            scenario = this,
+            validationFunctions = testStructure.validationFunctions,
+            stateRepresentationMethod = testStructure.stateRepresentation,
+            verifier = verifier
+        ).run()
 
     private fun ExecutionScenario.copy() = ExecutionScenario(
         ArrayList(initExecution),

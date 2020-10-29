@@ -47,7 +47,12 @@ class StressStrategy(
             timeoutMs = testCfg.timeoutMs,
             useClocks = UseClocks.RANDOM
         )
-        runner.initialize()
+        try {
+            runner.initialize()
+        } catch (t: Throwable) {
+            runner.close()
+            throw t
+        }
     }
 
     override fun run(): LincheckFailure? {

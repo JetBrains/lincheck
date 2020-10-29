@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
+import java.io.*
 import java.lang.reflect.Method
 import java.util.*
 import kotlin.collections.set
@@ -46,11 +47,11 @@ abstract class ManagedStrategy(
     private val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
-) : Strategy(scenario) {
+) : Strategy(scenario), Closeable {
     // the number of parallel threads
     protected val nThreads: Int = scenario.parallelExecution.size
     // runner for scenario invocations
-    protected var runner: Runner
+    private var runner: Runner
     // provides Transformer with gradually increasing disjoint code location ids
     private val codeLocationIdProvider = IdProvider()
 
@@ -101,8 +102,13 @@ abstract class ManagedStrategy(
     init {
         runner = createRunner()
         // Managed state should be initialized before test class transformation
-        initializeManagedState()
-        runner.initialize()
+        try {
+            initializeManagedState()
+            runner.initialize()
+        } catch (t: Throwable) {
+            runner.close()
+            throw t
+        }
     }
 
     private fun createRunner(): Runner =
@@ -124,7 +130,7 @@ abstract class ManagedStrategy(
 
     override fun needsTransformation(): Boolean = true
 
-    override fun run(): LincheckFailure? = runner.use { runImpl() }
+    override fun run(): LincheckFailure? = runImpl().also { close() }
 
     // == STRATEGY INTERFACE METHODS ==
 
@@ -203,8 +209,9 @@ abstract class ManagedStrategy(
         }
         // re-transform class constructing trace
         collectTrace = true
-        // create new runner, because we want a new TransformationClassLoader
-        // with Transformer that inserts strategy method invocations for trace collection
+        // Replace the current runner with a new one in order to use a new
+        // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
+        runner.close()
         runner = createRunner()
         initializeManagedState()
         runner.initialize()
@@ -247,6 +254,10 @@ abstract class ManagedStrategy(
             // forcibly finish execution by throwing an exception.
             throw ForcibleExecutionFinishException
         }
+    }
+
+    override fun close() {
+        runner.close()
     }
 
     // == EXECUTION CONTROL METHODS ==
