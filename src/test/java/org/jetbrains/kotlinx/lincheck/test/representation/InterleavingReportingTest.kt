@@ -31,7 +31,7 @@ import org.junit.*
  * This test check basic interleaving reporting features,
  * including reporting of lock acquiring/releasing, reads/writes with parameter/result capturing.
  */
-class InterleavingReportingTest : VerifierState() {
+class InterleavingReportingTest {
     @Volatile
     var a = 0
     @Volatile
@@ -79,6 +79,7 @@ class InterleavingReportingTest : VerifierState() {
             .actorsAfter(0)
             .actorsBefore(0)
             .actorsPerThread(1)
+            .requireStateEquivalenceImplCheck(false)
             .checkImpl(this::class.java)
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
@@ -92,6 +93,4 @@ class InterleavingReportingTest : VerifierState() {
         check("MONITORENTER at InterleavingReportingTest.resetFlag" in log)
         check("MONITOREXIT at InterleavingReportingTest.resetFlag" in log)
     }
-
-    override fun extractState() = "$a $b $canEnterForbiddenSection"
 }

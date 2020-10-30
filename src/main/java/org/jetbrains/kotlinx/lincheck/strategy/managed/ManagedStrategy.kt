@@ -115,7 +115,7 @@ abstract class ManagedStrategy(
         ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
     private fun initializeManagedState() {
-        ManagedStrategyStateHolder.setState(runner.classLoader, this)
+        ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
     }
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
@@ -172,7 +172,7 @@ abstract class ManagedStrategy(
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
         suspendedMethodStack.forEach { it.clear() }
-        ManagedStrategyStateHolder.resetState(runner.classLoader)
+        ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
     }
 
     // == BASIC STRATEGY METHODS ==

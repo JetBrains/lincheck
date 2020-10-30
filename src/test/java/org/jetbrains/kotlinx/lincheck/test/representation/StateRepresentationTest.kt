@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.*
 /**
  * This test checks that there are states in reported interleavings for model checking strategy.
  */
-open class ModelCheckingStateReportingTest : VerifierState() {
+open class ModelCheckingStateReportingTest {
     @Volatile
     private var counter = AtomicInteger(0)
 
@@ -46,8 +46,6 @@ open class ModelCheckingStateReportingTest : VerifierState() {
         counter.incrementAndGet()
         return counter.getAndIncrement()
     }
-
-    override fun extractState(): Any = counter.get()
 
     @StateRepresentation
     fun stateRepresentation() = counter.toString()
@@ -58,6 +56,7 @@ open class ModelCheckingStateReportingTest : VerifierState() {
                 .actorsPerThread(1)
                 .actorsBefore(0)
                 .actorsAfter(0)
+                .requireStateEquivalenceImplCheck(false)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()

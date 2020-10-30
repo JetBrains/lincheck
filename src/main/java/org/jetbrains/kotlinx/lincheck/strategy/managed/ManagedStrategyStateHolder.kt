@@ -41,11 +41,11 @@ internal object ManagedStrategyStateHolder {
     /**
      * Sets the strategy and its initial state for the specified class loader.
      */
-    fun setState(loader: ClassLoader, strategy: ManagedStrategy?) {
+    fun setState(loader: ClassLoader, strategy: ManagedStrategy?, testClass: Class<out Any>) {
         try {
             val clazz = loader.loadClass(ManagedStrategyStateHolder::class.java.canonicalName)
             clazz.getField("strategy")[null] = strategy
-            clazz.getField("objectManager")[null] = ObjectManager()
+            clazz.getField("objectManager")[null] = ObjectManager(testClass)
             // load transformed java.util.Random class
             val randomClass = loader.loadClass(TransformationClassLoader.TRANSFORMED_PACKAGE_NAME + Random::class.java.canonicalName)
             clazz.getField("random")[null] = randomClass.getConstructor().newInstance()
@@ -57,19 +57,19 @@ internal object ManagedStrategyStateHolder {
     /**
      * Prepare the state for the specified class loader for the next invocation.
      */
-    fun resetState(loader: ClassLoader) {
+    fun resetState(loader: ClassLoader, testClass: Class<out Any>) {
         try {
             val clazz = loader.loadClass(ManagedStrategyStateHolder::class.java.canonicalName)
-            clazz.getMethod("resetStateImpl").invoke(null)
+            clazz.getMethod("resetStateImpl", Class::class.java).invoke(null, testClass)
         } catch (e: Exception) {
             throw IllegalStateException("Cannot set state to ManagedStateHolder", e)
         }
     }
 
     @JvmStatic
-    fun resetStateImpl() {
+    fun resetStateImpl(testClass: Class<out Any>) {
         random!!.setSeed(INITIAL_SEED)
-        objectManager = ObjectManager()
+        objectManager = ObjectManager(testClass)
     }
 }
 
