@@ -685,7 +685,9 @@ abstract class ManagedStrategy(
             enterIgnoredSection(iThread)
             val stateRepresentation = runner.constructStateRepresentation()!!
             leaveIgnoredSection(iThread)
-            _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace[iThread].toList())
+            // use call stack trace of the previous trace point
+            val callStackTrace = _trace.last().callStackTrace.toList()
+            _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace)
         }
     }
 }

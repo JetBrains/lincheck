@@ -123,6 +123,16 @@
                             <variant>BOTH</variant>
                         </configuration>
                     </execution>
+                    <execution>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>transform</goal>
+                        </goals>
+                        <configuration>
+                            <input>${project.build.directory}/classes-pre-atomicfu</input>
+                            <variant>BOTH</variant>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>

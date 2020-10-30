@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
+import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.appendFailure
@@ -31,21 +32,22 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.IllegalStateException
 import java.lang.StringBuilder
+import java.util.concurrent.atomic.*
 
 /**
  * This test checks that there are states in reported interleavings for model checking strategy.
  */
 open class ModelCheckingStateReportingTest : VerifierState() {
     @Volatile
-    private var counter = 0
+    private var counter = AtomicInteger(0)
 
     @Operation
     fun operation(): Int {
-        ++counter
-        return ++counter
+        counter.incrementAndGet()
+        return counter.getAndIncrement()
     }
 
-    override fun extractState(): Any = counter
+    override fun extractState(): Any = counter.get()
 
     @StateRepresentation
     fun stateRepresentation() = counter.toString()
@@ -61,7 +63,8 @@ open class ModelCheckingStateReportingTest : VerifierState() {
         val log = StringBuilder().appendFailure(failure).toString()
         check("STATE: 0" in log)
         check("STATE: 1" in log)
-        check("STATE: 2" in log)
+        check("STATE: 4" in log)
+        check(log.split("incrementAndGet(): 1").size - 1 == 1) { "A method call is logged twice in the trace" }
     }
 }
 
