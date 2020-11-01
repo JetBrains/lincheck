@@ -1562,6 +1562,11 @@ private fun findAllTransformationProblemsIn(packageName: String) {
             if (it.causeTransformationProblem())
                 println("CONFLICT: ${clazz.name} is not transformed, but its subclass ${it.name} is")
         }
+        val publicFields = clazz.fields
+        for (field in publicFields) {
+            if (field.type.causeTransformationProblem())
+                println("CONFLICT: ${clazz.name} is not transformed, but its public field of type `${field.type.name}` is")
+        }
         val publicMethods = clazz.methods
         for (method in publicMethods) {
             if (method.returnType.causeTransformationProblem())
