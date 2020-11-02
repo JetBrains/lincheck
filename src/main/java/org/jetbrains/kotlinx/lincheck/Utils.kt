@@ -265,7 +265,7 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
     override fun resolveClass(desc: ObjectStreamClass): Class<*> {
         // add `TRANSFORMED_PACKAGE_NAME` prefix in case of TransformationClassLoader and remove otherwise
         val className = if (loader is TransformationClassLoader) loader.remapClassName(desc.name)
-                        else desc.name.removePrefix(TransformationClassLoader.TRANSFORMED_PACKAGE_NAME)
+                        else desc.name.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME)
         return Class.forName(className, true, loader)
     }
 }

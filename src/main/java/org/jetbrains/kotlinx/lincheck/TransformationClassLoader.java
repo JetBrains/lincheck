@@ -37,6 +37,7 @@ import java.util.function.*;
 import java.util.stream.Collectors;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
 import static org.objectweb.asm.Opcodes.*;
 
 /**
@@ -44,14 +45,14 @@ import static org.objectweb.asm.Opcodes.*;
  * class transformations and hines them from others.
  */
 public class TransformationClassLoader extends ExecutionClassLoader {
+    public static final String REMAPPED_PACKAGE_INTERNAL_NAME = "org/jetbrains/kotlinx/lincheck/tran$f*rmed/";
+    public static final String REMAPPED_PACKAGE_CANONICAL_NAME = getCanonicalClassName(REMAPPED_PACKAGE_INTERNAL_NAME);
+    public static final int ASM_API = ASM9;
+
     private final List<Function<ClassVisitor, ClassVisitor>> classTransformers;
     // Cache for classloading and frames computing during the transformation.
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
     private final Remapper remapper;
-
-    public static final String TRANSFORMED_PACKAGE_INTERNAL_NAME = "org/jetbrains/kotlinx/lincheck/tran$f*rmed/";
-    public static final String TRANSFORMED_PACKAGE_NAME = TRANSFORMED_PACKAGE_INTERNAL_NAME.replace('/', '.');
-    public static final int ASM_API = ASM9;
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         classTransformers = new ArrayList<>();
@@ -76,7 +77,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * Returns `true` if the specified class should not be transformed.
      */
     private static boolean doNotTransform(String className) {
-        if (className.startsWith(TRANSFORMED_PACKAGE_NAME)) return false;
+        if (className.startsWith(REMAPPED_PACKAGE_CANONICAL_NAME)) return false;
         if (ManagedStrategyTransformerKt.isImpossibleToTransformApiClass(className)) return true;
         return className.startsWith("sun.") ||
                className.startsWith("java.") ||
@@ -156,11 +157,12 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         cr.accept(infoGetter, 0);
         ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), remapper);
         ClassVisitor cv = new CheckClassAdapter(cw, false); // For debug. Always used by default
-        // Uncomment for debug. Prints transformed byte-code for a certain class.
-        /*
-        if (className.equals(YourClass.class.getCanonicalName()))
-            cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
-        */
+
+        // The code in this comment block prints the transformed byte-code for the specified class,
+        // you may need to uncomment it for debug purposes under development.
+        // if (className.equals(YourClass.class.getCanonicalName()))
+        //   cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
+
         for (Function<ClassVisitor, ClassVisitor> ct : classTransformers)
             cv = ct.apply(cv);
         // Get transformed bytecode
@@ -172,8 +174,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * Returns the original name of the specified class before transformation.
      */
     private String originalName(String className) {
-        if (className.startsWith(TRANSFORMED_PACKAGE_NAME))
-            return className.substring(TRANSFORMED_PACKAGE_NAME.length());
+        if (className.startsWith(REMAPPED_PACKAGE_CANONICAL_NAME))
+            return className.substring(REMAPPED_PACKAGE_CANONICAL_NAME.length());
         return className;
     }
 
@@ -214,8 +216,8 @@ class TransformationClassWriter extends ClassWriter {
      * this method changes the package to the original one.
      */
     private String originalInternalName(String internalName) {
-        if (internalName.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME))
-            return internalName.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length());
+        if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME))
+            return internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length());
         return internalName;
     }
 }

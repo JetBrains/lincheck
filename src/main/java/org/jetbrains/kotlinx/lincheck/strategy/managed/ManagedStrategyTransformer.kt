@@ -23,15 +23,11 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer.Companion.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer.Companion.TRANSFORMED_JAVA_UTIL_INTERFACES
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.Method
-import org.reflections.*
-import org.reflections.scanners.*
 import java.lang.reflect.*
 import java.util.*
 import java.util.stream.*
@@ -1393,8 +1389,8 @@ internal class ManagedStrategyTransformer(
          */
         private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
             var ownerInternal = ownerInternal
-            if (ownerInternal.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
-                ownerInternal = ownerInternal.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
+            if (ownerInternal.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
+                ownerInternal = ownerInternal.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
                 val clazz = Class.forName(ownerInternal.canonicalClassName)
@@ -1409,8 +1405,8 @@ internal class ManagedStrategyTransformer(
 
         private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
             var internalName = ownerInternal
-            if (internalName.startsWith(TRANSFORMED_PACKAGE_INTERNAL_NAME)) {
-                internalName = internalName.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
+            if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
+                internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
                 val clazz = Class.forName(internalName.canonicalClassName)

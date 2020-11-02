@@ -48,7 +48,7 @@ internal class JavaUtilRemapper : Remapper() {
             // no need to transform enum
             val isEnum = originalClass.isEnum
             if (!isImpossibleToTransformApi && !isException && !inFunctionPackage && !isEnum && (isTransformedClass || isTransformedInterface))
-                return TransformationClassLoader.TRANSFORMED_PACKAGE_INTERNAL_NAME + name
+                return TransformationClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME + name
         }
         return name
     }
