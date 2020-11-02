@@ -229,6 +229,8 @@ Similarly to the stress strategy, model checking can be activated via `@ModelChe
 * **checkObstructionFreedom** - specifies whether **lincheck** should check the testing algorithm for obstruction-freedom;
 * **hangingDetectionThreshold** - specifies the maximum number of the same code location visits without thread switches that should be considered as hanging (e.g., due to an active lock).
 
+Note that currently, model checking mode **is not supported for Java 9 or newer** by default. The only way run it for Java 9+ is to add `--add-opens java.base/jdk.internal.misc=ALL-UNNAMED` to `java` options.
+
 ### Modular testing
 It is a common pattern to use linearizable data structures as building blocks of other ones. 
 At the same time, the number of all possible interleavings for non-trivial algorithms usually is enormous. 
