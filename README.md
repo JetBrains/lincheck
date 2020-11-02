@@ -99,7 +99,7 @@ public class SPMCQueueTest {
 }
 ```
 
-> A generator for `x` parameter is omitted and the default is used. See [Default generators](#default-generators) paragraph for details.
+A generator for `x` parameter is omitted and the default one is used. See [Default generators](#default-generators) paragraph for details.
 
 ## Parameter generators
 If an operation has parameters then generators should be specified for each of them. There are several ways to specify a parameter generator: explicitly on parameter via `@Param(gen = ..., conf = ...)` annotation, using named generator via `@Param(name = ...)` annotation, or using the default generator implicitly.
@@ -140,7 +140,7 @@ Unfortunately, this feature is disabled in **javac** compiler by default. Use `-
 </plugin>
 ```
 
-> However, some IDEs (such as IntelliJ IDEA) do not understand build system configuration as well as possible and running a test from these IDEs will not work. In order to solve this issue you can add `-parameters` option for **javac** compiler in your IDE configuration.
+However, some IDEs (such as IntelliJ IDEA) do not understand build system configuration as well as possible and running a test from these IDEs will not work. In order to solve this issue you can add `-parameters` option for **javac** compiler in your IDE configuration.
 
 ## Sequential specification
 By default, **lincheck** sequentially uses the testing data structure to define the correct specification.
@@ -199,7 +199,7 @@ public class MyConcurrentTest {
 }
 ```
 
-> It is possible to add several `@..CTest` annotations with different execution strategies or configurations and all of them should be processed. 
+It is possible to add several `@..CTest` annotations with different execution strategies or configurations and all of them should be processed. 
 
 
 
@@ -229,8 +229,6 @@ Similarly to the stress strategy, model checking can be activated via `@ModelChe
 * **checkObstructionFreedom** - specifies whether **lincheck** should check the testing algorithm for obstruction-freedom;
 * **hangingDetectionThreshold** - specifies the maximum number of the same code location visits without thread switches that should be considered as hanging (e.g., due to an active lock).
 
-Note that currently, model checking mode **is not supported for Java 9 or newer** by default. The only way run it for Java 9+ is to add `--add-opens java.base/jdk.internal.misc=ALL-UNNAMED` to `java` options.
-
 ### Modular testing
 It is a common pattern to use linearizable data structures as building blocks of other ones. 
 At the same time, the number of all possible interleavings for non-trivial algorithms usually is enormous. 
@@ -243,6 +241,15 @@ The atomicity contracts can be specified via `ModelCheckingOptions` (see [Config
 The specified guarantee forces **lincheck** not to switch threads inside these `put` and `get` methods, executing them atomically. Thus, the total number of possible interleavings is significantly decreased, and the testing quality is improved. 
 
 Additionally to marking methods as atomic, it is possible to ignore them for the analysis; this is extremely useful for logging and debugging methods.  For such methods, `ignored` guarantee should be used instead of `treatAsAtomic`, and **lincheck** will not add switch points before or after these method calls, considering them in the same way as thread-local operations.
+
+### Java 9+ support
+Please note that the current version requires the following JVM property 
+if the testing code uses classes from `java.util` package since 
+some of them use `jdk.internal.misc.Unsafe` under the hood:
+
+```
+--add-opens java.base/jdk.internal.misc=ALL-UNNAMED
+```
 
 ## State representation
 For both the stress testing and the model checking strategies, it is possible to enable state reporting. For this purpose, a method that returns `String` state representation should be annotated with `@StateRepresentation` and be located in the testing class. This method should be thread-safe, non-blocking, and should not modify the data structure. In case of the stress testing, the state representation is printed after each operation in the init and post execution parts as well as after the parallel part. In contrast, for model checking it is possible print the current state representation after each read or write event.
