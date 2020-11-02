@@ -574,7 +574,7 @@ internal class ManagedStrategyTransformer(
      */
     private class UnsafeTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            if ((owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe") && name == "getUnsafe") {
+            if (owner.isUnsafe() && name == "getUnsafe") {
                 // load Unsafe
                 adapter.push(owner.canonicalClassName)
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
@@ -888,7 +888,7 @@ internal class ManagedStrategyTransformer(
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
             val beforePark: Label = newLabel()
             val afterPark: Label = newLabel()
-            val isPark = owner == "sun/misc/Unsafe" && name == "park"
+            val isPark = owner.isUnsafe() && name == "park"
             if (isPark) {
                 val withoutTimeoutBranch: Label = newLabel()
                 val invokeBeforeParkEnd: Label = newLabel()
@@ -911,7 +911,7 @@ internal class ManagedStrategyTransformer(
                 goTo(afterPark)
             }
             visitLabel(beforePark)
-            val isUnpark = owner == "sun/misc/Unsafe" && name == "unpark"
+            val isUnpark = owner.isUnsafe() && name == "unpark"
             var threadLocal = 0
             if (isUnpark) {
                 dup()
@@ -1458,6 +1458,8 @@ private fun isClassMethod(owner: String, methodName: String, desc: String): Bool
 
 private fun isAFUMethodCall(opcode: Int, owner: String, methodName: String, desc: String) =
     opcode == INVOKEVIRTUAL && isAFU(owner) && isClassMethod(owner, methodName, desc)
+
+private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/internal/misc/Unsafe"
 
 /**
  * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.
