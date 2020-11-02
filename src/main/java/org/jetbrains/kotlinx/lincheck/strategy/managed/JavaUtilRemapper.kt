@@ -42,9 +42,9 @@ internal class JavaUtilRemapper : Remapper() {
             // some api classes that provide low-level access can not be transformed
             val isImpossibleToTransformApi = isImpossibleToTransformApiClass(normalizedName)
             // interfaces are not transformed by default and are in the special set when they should be transformed
-            val isTransformedInterface = originalClass.isInterface && originalClass.name.internalClassName in ManagedStrategyTransformer.TRANSFORMED_JAVA_UTIL_INTERFACES
+            val isTransformedInterface = originalClass.isInterface && originalClass.name.internalClassName in TRANSFORMED_JAVA_UTIL_INTERFACES
             // classes are transformed by default and are in the special set when they should not be transformed
-            val isTransformedClass = !originalClass.isInterface && originalClass.name.internalClassName !in ManagedStrategyTransformer.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
+            val isTransformedClass = !originalClass.isInterface && originalClass.name.internalClassName !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
             // no need to transform enum
             val isEnum = originalClass.isEnum
             if (!isImpossibleToTransformApi && !isException && !inFunctionPackage && !isEnum && (isTransformedClass || isTransformedInterface))
@@ -79,11 +79,11 @@ private fun findAllTransformationProblemsIn(packageName: String) {
     for (clazz in classes) {
         if (clazz.name.startsWith("java.util")) {
             // skip if the class is transformed
-            if (clazz.isInterface && clazz.name.internalClassName in ManagedStrategyTransformer.TRANSFORMED_JAVA_UTIL_INTERFACES) continue
-            if (!clazz.isInterface && clazz.name.internalClassName !in ManagedStrategyTransformer.NOT_TRANSFORMED_JAVA_UTIL_CLASSES) continue
+            if (clazz.isInterface && clazz.name.internalClassName in TRANSFORMED_JAVA_UTIL_INTERFACES) continue
+            if (!clazz.isInterface && clazz.name.internalClassName !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES) continue
         }
         val superInterfaces = clazz.interfaces
-        superInterfaces.firstOrNull { it.name.internalClassName in ManagedStrategyTransformer.TRANSFORMED_JAVA_UTIL_INTERFACES }?.let {
+        superInterfaces.firstOrNull { it.name.internalClassName in TRANSFORMED_JAVA_UTIL_INTERFACES }?.let {
             println("CONFLICT: ${clazz.name} is not transformed, but its sub-interface ${it.name} is" )
         }
         clazz.superclass?.let {
@@ -122,6 +122,6 @@ private val Class<*>.causesTransformationProblem: Boolean get() = when {
     !name.startsWith("java.util.") -> false
     isEnum -> false
     isArray -> this.componentType.causesTransformationProblem
-    isInterface -> name.internalClassName in ManagedStrategyTransformer.TRANSFORMED_JAVA_UTIL_INTERFACES
-    else -> name.internalClassName !in ManagedStrategyTransformer.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
+    isInterface -> name.internalClassName in TRANSFORMED_JAVA_UTIL_INTERFACES
+    else -> name.internalClassName !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
 }

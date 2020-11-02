@@ -63,10 +63,10 @@ internal class ManagedStrategyTransformer(
     }
 
     override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
-        // do not really transform strategy methods
+        // do not transform strategy methods
         if (isStrategyMethod(className)) return super.visitMethod(access, mname, desc, signature, exceptions)
         var access = access
-        // replace native method VMSupportsCS8 in AtomicLong with stub
+        // replace native method VMSupportsCS8 in AtomicLong with our stub
         if (access and ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
             val mv = super.visitMethod(access and ACC_NATIVE.inv(), mname, desc, signature, exceptions)
             return VMSupportsCS8MethodGenerator(GeneratorAdapter(mv, access and ACC_NATIVE.inv(), mname, desc))
@@ -84,8 +84,7 @@ internal class ManagedStrategyTransformer(
             mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (constructTraceRepresentation)
-            mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        if (constructTraceRepresentation) mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -1244,223 +1243,230 @@ internal class ManagedStrategyTransformer(
             super.visitLineNumber(line, start)
         }
     }
+}
 
-    companion object {
-        // By default `java.util` interfaces are not transformed, while classes are.
-        // Here are the exceptions to these rules.
-        // They were found with the help of the `findAllTransformationProblems` method.
-        internal val NOT_TRANSFORMED_JAVA_UTIL_CLASSES = setOf(
-            "java/util/ServiceLoader", // can not be transformed because of access to `SecurityManager`
-            "java/util/concurrent/TimeUnit", // many not transformed interfaces such as `java.util.concurrent.BlockingQueue` use it
-            "java/util/OptionalDouble", // used by `java.util.stream.DoubleStream`. Is an immutable collection
-            "java/util/OptionalLong",
-            "java/util/OptionalInt",
-            "java/util/Optional",
-            "java/util/Locale", // is an immutable class too
-            "java/util/Locale\$Category",
-            "java/util/Locale\$FilteringMode",
-            "java/util/Currency",
-            "java/util/Date",
-            "java/util/Calendar",
-            "java/util/TimeZone",
-            "java/util/DoubleSummaryStatistics", // this class is mutable, but `java.util.stream.DoubleStream` interface better be not transformed
-            "java/util/LongSummaryStatistics",
-            "java/util/IntSummaryStatistics",
-            "java/util/Formatter",
-            "java/util/stream/PipelineHelper",
-            "java/util/Random", // will be thread safe after `RandomTransformer` transformation
-            "java/util/concurrent/ThreadLocalRandom"
-        )
-        internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
-            "java/util/concurrent/CompletionStage", // because it uses `java.util.concurrent.CompletableFuture`
-            "java/util/Observer", // uses `java.util.Observable`
-            "java/util/concurrent/RejectedExecutionHandler",
-            "java/util/concurrent/ForkJoinPool\$ForkJoinWorkerThreadFactory",
-            "java/util/jar/Pack200\$Packer",
-            "java/util/jar/Pack200\$Unpacker",
-            "java/util/prefs/PreferencesFactory",
-            "java/util/ResourceBundle\$CacheKeyReference",
-            "java/util/prefs/PreferenceChangeListener",
-            "java/util/prefs/NodeChangeListener",
-            "java/util/logging/Filter",
-            "java/util/spi/ResourceBundleControlProvider"
-        )
+// By default `java.util` interfaces are not transformed, while classes are.
+// Here are the exceptions to these rules.
+// They were found with the help of the `findAllTransformationProblems` method.
+internal val NOT_TRANSFORMED_JAVA_UTIL_CLASSES = setOf(
+    "java/util/ServiceLoader", // can not be transformed because of access to `SecurityManager`
+    "java/util/concurrent/TimeUnit", // many not transformed interfaces such as `java.util.concurrent.BlockingQueue` use it
+    "java/util/OptionalDouble", // used by `java.util.stream.DoubleStream`. Is an immutable collection
+    "java/util/OptionalLong",
+    "java/util/OptionalInt",
+    "java/util/Optional",
+    "java/util/Locale", // is an immutable class too
+    "java/util/Locale\$Category",
+    "java/util/Locale\$FilteringMode",
+    "java/util/Currency",
+    "java/util/Date",
+    "java/util/Calendar",
+    "java/util/TimeZone",
+    "java/util/DoubleSummaryStatistics", // this class is mutable, but `java.util.stream.DoubleStream` interface better be not transformed
+    "java/util/LongSummaryStatistics",
+    "java/util/IntSummaryStatistics",
+    "java/util/Formatter",
+    "java/util/stream/PipelineHelper",
+    "java/util/Random", // will be thread safe after `RandomTransformer` transformation
+    "java/util/concurrent/ThreadLocalRandom"
+)
+internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
+    "java/util/concurrent/CompletionStage", // because it uses `java.util.concurrent.CompletableFuture`
+    "java/util/Observer", // uses `java.util.Observable`
+    "java/util/concurrent/RejectedExecutionHandler",
+    "java/util/concurrent/ForkJoinPool\$ForkJoinWorkerThreadFactory",
+    "java/util/jar/Pack200\$Packer",
+    "java/util/jar/Pack200\$Unpacker",
+    "java/util/prefs/PreferencesFactory",
+    "java/util/ResourceBundle\$CacheKeyReference",
+    "java/util/prefs/PreferenceChangeListener",
+    "java/util/prefs/NodeChangeListener",
+    "java/util/logging/Filter",
+    "java/util/spi/ResourceBundleControlProvider"
+)
 
-        private val OBJECT_TYPE = Type.getType(Any::class.java)
-        private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
-        private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStrategyStateHolder::class.java)
-        private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
-        private val OBJECT_MANAGER_TYPE = Type.getType(ObjectManager::class.java)
-        private val RANDOM_TYPE = Type.getType(Random::class.java)
-        private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
-        private val STRING_TYPE = Type.getType(String::class.java)
-        private val CLASS_TYPE = Type.getType(Class::class.java)
-        private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
-        private val TRACE_POINT_TYPE = Type.getType(TracePoint::class.java)
-        private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteTracePoint::class.java)
-        private val READ_TRACE_POINT_TYPE = Type.getType(ReadTracePoint::class.java)
-        private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallTracePoint::class.java)
-        private val MONITORENTER_TRACE_POINT_TYPE = Type.getType(MonitorEnterTracePoint::class.java)
-        private val MONITOREXIT_TRACE_POINT_TYPE = Type.getType(MonitorExitTracePoint::class.java)
-        private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitTracePoint::class.java)
-        private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
-        private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
-        private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
+private val OBJECT_TYPE = Type.getType(Any::class.java)
+private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
+private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStrategyStateHolder::class.java)
+private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
+private val OBJECT_MANAGER_TYPE = Type.getType(ObjectManager::class.java)
+private val RANDOM_TYPE = Type.getType(Random::class.java)
+private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
+private val STRING_TYPE = Type.getType(String::class.java)
+private val CLASS_TYPE = Type.getType(Class::class.java)
+private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
+private val TRACE_POINT_TYPE = Type.getType(TracePoint::class.java)
+private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteTracePoint::class.java)
+private val READ_TRACE_POINT_TYPE = Type.getType(ReadTracePoint::class.java)
+private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallTracePoint::class.java)
+private val MONITORENTER_TRACE_POINT_TYPE = Type.getType(MonitorEnterTracePoint::class.java)
+private val MONITOREXIT_TRACE_POINT_TYPE = Type.getType(MonitorExitTracePoint::class.java)
+private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitTracePoint::class.java)
+private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
+private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
+private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 
-        private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
-        private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
-        private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
-        private val BEFORE_LOCK_ACQUIRE_METHOD = Method.getMethod(ManagedStrategy::beforeLockAcquire.javaMethod)
-        private val BEFORE_LOCK_RELEASE_METHOD = Method.getMethod(ManagedStrategy::beforeLockRelease.javaMethod)
-        private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.javaMethod)
-        private val AFTER_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::afterNotify.javaMethod)
-        private val BEFORE_PARK_METHOD = Method.getMethod(ManagedStrategy::beforePark.javaMethod)
-        private val AFTER_UNPARK_METHOD = Method.getMethod(ManagedStrategy::afterUnpark.javaMethod)
-        private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
-        private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
-        private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
-        private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
-        private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
-        private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
-        private val CREATE_TRACE_POINT_METHOD = Method.getMethod(ManagedStrategy::createTracePoint.javaMethod)
-        private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::newLocalObject.javaMethod)
-        private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::deleteLocalObject.javaMethod)
-        private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::isLocalObject.javaMethod)
-        private val ADD_DEPENDENCY_METHOD = Method.getMethod(ObjectManager::addDependency.javaMethod)
-        private val SET_OBJECT_NAME = Method.getMethod(ObjectManager::setObjectName.javaMethod)
-        private val GET_OBJECT_NAME = Method.getMethod(ObjectManager::getObjectName.javaMethod)
-        private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
-        private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
-        private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteTracePoint::initializeWrittenValue.javaMethod)
-        private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadTracePoint::initializeReadValue.javaMethod)
-        private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallTracePoint::initializeReturnedValue.javaMethod)
-        private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTracePoint::initializeThrownException.javaMethod)
-        private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
-        private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
-        private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
+private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
+private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
+private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
+private val BEFORE_LOCK_ACQUIRE_METHOD = Method.getMethod(ManagedStrategy::beforeLockAcquire.javaMethod)
+private val BEFORE_LOCK_RELEASE_METHOD = Method.getMethod(ManagedStrategy::beforeLockRelease.javaMethod)
+private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.javaMethod)
+private val AFTER_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::afterNotify.javaMethod)
+private val BEFORE_PARK_METHOD = Method.getMethod(ManagedStrategy::beforePark.javaMethod)
+private val AFTER_UNPARK_METHOD = Method.getMethod(ManagedStrategy::afterUnpark.javaMethod)
+private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
+private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
+private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
+private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
+private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
+private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
+private val CREATE_TRACE_POINT_METHOD = Method.getMethod(ManagedStrategy::createTracePoint.javaMethod)
+private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::newLocalObject.javaMethod)
+private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::deleteLocalObject.javaMethod)
+private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::isLocalObject.javaMethod)
+private val ADD_DEPENDENCY_METHOD = Method.getMethod(ObjectManager::addDependency.javaMethod)
+private val SET_OBJECT_NAME = Method.getMethod(ObjectManager::setObjectName.javaMethod)
+private val GET_OBJECT_NAME = Method.getMethod(ObjectManager::getObjectName.javaMethod)
+private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
+private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
+private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteTracePoint::initializeWrittenValue.javaMethod)
+private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadTracePoint::initializeReadValue.javaMethod)
+private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallTracePoint::initializeReturnedValue.javaMethod)
+private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTracePoint::initializeThrownException.javaMethod)
+private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
+private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
+private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
 
-        private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
+private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 
-        /**
-         * Returns array of locals containing given parameters.
-         * STACK: param_1 param_2 ... param_n
-         * RESULT STACK: (empty)
-         */
-        private fun GeneratorAdapter.storeParameters(paramTypes: Array<Type>): IntArray {
-            val locals = IntArray(paramTypes.size)
-            // store all arguments
-            for (i in paramTypes.indices.reversed()) {
-                locals[i] = newLocal(paramTypes[i])
-                storeLocal(locals[i], paramTypes[i])
-            }
-            return locals
-        }
+/**
+ * Returns array of locals containing given parameters.
+ * STACK: param_1 param_2 ... param_n
+ * RESULT STACK: (empty)
+ */
+private fun GeneratorAdapter.storeParameters(paramTypes: Array<Type>): IntArray {
+    val locals = IntArray(paramTypes.size)
+    // store all arguments
+    for (i in paramTypes.indices.reversed()) {
+        locals[i] = newLocal(paramTypes[i])
+        storeLocal(locals[i], paramTypes[i])
+    }
+    return locals
+}
 
-        private fun GeneratorAdapter.storeParameters(methodDescriptor: String) = storeParameters(Type.getArgumentTypes(methodDescriptor))
+private fun GeneratorAdapter.storeParameters(methodDescriptor: String) = storeParameters(Type.getArgumentTypes(methodDescriptor))
 
-        /**
-         * Returns array of locals containing given parameters.
-         * STACK: param_1 param_2 ... param_n
-         * RESULT STACK: param_1 param_2 ... param_n (the stack is not changed)
-         */
-        private fun GeneratorAdapter.copyParameters(paramTypes: Array<Type>): IntArray {
-            val locals = storeParameters(paramTypes)
-            loadLocals(locals)
-            return locals
-        }
+/**
+ * Returns array of locals containing given parameters.
+ * STACK: param_1 param_2 ... param_n
+ * RESULT STACK: param_1 param_2 ... param_n (the stack is not changed)
+ */
+private fun GeneratorAdapter.copyParameters(paramTypes: Array<Type>): IntArray {
+    val locals = storeParameters(paramTypes)
+    loadLocals(locals)
+    return locals
+}
 
-        private fun GeneratorAdapter.copyParameters(methodDescriptor: String): IntArray = copyParameters(Type.getArgumentTypes(methodDescriptor))
+private fun GeneratorAdapter.copyParameters(methodDescriptor: String): IntArray = copyParameters(Type.getArgumentTypes(methodDescriptor))
 
-        private fun GeneratorAdapter.loadLocals(locals: IntArray) {
-            for (local in locals)
-                loadLocal(local)
-        }
+private fun GeneratorAdapter.loadLocals(locals: IntArray) {
+    for (local in locals)
+        loadLocal(local)
+}
 
-        /**
-         * Saves the top value on the stack without changing stack.
-         */
-        private fun GeneratorAdapter.copyLocal(local: Int) {
-            storeLocal(local)
-            loadLocal(local)
-        }
+/**
+ * Saves the top value on the stack without changing stack.
+ */
+private fun GeneratorAdapter.copyLocal(local: Int) {
+    storeLocal(local)
+    loadLocal(local)
+}
 
-        /**
-         * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
-         */
-        private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
-            var ownerInternal = ownerInternal
-            if (ownerInternal.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
-                ownerInternal = ownerInternal.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
-            }
-            return try {
-                val clazz = Class.forName(ownerInternal.canonicalClassName)
-                val fields = clazz.declaredFields
-                Arrays.stream(fields)
-                        .filter { field: Field -> field.modifiers and (Modifier.FINAL or Modifier.STATIC) == Modifier.FINAL }
-                        .collect(Collectors.toList())
-            } catch (e: ClassNotFoundException) {
-                throw RuntimeException(e)
-            }
-        }
-
-        private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
-            var internalName = ownerInternal
-            if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
-                internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
-            }
-            return try {
-                val clazz = Class.forName(internalName.canonicalClassName)
-                findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
-            } catch (e: ClassNotFoundException) {
-                throw RuntimeException(e)
-            } catch (e: NoSuchFieldException) {
-                throw RuntimeException(e)
-            }
-        }
-
-        private fun findField(clazz: Class<*>, fieldName: String): Field {
-            var clazz: Class<*>? = clazz
-            do {
-                val fields = clazz!!.declaredFields
-                for (field in fields) if (field.name == fieldName) return field
-                clazz = clazz.superclass
-            } while (clazz != null)
-            throw NoSuchFieldException()
-        }
-
-        private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
-
-        private fun isSuspend(owner: String, methodName: String, descriptor: String): Boolean =
-            try {
-                Class.forName(owner.canonicalClassName).kotlin.declaredFunctions.any {
-                    it.isSuspend && it.name == methodName && Method.getMethod(it.javaMethod).descriptor == descriptor
-                }
-            } catch (e: Throwable) {
-                // kotlin reflection is not available for some functions
-                false
-            }
-
-        private fun isSuspendStateMachine(internalClassName: String): Boolean {
-            // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
-            // it is internal, so check by name
-            return Class.forName(internalClassName.canonicalClassName).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
-        }
-
-        private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
-
-        private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
-
-        // returns true only the method is declared in this class and is not inherited
-        private fun isClassMethod(owner: String, methodName: String, desc: String): Boolean =
-            Class.forName(owner.canonicalClassName).declaredMethods.any {
-                val method = Method.getMethod(it)
-                method.name == methodName && method.descriptor == desc
-            }
-
-        private fun isAFUMethodCall(opcode: Int, owner: String, methodName: String, desc: String) =
-            opcode == INVOKEVIRTUAL && isAFU(owner) && isClassMethod(owner, methodName, desc)
+/**
+ * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
+ */
+private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
+    var ownerInternal = ownerInternal
+    if (ownerInternal.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
+        ownerInternal = ownerInternal.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
+    }
+    return try {
+        val clazz = Class.forName(ownerInternal.canonicalClassName)
+        val fields = clazz.declaredFields
+        Arrays.stream(fields)
+            .filter { field: Field -> field.modifiers and (Modifier.FINAL or Modifier.STATIC) == Modifier.FINAL }
+            .collect(Collectors.toList())
+    } catch (e: ClassNotFoundException) {
+        throw RuntimeException(e)
     }
 }
+
+private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
+    var internalName = ownerInternal
+    if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
+        internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
+    }
+    return try {
+        val clazz = Class.forName(internalName.canonicalClassName)
+        findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
+    } catch (e: ClassNotFoundException) {
+        throw RuntimeException(e)
+    } catch (e: NoSuchFieldException) {
+        throw RuntimeException(e)
+    }
+}
+
+private fun findField(clazz: Class<*>, fieldName: String): Field {
+    var clazz: Class<*>? = clazz
+    do {
+        val fields = clazz!!.declaredFields
+        for (field in fields) if (field.name == fieldName) return field
+        clazz = clazz.superclass
+    } while (clazz != null)
+    throw NoSuchFieldException()
+}
+
+private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
+
+private fun isSuspend(owner: String, methodName: String, descriptor: String): Boolean =
+    try {
+        Class.forName(owner.canonicalClassName).kotlin.declaredFunctions.any {
+            it.isSuspend && it.name == methodName && Method.getMethod(it.javaMethod).descriptor == descriptor
+        }
+    } catch (e: Throwable) {
+        // kotlin reflection is not available for some functions
+        false
+    }
+
+private fun isSuspendStateMachine(internalClassName: String): Boolean {
+    // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
+    // it is internal, so check by name
+    return Class.forName(internalClassName.canonicalClassName).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
+}
+
+private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
+
+private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
+
+// returns true only the method is declared in this class and is not inherited
+private fun isClassMethod(owner: String, methodName: String, desc: String): Boolean =
+    Class.forName(owner.canonicalClassName).declaredMethods.any {
+        val method = Method.getMethod(it)
+        method.name == methodName && method.descriptor == desc
+    }
+
+private fun isAFUMethodCall(opcode: Int, owner: String, methodName: String, desc: String) =
+    opcode == INVOKEVIRTUAL && isAFU(owner) && isClassMethod(owner, methodName, desc)
+
+/**
+ * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.
+ */
+internal fun isImpossibleToTransformApiClass(className: String) =
+    className == "sun.misc.Unsafe" ||
+        className == "jdk.internal.misc.Unsafe" ||
+        className == "java.lang.invoke.VarHandle" ||
+        className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
 
 /**
  * This class is used for getting the [sun.misc.Unsafe] or [jdk.internal.misc.Unsafe] instance.
@@ -1485,12 +1491,3 @@ internal object UnsafeHolder {
         return theUnsafe!!
     }
 }
-
-/**
- * Some api classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation
- */
-internal fun isImpossibleToTransformApiClass(className: String) =
-    className == "sun.misc.Unsafe" ||
-    className == "jdk.internal.misc.Unsafe" ||
-    className == "java.lang.invoke.VarHandle" ||
-    (className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater"))
