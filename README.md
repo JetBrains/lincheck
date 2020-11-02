@@ -245,10 +245,11 @@ Additionally to marking methods as atomic, it is possible to ignore them for the
 ### Java 9+ support
 Please note that the current version requires the following JVM property 
 if the testing code uses classes from `java.util` package since 
-some of them use `jdk.internal.misc.Unsafe` under the hood:
+some of them use `jdk.internal.misc.Unsafe` or similar internal classes under the hood:
 
 ```
 --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
+--add-exports java.base/jdk.internal.util=ALL-UNNAMED
 ```
 
 ## State representation
