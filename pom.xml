@@ -288,13 +288,14 @@
             <version>${atomicfu.version}</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Required for the remapping problems analysis, see JavaUtilRemapping.main() -->
         <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
             <version>0.9.12</version>
             <scope>provided</scope>
         </dependency>
-        <!--For tests-->
+        <!-- For tests -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

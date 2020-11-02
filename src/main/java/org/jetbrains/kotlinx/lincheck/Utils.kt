@@ -284,6 +284,9 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
  */
 internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
     when {
-        classTransformers.any { it is ManagedStrategyTransformer } -> ManagedStrategyTransformer.JavaUtilRemapper()
+        classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
         else -> null
     }
+
+internal val String.canonicalClassName get() = this.replace('/', '.')
+internal val String.internalClassName get() = this.replace('.', '/')

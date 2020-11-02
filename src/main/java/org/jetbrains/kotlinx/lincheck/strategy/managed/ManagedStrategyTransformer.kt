@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer.Companion.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer.Companion.TRANSFORMED_JAVA_UTIL_INTERFACES
@@ -103,33 +104,7 @@ internal class ManagedStrategyTransformer(
         return mv
     }
 
-    /**
-     * Changes package of transformed classes from `java.util` package, excluding some,
-     * because transformed classes can not lie in `java.util`
-     */
-    internal class JavaUtilRemapper : Remapper() {
-        override fun map(name: String): String {
-            if (name.startsWith("java/util/")) {
-                val normalizedName = name.toClassName()
-                val originalClass = ClassLoader.getSystemClassLoader().loadClass(normalizedName)
-                // transformation of exceptions causes a lot of trouble with catching expected exceptions
-                val isException = Throwable::class.java.isAssignableFrom(originalClass)
-                // function package is not transformed, because AFU uses it, and thus, there will be transformation problems
-                val inFunctionPackage = name.startsWith("java/util/function/")
-                // some api classes that provide low-level access can not be transformed
-                val isImpossibleToTransformApi = isImpossibleToTransformApiClass(normalizedName)
-                // interfaces are not transformed by default and are in the special set when they should be transformed
-                val isTransformedInterface = originalClass.isInterface && originalClass.name.toInternalName() in TRANSFORMED_JAVA_UTIL_INTERFACES
-                // classes are transformed by default and are in the special set when they should not be transformed
-                val isTransformedClass = !originalClass.isInterface && originalClass.name.toInternalName() !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
-                // no need to transform enum
-                val isEnum = originalClass.isEnum
-                if (!isImpossibleToTransformApi && !isException && !inFunctionPackage && !isEnum && (isTransformedClass || isTransformedInterface))
-                    return TRANSFORMED_PACKAGE_INTERNAL_NAME + name
-            }
-            return name
-        }
-    }
+
 
     /**
      * Generates body of a native method VMSupportsCS8.
@@ -405,7 +380,7 @@ internal class ManagedStrategyTransformer(
          */
         private fun classifyGuaranteeType(className: String, methodName: String): ManagedGuaranteeType? {
             for (guarantee in guarantees)
-                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.toClassName()))
+                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.canonicalClassName))
                     return guarantee.type
             return null
         }
@@ -680,7 +655,7 @@ internal class ManagedStrategyTransformer(
         private val randomMethods by lazy { Random::class.java.declaredMethods }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            if (opcode == INVOKEVIRTUAL && extendsRandom(owner.toClassName()) && isRandomMethod(name, desc)) {
+            if (opcode == INVOKEVIRTUAL && extendsRandom(owner.canonicalClassName) && isRandomMethod(name, desc)) {
                 val locals = adapter.storeParameters(desc)
                 adapter.pop() // pop replaced Random
                 loadRandom()
@@ -1009,7 +984,7 @@ internal class ManagedStrategyTransformer(
     private inner class LocalObjectManagingTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
             val isObjectCreation = opcode == INVOKESPECIAL && name == "<init>" && owner == "java/lang/Object"
-            val isImpossibleToTransformPrimitive = isImpossibleToTransformApiClass(owner.toClassName())
+            val isImpossibleToTransformPrimitive = isImpossibleToTransformApiClass(owner.canonicalClassName)
             val lowerCaseName = name.toLowerCase(Locale.US)
             val isPrimitiveWrite = isImpossibleToTransformPrimitive && WRITE_KEYWORDS.any { it in lowerCaseName }
             val isObjectPrimitiveWrite = isPrimitiveWrite && Type.getArgumentTypes(descriptor).lastOrNull()?.descriptor?.isNotPrimitiveType() ?: false
@@ -1420,7 +1395,7 @@ internal class ManagedStrategyTransformer(
                 ownerInternal = ownerInternal.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
-                val clazz = Class.forName(ownerInternal.toClassName())
+                val clazz = Class.forName(ownerInternal.canonicalClassName)
                 val fields = clazz.declaredFields
                 Arrays.stream(fields)
                         .filter { field: Field -> field.modifiers and (Modifier.FINAL or Modifier.STATIC) == Modifier.FINAL }
@@ -1436,7 +1411,7 @@ internal class ManagedStrategyTransformer(
                 internalName = internalName.substring(TRANSFORMED_PACKAGE_INTERNAL_NAME.length)
             }
             return try {
-                val clazz = Class.forName(internalName.toClassName())
+                val clazz = Class.forName(internalName.canonicalClassName)
                 findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
             } catch (e: ClassNotFoundException) {
                 throw RuntimeException(e)
@@ -1459,7 +1434,7 @@ internal class ManagedStrategyTransformer(
 
         private fun isSuspend(owner: String, methodName: String, descriptor: String): Boolean =
             try {
-                Class.forName(owner.toClassName()).kotlin.declaredFunctions.any {
+                Class.forName(owner.canonicalClassName).kotlin.declaredFunctions.any {
                     it.isSuspend && it.name == methodName && Method.getMethod(it.javaMethod).descriptor == descriptor
                 }
             } catch (e: Throwable) {
@@ -1470,7 +1445,7 @@ internal class ManagedStrategyTransformer(
         private fun isSuspendStateMachine(internalClassName: String): Boolean {
             // all named suspend functions extend kotlin.coroutines.jvm.internal.ContinuationImpl
             // it is internal, so check by name
-            return Class.forName(internalClassName.toClassName()).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
+            return Class.forName(internalClassName.canonicalClassName).superclass?.name == "kotlin.coroutines.jvm.internal.ContinuationImpl"
         }
 
         private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
@@ -1479,7 +1454,7 @@ internal class ManagedStrategyTransformer(
 
         // returns true only the method is declared in this class and is not inherited
         private fun isClassMethod(owner: String, methodName: String, desc: String): Boolean =
-            Class.forName(owner.toClassName()).declaredMethods.any {
+            Class.forName(owner.canonicalClassName).declaredMethods.any {
                 val method = Method.getMethod(it)
                 method.name == methodName && method.descriptor == desc
             }
@@ -1520,84 +1495,3 @@ internal fun isImpossibleToTransformApiClass(className: String) =
     className == "sun.misc.Unsafe" ||
     className == "java.lang.invoke.VarHandle" ||
     (className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater"))
-
-private fun String.toClassName() = this.replace('/', '.')
-private fun String.toInternalName() = this.replace('.', '/')
-
-/**
- * This method finds transformation problems in basic java packages.
- * Use it after updating transformation logic or jdk version.
- */
-private fun findAllTransformationProblems() {
-    val javaPackages = listOf(
-        "java.util",
-        "java.lang",
-        "java.math",
-        "java.text",
-        "java.time"
-    )
-    javaPackages.forEach {
-        findAllTransformationProblemsIn(it)
-    }
-}
-
-/**
- * Finds transformation problems because of `java.util` in the given package.
- * Note that it supposes that all classes, other than `java.util` classes, are not transformed,
- * because transformed classes do not cause problems.
- */
-private fun findAllTransformationProblemsIn(packageName: String) {
-    val classes = getAllClasses(packageName).map { Class.forName(it) }
-    for (clazz in classes) {
-        if (clazz.name.startsWith("java.util")) {
-            // skip if the class is transformed
-            if (clazz.isInterface && clazz.name.toInternalName() in TRANSFORMED_JAVA_UTIL_INTERFACES) continue
-            if (!clazz.isInterface && clazz.name.toInternalName() !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES) continue
-        }
-        val superInterfaces = clazz.interfaces
-        superInterfaces.firstOrNull { it.name.toInternalName() in TRANSFORMED_JAVA_UTIL_INTERFACES }?.let {
-            println("CONFLICT: ${clazz.name} is not transformed, but its sub-interface ${it.name} is" )
-        }
-        clazz.superclass?.let {
-            if (it.causeTransformationProblem())
-                println("CONFLICT: ${clazz.name} is not transformed, but its subclass ${it.name} is")
-        }
-        val publicFields = clazz.fields
-        for (field in publicFields) {
-            if (field.type.causeTransformationProblem())
-                println("CONFLICT: ${clazz.name} is not transformed, but its public field of type `${field.type.name}` is")
-        }
-        val publicMethods = clazz.methods
-        for (method in publicMethods) {
-            if (method.returnType.causeTransformationProblem())
-                println("CONFLICT: ${clazz.name} is not transformed, but the return type ${method.returnType.name} in its method `${method.name}` is")
-            for (parameter in method.parameterTypes) {
-                if (parameter.causeTransformationProblem())
-                    println("CONFLICT: ${clazz.name} is not transformed, but the parameter type ${parameter.name} in its method `${method.name}` is")
-            }
-        }
-    }
-}
-
-private fun getAllClasses(packageName: String): List<String> {
-    check(packageName != "java") { "For some reason unable to find classes in `java` package. Use more specified name such as `java.util`" }
-    val reflections = Reflections(
-        packageName.replace('.', '/'),
-        SubTypesScanner(false)
-    )
-    return reflections.allTypes.toList()
-}
-
-/**
- * Checks whether class causes transformation problem if is used from a non-transformed class.
- * Transformed `java.util` classes cause such problems, because they are moved to another package.
- */
-private fun Class<*>.causeTransformationProblem(): Boolean {
-    if (!name.startsWith("java.util.")) return false
-    if (isArray) return this.componentType.causeTransformationProblem()
-    if (isEnum) return false
-    return if (isInterface)
-        name.toInternalName() in TRANSFORMED_JAVA_UTIL_INTERFACES
-    else
-        name.toInternalName() !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
-}
