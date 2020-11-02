@@ -47,7 +47,7 @@ internal object ManagedStrategyStateHolder {
             clazz.getField("strategy")[null] = strategy
             clazz.getField("objectManager")[null] = ObjectManager(testClass)
             // load transformed java.util.Random class
-            val randomClass = loader.loadClass(TransformationClassLoader.TRANSFORMED_PACKAGE_NAME + Random::class.java.canonicalName)
+            val randomClass = loader.loadClass(Random::class.java.canonicalName)
             clazz.getField("random")[null] = randomClass.getConstructor().newInstance()
         } catch (e: Throwable) {
             throw IllegalStateException("Cannot set state to ManagedStateHolder", e)

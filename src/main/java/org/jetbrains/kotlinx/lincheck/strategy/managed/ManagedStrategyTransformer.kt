@@ -1271,7 +1271,9 @@ internal class ManagedStrategyTransformer(
             "java/util/LongSummaryStatistics",
             "java/util/IntSummaryStatistics",
             "java/util/Formatter",
-            "java/util/stream/PipelineHelper"
+            "java/util/stream/PipelineHelper",
+            "java/util/Random", // will be thread safe after `RandomTransformer` transformation
+            "java/util/concurrent/ThreadLocalRandom"
         )
         internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
             "java/util/concurrent/CompletionStage", // because it uses `java.util.concurrent.CompletableFuture`
