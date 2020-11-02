@@ -253,7 +253,7 @@ internal class ModelCheckingStrategy(
         fun isSwitchPosition() = executionPosition in switchPositions
 
         /**
-         * Create a new execution position that corresponds to a switch point.
+         * Creates a new execution position that corresponds to a switch point.
          * Unlike switch point the execution position is just a gradually increasing counter
          * that helps to distinguish different switch positions.
          */
