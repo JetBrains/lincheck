@@ -37,11 +37,11 @@ internal fun StringBuilder.appendTrace(
 ) {
     // clear object numeration that is used by `CodePoint.toString` for better representation
     objectNumeration.clear()
-    val graphStart = constructInterleavingGraph(scenario, results, trace)
-    val interleaving = interleavingGraphToRepresentation(graphStart)
-    val interleavingRepresentation = splitToColumns(scenario.threads, interleaving)
-    appendln("Parallel part interleaving:")
-    append(printInColumnsCustom(interleavingRepresentation) {
+    val startTraceGraphNode = constructTraceGraph(scenario, results, trace)
+    val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode)
+    val traceRepresentationSplitted = splitToColumns(scenario.threads, traceRepresentation)
+    appendln("Parallel part trace:")
+    append(printInColumnsCustom(traceRepresentationSplitted) {
         StringBuilder().apply {
             for (i in it.indices) {
                 append(if (i == 0) "| " else " | ")
@@ -53,14 +53,14 @@ internal fun StringBuilder.appendTrace(
 }
 
 /**
- * Convert interleaving events to the final form of a matrix of strings
+ * Convert trace events to the final form of a matrix of strings.
  */
-private fun splitToColumns(nThreads: Int, interleaving: List<InterleavingEventRepresentation>): List<List<String>> {
+private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRepresentation>): List<List<String>> {
     val result = List(nThreads) { mutableListOf<String>() }
-    for (message in interleaving) {
-        val columnId = message.iThread
+    for (event in traceRepresentation) {
+        val columnId = event.iThread
         // write message in an appropriate column
-        result[columnId].add(message.representation)
+        result[columnId].add(event.representation)
         val neededSize = result[columnId].size
         for (column in result)
             if (column.size != neededSize)
@@ -70,15 +70,14 @@ private fun splitToColumns(nThreads: Int, interleaving: List<InterleavingEventRe
 }
 
 /**
- * Construct an interleaving graph based on provided [tracePoints].
- * Returns the node corresponding to the first interleaving event.
- * An interleaving graph consists of two types of edges:
+ * Constructs a trace graph based on the provided [tracePoints].
+ * Returns the node corresponding to the starting trace event.
+ *
+ * A trace graph consists of two types of edges:
  * `next` edges form a single-directed list in which the order of events is the same as in [tracePoints].
  * `internalEvents` edges form a directed forest.
- * The root of each tree is an actor.
- * Its children are events and method invocations.
  */
-private fun constructInterleavingGraph(scenario: ExecutionScenario, results: ExecutionResult?, tracePoints: List<TracePoint>): InterleavingNode? {
+private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, tracePoints: List<TracePoint>): TraceNode? {
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.threads) { iThread ->
         tracePoints.mapIndexed { i, e -> Pair(i, e) }.lastOrNull { it.second.iThread == iThread }?.first ?: -1
@@ -89,8 +88,8 @@ private fun constructInterleavingGraph(scenario: ExecutionScenario, results: Exe
     val actorNodes = Array(scenario.threads) { Array<ActorNode?>(scenario.parallelExecution[it].size) { null } }
     // call nodes for each method call
     val callNodes = mutableMapOf<Int, CallNode>()
-    // all interleaving nodes in order corresponding to interleavingEvents
-    val interleavingNodes = mutableListOf<InterleavingNode>()
+    // all trace nodes in order corresponding to `tracePoints`
+    val traceGraphNodes = mutableListOf<TraceNode>()
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -100,21 +99,27 @@ private fun constructInterleavingGraph(scenario: ExecutionScenario, results: Exe
         while (lastHandledActor[iThread] < min(actorId, scenario.parallelExecution[iThread].lastIndex)) {
             val nextActor = ++lastHandledActor[iThread]
             // create new actor node actor
-            val actorNode = interleavingNodes.allocate { ActorNode(iThread, it, scenario.parallelExecution[iThread][nextActor], results[iThread, nextActor]) }
+            val actorNode = traceGraphNodes.createAndAppend { lastNode ->
+                ActorNode(iThread, lastNode, scenario.parallelExecution[iThread][nextActor], results[iThread, nextActor])
+            }
             actorNodes[iThread][nextActor] = actorNode
-            interleavingNodes.add(actorNode)
+            traceGraphNodes.add(actorNode)
         }
         // add the event
         when (event) {
             // simpler code for FinishEvent, because it does not have actorId or callStackTrace
-            is FinishThreadTracePoint -> interleavingNodes.allocate { InterleavingLeafEvent(iThread, it, event) }
+            is FinishThreadTracePoint -> traceGraphNodes.createAndAppend { lastNode ->
+                TraceLeafEvent(iThread, lastNode, event)
+            }
             else -> {
-                var innerNode: InterleavingInnerNode = actorNodes[iThread][actorId]!!
+                var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
                 for (call in event.callStackTrace) {
                     val callId = call.identifier
                     val callNode = callNodes.computeIfAbsent(callId) {
                         // create a new call node if needed
-                        val result = interleavingNodes.allocate { CallNode(iThread, it, call.call) }
+                        val result = traceGraphNodes.createAndAppend { lastNode ->
+                            CallNode(iThread, lastNode, call.call)
+                        }
                         // make it a child of the previous node
                         innerNode.addInternalEvent(result)
                         result
@@ -122,7 +127,9 @@ private fun constructInterleavingGraph(scenario: ExecutionScenario, results: Exe
                     innerNode = callNode
                 }
                 val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
-                val node = interleavingNodes.allocate { InterleavingLeafEvent(iThread, it, event, isLastExecutedEvent) }
+                val node = traceGraphNodes.createAndAppend { lastNode ->
+                    TraceLeafEvent(iThread, lastNode, event, isLastExecutedEvent)
+                }
                 innerNode.addInternalEvent(node)
             }
         }
@@ -139,35 +146,35 @@ private fun constructInterleavingGraph(scenario: ExecutionScenario, results: Exe
                 resultNode.next = lastEventNext
             }
         }
-    return interleavingNodes.firstOrNull()
+    return traceGraphNodes.firstOrNull()
 }
 
 private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
     if (this == null) null else this.parallelResults[iThread][actorId]
 
 /**
- * Create a new interleaving node and add it to the end of the list.
+ * Create a new trace node and add it to the end of the list.
  */
-private fun <T : InterleavingNode> MutableList<InterleavingNode>.allocate(constructor: (lastNode: InterleavingNode?) -> T): T {
-    val node = constructor(lastOrNull())
-    add(node)
-    return node
-}
+private fun <T : TraceNode> MutableList<TraceNode>.createAndAppend(constructor: (lastNode: TraceNode?) -> T): T =
+    constructor(lastOrNull()).also { add(it) }
 
-private fun interleavingGraphToRepresentation(firstNode: InterleavingNode?): List<InterleavingEventRepresentation> {
-    var currentNode: InterleavingNode? = firstNode
-    val interleaving = mutableListOf<InterleavingEventRepresentation>()
-    while (currentNode != null) {
-        currentNode = currentNode.addRepresentationTo(interleaving)
+private fun traceGraphToRepresentationList(startNode: TraceNode?): List<TraceEventRepresentation> {
+    var curNode: TraceNode? = startNode
+    val traceRepresentation = mutableListOf<TraceEventRepresentation>()
+    while (curNode != null) {
+        curNode = curNode.addRepresentationTo(traceRepresentation)
     }
-    return interleaving
+    return traceRepresentation
 }
 
-private sealed class InterleavingNode(protected val iThread: Int, last: InterleavingNode?) {
+private sealed class TraceNode(
+    protected val iThread: Int,
+    last: TraceNode?
+) {
     // `next` edges form an ordered single-directed event list
-    var next: InterleavingNode? = null
+    var next: TraceNode? = null
     // `lastInternalEvent` helps to skip internal events if an actor or a method call can be compressed
-    abstract val lastInternalEvent: InterleavingNode
+    abstract val lastInternalEvent: TraceNode
     // `lastState` helps to find the last state needed for the compression
     abstract val lastState: String?
     // whether the internal events should be reported
@@ -180,84 +187,82 @@ private sealed class InterleavingNode(protected val iThread: Int, last: Interlea
     }
 
     /**
-     * Adds node representation and returns next node to be processed.
+     * Adds this node representation to the [traceRepresentation] and returns the next node to be processed.
      */
-    abstract fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode?
+    abstract fun addRepresentationTo(traceRepresentation: MutableList<TraceEventRepresentation>): TraceNode?
 }
 
-private class InterleavingLeafEvent(iThread: Int, last: InterleavingNode?, private val event: TracePoint, lastExecutedEvent: Boolean = false)
-    : InterleavingNode(iThread, last) {
+private class TraceLeafEvent(
+    iThread: Int,
+    last: TraceNode?,
+    private val event: TracePoint,
+    lastExecutedEvent: Boolean = false
+) : TraceNode(iThread, last) {
     override val lastState: String? = if (event is StateRepresentationTracePoint) event.stateRepresentation else null
-    override val lastInternalEvent: InterleavingNode = this
+    override val lastInternalEvent: TraceNode = this
     override val shouldBeExpanded: Boolean = lastExecutedEvent || event is SwitchEventTracePoint // switch events should be reported
 
-    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
+    override fun addRepresentationTo(traceRepresentation: MutableList<TraceEventRepresentation>): TraceNode? {
         val representation = TRACE_INDENTATION + event.toString()
-        interleaving.add(InterleavingEventRepresentation(iThread, representation))
+        traceRepresentation.add(TraceEventRepresentation(iThread, representation))
         return next
     }
 }
 
-private abstract class InterleavingInnerNode(iThread: Int, last: InterleavingNode?) : InterleavingNode(iThread, last) {
+private abstract class TraceInnerNode(iThread: Int, last: TraceNode?) : TraceNode(iThread, last) {
     override val lastState: String?
-        get() {
-            for (event in internalEvents.reversed())
-                if (event.lastState != null)
-                    return event.lastState
-            return null
-        }
-    override val lastInternalEvent: InterleavingNode
+        get() = internalEvents.map { it.lastState }.last { it != null }
+    override val lastInternalEvent: TraceNode
         get() = if (internalEvents.isEmpty()) this else internalEvents.last().lastInternalEvent
-    override val shouldBeExpanded: Boolean by lazy { internalEvents.any { it.shouldBeExpanded } }
-    private val internalEvents = mutableListOf<InterleavingNode>()
+    override val shouldBeExpanded: Boolean
+        by lazy { internalEvents.any { it.shouldBeExpanded } }
+    private val internalEvents = mutableListOf<TraceNode>()
 
-    fun addInternalEvent(node: InterleavingNode) {
+    fun addInternalEvent(node: TraceNode) {
         internalEvents.add(node)
     }
 }
 
-private class CallNode(iThread: Int, last: InterleavingNode?, private val call: MethodCallTracePoint) : InterleavingInnerNode(iThread, last) {
+private class CallNode(iThread: Int, last: TraceNode?, private val call: MethodCallTracePoint) : TraceInnerNode(iThread, last) {
     // suspended method contents should be reported
     override val shouldBeExpanded: Boolean by lazy { call.wasSuspended || super.shouldBeExpanded }
 
-    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? =
+    override fun addRepresentationTo(traceRepresentation: MutableList<TraceEventRepresentation>): TraceNode? =
         if (!shouldBeExpanded) {
-            interleaving.add(InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "$call"))
-            lastState?.let { interleaving.add(stateEventRepresentation(iThread, it)) }
+            traceRepresentation.add(TraceEventRepresentation(iThread, TRACE_INDENTATION + "$call"))
+            lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
-        } else {
-            next
-        }
+        } else next
 }
 
-private class ActorNode(iThread: Int, last: InterleavingNode?, private val actor: Actor, private val result: Result?) : InterleavingInnerNode(iThread, last) {
-    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? =
+private class ActorNode(iThread: Int, last: TraceNode?, private val actor: Actor, private val result: Result?) : TraceInnerNode(iThread, last) {
+    override fun addRepresentationTo(traceRepresentation: MutableList<TraceEventRepresentation>): TraceNode? =
         if (!shouldBeExpanded) {
             val representation = "$actor" + if (result != null) ": $result" else ""
-            interleaving.add(InterleavingEventRepresentation(iThread, representation))
-            lastState?.let { interleaving.add(stateEventRepresentation(iThread, it)) }
+            traceRepresentation.add(TraceEventRepresentation(iThread, representation))
+            lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            interleaving.add(InterleavingEventRepresentation(iThread, "$actor"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, "$actor"))
             next
         }
 }
 
-private class ActorResultNode(iThread: Int, last: InterleavingNode?, private val result: Result?) : InterleavingNode(iThread, last) {
+private class ActorResultNode(iThread: Int, last: TraceNode?, private val result: Result?) : TraceNode(iThread, last) {
     override val lastState: String? = null
-    override val lastInternalEvent: InterleavingNode = this
+    override val lastInternalEvent: TraceNode = this
     override val shouldBeExpanded: Boolean = false
 
-    override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
+    override fun addRepresentationTo(traceRepresentation: MutableList<TraceEventRepresentation>): TraceNode? {
         if (result == Cancelled)
-            interleaving.add(InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "CONTINUATION CANCELLED"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, TRACE_INDENTATION + "CONTINUATION CANCELLED"))
         if (result != null)
-            interleaving.add(InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "result: $result"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, TRACE_INDENTATION + "result: $result"))
         return next
     }
 }
 
 private fun stateEventRepresentation(iThread: Int, stateRepresentation: String) =
-    InterleavingEventRepresentation(iThread, TRACE_INDENTATION + "STATE: $stateRepresentation")
+    TraceEventRepresentation(iThread, TRACE_INDENTATION + "STATE: $stateRepresentation")
 
-private class InterleavingEventRepresentation(val iThread: Int, val representation: String)
+private class TraceEventRepresentation(val iThread: Int, val representation: String)

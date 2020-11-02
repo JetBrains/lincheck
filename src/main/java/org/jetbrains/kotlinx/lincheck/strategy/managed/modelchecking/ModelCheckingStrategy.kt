@@ -45,17 +45,18 @@ internal class ModelCheckingStrategy(
         stateRepresentation: Method?,
         verifier: Verifier
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
-    // the number of invocations that the managed strategy may use to search for an incorrect execution
+    // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
-    // the number of used invocations
+    // The number of already used invocations.
     private var usedInvocations = 0
-    // the maximum number of switches that strategy tries to use
+    // The maximum number of thread switch choices that strategy should perform
+    // (increases when all the interleavings with the current depth are studied)
     private var maxNumberOfSwitches = 0
-    // the root for the interleaving tree. Is a `ThreadChoosingNode`, for which every thread can be chosen as first to execute
+    // The root of the interleaving tree that chooses the starting thread.
     private var root: InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
-    // random used for the generation of seeds and the execution tree
+    // This random is used for choosing the next unexplored interleaving node in the tree.
     private val generationRandom = Random(0)
-    // the interleaving that will be executed on the next invocations
+    // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
     override fun runImpl(): LincheckFailure? {
@@ -71,8 +72,8 @@ internal class ModelCheckingStrategy(
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
         if (mustSwitch) {
-            // create new execution position if is a forced switch.
-            // all other execution positions are covered by `shouldSwitch` method,
+            // Create new execution position if this is a forced switch.
+            // All other execution positions are covered by `shouldSwitch` method,
             // but forced switches do not ask `shouldSwitch`, because they are forced.
             // a choice of this execution position will mean that the next switch is the forced switch
             currentInterleaving.newExecutionPosition(iThread)
@@ -188,11 +189,11 @@ internal class ModelCheckingStrategy(
      */
     private inner class SwitchChoosingNode : InterleavingTreeNode() {
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
-            val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfSwitches()
+            val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfSwitches
             if (isLeaf) {
                 finishExploration()
                 if (!isInitialized)
-                    interleavingBuilder.addLastNotInitializedNode(this)
+                    interleavingBuilder.addLastNoninitializedNode(this)
                 return interleavingBuilder.build()
             }
             val choice = chooseUnexploredNode()
@@ -206,12 +207,13 @@ internal class ModelCheckingStrategy(
     private inner class Choice(val node: InterleavingTreeNode, val value: Int)
 
     /**
-     * This class helps to run re-producible invocations.
-     * Its parameters determine what interleaving the invocation will get.
-     * To re-run the same invocation, just use the same Interleaving instance.
+     * This class specifies an interleaving that is re-producible.
      */
-    private inner class Interleaving(switchPositions: List<Int>, private val threadSwitchChoices: List<Int>, private var lastNotInitializedNode: SwitchChoosingNode?) {
-        private val switchPositions = switchPositions.toIntArray()
+    private inner class Interleaving(
+        private val switchPositions: List<Int>,
+        private val threadSwitchChoices: List<Int>,
+        private var lastNotInitializedNode: SwitchChoosingNode?
+    ) {
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
@@ -219,7 +221,7 @@ internal class ModelCheckingStrategy(
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
-            interleavingFinishingRandom = Random(2) // random with any constant seed
+            interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
             currentThread = nextThreadToSwitch.next() // choose initial executing thread
             lastNotInitializedNodeChoices = null
@@ -267,7 +269,9 @@ internal class ModelCheckingStrategy(
     private inner class InterleavingBuilder {
         private val switchPositions = mutableListOf<Int>()
         private val threadSwitchChoices = mutableListOf<Int>()
-        private var lastNotInitializedNode: SwitchChoosingNode? = null
+        private var lastNoninitializedNode: SwitchChoosingNode? = null
+
+        val numberOfSwitches get() = switchPositions.size
 
         fun addSwitchPosition(switchPosition: Int) {
             switchPositions.add(switchPosition)
@@ -277,11 +281,10 @@ internal class ModelCheckingStrategy(
             threadSwitchChoices.add(iThread)
         }
 
-        fun addLastNotInitializedNode(lastNotInitializedNode: SwitchChoosingNode) {
-            this.lastNotInitializedNode = lastNotInitializedNode
+        fun addLastNoninitializedNode(lastNoninitializedNode: SwitchChoosingNode) {
+            this.lastNoninitializedNode = lastNoninitializedNode
         }
 
-        fun numberOfSwitches() = switchPositions.size
-        fun build(): Interleaving = Interleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
+        fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
     }
 }
