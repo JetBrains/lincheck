@@ -604,10 +604,11 @@ internal class ManagedStrategyTransformer(
      */
     private class UnsafeTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            if (owner == "sun/misc/Unsafe" && name == "getUnsafe") {
+            if ((owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe") && name == "getUnsafe") {
                 // load Unsafe
+                adapter.push(owner.toClassName())
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
-                adapter.checkCast(UNSAFE_TYPE)
+                adapter.checkCast(Type.getType("L${owner};"))
                 return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -1322,7 +1323,6 @@ internal class ManagedStrategyTransformer(
         private val STRING_TYPE = Type.getType(String::class.java)
         private val CLASS_TYPE = Type.getType(Class::class.java)
         private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
-        private val UNSAFE_TYPE = Type.getType("Lsun/misc/Unsafe;") // no direct referencing to allow compiling with jdk9+
         private val TRACE_POINT_TYPE = Type.getType(TracePoint::class.java)
         private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteTracePoint::class.java)
         private val READ_TRACE_POINT_TYPE = Type.getType(ReadTracePoint::class.java)
@@ -1490,7 +1490,7 @@ internal class ManagedStrategyTransformer(
 }
 
 /**
- * This class is used for getting the [sun.misc.Unsafe] instance.
+ * This class is used for getting the [sun.misc.Unsafe] or [jdk.internal.misc.Unsafe] instance.
  * We need it in some transformed classes from the `java.util.` package,
  * and it cannot be accessed directly after the transformation.
  */
@@ -1499,10 +1499,10 @@ internal object UnsafeHolder {
     private var theUnsafe: Any? = null
 
     @JvmStatic
-    fun getUnsafe(): Any {
+    fun getUnsafe(unsafeClass: String): Any {
         if (theUnsafe == null) {
             try {
-                val f = Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe")
+                val f = Class.forName(unsafeClass).getDeclaredField("theUnsafe")
                 f.isAccessible = true
                 theUnsafe = f.get(null)
             } catch (e: Exception) {
@@ -1518,6 +1518,7 @@ internal object UnsafeHolder {
  */
 internal fun isImpossibleToTransformApiClass(className: String) =
     className == "sun.misc.Unsafe" ||
+    className == "jdk.internal.misc.Unsafe" ||
     className == "java.lang.invoke.VarHandle" ||
     (className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater"))
 
