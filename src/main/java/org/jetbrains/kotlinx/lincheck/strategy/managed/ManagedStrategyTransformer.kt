@@ -581,7 +581,7 @@ internal class ManagedStrategyTransformer(
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             if ((owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe") && name == "getUnsafe") {
                 // load Unsafe
-                adapter.push(owner.toClassName())
+                adapter.push(owner.canonicalClassName)
                 adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
                 adapter.checkCast(Type.getType("L${owner};"))
                 return
