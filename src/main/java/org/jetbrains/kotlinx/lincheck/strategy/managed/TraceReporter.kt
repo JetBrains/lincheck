@@ -211,7 +211,7 @@ private class TraceLeafEvent(
 
 private abstract class TraceInnerNode(iThread: Int, last: TraceNode?) : TraceNode(iThread, last) {
     override val lastState: String?
-        get() = internalEvents.map { it.lastState }.last { it != null }
+        get() = internalEvents.map { it.lastState }.lastOrNull { it != null }
     override val lastInternalEvent: TraceNode
         get() = if (internalEvents.isEmpty()) this else internalEvents.last().lastInternalEvent
     override val shouldBeExpanded: Boolean
