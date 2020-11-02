@@ -102,7 +102,8 @@ public class TestThreadExecutionHelperTest {
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
         ex.clocks = new int[4][1];
-        ex.allThreadExecutions = (TestThreadExecution[]) asList(ex).toArray();
+        ex.allThreadExecutions = new TestThreadExecution[1];
+        ex.allThreadExecutions[0] = ex;
         ex.run();
         Assert.assertArrayEquals(new Result[]{
             VoidResult.INSTANCE,
