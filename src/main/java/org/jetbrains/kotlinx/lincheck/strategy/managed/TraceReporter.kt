@@ -189,7 +189,7 @@ private class InterleavingLeafEvent(iThread: Int, last: InterleavingNode?, priva
     : InterleavingNode(iThread, last) {
     override val lastState: String? = if (event is StateRepresentationTracePoint) event.stateRepresentation else null
     override val lastInternalEvent: InterleavingNode = this
-    override val shouldBeExpanded: Boolean = lastExecutedEvent || event is SwitchEvent // switch events should be reported
+    override val shouldBeExpanded: Boolean = lastExecutedEvent || event is SwitchEventTracePoint // switch events should be reported
 
     override fun addRepresentationTo(interleaving: MutableList<InterleavingEventRepresentation>): InterleavingNode? {
         val representation = TRACE_INDENTATION + event.toString()

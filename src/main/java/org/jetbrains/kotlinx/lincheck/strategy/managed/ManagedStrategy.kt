@@ -667,7 +667,7 @@ abstract class ManagedStrategy(
         val trace: List<TracePoint> = _trace
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
-            _trace += SwitchEvent(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
+            _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
         }
 
         fun finishThread(iThread: Int) {

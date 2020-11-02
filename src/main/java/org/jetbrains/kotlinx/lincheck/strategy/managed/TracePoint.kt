@@ -27,12 +27,13 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
 /**
- * Trace points store information about an execution event,
- * such as code location passing or thread switches
- * and are used for constructing a readable interleaving trace.
- * Essentially, a trace is a list of trace points.
- * [callStackTrace] helps to understand whether two events happen
- * in the same method, in nested methods or in disjoint methods.
+ * Essentially, a trace is a list of trace points, which represent
+ * interleaving events, such as code location passing or thread switches,
+ * and store additional information that makes the trace more readable,
+ * such as the current state representations.
+ *
+ * [callStackTrace] helps to understand whether two events
+ * happened in the same, nested, or disjoint methods.
  */
 sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callStackTrace: CallStackTrace) {
     protected abstract fun toStringImpl(): String
@@ -43,7 +44,7 @@ internal typealias CallStackTrace = List<CallStackTraceElement>
 internal typealias TracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace) -> TracePoint
 internal typealias CodeLocationTracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace, StackTraceElement) -> TracePoint
 
-internal class SwitchEvent(
+internal class SwitchEventTracePoint(
     iThread: Int, actorId: Int,
     val reason: SwitchReason,
     callStackTrace: CallStackTrace
@@ -227,7 +228,7 @@ private fun StackTraceElement.shorten(): String {
 private fun adornedStringRepresentation(any: Any?): String {
     // Primitive types (and several others) are immutable and
     // have trivial `toString` implementation, which is used here.
-    if (any == null || any.javaClass.isImmutableWithNiceToString())
+    if (any == null || any.javaClass.isImmutableWithNiceToString)
         return any.toString()
     // simplified representation for Continuations
     // (we usually do not really care about details).
@@ -260,12 +261,12 @@ internal enum class SwitchReason(private val reason: String) {
 internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
 
 private fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
-    .computeIfAbsent(clazz) { mutableMapOf() }
+    .computeIfAbsent(clazz) { WeakHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
 internal val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
-private fun Class<out Any>?.isImmutableWithNiceToString() = this in listOf(
+private val Class<out Any>?.isImmutableWithNiceToString get() = this in listOf(
     java.lang.Integer::class.java,
     java.lang.Long::class.java,
     java.lang.Short::class.java,
