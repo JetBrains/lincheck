@@ -71,6 +71,8 @@ fun main() = listOf(
  * Finds transformation problems because of `java.util` in the given package.
  * Note that it supposes that all classes, other than `java.util` classes, are not transformed,
  * because transformed classes do not cause problems.
+ *
+ * There are still some problems left, but with rarely used classes such as `java.lang.System`.
  */
 private fun findAllTransformationProblemsIn(packageName: String) {
     val classes = getAllClasses(packageName).map { Class.forName(it) }
