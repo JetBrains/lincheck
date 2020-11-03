@@ -34,7 +34,6 @@ import java.util.stream.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
-
 /**
  * This transformer inserts [ManagedStrategy] methods invocations.
  */
@@ -45,7 +44,7 @@ internal class ManagedStrategyTransformer(
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
-    private val codeLocationIdProvider: IdProvider
+    private val codeLocationIdProvider: CodeLocationIdProvider
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -383,7 +382,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeAtomicMethodCall() {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(codeLocationIdProvider.previousId) // re-use previous code location
+            adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
@@ -427,7 +426,7 @@ internal class ManagedStrategyTransformer(
             if (!constructTraceRepresentation) {
                 // just increase code location id to keep ids consistent with the ones
                 // when `constructTraceRepresentation` is disabled
-                codeLocationIdProvider.getNewId()
+                codeLocationIdProvider.newId()
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
@@ -1165,7 +1164,7 @@ internal class ManagedStrategyTransformer(
         // STACK: (empty) -> code location, trace point
         protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor) {
             // push the codeLocation on stack
-            adapter.push(codeLocationIdProvider.getNewId())
+            adapter.push(codeLocationIdProvider.newId())
             // push the corresponding trace point
             if (constructTraceRepresentation) {
                 // add constructor for the code location
@@ -1243,6 +1242,15 @@ internal class ManagedStrategyTransformer(
             super.visitLineNumber(line, start)
         }
     }
+}
+
+/**
+ * The counter that helps to assign gradually increasing disjoint ids to different code locations
+ */
+internal class CodeLocationIdProvider {
+    var lastId = -1 // the first id will be zero
+        private set
+    fun newId() = ++lastId
 }
 
 // By default `java.util` interfaces are not transformed, while classes are.

@@ -29,7 +29,9 @@ import java.lang.reflect.*
 import kotlin.random.*
 
 /**
- * ModelCheckingStrategy studies interesting code locations in the scenario
+ * The model checking strategy studies all possible interleavings
+ *
+ * interesting code locations in the scenario
  * and then tries to add thread context switches at random code locations.
  * This process can be described as building an interleaving tree which nodes are the choices of
  * where to add a thread context switch or what thread to switch to at the chosen code location.

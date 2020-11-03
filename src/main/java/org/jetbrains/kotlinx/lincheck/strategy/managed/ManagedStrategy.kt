@@ -33,12 +33,12 @@ import java.util.*
 import kotlin.collections.set
 
 /**
- * This is an abstract class for all managed strategies.
- * This abstraction helps to choose a proper [Runner],
- * to transform byte-code in order to insert required for managing instructions,
- * to implement these managing instructions providing higher level interface,
- * to support constructing interleaving trace,
- * and to hide class loading problems from the strategy algorithm.
+ * This is an abstraction for all managed strategies, which encapsulated
+ * the required byte-code transformation and [running][Runner] logic and provides
+ * a high-level level interface to implement the strategy logic.
+ *
+ * It is worth noting that here we also solve all the transformation
+ * and class loading problems.
  */
 abstract class ManagedStrategy(
     private val testClass: Class<*>,
@@ -48,60 +48,61 @@ abstract class ManagedStrategy(
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), Closeable {
-    // the number of parallel threads
+    // The number of parallel threads.
     protected val nThreads: Int = scenario.parallelExecution.size
-    // runner for scenario invocations
+    // Runner for scenario invocations,
+    // can be replaced with a new one for trace construction.
     private var runner: Runner
-    // provides Transformer with gradually increasing disjoint code location ids
-    private val codeLocationIdProvider = IdProvider()
+    // Shares location ids between class transformers in order
+    // to keep them different in different code locations.
+    private val codeLocationIdProvider = CodeLocationIdProvider()
 
     // == EXECUTION CONTROL FIELDS ==
 
-    // what thread is currently allowed to perform operations
+    // Which thread is allowed to perform operations?
     @Volatile
     protected var currentThread: Int = 0
-    // whether a thread finished all its operations
+    // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
-    // is thread suspended
+    // Which threads are suspended?
     private val isSuspended = BooleanArray(nThreads) { false }
-    // current actor id for each thread
+    // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
-    // the number of blocks that should be ignored by the strategy entered and not left for each thread
+    // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
-    // detector of loops (i.e. active locks)
+    // Detector of loops or hangs (i.e. active locks).
     private lateinit var loopDetector: LoopDetector
-    // tracker of acquisitions and releases of monitors
+    // Tracker of acquisitions and releases of monitors.
     private lateinit var monitorTracker: MonitorTracker
 
-    // InvocationResult that was observed by the strategy in the execution (e.g. deadlock)
+    // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
 
     // == TRACE CONSTRUCTION FIELDS ==
 
-    // whether additional information about events in the interleaving should be collected
+    // Whether an additional information requires for the trace construction should be collected.
     private var collectTrace = false
-    // whether additional information about states after interleaving events should be collected
+    // Whether state representations (see `@StateRepresentation`) should be collected after interleaving events.
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
-    // interleaving point constructors, where `tracePointConstructors[id]` stores
-    // a constructor for the corresponding code location.
+    // Trace point constructors, where `tracePointConstructors[id]`
+    // stores a constructor for the corresponding code location.
     private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
-    // logger of all events in the execution such as thread switches
-    private var traceCollector: TraceCollector? = null // null when `constructStateRepresentation` is false
-    // stack with info about method invocations in current stack trace for each thread
+    // Collector of all events in the execution such as thread switches.
+    private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+    // Stores the currently execuring methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
-    // an increasing id all method invocations
-    private var methodIdentifier = 0
-    // stack with info about suspended method invocations for each thread.
-    // upon suspension a method identifier is added to the stack,
-    // so that the same identifier is used after coroutine resuming.
-    // this way trace points before suspension and after resuming correspond
-    // to the same method invocation in the trace
-    private val suspendedMethodStack = Array(nThreads) { mutableListOf<Int>() }
+    // Stores the global number of method calls.
+    private var methodCallNumber = 0
+    // In case of suspension, the call stack of the corresponding `suspend`
+    // methods is stored here, so that the same method call identifiers are
+    // used on resumption, and the trace point before and after the suspension
+    // correspond to the same method call in the trace.
+    private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
     init {
         runner = createRunner()
-        // Managed state should be initialized before test class transformation
+        // The managed state should be initialized before еру test class transformation.
         try {
             initializeManagedState()
             runner.initialize()
@@ -171,7 +172,7 @@ abstract class ManagedStrategy(
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
-        suspendedMethodStack.forEach { it.clear() }
+        suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
     }
 
@@ -191,7 +192,7 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * Re-runs previous invocation to log all its execution events.
+     * Re-runs the last invocation to collect its trace.
      */
     private fun collectTrace(failingResult: InvocationResult): List<TracePoint>? {
         val detectedByStrategy = suddenInvocationResult != null
@@ -203,11 +204,11 @@ abstract class ManagedStrategy(
         }
 
         if (!canCollectTrace) {
-            // interleaving events can be collected almost always,
-            // except for strange cases such as Runner timeout or LinChecker exceptions.
+            // Interleaving events can be collected almost always,
+            // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
             return null
         }
-        // re-transform class constructing trace
+        // Re-transform class constructing trace
         collectTrace = true
         // Replace the current runner with a new one in order to use a new
         // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
@@ -229,13 +230,12 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * Runs next invocation with the same [scenario][ExecutionScenario].
-     * @return invocation results for each executed actor.
+     * Runs the next invocation with the same [scenario][ExecutionScenario].
      */
     protected fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result = runner.run()
-        // if strategy already determined invocation result, then return it instead
+        // Has strategy already determined the invocation result?
         suddenInvocationResult?.let { return it  }
         return result
     }
@@ -243,7 +243,7 @@ abstract class ManagedStrategy(
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
         if (testCfg.checkObstructionFreedom) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
-            // forcibly finish execution by throwing an exception.
+            // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException
         }
     }
@@ -251,7 +251,7 @@ abstract class ManagedStrategy(
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
             suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
-            // forcibly finish execution by throwing an exception.
+            // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException
         }
     }
@@ -271,7 +271,7 @@ abstract class ManagedStrategy(
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (!isTestThread(iThread)) return // can switch only test threads
         check(iThread == currentThread)
-        if (inIgnoredSection(iThread)) return // can not suspend in ignored sections
+        if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
@@ -284,7 +284,7 @@ abstract class ManagedStrategy(
             switchCurrentThread(iThread, reason)
         }
         traceCollector?.passCodeLocation(codeLocation, tracePoint)
-        // continue operation
+        // continue the operation
     }
 
     /**
@@ -313,8 +313,8 @@ abstract class ManagedStrategy(
      */
     open fun onFailure(iThread: Int, exception: Throwable) {
         // Despite the fact that the corresponding failure will be detected by the runner,
-        // the managed strategy can construct an interleaving to produce the error. Let's
-        // then store the corresponding failing result and construct the trace then.
+        // the managed strategy can construct a trace to reproduce this failure.
+        // Let's then store the corresponding failing result and construct the trace.
         if (exception is ForcibleExecutionFinishException) return // not a forcible execution finish
         suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
     }
@@ -322,7 +322,7 @@ abstract class ManagedStrategy(
     override fun onActorStart(iThread: Int) {
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
-        suspendedMethodStack[iThread].clear()
+        suspendedFunctionsStack[iThread].clear()
         loopDetector.reset(iThread)
     }
 
@@ -330,7 +330,7 @@ abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e. is not blocked/finished).
      */
-    protected fun isActive(iThread: Int): Boolean =
+    private fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
         !monitorTracker.isWaiting(iThread) &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
@@ -540,7 +540,7 @@ abstract class ManagedStrategy(
         check(currentThread == iThread)
         isSuspended[iThread] = false
         // method will not be resumed after suspension, so clear prepared for resume call stack
-        suspendedMethodStack[iThread].clear()
+        suspendedFunctionsStack[iThread].clear()
     }
 
     /**
@@ -575,7 +575,7 @@ abstract class ManagedStrategy(
         if (isTestThread(iThread)) {
             check(collectTrace) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
-            val suspendedMethodStack = suspendedMethodStack[iThread]
+            val suspendedMethodStack = suspendedFunctionsStack[iThread]
             val methodId = if (suspendedMethodStack.isNotEmpty()) {
                 // if there was a suspension before, then instead of creating a new identifier
                 // use the one that the suspended call had
@@ -583,7 +583,7 @@ abstract class ManagedStrategy(
                 suspendedMethodStack.removeAt(suspendedMethodStack.lastIndex)
                 lastId
             } else {
-                methodIdentifier++
+                methodCallNumber++
             }
             // code location of the new method call is currently the last
             callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
@@ -602,7 +602,7 @@ abstract class ManagedStrategy(
             val callStackTrace = callStackTrace[iThread]
             if (tracePoint.wasSuspended) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
-                suspendedMethodStack[iThread].add(callStackTrace.last().identifier)
+                suspendedFunctionsStack[iThread].add(callStackTrace.last().identifier)
             }
             callStackTrace.removeAt(callStackTrace.lastIndex)
         }
@@ -855,15 +855,6 @@ private class MonitorTracker(nThreads: Int) {
      * and the number of thread ([iThread]) that holds the monitor.
      */
     private class MonitorAcquiringInfo(val iThread: Int, var timesAcquired: Int)
-}
-
-/**
- * Counter that helps to assign gradually increasing disjoint ids to code locations
- */
-internal class IdProvider {
-    var previousId = -1 // the first id will be zero
-        private set
-    fun getNewId() = ++previousId
 }
 
 /**
