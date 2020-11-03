@@ -19,40 +19,29 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.test.runner
+package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.test.*
+import java.util.concurrent.*
 
-class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
-    private var counter = 0
-    private var lock1 = Any()
-    private var lock2 = Any()
+class TransformInterfaceFromJUCWithRemappedClassTest : AbstractLincheckTest() {
+    private val q: BlockingQueue<Int> = ArrayBlockingQueue(10)
 
-    @Operation
-    fun inc12(): Int {
-        synchronized(lock1) {
-            synchronized(lock2) {
-                return counter++
-            }
-        }
+    init {
+        q.add(10)
     }
 
     @Operation
-    fun inc21(): Int {
-        synchronized(lock2) {
-            synchronized(lock1) {
-                return counter++
-            }
-        }
-    }
+    fun op() = q.poll(100, TimeUnit.DAYS)
 
     override fun <O : Options<O, *>> O.customize() {
-        minimizeFailedScenario(false)
-        invocationTimeout(100)
+        iterations(1)
+        actorsBefore(0)
+        threads(1)
+        actorsPerThread(1)
+        actorsAfter(0)
+        requireStateEquivalenceImplCheck(false)
     }
-
-    override fun extractState(): Any = counter
 }

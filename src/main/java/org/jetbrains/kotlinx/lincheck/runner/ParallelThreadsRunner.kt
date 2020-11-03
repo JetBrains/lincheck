@@ -21,9 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
@@ -39,37 +41,39 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  * This runner executes parallel scenario part in different threads.
  * Supports running scenarios with `suspend` functions.
  *
- * It is pretty useful for stress testing or if you do not care about context switches.
+ * It is pretty useful for stress testing or if you do not care about context switch expenses.
  */
-open class ParallelThreadsRunner(
+internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
-    waits: List<IntArray>?,
-    private val timeoutMs: Long // for deadlock recognition
-) : Runner(strategy, testClass, validationFunctions) {
-    private lateinit var testInstance: Any
+    stateRepresentationFunction: Method?,
+    private val timeoutMs: Long, // for deadlock or livelock detection
+    private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
+) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
 
     private val completions = List(scenario.threads) { t ->
         List(scenario.parallelExecution[t].size) { Completion(t) }
     }
 
-    private val testThreadExecutions = Array(scenario.threads) { t ->
-        TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], false, scenario.hasSuspendableActors())
-            .also { if (waits != null) it.waits = waits[t] }
-    }
-
-    init {
-        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
-    }
+    private lateinit var testInstance: Any
+    private lateinit var testThreadExecutions: Array<TestThreadExecution>
 
     private var suspensionPointResults = MutableList<Result>(scenario.threads) { NoResult }
 
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
+
+    override fun initialize() {
+        super.initialize()
+        testThreadExecutions = Array(scenario.threads) { t ->
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
+        }
+        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
+    }
 
     /**
      * Passed as continuation to invoke the suspendable actor from [iThread].
@@ -83,8 +87,7 @@ open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override val context: CoroutineContext
-            get() = ParallelThreadRunnerInterceptor(resWithCont)
+        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler()
 
         override fun resumeWith(result: kotlin.Result<Any?>) {
             // decrement completed or suspended threads only if the operation was not cancelled and
@@ -108,7 +111,7 @@ open class ParallelThreadsRunner(
         private var resWithCont: SuspensionPointResultWithContinuation
     ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
         override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
-            return Continuation(EmptyCoroutineContext) { result ->
+            return Continuation(StoreExceptionHandler()) { result ->
                 // decrement completed or suspended threads only if the operation was not cancelled
                 if (!result.cancelledByLincheck()) {
                     completedOrSuspendedThreads.decrementAndGet()
@@ -118,16 +121,13 @@ open class ParallelThreadsRunner(
         }
     }
 
-    private fun isLastActor(threadId: Int, actorId: Int) = actorId == scenario.parallelExecution[threadId].size - 1
-
     private fun reset() {
         testInstance = testClass.newInstance()
-        val useClocks = Random.nextBoolean()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
             val threads = scenario.threads
             val actors = scenario.parallelExecution[t].size
-            ex.useClocks = useClocks
+            ex.useClocks = if (useClocks == ALWAYS) true else Random.nextBoolean()
             ex.curClock = 0
             ex.clocks = Array(actors) { emptyClockArray(threads) }
             ex.results = arrayOfNulls(actors)
@@ -158,31 +158,37 @@ open class ParallelThreadsRunner(
             val actor = scenario.parallelExecution[iThread][actorId]
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) Cancelled
-            else waitAndInvokeFollowUp(iThread, actorId)
+            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) {
+                afterCoroutineCancelled(iThread)
+                Cancelled
+            } else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
-        if (isLastActor(iThread, actorId) && finalResult !== Suspended)
+        val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
+        if (isLastActor && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()
         suspensionPointResults[iThread] = NoResult
         return finalResult
     }
 
-    private fun waitAndInvokeFollowUp(threadId: Int, actorId: Int): Result {
-        completedOrSuspendedThreads.incrementAndGet()
+    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
+        // Coroutine is suspended. Call method so that strategy can learn it.
+        afterCoroutineSuspended(iThread)
         // Tf the suspended method call has a follow-up part after this suspension point,
         // then wait for the resuming thread to write a result of this suspension point
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.
-        val completion = completions[threadId][actorId]
+        val completion = completions[iThread][actorId]
         var i = 1
-        while (completion.resWithCont.get() === null && suspensionPointResults[threadId] === NoResult) {
+        while (!isCoroutineResumed(iThread, actorId)) {
             // Check whether the scenario is completed and the current suspended operation cannot be resumed.
             if (completedOrSuspendedThreads.get() == scenario.threads) {
-                suspensionPointResults[threadId] = NoResult
+                suspensionPointResults[iThread] = NoResult
                 return Suspended
             }
             if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
         }
+        // Coroutine will be resumed. Call method so that strategy can learn it.
+        afterCoroutineResumed(iThread)
         // Check whether the result of the suspension point with the continuation has been stored
         // by the resuming thread, and invoke the follow-up part in this case
         if (completion.resWithCont.get() !== null) {
@@ -190,8 +196,19 @@ open class ParallelThreadsRunner(
             val resumedValue = completion.resWithCont.get().first
             completion.resWithCont.get().second.resumeWith(resumedValue)
         }
-        return suspensionPointResults[threadId]
+        return suspensionPointResults[iThread]
     }
+
+    override fun afterCoroutineSuspended(iThread: Int) {
+        completedOrSuspendedThreads.incrementAndGet()
+    }
+
+    override fun afterCoroutineResumed(iThread: Int) {}
+
+    override fun afterCoroutineCancelled(iThread: Int) {}
+
+    override fun isCoroutineResumed(iThread: Int, actorId: Int) =
+        suspensionPointResults[iThread] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
         reset()
@@ -207,10 +224,11 @@ open class ParallelThreadsRunner(
                 }
             }
         }
+        val afterInitStateRepresentation = constructStateRepresentation()
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
-            val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is TestThread && t.runnerHash == runnerHash }
+            val threadDump = collectThreadDump(this)
             return DeadlockInvocationResult(threadDump)
         } catch (e: ExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
@@ -226,6 +244,7 @@ open class ParallelThreadsRunner(
             )
             return ValidationFailureInvocationResult(s, functionName, exception)
         }
+        val afterParallelStateRepresentation = constructStateRepresentation()
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
@@ -248,7 +267,12 @@ open class ParallelThreadsRunner(
             }
             result
         }
-        val results = ExecutionResult(initResults, parallelResultsWithClock, postResults)
+        val afterPostStateRepresentation = constructStateRepresentation()
+        val results = ExecutionResult(
+            initResults, afterInitStateRepresentation,
+            parallelResultsWithClock, afterParallelStateRepresentation,
+            postResults, afterPostStateRepresentation
+        )
         return CompletedInvocationResult(results)
     }
 
@@ -266,16 +290,18 @@ open class ParallelThreadsRunner(
         }
     }
 
+    override fun needsTransformation() = true
+    override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
+
+    override fun constructStateRepresentation() =
+        stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
+
     override fun close() {
         super.close()
-        executor.shutdown()
-    }
-
-    override fun needsTransformation() = true
-
-    override fun createTransformer(cv: ClassVisitor): ClassVisitor {
-        return CancellabilitySupportClassTransformer(cv)
+        executor.close()
     }
 }
+
+internal enum class UseClocks { ALWAYS, RANDOM }
 
 private const val MAX_SPINNING_TIME_BEFORE_YIELD = 2_000_000

@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
+import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
@@ -48,20 +49,18 @@ public class TestThreadExecutionGenerator {
     private static final Method OBJECT_GET_CLASS = new Method("getClass", CLASS_TYPE, NO_ARGS);
     private static final Type OBJECT_ARRAY_TYPE = getType(Object[].class);
     private static final Type THROWABLE_TYPE = getType(Throwable.class);
-    private static final Type INT_ARRAY_TYPE = getType(int[].class);
     private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", VOID_TYPE, NO_ARGS);
 
     private static final Type RUNNER_TYPE = getType(Runner.class);
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
+    private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
+    private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
     private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
     private static final Method TEST_THREAD_EXECUTION_READ_CLOCKS = new Method("readClocks", VOID_TYPE, new Type[]{INT_TYPE});
-
-    private static final Type UTILS_TYPE = getType(UtilsKt.class);
-    private static final Method UTILS_CONSUME_CPU = new Method("consumeCPU", VOID_TYPE, new Type[] {INT_TYPE});
 
     private static final Type RESULT_TYPE = getType(Result.class);
 
@@ -104,12 +103,15 @@ public class TestThreadExecutionGenerator {
     /**
      * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#run()} implementation.
      */
-    public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors, List<ParallelThreadsRunner.Completion> completions, boolean waitsEnabled, boolean scenarioContainsSuspendableActors) {
+    public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors,
+                                             List<ParallelThreadsRunner.Completion> completions,
+                                             boolean scenarioContainsSuspendableActors
+    ) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
-        Class<? extends TestThreadExecution> clz = runner.classLoader.defineClass(className,
-                generateClass(internalClassName, getType(runner.testClass), iThread, actors, objArgs, completions, waitsEnabled, scenarioContainsSuspendableActors));
+        Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
+                generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
@@ -122,13 +124,13 @@ public class TestThreadExecutionGenerator {
 
     private static byte[] generateClass(String internalClassName, Type testClassType, int iThread, List<Actor> actors,
                                         List<Object> objArgs, List<ParallelThreadsRunner.Completion> completions,
-                                        boolean waitsEnabled, boolean scenarioContainsSuspendableActors)
+                                        boolean scenarioContainsSuspendableActors)
     {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
         cca.visit(52, ACC_PUBLIC + ACC_SUPER, internalClassName, null, TEST_THREAD_EXECUTION_TYPE.getInternalName(), null);
         generateConstructor(cca);
-        generateRun(cca, testClassType, iThread, actors, objArgs, completions, waitsEnabled, scenarioContainsSuspendableActors);
+        generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors);
         cca.visitEnd();
         return cw.toByteArray();
     }
@@ -145,7 +147,7 @@ public class TestThreadExecutionGenerator {
 
     private static void generateRun(ClassVisitor cv, Type testType, int iThread, List<Actor> actors,
                                     List<Object> objArgs, List<Completion> completions,
-                                    boolean waitsEnabled, boolean scenarioContainsSuspendableActors)
+                                    boolean scenarioContainsSuspendableActors)
     {
         int access = ACC_PUBLIC;
         Method m = new Method("run", VOID_TYPE, NO_ARGS);
@@ -169,12 +171,11 @@ public class TestThreadExecutionGenerator {
         int iLocal = mv.newLocal(INT_TYPE);
         mv.push(0);
         mv.storeLocal(iLocal);
+
         // Invoke actors
-        Label returnNoResult, launchNextActor;
         for (int i = 0; i < actors.size(); i++) {
             readClocksIfNeeded(i, mv);
-            launchNextActor = mv.newLabel();
-            returnNoResult = mv.newLabel();
+            Label returnNoResult = mv.newLabel();
             if (scenarioContainsSuspendableActors) {
                 // check whether all threads are completed or suspended
                 mv.loadThis();
@@ -184,25 +185,24 @@ public class TestThreadExecutionGenerator {
                 mv.ifCmp(BOOLEAN_TYPE, GeneratorAdapter.EQ, returnNoResult);
             }
             Actor actor = actors.get(i);
-            // Add busy-wait before operation execution (for non-first operations only)
-            if (waitsEnabled && i > 0) {
-                mv.loadThis();
-                mv.getField(TEST_THREAD_EXECUTION_TYPE, "waits", INT_ARRAY_TYPE);
-                mv.push(i - 1);
-                mv.arrayLoad(INT_TYPE);
-                mv.invokeStatic(UTILS_TYPE, UTILS_CONSUME_CPU);
-            }
             // Start of try-catch block for exceptions which this actor should handle
-            Label start, end = null, handler = null, handlerEnd = null;
+            Label handledExpectionHandler = null;
+            Label actorCatchBlockStart = mv.newLabel();
+            Label actorCatchBlockEnd = mv.newLabel();
             if (actor.getHandlesExceptions()) {
-                start = mv.newLabel();
-                end = mv.newLabel();
-                handler = mv.newLabel();
-                handlerEnd = mv.newLabel();
+                handledExpectionHandler = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(start, end, handler, getType(ec).getInternalName());
-                mv.visitLabel(start);
+                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExpectionHandler, getType(ec).getInternalName());
             }
+            // Catch those exceptions that has not been caught yet
+            Label unexpectedExceptionHandler = mv.newLabel();
+            mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, unexpectedExceptionHandler, THROWABLE_TYPE.getInternalName());
+            mv.visitLabel(actorCatchBlockStart);
+            // onActorStart call
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_START);
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
             mv.push(i);
@@ -247,24 +247,47 @@ public class TestThreadExecutionGenerator {
             }
             // Store result to array
             mv.arrayStore(RESULT_TYPE);
-            // End of try-catch block
+            // End of try-catch block for handled exceptions
+            mv.visitLabel(actorCatchBlockEnd);
+            Label skipHandlers = mv.newLabel();
+            mv.goTo(skipHandlers);
+
+            // Handle exceptions that are valid results
             if (actor.getHandlesExceptions()) {
-                mv.visitLabel(end);
-                mv.goTo(handlerEnd);
-                mv.visitLabel(handler);
+                // Handled exception handler
+                mv.visitLabel(handledExpectionHandler);
                 if (scenarioContainsSuspendableActors) {
                     storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
                 } else {
                     storeExceptionResultFromThrowable(mv, resLocal, iLocal);
                 }
-                mv.visitLabel(handlerEnd);
             }
+            // End of try-catch block for all other exceptions
+            mv.goTo(skipHandlers);
+
+            // Unexpected exception handler
+            mv.visitLabel(unexpectedExceptionHandler);
+            // Call onFailure method
+            mv.dup();
+            int eLocal = mv.newLocal(THROWABLE_TYPE);
+            mv.storeLocal(eLocal);
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.loadLocal(eLocal);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FAILURE_METHOD);
+            // Just throw the exception further
+            mv.throwException();
+            mv.visitLabel(skipHandlers);
+
             // Increment the clock
             mv.loadThis();
             mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);
             // Increment number of current operation
             mv.iinc(iLocal, 1);
+            Label launchNextActor = mv.newLabel();
             mv.visitJumpInsn(GOTO, launchNextActor);
+
             // write NoResult if all threads were suspended or completed
             mv.visitLabel(returnNoResult);
             mv.loadLocal(resLocal);
@@ -273,7 +296,6 @@ public class TestThreadExecutionGenerator {
             mv.visitFieldInsn(GETSTATIC, NO_RESULT_CLASS_NAME, INSTANCE, NO_RESULT_TYPE.getDescriptor());
             mv.arrayStore(RESULT_TYPE);
             mv.iinc(iLocal, 1);
-            mv.visitJumpInsn(GOTO, launchNextActor);
             mv.visitLabel(launchNextActor);
         }
         // Call runner's onFinish(iThread) method

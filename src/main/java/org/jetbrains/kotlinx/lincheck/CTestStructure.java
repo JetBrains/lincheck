@@ -23,19 +23,15 @@ package org.jetbrains.kotlinx.lincheck;
  */
 
 import org.jetbrains.kotlinx.lincheck.annotations.*;
-import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator;
+import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import static org.jetbrains.kotlinx.lincheck.ActorKt.isSuspendable;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.stream.*;
+
+import static org.jetbrains.kotlinx.lincheck.ActorKt.*;
 
 /**
  * Contains information about the provided operations (see {@link Operation}).
@@ -46,11 +42,14 @@ public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<OperationGroup> operationGroups;
     public final List<Method> validationFunctions;
+    public final Method stateRepresentation;
 
-    private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups, List<Method> validationFunctions) {
+    private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups,
+                           List<Method> validationFunctions, Method stateRepresentation) {
         this.actorGenerators = actorGenerators;
         this.operationGroups = operationGroups;
         this.validationFunctions = validationFunctions;
+        this.stateRepresentation = stateRepresentation;
     }
 
     /**
@@ -61,20 +60,29 @@ public class CTestStructure {
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
         List<Method> validationFunctions = new ArrayList<>();
+        List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
         while (clazz != null) {
-            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions);
+            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions, stateRepresentations);
             clazz = clazz.getSuperclass();
         }
+        if (stateRepresentations.size() > 1) {
+            throw new IllegalStateException("Several functions marked with " + StateRepresentation.class.getSimpleName() +
+                " were found, while at most one should be specified: " +
+                stateRepresentations.stream().map(Method::getName).collect(Collectors.joining(", ")));
+        }
+        Method stateRepresentation = null;
+        if (!stateRepresentations.isEmpty())
+            stateRepresentation = stateRepresentations.get(0);
         // Create StressCTest class configuration
-        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions);
+        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation);
     }
 
     private static void readTestStructureFromClass(Class<?> clazz, Map<String, ParameterGenerator<?>> namedGens,
                                                    Map<String, OperationGroup> groupConfigs,
                                                    List<ActorGenerator> actorGenerators,
-                                                   List<Method> validationFunctions
-    ) {
+                                                   List<Method> validationFunctions,
+                                                   List<Method> stateRepresentations) {
         // Read named parameter paramgen (declared for class)
         for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
             if (paramAnn.name().isEmpty()) {
@@ -88,7 +96,7 @@ public class CTestStructure {
                     opGroupConfigAnn.nonParallel()));
         }
         // Create actor paramgen
-        for (Method m : clazz.getDeclaredMethods()) {
+        for (Method m : getDeclaredMethodSorted(clazz)) {
             // Operation
             if (m.isAnnotationPresent(Operation.class)) {
                 Operation operationAnn = m.getAnnotation(Operation.class);
@@ -124,7 +132,29 @@ public class CTestStructure {
                     throw new IllegalStateException("Validation function " + m.getName() + " should not have parameters");
                 validationFunctions.add(m);
             }
+
+            if (m.isAnnotationPresent(StateRepresentation.class)) {
+                if (m.getParameterCount() != 0)
+                    throw new IllegalStateException("State representation function " + m.getName() + " should not have parameters");
+                if (m.getReturnType() != String.class)
+                    throw new IllegalStateException("State representation function " + m.getName() + " should have String return type");
+                stateRepresentations.add(m);
+            }
         }
+    }
+
+    /**
+     * Sort methods by name to make scenario generation deterministic.
+     */
+    private static Method[] getDeclaredMethodSorted(Class<?> clazz) {
+        Method[] methods = clazz.getDeclaredMethods();
+        Comparator<Method> comparator = Comparator
+                // compare by method name
+                .comparing(Method::getName)
+                // then compare by parameter class names
+                .thenComparing(m -> Arrays.stream(m.getParameterTypes()).map(Class::getName).collect(Collectors.joining(":")));
+        Arrays.sort(methods, comparator);
+        return methods;
     }
 
     private static ParameterGenerator<?> getOrCreateGenerator(Method m, Parameter p, String nameInOperation,
@@ -145,7 +175,7 @@ public class CTestStructure {
             if (defaultGenerator != null)
                 return defaultGenerator;
             // Cannot create default parameter generator, throw an exception
-            throw new IllegalStateException("Generator for parameter \'" + p + "\" in method \""
+            throw new IllegalStateException("Generator for parameter \"" + p + "\" in method \""
                 + m.getName() + "\" should be specified.");
         }
         // If the @Param annotation is presented check it's correctness firstly

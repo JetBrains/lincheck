@@ -388,7 +388,7 @@ internal class VerifierInterceptor(
 ) : AbstractCoroutineContextElement(ContinuationInterceptor),
     ContinuationInterceptor {
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
-        return Continuation(EmptyCoroutineContext) { res ->
+        return Continuation(StoreExceptionHandler()) { res ->
             // write the result only if the operation has not been cancelled
             if (!res.cancelledByLincheck()) {
                 resumedTicketsWithResults[ticket] = ResumedResult(continuation as Continuation<Any?> to res)
@@ -415,7 +415,7 @@ internal class Completion(
     private val resumedTicketsWithResults: MutableMap<Int, ResumedResult>
 ) : Continuation<Any?> {
     override val context: CoroutineContext
-        get() = VerifierInterceptor(ticket, actor, resumedTicketsWithResults)
+        get() = VerifierInterceptor(ticket, actor, resumedTicketsWithResults) + StoreExceptionHandler()
 
     override fun resumeWith(result: kotlin.Result<Any?>) {
         // write the result only if the operation has not been cancelled

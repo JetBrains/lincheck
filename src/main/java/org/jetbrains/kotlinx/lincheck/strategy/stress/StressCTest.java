@@ -42,7 +42,7 @@ import java.lang.annotation.*;
 @Inherited
 public @interface StressCTest {
     /**
-     * Number of different test scenarios to be executed
+     * The number of different test scenarios to be executed
      */
     int iterations() default CTestConfiguration.DEFAULT_ITERATIONS;
 
@@ -92,19 +92,19 @@ public @interface StressCTest {
     int actorsAfter() default CTestConfiguration.DEFAULT_ACTORS_AFTER;
 
     /**
-     * Use the specified execution generator
+     * Use the specified execution generator.
      */
     Class<? extends ExecutionGenerator> generator() default RandomExecutionGenerator.class;
 
     /**
-     * Use the specified verifier
+     * Use the specified verifier.
      */
     Class<? extends Verifier> verifier() default LinearizabilityVerifier.class;
 
     /**
      * Require correctness check of test instance state equivalency relation, which is defined by the user.
      * Essentially, it checks whether two new instances of the test class are equal.
-     * If the check fails. an [{@link IllegalStateException}] is thrown.
+     * If the check fails, an {@link IllegalStateException} is thrown.
      */
     boolean requireStateEquivalenceImplCheck() default true;
 
@@ -127,7 +127,6 @@ public @interface StressCTest {
 
     /**
      * Holder annotation for {@link StressCTest}.
-     * Not a public API.
      */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)

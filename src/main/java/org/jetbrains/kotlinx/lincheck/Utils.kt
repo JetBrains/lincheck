@@ -25,24 +25,18 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.objectweb.asm.*
+import org.objectweb.asm.commons.*
 import java.io.*
 import java.lang.ref.*
-import java.lang.reflect.*
+import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
-@Volatile
-private var consumedCPU = System.currentTimeMillis().toInt()
-
-fun consumeCPU(tokens: Int) {
-    var t = consumedCPU // volatile read
-    for (i in tokens downTo 1)
-        t += (t * 0x5DEECE66DL + 0xBL + i.toLong() and 0xFFFFFFFFFFFFL).toInt()
-    if (t == 42)
-        consumedCPU += t
-}
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
@@ -106,7 +100,10 @@ internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadC
 
 private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
 
-private fun getMethod(instance: Any, method: Method): Method {
+/**
+ * Get the same [method] for [instance] solving the different class loaders problem.
+ */
+internal fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
     return methods[method]?.get() ?: run {
         val m = instance.javaClass.getMethod(method.name, method.parameterTypes)
@@ -116,7 +113,8 @@ private fun getMethod(instance: Any, method: Method): Method {
 }
 
 /**
- * Finds a method corresponding to [name] and [parameterTypes] ignoring difference in loaders for [parameterTypes].
+ * Finds a method withe the specified [name] and (parameters)[parameterTypes]
+ * ignoring the difference in class loaders for these parameter types.
  */
 private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method =
     methods.find { method ->
@@ -180,7 +178,22 @@ internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (t
     else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
-fun <T> CancellableContinuation<T>.cancelByLincheck() = cancel(cancellationByLincheckException)
+internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
+    var exception: Throwable? = null
+
+    override fun handleException(context: CoroutineContext, exception: Throwable) {
+        this.exception = exception
+    }
+}
+fun <T> CancellableContinuation<T>.cancelByLincheck(): Boolean {
+    val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
+    exceptionHandler.exception = null
+    val cancelled = cancel(cancellationByLincheckException)
+    exceptionHandler.exception?.let {
+        throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
+    }
+    return cancelled
+}
 
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
@@ -207,14 +220,29 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     parallelExecution.map { actors ->
         actors.map { a ->
             val args = a.arguments.map { it.convertForLoader(loader) }
-            Actor(a.method, args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension)
+            // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
+            Actor(a.method.convertForLoader(loader), args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension, a.isSuspendable)
         }
     },
     postExecution
 )
 
-private fun Any?.convertForLoader(loader: ClassLoader) = when {
-    this == null || TransformationClassLoader.doNotTransform(this.javaClass.name) -> this
+/**
+ * Finds the same method but loaded by the specified (class loader)[loader],
+ * the signature can be changed according to the [TransformationClassLoader]'s remapper.
+ */
+private fun Method.convertForLoader(loader: ClassLoader): Method {
+    if (loader !is TransformationClassLoader) return this
+    val clazz = declaringClass.convertForLoader(loader)
+    val parameterTypes = parameterTypes.map { it.convertForLoader(loader) }
+    return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
+}
+
+private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
+
+internal fun Any?.convertForLoader(loader: ClassLoader) = when {
+    this == null -> this
+    loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
     this is Serializable -> serialize().run { deserialize(loader) }
     else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
                   " or implement Serializable interface.")
@@ -234,5 +262,31 @@ internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(t
  * ObjectInputStream that uses custom class loader.
  */
 private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
-    override fun resolveClass(desc: ObjectStreamClass): Class<*> = Class.forName(desc.name, true, loader)
+    override fun resolveClass(desc: ObjectStreamClass): Class<*> {
+        // add `TRANSFORMED_PACKAGE_NAME` prefix in case of TransformationClassLoader and remove otherwise
+        val className = if (loader is TransformationClassLoader) loader.remapClassName(desc.name)
+                        else desc.name.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME)
+        return Class.forName(className, true, loader)
+    }
 }
+
+/**
+ * Collects the current thread dump and keeps only those
+ * threads that are related to the specified [runner].
+ */
+internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
+    t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
+}
+
+/**
+ * This method helps to encapsulate remapper logic from strategy interface.
+ * The remapper is determined based on the used transformers.
+ */
+internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
+    when {
+        classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
+        else -> null
+    }
+
+internal val String.canonicalClassName get() = this.replace('/', '.')
+internal val String.internalClassName get() = this.replace('.', '/')

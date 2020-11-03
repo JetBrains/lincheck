@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -47,12 +48,29 @@ abstract class AbstractLincheckTest(
         }
     }
 
-    @Test(timeout = 100_000)
+    @Test(timeout = TIMEOUT)
     fun testWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(10_000)
-        iterations(30)
-        minimizeFailedScenario(false)
-        customize()
+        commonConfiguration()
+        invocationsPerIteration(5_000)
         runInternalTest()
     }
+
+    @Test(timeout = TIMEOUT)
+    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
+        commonConfiguration()
+        invocationsPerIteration(1_000)
+        runInternalTest()
+    }
+
+    private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
+        iterations(30)
+        actorsBefore(2)
+        threads(3)
+        actorsPerThread(2)
+        actorsAfter(2)
+        minimizeFailedScenario(false)
+        customize()
+    }
 }
+
+private const val TIMEOUT = 100_000L
