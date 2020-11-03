@@ -29,15 +29,19 @@ import java.lang.reflect.*
 import kotlin.random.*
 
 /**
- * The model checking strategy studies all possible interleavings
+ * The model checking strategy studies all possible interleavings by increasing the
+ * interleaving tree depth -- the number of context switches performed by the strategy.
  *
- * interesting code locations in the scenario
- * and then tries to add thread context switches at random code locations.
- * This process can be described as building an interleaving tree which nodes are the choices of
- * where to add a thread context switch or what thread to switch to at the chosen code location.
- * The strategy do not try the same interleaving twice.
- * The depth of the interleaving tree is increased gradually as all possible
- * interleavings of the previous depth are researched.
+ * To restrict the number of interleaving to be studied, it is specified in [testCfg].
+ * The strategy constructs an interleaving tree, where nodes choose where the next
+ * context switch should be performed and to which thread.
+ *
+ * The strategy does not study the same interleaving twice.
+ * The depth of the interleaving tree increases gradually when all possible
+ * interleavings of the previous depth are studied. On the current level,
+ * the interleavings are studied uniformly, to study as many different ones
+ * as possible when the maximal number of interleavings to be studied is lower
+ * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
         testCfg: ModelCheckingCTestConfiguration,
@@ -52,7 +56,7 @@ internal class ModelCheckingStrategy(
     // The number of already used invocations.
     private var usedInvocations = 0
     // The maximum number of thread switch choices that strategy should perform
-    // (increases when all the interleavings with the current depth are studied)
+    // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
     // The root of the interleaving tree that chooses the starting thread.
     private var root: InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
@@ -77,14 +81,14 @@ internal class ModelCheckingStrategy(
             // Create new execution position if this is a forced switch.
             // All other execution positions are covered by `shouldSwitch` method,
             // but forced switches do not ask `shouldSwitch`, because they are forced.
-            // a choice of this execution position will mean that the next switch is the forced switch
+            // a choice of this execution position will mean that the next switch is the forced one.
             currentInterleaving.newExecutionPosition(iThread)
         }
     }
 
     override fun shouldSwitch(iThread: Int): Boolean {
-        // crete a new current position in the same place as where the check is,
-        // because the position check and the position increment are dual operations
+        // Crete a new current position in the same place as where the check is,
+        // because the position check and the position increment are dual operations.
         check(iThread == currentThread)
         currentInterleaving.newExecutionPosition(iThread)
         return currentInterleaving.isSwitchPosition()
@@ -105,18 +109,17 @@ internal class ModelCheckingStrategy(
         lateinit var choices: List<Choice>
         var isFullyExplored: Boolean = false
             protected set
-        val isInitialized
-            get() = ::choices.isInitialized
+        val isInitialized get() = ::choices.isInitialized
 
         fun nextInterleaving(): Interleaving? {
             if (isFullyExplored) {
-                // increase the maximum number of switches that can be used,
+                // Increase the maximum number of switches that can be used,
                 // because there are no more not covered interleavings
-                // with the previous maximum number of switches
+                // with the previous maximum number of switches.
                 maxNumberOfSwitches++
                 resetExploration()
             }
-            // check if everything is fully explored and there are no possible interleavings with more switches
+            // Check if everything is fully explored and there are no possible interleavings with more switches.
             if (isFullyExplored) return null
             return nextInterleaving(InterleavingBuilder())
         }
@@ -125,7 +128,7 @@ internal class ModelCheckingStrategy(
 
         protected fun resetExploration() {
             if (!isInitialized) {
-                // is a leaf node
+                // This is a leaf node.
                 isFullyExplored = false
                 fractionUnexplored = 1.0
                 return
@@ -155,7 +158,7 @@ internal class ModelCheckingStrategy(
 
         protected fun chooseUnexploredNode(): Choice {
             if (choices.size == 1) return choices.first()
-            // choose a weighted random child.
+            // Choose a weighted random child.
             val total = choices.sumByDouble { it.node.fractionUnexplored }
             val random = generationRandom.nextDouble() * total
             var sumWeight = 0.0
@@ -164,7 +167,7 @@ internal class ModelCheckingStrategy(
                 if (sumWeight >= random)
                     return choice
             }
-            // in case of errors because of floating point numbers choose the last unexplored choice
+            // In case of errors because of floating point numbers choose the last unexplored choice.
             return choices.last { !it.node.isFullyExplored }
         }
     }
@@ -228,7 +231,7 @@ internal class ModelCheckingStrategy(
             currentThread = nextThreadToSwitch.next() // choose initial executing thread
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
-                // create mutable list for the initialization of the not initialized node choices
+                // Create a mutable list for the initialization of the not initialized node choices.
                 lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
                     it.choices = choices
                 }
@@ -238,16 +241,15 @@ internal class ModelCheckingStrategy(
 
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {
-                // use the predefined choice
+                // Use the predefined choice.
                 val result = nextThreadToSwitch.next()
                 check(result in switchableThreads(iThread))
                 result
             } else {
-                // there is no predefined choice.
-                // this can happen if there are forced thread switches after the last predefined one
+                // There is no predefined choice.
+                // This can happen if there were forced thread switches after the last predefined one
                 // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
-                // we use random here, because deterministic thread switch choices,
-                // such as minimal available thread id, can result in a livelock.
+                // We use a deterministic random here to choose the next thread.
                 lastNotInitializedNodeChoices = null // end of execution position choosing initialization because of new switch
                 switchableThreads(iThread).random(interleavingFinishingRandom)
             }
@@ -255,14 +257,14 @@ internal class ModelCheckingStrategy(
         fun isSwitchPosition() = executionPosition in switchPositions
 
         /**
-         * Creates a new execution position that corresponds to a switch point.
-         * Unlike switch point the execution position is just a gradually increasing counter
-         * that helps to distinguish different switch positions.
+         * Creates a new execution position that corresponds to the current switch point.
+         * Unlike switch points, the execution position is just a gradually increasing counter
+         * which helps to distinguish different switch points.
          */
         fun newExecutionPosition(iThread: Int) {
             executionPosition++
             if (executionPosition > switchPositions.lastOrNull() ?: -1) {
-                // add new thread choosing node corresponding to a switch at the current execution position
+                // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
             }
         }
