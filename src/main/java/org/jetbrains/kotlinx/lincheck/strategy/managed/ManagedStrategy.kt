@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
-import java.lang.reflect.Method
+import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
 
@@ -241,12 +241,18 @@ abstract class ManagedStrategy(
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom) {
+        if (testCfg.checkObstructionFreedom && !blockingActorInProgress) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException
         }
     }
+
+    private val blockingActorInProgress: Boolean
+        get() = currentActorId.mapIndexed { iThread, actorId ->
+                    if (scenario.parallelExecution[iThread].size > actorId) scenario.parallelExecution[iThread][actorId]
+                    else null
+                }.filterNotNull().any { it.blocking }
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
