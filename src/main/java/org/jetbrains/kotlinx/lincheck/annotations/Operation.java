@@ -56,7 +56,7 @@ public @interface Operation {
     Class<? extends Throwable>[] handleExceptionsAsResult() default {};
 
     /**
-     * Specified whether the operation can be cancelled if it suspends,
+     * Specifies whether the operation can be cancelled if it suspends,
      * see {@link CancellableContinuation#cancel}; {@code true} by default.
      */
     boolean cancellableOnSuspension() default true;
@@ -69,4 +69,13 @@ public @interface Operation {
      * dual data structures formalism.
      */
     boolean allowExtraSuspension() default false;
+
+    /**
+     * Specifies whether this operation is blocking or may lead
+     * to a blocking behavior of another operation. This way,
+     * if the test checks for a non-blocking progress guarantee,
+     * <b>lincheck</b> will not fail the test if a hang is detected
+     * while one of the operations with this {@code blocking} marker is running.
+     */
+    boolean blocking() default false;
 }
