@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -49,6 +50,9 @@ abstract class ManagedCTestConfiguration(
             // Non-determinism should not be present in managed executions, but luckily the classes
             // can be just ignored, so that no thread context switches are added inside their methods.
             forClasses("kotlinx.coroutines.internal.StackTraceRecoveryKt").allMethods().ignore(),
+            // Ignore the DispatchedTask methods, they can be called by Lincheck.
+            @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+            forClasses(DispatchedTask::class.qualifiedName!!).allMethods().ignore(),
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             forClasses { className: String -> isTrustedPrimitive(className) }.allMethods().treatAsAtomic()
         )

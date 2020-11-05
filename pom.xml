@@ -24,8 +24,8 @@
         <license.licenseName>lgpl_v3</license.licenseName>
         <license.addJavaLicenseAfterPackage>false</license.addJavaLicenseAfterPackage>
         <lastCopyrightYear>2020</lastCopyrightYear>
-        <kotlin.version>1.3.72</kotlin.version>
-        <kotlinx.coroutines.version>1.3.5</kotlinx.coroutines.version>
+        <kotlin.version>1.4.0</kotlin.version>
+        <kotlinx.coroutines.version>1.4.0</kotlinx.coroutines.version>
         <asm.version>9.0</asm.version>
         <atomicfu.version>0.12.11</atomicfu.version>
     </properties>

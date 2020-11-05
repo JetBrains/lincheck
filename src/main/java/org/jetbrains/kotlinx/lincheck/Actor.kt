@@ -38,12 +38,22 @@ data class Actor @JvmOverloads constructor(
     val cancelOnSuspension: Boolean = false,
     val allowExtraSuspension: Boolean = false,
     val blocking: Boolean = false,
+    val promptCancellation: Boolean = false,
     // we have to specify `isSuspendable` property explicitly for transformed classes since
     // `isSuspendable` implementation produces a circular dependency and, therefore, fails.
     val isSuspendable: Boolean = method.isSuspendable()
 ) {
-    override fun toString() = cancellableMark + method.name + arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() }
-    private val cancellableMark get() = (if (cancelOnSuspension) "*" else "")
+    init {
+        if (promptCancellation) require(cancelOnSuspension) {
+            "`promptCancellation` cannot be set to `true` if `cancelOnSuspension` is `false`"
+        }
+    }
+
+    override fun toString() = method.name +
+        arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() } +
+        (if (cancelOnSuspension) " + " else "") +
+        (if (promptCancellation) "prompt_" else "") +
+        (if (cancelOnSuspension) "cancel" else "")
 
     val handlesExceptions = handledExceptions.isNotEmpty()
 }
