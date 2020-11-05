@@ -68,12 +68,12 @@ class ClocksTestScenarioGenerator(testCfg: CTestConfiguration, testStructure: CT
         emptyList(),
         listOf(
             listOf(
-                Actor(method = ClocksTest::a.javaMethod!!, arguments = emptyList(), handledExceptions = emptyList()),
-                Actor(method = ClocksTest::b.javaMethod!!, arguments = emptyList(), handledExceptions = emptyList())
+                Actor(method = ClocksTest::a.javaMethod!!, arguments = emptyList()),
+                Actor(method = ClocksTest::b.javaMethod!!, arguments = emptyList())
             ),
             listOf(
-                Actor(method = ClocksTest::c.javaMethod!!, arguments = emptyList(), handledExceptions = emptyList()),
-                Actor(method = ClocksTest::d.javaMethod!!, arguments = emptyList(), handledExceptions = emptyList())
+                Actor(method = ClocksTest::c.javaMethod!!, arguments = emptyList()),
+                Actor(method = ClocksTest::d.javaMethod!!, arguments = emptyList())
             )
         ),
         emptyList()

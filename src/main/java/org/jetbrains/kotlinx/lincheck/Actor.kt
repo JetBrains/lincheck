@@ -34,7 +34,7 @@ import kotlin.reflect.jvm.*
 data class Actor @JvmOverloads constructor(
     val method: Method,
     val arguments: List<Any?>,
-    val handledExceptions: List<Class<out Throwable>>,
+    val handledExceptions: List<Class<out Throwable>> = emptyList(),
     val cancelOnSuspension: Boolean = false,
     val allowExtraSuspension: Boolean = false,
     val blocking: Boolean = false,
