@@ -221,7 +221,15 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
         actors.map { a ->
             val args = a.arguments.map { it.convertForLoader(loader) }
             // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
-            Actor(a.method.convertForLoader(loader), args, a.handledExceptions, a.cancelOnSuspension, a.allowExtraSuspension, a.isSuspendable)
+            Actor(
+                method = a.method.convertForLoader(loader),
+                arguments = args,
+                handledExceptions = a.handledExceptions,
+                cancelOnSuspension = a.cancelOnSuspension,
+                allowExtraSuspension = a.allowExtraSuspension,
+                blocking = a.blocking,
+                isSuspendable = a.isSuspendable
+            )
         }
     },
     postExecution
