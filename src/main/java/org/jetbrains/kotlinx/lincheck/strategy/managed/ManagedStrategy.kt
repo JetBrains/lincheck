@@ -280,7 +280,11 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
-            failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
+            failIfObstructionFreedomIsRequired {
+                // Log the last event that caused obstruction freedom violation
+                traceCollector?.passCodeLocation(codeLocation, tracePoint)
+                "Obstruction-freedom is required but an active lock has been found"
+            }
             checkLiveLockHappened(loopDetector.totalOperations)
             isLoop = true
         }
@@ -488,8 +492,8 @@ abstract class ManagedStrategy(
      */
     internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
-        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on monitor block has been found" }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
         if (withTimeout) return false // timeouts occur instantly
         monitorTracker.waitOnMonitor(iThread, monitor)
         // switch to another thread and wait till a notify event happens
