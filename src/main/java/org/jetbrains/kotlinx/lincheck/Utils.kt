@@ -105,6 +105,7 @@ private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReferen
 /**
  * Get the same [method] for [instance] solving the different class loaders problem.
  */
+@Synchronized
 internal fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
     return methods[method]?.get() ?: run {

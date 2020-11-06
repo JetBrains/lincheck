@@ -260,6 +260,7 @@ internal enum class SwitchReason(private val reason: String) {
  */
 internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
 
+@Synchronized
 private fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
     .computeIfAbsent(clazz) { WeakHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
