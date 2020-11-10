@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 
 class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
@@ -56,8 +57,11 @@ enum class LoggingLevel {
     INFO, ERROR
 }
 
-private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
-    val nRows = groupedObjects.map { it.size }.max()!!
+internal fun <T> printInColumnsCustom(
+        groupedObjects: List<List<T>>,
+        joinColumns: (List<String>) -> String
+): String {
+    val nRows = groupedObjects.map { it.size }.max() ?: 0
     val nColumns = groupedObjects.size
     val rows = (0 until nRows).map { rowIndex ->
         (0 until nColumns)
@@ -65,13 +69,15 @@ private fun <T> printInColumns(groupedObjects: List<List<T>>): String {
                 .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
     }
     val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
-        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max()!!
+        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max() ?: 0
     }
     return (0 until nRows)
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
-            .map { rowCells -> rowCells.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
+            .map { rowCells -> joinColumns(rowCells) }
             .joinToString(separator = "\n")
 }
+
+private fun <T> printInColumns(groupedObjects: List<List<T>>) = printInColumnsCustom(groupedObjects) { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
 
 private class ActorWithResult(val actorRepresentation: String, val spacesAfterActor: Int,
                               val resultRepresentation: String, val spacesAfterResult: Int,
@@ -136,17 +142,31 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
     return this
 }
 
-internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder =
+internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
+        is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
     }
+    val results = if (failure is IncorrectResultsFailure) failure.results else null
+    if (failure.trace != null) {
+        appendln()
+        appendln("= The following interleaving leads to the error =")
+        appendTrace(failure.scenario, results, failure.trace)
+        if (failure is DeadlockWithDumpFailure) {
+            appendln()
+            append("All threads are in deadlock")
+        }
+    }
+    return this
+}
 
 private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
     appendln("= The execution failed with an unexpected exception =")
     appendExecutionScenario(failure.scenario)
+    appendln()
     appendException(failure.exception)
     return this
 }
@@ -154,11 +174,16 @@ private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedEx
 private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
     appendln("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
+    appendln()
     for ((t, stackTrace) in failure.threadDump) {
-        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread else "?"
+        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendln("Thread-$threadNumber:")
-        for (ste in stackTrace) {
+        for (s in stackTrace) {
+            // remove transformation package predix
+            val ste = StackTraceElement(s.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), s.methodName, s.fileName, s.lineNumber)
             if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
+            // omit information about strategy code insertions
+            if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.strategy.")) continue
             appendln("\t$ste")
         }
     }
@@ -171,13 +196,23 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
         appendln("Init part:")
         appendln(uniteActorsAndResultsLinear(failure.scenario.initExecution, failure.results.initResults))
     }
+    if (failure.results.afterInitStateRepresentation != null)
+        appendln("STATE: ${failure.results.afterInitStateRepresentation}")
     appendln("Parallel part:")
     val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
     append(printInColumns(parallelExecutionData))
+    if (failure.results.afterParallelStateRepresentation != null) {
+        appendln()
+        append("STATE: ${failure.results.afterParallelStateRepresentation}")
+    }
     if (failure.scenario.postExecution.isNotEmpty()) {
         appendln()
         appendln("Post part:")
         append(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
+    }
+    if (failure.results.afterPostStateRepresentation != null && failure.scenario.postExecution.isNotEmpty()) {
+        appendln()
+        append("STATE: ${failure.results.afterPostStateRepresentation}")
     }
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
         appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
@@ -189,6 +224,12 @@ private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): S
     appendln("= Validation function ${failure.functionName} has been failed =")
     appendExecutionScenario(failure.scenario)
     appendException(failure.exception)
+    return this
+}
+
+private fun StringBuilder.appendObstructionFreedomViolationFailure(failure: ObstructionFreedomViolationFailure): StringBuilder {
+    appendln("= ${failure.reason} =")
+    appendExecutionScenario(failure.scenario)
     return this
 }
 

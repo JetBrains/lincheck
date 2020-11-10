@@ -43,12 +43,17 @@ class DeadlockInvocationResult(
 ) : InvocationResult()
 
 /**
- * The invocation has finished with an unexpected exception.
+ * The invocation has completed with an unexpected exception.
  */
 class UnexpectedExceptionInvocationResult(
     val exception: Throwable
 ) : InvocationResult()
 
+/**
+ * The invocation successfully completed, but the
+ * [validation function][org.jetbrains.kotlinx.lincheck.annotations.Validate]
+ * check failed.
+ */
 class ValidationFailureInvocationResult(
     val scenario: ExecutionScenario,
     val functionName: String,
@@ -57,5 +62,12 @@ class ValidationFailureInvocationResult(
 
 class InvariantsViolatedInvocationResult(
         val scenario: ExecutionScenario,
-        val message : String
+        val message : String) : InvocationResult()
+
+/**
+ * Obstruction freedom check is requested,
+ * but an invocation that hangs has been found.
+ */
+class ObstructionFreedomViolationInvocationResult(
+    val reason: String
 ) : InvocationResult()

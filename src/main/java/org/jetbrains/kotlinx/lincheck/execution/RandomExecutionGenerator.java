@@ -46,7 +46,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         List<ActorGenerator> validActorGeneratorsForInit = testStructure.actorGenerators.stream()
             .filter(ag -> !ag.getUseOnce() && !ag.isSuspendable()).collect(Collectors.toList());
         List<Actor> initExecution = new ArrayList<>();
-        for (int i = 0; i < testConfiguration.actorsBefore && !validActorGeneratorsForInit.isEmpty(); i++) {
+        for (int i = 0; i < testConfiguration.getActorsBefore() && !validActorGeneratorsForInit.isEmpty(); i++) {
             ActorGenerator ag = validActorGeneratorsForInit.get(random.nextInt(validActorGeneratorsForInit.size()));
             initExecution.add(ag.generate(0));
         }
@@ -61,9 +61,9 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
 
         List<List<Actor>> parallelExecution = new ArrayList<>();
         List<ThreadGen> threadGens = new ArrayList<>();
-        for (int t = 0; t < testConfiguration.threads; t++) {
+        for (int t = 0; t < testConfiguration.getThreads(); t++) {
             parallelExecution.add(new ArrayList<>());
-            threadGens.add(new ThreadGen(t, testConfiguration.actorsPerThread));
+            threadGens.add(new ThreadGen(t, testConfiguration.getActorsPerThread()));
         }
         for (int i = 0; i < nonParallelGroups.size(); i++) {
             threadGens.get(i % threadGens.size()).nonParallelActorGenerators
@@ -99,9 +99,9 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
             List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
             for (ThreadGen threadGen : tgs2)
                 leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
-            for (int i = 0; i < testConfiguration.actorsAfter && !leftActorGenerators.isEmpty(); i++) {
+            for (int i = 0; i < testConfiguration.getActorsAfter() && !leftActorGenerators.isEmpty(); i++) {
                 ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
-                postExecution.add(agen.generate(testConfiguration.threads + 1));
+                postExecution.add(agen.generate(testConfiguration.getThreads() + 1));
             }
         } else {
             postExecution = Collections.emptyList();

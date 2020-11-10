@@ -31,7 +31,10 @@ Table of contents
   * [Parameter and result types](#parameter-and-result-types)
   * [Run test](#run-test)
 - [Execution strategies](#execution-strategies)
-  * [Stress strategy](#stress-strategy)
+  * [Stress testing](#stress-testing)
+  * [Model checking](#model-checking)
+    * [State representation](#state-representation)
+    * [Incremental testing](#incremental-testing)
 - [Correctness contracts](#correctness-contracts)
   * [Linearizability](#linearizability)
     + [States equivalency](#states-equivalency)
@@ -96,7 +99,7 @@ public class SPMCQueueTest {
 }
 ```
 
-> A generator for `x` parameter is omitted and the default is used. See [Default generators](#default-generators) paragraph for details.
+A generator for `x` parameter is omitted and the default one is used. See [Default generators](#default-generators) paragraph for details.
 
 ## Parameter generators
 If an operation has parameters then generators should be specified for each of them. There are several ways to specify a parameter generator: explicitly on parameter via `@Param(gen = ..., conf = ...)` annotation, using named generator via `@Param(name = ...)` annotation, or using the default generator implicitly.
@@ -137,7 +140,7 @@ Unfortunately, this feature is disabled in **javac** compiler by default. Use `-
 </plugin>
 ```
 
-> However, some IDEs (such as IntelliJ IDEA) do not understand build system configuration as well as possible and running a test from these IDEs will not work. In order to solve this issue you can add `-parameters` option for **javac** compiler in your IDE configuration.
+However, some IDEs (such as IntelliJ IDEA) do not understand build system configuration as well as possible and running a test from these IDEs will not work. In order to solve this issue you can add `-parameters` option for **javac** compiler in your IDE configuration.
 
 ## Sequential specification
 By default, **lincheck** sequentially uses the testing data structure to define the correct specification.
@@ -196,7 +199,7 @@ public class MyConcurrentTest {
 }
 ```
 
-> It is possible to add several `@..CTest` annotations with different execution strategies or configurations and all of them should be processed. 
+It is possible to add several `@..CTest` annotations with different execution strategies or configurations and all of them should be processed. 
 
 
 
@@ -205,8 +208,8 @@ public class MyConcurrentTest {
 # Execution strategies
 The section above describes how to specify the operations and the initial state, whereas this section is about executing the test. Using the provided operations **lincheck** generates several random scenarios and then executes them using the specified execution strategy. At this moment, only stress strategy is implemented, but a model checking one will be added soon.
 
-## Stress strategy
-The first implemented in **lincheck** execution strategy is stress testing strategy. This strategy uses the same idea as `JCStress` tool - it executes the generated scenario in parallel a lot of times in hope to hit on an interleaving which produces incorrect results. This strategy is pretty useful for finding bugs related to low-level effects (like a forgotten volatile modifier), but, unfortunately, does not guarantee any coverage. It is also recommended to use not only Intel processors with this strategy because its internal memory model is quite strong and cannot produce a lot of behaviors which are possible with ARM, for example. 
+## Stress testing
+The first implemented in **lincheck** strategy is stress testing. This strategy uses the same idea as `JCStress` tool - it executes the generated scenario in parallel a lot of times in hope to hit on an interleaving which produces incorrect results. This strategy is pretty useful for finding bugs related to low-level effects (like a forgotten volatile modifier), but, unfortunately, does not guarantee any coverage. It is also recommended to use not only Intel processors with this strategy because its internal memory model is quite strong and cannot produce a lot of behaviors which are possible with ARM, for example. 
 
 In order to use this strategy, just `@StressCTest` annotation should be added to the test class or `StressOptions` should be used if the test uses options to run (see [Configuration via options](#configuration-via-options) for details). Both of them are configured with the following options:
 
@@ -218,9 +221,39 @@ In order to use this strategy, just `@StressCTest` annotation should be added to
 * **actorsAfter** - number of operations to be executed after the concurrent part, helps to verify that a data structure is still correct;
 * **verifier** - verifier for an expected correctness contract (see [Correctness contracts](#correctness-contracts) for details).
 
+## Model checking
+Most of the complicated concurrent algorithms either use the sequentially consistent memory model under the hood, or bugs in their implementations can be re-produced under it. 
+Therefore, in **lincheck** we have a model checking mode that works under the sequentially consistent memory model. Intuitively, it studies all possible schedules with a bounded number of context switches by fully controlling the execution and putting context switches in different locations in threads. Similarly to the stress testing, it is possible to bound the number of schedules (invocations) to be studied -- this way, the test time is predictable independently on the scenario size and the algorithm complexity. To be short, **lincheck** starts with studying all interleavings with one context switch, but does this evenly, trying to explore different interleavings at first -- this way, we increase the total coverage if the number of available invocations is not enough to study all the interleavings. Once all the interleavings with one context switch are reviewed, it starts examining interleavings with two context switches, and so on, until the available invocations exceed the maximum or all interleavings are covered. This strategy helps not only to increase the testing coverage but also to find an incorrect schedule with the lowest number of context switches possible as well -- this is significant for further bug investigation. Since **lincheck** controls the execution, it also provides a trace that leads to the found incorrect result. It is worth noting that our model checking implementation is deterministic if the testing data structure is, so that errors are reproducible. Thus, it is recommended not to use `WeakHashMap` or so, but using `Random` provided by Java or Kotlin is fine since we always replace it with a deterministic implementation. 
 
+Similarly to the stress strategy, model checking can be activated via `@ModelCheckingCTest` annotation or using `ModelCheckingOptions`. The model checking strategy has the same parameters as the stress strategy and the following additional ones:
+* **checkObstructionFreedom** - specifies whether **lincheck** should check the testing algorithm for obstruction-freedom;
+* **hangingDetectionThreshold** - specifies the maximum number of the same code location visits without thread switches that should be considered as hanging (e.g., due to an active lock).
 
+### Modular testing
+It is a common pattern to use linearizable data structures as building blocks of other ones. 
+At the same time, the number of all possible interleavings for non-trivial algorithms usually is enormous. 
+This leads us to add a way of *modular* testing, so that the internal data structures are tested separately, and the operations in them are considered as `atomic` -- only one switch point is inserted for each atomic function invocation then. This feature significantly reduces the number of redundant interleavings and increases coverage at the same time. Moreover, it is also usual to have some debug code that manipulates with the shared memory but does not affect the testing data structure. In **lincheck**, it is possible to ignore such functions for the analysis, so that no switch point is inserted.
+For complex concurrent data structures, a large number of interleavings are not interesting. For instance, it is not useful to switch in an internal data structure if all its methods are synchronized. 
+With model checking strategy you can design separate tests for your inner data structures and then in the main test treat these structures as if they are correct.
 
+The atomicity contracts can be specified via `ModelCheckingOptions` (see [Configuration via options](#configuration-via-options)), the following syntax is used: 
+`options.addGuarantee(forClasses(ConcurrentHashMap.javaClass.name).methods("put", "get").treatAsAtomic())`. 
+The specified guarantee forces **lincheck** not to switch threads inside these `put` and `get` methods, executing them atomically. Thus, the total number of possible interleavings is significantly decreased, and the testing quality is improved. 
+
+Additionally to marking methods as atomic, it is possible to ignore them for the analysis; this is extremely useful for logging and debugging methods.  For such methods, `ignored` guarantee should be used instead of `treatAsAtomic`, and **lincheck** will not add switch points before or after these method calls, considering them in the same way as thread-local operations.
+
+### Java 9+ support
+Please note that the current version requires the following JVM property 
+if the testing code uses classes from `java.util` package since 
+some of them use `jdk.internal.misc.Unsafe` or similar internal classes under the hood:
+
+```
+--add-opens java.base/jdk.internal.misc=ALL-UNNAMED
+--add-exports java.base/jdk.internal.util=ALL-UNNAMED
+```
+
+## State representation
+For both the stress testing and the model checking strategies, it is possible to enable state reporting. For this purpose, a method that returns `String` state representation should be annotated with `@StateRepresentation` and be located in the testing class. This method should be thread-safe, non-blocking, and should not modify the data structure. In case of the stress testing, the state representation is printed after each operation in the init and post execution parts as well as after the parallel part. In contrast, for model checking it is possible print the current state representation after each read or write event.
 
 # Correctness contracts
 Once the generated scenario is executed using the specified strategy, it is needed to verify the operation results for correctness. By default **lincheck** checks the result for linearizability, which is de-facto a standard type of correctness. However, there are also verifiers for some relaxed contracts, which should be set via `@..CTest(verifier = ..Verifier.class)` option.
@@ -461,3 +494,31 @@ values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
 ---
 ```
+
+If `@ModelCheckingCTest` was used instead of `@StressCTest` with `minimizeScenario = true`, the output would be:
+```
+= Invalid execution results =
+Parallel part:
+| put(4, -4): null | put(-8, -8): null |
+Post part:
+[get(-8): null]
+= The execution that led to this result =
+= Parallel part execution: =
+| put(4, -4)                                                  |                      |
+|   table.READ: null at HashMap.putVal(HashMap.java:628)      |                      |
+|   table.READ: null at HashMap.resize(HashMap.java:678)      |                      |
+|   switch                                                    |                      |
+|                                                             | put(-8, -8): null    |
+|                                                             |   thread is finished |
+|   threshold.READ: 12 at HashMap.resize(HashMap.java:680)    |                      |
+|   threshold.WRITE(9) at HashMap.resize(HashMap.java:702)    |                      |
+|   table.WRITE(Node[]@1) at HashMap.resize(HashMap.java:705) |                      |
+|   READ: null at HashMap.putVal(HashMap.java:630)            |                      |
+|   WRITE(Node@1) at HashMap.putVal(HashMap.java:631)         |                      |
+|   modCount.READ: 1 at HashMap.putVal(HashMap.java:661)      |                      |
+|   modCount.WRITE(2) at HashMap.putVal(HashMap.java:661)     |                      |
+|   size.READ: 1 at HashMap.putVal(HashMap.java:662)          |                      |
+|   size.WRITE(2) at HashMap.putVal(HashMap.java:662)         |                      |
+|   threshold.READ: 9 at HashMap.putVal(HashMap.java:662)     |                      |
+|   result: null                                              |                      |
+|   thread is finished                                        |                      |```

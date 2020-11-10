@@ -26,45 +26,39 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
-import java.util.*
 
 class StressStrategy(
     testCfg: StressCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
+    stateRepresentationFunction: Method?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
-    private val random = Random(0)
     private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
-    private val waits: MutableList<IntArray>?
 
     init {
-        // Create waits if needed
-        waits = if (testCfg.addWaits) ArrayList() else null
-        if (testCfg.addWaits) {
-            for (actorsForThread in scenario.parallelExecution) {
-                waits!!.add(IntArray(actorsForThread.size))
-            }
+        runner = ParallelThreadsRunner(
+            strategy = this,
+            testClass = testClass,
+            validationFunctions = validationFunctions,
+            stateRepresentationFunction = stateRepresentationFunction,
+            timeoutMs = testCfg.timeoutMs,
+            useClocks = UseClocks.RANDOM
+        )
+        try {
+            runner.initialize()
+        } catch (t: Throwable) {
+            runner.close()
+            throw t
         }
-        // Create runner
-        runner = ParallelThreadsRunner(this, testClass, validationFunctions, waits, testCfg.timeoutMs)
     }
 
     override fun run(): LincheckFailure? {
-        try {
+        runner.use {
             // Run invocations
             for (invocation in 0 until invocations) {
-                // Specify waits if needed
-                if (waits != null) {
-                    val maxWait = (invocation.toFloat() * MAX_WAIT / invocations).toInt() + 1
-                    for (waitsForThread in waits) {
-                        for (i in waitsForThread.indices) {
-                            waitsForThread[i] = random.nextInt(maxWait)
-                        }
-                    }
-                }
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results))
@@ -74,10 +68,6 @@ class StressStrategy(
                 }
             }
             return null
-        } finally {
-            runner.close()
         }
     }
 }
-
-private const val MAX_WAIT = 1000

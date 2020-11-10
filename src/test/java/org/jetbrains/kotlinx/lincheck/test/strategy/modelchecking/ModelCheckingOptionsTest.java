@@ -1,10 +1,8 @@
-package org.jetbrains.kotlinx.lincheck.test.strategy.randomswitch;
-
-/*
+/*-
  * #%L
  * Lincheck
  * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,17 +19,22 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.randomswitch;
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking;
 
-import org.jetbrains.kotlinx.lincheck.*;
-import org.jetbrains.kotlinx.lincheck.annotations.*;
-import org.jetbrains.kotlinx.lincheck.execution.*;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.*;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
-import org.junit.*;
+import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.kotlinx.lincheck.LoggingLevel;
+import org.jetbrains.kotlinx.lincheck.annotations.Operation;
+import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
+import org.junit.Test;
 
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class RandomSwitchOptionsTest {
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuaranteeKt.forClasses;
+
+
+public class ModelCheckingOptionsTest {
     private final AtomicInteger i = new AtomicInteger();
 
     @Operation()
@@ -41,15 +44,19 @@ public class RandomSwitchOptionsTest {
 
     @Test
     public void test() {
-        RandomSwitchOptions opts = new RandomSwitchOptions()
+        ModelCheckingOptions opts = new ModelCheckingOptions()
             .iterations(10)
             .invocationsPerIteration(200)
             .executionGenerator(RandomExecutionGenerator.class)
-            .threads(2)
-            .actorsPerThread(4)
             .verifier(LinearizabilityVerifier.class)
+            .threads(2)
+            .actorsPerThread(3)
+            .checkObstructionFreedom(true)
+            .hangingDetectionThreshold(30)
+            .logLevel(LoggingLevel.ERROR)
+            .addGuarantee(forClasses("java.util.WeakHashMap").allMethods().ignore())
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
-        LinChecker.check(RandomSwitchOptionsTest.class, opts);
+        LinChecker.check(ModelCheckingOptionsTest.class, opts);
     }
 }

@@ -25,11 +25,11 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.*
 import java.util.concurrent.atomic.*
 
-@StressCTest(iterations = 1, actorsBefore = 0, actorsAfter = 0, threads = 2, requireStateEquivalenceImplCheck = false)
-class CancellationHandlingTest {
+class CancellationHandlingTest : AbstractLincheckTest() {
     @Volatile
     private var suspendedContOrCancelled = AtomicReference<Any?>(null)
 
@@ -47,8 +47,12 @@ class CancellationHandlingTest {
         (cont as CancellableContinuation<Unit>).cancel()
     }
 
-    @Test
-    fun test() = LinChecker.check(this::class.java)
+    override fun <O : Options<O, *>> O.customize() {
+        requireStateEquivalenceImplCheck(false)
+        actorsBefore(0)
+        actorsAfter(0)
+        iterations(1)
+    }
 }
 
 private val CANCELLED = Any()

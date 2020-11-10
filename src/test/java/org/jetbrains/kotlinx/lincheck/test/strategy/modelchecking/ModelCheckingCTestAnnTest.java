@@ -1,10 +1,8 @@
-package org.jetbrains.kotlinx.lincheck.test.strategy.randomswitch;
-
-/*
+/*-
  * #%L
  * Lincheck
  * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,22 +19,22 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.randomswitch;
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking;
 
-import org.jetbrains.annotations.*;
-import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.execution.*;
-import org.jetbrains.kotlinx.lincheck.strategy.randomswitch.*;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
-import org.jetbrains.kotlinx.lincheck.verifier.*;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
-import org.junit.*;
+import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
+import org.junit.Test;
 
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-@RandomSwitchCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
-        generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
-public class RandomSwitchCTestAnnTest extends VerifierState {
+@ModelCheckingCTest(threads = 2, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
+        generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class, checkObstructionFreedom = true)
+public class ModelCheckingCTestAnnTest extends VerifierState {
     private final AtomicInteger i = new AtomicInteger();
 
     @Operation()
@@ -46,7 +44,7 @@ public class RandomSwitchCTestAnnTest extends VerifierState {
 
     @Test
     public void test() {
-        LinChecker.check(RandomSwitchCTestAnnTest.class);
+        LinChecker.check(ModelCheckingCTestAnnTest.class);
     }
 
     @NotNull

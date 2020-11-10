@@ -36,14 +36,15 @@ data class Actor @JvmOverloads constructor(
     val arguments: List<Any?>,
     val handledExceptions: List<Class<out Throwable>>,
     val cancelOnSuspension: Boolean = false,
-    val allowExtraSuspension: Boolean = false
+    val allowExtraSuspension: Boolean = false,
+    // we have to specify `isSuspendable` property explicitly for transformed classes since
+    // `isSuspendable` implementation produces a circular dependency and, therefore, fails.
+    val isSuspendable: Boolean = method.isSuspendable()
 ) {
     override fun toString() = cancellableMark + method.name + arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() }
     private val cancellableMark get() = (if (cancelOnSuspension) "*" else "")
 
     val handlesExceptions = handledExceptions.isNotEmpty()
-
-    val isSuspendable = method.isSuspendable()
 }
 
 fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false

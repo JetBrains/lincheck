@@ -36,7 +36,6 @@ public abstract class TestThreadExecution implements Runnable {
     protected Runner runner;
     public Object testInstance;
     protected Object[] objArgs;
-    public int[] waits; // for StressStrategy
     public TestThreadExecution[] allThreadExecutions;
 
     public Result[] results; // for ExecutionResult
