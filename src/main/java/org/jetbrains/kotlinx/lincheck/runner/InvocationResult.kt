@@ -54,3 +54,8 @@ class ValidationFailureInvocationResult(
     val functionName: String,
     val exception: Throwable
 ) : InvocationResult()
+
+class InvariantsViolatedInvocationResult(
+        val scenario: ExecutionScenario,
+        val message : String
+) : InvocationResult()
