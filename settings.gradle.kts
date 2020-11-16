@@ -1,9 +1,8 @@
 pluginManagement {
-    val kotlin_version: String by settings
+    val kotlinVersion: String by settings
     plugins {
         java
-        `maven-publish`
-        kotlin("multiplatform") version kotlin_version
+        kotlin("multiplatform") version kotlinVersion
     }
 
     repositories {

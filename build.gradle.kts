@@ -1,29 +1,17 @@
 import org.gradle.jvm.tasks.Jar
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-val license_licenseName: String by project
-val license_addJavaLicenseAfterPackage: String by project
-val inceptionYear: String by project
-val lastCopyrightYear: String by project
-val kotlin_version: String by project
-val kotlinx_coroutines_version: String by project
-val asm_version: String by project
-val atomicfu_version: String by project
-val reflections_version: String by project
-
+// atomicfu
 buildscript {
-    val atomicfu_version: String by project
     dependencies {
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfu_version")
+        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:${project.property("atomicfuVersion")}")
     }
 }
 
 apply(plugin = "kotlinx-atomicfu")
 
-// version configured in settings.gradle.kts
+// versions configured in settings.gradle.kts
 plugins {
     java
-    `maven-publish`
     kotlin("multiplatform")
 }
 
@@ -68,33 +56,23 @@ java {
 }
 
 // https://youtrack.jetbrains.com/issue/KT-31603
-sourceSets {
-    main {
-        java {
-            srcDirs("src/jvm/main")
-        }
-    }
+sourceSets.main {
+    java.srcDirs("src/jvm/main")
+}
 
-    test {
-        java {
-            srcDirs("src/jvm/test")
-        }
-    }
+sourceSets.test {
+    java.srcDirs("src/jvm/test")
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
-    implementation("org.ow2.asm:asm-commons:$asm_version")
-    implementation("org.ow2.asm:asm-util:$asm_version")
-    implementation("org.reflections:reflections:$reflections_version")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:${project.property("kotlinVersion")}")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-common:${project.property("kotlinVersion")}")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:${project.property("kotlinVersion")}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${project.property("kotlinxCoroutinesVersion")}")
+    implementation("org.ow2.asm:asm-commons:${project.property("asmVersion")}")
+    implementation("org.ow2.asm:asm-util:${project.property("asmVersion")}")
+    implementation("org.reflections:reflections:${project.property("reflectionsVersion")}")
 }
-
-group = "org.jetbrains.kotlinx"
-version = "2.9-SNAPSHOT"
-description = "Lincheck"
 
 tasks {
     withType<JavaCompile> {
@@ -110,6 +88,9 @@ tasks {
 
     withType<Jar> {
         manifest {
+            val inceptionYear: String by project
+            val lastCopyrightYear: String by project
+
             attributes(
                     "Copyright" to "Copyright (C) 2015 - 2019 Devexperts, LLC\n" +
                             "                                Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
@@ -117,13 +98,7 @@ tasks {
             )
         }
     }
-
 }
 
-publishing {
-    repositories {
-        maven {
-            url = uri("$buildDir/repository")
-        }
-    }
-}
+group = project.property("group")!!
+version = project.property("version")!!
