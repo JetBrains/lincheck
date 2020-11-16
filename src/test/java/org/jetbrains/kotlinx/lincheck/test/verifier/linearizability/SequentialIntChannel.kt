@@ -34,7 +34,7 @@ open class SequentialIntChannel(private val capacity: Int) : VerifierState() {
 
     suspend fun send(x: Int) {
         if (offer(x)) return
-        suspendAtomicCancellableCoroutine<Unit> { cont ->
+        suspendCancellableCoroutine<Unit> { cont ->
             senders.add(cont to x)
         }
     }
@@ -70,7 +70,7 @@ open class SequentialIntChannel(private val capacity: Int) : VerifierState() {
         if (buffer.isEmpty() && senders.isEmpty() && closed) return CLOSED
         val pollResult = poll()
         if (pollResult !== null) return pollResult
-        return suspendAtomicCancellableCoroutine { cont ->
+        return suspendCancellableCoroutine { cont ->
             receivers.add(cont)
         }
     }

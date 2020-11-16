@@ -78,4 +78,11 @@ public @interface Operation {
      * while one of the operations with this {@code blocking} marker is running.
      */
     boolean blocking() default false;
+
+    /**
+     * Specifies whether this cancellable operation supports
+     * prompt cancellation, {@code false} by default. This parameter
+     * is ignored if {@link #cancellableOnSuspension} is {@code false}.
+     */
+    boolean promptCancellation() default false;
 }

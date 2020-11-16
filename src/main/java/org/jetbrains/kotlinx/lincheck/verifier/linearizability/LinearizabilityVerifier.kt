@@ -62,12 +62,14 @@ class LinearizabilityContext : VerifierContext {
         val actor = scenario[threadId][actorId]
         val expectedResult = results[threadId][actorId]
         // Check whether the operation has been suspended and should be followed by cancellation
-        if (suspended[threadId]) {
+        val ticket = tickets[threadId]
+        val promptCancel = actor.promptCancellation && ticket != NO_TICKET
+        if (suspended[threadId] || promptCancel) {
             return if (actor.cancelOnSuspension && expectedResult === Cancelled)
-                state.nextByCancellation(actor, tickets[threadId]).createContext(threadId)
+                state.nextByCancellation(actor, ticket).createContext(threadId)
             else null
         }
-        // Try to make transition by the next actor from the current thread,
+        // Try to make a transition by the next actor from the current thread,
         // passing the ticket corresponding to the current thread.
         return state.next(actor, expectedResult, tickets[threadId])?.createContext(threadId)
     }
