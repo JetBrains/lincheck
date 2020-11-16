@@ -76,7 +76,6 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     /**
      * Returns `true` if the specified class should not be transformed.
      */
-    @SuppressWarnings("KotlinInternalInJava")
     private static boolean doNotTransform(String className) {
         if (className.startsWith(REMAPPED_PACKAGE_CANONICAL_NAME)) return false;
         if (ManagedStrategyTransformerKt.isImpossibleToTransformApiClass(className)) return true;

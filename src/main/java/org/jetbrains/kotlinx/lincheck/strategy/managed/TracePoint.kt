@@ -260,7 +260,8 @@ internal enum class SwitchReason(private val reason: String) {
  */
 internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
 
-private val Class<out Any>?.isImmutableWithNiceToString get() = this in listOf(
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in listOf(
     java.lang.Integer::class.java,
     java.lang.Long::class.java,
     java.lang.Short::class.java,
@@ -271,5 +272,6 @@ private val Class<out Any>?.isImmutableWithNiceToString get() = this in listOf(
     java.lang.Boolean::class.java,
     java.lang.String::class.java,
     BigInteger::class.java,
-    BigDecimal::class.java
-)
+    BigDecimal::class.java,
+    kotlinx.coroutines.internal.Symbol::class.java
+).map { it.canonicalName }
