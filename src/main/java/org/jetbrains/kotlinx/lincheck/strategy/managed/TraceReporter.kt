@@ -26,17 +26,17 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
+import java.util.*
 import kotlin.math.min
 
 private const val TRACE_INDENTATION = "  "
 
+@Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
     scenario: ExecutionScenario,
     results: ExecutionResult?,
     trace: List<TracePoint>
 ) {
-    // clear object numeration that is used by `CodePoint.toString` for better representation
-    objectNumeration.clear()
     val startTraceGraphNode = constructTraceGraph(scenario, results, trace)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode)
     val traceRepresentationSplitted = splitToColumns(scenario.threads, traceRepresentation)
@@ -50,6 +50,7 @@ internal fun StringBuilder.appendTrace(
             append(" |")
         }.toString()
     })
+    objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
 
 /**
@@ -266,3 +267,10 @@ private fun stateEventRepresentation(iThread: Int, stateRepresentation: String) 
     TraceEventRepresentation(iThread, TRACE_INDENTATION + "STATE: $stateRepresentation")
 
 private class TraceEventRepresentation(val iThread: Int, val representation: String)
+
+// Should be called only during `appendTrace` invocation
+internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
+    .computeIfAbsent(clazz) { WeakHashMap() }
+    .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
+
+private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
