@@ -241,18 +241,22 @@ abstract class ManagedStrategy(
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom && !blockingActorInProgress) {
+        if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException
         }
     }
 
-    private val blockingActorInProgress: Boolean
+    private val curActorIsBlocking: Boolean
+        get() = scenario.parallelExecution[currentThread][currentActorId[currentThread]].blocking
+
+    private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (scenario.parallelExecution[iThread].size > actorId) scenario.parallelExecution[iThread][actorId]
+                    if (iThread != currentThread && !finished[iThread])
+                        scenario.parallelExecution[iThread][actorId]
                     else null
-                }.filterNotNull().any { it.blocking }
+                }.filterNotNull().any { it.causesBlocking }
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {

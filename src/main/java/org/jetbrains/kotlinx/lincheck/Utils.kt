@@ -241,6 +241,7 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
                 cancelOnSuspension = a.cancelOnSuspension,
                 allowExtraSuspension = a.allowExtraSuspension,
                 blocking = a.blocking,
+                causesBlocking = a.causesBlocking,
                 promptCancellation = a.promptCancellation,
                 isSuspendable = a.isSuspendable
             )
