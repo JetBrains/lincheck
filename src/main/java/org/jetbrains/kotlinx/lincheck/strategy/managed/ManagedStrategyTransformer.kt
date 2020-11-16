@@ -953,9 +953,8 @@ internal class ManagedStrategyTransformer(
      * when a continuation is cancelled by lincheck
      */
     private inner class CancellabilitySupportMethodTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isCancel =
-            className == "kotlinx/coroutines/CancellableContinuationImpl" && methodName == "cancel" ||
-            className == "kotlinx/coroutines/DispatchedTask" && methodName == "cancelCompletedResult"
+        private val isCancel = className == "kotlinx/coroutines/CancellableContinuationImpl" &&
+            (methodName == "cancel" || methodName == "cancelCompletedResult")
 
         override fun visitCode() {
             if (isCancel)
