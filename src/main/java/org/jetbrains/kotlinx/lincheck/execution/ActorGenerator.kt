@@ -38,6 +38,7 @@ class ActorGenerator(
     cancellableOnSuspension: Boolean,
     private val allowExtraSuspension: Boolean,
     private val blocking: Boolean,
+    private val causesBlocking: Boolean,
     promptCancellation: Boolean
 ) {
     private val cancellableOnSuspension = cancellableOnSuspension && isSuspendable
@@ -56,6 +57,7 @@ class ActorGenerator(
             cancelOnSuspension = cancelOnSuspension,
             allowExtraSuspension = allowExtraSuspension,
             blocking = blocking,
+            causesBlocking = causesBlocking,
             promptCancellation = promptCancellation
         )
     }
