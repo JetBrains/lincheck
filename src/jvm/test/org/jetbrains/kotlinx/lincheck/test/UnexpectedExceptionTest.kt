@@ -47,7 +47,7 @@ class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(Unexpec
     @InternalCoroutinesApi
     @Operation
     suspend fun operation() {
-        suspendAtomicCancellableCoroutine<Unit> { cont ->
+        suspendCancellableCoroutine<Unit> { cont ->
             cont.resumeWithException(IllegalArgumentException("Unexpected!"))
         }
     }
