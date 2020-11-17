@@ -81,7 +81,7 @@ class CancelledSuspendInterleavingReportingTest : VerifierState() {
     @InternalCoroutinesApi
     @Operation(cancellableOnSuspension = true)
     suspend fun cancelledOp() {
-        suspendAtomicCancellableCoroutine<Unit> { cont ->
+        suspendCancellableCoroutine<Unit> { cont ->
             cont.invokeOnCancellation {
                 correct = false
             }

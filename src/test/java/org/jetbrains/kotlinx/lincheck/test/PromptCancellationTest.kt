@@ -1,0 +1,88 @@
+/*-
+ * #%L
+ * Lincheck
+ * %%
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>.
+ * #L%
+ */
+
+package org.jetbrains.kotlinx.lincheck.test
+
+import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import kotlin.coroutines.*
+import kotlin.reflect.*
+
+abstract class AbstractPromptCancellationTest(
+    vararg expectedFailures: KClass<out LincheckFailure>,
+    val sequentialSpecification: KClass<*>? = null
+) : AbstractLincheckTest(*expectedFailures) {
+    @Volatile
+    var returnResult = 0
+
+    @Volatile
+    var cont: CancellableContinuation<Unit>? = null
+
+    @Operation(cancellableOnSuspension = true, promptCancellation = true, runOnce = true)
+    suspend fun suspendOp() {
+        suspendCancellableCoroutine<Unit> { cont ->
+            this.cont = cont
+        }
+    }
+
+    @ExperimentalCoroutinesApi
+    @Operation(runOnce = true)
+    fun resumeOp(): Int {
+        cont?.resume(Unit, { returnResult = 42 })
+        return returnResult
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+        threads(2)
+        actorsPerThread(1)
+        actorsAfter(0)
+        if (this is StressOptions) invocationsPerIteration(1_000_000)
+        requireStateEquivalenceImplCheck(false)
+        sequentialSpecification?.let { sequentialSpecification(it.java) }
+    }
+}
+
+class CorrectPromptCancellationTest : AbstractPromptCancellationTest()
+
+class IncorrectPromptCancellationTest : AbstractPromptCancellationTest(
+    IncorrectResultsFailure::class,
+    sequentialSpecification = IncorrectPromptCancellationSequential::class
+)
+
+class IncorrectPromptCancellationSequential {
+    var cont: CancellableContinuation<Unit>? = null
+
+    suspend fun suspendOp() {
+        suspendCancellableCoroutine<Unit> { cont ->
+            this.cont = cont
+        }
+    }
+
+    fun resumeOp(): Int {
+        cont?.resume(Unit)
+        return 0
+    }
+}

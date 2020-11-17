@@ -86,7 +86,7 @@ abstract class VerifierContext(
      * For every thread it stores a ticket assigned to the last executed actor by [LTS].
      * A ticket is assigned from the range (0 .. threads) to an actor that suspends it's execution,
      * after being resumed the actor is invoked with this ticket to complete it's execution.
-     * If an actor does not suspend, the assigned ticket equals `-1`.
+     * If an actor does not suspend, the assigned ticket equals [NO_TICKET].
      */
     protected val tickets: IntArray = IntArray(scenario.threads + 2) { NO_TICKET }
 ) {

@@ -74,7 +74,7 @@ class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
     suspend fun operation1() {
         val c = c.incrementAndGet()
         if (c == 6) return
-        suspendAtomicCancellableCoroutine<Unit> {  }
+        suspendCancellableCoroutine<Unit> {  }
     }
 
     @InternalCoroutinesApi
@@ -82,7 +82,7 @@ class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
     suspend fun operation2() {
         val c = c.incrementAndGet()
         if (c == 6) return
-        suspendAtomicCancellableCoroutine<Unit> {  }
+        suspendCancellableCoroutine<Unit> {  }
     }
 
     override fun <O : Options<O, *>> O.customize() {

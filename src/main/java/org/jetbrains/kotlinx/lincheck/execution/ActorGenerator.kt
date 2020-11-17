@@ -36,17 +36,30 @@ class ActorGenerator(
     private val handledExceptions: List<Class<out Throwable?>>,
     val useOnce: Boolean,
     cancellableOnSuspension: Boolean,
-    val allowExtraSuspension: Boolean
+    private val allowExtraSuspension: Boolean,
+    private val blocking: Boolean,
+    private val causesBlocking: Boolean,
+    promptCancellation: Boolean
 ) {
     private val cancellableOnSuspension = cancellableOnSuspension && isSuspendable
+    private val promptCancellation = cancellableOnSuspension && promptCancellation
 
     fun generate(threadId: Int): Actor {
         val parameters = parameterGenerators
             .map { it.generate() }
             .map { if (it === THREAD_ID_TOKEN) threadId else it }
-        val cancelOnSuspension = cancellableOnSuspension and DETERMINISTIC_RANDOM.nextBoolean()
-        return Actor(method, parameters, handledExceptions,
-                     cancelOnSuspension, allowExtraSuspension)
+        val cancelOnSuspension = this.cancellableOnSuspension and DETERMINISTIC_RANDOM.nextBoolean()
+        val promptCancellation = cancelOnSuspension and this.promptCancellation and DETERMINISTIC_RANDOM.nextBoolean()
+        return Actor(
+            method = method,
+            arguments = parameters,
+            handledExceptions = handledExceptions,
+            cancelOnSuspension = cancelOnSuspension,
+            allowExtraSuspension = allowExtraSuspension,
+            blocking = blocking,
+            causesBlocking = causesBlocking,
+            promptCancellation = promptCancellation
+        )
     }
 
     val isSuspendable: Boolean get() = method.isSuspendable()

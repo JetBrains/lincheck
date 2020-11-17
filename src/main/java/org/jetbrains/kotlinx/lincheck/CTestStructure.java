@@ -99,10 +99,10 @@ public class CTestStructure {
         for (Method m : getDeclaredMethodSorted(clazz)) {
             // Operation
             if (m.isAnnotationPresent(Operation.class)) {
-                Operation operationAnn = m.getAnnotation(Operation.class);
+                Operation opAnn = m.getAnnotation(Operation.class);
                 boolean isSuspendableMethod = isSuspendable(m);
                 // Check that params() in @Operation is empty or has the same size as the method
-                if (operationAnn.params().length > 0 && operationAnn.params().length != m.getParameterCount()) {
+                if (opAnn.params().length > 0 && opAnn.params().length != m.getParameterCount()) {
                     throw new IllegalArgumentException("Invalid count of paramgen for " + m.toString()
                             + " method in @Operation");
                 }
@@ -110,16 +110,17 @@ public class CTestStructure {
                 final List<ParameterGenerator<?>> gens = new ArrayList<>();
                 int nParameters = m.getParameterCount() - (isSuspendableMethod ? 1 : 0);
                 for (int i = 0; i < nParameters; i++) {
-                    String nameInOperation = operationAnn.params().length > 0 ? operationAnn.params()[i] : null;
+                    String nameInOperation = opAnn.params().length > 0 ? opAnn.params()[i] : null;
                     gens.add(getOrCreateGenerator(m, m.getParameters()[i], nameInOperation, namedGens));
                 }
                 // Get list of handled exceptions if they are presented
-                List<Class<? extends Throwable>> handledExceptions = Arrays.asList(operationAnn.handleExceptionsAsResult());
-                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, operationAnn.runOnce(),
-                    operationAnn.cancellableOnSuspension(), operationAnn.allowExtraSuspension());
+                List<Class<? extends Throwable>> handledExceptions = Arrays.asList(opAnn.handleExceptionsAsResult());
+                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, opAnn.runOnce(),
+                    opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
+                    opAnn.promptCancellation());
                 actorGenerators.add(actorGenerator);
                 // Get list of groups and add this operation to specified ones
-                String opGroup = operationAnn.group();
+                String opGroup = opAnn.group();
                 if (!opGroup.isEmpty()) {
                     OperationGroup operationGroup = groupConfigs.get(opGroup);
                     if (operationGroup == null)

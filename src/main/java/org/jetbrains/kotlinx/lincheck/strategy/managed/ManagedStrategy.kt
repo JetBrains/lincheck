@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
-import java.lang.reflect.Method
+import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
 
@@ -241,12 +241,22 @@ abstract class ManagedStrategy(
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom) {
+        if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException
         }
     }
+
+    private val curActorIsBlocking: Boolean
+        get() = scenario.parallelExecution[currentThread][currentActorId[currentThread]].blocking
+
+    private val concurrentActorCausesBlocking: Boolean
+        get() = currentActorId.mapIndexed { iThread, actorId ->
+                    if (iThread != currentThread && !finished[iThread])
+                        scenario.parallelExecution[iThread][actorId]
+                    else null
+                }.filterNotNull().any { it.causesBlocking }
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
@@ -274,7 +284,11 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
-            failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but an active lock has been found" }
+            failIfObstructionFreedomIsRequired {
+                // Log the last event that caused obstruction freedom violation
+                traceCollector?.passCodeLocation(codeLocation, tracePoint)
+                "Obstruction-freedom is required but an active lock has been found"
+            }
             checkLiveLockHappened(loopDetector.totalOperations)
             isLoop = true
         }
@@ -315,7 +329,7 @@ abstract class ManagedStrategy(
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        if (exception is ForcibleExecutionFinishException) return // not a forcible execution finish
+        if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
         suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
     }
 
@@ -482,8 +496,8 @@ abstract class ManagedStrategy(
      */
     internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
-        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on monitor block has been found" }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
         if (withTimeout) return false // timeouts occur instantly
         monitorTracker.waitOnMonitor(iThread, monitor)
         // switch to another thread and wait till a notify event happens
@@ -863,6 +877,9 @@ private class MonitorTracker(nThreads: Int) {
  * If we just leave it, then the execution will not be halted.
  * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
  */
-internal object ForcibleExecutionFinishException : RuntimeException()
+internal object ForcibleExecutionFinishException : RuntimeException() {
+    // do not create a stack trace -- it simply can be unsafe
+    override fun fillInStackTrace() = this
+}
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
