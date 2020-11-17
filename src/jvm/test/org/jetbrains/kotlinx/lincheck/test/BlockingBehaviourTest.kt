@@ -62,6 +62,7 @@ class CausesBlockingOperationTest {
         .checkObstructionFreedom()
         .verifier(EpsilonVerifier::class.java)
         .requireStateEquivalenceImplCheck(false)
+        .iterations(20)
         .actorsBefore(0)
         .actorsAfter(0)
         .check(this::class)
