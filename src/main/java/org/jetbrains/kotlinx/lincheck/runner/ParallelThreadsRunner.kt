@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
@@ -54,14 +53,25 @@ internal open class ParallelThreadsRunner(
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
 
-    private val completions = List(scenario.threads) { t ->
-        List(scenario.parallelExecution[t].size) { Completion(t) }
-    }
-
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
 
-    private var suspensionPointResults = MutableList<Result>(scenario.threads) { NoResult }
+    private var suspensionPointResults = List(scenario.threads) { t ->
+        MutableList<Result>(scenario.parallelExecution[t].size) { NoResult }
+    }
+
+    private val completions = List(scenario.threads) { t ->
+        List(scenario.parallelExecution[t].size) { actorId -> Completion(t, actorId) }
+    }
+
+    // These completion statuses are updated atomically on resumptions and cancellations.
+    // Due to prompt cancellation, resumption and cancellation can happen concurrently,
+    // so that we need to synchronize them somehow. In order to update `completedOrSuspendedThreads`
+    // consistently, we atomically change the status from `null` to `RESUMED` or `CANCELLED` and
+    // update the counter on failure -- thus, synchronizing the threads.
+    private lateinit var completionStatuses: List<AtomicReferenceArray<CompletionStatus>>
+    private fun trySetResumedStatus(iThread: Int, actorId: Int) = completionStatuses[iThread].compareAndSet(actorId, null, CompletionStatus.RESUMED)
+    private fun trySetCancelledStatus(iThread: Int, actorId: Int) = completionStatuses[iThread].compareAndSet(actorId, null, CompletionStatus.CANCELLED)
 
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
@@ -84,7 +94,7 @@ internal open class ParallelThreadsRunner(
      *
      * [resumeWith] is invoked when the coroutine running this actor completes with result or exception.
      */
-    protected inner class Completion(private val iThread: Int) : Continuation<Any?> {
+    protected inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
         override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler()
@@ -93,29 +103,38 @@ internal open class ParallelThreadsRunner(
             // decrement completed or suspended threads only if the operation was not cancelled and
             // the continuation was not intercepted; it was already decremented before writing `resWithCont` otherwise
             if (!result.cancelledByLincheck()) {
-                if (resWithCont.get() === null)
+                if (resWithCont.get() === null) {
                     completedOrSuspendedThreads.decrementAndGet()
+                    if (!trySetResumedStatus(iThread, actorId)) {
+                        // already cancelled via prompt cancellation, increment the counter back
+                        completedOrSuspendedThreads.incrementAndGet()
+                    }
+                }
                 // write function's final result
-                suspensionPointResults[iThread] = createLincheckResult(result, wasSuspended = true)
+                suspensionPointResults[iThread][actorId] = createLincheckResult(result, wasSuspended = true)
             }
         }
-    }
 
-    /**
-     * When suspended actor is resumed by another thread
-     * [ParallelThreadRunnerInterceptor.interceptContinuation] is called to intercept it's continuation.
-     * Intercepted continuation just writes the result of the suspension point and reference to the unintercepted continuation
-     * so that the calling thread could resume this continuation by itself.
-     */
-    private inner class ParallelThreadRunnerInterceptor(
-        private var resWithCont: SuspensionPointResultWithContinuation
-    ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
-        override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
-            return Continuation(StoreExceptionHandler()) { result ->
-                // decrement completed or suspended threads only if the operation was not cancelled
-                if (!result.cancelledByLincheck()) {
-                    completedOrSuspendedThreads.decrementAndGet()
-                    resWithCont.set(result to continuation as Continuation<Any?>)
+        /**
+         * When suspended actor is resumed by another thread
+         * [ParallelThreadRunnerInterceptor.interceptContinuation] is called to intercept it's continuation.
+         * Intercepted continuation just writes the result of the suspension point and reference to the unintercepted continuation
+         * so that the calling thread could resume this continuation by itself.
+         */
+        private inner class ParallelThreadRunnerInterceptor(
+            private var resWithCont: SuspensionPointResultWithContinuation
+        ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
+            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
+                return Continuation(StoreExceptionHandler()) { result ->
+                    // decrement completed or suspended threads only if the operation was not cancelled
+                    if (!result.cancelledByLincheck()) {
+                        completedOrSuspendedThreads.decrementAndGet()
+                        if (!trySetResumedStatus(iThread, actorId)) {
+                            // already cancelled via prompt cancellation, increment the counter back
+                            completedOrSuspendedThreads.incrementAndGet()
+                        }
+                        resWithCont.set(result to continuation as Continuation<Any?>)
+                    }
                 }
             }
         }
@@ -132,9 +151,12 @@ internal open class ParallelThreadsRunner(
             ex.clocks = Array(actors) { emptyClockArray(threads) }
             ex.results = arrayOfNulls(actors)
         }
-        suspensionPointResults = MutableList(scenario.threads) { NoResult }
+        suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
         completions.forEach { it.forEach { it.resWithCont.set(null) } }
+        completionStatuses = List(scenario.threads) { t ->
+            AtomicReferenceArray<CompletionStatus>(scenario.parallelExecution[t].size)
+        }
         uninitializedThreads.set(scenario.threads)
         // update `spinningTimeBeforeYield` adaptively
         if (yieldInvokedInOnStart) {
@@ -159,28 +181,18 @@ internal open class ParallelThreadsRunner(
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
             if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck(actor.promptCancellation)) {
+                if (!trySetCancelledStatus(iThread, actorId)) {
+                    // already resumed, increment `completedOrSuspendedThreads` back
+                    completedOrSuspendedThreads.incrementAndGet()
+                }
                 afterCoroutineCancelled(iThread)
                 Cancelled
             } else waitAndInvokeFollowUp(iThread, actorId)
-        } else if (actor.promptCancellation) {
-            // Since there is a possible rendezvous between `suspendCancellableCoroutine`
-            // and the corresponding `resume`, so that the first one does not actually
-            // suspends and simply takes the result, it is still important to cancel
-            // this continuation because of the `onCancellation` handler in case of
-            // prompt cancellation. Otherwise, it is complicated to provide a sequential
-            // specification which explains invocation results with such a rendezvous.
-            val t = Thread.currentThread() as TestThread
-            val cont = t.cont.also { t.cont = null }
-            if (cont !== null) {
-                cont.cancelByLincheck(actor.promptCancellation)
-                afterCoroutineCancelled(iThread)
-                Cancelled
-            } else createLincheckResult(res)
         } else createLincheckResult(res)
         val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
         if (isLastActor && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()
-        suspensionPointResults[iThread] = NoResult
+        suspensionPointResults[iThread][actorId] = NoResult
         return finalResult
     }
 
@@ -196,7 +208,7 @@ internal open class ParallelThreadsRunner(
         while (!isCoroutineResumed(iThread, actorId)) {
             // Check whether the scenario is completed and the current suspended operation cannot be resumed.
             if (completedOrSuspendedThreads.get() == scenario.threads) {
-                suspensionPointResults[iThread] = NoResult
+                suspensionPointResults[iThread][actorId] = NoResult
                 return Suspended
             }
             if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
@@ -210,7 +222,7 @@ internal open class ParallelThreadsRunner(
             val resumedValue = completion.resWithCont.get().first
             completion.resWithCont.get().second.resumeWith(resumedValue)
         }
-        return suspensionPointResults[iThread]
+        return suspensionPointResults[iThread][actorId]
     }
 
     override fun afterCoroutineSuspended(iThread: Int) {
@@ -221,8 +233,10 @@ internal open class ParallelThreadsRunner(
 
     override fun afterCoroutineCancelled(iThread: Int) {}
 
+    // We cannot use `completionStatuses` here since
+    // they are set _before_ the result is published.
     override fun isCoroutineResumed(iThread: Int, actorId: Int) =
-        suspensionPointResults[iThread] != NoResult || completions[iThread][actorId].resWithCont.get() != null
+        suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
         reset()
@@ -317,5 +331,7 @@ internal open class ParallelThreadsRunner(
 }
 
 internal enum class UseClocks { ALWAYS, RANDOM }
+
+internal enum class CompletionStatus { CANCELLED, RESUMED }
 
 private const val MAX_SPINNING_TIME_BEFORE_YIELD = 2_000_000
