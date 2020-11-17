@@ -1,111 +1,150 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import org.jetbrains.kotlinx.lincheck.consumeCPU
 import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.getMethod
 import org.jetbrains.kotlinx.lincheck.runner.*
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.ExecutionException
+import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import kotlin.random.Random
 
+internal interface MessageQueue {
+    fun put(msg: Message)
+    fun get(): Message?
+    fun clear()
+}
 
-open class DistributedRunner(val strategy: DistributedStrategy,
-                             testClass: Class<*>,
-                             validationFunctions: List<Method>?) : Runner(strategy, testClass,
-        validationFunctions) {
-    private lateinit var testInstances: Array<Process>
-    private lateinit var messageCounts: MutableList<AtomicInteger>
-    private val messageRequests = Collections.synchronizedCollection(PriorityQueue<MessageRequest>())
-    private val localMessages = Array<ConcurrentLinkedQueue<Message>>(scenario.threads) { ConcurrentLinkedQueue() }
-    private var time = 0
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
-    private val messageHistory : MutableCollection<MessageRequest> = Collections.synchronizedCollection(mutableListOf<MessageRequest>())
-    private val failedProcesses = Array(scenario.threads) {false}
-
-    @Volatile
-    private var isFinished = false
-
-    private val testThreadExecutions = Array(scenario.threads) { t ->
-        TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], null, false, false)
+internal class SynchronousMessageQueue : MessageQueue {
+    private val messageQueue = LinkedBlockingQueue<Message>()
+    override fun put(msg: Message) {
+        messageQueue.add(msg)
     }
 
-    private val executor = newFixedThreadPool(scenario.threads)
+    override fun get(): Message? {
+        return messageQueue.poll()
+    }
 
-    private inner class MessageHandler : Thread("Message Handler") {
+    override fun clear() {
+        messageQueue.clear()
+    }
+}
+
+class FifoMessageQueue(numberOfNodes: Int) : MessageQueue {
+    private val messageQueues = Array(numberOfNodes) {
+        LinkedBlockingQueue<Message>()
+    }
+
+    override fun put(msg: Message) {
+        messageQueues[msg.receiver].add(msg)
+    }
+
+    override fun get(): Message? {
+        if (messageQueues.none { it.isNotEmpty() }) {
+            return null
+        }
+        return messageQueues.filter { it.isNotEmpty() }.shuffled()[0].poll()
+    }
+
+    override fun clear() {
+        messageQueues.forEach { it.clear() }
+    }
+}
+
+class AsynchronousMessageQueue(private val numberOfNodes: Int) : MessageQueue {
+    private val messageQueues = Array(numberOfNodes) {
+        LinkedBlockingQueue<Message>()
+    }
+
+    override fun put(msg: Message) {
+        val queueToPut = Random.nextInt(numberOfNodes)
+        messageQueues[queueToPut].add(msg)
+    }
+
+    override fun get(): Message? {
+        if (messageQueues.none { it.isNotEmpty() }) {
+            return null
+        }
+        return messageQueues.filter { it.isNotEmpty() }.shuffled()[0].poll()
+    }
+
+    override fun clear() {
+        messageQueues.forEach { it.clear() }
+    }
+}
+
+
+open class DistributedRunner(strategy: DistributedStrategy,
+                             val testCfg: DistributedCTestConfiguration,
+                             testClass: Class<*>,
+                             validationFunctions: List<Method>,
+                             stateRepresentationFunction: Method?) : Runner(
+        strategy, testClass,
+        validationFunctions,
+        stateRepresentationFunction){
+    private val messageQueue: MessageQueue = when(testCfg.messageOrder) {
+        MessageOrder.SYNCHRONOUS -> SynchronousMessageQueue()
+        MessageOrder.FIFO -> FifoMessageQueue(testCfg.threads)
+        MessageOrder.ASYNCHRONOUS -> AsynchronousMessageQueue(testCfg.threads)
+    }
+    private lateinit var testInstances: Array<Node>
+    private lateinit var messageCounts: MutableList<AtomicInteger>
+    private lateinit var messageBroker: MessageBroker
+    private val messageHistory = ConcurrentLinkedQueue<Event>()
+    private val failedProcesses = Array(testCfg.threads) { false }
+
+    private inner class MessageBroker : Thread() {
         override fun run() {
             while (!isFinished) {
-                var requests: List<MessageRequest> = emptyList()
-                var nextDelivery: Int
-                var delay = 0
-                lock.withLock {
-                    println("message handler queue lock")
-                    while(messageRequests.isEmpty() && !isFinished) {
-                        println("await condition")
-                        condition.await()
-                    }
-                    if (isFinished) {
-                        return
-                    }
-                    println("message handler processing message")
-
-                    nextDelivery = messageRequests.first().timestamp
-                    requests = messageRequests.filter { it.timestamp == nextDelivery }
-                    messageRequests.removeAll(requests)
-                    delay = nextDelivery - time
-                    time = nextDelivery
-                }
-                consumeCPU(delay)
-                requests.forEach {
-                    println("Message handler -- from: ${it.from} to: ${it.to}" +
-                            " ${it
-                                    .message}")
-                    println("test instances size ${testInstances.size}")
-                    testInstances[it.to].onMessage(it
-                            .from, it.message)
-                }
+                val message = messageQueue.get() ?: continue
+                messageHistory.add(MessageDeliveredEvent(message))
+                testInstances[message.receiver].onMessage(message)
             }
         }
     }
 
-    private lateinit var messageHandler : MessageHandler
+    @Volatile
+    private var isFinished = false
+
+    private lateinit var testThreadExecutions : Array<TestThreadExecution>
+
+    private val executor = newFixedThreadPool(testCfg.threads)
 
 
-    private val environments: Array<Environment> = Array(scenario.threads) {
-        createEnvironment(it, strategy.testCfg)
+    private val environments: Array<Environment> = Array(testCfg.threads) {
+        EnvironmentImpl(it, testCfg.threads)
     }
 
-    init {
+    override fun initialize() {
+        super.initialize()
+        check(scenario.parallelExecution.size == testCfg.threads) {
+            "Parrallel execution size is ${scenario.parallelExecution.size}"
+        }
+        testThreadExecutions = Array(testCfg.threads) { t ->
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], null, false)
+        }
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }
 
     private fun reset() {
         messageHistory.clear()
+        messageQueue.clear()
+        isFinished = false
         failedProcesses.fill(false)
-        messageHandler = MessageHandler()
-        println("number of threads which should be ${scenario.threads}")
-        testInstances = Array(scenario.threads) {
-            testClass.getConstructor(Environment::class.java).newInstance(environments[it]) as Process
+        testInstances = Array(testCfg.threads) {
+            testClass.getConstructor(Environment::class.java).newInstance(environments[it]) as Node
         }
-        messageCounts = Collections.synchronizedList(Array(scenario.threads) {
+        messageCounts = Collections.synchronizedList(Array(testCfg.threads) {
             AtomicInteger(0)
         }.asList())
-        messageRequests.clear()
-        time = 0
-        isFinished = false
-        messageHandler.start()
+        messageBroker = MessageBroker()
+        messageBroker.start()
         val useClocks = Random.nextBoolean()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstances[t]
-            val threads = scenario.threads
+            val threads = testCfg.threads
             val actors = scenario.parallelExecution[t].size
             ex.useClocks = useClocks
             ex.curClock = 0
@@ -114,16 +153,27 @@ open class DistributedRunner(val strategy: DistributedStrategy,
         }
     }
 
+    override fun constructStateRepresentation() : String {
+        var res = "\nMESSAGES\n"
+        for (event in messageHistory) {
+           res += event.toString() + '\n'
+        }
+        res += "NODE STATES\n"
+        for(testInstance in testInstances) {
+           res += stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String? + '\n'
+        }
+        return res
+    }
+
     override fun run(): InvocationResult {
         reset()
         testThreadExecutions.map { executor.submit(it) }.forEach { future ->
             try {
                 future.get(20, TimeUnit.SECONDS)
             } catch (e: TimeoutException) {
-                isFinished = true
-                lock.withLock { condition.signal() }
-                messageHandler.join()
                 println("Timeout exception")
+                isFinished = true
+                messageBroker.join()
                 val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread }
                 return DeadlockInvocationResult(threadDump)
             } catch (e: ExecutionException) {
@@ -145,10 +195,9 @@ open class DistributedRunner(val strategy: DistributedStrategy,
             }
         }
         isFinished = true
-        lock.withLock { condition.signal() }
-        messageHandler.join()
+        messageBroker.join()
         messageCounts.forEachIndexed { t, c ->
-            if (c.get() > strategy.testCfg.messagePerProcess) {
+            if (c.get() > testCfg.messagePerProcess) {
                 return InvariantsViolatedInvocationResult(scenario,
                         "Process $t send more messages than expected (actual count is" +
                                 " ${c.get()})")
@@ -157,13 +206,13 @@ open class DistributedRunner(val strategy: DistributedStrategy,
         val totalNumberOfMessages = messageCounts.fold(0) { acc, c ->
             acc + c.get()
         }
-        if (totalNumberOfMessages > strategy.testCfg.totalMessageCount) {
+        if (totalNumberOfMessages > testCfg.totalMessageCount) {
             return InvariantsViolatedInvocationResult(scenario,
                     "Total number of messages is more than " +
                             "expected (actual is $totalNumberOfMessages)")
         }
-        val results = ExecutionResult(emptyList(), parallelResultsWithClock,
-                emptyList())
+        val results = ExecutionResult(emptyList(), null,  parallelResultsWithClock, constructStateRepresentation(),
+                emptyList(), null)
         return CompletedInvocationResult(results)
     }
 
@@ -172,90 +221,47 @@ open class DistributedRunner(val strategy: DistributedStrategy,
         executor.shutdown()
     }
 
-    private abstract inner class EnvironmentImpl(override val processId: Int,
+    private inner class EnvironmentImpl(override val processId: Int,
                                                  override val nProcesses:
-                                                 Int, val testCfg: DistributedCTestConfiguration) : Environment {
-        override fun send(destId: Int, message: Message) {
-            println("from: $processId to: $destId $message")
-            assert(!isFinished)
+                                                 Int) : Environment {
+        override fun send(message: Message) {
+            if (failedProcesses[processId]) {
+                return
+            }
+            //assert(!isFinished)
             val shouldBeSend = Random.nextDouble(0.0, 1.0) <= testCfg
                     .networkReliability
             val numberOfFailedProcesses = failedProcesses.sumBy { if (it) 1 else 0 }
+            var processShouldFail = false
             if (numberOfFailedProcesses < testCfg.maxNumberOfFailedNodes) {
                 val failProb = (testCfg.maxNumberOfFailedNodes - numberOfFailedProcesses) / testCfg.maxNumberOfFailedNodes * 0.1
-                val processShouldFail = Random.nextDouble(0.0, 1.1) < failProb
+                processShouldFail = Random.nextDouble(0.0, 1.0) < failProb
             }
-            println("from $processId to $destId $message shouldBeSend = $shouldBeSend")
-            if (shouldBeSend) {
-                lock.withLock {
-                    println("$processId queue lock")
-                    val request = MessageRequest(deliveryTime(), processId, destId, message)
-                    messageRequests.add(request)
-                    messageHistory.add(request)
-                    condition.signal()
-                    messageCounts[processId].incrementAndGet()
-                }.also {  println("$processId queue unlock") }
+            if (processShouldFail) {
+                failedProcesses[processId] = true
             }
-        }
-
-        override fun sendLocal(message: Message) {
-            localMessages[processId].add(message)
-        }
-
-        abstract fun deliveryTime(): Int
-    }
-
-    private inner class SynchronousEnvironmentImp(processId: Int,
-                                                  nProcesses:
-                                                  Int, testCfg:
-                                                  DistributedCTestConfiguration) : EnvironmentImpl(processId, nProcesses, testCfg) {
-        override fun deliveryTime(): Int {
-
-            val minTime = if (messageRequests.isEmpty()) {
-                time
-            } else {
-                messageRequests.last().timestamp
+            if (!shouldBeSend) {
+               return
             }
-            return Random.nextInt(minTime, time + testCfg.maxDelay + 1)
-        }
-    }
-
-    private inner class AsynchronousEnvironmentImp(processId: Int,
-                                                   nProcesses:
-                                                   Int, testCfg:
-                                                   DistributedCTestConfiguration) : EnvironmentImpl(processId, nProcesses, testCfg) {
-        override fun deliveryTime(): Int {
-            return Random.nextInt(time, time + testCfg.maxDelay + 1)
-        }
-    }
-
-    private inner class FifoEnvironmentImp(processId: Int,
-                                           nProcesses:
-                                           Int, testCfg:
-                                           DistributedCTestConfiguration) : EnvironmentImpl(processId, nProcesses, testCfg) {
-        override fun deliveryTime(): Int {
-            val minTime = messageRequests.filter { it.from == processId }
-                    .min()?.timestamp ?: time
-            return Random.nextInt(minTime, time + testCfg.maxDelay + 1)
-        }
-    }
-
-    private fun createEnvironment(processId: Int, testCfg:
-    DistributedCTestConfiguration): Environment {
-        return when (testCfg.messageOrder) {
-            MessageOrder.SYNCHRONOUS -> SynchronousEnvironmentImp(processId, testCfg.threads, testCfg)
-            MessageOrder.FIFO -> FifoEnvironmentImp(processId, testCfg.threads, testCfg)
-            MessageOrder.ASYNCHRONOUS -> AsynchronousEnvironmentImp(processId, testCfg.threads, testCfg)
+            val duplicates = Random.nextInt(1, testCfg.duplicationRate + 1)
+            for (i in 0 until duplicates) {
+                messageHistory.add(MessageSentEvent(message))
+                messageQueue.put(message)
+            }
         }
     }
 }
 
-sealed class ProcessEvent
-class MessageRequest(val timestamp: Int, val from: Int, val to: Int, val
-message: Message) :
-        ProcessEvent(), Comparable<MessageRequest> {
-    override fun compareTo(other: MessageRequest): Int {
-        return timestamp - other.timestamp
-    }
+sealed class Event
 
+class MessageSentEvent(val message : Message) : Event() {
+    override fun toString(): String {
+        return "Process ${message.sender} send message to process ${message.receiver}, body: ${message.body}, headers: ${message.headers}"
+    }
+}
+
+class MessageDeliveredEvent(val message : Message) : Event() {
+    override fun toString(): String {
+        return "Process ${message.receiver} received message from process ${message.sender}, body: ${message.body}, headers: ${message.headers}"
+    }
 }

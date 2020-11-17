@@ -66,14 +66,19 @@ class DistributedOptions : Options<DistributedOptions,
         return this
     }
 
-    override fun createTestConfigurations(testClass: Class<*>?): DistributedCTestConfiguration {
+    fun duplicationRate(rate : Int) : DistributedOptions {
+        this.duplicationRate = rate
+        return this
+    }
+
+    override fun createTestConfigurations(testClass: Class<*>): DistributedCTestConfiguration {
         return DistributedCTestConfiguration(testClass, iterations, threads,
                 actorsPerThread, executionGenerator,
                 verifier, invocationsPerIteration, networkReliability,
                 messageOrder, maxNumberOfFailedNodes, supportRecovery,
                 maxDelay, maxMessageCount, maxMessagePerProcess, duplicationRate,
-                requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass!!), timeoutMs)
+                requireStateEquivalenceImplementationCheck, false,
+                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs)
 
     }
 }

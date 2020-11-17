@@ -5,7 +5,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
  */
 interface Environment {
     /**
-     * Identifier of this process (from 1 to [nProcesses]).
+     * Identifier of this process (from 0 to [nProcesses]).
      */
     val processId: Int
 
@@ -15,23 +15,22 @@ interface Environment {
     val nProcesses: Int
 
     /**
-     * Sends the specified [message] to the process [destId] (from 1 to [nProcesses]).
+     * Sends the specified [message] to the process [destId] (from 0 to [nProcesses]).
      */
-    fun send(destId: Int, message: Message)
+    fun send(message: Message)
 
     /**
-     * Sends the specified [message] to all processes except itself (from 1 to
+     * Sends the specified [message] to all processes except itself (from 0 to
      * [nProcesses]).
      */
     fun broadcast(message: Message) {
-        for (i in 1..nProcesses) {
-            send(i, message)
+        for (i in 0 until nProcesses) {
+            message.receiver = i
+            send(message)
         }
     }
-
-    /**
-     *  Sends local message (to user)
-     *  */
-    fun sendLocal(message : Message)
 }
+
+
+
 

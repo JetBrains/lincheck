@@ -11,19 +11,27 @@ import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 import java.util.*
+import java.util.concurrent.locks.ReentrantLock
 
 class DistributedStrategy(val testCfg: DistributedCTestConfiguration,
                           testClass: Class<*>,
                           scenario: ExecutionScenario,
-                          private val verifier: Verifier,
-                          val validationFunctions: List<Method>?
+                          validationFunctions: List<Method>,
+                          stateRepresentationFunction: Method?,
+                          private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
 
     init {
         // Create runner
-        runner = DistributedRunner(this, testClass, validationFunctions)
+        runner = DistributedRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
+        try {
+            runner.initialize()
+        } catch (t: Throwable) {
+            runner.close()
+            throw t
+        }
     }
 
     override fun run(): LincheckFailure? {
@@ -32,27 +40,21 @@ class DistributedStrategy(val testCfg: DistributedCTestConfiguration,
             for (invocation in 0 until invocations) {
                 println("INVOCATION $invocation")
                 val ir = runner.run()
-                println("Ir ${ir}")
                 when (ir) {
                     is CompletedInvocationResult -> {
-                        println(verifier)
                         if (!verifier.verifyResults(scenario, ir.results)) {
-                            println("Wrong results ${ir.results} ${scenario}")
                             return IncorrectResultsFailure(scenario, ir.results)
                         }
 
                     }
                     else ->
                     {
-                        println("results ${ir.toLincheckFailure(scenario)}")
                         return ir.toLincheckFailure(scenario)
                     }
                 }
             }
-            println("Return null")
             return null
         } finally {
-            println("All")
             runner.close()
         }
     }

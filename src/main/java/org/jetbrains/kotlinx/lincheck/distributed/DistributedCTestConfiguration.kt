@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
 
-class DistributedCTestConfiguration(testClass: Class<*>?, iterations: Int,
+class DistributedCTestConfiguration(testClass: Class<*>, iterations: Int,
                                     threads: Int, actorsPerThread: Int,
                                     generatorClass: Class<out ExecutionGenerator>,
                                     verifierClass: Class<out Verifier>,
@@ -50,12 +50,12 @@ class DistributedCTestConfiguration(testClass: Class<*>?, iterations: Int,
                 0, 0, generatorClass, verifierClass,
                 requireStateEquivalenceCheck,
                 minimizeFailedScenario, sequentialSpecification, timeoutMs) {
-    override fun createStrategy(testClass: Class<*>, scenario:
-    ExecutionScenario, validationFunctions: MutableList<Method>?, verifier: Verifier): Strategy {
-        return DistributedStrategy(this, testClass, scenario, verifier, validationFunctions)
-    }
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
+    }
+
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>, stateRepresentationMethod: Method?, verifier: Verifier): Strategy {
+        return DistributedStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
     }
 }
