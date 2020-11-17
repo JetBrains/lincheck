@@ -37,23 +37,29 @@ kotlin {
         val jvmMain by getting {
             kotlin.srcDir("src/jvm/main")
 
+            val kotlinVersion: String by project
+            val kotlinxCoroutinesVersion: String by project
+            val asmVersion: String by project
+            val reflectionsVersion: String by project
             dependencies {
-                api("org.jetbrains.kotlin:kotlin-stdlib:${project.property("kotlinVersion")}")
-                api("org.jetbrains.kotlin:kotlin-stdlib-common:${project.property("kotlinVersion")}")
-                api("org.jetbrains.kotlin:kotlin-reflect:${project.property("kotlinVersion")}")
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${project.property("kotlinxCoroutinesVersion")}")
-                api("org.ow2.asm:asm-commons:${project.property("asmVersion")}")
-                api("org.ow2.asm:asm-util:${project.property("asmVersion")}")
-                api("org.reflections:reflections:${project.property("reflectionsVersion")}")
+                api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+                api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
+                api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+                api("org.ow2.asm:asm-commons:$asmVersion")
+                api("org.ow2.asm:asm-util:$asmVersion")
+                api("org.reflections:reflections:$reflectionsVersion")
             }
         }
 
         val jvmTest by getting {
             kotlin.srcDir("src/jvm/test")
 
+            val junitVersion: String by project
+            val jctoolsVersion: String by project
             dependencies {
-                implementation("junit:junit:4.12")
-                implementation("org.jctools:jctools-core:2.1.0")
+                implementation("junit:junit:$junitVersion")
+                implementation("org.jctools:jctools-core:$jctoolsVersion")
             }
         }
     }
