@@ -154,14 +154,28 @@ internal open class ParallelThreadsRunner(
      */
     @Suppress("unused")
     fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
+        val actor = scenario.parallelExecution[iThread][actorId]
         val finalResult = if (res === COROUTINE_SUSPENDED) {
-            val actor = scenario.parallelExecution[iThread][actorId]
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck()) {
+            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck(actor.promptCancellation)) {
                 afterCoroutineCancelled(iThread)
                 Cancelled
             } else waitAndInvokeFollowUp(iThread, actorId)
+        } else if (actor.promptCancellation) {
+            // Since there is a possible rendezvous between `suspendCancellableCoroutine`
+            // and the corresponding `resume`, so that the first one does not actually
+            // suspends and simply takes the result, it is still important to cancel
+            // this continuation because of the `onCancellation` handler in case of
+            // prompt cancellation. Otherwise, it is complicated to provide a sequential
+            // specification which explains invocation results with such a rendezvous.
+            val t = Thread.currentThread() as TestThread
+            val cont = t.cont.also { t.cont = null }
+            if (cont !== null) {
+                cont.cancelByLincheck(actor.promptCancellation)
+                afterCoroutineCancelled(iThread)
+                Cancelled
+            } else createLincheckResult(res)
         } else createLincheckResult(res)
         val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
         if (isLastActor && finalResult !== Suspended)

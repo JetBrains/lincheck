@@ -71,11 +71,28 @@ public @interface Operation {
     boolean allowExtraSuspension() default false;
 
     /**
-     * Specifies whether this operation is blocking or may lead
-     * to a blocking behavior of another operation. This way,
-     * if the test checks for a non-blocking progress guarantee,
-     * <b>lincheck</b> will not fail the test if a hang is detected
-     * while one of the operations with this {@code blocking} marker is running.
+     * Specifies whether this operation is blocking.
+     * This way, if the test checks for a non-blocking progress guarantee,
+     * <b>lincheck</b> will not fail the test if a hang is detected on
+     * a running operations with this {@code blocking} marker.
      */
     boolean blocking() default false;
+
+    /**
+     * Specifies whether this operation invocation can lead
+     * to a blocking behavior of another concurrent operation.
+     * This way, if the test checks for a non-blocking progress guarantee,
+     * <b>lincheck</b> will not fail the test if a hang is detected
+     * while one of the operations marked with {@link #causesBlocking}
+     * is running concurrently. Note, that this operation is not
+     * considered as blocking until it is marked as {@link #blocking}.
+     */
+    boolean causesBlocking() default false;
+
+    /**
+     * Specifies whether this cancellable operation supports
+     * prompt cancellation, {@code false} by default. This parameter
+     * is ignored if {@link #cancellableOnSuspension} is {@code false}.
+     */
+    boolean promptCancellation() default false;
 }

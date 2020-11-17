@@ -241,18 +241,22 @@ abstract class ManagedStrategy(
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom && !blockingActorInProgress) {
+        if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException
         }
     }
 
-    private val blockingActorInProgress: Boolean
+    private val curActorIsBlocking: Boolean
+        get() = scenario.parallelExecution[currentThread][currentActorId[currentThread]].blocking
+
+    private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (scenario.parallelExecution[iThread].size > actorId) scenario.parallelExecution[iThread][actorId]
+                    if (iThread != currentThread && !finished[iThread])
+                        scenario.parallelExecution[iThread][actorId]
                     else null
-                }.filterNotNull().any { it.blocking }
+                }.filterNotNull().any { it.causesBlocking }
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
@@ -325,7 +329,7 @@ abstract class ManagedStrategy(
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        if (exception is ForcibleExecutionFinishException) return // not a forcible execution finish
+        if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
         suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
     }
 
@@ -873,6 +877,9 @@ private class MonitorTracker(nThreads: Int) {
  * If we just leave it, then the execution will not be halted.
  * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
  */
-internal object ForcibleExecutionFinishException : RuntimeException()
+internal object ForcibleExecutionFinishException : RuntimeException() {
+    // do not create a stack trace -- it simply can be unsafe
+    override fun fillInStackTrace() = this
+}
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known

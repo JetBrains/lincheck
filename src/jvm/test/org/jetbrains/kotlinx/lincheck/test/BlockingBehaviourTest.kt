@@ -30,6 +30,20 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
 class BlockingOperationTest {
+    @Operation(blocking = true)
+    fun blocking(): Unit = synchronized(this) {}
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .checkObstructionFreedom()
+        .verifier(EpsilonVerifier::class.java)
+        .requireStateEquivalenceImplCheck(false)
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .check(this::class)
+}
+
+class CausesBlockingOperationTest {
     private val counter = atomic(0)
 
     @Operation
@@ -37,11 +51,8 @@ class BlockingOperationTest {
         while (counter.value % 2 != 0) {}
     }
 
-    @Operation(blocking = true)
-    fun blocking(): Unit = synchronized(this) {}
-
-    @Operation(blocking = true)
-    fun leadsToBlocking() {
+    @Operation(causesBlocking = true)
+    fun causesBlocking() {
         counter.incrementAndGet()
         counter.incrementAndGet()
     }
@@ -51,7 +62,6 @@ class BlockingOperationTest {
         .checkObstructionFreedom()
         .verifier(EpsilonVerifier::class.java)
         .requireStateEquivalenceImplCheck(false)
-        .minimizeFailedScenario(false)
         .actorsBefore(0)
         .actorsAfter(0)
         .check(this::class)

@@ -224,9 +224,17 @@ class LTS(sequentialSpecification: Class<*>) {
                 createLincheckResult(finalRes, wasSuspended = true)
             }
             CANCELLATION -> {
-                check(continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancelByLincheck()) { "Error, should be able to cancel" }
-                check(suspendedOperations.removeIf { it.actor == actor && it.ticket == ticket }) { "Should be found, something is going very wrong..." }
-                check(!resumedOperations.containsKey(ticket)) { "Cancelled operations should not be processed as the resumed ones" }
+                check(continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancelByLincheck(promptCancellation = actor.promptCancellation)) {
+                    "Error, should be able to cancel"
+                }
+                if (!actor.promptCancellation) {
+                    check(suspendedOperations.removeIf { it.actor == actor && it.ticket == ticket }) {
+                        "Should be found, something is going very wrong..."
+                    }
+                }
+                if (resumedOperations.remove(ticket) != null) check(actor.promptCancellation) {
+                    "The operation can be resumed and then cancelled only with the prompt cancellation enabled"
+                }
                 Cancelled
             }
         }

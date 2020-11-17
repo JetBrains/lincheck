@@ -36,6 +36,8 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.reflect.full.*
+import kotlin.reflect.jvm.*
 
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
@@ -103,6 +105,7 @@ private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReferen
 /**
  * Get the same [method] for [instance] solving the different class loaders problem.
  */
+@Synchronized
 internal fun getMethod(instance: Any, method: Method): Method {
     val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
     return methods[method]?.get() ?: run {
@@ -185,15 +188,25 @@ internal class StoreExceptionHandler : AbstractCoroutineContextElement(Coroutine
         this.exception = exception
     }
 }
-fun <T> CancellableContinuation<T>.cancelByLincheck(): Boolean {
+
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): Boolean {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
     val cancelled = cancel(cancellationByLincheckException)
     exceptionHandler.exception?.let {
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
+    if (!cancelled && promptCancellation) {
+        // TODO we can invoke the method directly if the transformation is disabled
+        getMethod(this, cancelCompletedResultMethod).invoke(this, null, cancellationByLincheckException)
+        return true
+    }
     return cancelled
 }
+
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!
 
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
@@ -228,6 +241,8 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
                 cancelOnSuspension = a.cancelOnSuspension,
                 allowExtraSuspension = a.allowExtraSuspension,
                 blocking = a.blocking,
+                causesBlocking = a.causesBlocking,
+                promptCancellation = a.promptCancellation,
                 isSuspendable = a.isSuspendable
             )
         }
