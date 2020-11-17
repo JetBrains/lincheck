@@ -2,14 +2,13 @@ import org.gradle.jvm.tasks.Jar
 
 // atomicfu
 buildscript {
+    val atomicfuVersion: String by project
     dependencies {
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:${project.property("atomicfuVersion")}")
+        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
     }
 }
-
 apply(plugin = "kotlinx-atomicfu")
 
-// versions configured in settings.gradle.kts
 plugins {
     java
     kotlin("multiplatform")
@@ -65,7 +64,6 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-// https://youtrack.jetbrains.com/issue/KT-31603
 sourceSets.main {
     java.srcDirs("src/jvm/main")
 }
@@ -75,11 +73,6 @@ sourceSets.test {
 }
 
 tasks {
-    withType<JavaCompile> {
-        options.encoding = Charsets.UTF_8.name()
-        options.compilerArgs.add("-XDignore.symbol.file")
-    }
-
     withType<Test> {
         maxParallelForks = 1
         jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
@@ -90,15 +83,10 @@ tasks {
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
-
-            attributes(
-                    "Copyright" to "Copyright (C) 2015 - 2019 Devexperts, LLC\n" +
-                            "                                Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
-
+            attributes("Copyright" to
+                "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
+                "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
             )
         }
     }
 }
-
-group = project.property("group")!!
-version = project.property("version")!!
