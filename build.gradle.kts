@@ -36,6 +36,16 @@ kotlin {
     sourceSets {
         val jvmMain by getting {
             kotlin.srcDirs("src/jvm/main")
+
+            dependencies {
+                api("org.jetbrains.kotlin:kotlin-stdlib:${project.property("kotlinVersion")}")
+                api("org.jetbrains.kotlin:kotlin-stdlib-common:${project.property("kotlinVersion")}")
+                api("org.jetbrains.kotlin:kotlin-reflect:${project.property("kotlinVersion")}")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${project.property("kotlinxCoroutinesVersion")}")
+                api("org.ow2.asm:asm-commons:${project.property("asmVersion")}")
+                api("org.ow2.asm:asm-util:${project.property("asmVersion")}")
+                api("org.reflections:reflections:${project.property("reflectionsVersion")}")
+            }
         }
 
         val jvmTest by getting {
@@ -62,16 +72,6 @@ sourceSets.main {
 
 sourceSets.test {
     java.srcDirs("src/jvm/test")
-}
-
-dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:${project.property("kotlinVersion")}")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-common:${project.property("kotlinVersion")}")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:${project.property("kotlinVersion")}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${project.property("kotlinxCoroutinesVersion")}")
-    implementation("org.ow2.asm:asm-commons:${project.property("asmVersion")}")
-    implementation("org.ow2.asm:asm-util:${project.property("asmVersion")}")
-    implementation("org.reflections:reflections:${project.property("reflectionsVersion")}")
 }
 
 tasks {
