@@ -12,6 +12,7 @@ apply(plugin = "kotlinx-atomicfu")
 plugins {
     java
     kotlin("multiplatform")
+    id("maven-publish")
 }
 
 repositories {
@@ -34,7 +35,7 @@ kotlin {
 
     sourceSets {
         val jvmMain by getting {
-            kotlin.srcDirs("src/jvm/main")
+            kotlin.srcDir("src/jvm/main")
 
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:${project.property("kotlinVersion")}")
@@ -48,8 +49,7 @@ kotlin {
         }
 
         val jvmTest by getting {
-            // someone should look here, and try to remove first argument
-            kotlin.srcDirs("src/jvm/main", "src/jvm/test")
+            kotlin.srcDir("src/jvm/test")
 
             dependencies {
                 implementation("junit:junit:4.12")
