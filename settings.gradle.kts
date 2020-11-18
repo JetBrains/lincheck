@@ -12,5 +12,6 @@ pluginManagement {
     }
 }
 
-rootProject.name = "kotlinx-lincheck"
+val name: String by settings
+rootProject.name = name
 enableFeaturePreview("GRADLE_METADATA")

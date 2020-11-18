@@ -79,6 +79,11 @@ sourceSets.test {
 }
 
 tasks {
+    // empty xxx-javadoc.jar
+    register<Jar>("javadocJar") {
+        archiveClassifier.set("javadoc")
+    }
+
     withType<Test> {
         maxParallelForks = 1
         jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
@@ -93,6 +98,15 @@ tasks {
                 "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
                 "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
             )
+        }
+    }
+}
+
+publishing {
+    publications.withType<MavenPublication> {
+        // add empty javadoc
+        if (name == "jvm") {
+            artifact(tasks.getByName("javadocJar"))
         }
     }
 }
