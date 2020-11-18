@@ -6,7 +6,9 @@
 
 **Lincheck** is a framework for testing concurrent data structures for correctness. In order to use the framework, operations to be executed concurrently should be specified with the necessary information for an execution scenario generation. With the help of this specification, **lincheck** generates different scenarios, executes them in concurrent environment several times and then checks that the execution results are correct (usually, linearizable, but different relaxed contracts can be used as well).
 
-The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck) and JCenter. For Maven and Gradle use `org.jetbrains.kotlinx:lincheck:<version>` artifact path.
+The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck) and JCenter. 
+Use `org.jetbrains.kotlinx:lincheck:<version>` artifact path in Gradle 
+and `org.jetbrains.kotlinx:lincheck-jvm:<version>` in Maven.
 
 ##### Given talks:
  *  [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019, RU)
