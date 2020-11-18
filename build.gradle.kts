@@ -13,6 +13,7 @@ plugins {
     java
     kotlin("multiplatform")
     id("maven-publish")
+    id("kotlinx.team.infra") version "0.2.0-dev-55"
 }
 
 repositories {
@@ -107,6 +108,30 @@ publishing {
         // add empty javadoc
         if (name == "jvm") {
             artifact(tasks.getByName("javadocJar"))
+        }
+    }
+}
+
+infra {
+    teamcity {
+        bintrayUser = "%env.BINTRAY_USER%"
+        bintrayToken = "%env.BINTRAY_API_KEY%"
+    }
+    publishing {
+        bintray {
+            organization = "kotlin"
+            repository = "kotlinx"
+            library = "kotlinx.lincheck"
+            username = findProperty("bintrayUser") as String?
+            password = findProperty("bintrayApiKey") as String?
+        }
+
+        bintrayDev {
+            organization = "kotlin"
+            repository = "kotlin-dev"
+            library = "kotlinx.lincheck"
+            username = findProperty("bintrayUser") as String?
+            password = findProperty("bintrayApiKey") as String?
         }
     }
 }
