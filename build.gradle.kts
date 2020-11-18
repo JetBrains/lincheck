@@ -118,17 +118,11 @@ infra {
         bintrayToken = "%env.BINTRAY_API_KEY%"
     }
     publishing {
+        include(":")
+
         bintray {
             organization = "kotlin"
             repository = "kotlinx"
-            library = "kotlinx.lincheck"
-            username = findProperty("bintrayUser") as String?
-            password = findProperty("bintrayApiKey") as String?
-        }
-
-        bintrayDev {
-            organization = "kotlin"
-            repository = "kotlin-dev"
             library = "kotlinx.lincheck"
             username = findProperty("bintrayUser") as String?
             password = findProperty("bintrayApiKey") as String?

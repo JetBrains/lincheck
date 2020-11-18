@@ -27,26 +27,28 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
    `git merge develop` <br>
    `git push`
    
-9. Switch into `develop` branch back: <br>
-    `git checkout develop`
+9. Make sure that the `master` branch build is green on [Teamcity](https://teamcity.jetbrains.com/project/KotlinTools_KotlinxLincheck?branch=%3Cdefault%3E&mode=builds)
 
-10. Clean and build the project (make sure that all tests are passed)
-    and publish the artifacts: <br>
-    `./gradlew build` <br>
-    `./gradlew publish`
+10. Switch into `develop` branch back: <br>
+   `git checkout develop`
 
-11. In [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck#) admin interface:
+11. Clean the project and publish the artifacts without running the tests: <br>
+    `./gradlew -PbintrayUser=<username> -PbintrayApiKey=<api-key> clean publish`
+
+12. In [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck#) admin interface:
     * Publish artifacts of the new version.
     * Wait until newly published version becomes the most recent.
     * Sync to Maven Central.
 
-12. In [GitHub](https://github.com/Kotlin/kotlinx-lincheck/releases) interface:
+13. In [GitHub](https://github.com/Kotlin/kotlinx-lincheck/releases) interface:
     * Create a release named `lincheck-<version>`.
     * Write a release notes message following the old ones as example of style.
     
-13. Update the version to the next `SNAPSHOT` one in [`gradle.properties`](gradle.properties).
+14. Update the version to the next `SNAPSHOT` one in [`gradle.properties`](gradle.properties).
 
-14. Commit and push the updated [`gradle.properties`](gradle.properties): <br>
+15. Commit and push the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties` <br>
    `git commit -m "Prepare for next development iteration` <br>
    `git push`
+    
+**Congratulation! You've just released a new Lincheck version!**
