@@ -156,10 +156,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         ClassVersionGetter infoGetter = new ClassVersionGetter();
         cr.accept(infoGetter, 0);
         ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), remapper);
-        ClassVisitor cv = new CheckClassAdapter(cw, false); // For debug. Always used by default
-
-        // The code in this comment block prints the transformed byte-code for the specified class,
+        ClassVisitor cv = cw;
+        // The code in this comment block verifies the transformed byte-code and prints it for the specified class,
         // you may need to uncomment it for debug purposes under development.
+        // cv = new CheckClassAdapter(cv, false);
         // if (className.equals(YourClass.class.getCanonicalName()))
         //   cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
 
