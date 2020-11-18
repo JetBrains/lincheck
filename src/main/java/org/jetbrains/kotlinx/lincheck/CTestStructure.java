@@ -90,6 +90,8 @@ public class CTestStructure {
             }
             namedGens.put(paramAnn.name(), createGenerator(paramAnn));
         }
+        // Create map for default (not named) gens
+        Map<Class<?>, ParameterGenerator<?>> defaultGens = createDefaultGenerators();
         // Read group configurations
         for (OpGroupConfig opGroupConfigAnn: clazz.getAnnotationsByType(OpGroupConfig.class)) {
             groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
@@ -111,7 +113,7 @@ public class CTestStructure {
                 int nParameters = m.getParameterCount() - (isSuspendableMethod ? 1 : 0);
                 for (int i = 0; i < nParameters; i++) {
                     String nameInOperation = opAnn.params().length > 0 ? opAnn.params()[i] : null;
-                    gens.add(getOrCreateGenerator(m, m.getParameters()[i], nameInOperation, namedGens));
+                    gens.add(getOrCreateGenerator(m, m.getParameters()[i], nameInOperation, namedGens, defaultGens));
                 }
                 // Get list of handled exceptions if they are presented
                 List<Class<? extends Throwable>> handledExceptions = Arrays.asList(opAnn.handleExceptionsAsResult());
@@ -159,7 +161,7 @@ public class CTestStructure {
     }
 
     private static ParameterGenerator<?> getOrCreateGenerator(Method m, Parameter p, String nameInOperation,
-        Map<String, ParameterGenerator<?>> namedGens)
+        Map<String, ParameterGenerator<?>> namedGens, Map<Class<?>, ParameterGenerator<?>> defaultGens)
     {
         // Read @Param annotation on the parameter
         Param paramAnn = p.getAnnotation(Param.class);
@@ -172,7 +174,7 @@ public class CTestStructure {
             if (name != null)
                 return checkAndGetNamedGenerator(namedGens, name);
             // Parameter generator is not specified, try to create a default one
-            ParameterGenerator<?> defaultGenerator = createDefaultGenerator(p);
+            ParameterGenerator<?> defaultGenerator = defaultGens.get(p.getType());
             if (defaultGenerator != null)
                 return defaultGenerator;
             // Cannot create default parameter generator, throw an exception
@@ -197,16 +199,22 @@ public class CTestStructure {
         }
     }
 
-    private static ParameterGenerator<?> createDefaultGenerator(Parameter p) {
-        Class<?> t = p.getType();
-        if (t == byte.class   || t == Byte.class)    return new ByteGen("");
-        if (t == short.class  || t == Short.class)   return new ShortGen("");
-        if (t == int.class    || t == Integer.class) return new IntGen("");
-        if (t == long.class   || t == Long.class)    return new LongGen("");
-        if (t == float.class  || t == Float.class)   return new FloatGen("");
-        if (t == double.class || t == Double.class)  return new DoubleGen("");
-        if (t == String.class) return new StringGen("");
-        return null;
+    private static Map<Class<?>, ParameterGenerator<?>> createDefaultGenerators() {
+        Map<Class<?>, ParameterGenerator<?>> defaultGens = new HashMap<>();
+        defaultGens.put(byte.class, new ByteGen(""));
+        defaultGens.put(Byte.class, defaultGens.get(byte.class));
+        defaultGens.put(short.class, new ShortGen(""));
+        defaultGens.put(Short.class, defaultGens.get(short.class));
+        defaultGens.put(int.class, new IntGen(""));
+        defaultGens.put(Integer.class, defaultGens.get(int.class));
+        defaultGens.put(long.class, new LongGen(""));
+        defaultGens.put(Long.class, defaultGens.get(long.class));
+        defaultGens.put(float.class, new FloatGen(""));
+        defaultGens.put(Float.class, defaultGens.get(float.class));
+        defaultGens.put(double.class, new DoubleGen(""));
+        defaultGens.put(Double.class, defaultGens.get(double.class));
+        defaultGens.put(String.class, new StringGen(""));
+        return defaultGens;
     }
 
     private static ParameterGenerator<?> checkAndGetNamedGenerator(Map<String, ParameterGenerator<?>> namedGens, String name) {
