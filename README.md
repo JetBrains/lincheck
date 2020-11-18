@@ -9,7 +9,9 @@
 The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck) and JCenter. For Maven and Gradle use `org.jetbrains.kotlinx:lincheck:<version>` artifact path.
 
 ##### Given talks:
- *  [Lock-free algorithms testing](http://nkoval.info/talks/#lock_free_algorithms_testing) by Nikita Koval
+ *  [Testing concurrent algorithms with Lincheck](https://nkoval.com/talks/#lincheck-joker-2019)
+ *  [Lincheck: testing concurrent data structures on Java](https://nkoval.com/projects/#lincheck-hydra-2019)
+ *  [Lock-free algorithms testing](https://nkoval.com/talks/#lock_free_algorithms_testing)
 
 
 This is a fork of [Lin-Check framework by Devexperts](https://github.com/Devexperts/lin-check); the last one is no longer being developed.
