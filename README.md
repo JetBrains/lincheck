@@ -3,14 +3,18 @@
 [![JetBrains incubator project](https://jb.gg/badges/incubator.svg)](https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Download](https://api.bintray.com/packages/kotlin/kotlinx/kotlinx.lincheck/images/download.svg) ](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck/_latestVersion)
-[![Build Status](https://travis-ci.org/Kotlin/kotlinx-lincheck.svg?branch=master)](https://travis-ci.org/Kotlin/kotlinx-lincheck)
 
 **Lincheck** is a framework for testing concurrent data structures for correctness. In order to use the framework, operations to be executed concurrently should be specified with the necessary information for an execution scenario generation. With the help of this specification, **lincheck** generates different scenarios, executes them in concurrent environment several times and then checks that the execution results are correct (usually, linearizable, but different relaxed contracts can be used as well).
 
-The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck) and JCenter. For Maven and Gradle use `org.jetbrains.kotlinx:lincheck:<version>` artifact in for your tests.
+The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotlinx.lincheck) and JCenter. 
+Use `org.jetbrains.kotlinx:lincheck:<version>` artifact path in Gradle 
+and `org.jetbrains.kotlinx:lincheck-jvm:<version>` in Maven.
 
 ##### Given talks:
- *  [Lock-free algorithms testing](http://nkoval.info/talks/#lock_free_algorithms_testing) by Nikita Koval
+ *  [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019, RU)
+ *  [Testing concurrent algorithms with Lincheck](https://nkoval.com/talks/#lincheck-joker-2019) (Joker 2019, RU)
+ *  [Lincheck: testing concurrent data structures on Java](https://nkoval.com/talks/#lincheck-hydra-2019) (Hydra 2019, RU)
+ *  [Lock-free algorithms testing](https://nkoval.com/talks/#lock_free_algorithms_testing) (Joker 2017, RU)
 
 
 This is a fork of [Lin-Check framework by Devexperts](https://github.com/Devexperts/lin-check); the last one is no longer being developed.
@@ -33,8 +37,9 @@ Table of contents
 - [Execution strategies](#execution-strategies)
   * [Stress testing](#stress-testing)
   * [Model checking](#model-checking)
-    * [State representation](#state-representation)
-    * [Incremental testing](#incremental-testing)
+    + [Modular testing](#modular-testing)
+    + [Java 9+ support](#java-9+-support)
+  * [State representation](#state-representation)
 - [Correctness contracts](#correctness-contracts)
   * [Linearizability](#linearizability)
     + [States equivalency](#states-equivalency)
@@ -43,9 +48,9 @@ Table of contents
   * [Quiescent consistency](#quiescent-consistency)
     + [Test example](#test-example-1)
 - [Blocking data structures](#blocking-data-structures)
-    + [Example with a rendezvous channel](#example-with-a-rendezvous-channel)
-    + [States equivalency](#states-equivalency-1)
-    + [Test example](#test-example-2)
+  + [Example with a rendezvous channel](#example-with-a-rendezvous-channel)
+  + [States equivalency](#states-equivalency-1)
+  + [Test example](#test-example-2)
 - [Configuration via options](#configuration-via-options)
 - [Example](#example)
 

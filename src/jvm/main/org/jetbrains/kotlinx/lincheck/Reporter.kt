@@ -172,20 +172,15 @@ private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedEx
 }
 
 private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
-    appendln("= The execution has hung, see the thread dump =")
+    appendLine("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
-    appendln()
+    appendLine()
     for ((t, stackTrace) in failure.threadDump) {
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
-        appendln("Thread-$threadNumber:")
-        for (s in stackTrace) {
-            // remove transformation package predix
-            val ste = StackTraceElement(s.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), s.methodName, s.fileName, s.lineNumber)
-            if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.runner.")) break
-            // omit information about strategy code insertions
-            if (ste.className.startsWith("org.jetbrains.kotlinx.lincheck.strategy.")) continue
-            appendln("\t$ste")
-        }
+        appendLine("Thread-$threadNumber:")
+        stackTrace.map {
+            StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
+        }.forEach { appendLine("\t$it") }
     }
     return this
 }

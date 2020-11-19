@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
-import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
@@ -186,13 +185,13 @@ public class TestThreadExecutionGenerator {
             }
             Actor actor = actors.get(i);
             // Start of try-catch block for exceptions which this actor should handle
-            Label handledExpectionHandler = null;
+            Label handledExceptionHandler = null;
             Label actorCatchBlockStart = mv.newLabel();
             Label actorCatchBlockEnd = mv.newLabel();
             if (actor.getHandlesExceptions()) {
-                handledExpectionHandler = mv.newLabel();
+                handledExceptionHandler = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExpectionHandler, getType(ec).getInternalName());
+                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExceptionHandler, getType(ec).getInternalName());
             }
             // Catch those exceptions that has not been caught yet
             Label unexpectedExceptionHandler = mv.newLabel();
@@ -255,7 +254,7 @@ public class TestThreadExecutionGenerator {
             // Handle exceptions that are valid results
             if (actor.getHandlesExceptions()) {
                 // Handled exception handler
-                mv.visitLabel(handledExpectionHandler);
+                mv.visitLabel(handledExceptionHandler);
                 if (scenarioContainsSuspendableActors) {
                     storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
                 } else {
