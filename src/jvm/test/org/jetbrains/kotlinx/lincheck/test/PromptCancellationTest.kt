@@ -57,7 +57,7 @@ abstract class AbstractPromptCancellationTest(
         threads(2)
         actorsPerThread(1)
         actorsAfter(0)
-        if (this is StressOptions) invocationsPerIteration(1_000_000)
+        if (this is StressOptions) invocationsPerIteration(200_000)
         requireStateEquivalenceImplCheck(false)
         sequentialSpecification?.let { sequentialSpecification(it.java) }
     }
