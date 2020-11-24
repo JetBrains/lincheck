@@ -55,6 +55,13 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
                     storage[tokens[1].toInt()] = tokens[2].toInt()
                     present.toString()
                 }
+                "remove" -> {
+                    val present = storage.containsKey(tokens[1].toInt())
+                    if (present) {
+                        storage.remove(tokens[1].toInt())
+                    }
+                    present.toString()
+                }
                 else -> "error"
             }
         }
@@ -104,6 +111,23 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
 
         return res.toBoolean()
     }
+
+    @Operation
+    fun remove(key: Int): Boolean {
+        if (environment.processId == 0) {
+            lock.withLock {
+                val res = storage.containsKey(key)
+                if (res) {
+                    storage.remove(key)
+                }
+                return res
+            }
+        }
+        val res = sendOnce("remove $key")
+
+        return res.toBoolean()
+    }
+
 
     @Operation
     fun get(key: Int): Int? {
@@ -164,7 +188,7 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
                 receiver = message.sender))
     }
 
-    fun sendOnce(body: String): String {
+    private fun sendOnce(body: String): String {
         val id = commandId++.toString()
         val message = Message(body, headers = hashMapOf("id" to id),
                 sender = environment.processId, receiver = 0)
@@ -237,6 +261,15 @@ class SingleNode {
     fun get(key: Int): Int? {
         return storage[key]
     }
+
+    @Operation
+    fun remove(key : Int) : Boolean {
+        val res = storage.containsKey(key)
+        if (res) {
+            storage.remove(key)
+        }
+        return res
+    }
 }
 
 class TestClass : AbstractLincheckTest() {
@@ -254,7 +287,7 @@ class TestClass : AbstractLincheckTest() {
         LinChecker.check(KVStorageCentralSimple::class
                 .java, DistributedOptions().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(SingleNode::class.java).threads
-        (2).messageOrder(MessageOrder.ASYNCHRONOUS).duplicationRate(2).networkReliability(0.7)
+        (2).duplicationRate(2).networkReliability(0.7)
                 .invocationsPerIteration(100).iterations(100))
     }
 
