@@ -17,7 +17,7 @@ interface Environment {
     /**
      * Sends the specified [message] to the process [destId] (from 0 to [nProcesses]).
      */
-    fun send(message: Message)
+    fun send(message: Message, receiver : Int)
 
     /**
      * Sends the specified [message] to all processes except itself (from 0 to
@@ -25,12 +25,27 @@ interface Environment {
      */
     fun broadcast(message: Message) {
         for (i in 0 until nProcesses) {
-            message.receiver = i
-            send(message)
+            send(message, i)
         }
     }
+
+    fun sendLocal(message : Message)
+
+    fun checkLocalMessages(atMostOnce : Boolean = false, atLeastOnce : Boolean = false, preserveOrder : Boolean = false)
+
+    val messages : List<Message>
+
+    val processes : List<ProcessExecution>
+    val processExecution : ProcessExecution?
 }
 
+data class ProcessExecution(
+        val id : Int,
+        val isAlive : Boolean,
+        val sentMessages : List<Message>,
+        val receivedMessages : List<Message>,
+        val localMessages : List<Message>) {
+}
 
 
 

@@ -26,7 +26,7 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
     private val queue = LinkedBlockingQueue<Message>()
 
     @StateRepresentation
-    fun stateRepresentation() : String {
+    fun stateRepresentation(): String {
         return commandResults.toString()
     }
 
@@ -39,15 +39,13 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
         if (commandResults.containsKey(id)) {
             environment.send(
                     Message(body = commandResults[id]!!,
-                            headers = hashMapOf("id" to id, "state" to storage.toString()),
-                            sender = environment.processId,
-                            receiver = message.sender)
-            )
+                            headers = hashMapOf("id" to id, "state" to storage.toString())),
+                    message.sender!!)
             return
         }
         val tokens = message.body.split(' ')
         val result = lock.withLock {
-                when (tokens[0]) {
+            when (tokens[0]) {
                 "contains" -> storage.containsKey(tokens[1].toInt()).toString()
                 "get" -> storage[tokens[1].toInt()]?.toString()
                 "put" -> {
@@ -66,17 +64,15 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
             }
         }
         commandResults[id] = result.toString()
-        environment.send(Message(body = result ?: "null", headers = hashMapOf("id" to id, "state" to storage.toString()),
-                sender = environment.processId,
-                receiver = message.sender))
+        environment.send(Message(body = result
+                ?: "null", headers = hashMapOf("id" to id, "state" to storage.toString())), receiver = message.sender!!)
     }
 
     fun sendOnce(body: String): String {
         val id = commandId++.toString()
-        val message = Message(body, headers = hashMapOf("id" to id),
-                sender = environment.processId, receiver = 0)
+        val message = Message(body, headers = hashMapOf("id" to id))
         while (true) {
-            environment.send(message)
+            environment.send(message, 0)
             val response = queue.poll(10, TimeUnit.MILLISECONDS)
             if (response != null) {
                 commandResults[response.headers["id"]!!] = response.body
@@ -99,7 +95,7 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
     }
 
     @Operation
-    fun put(key: Int, value : Int): Boolean {
+    fun put(key: Int, value: Int): Boolean {
         if (environment.processId == 0) {
             lock.withLock {
                 val res = storage.containsKey(key)
@@ -151,7 +147,7 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
     private val queue = LinkedBlockingQueue<Message>()
 
     @StateRepresentation
-    fun stateRepresentation() : String {
+    fun stateRepresentation(): String {
         return commandResults.toString()
     }
 
@@ -164,10 +160,8 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
         if (commandResults.containsKey(id)) {
             environment.send(
                     Message(body = commandResults[id]!!,
-                            headers = hashMapOf("id" to id, "state" to storage.toString()),
-                            sender = environment.processId,
-                            receiver = message.sender)
-            )
+                            headers = hashMapOf("id" to id, "state" to storage.toString())),
+                    receiver = message.sender!!)
             return
         }
         val tokens = message.body.split(' ')
@@ -183,17 +177,16 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
                 else -> "error"
             }
         }
-        environment.send(Message(body = result ?: "null", headers = hashMapOf("id" to id, "state" to storage.toString()),
-                sender = environment.processId,
-                receiver = message.sender))
+        environment.send(Message(body = result
+                ?: "null", headers = hashMapOf("id" to id, "state" to storage.toString())),
+                receiver = message.sender!!)
     }
 
     private fun sendOnce(body: String): String {
         val id = commandId++.toString()
-        val message = Message(body, headers = hashMapOf("id" to id),
-                sender = environment.processId, receiver = 0)
+        val message = Message(body, headers = hashMapOf("id" to id))
         while (true) {
-            environment.send(message)
+            environment.send(message, 0)
             val response = queue.poll(10, TimeUnit.MILLISECONDS)
             if (response != null) {
                 commandResults[response.headers["id"]!!] = response.body
@@ -216,7 +209,7 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
     }
 
     @Operation
-    fun put(key: Int, value : Int): Boolean {
+    fun put(key: Int, value: Int): Boolean {
         if (environment.processId == 0) {
             lock.withLock {
                 val res = storage.containsKey(key)
@@ -242,16 +235,16 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
 }
 
 
-
 class SingleNode {
     private val storage = HashMap<Int, Int>()
+
     @Operation
     fun contains(key: Int): Boolean {
         return storage.contains(key)
     }
 
     @Operation
-    fun put(key: Int, value: Int) : Boolean {
+    fun put(key: Int, value: Int): Boolean {
         val res = storage.containsKey(key)
         storage[key] = value
         return res
@@ -263,7 +256,7 @@ class SingleNode {
     }
 
     @Operation
-    fun remove(key : Int) : Boolean {
+    fun remove(key: Int): Boolean {
         val res = storage.containsKey(key)
         if (res) {
             storage.remove(key)
@@ -297,7 +290,7 @@ class TestClass : AbstractLincheckTest() {
                 .java, DistributedOptions().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(SingleNode::class.java).threads
         (2).messageOrder(MessageOrder.ASYNCHRONOUS).networkReliability(0.7)
-                .invocationsPerIteration(100).iterations(100))
+                .invocationsPerIteration(1).iterations(1))
     }
 
     @Test(expected = LincheckAssertionError::class)

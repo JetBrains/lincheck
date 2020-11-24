@@ -4,13 +4,12 @@ import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.getMethod
 import org.jetbrains.kotlinx.lincheck.runner.*
+import java.lang.Thread.MIN_PRIORITY
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import kotlin.random.Random
 
 internal interface MessageQueue {
@@ -40,7 +39,7 @@ class FifoMessageQueue(numberOfNodes: Int) : MessageQueue {
     }
 
     override fun put(msg: Message) {
-        messageQueues[msg.receiver].add(msg)
+        messageQueues[msg.receiver!!].add(msg)
     }
 
     override fun get(): Message? {
@@ -102,14 +101,13 @@ open class DistributedRunner(strategy: DistributedStrategy,
             while (isRunning) {
                 val message = messageQueue.get() ?: continue
                 messageHistory.add(MessageDeliveredEvent(message))
-                testInstances[message.receiver].onMessage(message)
+                testInstances[message.receiver!!].onMessage(message)
             }
         }
     }
 
     @Volatile
     private var isRunning = false
-
 
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
 
@@ -172,6 +170,7 @@ open class DistributedRunner(strategy: DistributedStrategy,
 
     override fun run(): InvocationResult {
         reset()
+        println(testThreadExecutions.size)
         testThreadExecutions.map { executor.submit(it) }.forEach { future ->
             try {
                 future.get(20, TimeUnit.SECONDS)
@@ -231,11 +230,12 @@ open class DistributedRunner(strategy: DistributedStrategy,
     private inner class EnvironmentImpl(override val processId: Int,
                                         override val nProcesses:
                                         Int) : Environment {
-        override fun send(message: Message) {
+        override fun send(message: Message, receiver : Int) {
+            message.receiver = receiver
+            message.sender = processId
             if (failedProcesses[processId]) {
                 return
             }
-            //assert(!isFinished)
             val shouldBeSend = Random.nextDouble(0.0, 1.0) <= testCfg
                     .networkReliability
             val numberOfFailedProcesses = failedProcesses.sumBy { if (it) 1 else 0 }
@@ -256,6 +256,21 @@ open class DistributedRunner(strategy: DistributedStrategy,
                 messageQueue.put(message)
             }
         }
+
+        override fun sendLocal(message: Message) {
+            TODO("Not yet implemented")
+        }
+
+        override fun checkLocalMessages(atMostOnce: Boolean, atLeastOnce: Boolean, preserveOrder: Boolean) {
+            TODO("Not yet implemented")
+        }
+
+        override val messages: List<Message>
+            get() = emptyList()
+        override val processes: List<ProcessExecution>
+            get() = emptyList()
+        override val processExecution: ProcessExecution?
+            get() = null
     }
 }
 
