@@ -670,6 +670,7 @@ internal class ManagedStrategyTransformer(
                 adapter.pop() // pop parameter
                 loadRandom()
                 adapter.invokeVirtual(RANDOM_TYPE, NEXT_INT_METHOD)
+                return
             }
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
         }
