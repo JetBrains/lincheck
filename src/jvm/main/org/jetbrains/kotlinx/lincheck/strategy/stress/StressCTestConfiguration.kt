@@ -32,12 +32,13 @@ import java.lang.reflect.*
 class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
                                generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
                                val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                               sequentialSpecification: Class<*>?, timeoutMs: Long
+                               sequentialSpecification: Class<*>?, timeoutMs: Long,
+                               val addCrashes: Boolean = false
 ) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier) =
-        StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier, addCrashes)
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000

@@ -36,7 +36,7 @@ import java.io.*
  */
 abstract class Runner protected constructor(
     protected val strategy: Strategy,
-    private val _testClass: Class<*>, // will be transformed later
+    protected val _testClass: Class<*>, // will be transformed later
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
@@ -138,7 +138,7 @@ abstract class Runner protected constructor(
      * Is invoked before each actor execution from the specified thread.
      * The invocations are inserted into the generated code.
      */
-    fun onActorStart(iThread: Int) {
+    open fun onActorStart(iThread: Int) {
         strategy.onActorStart(iThread)
     }
 

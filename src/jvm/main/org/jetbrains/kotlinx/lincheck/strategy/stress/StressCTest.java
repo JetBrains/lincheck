@@ -125,6 +125,8 @@ public @interface StressCTest {
      */
     Class<?> sequentialSpecification() default DummySequentialSpecification.class;
 
+    boolean addCrashes() default false;
+
     /**
      * Holder annotation for {@link StressCTest}.
      */

@@ -23,6 +23,10 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.CrashError
+import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
+import org.jetbrains.kotlinx.lincheck.nvm.Probability
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityTransformer
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -35,6 +39,47 @@ import kotlin.coroutines.intrinsics.*
 import kotlin.random.*
 
 private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<kotlin.Result<Any?>, Continuation<Any?>>>
+
+internal enum class ExecutionState {
+    INIT, PARALLEL, POST
+}
+
+object RecoverableStateContainer {
+    @Volatile
+    internal var state = ExecutionState.INIT
+
+    @Volatile
+    internal var threads = 0
+
+    private var crashes = initCrashes()
+    private var executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER) { -1 }
+
+    private fun initCrashes() = Array(NVMCache.MAX_THREADS_NUMBER) { mutableListOf<CrashError>() }
+
+    fun threadId(): Int = when (state) {
+        ExecutionState.INIT -> 0
+        ExecutionState.PARALLEL -> Thread.currentThread().let {
+            if (it is TestThread) it.iThread + 1 else -1
+        }
+        ExecutionState.POST -> threads + 1
+    }
+
+    internal fun registerCrash(threadId: Int, crash: CrashError) {
+        crash.actorIndex = executedActors[threadId]
+        crashes[threadId].add(crash)
+    }
+
+    internal fun clearCrashes() = crashes.also {
+        crashes = initCrashes()
+        executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER) { -1 }
+    }
+
+    internal fun actorStarted(threadId: Int) {
+        executedActors[threadId]++
+    }
+
+    fun crashesCount() = crashes.sumBy { it.size }
+}
 
 /**
  * This runner executes parallel scenario part in different threads.
@@ -239,8 +284,11 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
+        Probability.totalActors = scenario.initExecution.size + scenario.parallelExecution.sumBy { it.size } + scenario.postExecution.size
+        beforeInit()
         reset()
         val initResults = scenario.initExecution.mapIndexed { i, initActor ->
+            RecoverableStateContainer.actorStarted(0)
             executeActor(testInstance, initActor).also {
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
                     val s = ExecutionScenario(
@@ -253,6 +301,7 @@ internal open class ParallelThreadsRunner(
             }
         }
         val afterInitStateRepresentation = constructStateRepresentation()
+        beforeParallel(scenario.threads)
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
@@ -275,7 +324,9 @@ internal open class ParallelThreadsRunner(
         val afterParallelStateRepresentation = constructStateRepresentation()
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
+        beforePost()
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
+            RecoverableStateContainer.actorStarted(scenario.parallelExecution.size + 1)
             // no actors are executed after suspension of a post part
             val result = if (postPartSuspended) {
                 NoResult
@@ -299,9 +350,29 @@ internal open class ParallelThreadsRunner(
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,
-            postResults, afterPostStateRepresentation
+            postResults, afterPostStateRepresentation,
+            RecoverableStateContainer.clearCrashes().toList()
         )
+        RecoverableStateContainer.state = ExecutionState.INIT
         return CompletedInvocationResult(results)
+    }
+
+    protected fun beforeInit() {
+        RecoverableStateContainer.state = ExecutionState.INIT
+    }
+
+    protected fun beforeParallel(threads: Int) {
+        RecoverableStateContainer.threads = threads
+        RecoverableStateContainer.state = ExecutionState.PARALLEL
+    }
+
+    protected fun beforePost() {
+        RecoverableStateContainer.state = ExecutionState.POST
+    }
+
+    override fun onActorStart(iThread: Int) {
+        super.onActorStart(iThread)
+        RecoverableStateContainer.actorStarted(iThread + 1)
     }
 
     override fun onStart(iThread: Int) {
@@ -319,7 +390,8 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun needsTransformation() = true
-    override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
+    override fun createTransformer(cv: ClassVisitor): ClassVisitor =
+        RecoverabilityTransformer(CancellabilitySupportClassTransformer(cv))
 
     override fun constructStateRepresentation() =
         stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?

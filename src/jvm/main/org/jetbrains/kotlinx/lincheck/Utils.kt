@@ -232,7 +232,7 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     initExecution,
     parallelExecution.map { actors ->
         actors.map { a ->
-            val args = a.arguments.map { it.convertForLoader(loader) }
+            val args = a.arguments.map { it.convertForLoader(loader) }.toMutableList()
             // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
             Actor(
                 method = a.method.convertForLoader(loader),
@@ -243,7 +243,8 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
                 blocking = a.blocking,
                 causesBlocking = a.causesBlocking,
                 promptCancellation = a.promptCancellation,
-                isSuspendable = a.isSuspendable
+                isSuspendable = a.isSuspendable,
+                threadIdArgsIndices = a.threadIdArgsIndices
             )
         }
     },

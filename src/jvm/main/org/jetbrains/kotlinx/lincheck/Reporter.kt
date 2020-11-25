@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.CrashError
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -178,11 +179,15 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     for ((t, stackTrace) in failure.threadDump) {
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
-        stackTrace.map {
-            StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
-        }.forEach { appendLine("\t$it") }
+        appendStackTrace(stackTrace)
     }
     return this
+}
+
+private fun StringBuilder.appendStackTrace(stackTrace: Array<StackTraceElement>) {
+    stackTrace.map {
+        StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
+    }.forEach { appendLine("\t$it") }
 }
 
 private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResultsFailure): StringBuilder {
@@ -212,6 +217,16 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
         appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
             "in each of the parallel threads seen at the beginning of the current operation\n---")
+    failure.results.crashes.forEachIndexed { threadId, threadCrashes ->
+        if (threadCrashes.isNotEmpty()) {
+            appendLine("\nCrashes on thread $threadId:")
+            threadCrashes.forEach { crash ->
+                val actor = if (crash.actorIndex == -1) "constructor" else "actor ${1 + crash.actorIndex}"
+                appendLine("Crashed inside $actor:")
+                appendCrash(crash)
+            }
+        }
+    }
     return this
 }
 
@@ -232,4 +247,8 @@ private fun StringBuilder.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
+}
+
+private fun StringBuilder.appendCrash(crash: CrashError) {
+    appendStackTrace(crash.stackTrace)
 }

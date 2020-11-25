@@ -33,20 +33,23 @@ class StressStrategy(
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
-    private val verifier: Verifier
+    private val verifier: Verifier,
+    addCrashes: Boolean = false
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: Runner
+    private val runner: Runner = if (addCrashes) {
+        RecoverableParallelThreadsRunner(
+            this, testClass, validationFunctions, stateRepresentationFunction,
+            testCfg.timeoutMs, UseClocks.RANDOM
+        )
+    } else {
+        ParallelThreadsRunner(
+            this, testClass, validationFunctions, stateRepresentationFunction,
+            testCfg.timeoutMs, UseClocks.RANDOM
+        )
+    }
 
     init {
-        runner = ParallelThreadsRunner(
-            strategy = this,
-            testClass = testClass,
-            validationFunctions = validationFunctions,
-            stateRepresentationFunction = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
-        )
         try {
             runner.initialize()
         } catch (t: Throwable) {

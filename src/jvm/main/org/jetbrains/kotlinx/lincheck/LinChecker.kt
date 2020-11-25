@@ -24,7 +24,9 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.Probability
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
@@ -93,11 +95,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             for (j in scenario.parallelExecution[i].indices) {
                 val newScenario = scenario.copy()
                 newScenario.parallelExecution[i].removeAt(j)
-                if (newScenario.parallelExecution[i].isEmpty()) newScenario.parallelExecution.removeAt(i) // remove empty thread
+                if (newScenario.parallelExecution[i].isEmpty()) {
+                    newScenario.parallelExecution.removeAt(i) // remove empty thread
+                    newScenario.setThreadIds()
+                }
                 val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
                 if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
             }
         }
+        scenario.setThreadIds() // reset thread ids after parallel minimization
         for (i in scenario.initExecution.indices) {
             val newScenario = scenario.copy()
             newScenario.initExecution.removeAt(i)
@@ -110,7 +116,33 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
             if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
         }
+        if (testCfg is StressCTestConfiguration && testCfg.addCrashes && this is IncorrectResultsFailure)
+            return minimizeCrashes(testCfg, verifier).also { Probability.expectedCrashes = 10 }
         return this
+    }
+
+    private fun IncorrectResultsFailure.crashesNumber() = results.crashes.sumBy { it.size }
+
+    private fun IncorrectResultsFailure.minimizeCrashes(
+        testCfg: CTestConfiguration,
+        verifier: Verifier
+    ): LincheckFailure {
+        Probability.expectedCrashes--
+        val currentCrashesNumber = crashesNumber()
+        repeat(100) {
+            val newIteration = scenario.tryMinimize(testCfg, verifier)
+            if (newIteration != null
+                && newIteration is IncorrectResultsFailure
+                && newIteration.crashesNumber() < currentCrashesNumber
+            ) return newIteration.minimizeCrashes(testCfg, verifier)
+        }
+        return this
+    }
+
+    private fun List<Actor>.setThreadId(threadId: Int) = forEach { actor -> actor.setThreadId(threadId) }
+    private fun ExecutionScenario.setThreadIds() {
+        parallelExecution.forEachIndexed { index, actors -> actors.setThreadId(index + 1) }
+        postExecution.setThreadId(parallelExecution.size + 1)
     }
 
     private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, verifier: Verifier) =
