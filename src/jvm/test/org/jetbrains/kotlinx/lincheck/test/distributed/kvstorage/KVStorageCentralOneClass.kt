@@ -6,7 +6,6 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -265,7 +264,7 @@ class SingleNode {
     }
 }
 
-class KVStorageCentralTestClass : AbstractLincheckTest() {
+class KVStorageCentralTestClass  {
     @Test
     fun testSimple() {
         LinChecker.check(KVStorageCentralSimple::class

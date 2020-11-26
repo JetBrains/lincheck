@@ -9,6 +9,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Message
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.Test
+import java.lang.reflect.InvocationTargetException
 import java.util.*
 import kotlin.collections.HashSet
 
@@ -55,8 +56,9 @@ class Peer(private val env: Environment) : Node {
     }
 }
 
-class BroadcastTest : AbstractLincheckTest() {
-    @Test
+class BroadcastTest {
+    // Just an API example, doesn't work
+    @Test(expected = InvocationTargetException::class)
     fun test() {
         LinChecker.check(Peer::class
                 .java, DistributedOptions().requireStateEquivalenceImplCheck

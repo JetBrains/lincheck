@@ -1,10 +1,30 @@
-package org.jetbrains.kotlinx.lincheck.distributed
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ */
 
+package org.jetbrains.kotlinx.lincheck.distributed.stress
+
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.getMethod
 import org.jetbrains.kotlinx.lincheck.runner.*
-import java.lang.Thread.MIN_PRIORITY
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.*
@@ -170,7 +190,6 @@ open class DistributedRunner(strategy: DistributedStrategy,
 
     override fun run(): InvocationResult {
         reset()
-        println(testThreadExecutions.size)
         testThreadExecutions.map { executor.submit(it) }.forEach { future ->
             try {
                 future.get(20, TimeUnit.SECONDS)

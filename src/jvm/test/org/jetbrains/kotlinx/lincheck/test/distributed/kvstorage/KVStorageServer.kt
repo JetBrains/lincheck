@@ -5,6 +5,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.Test
+import java.lang.IllegalArgumentException
 
 class KVStorageServer(private val env: Environment) : Node {
     private val storage = HashMap<Int, Int>()
@@ -87,10 +88,10 @@ class KVStorageClient(private val env: Environment) : NodeWithReceiveImp() {
     }
 }
 
-class KVStorageServerTestClass : AbstractLincheckTest() {
-    @Test
+class KVStorageServerTestClass {
+    @Test(expected = IllegalArgumentException::class)
     fun testSimple() {
-        LinChecker.check(KVStorageCentralSimple::class.java,
+        LinChecker.check(KVStorageServer::class.java,
                 DistributedOptions().requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(SingleNode::class.java)
                 .testClass(KVStorageServer::class.java, 1)
@@ -99,9 +100,9 @@ class KVStorageServerTestClass : AbstractLincheckTest() {
                 .invocationsPerIteration(100).iterations(1000))
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException::class)
     fun testFull() {
-        LinChecker.check(KVStorageCentralSimple::class.java,
+        LinChecker.check(KVStorageServer::class.java,
                 DistributedOptions()
                         .requireStateEquivalenceImplCheck(false)
                         .sequentialSpecification(SingleNode::class.java)
