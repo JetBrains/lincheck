@@ -230,6 +230,10 @@ open class DistributedRunner(strategy: DistributedStrategy,
     private inner class EnvironmentImpl(override val processId: Int,
                                         override val nProcesses:
                                         Int) : Environment {
+        override fun getAddress(cls: Class<*>, i: Int): Int {
+            TODO("Not yet implemented")
+        }
+
         override fun send(message: Message, receiver : Int) {
             message.receiver = receiver
             message.sender = processId

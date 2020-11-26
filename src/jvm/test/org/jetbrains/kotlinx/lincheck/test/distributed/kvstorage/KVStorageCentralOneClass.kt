@@ -265,7 +265,7 @@ class SingleNode {
     }
 }
 
-class TestClass : AbstractLincheckTest() {
+class KVStorageCentralTestClass : AbstractLincheckTest() {
     @Test
     fun testSimple() {
         LinChecker.check(KVStorageCentralSimple::class

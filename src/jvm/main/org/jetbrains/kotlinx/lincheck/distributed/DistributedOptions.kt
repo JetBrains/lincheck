@@ -20,6 +20,7 @@ class DistributedOptions : Options<DistributedOptions,
     var maxMessageCount : Int = Int.MAX_VALUE
     var maxMessagePerProcess : Int = Int.MAX_VALUE
     var duplicationRate : Int = 1
+    var testClasses = HashMap<Class<out Node>, Int>()
 
     fun delay(delay : Int) : DistributedOptions {
         this.maxDelay = delay
@@ -29,6 +30,11 @@ class DistributedOptions : Options<DistributedOptions,
 
     fun networkReliability(networkReliability: Double): DistributedOptions {
         this.networkReliability = networkReliability
+        return this
+    }
+
+    fun testClass(cls : Class<out Node>, numberOfInstances : Int): DistributedOptions {
+        this.testClasses[cls] = numberOfInstances
         return this
     }
 
@@ -47,7 +53,7 @@ class DistributedOptions : Options<DistributedOptions,
     }
 
     fun supportRecovery(supportRecovery: Boolean): DistributedOptions {
-        this.supportRecovery = true
+        this.supportRecovery = supportRecovery
         return this
     }
 
