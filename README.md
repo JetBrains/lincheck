@@ -455,7 +455,7 @@ Here is a test for a not thread-safe `HashMap` with the failed scenario and the 
 @StressCTest(minimizeFailedScenario = false)
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
 public class HashMapLinearizabilityTest extends VerifierState {
-    private HashMap<Integer, Integer> map = new HashMap<>();
+    private final HashMap<Integer, Integer> map = new HashMap<>();
 
     @Operation
     public Integer put(@Param(name = "key") int key, int value) {
@@ -504,26 +504,28 @@ If `@ModelCheckingCTest` was used instead of `@StressCTest` with `minimizeScenar
 ```
 = Invalid execution results =
 Parallel part:
-| put(4, -4): null | put(-8, -8): null |
-Post part:
-[get(-8): null]
-= The execution that led to this result =
-= Parallel part execution: =
-| put(4, -4)                                                  |                      |
-|   table.READ: null at HashMap.putVal(HashMap.java:628)      |                      |
-|   table.READ: null at HashMap.resize(HashMap.java:678)      |                      |
-|   switch                                                    |                      |
-|                                                             | put(-8, -8): null    |
-|                                                             |   thread is finished |
-|   threshold.READ: 12 at HashMap.resize(HashMap.java:680)    |                      |
-|   threshold.WRITE(9) at HashMap.resize(HashMap.java:702)    |                      |
-|   table.WRITE(Node[]@1) at HashMap.resize(HashMap.java:705) |                      |
-|   READ: null at HashMap.putVal(HashMap.java:630)            |                      |
-|   WRITE(Node@1) at HashMap.putVal(HashMap.java:631)         |                      |
-|   modCount.READ: 1 at HashMap.putVal(HashMap.java:661)      |                      |
-|   modCount.WRITE(2) at HashMap.putVal(HashMap.java:661)     |                      |
-|   size.READ: 1 at HashMap.putVal(HashMap.java:662)          |                      |
-|   size.WRITE(2) at HashMap.putVal(HashMap.java:662)         |                      |
-|   threshold.READ: 9 at HashMap.putVal(HashMap.java:662)     |                      |
-|   result: null                                              |                      |
-|   thread is finished                                        |                      |```
+| put(5, -8): null | put(5, 4): null |
+= The following interleaving leads to the error =
+Parallel part trace:
+| put(5, -8)                                                           |                      |
+|   put(5,-8): null at HashMapTest.put(HashMapTest.java:40)            |                      |
+|     putVal(0,5,-8,false,true): null at HashMap.put(HashMap.java:607) |                      |
+|       table.READ: null at HashMap.putVal(HashMap.java:623)           |                      |
+|       resize(): Node[]@1 at HashMap.putVal(HashMap.java:624)         |                      |
+|         table.READ: null at HashMap.resize(HashMap.java:673)         |                      |
+|         threshold.READ: 0 at HashMap.resize(HashMap.java:675)        |                      |
+|         threshold.WRITE(12) at HashMap.resize(HashMap.java:697)      |                      |
+|         switch                                                       |                      |
+|                                                                      | put(5, 4): null      |
+|                                                                      |   thread is finished |
+|         table.WRITE(Node[]@1) at HashMap.resize(HashMap.java:700)    |                      |
+|       READ: null at HashMap.putVal(HashMap.java:625)                 |                      |
+|       WRITE(Node@1) at HashMap.putVal(HashMap.java:626)              |                      |
+|       modCount.READ: 1 at HashMap.putVal(HashMap.java:656)           |                      |
+|       modCount.WRITE(2) at HashMap.putVal(HashMap.java:656)          |                      |
+|       size.READ: 1 at HashMap.putVal(HashMap.java:657)               |                      |
+|       size.WRITE(2) at HashMap.putVal(HashMap.java:657)              |                      |
+|       threshold.READ: 9 at HashMap.putVal(HashMap.java:657)          |                      |
+|   result: null                                                       |                      |
+|   thread is finished                                                 |                      |
+```
