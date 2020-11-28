@@ -21,6 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.runner.*
 import java.math.*
 import java.util.*
 import kotlin.coroutines.*
@@ -214,6 +216,23 @@ internal class UnparkTracePoint(
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
+}
+
+internal class CoroutineCancellationTracePoint(
+    iThread: Int, actorId: Int,
+    callStackTrace: CallStackTrace,
+) : TracePoint(iThread, actorId, callStackTrace) {
+    private lateinit var cancellationResult: CancellationResult
+
+    fun initializeCancellationResult(cancellationResult: CancellationResult) {
+        this.cancellationResult = cancellationResult
+    }
+
+    override fun toStringImpl(): String = when (cancellationResult) {
+        CancellationResult.CANCELLED -> "CANCELLED COROUTINE"
+        CancellationResult.CANCELLED_COMPLETED_RESULT -> "CANCELLED COMPLETED COROUTINE"
+        CancellationResult.FAILED -> "FAILED COROUTINE CANCELLATION"
+    }
 }
 
 /**

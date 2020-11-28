@@ -190,7 +190,7 @@ internal class StoreExceptionHandler : AbstractCoroutineContextElement(Coroutine
 }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): Boolean {
+internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
     val cancelled = cancel(cancellationByLincheckException)
@@ -199,10 +199,12 @@ fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean)
     }
     if (!cancelled && promptCancellation) {
         context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
-        return true
+        return CancellationResult.CANCELLED_COMPLETED_RESULT
     }
-    return cancelled
+    return if (cancelled) CancellationResult.CANCELLED else CancellationResult.FAILED
 }
+
+internal enum class CancellationResult { CANCELLED, CANCELLED_COMPLETED_RESULT, FAILED }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!

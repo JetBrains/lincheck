@@ -176,17 +176,16 @@ internal open class ParallelThreadsRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
+    open fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
         val actor = scenario.parallelExecution[iThread][actorId]
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck(actor.promptCancellation)) {
+            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CancellationResult.FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
                 }
-                afterCoroutineCancelled(iThread)
                 Cancelled
             } else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
@@ -226,13 +225,14 @@ internal open class ParallelThreadsRunner(
         return suspensionPointResults[iThread][actorId]
     }
 
+    internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
+        cont.cancelByLincheck(promptCancellation)
+
     override fun afterCoroutineSuspended(iThread: Int) {
         completedOrSuspendedThreads.incrementAndGet()
     }
 
     override fun afterCoroutineResumed(iThread: Int) {}
-
-    override fun afterCoroutineCancelled(iThread: Int) {}
 
     // We cannot use `completionStatuses` here since
     // they are set _before_ the result is published.

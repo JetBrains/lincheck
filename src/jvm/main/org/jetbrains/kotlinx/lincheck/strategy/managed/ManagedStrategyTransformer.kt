@@ -950,23 +950,24 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Removes switch points in CancellableContinuationImpl.cancel, so that they will not be reported
-     * when a continuation is cancelled by lincheck
+     * Removes ignored section for `CancellableContinuationImpl.onCancellation` call, so that
+     * events in the `onCancellation` method influence the execution and the trace.
+     *
+     * Note that this transformer does not handle the case of cancel handler throwing an exception.
      */
     private inner class CancellabilitySupportMethodTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isCancel = className == "kotlinx/coroutines/CancellableContinuationImpl" &&
-            (methodName == "cancel" || methodName == "cancelCompletedResult")
+        private val isOnCancellation = className == "kotlinx/coroutines/InvokeOnCancel" && methodName == "invoke"
 
         override fun visitCode() {
-            if (isCancel)
-                invokeBeforeIgnoredSectionEntering()
+            if (isOnCancellation)
+                invokeAfterIgnoredSectionLeaving()
             mv.visitCode()
         }
 
         override fun visitInsn(opcode: Int) {
-            if (isCancel) {
+            if (isOnCancellation) {
                 when (opcode) {
-                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
+                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeBeforeIgnoredSectionEntering()
                     else -> { }
                 }
             }
