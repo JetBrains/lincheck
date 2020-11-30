@@ -1,5 +1,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import java.util.concurrent.TimeUnit
+
 /**
  * Environment interface for communication with other processes.
  */
@@ -20,6 +22,10 @@ interface Environment {
      * can get the server id.
      */
     fun getAddress(cls : Class<*>, i : Int) : Int
+
+    fun setTimer(timer : String, time : Int, timeUnit : TimeUnit = TimeUnit.MILLISECONDS)
+
+    fun cancelTimer(timer : String)
 
     /**
      * Sends the specified [message] to the process [destId] (from 0 to [nProcesses]).

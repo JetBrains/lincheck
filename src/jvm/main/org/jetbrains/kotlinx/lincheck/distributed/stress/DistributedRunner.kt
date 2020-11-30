@@ -29,9 +29,25 @@ import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.Executors.newFixedThreadPool
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 
+
+@Volatile
+private var consumedCPU = System.currentTimeMillis().toInt()
+
+fun consumeCPU(tokens: Int) {
+    var t = consumedCPU // volatile read
+    for (i in tokens downTo 1)
+        t += (t * 0x5DEECE66DL + 0xBL + i.toLong() and 0xFFFFFFFFFFFFL).toInt()
+    if (t == 42)
+        consumedCPU += t
+}
+
+/**
+ *
+ */
 internal interface MessageQueue {
     fun put(msg: Message)
     fun get(): Message?
@@ -114,12 +130,15 @@ open class DistributedRunner(strategy: DistributedStrategy,
     private lateinit var messageCounts: MutableList<AtomicInteger>
     private lateinit var messageBroker: MessageBroker
     private val messageHistory = ConcurrentLinkedQueue<Event>()
-    private val failedProcesses = Array(testCfg.threads) { false }
+    private val failedProcesses = Array(testCfg.threads) { AtomicBoolean(false) }
 
     private inner class MessageBroker : Thread() {
         override fun run() {
             while (isRunning) {
                 val message = messageQueue.get() ?: continue
+                if (failedProcesses[message.receiver!!].get()) {
+                    continue
+                }
                 messageHistory.add(MessageDeliveredEvent(message))
                 testInstances[message.receiver!!].onMessage(message)
             }
@@ -153,7 +172,7 @@ open class DistributedRunner(strategy: DistributedStrategy,
     private fun reset() {
         messageHistory.clear()
         messageQueue.clear()
-        failedProcesses.fill(false)
+        failedProcesses.fill(AtomicBoolean(false))
         testInstances = Array(testCfg.threads) {
             testClass.getConstructor(Environment::class.java).newInstance(environments[it]) as Node
         }
@@ -190,15 +209,17 @@ open class DistributedRunner(strategy: DistributedStrategy,
 
     override fun run(): InvocationResult {
         reset()
-        testThreadExecutions.map { executor.submit(it) }.forEach { future ->
+        testThreadExecutions.map { executor.submit(it) }.forEachIndexed { i, future ->
             try {
                 future.get(20, TimeUnit.SECONDS)
             } catch (e: TimeoutException) {
                 println("Timeout exception")
-                isRunning = false
-                messageBroker.join()
-                val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread }
-                return DeadlockInvocationResult(threadDump)
+                if (!failedProcesses[i].get()) {
+                    isRunning = false
+                    messageBroker.join()
+                    val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread }
+                    return DeadlockInvocationResult(threadDump)
+                }
             } catch (e: ExecutionException) {
                 return UnexpectedExceptionInvocationResult(e.cause!!)
             }
@@ -253,22 +274,37 @@ open class DistributedRunner(strategy: DistributedStrategy,
             TODO("Not yet implemented")
         }
 
+        override fun setTimer(timer: String, time: Int, timeUnit: TimeUnit) {
+            TODO("Not yet implemented")
+        }
+
+        override fun cancelTimer(timer: String) {
+            TODO("Not yet implemented")
+        }
+
         override fun send(message: Message, receiver : Int) {
             message.receiver = receiver
             message.sender = processId
-            if (failedProcesses[processId]) {
+            if (failedProcesses[processId].get()) {
                 return
             }
             val shouldBeSend = Random.nextDouble(0.0, 1.0) <= testCfg
                     .networkReliability
-            val numberOfFailedProcesses = failedProcesses.sumBy { if (it) 1 else 0 }
+            val numberOfFailedProcesses = failedProcesses.sumBy { if (it.get()) 1 else 0 }
             var processShouldFail = false
             if (numberOfFailedProcesses < testCfg.maxNumberOfFailedNodes) {
                 val failProb = (testCfg.maxNumberOfFailedNodes - numberOfFailedProcesses) / testCfg.maxNumberOfFailedNodes * 0.1
                 processShouldFail = Random.nextDouble(0.0, 1.0) < failProb
             }
             if (processShouldFail) {
-                failedProcesses[processId] = true
+                failedProcesses[processId].set(true)
+                if (!testCfg.supportRecovery) {
+                    return
+                }
+                val timeTillRecovery = Random.nextInt() % 1000
+                consumeCPU(timeTillRecovery)
+                failedProcesses[processId].set(false)
+                return
             }
             if (!shouldBeSend) {
                 return

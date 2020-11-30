@@ -43,7 +43,7 @@ class KVStorageServer(private val env: Environment) : Node {
     }
 }
 
-class KVStorageClient(private val env: Environment) : NodeWithReceiveImp() {
+class KVStorageClient(private val env: Environment) : BlockingReceiveNodeImp() {
     private var commandId = 0
     private val commandResults = HashMap<String, String>()
     private val serverAddr = env.getAddress(KVStorageServer::class.java, 0)

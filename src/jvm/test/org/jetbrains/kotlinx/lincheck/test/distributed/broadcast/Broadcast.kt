@@ -1,4 +1,4 @@
-package distributed.broadcast
+package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -7,7 +7,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Message
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.Test
 import java.lang.reflect.InvocationTargetException
 import java.util.*
