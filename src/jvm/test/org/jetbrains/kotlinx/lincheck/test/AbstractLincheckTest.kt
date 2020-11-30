@@ -43,7 +43,7 @@ abstract class AbstractLincheckTest(
             }
         } else {
             assert(expectedFailures.contains(failure::class)) {
-                "This test has been failed with an unexpected error: \n $failure"
+                "This test has failed with an unexpected error: \n $failure"
             }
         }
     }
