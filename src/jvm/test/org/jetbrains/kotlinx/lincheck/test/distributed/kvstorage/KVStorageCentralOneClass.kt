@@ -30,7 +30,7 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
     }
 
     override fun onMessage(message: Message) {
-        if (environment.processId != 0) {
+        if (environment.nodeId != 0) {
             queue.add(message)
             return
         }
@@ -84,7 +84,7 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
 
     @Operation
     fun contains(key: Int): Boolean {
-        if (environment.processId == 0) {
+        if (environment.nodeId == 0) {
             lock.withLock {
                 return storage.containsKey(key)
             }
@@ -95,7 +95,7 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
 
     @Operation
     fun put(key: Int, value: Int): Boolean {
-        if (environment.processId == 0) {
+        if (environment.nodeId == 0) {
             lock.withLock {
                 val res = storage.containsKey(key)
                 storage[key] = value
@@ -109,7 +109,7 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
 
     @Operation
     fun remove(key: Int): Boolean {
-        if (environment.processId == 0) {
+        if (environment.nodeId == 0) {
             lock.withLock {
                 val res = storage.containsKey(key)
                 if (res) {
@@ -126,7 +126,7 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
 
     @Operation
     fun get(key: Int): Int? {
-        if (environment.processId == 0) {
+        if (environment.nodeId == 0) {
             lock.withLock {
                 return storage[key]
             }
@@ -151,7 +151,7 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
     }
 
     override fun onMessage(message: Message) {
-        if (environment.processId != 0) {
+        if (environment.nodeId != 0) {
             queue.add(message)
             return
         }
@@ -198,7 +198,7 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
 
     @Operation
     fun contains(key: Int): Boolean {
-        if (environment.processId == 0) {
+        if (environment.nodeId == 0) {
             lock.withLock {
                 return storage.containsKey(key)
             }
@@ -209,7 +209,7 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
 
     @Operation
     fun put(key: Int, value: Int): Boolean {
-        if (environment.processId == 0) {
+        if (environment.nodeId == 0) {
             lock.withLock {
                 val res = storage.containsKey(key)
                 storage[key] = value
@@ -223,7 +223,7 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
 
     @Operation
     fun get(key: Int): Int? {
-        if (environment.processId == 0) {
+        if (environment.nodeId == 0) {
             lock.withLock {
                 return storage[key]
             }

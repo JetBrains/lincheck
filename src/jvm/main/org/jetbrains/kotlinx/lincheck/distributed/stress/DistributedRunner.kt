@@ -46,7 +46,7 @@ fun consumeCPU(tokens: Int) {
 }
 
 /**
- *
+ * The interface for message queue. Different implementations provide different guarantees of message delivery order.
  */
 internal interface MessageQueue {
     fun put(msg: Message)
@@ -267,8 +267,8 @@ open class DistributedRunner(strategy: DistributedStrategy,
         println("All")
     }
 
-    private inner class EnvironmentImpl(override val processId: Int,
-                                        override val nProcesses:
+    private inner class EnvironmentImpl(override val nodeId: Int,
+                                        override val numberOfNodes:
                                         Int) : Environment {
         override fun getAddress(cls: Class<*>, i: Int): Int {
             TODO("Not yet implemented")
@@ -282,10 +282,10 @@ open class DistributedRunner(strategy: DistributedStrategy,
             TODO("Not yet implemented")
         }
 
-        override fun send(message: Message, receiver : Int) {
+        override fun send(message: Message, receiver: Int) {
             message.receiver = receiver
-            message.sender = processId
-            if (failedProcesses[processId].get()) {
+            message.sender = nodeId
+            if (failedProcesses[nodeId].get()) {
                 return
             }
             val shouldBeSend = Random.nextDouble(0.0, 1.0) <= testCfg
@@ -297,13 +297,13 @@ open class DistributedRunner(strategy: DistributedStrategy,
                 processShouldFail = Random.nextDouble(0.0, 1.0) < failProb
             }
             if (processShouldFail) {
-                failedProcesses[processId].set(true)
+                failedProcesses[nodeId].set(true)
                 if (!testCfg.supportRecovery) {
                     return
                 }
                 val timeTillRecovery = Random.nextInt() % 1000
                 consumeCPU(timeTillRecovery)
-                failedProcesses[processId].set(false)
+                failedProcesses[nodeId].set(false)
                 return
             }
             if (!shouldBeSend) {

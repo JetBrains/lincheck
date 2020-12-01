@@ -3,14 +3,33 @@ package org.jetbrains.kotlinx.lincheck.distributed
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
+/**
+ * Interface for a single node in a distributed algorithm.
+ */
 interface Node {
+    /**
+     * Called when a new message arrives.
+     * @param message is a message from another node
+     */
     fun onMessage(message : Message)
+
+    /**
+     * Called if the [timer] expires. The timer can be set using the environment
+     * @see Environment#setTimer(String, Int, TimeUnit)
+     */
     fun onTimer(timer : String) {}
-    fun afterFailure() {}
+
+    /**
+     * Called before a process is recovered from failure. Used to define process state after failure
+     * (e.g. default values should be set for all fields).
+     */
+    fun beforeRecovery() {}
 }
+
 
 abstract class BlockingReceiveNodeImp : Node {
     private val messageQueue = LinkedBlockingQueue<Message>()
+
     override fun onMessage(message: Message) {
         messageQueue.add(message)
     }

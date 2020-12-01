@@ -12,10 +12,14 @@ import java.lang.reflect.InvocationTargetException
 import java.util.*
 import kotlin.collections.HashSet
 
+/**
+ * Implementation of the correct broadcast algorithm.
+ * Assume
+ */
 class Peer(private val env: Environment) : Node {
-    private val receivedMessages = Array<HashSet<Int>>(env.nProcesses) { HashSet() }
+    private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
     private var messageId = 0
-    private val undeliveredMessages = Array<PriorityQueue<Message>>(env.nProcesses) {
+    private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
         PriorityQueue(
                 kotlin.Comparator { x, y -> x.headers["id"]!!.toInt() - y.headers["id"]!!.toInt() }
         )
@@ -50,7 +54,7 @@ class Peer(private val env: Environment) : Node {
 
     @Operation
     fun send(msg: String) {
-        val message = Message(body = msg, headers = hashMapOf("id" to messageId++.toString(), "from" to env.processId.toString()))
+        val message = Message(body = msg, headers = hashMapOf("id" to messageId++.toString(), "from" to env.nodeId.toString()))
         env.broadcast(message)
     }
 }

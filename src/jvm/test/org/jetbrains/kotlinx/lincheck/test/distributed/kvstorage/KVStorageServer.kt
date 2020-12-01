@@ -3,13 +3,11 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.Test
-import java.lang.IllegalArgumentException
 
 class KVStorageServer(private val env: Environment) : Node {
     private val storage = HashMap<Int, Int>()
-    private val commandResults = Array<HashMap<String, Message>>(env.nProcesses) {
+    private val commandResults = Array<HashMap<String, Message>>(env.numberOfNodes) {
         HashMap()
     }
 
