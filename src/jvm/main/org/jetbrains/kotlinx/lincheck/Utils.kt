@@ -198,8 +198,7 @@ fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean)
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
     if (!cancelled && promptCancellation) {
-        // TODO we can invoke the method directly if the transformation is disabled
-        getMethod(this, cancelCompletedResultMethod).invoke(this, null, cancellationByLincheckException)
+        context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
         return true
     }
     return cancelled
