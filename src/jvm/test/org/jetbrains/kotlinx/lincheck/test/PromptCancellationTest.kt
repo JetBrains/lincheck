@@ -56,19 +56,20 @@ abstract class AbstractPromptCancellationTest(
     fun resumeOp(@Param(gen = IntGen::class, conf = "1:2") mode: Int): Int {
         val cont = cont ?: return -1
         when (mode) {
-            0 -> { // resume
+            1 -> { // resume
                 cont.resume(Unit) {
                     check(completedOrCancelled.compareAndSet(false, true))
                     returnResult = 42
                 }
             }
-            1 -> { // tryResume
+            2 -> { // tryResume
                 val token = cont.tryResume(Unit, null) {
                     check(completedOrCancelled.compareAndSet(false, true))
                     returnResult = 42
                 }
                 if (token != null) cont.completeResume(token)
             }
+            else -> error("Unexpected")
         }
         return returnResult
     }
