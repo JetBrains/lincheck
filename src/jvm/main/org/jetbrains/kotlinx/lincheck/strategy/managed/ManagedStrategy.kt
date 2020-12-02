@@ -194,7 +194,7 @@ abstract class ManagedStrategy(
     /**
      * Re-runs the last invocation to collect its trace.
      */
-    private fun collectTrace(failingResult: InvocationResult): List<TracePoint>? {
+    private fun collectTrace(failingResult: InvocationResult): Trace? {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
@@ -226,7 +226,7 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.asLincheckFailureWithoutTrace().toString())
             }.toString()
         }
-        return traceCollector!!.trace
+        return Trace(traceCollector!!.trace, testCfg.verboseTrace)
     }
 
     /**

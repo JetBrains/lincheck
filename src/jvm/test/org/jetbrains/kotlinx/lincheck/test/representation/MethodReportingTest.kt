@@ -30,7 +30,7 @@ import org.junit.*
 import java.lang.StringBuilder
 
 /**
- * This test check interleaving reporting features related to methods, such as reporting of atomic functions with
+ * This test checks interleaving reporting features related to methods, such as reporting of atomic functions with
  * and their parameters and results compression of calls that are executed without a context switch in the middle.
  */
 class MethodReportingTest : VerifierState() {
@@ -87,10 +87,6 @@ class MethodReportingTest : VerifierState() {
         check("ignored" !in log) { "ignored methods should not be present in log" }
         check("nonPrimitiveParameter(IllegalStateException@1)" in log)
         check("nonPrimitiveResult(): IllegalStateException@2" in log)
-    }
-
-    private class BooleanHolder(var value: Boolean) {
-        override fun toString(): String = value.toString()
     }
 }
 

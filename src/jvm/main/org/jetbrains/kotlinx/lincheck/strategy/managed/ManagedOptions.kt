@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_GUARANTEES
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_HANGING_DETECTION_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_INVOCATIONS
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_VERBOSE_TRACE
 import java.util.*
 
 /**
@@ -38,6 +39,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
     protected var eliminateLocalObjects: Boolean = DEFAULT_ELIMINATE_LOCAL_OBJECTS;
+    protected var verboseTrace = DEFAULT_VERBOSE_TRACE
 
     /**
      * Use the specified number of scenario invocations to study interleavings in each iteration.
@@ -74,6 +76,16 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun addGuarantee(guarantee: ManagedStrategyGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
+    }
+
+    /**
+     * Set to `true` to make Lincheck log all events in an incorrect execution trace.
+     * By default, Lincheck collapses the method invocations that were not interrupted
+     * (e.g., due to a switch to another thread), and omits all the details except for
+     * the method invocation result.
+     */
+    fun verboseTrace(verboseTrace: Boolean): OPT = applyAndCast {
+        this.verboseTrace = verboseTrace
     }
 
     /**
