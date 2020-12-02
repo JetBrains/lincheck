@@ -79,9 +79,10 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     }
 
     /**
-     * Set to `true` to make Lincheck log every execution event in an incorrect interleaving.
-     * By default, Lincheck will not report events in methods that do not have
-     * execution affecting events, such as context thread switches.
+     * Set to `true` to make Lincheck log all events in an incorrect execution trace.
+     * By default, Lincheck collapses the method invocations that were not interrupted
+     * (e.g., due to a switch to another thread), and omits all the details except for
+     * the method invocation result.
      */
     fun verboseTrace(verboseTrace: Boolean): OPT = applyAndCast {
         this.verboseTrace = verboseTrace
