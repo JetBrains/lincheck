@@ -19,22 +19,12 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.verifier;
+package org.jetbrains.kotlinx.lincheck.paramgen
 
-import org.jetbrains.kotlinx.lincheck.execution.*;
-
-/**
- * This verifier does nothing and could be used for performance benchmarking.
- */
-public class EpsilonVerifier implements Verifier {
-
-    public EpsilonVerifier(Class<?> sequentialSpecification) {}
-
-    @Override
-    public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
-        return true; // Always correct results :)
+class LongGen(configuration: String) : ParameterGenerator<Long> {
+    private val intGen: IntGen = IntGen(configuration)
+    override fun generate(): Long {
+        return intGen.generate().toLong()
     }
 
-    @Override
-    public void checkStateEquivalenceImplementation() {}
 }

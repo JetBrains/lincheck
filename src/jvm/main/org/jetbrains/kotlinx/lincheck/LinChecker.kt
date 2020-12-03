@@ -127,7 +127,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun ExecutionScenario.copy() = ExecutionScenario(
         ArrayList(initExecution),
-        parallelExecution.map { ArrayList(it) },
+        parallelExecution.map { ArrayList(it) } as MutableList<MutableList<Actor>>,
         ArrayList(postExecution)
     )
 

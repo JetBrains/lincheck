@@ -246,8 +246,8 @@ internal open class ParallelThreadsRunner(
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
                     val s = ExecutionScenario(
                         scenario.initExecution.subList(0, i + 1),
-                        emptyList(),
-                        emptyList()
+                        ArrayList(),
+                        ArrayList()
                     )
                     return ValidationFailureInvocationResult(s, functionName, exception)
                 }
@@ -269,7 +269,7 @@ internal open class ParallelThreadsRunner(
             val s = ExecutionScenario(
                 scenario.initExecution,
                 scenario.parallelExecution,
-                emptyList()
+                ArrayList()
             )
             return ValidationFailureInvocationResult(s, functionName, exception)
         }

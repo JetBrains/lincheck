@@ -65,18 +65,18 @@ class ClocksTestScenarioGenerator(testCfg: CTestConfiguration, testStructure: CT
     : ExecutionGenerator(testCfg, testStructure)
 {
     override fun nextExecution() = ExecutionScenario(
-        emptyList(),
-        listOf(
-            listOf(
+        ArrayList(),
+        mutableListOf(
+            mutableListOf(
                 Actor(method = ClocksTest::a.javaMethod!!, arguments = emptyList()),
                 Actor(method = ClocksTest::b.javaMethod!!, arguments = emptyList())
             ),
-            listOf(
+            mutableListOf(
                 Actor(method = ClocksTest::c.javaMethod!!, arguments = emptyList()),
                 Actor(method = ClocksTest::d.javaMethod!!, arguments = emptyList())
             )
         ),
-        emptyList()
+        ArrayList()
     )
 
 }

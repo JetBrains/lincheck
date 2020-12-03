@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.verifier
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 
@@ -43,7 +44,7 @@ public class SerializabilityVerifier(
     override fun checkStateEquivalenceImplementation() = linerizabilityVerifier.checkStateEquivalenceImplementation()
 
     private val ExecutionScenario.converted get() = ExecutionScenario(
-        emptyList(), mergeAndFlatten(initExecution, parallelExecution, postExecution), emptyList()
+            arrayListOf(), mergeAndFlatten(initExecution, parallelExecution, postExecution) as MutableList<MutableList<Actor>>, arrayListOf()
     )
 
     private val ExecutionResult.converted: ExecutionResult

@@ -25,21 +25,22 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import java.lang.reflect.*
 import kotlin.random.*
+import kotlin.reflect.KClass
 
 /**
  * Implementations of this class generate [actors][Actor]
  * using [parameter generators][ParameterGenerator].
  */
 class ActorGenerator(
-    private val method: Method,
-    private val parameterGenerators: List<ParameterGenerator<*>>,
-    private val handledExceptions: List<Class<out Throwable?>>,
-    val useOnce: Boolean,
-    cancellableOnSuspension: Boolean,
-    private val allowExtraSuspension: Boolean,
-    private val blocking: Boolean,
-    private val causesBlocking: Boolean,
-    promptCancellation: Boolean
+        private val method: Method,
+        private val parameterGenerators: List<ParameterGenerator<*>>,
+        private val handledExceptions: List<Class<out Throwable?>>,
+        val useOnce: Boolean,
+        cancellableOnSuspension: Boolean,
+        private val allowExtraSuspension: Boolean,
+        private val blocking: Boolean,
+        private val causesBlocking: Boolean,
+        promptCancellation: Boolean
 ) {
     private val cancellableOnSuspension = cancellableOnSuspension && isSuspendable
     private val promptCancellation = cancellableOnSuspension && promptCancellation

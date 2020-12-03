@@ -19,8 +19,6 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.verifier;
+package org.jetbrains.kotlinx.lincheck.verifier
 
-public class DummySequentialSpecification {
-    private DummySequentialSpecification() {} // This dummy class should not be created
-}
+class DummySequentialSpecification private constructor() // This dummy class should not be created
