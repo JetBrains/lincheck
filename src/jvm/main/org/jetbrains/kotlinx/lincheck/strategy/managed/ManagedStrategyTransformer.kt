@@ -91,7 +91,6 @@ internal class ManagedStrategyTransformer(
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CancellabilitySupportMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -946,32 +945,6 @@ internal class ManagedStrategyTransformer(
             loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, ::UnparkTracePoint)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
-        }
-    }
-
-    /**
-     * Removes ignored section for `CancellableContinuationImpl.onCancellation` call, so that
-     * events in the `onCancellation` method influence the execution and the trace.
-     *
-     * Note that this transformer does not handle the case of cancel handler throwing an exception.
-     */
-    private inner class CancellabilitySupportMethodTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isCancel = className == "kotlinx/coroutines/CancellableContinuationImpl" && methodName == "cancel"
-
-        override fun visitCode() {
-            if (isCancel)
-                invokeAfterIgnoredSectionLeaving()
-            mv.visitCode()
-        }
-
-        override fun visitInsn(opcode: Int) {
-            if (isCancel) {
-                when (opcode) {
-                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeBeforeIgnoredSectionEntering()
-                    else -> { }
-                }
-            }
-            mv.visitInsn(opcode)
         }
     }
 

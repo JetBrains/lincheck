@@ -777,14 +777,6 @@ private class ManagedStrategyRunner(
             managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
         return cancellationResult
     }
-
-    override fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
-        // Enter ignored section, because Runner can call transformed methods here, such as `coroutine.cancel`
-        managedStrategy.enterIgnoredSection(iThread)
-        val result = super.processInvocationResult(res, iThread, actorId)
-        managedStrategy.leaveIgnoredSection(iThread)
-        return result
-    }
 }
 
 /**
