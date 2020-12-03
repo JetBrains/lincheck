@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
@@ -181,7 +182,7 @@ internal open class ParallelThreadsRunner(
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CancellationResult.CANCELLATION_FAILED) {
+            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()

@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -773,7 +774,7 @@ private class ManagedStrategyRunner(
         // Pass the result to `cancellationTracePoint`.
         cancellationTracePoint?.initializeCancellationResult(cancellationResult)
         // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
-        if (cancellationResult != CancellationResult.CANCELLATION_FAILED)
+        if (cancellationResult != CANCELLATION_FAILED)
             managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
         return cancellationResult
     }

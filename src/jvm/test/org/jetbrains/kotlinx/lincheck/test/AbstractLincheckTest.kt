@@ -74,3 +74,9 @@ abstract class AbstractLincheckTest(
 }
 
 private const val TIMEOUT = 100_000L
+
+fun checkTraceHasNoLincheckEvents(trace: String) {
+    val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.test.").size - 1
+    val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
+    check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
+}

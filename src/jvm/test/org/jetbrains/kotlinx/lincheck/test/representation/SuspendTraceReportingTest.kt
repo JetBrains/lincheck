@@ -26,6 +26,7 @@ import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
@@ -72,6 +73,7 @@ class SuspendTraceReportingTest : VerifierState() {
             "suspended function should be mentioned exactly twice (once in parallel and once in parallel execution)"
         }
         check("barStarted.READ: true" in log) { "this code location after suspension should be reported" }
+        checkTraceHasNoLincheckEvents(log)
     }
 
     private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
