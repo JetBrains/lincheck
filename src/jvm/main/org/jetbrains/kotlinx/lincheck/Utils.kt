@@ -197,14 +197,17 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
     exceptionHandler.exception?.let {
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
-    if (!cancelled && promptCancellation) {
-        context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
-        return CancellationResult.CANCELLED_COMPLETED_RESULT
+    return when {
+        cancelled -> CancellationResult.CANCELLED_BEFORE_RESUMPTION
+        promptCancellation -> {
+            context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
+            CancellationResult.CANCELLED_AFTER_RESUMPTION
+        }
+        else -> CancellationResult.CANCELLATION_FAILED
     }
-    return if (cancelled) CancellationResult.CANCELLED else CancellationResult.FAILED
 }
 
-internal enum class CancellationResult { CANCELLED, CANCELLED_COMPLETED_RESULT, FAILED }
+internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!

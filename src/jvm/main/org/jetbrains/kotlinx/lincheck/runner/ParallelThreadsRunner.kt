@@ -181,7 +181,7 @@ internal open class ParallelThreadsRunner(
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CancellationResult.FAILED) {
+            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CancellationResult.CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
@@ -225,6 +225,10 @@ internal open class ParallelThreadsRunner(
         return suspensionPointResults[iThread][actorId]
     }
 
+    /**
+     * This method is used for communication between `ParallelThreadsRunner` and `ManagedStrategy` via overriding,
+     * so that runner do not know about managed strategy details.
+     */
     internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
         cont.cancelByLincheck(promptCancellation)
 

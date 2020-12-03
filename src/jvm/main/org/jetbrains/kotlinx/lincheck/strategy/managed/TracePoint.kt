@@ -22,9 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.runner.*
 import java.math.*
-import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
@@ -229,9 +227,9 @@ internal class CoroutineCancellationTracePoint(
     }
 
     override fun toStringImpl(): String = when (cancellationResult) {
-        CancellationResult.CANCELLED -> "CANCELLED COROUTINE"
-        CancellationResult.CANCELLED_COMPLETED_RESULT -> "CANCELLED COMPLETED COROUTINE"
-        CancellationResult.FAILED -> "FAILED COROUTINE CANCELLATION"
+        CancellationResult.CANCELLED_BEFORE_RESUMPTION -> "CANCELLED BEFORE RESUMPTION"
+        CancellationResult.CANCELLED_AFTER_RESUMPTION -> "PROMPT CANCELLED AFTER RESUMPTION"
+        CancellationResult.CANCELLATION_FAILED -> "CANCELLATION ATTEMPT FAILED"
     }
 }
 

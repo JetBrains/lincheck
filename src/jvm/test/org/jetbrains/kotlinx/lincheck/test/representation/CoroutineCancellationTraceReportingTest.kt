@@ -52,10 +52,11 @@ class CoroutineCancellationTraceReportingTest : VerifierState() {
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
+            .verboseTrace(true)
             .checkImpl(this::class.java)
         checkNotNull(failure) { "the test should fail" }
         val log = failure.toString()
-        check("CANCELLED COROUTINE" in log) { "The cancellation event should be reported" }
-        check("at InvokeOnCancel.invoke" in log) { "The `onCancellation` handler events should be reported" }
+        check("CANCELLED BEFORE RESUMPTION" in log) { "The cancellation event should be reported" }
+        check("setCorrect(false)" in log) { "The `onCancellation` handler events should be reported" }
     }
 }

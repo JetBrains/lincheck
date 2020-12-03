@@ -773,7 +773,7 @@ private class ManagedStrategyRunner(
         // Pass the result to `cancellationTracePoint`.
         cancellationTracePoint?.initializeCancellationResult(cancellationResult)
         // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
-        if (cancellationResult != CancellationResult.FAILED)
+        if (cancellationResult != CancellationResult.CANCELLATION_FAILED)
             managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
         return cancellationResult
     }

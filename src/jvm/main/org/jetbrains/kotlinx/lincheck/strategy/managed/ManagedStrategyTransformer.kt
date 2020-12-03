@@ -956,16 +956,16 @@ internal class ManagedStrategyTransformer(
      * Note that this transformer does not handle the case of cancel handler throwing an exception.
      */
     private inner class CancellabilitySupportMethodTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isOnCancellation = className == "kotlinx/coroutines/InvokeOnCancel" && methodName == "invoke"
+        private val isCallCancelHandler = className == "kotlinx/coroutines/CancellableContinuationImpl" && methodName == "callCancelHandler"
 
         override fun visitCode() {
-            if (isOnCancellation)
+            if (isCallCancelHandler)
                 invokeAfterIgnoredSectionLeaving()
             mv.visitCode()
         }
 
         override fun visitInsn(opcode: Int) {
-            if (isOnCancellation) {
+            if (isCallCancelHandler) {
                 when (opcode) {
                     ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeBeforeIgnoredSectionEntering()
                     else -> { }
