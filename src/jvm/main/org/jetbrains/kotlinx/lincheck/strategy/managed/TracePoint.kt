@@ -27,7 +27,7 @@ import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
-class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
+data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
 
 /**
  * Essentially, a trace is a list of trace points, which represent
