@@ -222,15 +222,23 @@ internal class CoroutineCancellationTracePoint(
     callStackTrace: CallStackTrace,
 ) : TracePoint(iThread, actorId, callStackTrace) {
     private lateinit var cancellationResult: CancellationResult
+    private var exception: Throwable? = null
 
     fun initializeCancellationResult(cancellationResult: CancellationResult) {
         this.cancellationResult = cancellationResult
     }
 
-    override fun toStringImpl(): String = when (cancellationResult) {
-        CANCELLED_BEFORE_RESUMPTION -> "CANCELLED BEFORE RESUMPTION"
-        CANCELLED_AFTER_RESUMPTION -> "PROMPT CANCELLED AFTER RESUMPTION"
-        CANCELLATION_FAILED -> "CANCELLATION ATTEMPT FAILED"
+    fun initializeException(e: Throwable) {
+        this.exception = e;
+    }
+
+    override fun toStringImpl(): String {
+        if (exception != null) return "EXCEPTION WHILE CANCELLATION"
+        return when (cancellationResult) {
+            CANCELLED_BEFORE_RESUMPTION -> "CANCELLED BEFORE RESUMPTION"
+            CANCELLED_AFTER_RESUMPTION -> "PROMPT CANCELLED AFTER RESUMPTION"
+            CANCELLATION_FAILED -> "CANCELLATION ATTEMPT FAILED"
+        }
     }
 }
 

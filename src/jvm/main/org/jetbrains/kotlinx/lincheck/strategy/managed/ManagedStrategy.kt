@@ -769,14 +769,19 @@ private class ManagedStrategyRunner(
         // Create a cancellation trace point before `cancel`, so that cancellation trace point
         // precede the events in `onCancellation` handler.
         val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
-        // Call the `cancel` method.
-        val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
-        // Pass the result to `cancellationTracePoint`.
-        cancellationTracePoint?.initializeCancellationResult(cancellationResult)
-        // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
-        if (cancellationResult != CANCELLATION_FAILED)
-            managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
-        return cancellationResult
+        try {
+            // Call the `cancel` method.
+            val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
+            // Pass the result to `cancellationTracePoint`.
+            cancellationTracePoint?.initializeCancellationResult(cancellationResult)
+            // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
+            if (cancellationResult != CANCELLATION_FAILED)
+                managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
+            return cancellationResult
+        } catch(e: Throwable) {
+            cancellationTracePoint?.initializeException(e)
+            throw e // throw further
+        }
     }
 }
 
