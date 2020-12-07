@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.util.concurrent.atomic.*
@@ -65,5 +66,6 @@ class AFUCallRepresentationTest : VerifierState() {
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("counter.compareAndSet(0,1)" in log)
+        checkTraceHasNoLincheckEvents(log)
     }
 }

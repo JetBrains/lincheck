@@ -24,6 +24,7 @@ import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.junit.*
 import java.lang.StringBuilder
 
@@ -75,5 +76,6 @@ class SwitchAsFirstMethodEventTest {
         check("incrementAndGet" !in log) {
             "When the switch is lifted out of methods, there is no point at reporting this method"
         }
+        checkTraceHasNoLincheckEvents(log)
     }
 }
