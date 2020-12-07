@@ -32,6 +32,6 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
         return ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
                 guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects)
+                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects, verboseTrace)
     }
 }

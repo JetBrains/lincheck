@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
 /**
- * This test check basic interleaving reporting features,
+ * This test checks basic interleaving reporting features,
  * including reporting of lock acquiring/releasing, reads/writes with parameter/result capturing.
  */
 class TraceReportingTest {
