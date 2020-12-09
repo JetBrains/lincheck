@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.representation
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -68,6 +69,7 @@ class CapturedValueRepresentationTest : VerifierState() {
         check(" int[]@1" in log)
         check(" String[]@1" in log)
         check(" 0" in log)
+        checkTraceHasNoLincheckEvents(log)
     }
 
     override fun extractState(): Any = counter

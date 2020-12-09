@@ -267,8 +267,6 @@ private class ActorResultNode(iThread: Int, last: TraceNode?, verboseTrace: Bool
     override val shouldBeExpanded: Boolean = false
 
     override fun addRepresentationTo(traceRepresentation: MutableList<TraceEventRepresentation>): TraceNode? {
-        if (result == Cancelled)
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "CONTINUATION CANCELLED"))
         if (result != null)
             traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "result: $result"))
         return next

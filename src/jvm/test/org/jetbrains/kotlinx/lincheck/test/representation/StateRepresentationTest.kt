@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.IllegalStateException
@@ -64,6 +65,7 @@ open class ModelCheckingStateReportingTest {
         check("STATE: 1" in log)
         check("STATE: 4" in log)
         check(log.split("incrementAndGet(): 1").size - 1 == 1) { "A method call is logged twice in the trace" }
+        checkTraceHasNoLincheckEvents(log)
     }
 }
 
@@ -97,6 +99,7 @@ class StressStateReportingTest : VerifierState() {
         val log = StringBuilder().appendFailure(failure).toString()
         check("STATE: 0" in log)
         check("STATE: 2" in log || "STATE: 3" in log || "STATE: 4" in log)
+        checkTraceHasNoLincheckEvents(log)
     }
 }
 

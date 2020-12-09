@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.representation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.junit.*
 
 /**
@@ -70,5 +71,6 @@ class VerboseTraceTest {
         check("    levelOneCounter" in log)
         check("    levelTwoEvent" in log) { "An intermediate method call was not logged or has an incorrect indentation" }
         check("      levelTwoCounter" in log)
+        checkTraceHasNoLincheckEvents(log)
     }
 }
