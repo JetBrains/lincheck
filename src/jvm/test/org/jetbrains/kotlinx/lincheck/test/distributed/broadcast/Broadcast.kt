@@ -1,22 +1,23 @@
-package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
+/*package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Message
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.junit.Test
 import java.lang.reflect.InvocationTargetException
 import java.util.*
 import kotlin.collections.HashSet
 
+
+data class Message(val body : String, val id : Int, val from : Int)
+
 /**
- * Implementation of the correct broadcast algorithm.
- * Assume
+ *
  */
-class Peer(private val env: Environment) : Node {
+class Peer(private val env: Environment<Message>) : Node<Message> {
     private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
     private var messageId = 0
     private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
@@ -70,4 +71,4 @@ class BroadcastTest {
                 .invocationsPerIteration(100).iterations(1000))
     }
 }
-
+*/

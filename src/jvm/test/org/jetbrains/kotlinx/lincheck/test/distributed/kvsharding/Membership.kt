@@ -18,11 +18,11 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
+/*
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Message
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import java.lang.RuntimeException
 
@@ -51,7 +51,6 @@ class Member(private val env: Environment) : Node {
             }
             else -> throw RuntimeException("Unknown message type")
         }
-        TODO("Not yet implemented")
     }
 
     override fun onTimer(timer: String) {
@@ -92,3 +91,4 @@ class Member(private val env: Environment) : Node {
         return getMembersOnce()
     }
 }
+ */

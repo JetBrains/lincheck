@@ -31,7 +31,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
-class DistributedStrategy(val testCfg: DistributedCTestConfiguration,
+class DistributedStrategy<Message>(val testCfg: DistributedCTestConfiguration<Message>,
                           testClass: Class<*>,
                           scenario: ExecutionScenario,
                           validationFunctions: List<Method>,

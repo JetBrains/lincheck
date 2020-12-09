@@ -6,12 +6,12 @@ import java.util.concurrent.TimeUnit
 /**
  * Interface for a single node in a distributed algorithm.
  */
-interface Node {
+interface Node<Message> {
     /**
      * Called when a new message arrives.
      * @param message is a message from another node
      */
-    fun onMessage(message : Message)
+    fun onMessage(message : Message, sender : Int)
 
     /**
      * Called if the [timer] expires. The timer can be set using the environment
@@ -27,10 +27,10 @@ interface Node {
 }
 
 
-abstract class BlockingReceiveNodeImp : Node {
+abstract class BlockingReceiveNodeImp<Message> : Node<Message> {
     private val messageQueue = LinkedBlockingQueue<Message>()
 
-    override fun onMessage(message: Message) {
+    override fun onMessage(message: Message, sender : Int) {
         messageQueue.add(message)
     }
 

@@ -7,6 +7,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
+import java.lang.RuntimeException
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -15,69 +16,62 @@ import kotlin.collections.HashMap
 import kotlin.concurrent.withLock
 
 
-class KVStorageCentralSimple(private val environment: Environment) : Node {
+class KVStorageCentralSimple(private val environment: Environment<Command>) : Node<Command> {
     private val lock = ReentrantLock()
     private var commandId = 0
-    private val commandResults = HashMap<String, String>()
+    private val commandResults = Array(environment.numberOfNodes) { HashMap<Int, Command>()}
     private val storage = Collections.synchronizedMap(
             HashMap<Int, Int>())
 
-    private val queue = LinkedBlockingQueue<Message>()
+    private val queue = LinkedBlockingQueue<Command>()
 
     @StateRepresentation
     fun stateRepresentation(): String {
         return commandResults.toString()
     }
 
-    override fun onMessage(message: Message) {
+    override fun onMessage(message: Command, sender : Int) {
         if (environment.nodeId != 0) {
             queue.add(message)
             return
         }
-        val id = message.headers["id"]!!
-        if (commandResults.containsKey(id)) {
+        val id = message.id
+        if (commandResults[sender].containsKey(id)) {
             environment.send(
-                    Message(body = commandResults[id]!!,
-                            headers = hashMapOf("id" to id, "state" to storage.toString())),
-                    message.sender!!)
+                    commandResults[sender][id]!!,
+                    sender)
             return
         }
-        val tokens = message.body.split(' ')
-        val result = lock.withLock {
-            when (tokens[0]) {
-                "contains" -> storage.containsKey(tokens[1].toInt()).toString()
-                "get" -> storage[tokens[1].toInt()]?.toString()
-                "put" -> {
-                    val present = storage.containsKey(tokens[1].toInt())
-                    storage[tokens[1].toInt()] = tokens[2].toInt()
-                    present.toString()
+        val result : Command = lock.withLock {
+            try {
+                when (message) {
+                    is ContainsCommand -> ContainsResult(storage.containsKey(message.key), id)
+                    is GetCommand -> GetResult(storage[message.key], id)
+                    is PutCommand -> PutResult(storage.put(message.key, message.value), id)
+                    is RemoveCommand -> RemoveResult(storage.remove(message.key), id)
+                    else -> throw RuntimeException("Unexpected command")
                 }
-                "remove" -> {
-                    val present = storage.containsKey(tokens[1].toInt())
-                    if (present) {
-                        storage.remove(tokens[1].toInt())
-                    }
-                    present.toString()
-                }
-                else -> "error"
+            } catch(e : Throwable) {
+                ErrorResult(e, id)
             }
         }
-        commandResults[id] = result.toString()
-        environment.send(Message(body = result
-                ?: "null", headers = hashMapOf("id" to id, "state" to storage.toString())), receiver = message.sender!!)
+        commandResults[sender][id] = result
+        environment.send(result, receiver = sender)
     }
 
-    fun sendOnce(body: String): String {
-        val id = commandId++.toString()
-        val message = Message(body, headers = hashMapOf("id" to id))
+    fun sendOnce(command : Command): Command {
         while (true) {
-            environment.send(message, 0)
+            environment.send(command, 0)
             val response = queue.poll(10, TimeUnit.MILLISECONDS)
             if (response != null) {
-                commandResults[response.headers["id"]!!] = response.body
+                commandResults[0][response.id] = response
             }
-            if (commandResults.containsKey(id)) {
-                return commandResults[id]!!
+            if (commandResults[0].containsKey(command.id)) {
+                val res = commandResults[0][command.id]!!
+                if (res is ErrorResult) {
+                    throw res.error
+                }
+                return res
             }
         }
     }
@@ -89,38 +83,30 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
                 return storage.containsKey(key)
             }
         }
-        val res = sendOnce("contains $key")
-        return res.toBoolean()
+        val response = sendOnce(ContainsCommand(key, commandId++)) as ContainsResult
+        return response.res
     }
 
     @Operation
-    fun put(key: Int, value: Int): Boolean {
+    fun put(key: Int, value: Int): Int? {
         if (environment.nodeId == 0) {
             lock.withLock {
-                val res = storage.containsKey(key)
-                storage[key] = value
-                return res
+                return storage.put(key, value)
             }
         }
-        val res = sendOnce("put $key $value")
-
-        return res.toBoolean()
+        val response = sendOnce(PutCommand(key, value, commandId++)) as PutResult
+        return response.res
     }
 
     @Operation
-    fun remove(key: Int): Boolean {
+    fun remove(key: Int): Int? {
         if (environment.nodeId == 0) {
             lock.withLock {
-                val res = storage.containsKey(key)
-                if (res) {
-                    storage.remove(key)
-                }
-                return res
+                return storage.remove(key)
             }
         }
-        val res = sendOnce("remove $key")
-
-        return res.toBoolean()
+        val response = sendOnce(RemoveCommand(key, commandId++)) as RemoveResult
+        return response.res
     }
 
 
@@ -131,67 +117,66 @@ class KVStorageCentralSimple(private val environment: Environment) : Node {
                 return storage[key]
             }
         }
-        val res = sendOnce("get $key")
-        return res.toIntOrNull()
+        val response = sendOnce(GetCommand(key, commandId++)) as GetResult
+        return response.res
     }
 }
 
-class KVStorageIncorrect(private val environment: Environment) : Node {
+class KVStorageIncorrect(private val environment: Environment<Command>) : Node<Command> {
     private val lock = ReentrantLock()
     private var commandId = 0
-    private val commandResults = HashMap<String, String>()
+    private val commandResults = Array(environment.numberOfNodes) { HashMap<Int, Command>()}
     private val storage = Collections.synchronizedMap(
             HashMap<Int, Int>())
 
-    private val queue = LinkedBlockingQueue<Message>()
+    private val queue = LinkedBlockingQueue<Command>()
 
     @StateRepresentation
     fun stateRepresentation(): String {
         return commandResults.toString()
     }
 
-    override fun onMessage(message: Message) {
+    override fun onMessage(message: Command, sender : Int) {
         if (environment.nodeId != 0) {
             queue.add(message)
             return
         }
-        val id = message.headers["id"]!!
-        if (commandResults.containsKey(id)) {
+        val id = message.id
+        if (commandResults[sender].containsKey(id)) {
             environment.send(
-                    Message(body = commandResults[id]!!,
-                            headers = hashMapOf("id" to id, "state" to storage.toString())),
-                    receiver = message.sender!!)
+                    commandResults[sender][id]!!,
+                    sender)
             return
         }
-        val tokens = message.body.split(' ')
-        val result = lock.withLock {
-            when (tokens[0]) {
-                "contains" -> storage.containsKey(tokens[1].toInt()).toString()
-                "get" -> storage[tokens[1].toInt()]?.toString()
-                "put" -> {
-                    val present = storage.containsKey(tokens[1].toInt())
-                    storage[tokens[1].toInt()] = tokens[2].toInt()
-                    present.toString()
+        val result : Command = lock.withLock {
+            try {
+                when (message) {
+                    is ContainsCommand -> ContainsResult(storage.containsKey(message.key), id)
+                    is GetCommand -> GetResult(storage[message.key], id)
+                    is PutCommand -> PutResult(storage.put(message.key, message.value), id)
+                    is RemoveCommand -> RemoveResult(storage.remove(message.key), id)
+                    else -> throw RuntimeException("Unexpected command")
                 }
-                else -> "error"
+            } catch(e : Throwable) {
+                ErrorResult(e, id)
             }
         }
-        environment.send(Message(body = result
-                ?: "null", headers = hashMapOf("id" to id, "state" to storage.toString())),
-                receiver = message.sender!!)
+        environment.send(result, receiver = sender)
     }
 
-    private fun sendOnce(body: String): String {
-        val id = commandId++.toString()
-        val message = Message(body, headers = hashMapOf("id" to id))
+    fun sendOnce(command : Command): Command {
         while (true) {
-            environment.send(message, 0)
+            environment.send(command, 0)
             val response = queue.poll(10, TimeUnit.MILLISECONDS)
             if (response != null) {
-                commandResults[response.headers["id"]!!] = response.body
+                commandResults[0][response.id] = response
             }
-            if (commandResults.containsKey(id)) {
-                return commandResults[id]!!
+            if (commandResults[0].containsKey(command.id)) {
+                val res = commandResults[0][command.id]!!
+                if (res is ErrorResult) {
+                    throw res.error
+                }
+                return res
             }
         }
     }
@@ -203,23 +188,32 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
                 return storage.containsKey(key)
             }
         }
-        val res = sendOnce("contains $key")
-        return res.toBoolean()
+        val response = sendOnce(ContainsCommand(key, commandId++)) as ContainsResult
+        return response.res
     }
 
     @Operation
-    fun put(key: Int, value: Int): Boolean {
+    fun put(key: Int, value: Int): Int? {
         if (environment.nodeId == 0) {
             lock.withLock {
-                val res = storage.containsKey(key)
-                storage[key] = value
-                return res
+                return storage.put(key, value)
             }
         }
-        val res = sendOnce("put $key $value")
-
-        return res.toBoolean()
+        val response = sendOnce(PutCommand(key, value, commandId++)) as PutResult
+        return response.res
     }
+
+    @Operation
+    fun remove(key: Int): Int? {
+        if (environment.nodeId == 0) {
+            lock.withLock {
+                return storage.remove(key)
+            }
+        }
+        val response = sendOnce(RemoveCommand(key, commandId++)) as RemoveResult
+        return response.res
+    }
+
 
     @Operation
     fun get(key: Int): Int? {
@@ -228,11 +222,10 @@ class KVStorageIncorrect(private val environment: Environment) : Node {
                 return storage[key]
             }
         }
-        val res = sendOnce("get $key")
-        return res.toIntOrNull()
+        val response = sendOnce(GetCommand(key, commandId++)) as GetResult
+        return response.res
     }
 }
-
 
 class SingleNode {
     private val storage = HashMap<Int, Int>()
@@ -243,10 +236,8 @@ class SingleNode {
     }
 
     @Operation
-    fun put(key: Int, value: Int): Boolean {
-        val res = storage.containsKey(key)
-        storage[key] = value
-        return res
+    fun put(key: Int, value: Int): Int? {
+        return storage.put(key, value)
     }
 
     @Operation
@@ -255,12 +246,8 @@ class SingleNode {
     }
 
     @Operation
-    fun remove(key: Int): Boolean {
-        val res = storage.containsKey(key)
-        if (res) {
-            storage.remove(key)
-        }
-        return res
+    fun remove(key: Int): Int? {
+        return storage.remove(key)
     }
 }
 
@@ -268,7 +255,7 @@ class KVStorageCentralTestClass  {
     @Test
     fun testSimple() {
         LinChecker.check(KVStorageCentralSimple::class
-                .java, DistributedOptions().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<Command>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(SingleNode::class.java).threads
         (2).messageOrder(MessageOrder.ASYNCHRONOUS)
                 .invocationsPerIteration(100).iterations(1000))
@@ -277,7 +264,7 @@ class KVStorageCentralTestClass  {
     @Test
     fun testFull() {
         LinChecker.check(KVStorageCentralSimple::class
-                .java, DistributedOptions().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<Command>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(SingleNode::class.java).threads
         (2).duplicationRate(2).networkReliability(0.7)
                 .invocationsPerIteration(100).iterations(100))
@@ -286,7 +273,7 @@ class KVStorageCentralTestClass  {
     @Test
     fun testNetworkReliability() {
         LinChecker.check(KVStorageCentralSimple::class
-                .java, DistributedOptions().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<Command>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(SingleNode::class.java).threads
         (2).messageOrder(MessageOrder.ASYNCHRONOUS).networkReliability(0.7)
                 .invocationsPerIteration(1).iterations(1))
@@ -295,7 +282,7 @@ class KVStorageCentralTestClass  {
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() {
         LinChecker.check(KVStorageIncorrect::class
-                .java, DistributedOptions().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<Command>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(SingleNode::class.java).threads
         (2).duplicationRate(2).networkReliability(0.7)
                 .invocationsPerIteration(100).iterations(1000))

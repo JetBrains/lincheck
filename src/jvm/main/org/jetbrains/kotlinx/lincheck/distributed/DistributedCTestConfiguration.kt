@@ -31,7 +31,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
 
-class DistributedCTestConfiguration(testClass: Class<*>, iterations: Int,
+class DistributedCTestConfiguration<Message>(testClass: Class<*>, iterations: Int,
                                     threads: Int, actorsPerThread: Int,
                                     generatorClass: Class<out ExecutionGenerator>,
                                     verifierClass: Class<out Verifier>,
@@ -57,6 +57,6 @@ class DistributedCTestConfiguration(testClass: Class<*>, iterations: Int,
     }
 
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>, stateRepresentationMethod: Method?, verifier: Verifier): Strategy {
-        return DistributedStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        return DistributedStrategy<Message>(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
     }
 }
