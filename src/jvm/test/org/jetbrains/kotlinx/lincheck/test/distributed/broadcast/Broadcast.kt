@@ -1,51 +1,48 @@
-/*package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
+package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.lang.reflect.InvocationTargetException
 import java.util.*
 import kotlin.collections.HashSet
 
 
-data class Message(val body : String, val id : Int, val from : Int)
+class Message(val body: String, val id: Int, val from: Int)
 
 /**
  *
  */
-class Peer(private val env: Environment<Message>) : Node<Message> {
+class PeerIncorrect(private val env: Environment<Message>) : Node<Message> {
     private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
     private var messageId = 0
     private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
-        PriorityQueue(
-                kotlin.Comparator { x, y -> x.headers["id"]!!.toInt() - y.headers["id"]!!.toInt() }
-        )
+        PriorityQueue { x, y -> x.id - y.id }
     }
 
     @Validate
     fun validateResults() {
-        val p = env.processExecution!!
-        env.checkLocalMessages(atMostOnce = true, preserveOrder = true)
-        if (p.isAlive) {
-            p.sentMessages.forEach { m -> check(p.localMessages.contains(m)) }
+        // All messages were delivered at most once.
+        check(env.localMessages().isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
+        // If message m from process s was delivered, it was sent by process s before.
+        env.localMessages().forEach { m -> check(env.sentMessages(m.from).map { it.message }.contains(m)) }
+        // If the correct process sent message m, it should deliver m.
+        if (env.isCorrect()) {
+            env.localMessages().forEach { m -> check(env.sentMessages().map { it.message }.contains(m)) }
         }
-        p.localMessages.forEach {
-            check(env.processes[it.headers["from"]!!.toInt()].sentMessages.contains(it))
+        // If the message was delivered to one process, it was delivered to all correct processes.
+        env.localMessages().forEach { m -> env.correctProcesses().forEach { check(env.localMessages(it).contains(m)) } }
+        // If some process sent m1 before m2, every process which delivered m2 delivered m1.
+        val localMessagesOrder = Array(env.numberOfNodes) { i ->
+            env.localMessages().filter {it.from == i }.map { m -> env.sentMessages(i).map { it.message }.indexOf(m) }
         }
-        env.processes.filter { it.isAlive }.forEach {
-            it.sentMessages.forEach { m ->
-                p.localMessages.contains(m)
-            }
-        }
+        localMessagesOrder.forEach { check(it.sorted() == it) }
     }
 
-    override fun onMessage(message: Message) {
-        val msgId = message.headers["id"]!!.toInt()
-        val sender = message.headers["from"]!!.toInt()
+    override fun onMessage(message: Message, sender: Int) {
+        val msgId = message.id
         if (!receivedMessages[sender].contains(msgId)) {
             env.broadcast(message)
             receivedMessages[sender].add(msgId)
@@ -55,7 +52,7 @@ class Peer(private val env: Environment<Message>) : Node<Message> {
 
     @Operation
     fun send(msg: String) {
-        val message = Message(body = msg, headers = hashMapOf("id" to messageId++.toString(), "from" to env.nodeId.toString()))
+        val message = Message(body = msg, id = messageId++, from = env.nodeId)
         env.broadcast(message)
     }
 }
@@ -64,11 +61,10 @@ class BroadcastTest {
     // Just an API example, doesn't work
     @Test(expected = InvocationTargetException::class)
     fun test() {
-        LinChecker.check(Peer::class
-                .java, DistributedOptions().requireStateEquivalenceImplCheck
+        LinChecker.check(PeerIncorrect::class
+                .java, DistributedOptions<Message>().requireStateEquivalenceImplCheck
         (false).threads
         (5).maxNumberOfFailedNodes(2).supportRecovery(false)
                 .invocationsPerIteration(100).iterations(1000))
     }
 }
-*/

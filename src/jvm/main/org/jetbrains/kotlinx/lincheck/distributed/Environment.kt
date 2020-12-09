@@ -72,6 +72,8 @@ class ProcessRecoveryEvent(val processId: Int) : Event()
 class TimerEvent(val processId: Int, val timer: String) : Event()
 
 fun <Message> Environment<Message>.correctProcesses() = (0 until numberOfNodes).subtract(events.filterIsInstance<ProcessFailureEvent>().map { it.processId })
-fun <Message> Environment<Message>.sentMessages(processId: Int) = events.filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
-fun <Message> Environment<Message>.receivedMessage(processId: Int) = events.filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
-fun <Message> Environment<Message>.localMessage(processId: Int) = events.filterIsInstance<LocalMessageSentEvent<Message>>()
+fun <Message> Environment<Message>.sentMessages(processId: Int = nodeId) = events.filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
+fun <Message> Environment<Message>.receivedMessages(processId: Int = nodeId) = events.filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
+fun <Message> Environment<Message>.localMessages(processId: Int = nodeId) = events.filterIsInstance<LocalMessageSentEvent<Message>>().filter { it.sender == processId }.map { it.message }
+fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
+fun <Message> Environment<Message>.isCorrect() = correctProcesses().contains(nodeId)

@@ -88,7 +88,7 @@ class DistributedOptions<Message> : Options<DistributedOptions<Message>,
                 actorsPerThread, executionGenerator,
                 verifier, invocationsPerIteration, networkReliability,
                 messageOrder, maxNumberOfFailedNodes, supportRecovery,
-                maxDelay, maxMessageCount, maxMessagePerProcess, duplicationRate,
+                maxDelay, maxMessageCount, maxMessagePerProcess, duplicationRate, testClasses,
                 requireStateEquivalenceImplementationCheck, false,
                 chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs)
     }
