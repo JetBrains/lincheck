@@ -94,6 +94,7 @@ internal class ManagedStrategyTransformer(
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
 
@@ -684,6 +685,16 @@ internal class ManagedStrategyTransformer(
                 val method = Method.getMethod(it)
                 method.name == methodName && method.descriptor == desc
             }
+    }
+
+    /**
+     * Removes all `Thread.yield` invocations, because model checking strategy manages the execution itself
+     */
+    private class ThreadYieldTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            if (opcode == INVOKESTATIC && owner == "java/lang/Thread" && name == "yield") return
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+        }
     }
 
     /**
