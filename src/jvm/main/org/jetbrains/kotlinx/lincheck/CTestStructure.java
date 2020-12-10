@@ -201,6 +201,8 @@ public class CTestStructure {
 
     private static Map<Class<?>, ParameterGenerator<?>> createDefaultGenerators() {
         Map<Class<?>, ParameterGenerator<?>> defaultGens = new HashMap<>();
+        defaultGens.put(boolean.class, new BooleanGen(""));
+        defaultGens.put(Boolean.class, defaultGens.get(boolean.class));
         defaultGens.put(byte.class, new ByteGen(""));
         defaultGens.put(Byte.class, defaultGens.get(byte.class));
         defaultGens.put(short.class, new ShortGen(""));
