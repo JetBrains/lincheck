@@ -30,21 +30,41 @@ object Probability {
 
     @Volatile
     var totalPossibleCrashes = 0
+        set(value) {
+            field = value
+            updateSingleCrashProbability()
+        }
 
     @Volatile
     var totalActors = 0
+        set(value) {
+            field = value
+            updateSingleCrashProbability()
+        }
 
     @Volatile
     var expectedCrashes = 10
+        set(value) {
+            field = value
+            updateSingleCrashProbability()
+        }
 
-    private const val RANDOM_FLUSH_PROBABILITY = 0.2
-    private const val RANDOM_SYSTEM_CRASH_PROBABILITY = 0.3
+    @Volatile
+    private var singleCrashProbability = 0.0f
+
+    private fun updateSingleCrashProbability() {
+        singleCrashProbability = expectedCrashes / max(1, totalPossibleCrashes * totalActors).toFloat()
+    }
+
+    private const val RANDOM_FLUSH_PROBABILITY = 0.2f
+    private const val RANDOM_SYSTEM_CRASH_PROBABILITY = 0.3f
 
     fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
-    fun shouldCrash() = (RecoverableStateContainer.crashesCount() <= 2 * expectedCrashes) && bernoulli(singleCrashProbability())
+    fun shouldCrash() = RecoverableStateContainer.crashesEnabled
+        && (RecoverableStateContainer.crashesCount() <= expectedCrashes)
+        && bernoulli(singleCrashProbability)
+
     fun shouldSystemCrash() = bernoulli(RANDOM_SYSTEM_CRASH_PROBABILITY)
 
-    private fun singleCrashProbability() = expectedCrashes / max(1, totalPossibleCrashes * totalActors).toDouble()
-
-    private fun bernoulli(probability: Double) = random.nextDouble() < probability
+    private fun bernoulli(probability: Float) = random.nextFloat() < probability
 }

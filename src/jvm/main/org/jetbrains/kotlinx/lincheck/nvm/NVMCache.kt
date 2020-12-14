@@ -30,7 +30,8 @@ object NVMCache {
     /** Flushes all local variables of thread. */
     fun flush(threadId: Int) {
         val localCache = cache[threadId] ?: return
-        localCache.toList().forEach { it.flush(threadId) }
+        localCache.forEach { it.flushInternal(threadId) }
+        localCache.clear()
     }
 
     internal fun add(threadId: Int, variable: Persistent<*>) {
@@ -45,6 +46,7 @@ object NVMCache {
 
     internal fun crash(threadId: Int) {
         val localCache = cache[threadId] ?: return
-        localCache.toList().forEach { it.crash(threadId) }
+        localCache.forEach { it.crash(threadId) }
+        localCache.clear()
     }
 }

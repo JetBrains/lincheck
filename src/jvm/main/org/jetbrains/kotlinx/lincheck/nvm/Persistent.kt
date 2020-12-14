@@ -50,9 +50,13 @@ class Persistent<T>() {
     }
 
     fun flush(threadId: Int = RecoverableStateContainer.threadId()) {
+        flushInternal(threadId)
+        NVMCache.remove(threadId, this)
+    }
+
+    internal fun flushInternal(threadId: Int = RecoverableStateContainer.threadId()) {
         if (empty[threadId]) return
         persistedValue = localValue
-        NVMCache.remove(threadId, this)
     }
 
     fun writeAndFlush(threadId: Int = RecoverableStateContainer.threadId(), value: T) {
@@ -63,9 +67,8 @@ class Persistent<T>() {
 
     internal fun crash(threadId: Int) {
         if (Probability.shouldFlush()) {
-            flush(threadId)
+            flushInternal(threadId)
         }
-        NVMCache.remove(threadId, this)
         empty[threadId] = true
     }
 }

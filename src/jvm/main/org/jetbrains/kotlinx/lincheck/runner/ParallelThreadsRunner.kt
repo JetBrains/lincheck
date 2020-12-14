@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
@@ -51,7 +52,11 @@ object RecoverableStateContainer {
     @Volatile
     internal var threads = 0
 
+    @Volatile
+    internal var crashesEnabled = false
+
     private var crashes = initCrashes()
+    private val crashesCount = atomic(0)
     private var executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER) { -1 }
 
     private fun initCrashes() = Array(NVMCache.MAX_THREADS_NUMBER) { mutableListOf<CrashError>() }
@@ -67,9 +72,11 @@ object RecoverableStateContainer {
     internal fun registerCrash(threadId: Int, crash: CrashError) {
         crash.actorIndex = executedActors[threadId]
         crashes[threadId].add(crash)
+        crashesCount.incrementAndGet()
     }
 
     internal fun clearCrashes() = crashes.also {
+        crashesCount.value = 0
         crashes = initCrashes()
         executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER) { -1 }
     }
@@ -78,7 +85,7 @@ object RecoverableStateContainer {
         executedActors[threadId]++
     }
 
-    fun crashesCount() = crashes.sumBy { it.size }
+    fun crashesCount() = crashesCount.value
 }
 
 /**
@@ -287,6 +294,7 @@ internal open class ParallelThreadsRunner(
         Probability.totalActors = scenario.initExecution.size + scenario.parallelExecution.sumBy { it.size } + scenario.postExecution.size
         beforeInit()
         reset()
+        RecoverableStateContainer.crashesEnabled = true
         val initResults = scenario.initExecution.mapIndexed { i, initActor ->
             RecoverableStateContainer.actorStarted(0)
             executeActor(testInstance, initActor).also {
@@ -353,6 +361,7 @@ internal open class ParallelThreadsRunner(
             postResults, afterPostStateRepresentation,
             RecoverableStateContainer.clearCrashes().toList()
         )
+        RecoverableStateContainer.crashesEnabled = false
         RecoverableStateContainer.state = ExecutionState.INIT
         return CompletedInvocationResult(results)
     }
