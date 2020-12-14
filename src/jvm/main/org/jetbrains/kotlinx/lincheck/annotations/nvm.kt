@@ -32,3 +32,7 @@ annotation class Recoverable(
     val recoverMethod: String = "",
     val beforeMethod: String = ""
 )
+
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR, AnnotationTarget.CLASS)
+annotation class CrashFree
