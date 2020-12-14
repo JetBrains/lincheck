@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
-import org.jetbrains.kotlinx.lincheck.nvm.Persistent
+import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -69,9 +69,9 @@ internal class CounterFailingTest {
 
 private class NRLFailingCounter @Recoverable constructor(threadsCount: Int) : VerifierState() {
     private val R = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
-    private val Response = MutableList(threadsCount) { Persistent(0) }
-    private val CheckPointer = MutableList(threadsCount) { Persistent(0) }
-    private val CurrentValue = MutableList(threadsCount) { Persistent(0) }
+    private val Response = MutableList(threadsCount) { nonVolatile(0) }
+    private val CheckPointer = MutableList(threadsCount) { nonVolatile(0) }
+    private val CurrentValue = MutableList(threadsCount) { nonVolatile(0) }
 
     init {
         NVMCache.flush(0)
@@ -82,7 +82,7 @@ private class NRLFailingCounter @Recoverable constructor(threadsCount: Int) : Ve
     @Recoverable
     fun get(p: Int): Int {
         val returnValue = R.sumBy { it.read()!! }
-        Response[p].write(p, returnValue)
+        Response[p].write(returnValue, p)
         Response[p].flush(p)
         return returnValue
     }
@@ -93,8 +93,8 @@ private class NRLFailingCounter @Recoverable constructor(threadsCount: Int) : Ve
     }
 
     private fun incrementImpl(p: Int) {
-        R[p].write(p, 1 + CurrentValue[p].read(p)!!)
-        CheckPointer[p].write(p, 1)
+        R[p].write(1 + CurrentValue[p].read(p), p)
+        CheckPointer[p].write(1, p)
         CheckPointer[p].flush(p)
     }
 
@@ -103,8 +103,8 @@ private class NRLFailingCounter @Recoverable constructor(threadsCount: Int) : Ve
     }
 
     private fun incrementBefore(p: Int) {
-        CurrentValue[p].write(p, R[p].read()!!)
-        CheckPointer[p].write(p, 0)
+        CurrentValue[p].write(R[p].read()!!, p)
+        CheckPointer[p].write(0, p)
         CurrentValue[p].flush(p)
         CurrentValue[p].flush(p) // should be CheckPointer[p].flush(p)
     }

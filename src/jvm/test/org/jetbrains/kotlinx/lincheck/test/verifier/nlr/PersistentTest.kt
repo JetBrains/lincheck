@@ -25,7 +25,7 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.nvm.Persistent
+import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
@@ -35,7 +35,7 @@ import org.junit.Test
     sequentialSpecification = Sequential::class
 )
 internal class PersistentTest {
-    private val x = Persistent(0)
+    private val x = nonVolatile(0)
 
     @Operation
     fun read() = x.read()

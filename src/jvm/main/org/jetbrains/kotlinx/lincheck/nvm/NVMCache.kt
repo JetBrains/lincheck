@@ -25,7 +25,7 @@ package org.jetbrains.kotlinx.lincheck.nvm
 object NVMCache {
     const val MAX_THREADS_NUMBER = 10
 
-    private val cache = Array<HashSet<Persistent<*>>?>(MAX_THREADS_NUMBER) { null }
+    private val cache = Array<HashSet<AbstractNonVolatilePrimitive>?>(MAX_THREADS_NUMBER) { null }
 
     /** Flushes all local variables of thread. */
     fun flush(threadId: Int) {
@@ -34,12 +34,12 @@ object NVMCache {
         localCache.clear()
     }
 
-    internal fun add(threadId: Int, variable: Persistent<*>) {
-        val localCache = cache[threadId] ?: hashSetOf<Persistent<*>>().also { cache[threadId] = it }
+    internal fun add(threadId: Int, variable: AbstractNonVolatilePrimitive) {
+        val localCache = cache[threadId] ?: hashSetOf<AbstractNonVolatilePrimitive>().also { cache[threadId] = it }
         localCache.add(variable)
     }
 
-    internal fun remove(threadId: Int, variable: Persistent<*>) {
+    internal fun remove(threadId: Int, variable: AbstractNonVolatilePrimitive) {
         val localCache = cache[threadId] ?: return
         localCache.remove(variable)
     }

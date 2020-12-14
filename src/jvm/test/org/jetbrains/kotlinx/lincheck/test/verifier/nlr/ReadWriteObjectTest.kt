@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
-import org.jetbrains.kotlinx.lincheck.nvm.Persistent
+import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -53,7 +53,7 @@ class ReadWriteObjectTest {
 
     @Operation
     fun write(@Param(gen = ThreadIdGen::class) threadId: Int, value: Int) =
-        rwo.write(threadId, Record(threadId, operationCounter[threadId]++, value))
+        rwo.write(Record(threadId, operationCounter[threadId]++, value), threadId)
 
     @Test
     fun test() = LinChecker.check(this.javaClass)
@@ -83,7 +83,7 @@ class NRLReadWriteObject<T>(threadsCount: Int) : VerifierState() {
     private var R: T? = null
 
     // (state, value) for every thread
-    private val S = MutableList<Persistent<Pair<Int, T?>>>(threadsCount) { Persistent(0 to null) }
+    private val S = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
 
     public override fun extractState() = R ?: nullObject
 
@@ -91,24 +91,24 @@ class NRLReadWriteObject<T>(threadsCount: Int) : VerifierState() {
     fun read() = R
 
     @Recoverable(recoverMethod = "writeRecover")
-    fun write(p: Int, value: T) {
-        writeImpl(p, value)
+    fun write(value: T, p: Int) {
+        writeImpl(value, p)
     }
 
-    fun writeImpl(p: Int, value: T) {
+    fun writeImpl(value: T, p: Int) {
         val tmp = R
-        S[p].write(p, 1 to tmp)
+        S[p].write(1 to tmp, p)
         NVMCache.flush(p)
         R = value
-        S[p].write(p, 0 to value)
+        S[p].write(0 to value, p)
         NVMCache.flush(p)
     }
 
-    fun writeRecover(p: Int, value: T) {
-        val (flag, current) = S[p].read(p)!!
-        if (flag == 0 && current != value) return writeImpl(p, value)
-        else if (flag == 1 && current == R) return writeImpl(p, value)
-        S[p].write(p, 0 to value)
+    fun writeRecover(value: T, p: Int) {
+        val (flag, current) = S[p].read(p)
+        if (flag == 0 && current != value) return writeImpl(value, p)
+        else if (flag == 1 && current == R) return writeImpl(value, p)
+        S[p].write(0 to value, p)
         NVMCache.flush(p)
     }
 }

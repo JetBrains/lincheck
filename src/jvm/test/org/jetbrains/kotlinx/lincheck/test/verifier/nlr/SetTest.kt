@@ -23,11 +23,11 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
 import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
-import org.jetbrains.kotlinx.lincheck.nvm.Persistent
+import org.jetbrains.kotlinx.lincheck.nvm.NonVolatileRef
+import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -80,14 +80,14 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
         val deleter = atomic(NULL_DELETER)
     }
 
-    private inner class Info(var node: Persistent<Node?> = Persistent(null)) {
-        var result = Persistent<Boolean?>(null)
+    private inner class Info(var node: NonVolatileRef<Node?> = nonVolatile(null)) {
+        var result = nonVolatile(null as Boolean?)
     }
 
     private inner class PrevNextPair(val previous: Node?, val next: Node?)
 
-    private val recoveryData = MutableList(threadsCount) { Persistent<Info?>(null) }
-    private val checkPointer = Array(threadsCount) { Persistent(0) }
+    private val recoveryData = MutableList(threadsCount) { nonVolatile<Info?>(null) }
+    private val checkPointer = Array(threadsCount) { nonVolatile(0) }
     private val head = atomic<Node?>(null)
 
     @Recoverable
@@ -128,7 +128,7 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
             val previous = prevNext.previous
             val next = prevNext.next
             if (next != null && next.value.compareTo(value) == 0) {
-                recoveryData[p].read(p)!!.result.write(p, false)
+                recoveryData[p].read(p)!!.result.write(false, p)
                 recoveryData[p].read(p)!!.result.flush(p)
                 return false
             }
@@ -136,13 +136,13 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
             // flush
             if (previous == null) {
                 if (head.compareAndSet(next, newNode)) {
-                    recoveryData[p].read(p)!!.result.write(p, true)
+                    recoveryData[p].read(p)!!.result.write(true, p)
                     recoveryData[p].read(p)!!.result.flush(p)
                     return true
                 }
             } else {
                 if (previous.next.compareAndSet(next, newNode, false, false)) {
-                    recoveryData[p].read(p)!!.result.write(p, true)
+                    recoveryData[p].read(p)!!.result.write(true, p)
                     recoveryData[p].read(p)!!.result.flush(p)
                     return true
                 }
@@ -151,11 +151,11 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
     }
 
     fun addBefore(p: Int, value: T) {
-        checkPointer[p].write(p, 0)
+        checkPointer[p].write(0, p)
         checkPointer[p].flush(p)
-        recoveryData[p].write(p, Info(Persistent(Node(value, null))))
+        recoveryData[p].write(Info(nonVolatile(Node(value, null))), p)
         recoveryData[p].flush(p)
-        checkPointer[p].write(p, 1)
+        checkPointer[p].write(1, p)
         checkPointer[p].flush(p)
     }
 
@@ -167,7 +167,7 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
         val prevNext = findPrevNext(value)
         val current = prevNext.next
         if (current === node || node.next.isMarked) {
-            recoveryData[p].read(p)!!.result.write(p, true)
+            recoveryData[p].read(p)!!.result.write(true, p)
             recoveryData[p].read(p)!!.result.flush(p)
             return true
         }
@@ -182,11 +182,11 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
         val previous = prevNext.previous
         val current = prevNext.next
         if (current == null || current.value.compareTo(value) != 0) {
-            recoveryData[p].read(p)!!.result.write(p, false)
+            recoveryData[p].read(p)!!.result.write(false, p)
             recoveryData[p].read(p)!!.result.flush(p)
             return false
         }
-        recoveryData[p].read(p)!!.node.write(p, current)
+        recoveryData[p].read(p)!!.node.write(current, p)
         recoveryData[p].read(p)!!.node.flush(p)
         while (!current.next.isMarked) {
             val next = current.next.reference
@@ -195,17 +195,17 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
         val next = current.next.reference
         previous?.next?.compareAndSet(current, next, false, false) ?: head.compareAndSet(current, next)
         val result = current.deleter.compareAndSet(NULL_DELETER, p)
-        recoveryData[p].read(p)!!.result.write(p, result)
+        recoveryData[p].read(p)!!.result.write(result, p)
         recoveryData[p].read(p)!!.result.flush(p)
         return result
     }
 
     fun removeBefore(p: Int, value: T) {
-        checkPointer[p].write(p, 0)
+        checkPointer[p].write(0, p)
         checkPointer[p].flush(p)
-        recoveryData[p].write(p, Info())
+        recoveryData[p].write(Info(), p)
         recoveryData[p].flush(p)
-        checkPointer[p].write(p, 1)
+        checkPointer[p].write(1, p)
         checkPointer[p].flush(p)
     }
 
@@ -217,7 +217,7 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
         if (node != null && node.next.isMarked) {
             node.deleter.compareAndSet(NULL_DELETER, p)
             val res = node.deleter.value == p
-            recoveryData[p].read(p)!!.result.write(p, res)
+            recoveryData[p].read(p)!!.result.write(res, p)
             recoveryData[p].read(p)!!.result.flush(p)
             return res
         }

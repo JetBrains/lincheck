@@ -23,11 +23,10 @@
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
-import org.jetbrains.kotlinx.lincheck.nvm.Persistent
+import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -71,8 +70,8 @@ internal class LinearizableTestAndSet : VerifierState() {
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
 class NRLTestAndSet(private val threadsCount: Int) : VerifierState() {
-    private val R = MutableList(threadsCount) { Persistent(0) }
-    private val Response = MutableList(threadsCount) { Persistent(0) }
+    private val R = MutableList(threadsCount) { nonVolatile(0) }
+    private val Response = MutableList(threadsCount) { nonVolatile(0) }
 
     @Volatile
     private var Winner = -1
@@ -105,17 +104,17 @@ class NRLTestAndSet(private val threadsCount: Int) : VerifierState() {
     }
 
     private fun testAndSetRecover(p: Int): Int {
-        if (R[p].read()!! < 2) return testAndSet(p)
-        if (R[p].read() == 3) return Response[p].read()!!
+        if (R[p].read() < 2) return testAndSet(p)
+        if (R[p].read() == 3) return Response[p].read()
         if (Winner == -1) {
             Doorway = false
             R[p].writeAndFlush(value = 4)
             tas.testAndSet()
             for (i in 0 until p) {
-                wailUntil { R[i].read()!!.let { it == 0 || it == 3 } }
+                wailUntil { R[i].read().let { it == 0 || it == 3 } }
             }
             for (i in p + 1 until threadsCount) {
-                wailUntil { R[i].read()!!.let { it == 0 || it > 2 } }
+                wailUntil { R[i].read().let { it == 0 || it > 2 } }
             }
             if (Winner == -1) {
                 Winner = p
