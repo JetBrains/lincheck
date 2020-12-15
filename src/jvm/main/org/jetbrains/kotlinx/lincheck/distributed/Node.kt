@@ -28,17 +28,17 @@ interface Node<Message> {
 
 
 abstract class BlockingReceiveNodeImp<Message> : Node<Message> {
-    private val messageQueue = LinkedBlockingQueue<Message>()
+    private val messageQueue = LinkedBlockingQueue<Pair<Message, Int>>()
 
     override fun onMessage(message: Message, sender : Int) {
-        messageQueue.add(message)
+        messageQueue.add(Pair(message, sender))
     }
 
-    fun receive(timeout : Long, timeUnit: TimeUnit = TimeUnit.MILLISECONDS) : Message? {
+    fun receive(timeout : Long, timeUnit: TimeUnit = TimeUnit.MILLISECONDS) : Pair<Message, Int>? {
         return messageQueue.poll(timeout, timeUnit)
     }
 
-    fun receive() : Message? {
-        return messageQueue.poll()
+    fun receive() : Pair<Message, Int> {
+        return messageQueue.peek()
     }
 }

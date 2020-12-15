@@ -56,14 +56,13 @@ class DistributedStrategy<Message>(val testCfg: DistributedCTestConfiguration<Me
         try {
             // Run invocations
             for (invocation in 0 until invocations) {
-                println("INVOCATION $invocation")
+               println("INVOCATION $invocation")
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results)) {
                             return IncorrectResultsFailure(scenario, ir.results)
                         }
-
                     }
                     else ->
                     {

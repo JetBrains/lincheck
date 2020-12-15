@@ -25,7 +25,9 @@ interface Environment<Message> {
      * @param i is the index
      * @return
      */
-    fun getAddress(cls: Class<*>, i: Int): Int
+    fun getAddress(cls: Class<out Node<Message>>, i: Int): Int
+
+    fun getNumberOfNodeType(cls: Class<out Node<Message>>) : Int
 
     /**
      * @param timer

@@ -72,7 +72,7 @@ internal class SynchronousMessageQueue<Message> : MessageQueue<Message> {
     }
 }
 
-class FifoMessageQueue<Message>(numberOfNodes: Int) : MessageQueue<Message> {
+internal class FifoMessageQueue<Message>(numberOfNodes: Int) : MessageQueue<Message> {
     private val messageQueues = Array(numberOfNodes) {
         LinkedBlockingQueue<MessageWrapper<Message>>()
     }
@@ -93,7 +93,7 @@ class FifoMessageQueue<Message>(numberOfNodes: Int) : MessageQueue<Message> {
     }
 }
 
-class AsynchronousMessageQueue<Message>(private val numberOfNodes: Int) : MessageQueue<Message> {
+internal class AsynchronousMessageQueue<Message>(private val numberOfNodes: Int) : MessageQueue<Message> {
     private val messageQueues = Array(numberOfNodes) {
         LinkedBlockingQueue<MessageWrapper<Message>>()
     }
@@ -115,6 +115,7 @@ class AsynchronousMessageQueue<Message>(private val numberOfNodes: Int) : Messag
     }
 }
 
+internal class NodeFailureException(val nodeId: Int) : Exception()
 
 open class DistributedRunner<Message>(strategy: DistributedStrategy<Message>,
                              val testCfg: DistributedCTestConfiguration<Message>,
@@ -142,7 +143,7 @@ open class DistributedRunner<Message>(strategy: DistributedStrategy<Message>,
                 if (failedProcesses[message.receiver].get()) {
                     continue
                 }
-                //println("[${message.receiver}]: Received message $message from process ${message.sender}")
+                //println("[${message.receiver}]: Received message ${message.msg} from process ${message.sender}")
                 testInstances[message.receiver].onMessage(message.msg, message.sender)
             }
         }
@@ -163,9 +164,10 @@ open class DistributedRunner<Message>(strategy: DistributedStrategy<Message>,
     override fun initialize() {
         super.initialize()
         check(scenario.parallelExecution.size == testCfg.threads) {
-            "Parrallel execution size is ${scenario.parallelExecution.size}"
+            "Parallel execution size is ${scenario.parallelExecution.size}"
         }
         testThreadExecutions = Array(testCfg.threads) { t ->
+           // println(scenario.parallelExecution[t].size)
             TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], null, false)
         }
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
@@ -211,14 +213,14 @@ open class DistributedRunner<Message>(strategy: DistributedStrategy<Message>,
         testThreadExecutions.map { executor.submit(it) }.forEachIndexed { i, future ->
             try {
                 future.get(20, TimeUnit.SECONDS)
-            } catch (e: TimeoutException) {
-                println("Timeout exception")
-                if (!failedProcesses[i].get()) {
-                    isRunning = false
-                    messageBroker.join()
-                    val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread }
-                    return DeadlockInvocationResult(threadDump)
-                }
+            } catch(e : NodeFailureException) {
+
+            }
+            catch (e: TimeoutException) {
+                isRunning = false
+                messageBroker.join()
+                val threadDump = Thread.getAllStackTraces().filter { (t, _) -> t is FixedActiveThreadsExecutor.TestThread }
+                return DeadlockInvocationResult(threadDump)
             } catch (e: ExecutionException) {
                 return UnexpectedExceptionInvocationResult(e.cause!!)
             }
@@ -269,9 +271,6 @@ open class DistributedRunner<Message>(strategy: DistributedStrategy<Message>,
     private inner class EnvironmentImpl(override val nodeId: Int,
                                         override val numberOfNodes:
                                         Int) : Environment<Message> {
-        override fun getAddress(cls: Class<*>, i: Int): Int {
-            TODO("Not yet implemented")
-        }
 
         override fun setTimer(timer: String, time: Int, timeUnit: TimeUnit) {
             TODO("Not yet implemented")
@@ -320,5 +319,13 @@ open class DistributedRunner<Message>(strategy: DistributedStrategy<Message>,
 
         override val events: List<Event>
             get() = TODO("Not yet implemented")
+
+        override fun getAddress(cls: Class<out Node<Message>>, i: Int): Int {
+            TODO("Not yet implemented")
+        }
+
+        override fun getNumberOfNodeType(cls: Class<out Node<Message>>): Int {
+            TODO("Not yet implemented")
+        }
     }
 }

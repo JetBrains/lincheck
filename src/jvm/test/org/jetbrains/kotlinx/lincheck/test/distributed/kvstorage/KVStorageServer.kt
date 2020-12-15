@@ -50,7 +50,7 @@ class KVStorageClient(private val environment: Environment<Command>) : BlockingR
             environment.send(command, serverAddr)
             val response = receive(10, TimeUnit.MILLISECONDS)
             if (response != null) {
-                commandResults[response.id] = response
+                commandResults[response.first.id] = response.first
             }
             if (commandResults.containsKey(command.id)) {
                 val res = commandResults[command.id]!!
