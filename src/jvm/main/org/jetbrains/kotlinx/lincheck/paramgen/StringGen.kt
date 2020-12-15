@@ -27,16 +27,6 @@ class StringGen(configuration: String) : ParameterGenerator<String?> {
     private val random = Random(0)
     private var maxWordLength = 0
     private var alphabet: String? = null
-    override fun generate(): String {
-        val cs = CharArray(random.nextInt(maxWordLength))
-        for (i in cs.indices) cs[i] = alphabet!![random.nextInt(alphabet!!.length)]
-        return String(cs)
-    }
-
-    companion object {
-        private const val DEFAULT_MAX_WORD_LENGTH = 15
-        private const val DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ "
-    }
 
     init {
         if (configuration.isEmpty()) { // use default configuration
@@ -53,4 +43,13 @@ class StringGen(configuration: String) : ParameterGenerator<String?> {
             }
         }
     }
+
+    override fun generate(): String {
+        val cs = CharArray(random.nextInt(maxWordLength))
+        for (i in cs.indices) cs[i] = alphabet!![random.nextInt(alphabet!!.length)]
+        return String(cs)
+    }
 }
+
+private const val DEFAULT_MAX_WORD_LENGTH = 15
+private const val DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ "

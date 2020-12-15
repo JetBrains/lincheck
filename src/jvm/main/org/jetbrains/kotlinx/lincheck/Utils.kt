@@ -245,7 +245,7 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
                 isSuspendable = a.isSuspendable
             )
         }
-    } as MutableList<MutableList<Actor>>,
+    },
     postExecution
 )
 

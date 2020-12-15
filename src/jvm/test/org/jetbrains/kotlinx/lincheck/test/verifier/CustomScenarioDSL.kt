@@ -118,9 +118,9 @@ class ExecutionBuilder {
             parallelResults.add(it.map { it.result })
         }
         return ExecutionScenario(
-            initial.map { it.actor } as MutableList<Actor>,
-            parallelExecution as MutableList<MutableList<Actor>>,
-            post.map { it.actor } as MutableList<Actor>
+            initial.map { it.actor },
+            parallelExecution,
+            post.map { it.actor }
         ) to ExecutionResult(
             initial.map { it.result },
             parallelResults.map { it.withEmptyClock(parallelExecution.size) },

@@ -21,15 +21,14 @@
 */
 package org.jetbrains.kotlinx.lincheck.annotations
 
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
+import kotlinx.coroutines.CancellableContinuation
 import kotlin.reflect.KClass
 
 /**
  * Mark your method with this annotation in order
  * to use it in concurrent testing as an operation.
  */
-@Retention(RetentionPolicy.RUNTIME)
+@kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
 annotation class Operation(
         /**
@@ -76,14 +75,14 @@ annotation class Operation(
          * to a blocking behavior of another concurrent operation.
          * This way, if the test checks for a non-blocking progress guarantee,
          * **lincheck** will not fail the test if a hang is detected
-         * while one of the operations marked with [.causesBlocking]
+         * while one of the operations marked with [causesBlocking]
          * is running concurrently. Note, that this operation is not
-         * considered as blocking until it is marked as [.blocking].
+         * considered as blocking until it is marked as [blocking].
          */
         val causesBlocking: Boolean = false,
         /**
          * Specifies whether this cancellable operation supports
          * prompt cancellation, `false` by default. This parameter
-         * is ignored if [.cancellableOnSuspension] is `false`.
+         * is ignored if [cancellableOnSuspension] is `false`.
          */
         val promptCancellation: Boolean = false)

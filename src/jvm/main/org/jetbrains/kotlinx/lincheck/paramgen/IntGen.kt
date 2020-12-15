@@ -21,27 +21,12 @@
 */
 package org.jetbrains.kotlinx.lincheck.paramgen
 
-import java.util.*
+import kotlin.random.Random
 
 class IntGen(configuration: String) : ParameterGenerator<Int> {
     private val random = Random(0)
     private var begin = 0
     private var end = 0
-    override fun generate(): Int {
-        return begin + random.nextInt(end - begin + 1)
-    }
-
-    fun checkRange(min: Int, max: Int, type: String) {
-        require(!(begin < min || end - 1 > max)) {
-            ("Illegal range for "
-                    + type + " type: [" + begin + "; " + end + ")")
-        }
-    }
-
-    companion object {
-        private const val DEFAULT_BEGIN = -10
-        private const val DEFAULT_END = 10
-    }
 
     init {
         if (configuration.isEmpty()) { // use default configuration
@@ -59,4 +44,18 @@ class IntGen(configuration: String) : ParameterGenerator<Int> {
             }
         }
     }
+
+    override fun generate(): Int {
+        return begin + random.nextInt(end - begin + 1)
+    }
+
+    fun checkRange(min: Int, max: Int, type: String) {
+        require(!(begin < min || end - 1 > max)) {
+            ("Illegal range for "
+                    + type + " type: [" + begin + "; " + end + ")")
+        }
+    }
 }
+
+private const val DEFAULT_BEGIN = -10
+private const val DEFAULT_END = 10

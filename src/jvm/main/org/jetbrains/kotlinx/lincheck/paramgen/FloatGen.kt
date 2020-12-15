@@ -23,8 +23,8 @@ package org.jetbrains.kotlinx.lincheck.paramgen
 
 class FloatGen(configuration: String) : ParameterGenerator<Float> {
     private val doubleGen: DoubleGen = DoubleGen(configuration)
+
     override fun generate(): Float {
         return doubleGen.generate().toFloat()
     }
-
 }

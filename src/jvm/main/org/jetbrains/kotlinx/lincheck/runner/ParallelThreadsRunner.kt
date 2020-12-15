@@ -142,7 +142,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun reset() {
-        testInstance = testClass.newInstance()
+        testInstance = testClass.getDeclaredConstructor().newInstance()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
             val threads = scenario.threads
@@ -246,8 +246,8 @@ internal open class ParallelThreadsRunner(
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
                     val s = ExecutionScenario(
                         scenario.initExecution.subList(0, i + 1),
-                        ArrayList(),
-                        ArrayList()
+                        emptyList(),
+                        emptyList()
                     )
                     return ValidationFailureInvocationResult(s, functionName, exception)
                 }
@@ -269,7 +269,7 @@ internal open class ParallelThreadsRunner(
             val s = ExecutionScenario(
                 scenario.initExecution,
                 scenario.parallelExecution,
-                ArrayList()
+                emptyList()
             )
             return ValidationFailureInvocationResult(s, functionName, exception)
         }

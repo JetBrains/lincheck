@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.verifier
 
-import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 
@@ -29,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
  * This verifier checks that the specified results could be happen in serializable execution.
  * It just tries to find any operations sequence which execution produces the same results.
  */
-public class SerializabilityVerifier(
+class SerializabilityVerifier(
     sequentialSpecification: Class<out Any>
 ) : CachedVerifier() {
     private val linerizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
@@ -44,7 +43,7 @@ public class SerializabilityVerifier(
     override fun checkStateEquivalenceImplementation() = linerizabilityVerifier.checkStateEquivalenceImplementation()
 
     private val ExecutionScenario.converted get() = ExecutionScenario(
-            arrayListOf(), mergeAndFlatten(initExecution, parallelExecution, postExecution) as MutableList<MutableList<Actor>>, arrayListOf()
+        emptyList(), mergeAndFlatten(initExecution, parallelExecution, postExecution), emptyList()
     )
 
     private val ExecutionResult.converted: ExecutionResult

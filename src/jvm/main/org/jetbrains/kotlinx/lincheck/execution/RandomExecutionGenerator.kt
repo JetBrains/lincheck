@@ -25,16 +25,13 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.CTestStructure.OperationGroup
-import java.util.*
-import java.util.function.Consumer
-import java.util.stream.Collectors
+import kotlin.random.Random
 
 class RandomExecutionGenerator(testConfiguration: CTestConfiguration, testStructure: CTestStructure) : ExecutionGenerator(testConfiguration, testStructure) {
     private val random = Random(0)
     override fun nextExecution(): ExecutionScenario {
         // Create init execution part
-        val validActorGeneratorsForInit = testStructure.actorGenerators.stream()
-                .filter { ag: ActorGenerator -> !ag.useOnce && !ag.isSuspendable }.collect(Collectors.toList())
+        val validActorGeneratorsForInit = testStructure.actorGenerators.filter { ag: ActorGenerator -> !ag.useOnce && !ag.isSuspendable }
         val initExecution: MutableList<Actor> = ArrayList()
         run {
             var i = 0
@@ -46,13 +43,10 @@ class RandomExecutionGenerator(testConfiguration: CTestConfiguration, testStruct
         }
         // Create parallel execution part
         // Construct non-parallel groups and parallel one
-        val nonParallelGroups = testStructure.operationGroups.stream()
-                .filter { g: OperationGroup -> g.nonParallel }
-                .collect(Collectors.toList())
-        nonParallelGroups.shuffle()
+        val nonParallelGroups = testStructure.operationGroups.filter { g: OperationGroup -> g.nonParallel }.shuffled()
         val parallelGroup: MutableList<ActorGenerator> = ArrayList(testStructure.actorGenerators)
-        nonParallelGroups.forEach(Consumer { g: OperationGroup -> parallelGroup.removeAll(g.actors) })
-        var parallelExecution: MutableList<MutableList<Actor>> = ArrayList()
+        nonParallelGroups.forEach { g: OperationGroup -> parallelGroup.removeAll(g.actors) }
+        val parallelExecution: MutableList<MutableList<Actor>> = ArrayList()
         val threadGens: MutableList<ThreadGen> = ArrayList()
         for (t in 0 until testConfiguration.threads) {
             parallelExecution.add(ArrayList())
@@ -83,10 +77,10 @@ class RandomExecutionGenerator(testConfiguration: CTestConfiguration, testStruct
                 if (--threadGen.left == 0) it.remove()
             }
         }
-        parallelExecution = parallelExecution.stream().filter { actors: List<Actor> -> actors.isNotEmpty() }.collect(Collectors.toList())
+        parallelExecution.retainAll { actors: List<Actor> -> actors.isNotEmpty() }
         // Create post execution part if the parallel part does not have suspendable actors
         val postExecution: MutableList<Actor>
-        if (parallelExecution.stream().noneMatch { actors: List<Actor> -> actors.stream().anyMatch(Actor::isSuspendable) }) {
+        if (parallelExecution.none { actors: List<Actor> -> actors.any(Actor::isSuspendable) }) {
             postExecution = ArrayList()
             val leftActorGenerators: MutableList<ActorGenerator> = ArrayList(parallelGroup)
             for (threadGen in tgs2) leftActorGenerators.addAll(threadGen.nonParallelActorGenerators)

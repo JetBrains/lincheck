@@ -28,9 +28,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
  * This verifier does nothing and could be used for performance benchmarking.
  */
 class EpsilonVerifier(sequentialSpecification: Class<*>) : Verifier {
-    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
-        return true // Always correct results :)
-    }
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean = true // Always correct results :)
 
     override fun checkStateEquivalenceImplementation() {}
 }

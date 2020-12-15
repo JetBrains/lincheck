@@ -21,26 +21,13 @@
 */
 package org.jetbrains.kotlinx.lincheck.paramgen
 
-import java.util.*
+import kotlin.random.Random
 
 class DoubleGen(configuration: String) : ParameterGenerator<Double> {
     private val random = Random(0)
     private var begin = 0.0
     private var end = 0.0
     private var step = 0.0
-    override fun generate(): Double {
-        val delta = end - begin
-        if (step == 0.0) // step is not defined
-            return begin + delta * random.nextDouble()
-        val maxSteps = (delta / step).toInt()
-        return begin + delta * random.nextInt(maxSteps + 1)
-    }
-
-    companion object {
-        private const val DEFAULT_BEGIN = -10f
-        private const val DEFAULT_END = 10f
-        private const val DEFAULT_STEP = 0.1f
-    }
 
     init {
         if (configuration.isEmpty()) { // use default configuration
@@ -66,4 +53,16 @@ class DoubleGen(configuration: String) : ParameterGenerator<Double> {
             require((end - begin) / step < Int.MAX_VALUE) { "step is too small for specified range" }
         }
     }
+
+    override fun generate(): Double {
+        val delta = end - begin
+        if (step == 0.0) // step is not defined
+            return begin + delta * random.nextDouble()
+        val maxSteps = (delta / step).toInt()
+        return begin + delta * random.nextInt(maxSteps + 1)
+    }
 }
+
+private const val DEFAULT_BEGIN = -10f
+private const val DEFAULT_END = 10f
+private const val DEFAULT_STEP = 0.1f

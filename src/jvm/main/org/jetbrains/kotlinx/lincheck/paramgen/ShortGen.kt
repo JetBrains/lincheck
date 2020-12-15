@@ -23,11 +23,12 @@ package org.jetbrains.kotlinx.lincheck.paramgen
  */
 class ShortGen(configuration: String) : ParameterGenerator<Short> {
     private val intGen: IntGen = IntGen(configuration)
-    override fun generate(): Short {
-        return intGen.generate().toShort()
-    }
 
     init {
         intGen.checkRange(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt(), "short")
+    }
+
+    override fun generate(): Short {
+        return intGen.generate().toShort()
     }
 }

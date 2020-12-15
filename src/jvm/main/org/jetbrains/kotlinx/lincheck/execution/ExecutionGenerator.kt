@@ -32,7 +32,10 @@ import org.jetbrains.kotlinx.lincheck.CTestStructure
  * IMPORTANT!
  * All implementations should have the same constructor as [ExecutionGenerator] has.
  */
-abstract class ExecutionGenerator protected constructor(protected val testConfiguration: CTestConfiguration, protected val testStructure: CTestStructure) {
+abstract class ExecutionGenerator(
+    protected val testConfiguration: CTestConfiguration,
+    protected val testStructure: CTestStructure
+) {
     /**
      * Generates an execution scenario according to the parameters provided by the test configuration
      * and the restrictions from the test structure.

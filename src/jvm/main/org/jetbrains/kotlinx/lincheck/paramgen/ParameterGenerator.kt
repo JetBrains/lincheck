@@ -21,12 +21,15 @@
  */
 package org.jetbrains.kotlinx.lincheck.paramgen
 
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+
 /**
  * The implementation of this interface is used to generate parameters
  * for [operation][Operation].
  */
 interface ParameterGenerator<T> {
     fun generate(): T
+
     class Dummy : ParameterGenerator<Any?> {
         override fun generate(): Any {
             throw UnsupportedOperationException()

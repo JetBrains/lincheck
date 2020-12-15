@@ -23,8 +23,8 @@ package org.jetbrains.kotlinx.lincheck.paramgen
 
 class LongGen(configuration: String) : ParameterGenerator<Long> {
     private val intGen: IntGen = IntGen(configuration)
+
     override fun generate(): Long {
         return intGen.generate().toLong()
     }
-
 }

@@ -23,11 +23,12 @@ package org.jetbrains.kotlinx.lincheck.paramgen
 
 class ByteGen(configuration: String) : ParameterGenerator<Byte> {
     private val intGen: IntGen = IntGen(configuration)
-    override fun generate(): Byte {
-        return intGen.generate().toByte()
-    }
 
     init {
         intGen.checkRange(Byte.MIN_VALUE.toInt(), Byte.MAX_VALUE.toInt(), "byte")
+    }
+
+    override fun generate(): Byte {
+        return intGen.generate().toByte()
     }
 }

@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import kotlin.collections.HashSet
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 
 /**
  * Implementation of this interface verifies that execution is correct with respect to the algorithm contract.
@@ -42,8 +44,26 @@ interface Verifier {
 
     /**
      * Verifiers which use sequential implementation instances as states (or parts of them)
-     * should check whether [.equals] and [.hashCode] methods are implemented
+     * should check whether [equals] and [hashCode] methods are implemented
      * correctly.
      */
     fun checkStateEquivalenceImplementation()
 }
+
+/**
+ * This verifier cached the already verified results in a hash table,
+ * and look into this hash table at first. In case of many invocations
+ * with the same scenario, this optimization improves the verification
+ * phase significantly.
+ */
+abstract class CachedVerifier : Verifier {
+    private val previousResults: MutableMap<ExecutionScenario, MutableSet<ExecutionResult>> = HashMap()
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
+        val newResult = previousResults.computeIfAbsent(scenario) { s: ExecutionScenario -> HashSet() }.add(results)
+        return if (!newResult) true else verifyResultsImpl(scenario, results)
+    }
+
+    abstract fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult): Boolean
+}
+
+internal class DummySequentialSpecification private constructor() // This dummy class should not be created
