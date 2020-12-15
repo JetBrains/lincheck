@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import java.util.*
 import kotlin.collections.ArrayList
 
 /**
@@ -37,7 +36,7 @@ import kotlin.collections.ArrayList
  */
 class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier {
     private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
-    private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = WeakHashMap()
+    private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = HashMap()
 
     override fun checkStateEquivalenceImplementation() = linearizabilityVerifier.checkStateEquivalenceImplementation()
 

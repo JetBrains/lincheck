@@ -23,14 +23,12 @@ package org.jetbrains.kotlinx.lincheck.annotations
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import java.lang.annotation.Inherited
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
 
 /**
  * This annotation should be added to a test class to specify the logging level.
  * By default, [LoggingLevel.ERROR] is used.
  */
-@Retention(RetentionPolicy.RUNTIME)
+@kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
 @Inherited
 annotation class LogLevel(val value: LoggingLevel)

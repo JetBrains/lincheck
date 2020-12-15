@@ -23,14 +23,12 @@ package org.jetbrains.kotlinx.lincheck.annotations
 
 import java.lang.annotation.Inherited
 import java.lang.annotation.Repeatable
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
 
 /**
  * Set some restrictions to the group with the specified name,
  * used during the scenario generation phase.
  */
-@Retention(RetentionPolicy.RUNTIME)
+@kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
 @Repeatable(OpGroupConfig.OpGroupConfigs::class)
 @Inherited
@@ -49,7 +47,7 @@ annotation class OpGroupConfig(
      * Holder annotation for [OpGroupConfig].
      * Not a public API.
      */
-    @Retention(RetentionPolicy.RUNTIME)
+    @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
     @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
     @Inherited
     annotation class OpGroupConfigs(vararg val value: OpGroupConfig)
