@@ -94,8 +94,8 @@ class KVStorageServerTestClass {
         LinChecker.check(KVStorageServer::class.java,
                 DistributedOptions<Command>().requireStateEquivalenceImplCheck(false)
                         .sequentialSpecification(SingleNode::class.java)
-                        .testClass(KVStorageServer::class.java, 1)
-                        .testClass(KVStorageClient::class.java, 1)
+                        .nodeType(KVStorageServer::class.java, 1)
+                        .nodeType(KVStorageClient::class.java, 1)
                         .messageOrder(MessageOrder.ASYNCHRONOUS)
                         .invocationsPerIteration(100).iterations(1000))
     }
@@ -106,8 +106,8 @@ class KVStorageServerTestClass {
                 DistributedOptions<Command>()
                         .requireStateEquivalenceImplCheck(false)
                         .sequentialSpecification(SingleNode::class.java)
-                        .testClass(KVStorageServer::class.java, 1)
-                        .testClass(KVStorageClient::class.java, 5)
+                        .nodeType(KVStorageServer::class.java, 1)
+                        .nodeType(KVStorageClient::class.java, 5)
                         .duplicationRate(2)
                         .networkReliability(0.7)
                         .invocationsPerIteration(100)

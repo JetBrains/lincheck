@@ -24,6 +24,8 @@ interface Node<Message> {
      * (e.g. default values should be set for all fields).
      */
     fun beforeRecovery() {}
+
+    fun onNodeUnavailable(nodeId : Int) {}
 }
 
 
