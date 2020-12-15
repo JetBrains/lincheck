@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.annotations
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator.Dummy
 import java.lang.annotation.Inherited
-import java.lang.annotation.Repeatable
 import kotlin.reflect.KClass
 
 /**
@@ -32,7 +31,7 @@ import kotlin.reflect.KClass
  */
 @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
-@Repeatable(Param.Params::class)
+@kotlin.annotation.Repeatable
 @Inherited
 annotation class Param(
     /**

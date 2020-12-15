@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import java.lang.annotation.Inherited
-import java.lang.annotation.Repeatable
 import kotlin.reflect.KClass
 
 /**
@@ -38,7 +37,7 @@ import kotlin.reflect.KClass
  */
 @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
-@Repeatable(StressCTest.StressCTests::class)
+@kotlin.annotation.Repeatable
 @Inherited
 annotation class StressCTest(
     /**

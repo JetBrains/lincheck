@@ -22,7 +22,6 @@
 package org.jetbrains.kotlinx.lincheck.annotations
 
 import java.lang.annotation.Inherited
-import java.lang.annotation.Repeatable
 
 /**
  * Set some restrictions to the group with the specified name,
@@ -30,7 +29,7 @@ import java.lang.annotation.Repeatable
  */
 @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
-@Repeatable(OpGroupConfig.OpGroupConfigs::class)
+@kotlin.annotation.Repeatable
 @Inherited
 annotation class OpGroupConfig(
         /**
