@@ -19,22 +19,16 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.verifier;
+package org.jetbrains.kotlinx.lincheck.verifier
 
-import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
 /**
  * This verifier does nothing and could be used for performance benchmarking.
  */
-public class EpsilonVerifier implements Verifier {
+class EpsilonVerifier(sequentialSpecification: Class<*>) : Verifier {
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean = true // Always correct results :)
 
-    public EpsilonVerifier(Class<?> sequentialSpecification) {}
-
-    @Override
-    public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
-        return true; // Always correct results :)
-    }
-
-    @Override
-    public void checkStateEquivalenceImplementation() {}
+    override fun checkStateEquivalenceImplementation() {}
 }

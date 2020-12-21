@@ -142,7 +142,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun reset() {
-        testInstance = testClass.newInstance()
+        testInstance = testClass.getDeclaredConstructor().newInstance()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
             val threads = scenario.threads

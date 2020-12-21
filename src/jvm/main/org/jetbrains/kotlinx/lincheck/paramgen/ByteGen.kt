@@ -1,5 +1,3 @@
-package org.jetbrains.kotlinx.lincheck.paramgen;
-
 /*
  * #%L
  * Lincheck
@@ -10,27 +8,27 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package org.jetbrains.kotlinx.lincheck.paramgen
 
-public class ByteGen implements ParameterGenerator<Byte> {
-    private final IntGen intGen;
+class ByteGen(configuration: String) : ParameterGenerator<Byte> {
+    private val intGen: IntGen = IntGen(configuration)
 
-    public ByteGen(String configuration) {
-        intGen = new IntGen(configuration);
-        intGen.checkRange(Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
+    init {
+        intGen.checkRange(Byte.MIN_VALUE.toInt(), Byte.MAX_VALUE.toInt(), "byte")
     }
 
-    public Byte generate() {
-        return (byte) (int) intGen.generate();
+    override fun generate(): Byte {
+        return intGen.generate().toByte()
     }
 }

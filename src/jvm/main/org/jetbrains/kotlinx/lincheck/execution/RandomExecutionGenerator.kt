@@ -1,129 +1,108 @@
-package org.jetbrains.kotlinx.lincheck.execution;
-
 /*
- * #%L
- * Lincheck
- * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
- * %%
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- * 
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
- */
+* #%L
+* Lincheck
+* %%
+* Copyright (C) 2015 - 2018 Devexperts, LLC
+* %%
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation, either version 3 of the
+* License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Lesser Public License for more details.
+*
+* You should have received a copy of the GNU General Lesser Public
+* License along with this program.  If not, see
+* <http://www.gnu.org/licenses/lgpl-3.0.html>.
+* #L%
+*/
+package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.Actor;
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
-import org.jetbrains.kotlinx.lincheck.CTestStructure;
+import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration
+import org.jetbrains.kotlinx.lincheck.CTestStructure
+import org.jetbrains.kotlinx.lincheck.CTestStructure.OperationGroup
+import kotlin.random.Random
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.stream.Collectors;
-
-public class RandomExecutionGenerator extends ExecutionGenerator {
-    private final Random random = new Random(0);
-
-    public RandomExecutionGenerator(CTestConfiguration testConfiguration, CTestStructure testStructure) {
-        super(testConfiguration, testStructure);
-    }
-
-    @Override
-    public ExecutionScenario nextExecution() {
+class RandomExecutionGenerator(testConfiguration: CTestConfiguration, testStructure: CTestStructure) : ExecutionGenerator(testConfiguration, testStructure) {
+    private val random = Random(0)
+    override fun nextExecution(): ExecutionScenario {
         // Create init execution part
-        List<ActorGenerator> validActorGeneratorsForInit = testStructure.actorGenerators.stream()
-            .filter(ag -> !ag.getUseOnce() && !ag.isSuspendable()).collect(Collectors.toList());
-        List<Actor> initExecution = new ArrayList<>();
-        for (int i = 0; i < testConfiguration.getActorsBefore() && !validActorGeneratorsForInit.isEmpty(); i++) {
-            ActorGenerator ag = validActorGeneratorsForInit.get(random.nextInt(validActorGeneratorsForInit.size()));
-            initExecution.add(ag.generate(0));
+        val validActorGeneratorsForInit = testStructure.actorGenerators.filter { ag: ActorGenerator -> !ag.useOnce && !ag.isSuspendable }
+        val initExecution: MutableList<Actor> = ArrayList()
+        run {
+            var i = 0
+            while (i < testConfiguration.actorsBefore && validActorGeneratorsForInit.isNotEmpty()) {
+                val ag = validActorGeneratorsForInit[random.nextInt(validActorGeneratorsForInit.size)]
+                initExecution.add(ag.generate(0))
+                i++
+            }
         }
         // Create parallel execution part
         // Construct non-parallel groups and parallel one
-        List<CTestStructure.OperationGroup> nonParallelGroups = testStructure.operationGroups.stream()
-            .filter(g -> g.nonParallel)
-            .collect(Collectors.toList());
-        Collections.shuffle(nonParallelGroups);
-        List<ActorGenerator> parallelGroup = new ArrayList<>(testStructure.actorGenerators);
-        nonParallelGroups.forEach(g -> parallelGroup.removeAll(g.actors));
-
-        List<List<Actor>> parallelExecution = new ArrayList<>();
-        List<ThreadGen> threadGens = new ArrayList<>();
-        for (int t = 0; t < testConfiguration.getThreads(); t++) {
-            parallelExecution.add(new ArrayList<>());
-            threadGens.add(new ThreadGen(t, testConfiguration.getActorsPerThread()));
+        val nonParallelGroups = testStructure.operationGroups.filter { g: OperationGroup -> g.nonParallel }.shuffled()
+        val parallelGroup: MutableList<ActorGenerator> = ArrayList(testStructure.actorGenerators)
+        nonParallelGroups.forEach { g: OperationGroup -> parallelGroup.removeAll(g.actors) }
+        val parallelExecution: MutableList<MutableList<Actor>> = ArrayList()
+        val threadGens: MutableList<ThreadGen> = ArrayList()
+        for (t in 0 until testConfiguration.threads) {
+            parallelExecution.add(ArrayList())
+            threadGens.add(ThreadGen(t, testConfiguration.actorsPerThread))
         }
-        for (int i = 0; i < nonParallelGroups.size(); i++) {
-            threadGens.get(i % threadGens.size()).nonParallelActorGenerators
-                .addAll(nonParallelGroups.get(i).actors);
+        for (i in nonParallelGroups.indices) {
+            threadGens[i % threadGens.size].nonParallelActorGenerators
+                    .addAll(nonParallelGroups[i]!!.actors)
         }
-        List<ThreadGen> tgs2 = new ArrayList<>(threadGens);
-        while (!threadGens.isEmpty()) {
-            for (Iterator<ThreadGen> it = threadGens.iterator(); it.hasNext(); ) {
-                ThreadGen threadGen = it.next();
-                int aGenIndexBound = threadGen.nonParallelActorGenerators.size() + parallelGroup.size();
+        val tgs2: List<ThreadGen> = ArrayList(threadGens)
+        while (threadGens.isNotEmpty()) {
+            val it = threadGens.iterator()
+            while (it.hasNext()) {
+                val threadGen = it.next()
+                val aGenIndexBound = threadGen.nonParallelActorGenerators.size + parallelGroup.size
                 if (aGenIndexBound == 0) {
-                    it.remove();
-                    continue;
+                    it.remove()
+                    continue
                 }
-                int aGenIndex = random.nextInt(aGenIndexBound);
-                ActorGenerator agen;
-                if (aGenIndex < threadGen.nonParallelActorGenerators.size()) {
-                    agen = getActorGenFromGroup(threadGen.nonParallelActorGenerators, aGenIndex);
+                val aGenIndex = random.nextInt(aGenIndexBound)
+                val agen: ActorGenerator = if (aGenIndex < threadGen.nonParallelActorGenerators.size) {
+                    getActorGenFromGroup(threadGen.nonParallelActorGenerators, aGenIndex)
                 } else {
-                    agen = getActorGenFromGroup(parallelGroup,
-                        aGenIndex - threadGen.nonParallelActorGenerators.size());
+                    getActorGenFromGroup(parallelGroup,
+                            aGenIndex - threadGen.nonParallelActorGenerators.size)
                 }
-                parallelExecution.get(threadGen.iThread).add(agen.generate(threadGen.iThread + 1));
-                if (--threadGen.left == 0)
-                    it.remove();
+                parallelExecution[threadGen.iThread].add(agen.generate(threadGen.iThread + 1))
+                if (--threadGen.left == 0) it.remove()
             }
         }
-        parallelExecution = parallelExecution.stream().filter(actors -> !actors.isEmpty()).collect(Collectors.toList());
+        parallelExecution.retainAll { actors: List<Actor> -> actors.isNotEmpty() }
         // Create post execution part if the parallel part does not have suspendable actors
-        List<Actor> postExecution;
-        if (parallelExecution.stream().noneMatch(actors -> actors.stream().anyMatch(Actor::isSuspendable))) {
-            postExecution = new ArrayList<>();
-            List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
-            for (ThreadGen threadGen : tgs2)
-                leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
-            for (int i = 0; i < testConfiguration.getActorsAfter() && !leftActorGenerators.isEmpty(); i++) {
-                ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
-                postExecution.add(agen.generate(testConfiguration.getThreads() + 1));
+        val postExecution: MutableList<Actor>
+        if (parallelExecution.none { actors: List<Actor> -> actors.any(Actor::isSuspendable) }) {
+            postExecution = ArrayList()
+            val leftActorGenerators: MutableList<ActorGenerator> = ArrayList(parallelGroup)
+            for (threadGen in tgs2) leftActorGenerators.addAll(threadGen.nonParallelActorGenerators)
+            var i = 0
+            while (i < testConfiguration.actorsAfter && leftActorGenerators.isNotEmpty()) {
+                val agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size))
+                postExecution.add(agen.generate(testConfiguration.threads + 1))
+                i++
             }
         } else {
-            postExecution = Collections.emptyList();
+            postExecution = arrayListOf()
         }
-        return new ExecutionScenario(initExecution, parallelExecution, postExecution);
+        return ExecutionScenario(initExecution, parallelExecution, postExecution)
     }
 
-    private ActorGenerator getActorGenFromGroup(List<ActorGenerator> aGens, int index) {
-        ActorGenerator aGen = aGens.get(index);
-        if (aGen.getUseOnce())
-            aGens.remove(index);
-        return aGen;
+    private fun getActorGenFromGroup(aGens: List<ActorGenerator>, index: Int): ActorGenerator {
+        val aGen = aGens[index]
+        if (aGen.useOnce) (aGens as MutableList<ActorGenerator>).removeAt(index)
+        return aGen
     }
 
-    private static class ThreadGen {
-        final List<ActorGenerator> nonParallelActorGenerators = new ArrayList<>();
-        int iThread;
-        int left;
-
-        ThreadGen(int iThread, int nActors) {
-            this.iThread = iThread;
-            this.left = nActors;
-        }
+    private class ThreadGen(var iThread: Int, var left: Int) {
+        val nonParallelActorGenerators: MutableList<ActorGenerator> = ArrayList()
     }
 }

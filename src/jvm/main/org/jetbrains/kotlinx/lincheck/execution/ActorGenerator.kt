@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import java.lang.reflect.*
 import kotlin.random.*
+import kotlin.reflect.KClass
 
 /**
  * Implementations of this class generate [actors][Actor]

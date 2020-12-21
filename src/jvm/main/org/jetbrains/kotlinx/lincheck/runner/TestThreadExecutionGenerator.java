@@ -31,6 +31,7 @@ import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,11 +113,11 @@ public class TestThreadExecutionGenerator {
         Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
                 generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
-            TestThreadExecution execution = clz.newInstance();
+            TestThreadExecution execution = clz.getDeclaredConstructor().newInstance();
             execution.runner = runner;
             execution.objArgs = objArgs.toArray();
             return execution;
-        } catch (InstantiationException | IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
             throw new IllegalStateException("Cannot initialize generated execution class", e);
         }
     }

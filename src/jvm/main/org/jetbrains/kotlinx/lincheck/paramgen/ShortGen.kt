@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.paramgen;
+package org.jetbrains.kotlinx.lincheck.paramgen
 
 /*
  * #%L
@@ -10,27 +10,25 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+class ShortGen(configuration: String) : ParameterGenerator<Short> {
+    private val intGen: IntGen = IntGen(configuration)
 
-public class ShortGen implements ParameterGenerator<Short> {
-    private final IntGen intGen;
-
-    public ShortGen(String configuration) {
-        intGen = new IntGen(configuration);
-        intGen.checkRange(Short.MIN_VALUE, Short.MAX_VALUE, "short");
+    init {
+        intGen.checkRange(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt(), "short")
     }
 
-    public Short generate() {
-        return (short) (int) intGen.generate();
+    override fun generate(): Short {
+        return intGen.generate().toShort()
     }
 }

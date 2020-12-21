@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
  * This verifier checks that the specified results could be happen in serializable execution.
  * It just tries to find any operations sequence which execution produces the same results.
  */
-public class SerializabilityVerifier(
+class SerializabilityVerifier(
     sequentialSpecification: Class<out Any>
 ) : CachedVerifier() {
     private val linerizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
