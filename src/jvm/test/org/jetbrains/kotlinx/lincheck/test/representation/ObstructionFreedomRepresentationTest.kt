@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.lang.StringBuilder
@@ -69,6 +70,7 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("incrementAndGet" in log) { "The cause of the error should be reported" }
+        checkTraceHasNoLincheckEvents(log)
     }
 }
 
@@ -96,5 +98,6 @@ class ObstructionFreedomSynchronizedRepresentationTest : VerifierState() {
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check(log.split("MONITORENTER").size - 1 == 2) { "MONITORENTER should be reported twice" }
+        checkTraceHasNoLincheckEvents(log)
     }
 }

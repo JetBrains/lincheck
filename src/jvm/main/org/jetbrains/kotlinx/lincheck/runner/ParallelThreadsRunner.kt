@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.Method
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
@@ -182,12 +183,11 @@ internal open class ParallelThreadsRunner(
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck(actor.promptCancellation)) {
+            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
                 }
-                afterCoroutineCancelled(iThread)
                 Cancelled
             } else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
@@ -227,13 +227,18 @@ internal open class ParallelThreadsRunner(
         return suspensionPointResults[iThread][actorId]
     }
 
+    /**
+     * This method is used for communication between `ParallelThreadsRunner` and `ManagedStrategy` via overriding,
+     * so that runner do not know about managed strategy details.
+     */
+    internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
+        cont.cancelByLincheck(promptCancellation)
+
     override fun afterCoroutineSuspended(iThread: Int) {
         completedOrSuspendedThreads.incrementAndGet()
     }
 
     override fun afterCoroutineResumed(iThread: Int) {}
-
-    override fun afterCoroutineCancelled(iThread: Int) {}
 
     // We cannot use `completionStatuses` here since
     // they are set _before_ the result is published.

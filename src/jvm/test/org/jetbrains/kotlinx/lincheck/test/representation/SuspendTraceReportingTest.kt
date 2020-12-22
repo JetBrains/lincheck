@@ -26,17 +26,18 @@ import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
 
-class SuspendInterleavingReportingTest : VerifierState() {
+class SuspendTraceReportingTest : VerifierState() {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false
     private var barStarted: Boolean = false
     private var counter: Int = 0
 
-    @Operation(allowExtraSuspension = true)
+    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
     suspend fun foo() {
         if (barStarted) canEnterForbiddenBlock = true
         lock.withLock {
@@ -45,9 +46,12 @@ class SuspendInterleavingReportingTest : VerifierState() {
         canEnterForbiddenBlock = false
     }
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
     suspend fun bar(): Int {
         barStarted = true
+        lock.withLock {
+            counter++
+        }
         if (canEnterForbiddenBlock) return -1
         return 0
     }
@@ -69,39 +73,8 @@ class SuspendInterleavingReportingTest : VerifierState() {
             "suspended function should be mentioned exactly twice (once in parallel and once in parallel execution)"
         }
         check("barStarted.READ: true" in log) { "this code location after suspension should be reported" }
+        checkTraceHasNoLincheckEvents(log)
     }
 
     private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
-}
-
-class CancelledSuspendInterleavingReportingTest : VerifierState() {
-    @Volatile
-    var correct = true
-
-    @InternalCoroutinesApi
-    @Operation(cancellableOnSuspension = true)
-    suspend fun cancelledOp() {
-        suspendCancellableCoroutine<Unit> { cont ->
-            cont.invokeOnCancellation {
-                correct = false
-            }
-        }
-    }
-
-    @Operation
-    fun isAbsurd(): Boolean = correct && !correct
-
-    override fun extractState(): Any = correct
-
-    @Test
-    fun test() {
-        val failure = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .checkImpl(this::class.java)
-        checkNotNull(failure) { "the test should fail" }
-        val log = failure.toString()
-        check("CONTINUATION CANCELLED" in log)
-    }
 }

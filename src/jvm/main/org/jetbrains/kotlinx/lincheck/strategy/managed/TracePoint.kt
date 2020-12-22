@@ -21,12 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import java.math.*
-import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
-class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
+data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
 
 /**
  * Essentially, a trace is a list of trace points, which represent
@@ -214,6 +215,31 @@ internal class UnparkTracePoint(
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
+}
+
+internal class CoroutineCancellationTracePoint(
+    iThread: Int, actorId: Int,
+    callStackTrace: CallStackTrace,
+) : TracePoint(iThread, actorId, callStackTrace) {
+    private lateinit var cancellationResult: CancellationResult
+    private var exception: Throwable? = null
+
+    fun initializeCancellationResult(cancellationResult: CancellationResult) {
+        this.cancellationResult = cancellationResult
+    }
+
+    fun initializeException(e: Throwable) {
+        this.exception = e;
+    }
+
+    override fun toStringImpl(): String {
+        if (exception != null) return "EXCEPTION WHILE CANCELLATION"
+        return when (cancellationResult) {
+            CANCELLED_BEFORE_RESUMPTION -> "CANCELLED BEFORE RESUMPTION"
+            CANCELLED_AFTER_RESUMPTION -> "PROMPT CANCELLED AFTER RESUMPTION"
+            CANCELLATION_FAILED -> "CANCELLATION ATTEMPT FAILED"
+        }
+    }
 }
 
 /**
