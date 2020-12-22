@@ -1,6 +1,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
@@ -10,7 +11,7 @@ import java.util.*
 import kotlin.collections.HashSet
 
 
-class Message(val body: String, val id: Int, val from: Int)
+data class Message(val body: String, val id: Int, val from: Int)
 
 /**
  *
@@ -22,7 +23,7 @@ class PeerIncorrect(private val env: Environment<Message>) : Node<Message> {
         PriorityQueue { x, y -> x.id - y.id }
     }
 
-    @Validate
+    //@Validate
     fun validateResults() {
         // All messages were delivered at most once.
         check(env.localMessages().isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
@@ -54,23 +55,5 @@ class PeerIncorrect(private val env: Environment<Message>) : Node<Message> {
     fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         env.broadcast(message)
-    }
-}
-
-class BroadcastEmptyClass {
-    @Operation
-    fun send(msg : String) {
-    }
-}
-
-class BroadcastTest {
-    // Just an API example, doesn't work
-    @Test
-    fun test() {
-        LinChecker.check(PeerIncorrect::class
-                .java, DistributedOptions<Message>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(BroadcastEmptyClass::class.java).threads
-        (5).maxNumberOfFailedNodes(2).supportRecovery(false)
-                .invocationsPerIteration(100).iterations(1000))
     }
 }
