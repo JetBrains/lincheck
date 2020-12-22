@@ -1,9 +1,8 @@
 /*
- * #%L
  * Lincheck
- * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
- * %%
+ *
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
@@ -16,15 +15,18 @@
  *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 package org.jetbrains.kotlinx.lincheck.paramgen
 
-class FloatGen(configuration: String) : ParameterGenerator<Float> {
-    private val doubleGen: DoubleGen = DoubleGen(configuration)
+class ByteGen(configuration: String) : ParameterGenerator<Byte> {
+    private val intGen: IntGen = IntGen(configuration)
 
-    override fun generate(): Float {
-        return doubleGen.generate().toFloat()
+    init {
+        intGen.checkRange(Byte.MIN_VALUE.toInt(), Byte.MAX_VALUE.toInt(), "byte")
+    }
+
+    override fun generate(): Byte {
+        return intGen.generate().toByte()
     }
 }

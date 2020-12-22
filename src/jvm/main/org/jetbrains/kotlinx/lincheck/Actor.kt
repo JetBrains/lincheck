@@ -22,14 +22,9 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import java.lang.reflect.*
+import kotlin.reflect.*
 import kotlin.reflect.jvm.kotlinFunction
-
-actual typealias Method = java.lang.reflect.Method
-
-/**
- * Handled exception, represents Class<out Throwable?>
- */
-actual data class HandledException(val exceptionClass: Class<out Throwable?>)
 
 /**
  * The actor entity describe the operation with its parameters
@@ -37,18 +32,18 @@ actual data class HandledException(val exceptionClass: Class<out Throwable?>)
  *
  * @see Operation
  */
-actual data class Actor @JvmOverloads actual constructor(
-    actual val method: Method,
+actual data class Actor(
+    val method: Method,
     actual val arguments: List<Any?>,
-    actual val handledExceptions: List<HandledException>,
-    actual val cancelOnSuspension: Boolean,
-    actual val allowExtraSuspension: Boolean,
+    actual val handledExceptions: List<KClass<*>>,
+    val cancelOnSuspension: Boolean,
+    val allowExtraSuspension: Boolean,
     actual val blocking: Boolean,
     actual val causesBlocking: Boolean,
-    actual val promptCancellation: Boolean,
+    val promptCancellation: Boolean,
     // we have to specify `isSuspendable` property explicitly for transformed classes since
     // `isSuspendable` implementation produces a circular dependency and, therefore, fails.
-    actual val isSuspendable: Boolean
+    val isSuspendable: Boolean = method.isSuspendable()
 ) {
     init {
         if (promptCancellation) require(cancelOnSuspension) {
@@ -61,8 +56,8 @@ actual data class Actor @JvmOverloads actual constructor(
         (if (cancelOnSuspension) " + " else "") +
         (if (promptCancellation) "prompt_" else "") +
         (if (cancelOnSuspension) "cancel" else "")
-
-    actual val handlesExceptions = handledExceptions.isNotEmpty()
 }
 
-actual fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false
+private fun Method.isSuspendable: Boolean = kotlinFunction?.isSuspend ?: false
+
+actual fun Any.apply(actor: Actor) = executeActor(this, actor)

@@ -20,13 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-
-expect class Method
-
-expect fun Method.isSuspendable(): Boolean
-
-expect class HandledException
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import kotlin.reflect.*
 
 /**
  * The actor entity describe the operation with its parameters
@@ -34,27 +29,15 @@ expect class HandledException
  *
  * @see Operation
  */
-expect class Actor constructor(
-        method: Method,
-        arguments: List<Any?>,
-        handledExceptions: List<HandledException> = emptyList(),
-        cancelOnSuspension: Boolean = false,
-        allowExtraSuspension: Boolean = false,
-        blocking: Boolean = false,
-        causesBlocking: Boolean = false,
-        promptCancellation: Boolean = false,
-        isSuspendable: Boolean = method.isSuspendable()
-) {
-    override fun toString(): String
-    val handlesExceptions: Boolean
-    val method: Method
+expect class Actor {
     val arguments: List<Any?>
-    val handledExceptions: List<HandledException>
-    val cancelOnSuspension: Boolean
-    val allowExtraSuspension: Boolean
+    val handledExceptions: List<KClass<*>>
     val blocking: Boolean
     val causesBlocking: Boolean
-    val promptCancellation: Boolean
     val isSuspendable: Boolean
-
+    override fun toString(): String
 }
+
+val Actor.handlesExceptions get() = handledExceptions.isNotEmpty()
+
+expect fun Any.apply(actor: Actor): Result

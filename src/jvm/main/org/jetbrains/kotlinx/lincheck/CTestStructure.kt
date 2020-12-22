@@ -21,23 +21,50 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator.Dummy
-import java.lang.Exception
-import java.lang.reflect.Method
-import java.lang.reflect.Parameter
+import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator.*
+import java.lang.reflect.*
 import java.util.*
-import java.util.stream.Collectors
+import java.util.stream.*
 import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.isNotEmpty
+import kotlin.collections.map
+import kotlin.collections.set
 
 /**
  * Contains information about the provided operations (see [Operation]).
  * Several [tests][StressCTest] can refer to one structure
  * (i.e. one test class could have several [StressCTest] annotations)
  */
-class CTestStructure private constructor(val actorGenerators: List<ActorGenerator>, val operationGroups: List<OperationGroup>,
-                                         val validationFunctions: List<Method>, val stateRepresentation: Method?) {
+
+expect class NewInstanceCreator<T> {
+    fun newInstance(): T
+}
+
+expect class ValidationFunction<T> {
+    fun validate(instance: T)
+}
+
+actual class ValidationFunction<T>(private val method: Method) {
+    actual fun validate(instance: T) = method.invoke(instance)
+}
+
+expect class StateRepresentationFunction<T> {
+    fun createStateRepresentation(instance: T): String
+}
+
+class CTestStructure private constructor(
+    val newInstanceCreator: ...,
+    val actorGenerators: List<ActorGenerator>,
+    val operationGroups: List<OperationGroup>,
+    val validationFunctions: List<Method>,
+    val stateRepresentation: Method?
+) {
     class OperationGroup(val name: String, val nonParallel: Boolean) {
         val actors: MutableList<ActorGenerator>
         override fun toString(): String {

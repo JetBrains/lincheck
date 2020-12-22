@@ -1,37 +1,35 @@
 /*
- * #%L
  * Lincheck
- * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
- * %%
+ *
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import java.io.*
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 
-class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
+class Reporter(
+    private val logLevel: LoggingLevel
+) {
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
-        appendln("\n= Iteration $iteration / $maxIterations =")
+        appendLine("\n= Iteration $iteration / $maxIterations =")
         appendExecutionScenario(scenario)
     }
 
@@ -40,7 +38,7 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
     }
 
     fun logScenarioMinimization(scenario: ExecutionScenario) = log(INFO) {
-        appendln("\nInvalid interleaving found, trying to minimize the scenario below:")
+        appendLine("\nInvalid interleaving found, trying to minimize the scenario below:")
         appendExecutionScenario(scenario)
     }
 
@@ -48,18 +46,18 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
         msg(sb)
-        out.println(sb)
+        println(sb)
     }
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = ERROR
+val DEFAULT_LOG_LEVEL = ERROR
 enum class LoggingLevel {
     INFO, ERROR
 }
 
 internal fun <T> printInColumnsCustom(
-        groupedObjects: List<List<T>>,
-        joinColumns: (List<String>) -> String
+    groupedObjects: List<List<T>>,
+    joinColumns: (List<String>) -> String
 ): String {
     val nRows = groupedObjects.map { it.size }.max() ?: 0
     val nColumns = groupedObjects.size
@@ -127,16 +125,16 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
 
 internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
     if (scenario.initExecution.isNotEmpty()) {
-        appendln("Execution scenario (init part):")
-        appendln(scenario.initExecution)
+        appendLine("Execution scenario (init part):")
+        appendLine(scenario.initExecution)
     }
     if (scenario.parallelExecution.isNotEmpty()) {
-        appendln("Execution scenario (parallel part):")
+        appendLine("Execution scenario (parallel part):")
         append(printInColumns(scenario.parallelExecution))
-        appendln()
+        appendLine()
     }
     if (scenario.postExecution.isNotEmpty()) {
-        appendln("Execution scenario (post part):")
+        appendLine("Execution scenario (post part):")
         append(scenario.postExecution)
     }
     return this
@@ -145,85 +143,73 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
 internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
-        is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
+        else -> appendPlatformSpecificFailure(failure)
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
-        appendln()
-        appendln("= The following interleaving leads to the error =")
+        appendLine()
+        appendLine("= The following interleaving leads to the error =")
         appendTrace(failure.scenario, results, failure.trace)
         if (failure is DeadlockWithDumpFailure) {
-            appendln()
+            appendLine()
             append("All threads are in deadlock")
         }
     }
     return this
 }
 
+expect fun appendPlatformSpecificFailure(failure: LincheckFailure)
+
 private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
-    appendln("= The execution failed with an unexpected exception =")
+    appendLine("= The execution failed with an unexpected exception =")
     appendExecutionScenario(failure.scenario)
-    appendln()
+    appendLine()
     appendException(failure.exception)
     return this
 }
 
-private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
-    appendLine("= The execution has hung, see the thread dump =")
-    appendExecutionScenario(failure.scenario)
-    appendLine()
-    for ((t, stackTrace) in failure.threadDump) {
-        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
-        appendLine("Thread-$threadNumber:")
-        stackTrace.map {
-            StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
-        }.forEach { appendLine("\t$it") }
-    }
-    return this
-}
-
 private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResultsFailure): StringBuilder {
-    appendln("= Invalid execution results =")
+    appendLine("= Invalid execution results =")
     if (failure.scenario.initExecution.isNotEmpty()) {
-        appendln("Init part:")
-        appendln(uniteActorsAndResultsLinear(failure.scenario.initExecution, failure.results.initResults))
+        appendLine("Init part:")
+        appendLine(uniteActorsAndResultsLinear(failure.scenario.initExecution, failure.results.initResults))
     }
     if (failure.results.afterInitStateRepresentation != null)
-        appendln("STATE: ${failure.results.afterInitStateRepresentation}")
-    appendln("Parallel part:")
+        appendLine("STATE: ${failure.results.afterInitStateRepresentation}")
+    appendLine("Parallel part:")
     val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
     append(printInColumns(parallelExecutionData))
     if (failure.results.afterParallelStateRepresentation != null) {
-        appendln()
+        appendLine()
         append("STATE: ${failure.results.afterParallelStateRepresentation}")
     }
     if (failure.scenario.postExecution.isNotEmpty()) {
-        appendln()
-        appendln("Post part:")
+        appendLine()
+        appendLine("Post part:")
         append(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
     }
     if (failure.results.afterPostStateRepresentation != null && failure.scenario.postExecution.isNotEmpty()) {
-        appendln()
+        appendLine()
         append("STATE: ${failure.results.afterPostStateRepresentation}")
     }
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
-        appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
+        appendLine("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
             "in each of the parallel threads seen at the beginning of the current operation\n---")
     return this
 }
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
-    appendln("= Validation function ${failure.functionName} has failed =")
+    appendLine("= Validation function ${failure.functionName} has failed =")
     appendExecutionScenario(failure.scenario)
     appendException(failure.exception)
     return this
 }
 
 private fun StringBuilder.appendObstructionFreedomViolationFailure(failure: ObstructionFreedomViolationFailure): StringBuilder {
-    appendln("= ${failure.reason} =")
+    appendLine("= ${failure.reason} =")
     appendExecutionScenario(failure.scenario)
     return this
 }
@@ -231,5 +217,5 @@ private fun StringBuilder.appendObstructionFreedomViolationFailure(failure: Obst
 private fun StringBuilder.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
-    appendln(sw.toString())
+    appendLine(sw.toString())
 }

@@ -24,10 +24,8 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
-import java.util.*
 import kotlin.collections.HashMap
 import kotlin.coroutines.*
 import kotlin.math.*
@@ -55,10 +53,10 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: Class<*>) {
+class LTS(val sequentialSpecification: () -> Any) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
-                                                    .loadClass(sequentialSpecification.name)!!
+//    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
+//                                                    .loadClass(sequentialSpecification.name)!!
 
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
@@ -279,7 +277,7 @@ class LTS(sequentialSpecification: Class<*>) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.newInstance()
+    private fun createInitialStateInstance() = sequentialSpecification()
 
     fun checkStateEquivalenceImplementation() {
         val i1 = createInitialStateInstance()

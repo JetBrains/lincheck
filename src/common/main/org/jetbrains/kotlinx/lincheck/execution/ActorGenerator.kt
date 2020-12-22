@@ -19,20 +19,25 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck.paramgen
+package org.jetbrains.kotlinx.lincheck.execution
+
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Method
+import org.jetbrains.kotlinx.lincheck.paramgen.*
+import kotlin.random.*
+import kotlin.reflect.KClass
 
 /**
- * This generator puts the number of the
- * executing thread as the parameter value.
- * The `0`-th thread specifies the init part
- * of the execution, while the `t+1`-th thread
- * references the post part (here we assume that
- * the parallel part has `t` threads).
- *
- * Note, that this API is unstable and is subject to change.
+ * Implementations of this class generate [actors][Actor]
+ * using [parameter generators][ParameterGenerator].
  */
-class ThreadIdGen(configuration: String) : ParameterGenerator<Any> {
-    override fun generate() = THREAD_ID_TOKEN
-}
+expect class ActorGenerator(
+    cancellableOnSuspension: Boolean,
+    promptCancellation: Boolean
+) {
+    val useOnce: Boolean
 
-internal val THREAD_ID_TOKEN = Any()
+    expect fun generate(threadId: Int): Actor
+
+    expect val isSuspendable: Boolean
+}
