@@ -42,7 +42,7 @@ interface Environment<Message> {
     fun cancelTimer(timer: String)
 
     /**
-     * Sends the specified [message] to the process [destId] (from 0 to [numberOfNodes]).
+     * Sends the specified [message] to the process [receiver] (from 0 to [numberOfNodes]).
      */
     fun send(message: Message, receiver: Int)
 
@@ -66,12 +66,12 @@ interface Environment<Message> {
 }
 
 sealed class Event
-class MessageSentEvent<Message>(val message: Message, val sender: Int, val receiver: Int, val id: Int) : Event()
-class MessageReceivedEvent<Message>(val message: Message, val sender: Int, val receiver: Int, val id: Int) : Event()
-class LocalMessageSentEvent<Message>(val message: Message, val sender: Int, val id: Int) : Event()
-class ProcessFailureEvent(val processId: Int) : Event()
-class ProcessRecoveryEvent(val processId: Int) : Event()
-class TimerEvent(val processId: Int, val timer: String) : Event()
+data class MessageSentEvent<Message>(val message: Message, val sender: Int, val receiver: Int, val id: Int) : Event()
+data class MessageReceivedEvent<Message>(val message: Message, val sender: Int, val receiver: Int, val id: Int) : Event()
+data class LocalMessageSentEvent<Message>(val message: Message, val sender: Int) : Event()
+data class ProcessFailureEvent(val processId: Int) : Event()
+data class ProcessRecoveryEvent(val processId: Int) : Event()
+data class TimerEvent(val processId: Int, val timer: String) : Event()
 
 fun <Message> Environment<Message>.correctProcesses() = (0 until numberOfNodes).subtract(events.filterIsInstance<ProcessFailureEvent>().map { it.processId })
 fun <Message> Environment<Message>.sentMessages(processId: Int = nodeId) = events.filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
