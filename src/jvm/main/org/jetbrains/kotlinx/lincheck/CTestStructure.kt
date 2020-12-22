@@ -186,6 +186,8 @@ class CTestStructure private constructor(val actorGenerators: List<ActorGenerato
 
         private fun createDefaultGenerators(): Map<Class<*>?, ParameterGenerator<*>> {
             val defaultGens: MutableMap<Class<*>?, ParameterGenerator<*>> = HashMap()
+            defaultGens[Boolean::class.javaPrimitiveType] = BooleanGen("")
+            defaultGens[Boolean::class.javaObjectType] = defaultGens[Boolean::class.javaPrimitiveType]!!
             defaultGens[Byte::class.javaPrimitiveType] = ByteGen("")
             defaultGens[Byte::class.javaObjectType] = defaultGens[Byte::class.javaPrimitiveType]!!
             defaultGens[Short::class.javaPrimitiveType] = ShortGen("")
