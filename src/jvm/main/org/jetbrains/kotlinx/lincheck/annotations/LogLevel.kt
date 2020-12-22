@@ -31,4 +31,4 @@ import java.lang.annotation.Inherited
 @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
 @Inherited
-annotation class LogLevel(val value: LoggingLevel)
+actual annotation class LogLevel(val value: LoggingLevel)

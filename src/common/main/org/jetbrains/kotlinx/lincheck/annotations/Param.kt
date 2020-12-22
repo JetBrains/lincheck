@@ -22,8 +22,6 @@ package org.jetbrains.kotlinx.lincheck.annotations
 
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator.Dummy
-import java.lang.annotation.Inherited
-import java.lang.annotation.Repeatable
 import kotlin.reflect.KClass
 
 /**
@@ -32,23 +30,22 @@ import kotlin.reflect.KClass
  */
 @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
-@Repeatable(Param.Params::class)
-@Inherited
-actual annotation class Param actual constructor(
-    /**
-     * If the annotation is set on a class, creates a [parameter generator][ParameterGenerator]
-     * which can be used in [operations][Operation] by this name. If is set on an operation,
-     * uses the specified named parameter generator which is created as described before.
-     */
-    actual val name: String = "",
-    /**
-     * Specifies the [ParameterGenerator] class which should be used for this parameter.
-     */
-    actual val gen: KClass<out ParameterGenerator<*>> = Dummy::class,
-    /**
-     * Specifies the configuration for the [parameter generator][.gen].
-     */
-    actual val conf: String = ""
+@Repeatable
+expect annotation class Param constructor(
+        /**
+         * If the annotation is set on a class, creates a [parameter generator][ParameterGenerator]
+         * which can be used in [operations][Operation] by this name. If is set on an operation,
+         * uses the specified named parameter generator which is created as described before.
+         */
+        val name: String,
+        /**
+         * Specifies the [ParameterGenerator] class which should be used for this parameter.
+         */
+        val gen: KClass<out ParameterGenerator<*>>,
+        /**
+         * Specifies the configuration for the [parameter generator][.gen].
+         */
+        val conf: String
 ) {
     /**
      * Holder annotation for [Param].
@@ -56,6 +53,5 @@ actual annotation class Param actual constructor(
      */
     @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
     @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
-    @Inherited
-    actual annotation class Params actual constructor(actual vararg val value: Param)
+    annotation class Params constructor(vararg val value: Param)
 }

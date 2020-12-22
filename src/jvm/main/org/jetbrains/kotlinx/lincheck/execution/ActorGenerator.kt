@@ -22,8 +22,8 @@
 package org.jetbrains.kotlinx.lincheck.execution
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Method
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import java.lang.reflect.*
 import kotlin.random.*
 import kotlin.reflect.KClass
 
@@ -34,7 +34,7 @@ import kotlin.reflect.KClass
 class ActorGenerator(
     private val method: Method,
     private val parameterGenerators: List<ParameterGenerator<*>>,
-    private val handledExceptions: List<Class<out Throwable?>>,
+    private val handledExceptions: List<HandledException>,
     val useOnce: Boolean,
     cancellableOnSuspension: Boolean,
     private val allowExtraSuspension: Boolean,

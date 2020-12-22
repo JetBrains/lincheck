@@ -35,6 +35,23 @@ kotlin {
     }
 
     sourceSets {
+        val commonMain by getting {
+            kotlin.srcDir("src/common/main")
+            val kotlinVersion: String by project
+            val kotlinxCoroutinesVersion: String by project
+            val asmVersion: String by project
+            val reflectionsVersion: String by project
+            dependencies {
+                api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+                api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
+                api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+                api("org.ow2.asm:asm-commons:$asmVersion")
+                api("org.ow2.asm:asm-util:$asmVersion")
+                api("org.reflections:reflections:$reflectionsVersion")
+            }
+        }
+
         val jvmMain by getting {
             kotlin.srcDir("src/jvm/main")
 

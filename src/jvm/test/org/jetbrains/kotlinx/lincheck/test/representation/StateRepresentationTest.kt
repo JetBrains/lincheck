@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
-import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.appendFailure

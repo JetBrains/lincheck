@@ -63,7 +63,7 @@ internal fun executeActor(
     } catch (invE: Throwable) {
         val eClass = (invE.cause ?: invE).javaClass.normalize()
         for (ec in actor.handledExceptions) {
-            if (ec.isAssignableFrom(eClass))
+            if (ec.exceptionClass.isAssignableFrom(eClass))
                 return ExceptionResult.create(eClass)
         }
         throw IllegalStateException("Invalid exception as a result of $actor", invE)

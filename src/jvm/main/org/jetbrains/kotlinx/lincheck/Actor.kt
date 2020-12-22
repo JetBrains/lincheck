@@ -22,8 +22,14 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import java.lang.reflect.Method
-import kotlin.reflect.jvm.*
+import kotlin.reflect.jvm.kotlinFunction
+
+actual typealias Method = java.lang.reflect.Method
+
+/**
+ * Handled exception, represents Class<out Throwable?>
+ */
+actual data class HandledException(val exceptionClass: Class<out Throwable?>)
 
 /**
  * The actor entity describe the operation with its parameters
@@ -31,18 +37,18 @@ import kotlin.reflect.jvm.*
  *
  * @see Operation
  */
-data class Actor @JvmOverloads constructor(
-    val method: Method,
-    val arguments: List<Any?>,
-    val handledExceptions: List<Class<out Throwable>> = emptyList(),
-    val cancelOnSuspension: Boolean = false,
-    val allowExtraSuspension: Boolean = false,
-    val blocking: Boolean = false,
-    val causesBlocking: Boolean = false,
-    val promptCancellation: Boolean = false,
+actual data class Actor @JvmOverloads actual constructor(
+    actual val method: Method,
+    actual val arguments: List<Any?>,
+    actual val handledExceptions: List<HandledException>,
+    actual val cancelOnSuspension: Boolean,
+    actual val allowExtraSuspension: Boolean,
+    actual val blocking: Boolean,
+    actual val causesBlocking: Boolean,
+    actual val promptCancellation: Boolean,
     // we have to specify `isSuspendable` property explicitly for transformed classes since
     // `isSuspendable` implementation produces a circular dependency and, therefore, fails.
-    val isSuspendable: Boolean = method.isSuspendable()
+    actual val isSuspendable: Boolean
 ) {
     init {
         if (promptCancellation) require(cancelOnSuspension) {
@@ -50,13 +56,13 @@ data class Actor @JvmOverloads constructor(
         }
     }
 
-    override fun toString() = method.name +
+    actual override fun toString() = method.name +
         arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() } +
         (if (cancelOnSuspension) " + " else "") +
         (if (promptCancellation) "prompt_" else "") +
         (if (cancelOnSuspension) "cancel" else "")
 
-    val handlesExceptions = handledExceptions.isNotEmpty()
+    actual val handlesExceptions = handledExceptions.isNotEmpty()
 }
 
-fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false
+actual fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false
