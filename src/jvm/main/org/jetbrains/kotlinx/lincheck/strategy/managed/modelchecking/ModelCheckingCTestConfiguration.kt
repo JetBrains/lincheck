@@ -26,12 +26,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
+import kotlin.reflect.*
 
 /**
  * Configuration for [random search][ModelCheckingStrategy] strategy.
  */
 class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
-                                      actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
+                                      actorsAfter: Int, generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
                                       checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
                                       guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
                                       sequentialSpecification: Class<*>?, timeoutMs: Long, eliminateLocalObjects: Boolean, verboseTrace: Boolean

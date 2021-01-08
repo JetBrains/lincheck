@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,14 +20,14 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import java.lang.reflect.*
+import kotlin.reflect.*
+import kotlin.reflect.jvm.*
 
-/**
- * The actor entity describe the operation with its parameters
- * which is executed during the testing.
- *
- * @see Operation
- */
-expect class Actor {
-    override fun toString(): String
+fun <T : Any> KClass<T>.getConstructor(vararg args: KParameter) : KFunction<T> {
+    return this.constructors.find { it.parameters == args.toList() }!!
+}
+
+fun <T : Any> KClass<T>.getConstructor(vararg args: Class<*>) : Constructor<T> {
+    return this.java.getConstructor(*args)
 }

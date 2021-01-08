@@ -22,12 +22,12 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.Method
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
+import org.jetbrains.kotlinx.lincheck.execution.*
 import java.io.*
 
 /**

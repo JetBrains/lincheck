@@ -47,7 +47,8 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
         return linearizabilityVerifier.verifyResults(convertedScenario, convertedResults)
     }
 
-    private val ExecutionScenario.converted: ExecutionScenario get() = scenarioMapping.computeIfAbsent(this) {
+    private val ExecutionScenario.converted: ExecutionScenario
+        get() = scenarioMapping.computeIfAbsent(this) {
         val parallelExecutionConverted = ArrayList<MutableList<Actor>>()
         repeat(threads) {
             parallelExecutionConverted.add(ArrayList())

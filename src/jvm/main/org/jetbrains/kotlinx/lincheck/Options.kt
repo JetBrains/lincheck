@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import kotlin.reflect.*
 
 /**
  * Abstract class for test options.
@@ -101,14 +102,14 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Use the specified execution generator.
      */
     fun executionGenerator(executionGenerator: Class<out ExecutionGenerator?>): OPT = applyAndCast {
-        this.executionGenerator = executionGenerator
+        this.executionGenerator = executionGenerator.kotlin
     }
 
     /**
      * Use the specified verifier.
      */
     fun verifier(verifier: Class<out Verifier?>): OPT = applyAndCast {
-        this.verifier = verifier
+        this.verifier = verifier.kotlin
     }
 
     /**

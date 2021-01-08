@@ -22,16 +22,16 @@
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.Method
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
+import kotlin.reflect.*
 
 /**
  * Configuration for [stress][StressStrategy] strategy.
  */
 class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-                               generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
+                               generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
                                val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
                                sequentialSpecification: Class<*>?, timeoutMs: Long
 ) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,

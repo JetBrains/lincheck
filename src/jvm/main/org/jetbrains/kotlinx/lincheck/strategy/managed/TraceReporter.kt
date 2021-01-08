@@ -22,10 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
+import org.jetbrains.kotlinx.lincheck.execution.*
 import java.util.*
 import kotlin.math.min
 

@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,14 +20,26 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.execution.*
 
 /**
- * The actor entity describe the operation with its parameters
- * which is executed during the testing.
- *
- * @see Operation
+ * Contains information about the provided operations (see [Operation]).
+ * Several [tests][StressCTest] can refer to one structure
+ * (i.e. one test class could have several [StressCTest] annotations)
  */
-expect class Actor {
-    override fun toString(): String
+expect class CTestStructure
+
+class OperationGroup(val name: String, val nonParallel: Boolean) {
+    val actors: MutableList<ActorGenerator>
+    override fun toString(): String {
+        return "OperationGroup{" +
+            "name='" + name + '\'' +
+            ", nonParallel=" + nonParallel +
+            ", actors=" + actors +
+            '}'
+    }
+
+    init {
+        actors = ArrayList()
+    }
 }

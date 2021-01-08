@@ -21,10 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import kotlin.reflect.*
 
 /**
  * A common configuration for managed strategies.
@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 abstract class ManagedCTestConfiguration(
     testClass: Class<*>, iterations: Int,
     threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-    generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
+    generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
     val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>?, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean

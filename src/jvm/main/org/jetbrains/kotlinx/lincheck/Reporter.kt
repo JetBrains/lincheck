@@ -1,23 +1,21 @@
 /*
- * #%L
  * Lincheck
- * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
- * %%
+ *
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
 package org.jetbrains.kotlinx.lincheck
@@ -56,28 +54,6 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
 enum class LoggingLevel {
     INFO, ERROR
 }
-
-internal fun <T> printInColumnsCustom(
-        groupedObjects: List<List<T>>,
-        joinColumns: (List<String>) -> String
-): String {
-    val nRows = groupedObjects.map { it.size }.max() ?: 0
-    val nColumns = groupedObjects.size
-    val rows = (0 until nRows).map { rowIndex ->
-        (0 until nColumns)
-                .map { groupedObjects[it] }
-                .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
-    }
-    val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
-        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max() ?: 0
-    }
-    return (0 until nRows)
-            .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
-            .map { rowCells -> joinColumns(rowCells) }
-            .joinToString(separator = "\n")
-}
-
-private fun <T> printInColumns(groupedObjects: List<List<T>>) = printInColumnsCustom(groupedObjects) { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
 
 private class ActorWithResult(val actorRepresentation: String, val spacesAfterActor: Int,
                               val resultRepresentation: String, val spacesAfterResult: Int,
@@ -123,23 +99,6 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
             ActorWithResult(actorRepr, spacesAfterActor, resultRepr, spacesAfterResultToAlign + 1, clock.toString())
         }
     }
-}
-
-internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
-    if (scenario.initExecution.isNotEmpty()) {
-        appendln("Execution scenario (init part):")
-        appendln(scenario.initExecution)
-    }
-    if (scenario.parallelExecution.isNotEmpty()) {
-        appendln("Execution scenario (parallel part):")
-        append(printInColumns(scenario.parallelExecution))
-        appendln()
-    }
-    if (scenario.postExecution.isNotEmpty()) {
-        appendln("Execution scenario (post part):")
-        append(scenario.postExecution)
-    }
-    return this
 }
 
 internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {

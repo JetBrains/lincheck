@@ -21,10 +21,7 @@
 */
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration
-import org.jetbrains.kotlinx.lincheck.CTestStructure
-import org.jetbrains.kotlinx.lincheck.CTestStructure.OperationGroup
+import org.jetbrains.kotlinx.lincheck.*
 import kotlin.random.Random
 
 class RandomExecutionGenerator(testConfiguration: CTestConfiguration, testStructure: CTestStructure) : ExecutionGenerator(testConfiguration, testStructure) {

@@ -96,8 +96,8 @@ public class TestThreadExecutionHelperTest {
             asList(
                 new Actor(ArrayDeque.class.getMethod("addLast", Object.class), asList(1)),
                 new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(new HandledException(NoSuchElementException.class))),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(new HandledException(Exception.class), new HandledException((NoSuchElementException.class))))
+                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(NoSuchElementException.class)),
+                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(Exception.class, (NoSuchElementException.class)))
             ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];

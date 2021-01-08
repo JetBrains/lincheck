@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import java.util.ArrayList
 
 /**
  * An abstraction for verifiers which use the labeled transition system (LTS) under the hood.

@@ -32,19 +32,20 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import java.lang.reflect.*
+import kotlin.reflect.*
 
 /**
  * Abstract configuration for different lincheck modes.
  */
-abstract class CTestConfiguration(
+actual abstract class CTestConfiguration(
     val testClass: Class<*>,
     val iterations: Int,
     val threads: Int,
     val actorsPerThread: Int,
     val actorsBefore: Int,
     val actorsAfter: Int,
-    val generatorClass: Class<out ExecutionGenerator>,
-    val verifierClass: Class<out Verifier>,
+    val generatorClass: KClass<out ExecutionGenerator>,
+    val verifierClass: KClass<out Verifier>,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: Class<*>?,
@@ -52,14 +53,15 @@ abstract class CTestConfiguration(
 ) {
     abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
+
     companion object {
         const val DEFAULT_ITERATIONS = 100
         const val DEFAULT_THREADS = 2
         const val DEFAULT_ACTORS_PER_THREAD = 5
         const val DEFAULT_ACTORS_BEFORE = 5
         const val DEFAULT_ACTORS_AFTER = 5
-        val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = RandomExecutionGenerator::class.java
-        val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
+        val DEFAULT_EXECUTION_GENERATOR: KClass<out ExecutionGenerator> = RandomExecutionGenerator::class
+        val DEFAULT_VERIFIER: KClass<out Verifier> = LinearizabilityVerifier::class
         const val DEFAULT_MINIMIZE_ERROR = true
         const val DEFAULT_TIMEOUT_MS: Long = 10000
     }
@@ -70,7 +72,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
         .map { ann: StressCTest ->
             StressCTestConfiguration(testClass, ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
+                ann.generator, ann.verifier, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
                 chooseSequentialSpecification(ann.sequentialSpecification.java, testClass), DEFAULT_TIMEOUT_MS
             )
@@ -79,7 +81,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
         .map { ann: ModelCheckingCTest ->
             ModelCheckingCTestConfiguration(testClass, ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
+                ann.generator, ann.verifier, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
                 ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
                 DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE

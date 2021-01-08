@@ -36,23 +36,12 @@ import kotlin.collections.HashMap
  * Several [tests][StressCTest] can refer to one structure
  * (i.e. one test class could have several [StressCTest] annotations)
  */
-class CTestStructure private constructor(val actorGenerators: List<ActorGenerator>, val operationGroups: List<OperationGroup>,
-                                         val validationFunctions: List<Method>, val stateRepresentation: Method?) {
-    class OperationGroup(val name: String, val nonParallel: Boolean) {
-        val actors: MutableList<ActorGenerator>
-        override fun toString(): String {
-            return "OperationGroup{" +
-                    "name='" + name + '\'' +
-                    ", nonParallel=" + nonParallel +
-                    ", actors=" + actors +
-                    '}'
-        }
-
-        init {
-            actors = ArrayList()
-        }
-    }
-
+actual class CTestStructure private constructor(
+    val actorGenerators: List<ActorGenerator>,
+    val operationGroups: List<OperationGroup>,
+    val validationFunctions: List<Method>,
+    val stateRepresentation: Method?
+) {
     companion object {
         /**
          * Constructs [CTestStructure] for the specified test class.
@@ -115,7 +104,7 @@ class CTestStructure private constructor(val actorGenerators: List<ActorGenerato
                         gens.add(getOrCreateGenerator(m, m.parameters[i], nameInOperation, namedGens, defaultGens))
                     }
                     // Get list of handled exceptions if they are presented
-                    val handledExceptions: List<HandledException> = opAnn.handleExceptionsAsResult.map { HandledException(it.java) }
+                    val handledExceptions: List<Class<out Throwable?>> = opAnn.handleExceptionsAsResult.map { it.java }
                     val actorGenerator = ActorGenerator(m, gens, handledExceptions, opAnn.runOnce,
                             opAnn.cancellableOnSuspension, opAnn.allowExtraSuspension, opAnn.blocking, opAnn.causesBlocking,
                             opAnn.promptCancellation)

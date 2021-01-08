@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.commons.Remapper
 
 /**
  * Implementation of this class describes how to run the generated execution.

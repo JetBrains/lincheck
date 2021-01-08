@@ -36,6 +36,7 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
@@ -63,7 +64,7 @@ internal fun executeActor(
     } catch (invE: Throwable) {
         val eClass = (invE.cause ?: invE).javaClass.normalize()
         for (ec in actor.handledExceptions) {
-            if (ec.exceptionClass.isAssignableFrom(eClass))
+            if (ec.isAssignableFrom(eClass))
                 return ExceptionResult.create(eClass)
         }
         throw IllegalStateException("Invalid exception as a result of $actor", invE)
