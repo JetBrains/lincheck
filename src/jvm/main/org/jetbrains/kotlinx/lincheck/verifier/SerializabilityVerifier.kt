@@ -28,7 +28,7 @@ import kotlin.reflect.*
  * It just tries to find any operations sequence which execution produces the same results.
  */
 class SerializabilityVerifier(
-    sequentialSpecification: KClass<out Any>
+    sequentialSpecification: KClass<*>
 ) : CachedVerifier() {
     private val linerizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
 
