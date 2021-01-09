@@ -17,12 +17,12 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
+package org.jetbrains.kotlinx.lincheck.paramgen
 
-package org.jetbrains.kotlinx.lincheck.runner
+class LongGen(configuration: String) : ParameterGenerator<Long> {
+    private val intGen: IntGen = IntGen(configuration)
 
-/**
- * Indicates that the invocation has run into deadlock or livelock.
- */
-class DeadlockInvocationResult(
-    val threadDump: Map<Thread, Array<StackTraceElement>>
-) : InvocationResult()
+    override fun generate(): Long {
+        return intGen.generate().toLong()
+    }
+}

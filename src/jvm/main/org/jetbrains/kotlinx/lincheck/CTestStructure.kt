@@ -37,8 +37,8 @@ import kotlin.collections.HashMap
  * (i.e. one test class could have several [StressCTest] annotations)
  */
 actual class CTestStructure private constructor(
-    val actorGenerators: List<ActorGenerator>,
-    val operationGroups: List<OperationGroup>,
+    actual val actorGenerators: List<ActorGenerator>,
+    actual val operationGroups: List<OperationGroup>,
     val validationFunctions: List<Method>,
     val stateRepresentation: Method?
 ) {

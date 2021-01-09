@@ -26,11 +26,11 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
-sealed class LincheckFailure(
+actual open class LincheckFailure(
     val scenario: ExecutionScenario,
     val trace: Trace?
 ) {
-    override fun toString() = StringBuilder().appendFailure(this).toString()
+    actual override fun toString() = StringBuilder().appendFailure(this).toString()
 }
 
 internal class IncorrectResultsFailure(

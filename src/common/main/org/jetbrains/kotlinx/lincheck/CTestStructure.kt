@@ -27,7 +27,10 @@ import org.jetbrains.kotlinx.lincheck.execution.*
  * Several [tests][StressCTest] can refer to one structure
  * (i.e. one test class could have several [StressCTest] annotations)
  */
-expect class CTestStructure
+expect class CTestStructure {
+    val actorGenerators: List<ActorGenerator>
+    val operationGroups: List<OperationGroup>
+}
 
 class OperationGroup(val name: String, val nonParallel: Boolean) {
     val actors: MutableList<ActorGenerator>

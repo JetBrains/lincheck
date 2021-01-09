@@ -29,5 +29,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
  * @see Operation
  */
 expect class Actor {
+    val isSuspendable: Boolean
     override fun toString(): String
 }

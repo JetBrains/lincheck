@@ -1,61 +1,40 @@
-/*-
- * #%L
+/*
  * Lincheck
- * %%
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
- * %%
+ *
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
+
 package org.jetbrains.kotlinx.lincheck.runner
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.objectweb.asm.*
-import java.lang.reflect.*
-import java.util.concurrent.atomic.*
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.execution.*
-import java.io.*
 
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
  * like fibers, it may require code transformation, so that [createTransformer] should
  * provide the corresponding transformer and [needsTransformation] should return `true`.
  */
-actual abstract class Runner protected constructor(
-    protected val strategy: Strategy,
-    private val _testClass: Class<*>, // will be transformed later
-    protected val validationFunctions: List<Method>,
-    protected val stateRepresentationFunction: Method?
-) : Closeable {
-    protected actual var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
-    protected lateinit var testClass: Class<*> // not available before `initialize` call
-    @Suppress("LeakingThis")
-    val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
-                                            else ExecutionClassLoader()
-    protected val completedOrSuspendedThreads = AtomicInteger(0)
+expect abstract class Runner {
+    protected var scenario: ExecutionScenario
 
     /**
      * This method is a part of `Runner` initialization and should be invoked after this runner
      * creation. It is separated from the constructor to perform the strategy initialization at first.
      */
-    actual open fun initialize() {
-        scenario = strategy.scenario.convertForLoader(classLoader)
-        testClass = loadClass(_testClass.typeName)
-    }
+    open fun initialize()
 
     /**
      * Returns the current state representation of the test instance constructed via
@@ -65,93 +44,73 @@ actual abstract class Runner protected constructor(
      * Please note, that it is unsafe to call this method concurrently with the running scenario.
      * However, it is fine to call it if the execution is paused somewhere in the middle.
      */
-    actual open fun constructStateRepresentation(): String? = null
-
-    /**
-     * Loads the specified class via this runner' class loader.
-     */
-    private fun loadClass(className: String): Class<*> = classLoader.loadClass(className)
-
-    /**
-     * Creates a transformer required for this runner.
-     * Throws [UnsupportedOperationException] by default.
-     *
-     * @return class visitor which transform the code due to support this runner.
-     */
-    open fun createTransformer(cv: ClassVisitor): ClassVisitor? = null
+    open fun constructStateRepresentation(): String?
 
     /**
      * This method should return `true` if code transformation
      * is required for this runner; returns `false` by default.
      */
-    actual open fun needsTransformation(): Boolean = false
-
-    /**
-     * Runs the next invocation.
-     */
-    abstract fun run(): InvocationResult
+    open fun needsTransformation(): Boolean
 
     /**
      * This method is invoked by every test thread as the first operation.
      * @param iThread number of invoking thread
      */
-    actual open fun onStart(iThread: Int) {}
+    open fun onStart(iThread: Int)
 
     /**
      * This method is invoked by every test thread as the last operation
      * if no exception has been thrown.
      * @param iThread number of invoking thread
      */
-    actual open fun onFinish(iThread: Int) {}
+    open fun onFinish(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when an unexpected exception is thrown.
      */
-    actual open fun onFailure(iThread: Int, e: Throwable) {}
+    open fun onFailure(iThread: Int, e: Throwable)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine suspends.
      * @param iThread number of invoking thread
      */
-    actual open fun afterCoroutineSuspended(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun afterCoroutineSuspended(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is resumed.
      */
-    actual open fun afterCoroutineResumed(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun afterCoroutineResumed(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is cancelled.
      */
-    actual open fun afterCoroutineCancelled(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun afterCoroutineCancelled(iThread: Int)
 
     /**
      * Returns `true` if the coroutine corresponding to
      * the actor `actorId` in the thread `iThread` is resumed.
      */
-    actual open fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean
 
     /**
      * Is invoked before each actor execution from the specified thread.
      * The invocations are inserted into the generated code.
      */
-    actual fun onActorStart(iThread: Int) {
-        strategy.onActorStart(iThread)
-    }
+    fun onActorStart(iThread: Int)
 
     /**
      * Closes the resources used in this runner.
      */
-    actual override fun close() {}
+    fun close()
 
     /**
      * @return whether all scenario threads are completed or suspended
      * Used by generated code.
      */
-    actual val isParallelExecutionCompleted: Boolean
-        get() = completedOrSuspendedThreads.get() == scenario.threads
+    val isParallelExecutionCompleted: Boolean
+
 }

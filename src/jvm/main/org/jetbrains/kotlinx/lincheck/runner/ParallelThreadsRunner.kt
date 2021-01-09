@@ -19,6 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*

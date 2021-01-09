@@ -31,18 +31,18 @@ import org.objectweb.asm.ClassVisitor
  * [.createStrategy] method is used. It is impossible to add a new strategy
  * without any code change.
  */
-abstract class Strategy protected constructor(
-    val scenario: ExecutionScenario
+actual abstract class Strategy protected actual constructor(
+    actual val scenario: ExecutionScenario
 ) {
     open fun needsTransformation() = false
     open fun createTransformer(cv: ClassVisitor): ClassVisitor {
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    abstract fun run(): LincheckFailure?
+    actual abstract fun run(): LincheckFailure?
 
     /**
      * Is invoked before each actor execution.
      */
-    open fun onActorStart(iThread: Int) {}
+    actual open fun onActorStart(iThread: Int) {}
 }

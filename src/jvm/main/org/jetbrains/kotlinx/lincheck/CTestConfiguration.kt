@@ -39,12 +39,12 @@ import kotlin.reflect.*
  */
 actual abstract class CTestConfiguration(
     val testClass: Class<*>,
-    val iterations: Int,
-    val threads: Int,
-    val actorsPerThread: Int,
-    val actorsBefore: Int,
-    val actorsAfter: Int,
-    val generatorClass: KClass<out ExecutionGenerator>,
+    actual val iterations: Int,
+    actual val threads: Int,
+    actual val actorsPerThread: Int,
+    actual val actorsBefore: Int,
+    actual val actorsAfter: Int,
+    actual val generatorClass: KClass<out ExecutionGenerator>,
     val verifierClass: KClass<out Verifier>,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,

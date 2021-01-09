@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -17,13 +17,12 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-
 package org.jetbrains.kotlinx.lincheck.paramgen
 
-import kotlin.random.*
+class FloatGen(configuration: String) : ParameterGenerator<Float> {
+    private val doubleGen: DoubleGen = DoubleGen(configuration)
 
-class BooleanGen(configuration: String) : ParameterGenerator<Boolean> {
-    private val random = Random(0)
-
-    override fun generate() = random.nextBoolean()
+    override fun generate(): Float {
+        return doubleGen.generate().toFloat()
+    }
 }

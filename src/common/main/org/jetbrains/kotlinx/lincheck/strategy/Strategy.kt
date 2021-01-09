@@ -18,11 +18,23 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.runner
+package org.jetbrains.kotlinx.lincheck.strategy
+
+import org.jetbrains.kotlinx.lincheck.execution.*
 
 /**
- * Indicates that the invocation has run into deadlock or livelock.
+ * Implementation of this class describes how to run the generated execution.
+ *
+ * Note that strategy can run execution several times. For strategy creating
+ * [.createStrategy] method is used. It is impossible to add a new strategy
+ * without any code change.
  */
-class DeadlockInvocationResult(
-    val threadDump: Map<Thread, Array<StackTraceElement>>
-) : InvocationResult()
+expect abstract class Strategy protected constructor(scenario: ExecutionScenario) {
+    abstract fun run(): LincheckFailure?
+
+    /**
+     * Is invoked before each actor execution.
+     */
+    open fun onActorStart(iThread: Int)
+    val scenario: ExecutionScenario
+}

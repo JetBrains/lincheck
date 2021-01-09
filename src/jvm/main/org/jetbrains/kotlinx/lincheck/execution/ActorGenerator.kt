@@ -22,8 +22,6 @@ package org.jetbrains.kotlinx.lincheck.execution
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import java.lang.reflect.*
-import kotlin.random.*
-import kotlin.reflect.KClass
 
 /**
  * Implementations of this class generate [actors][Actor]
@@ -33,7 +31,7 @@ actual class ActorGenerator(
     private val method: Method,
     private val parameterGenerators: List<ParameterGenerator<*>>,
     private val handledExceptions: List<Class<out Throwable?>>,
-    val useOnce: Boolean,
+    actual val useOnce: Boolean,
     cancellableOnSuspension: Boolean,
     private val allowExtraSuspension: Boolean,
     private val blocking: Boolean,
@@ -43,7 +41,7 @@ actual class ActorGenerator(
     private val cancellableOnSuspension = cancellableOnSuspension && isSuspendable
     private val promptCancellation = cancellableOnSuspension && promptCancellation
 
-    fun generate(threadId: Int): Actor {
+    actual fun generate(threadId: Int): Actor {
         val parameters = parameterGenerators
             .map { it.generate() }
             .map { if (it === THREAD_ID_TOKEN) threadId else it }
