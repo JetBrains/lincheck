@@ -48,7 +48,7 @@ actual abstract class CTestConfiguration(
     val verifierClass: KClass<out Verifier>,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
-    val sequentialSpecification: Class<*>?,
+    val sequentialSpecification: KClass<*>?,
     val timeoutMs: Long
 ) {
     abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
@@ -74,7 +74,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
                 ann.generator, ann.verifier, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
-                chooseSequentialSpecification(ann.sequentialSpecification.java, testClass), DEFAULT_TIMEOUT_MS
+                chooseSequentialSpecification(ann.sequentialSpecification, testClass), DEFAULT_TIMEOUT_MS
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
@@ -83,7 +83,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
                 ann.generator, ann.verifier, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
-                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
+                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification, testClass),
                 DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE
             )
         }

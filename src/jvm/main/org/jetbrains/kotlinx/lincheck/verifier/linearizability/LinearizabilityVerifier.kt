@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import kotlin.reflect.*
 
 /**
  * This verifier checks that the specified results could happen if the testing operations are linearizable.
@@ -34,7 +35,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
  * This verifier is based on [AbstractLTSVerifier] and caches the already processed results
  * for performance improvement (see [CachedVerifier]).
  */
-class LinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVerifier(sequentialSpecification) {
+class LinearizabilityVerifier(sequentialSpecification: KClass<*>) : AbstractLTSVerifier(sequentialSpecification) {
     override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
 
     override fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult) =

@@ -23,11 +23,12 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import kotlin.reflect.*
 
 /**
  * This verifier does nothing and could be used for performance benchmarking.
  */
-class EpsilonVerifier(sequentialSpecification: Class<*>) : Verifier {
+class EpsilonVerifier(sequentialSpecification: KClass<*>) : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean = true // Always correct results :)
 
     override fun checkStateEquivalenceImplementation() {}

@@ -40,7 +40,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
     protected var requireStateEquivalenceImplementationCheck = true
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
-    protected var sequentialSpecification: Class<*>? = null
+    protected var sequentialSpecification: KClass<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
 
     /**
@@ -148,7 +148,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * By default, the provided concurrent implementation is used in a sequential way.
      */
     fun sequentialSpecification(clazz: Class<*>?): OPT = applyAndCast {
-        sequentialSpecification = clazz
+        sequentialSpecification = clazz?.kotlin
     }
 
     /**

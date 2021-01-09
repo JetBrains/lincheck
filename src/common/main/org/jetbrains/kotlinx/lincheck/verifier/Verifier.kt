@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import kotlin.collections.HashSet
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 
 /**
  * Implementation of this interface verifies that execution is correct with respect to the algorithm contract.
@@ -48,6 +47,16 @@ interface Verifier {
      * correctly.
      */
     fun checkStateEquivalenceImplementation()
+}
+
+internal inline fun <K, V> Map<K, V>.computeIfAbsent(key: K, defaultValue: (K) -> V): V {
+    val value = get(key)
+    if (value == null && !containsKey(key)) {
+        return defaultValue(key)
+    } else {
+        @Suppress("UNCHECKED_CAST")
+        return value as V
+    }
 }
 
 /**

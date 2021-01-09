@@ -31,6 +31,8 @@ import java.util.*
 import kotlin.collections.HashMap
 import kotlin.coroutines.*
 import kotlin.math.*
+import kotlin.reflect.*
+import kotlin.reflect.full.*
 
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
@@ -55,10 +57,10 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: Class<*>) {
+class LTS(sequentialSpecification: KClass<*>) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
-                                                    .loadClass(sequentialSpecification.name)!!
+    private val sequentialSpecification: KClass<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
+                                                    .loadClass(sequentialSpecification.java.name)!!.kotlin
 
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
@@ -279,7 +281,7 @@ class LTS(sequentialSpecification: Class<*>) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.newInstance()
+    private fun createInitialStateInstance() = sequentialSpecification.getConstructor().newInstance()
 
     fun checkStateEquivalenceImplementation() {
         val i1 = createInitialStateInstance()

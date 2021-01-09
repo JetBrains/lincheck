@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.IllegalStateException
-import kotlin.reflect.KFunction
+import kotlin.reflect.*
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -58,7 +58,7 @@ fun verify(
     correct: Boolean
 ) {
     val (scenario, results) = scenarioWithResults(block)
-    val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
+    val verifier = verifierClass.getConstructor(KClass::class.java).newInstance(testClass.kotlin)
     val res = verifier.verifyResults(scenario, results)
     assert(res == correct)
 }

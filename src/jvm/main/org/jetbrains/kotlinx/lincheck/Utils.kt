@@ -41,8 +41,8 @@ import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
 
-fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
-    if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
+fun chooseSequentialSpecification(sequentialSpecificationByUser: KClass<*>?, testClass: Class<*>): KClass<*> =
+    if (sequentialSpecificationByUser === DummySequentialSpecification::class || sequentialSpecificationByUser == null) testClass.kotlin
     else sequentialSpecificationByUser
 
 internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)

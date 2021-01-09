@@ -25,7 +25,9 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.reflect.*
 
 /**
  * This verifier tests for quiescent consistency.
@@ -34,9 +36,9 @@ import kotlin.collections.ArrayList
  * However, we believe that quiescent points do not occur
  * in practice while supporting them complicates the implementation.
  */
-class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier {
+class QuiescentConsistencyVerifier(sequentialSpecification: KClass<*>) : Verifier {
     private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
-    private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = HashMap()
+    private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = WeakHashMap()
 
     override fun checkStateEquivalenceImplementation() = linearizabilityVerifier.checkStateEquivalenceImplementation()
 

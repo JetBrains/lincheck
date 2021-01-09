@@ -24,10 +24,6 @@ import java.lang.reflect.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
-fun <T : Any> KClass<T>.getConstructor(vararg args: KParameter) : KFunction<T> {
-    return this.constructors.find { it.parameters == args.toList() }!!
-}
-
 fun <T : Any> KClass<T>.getConstructor(vararg args: Class<*>) : Constructor<T> {
     return this.java.getConstructor(*args)
 }
