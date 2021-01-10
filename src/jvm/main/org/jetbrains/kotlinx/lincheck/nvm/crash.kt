@@ -39,8 +39,10 @@ object Crash {
      */
     private fun crash(threadId: Int) {
         NVMCache.crash(threadId)
-        throw CrashError().also { RecoverableStateContainer.registerCrash(threadId, it) }
+        throw CRASH.also { RecoverableStateContainer.registerCrash(threadId, it) }
     }
+
+    private val CRASH = CrashError()
 
     private val threads: MutableSet<Int> = Collections.newSetFromMap(ConcurrentHashMap())
     private val waitingCont = atomic(0)
