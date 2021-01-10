@@ -65,6 +65,32 @@ data class ExecutionResult(
 ) {
     constructor(initResults: List<Result>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<Result>) :
         this(initResults, null, parallelResultsWithClock, null, postResults, null)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ExecutionResult
+
+        if (initResults != other.initResults) return false
+        if (afterInitStateRepresentation != other.afterInitStateRepresentation) return false
+        if (parallelResultsWithClock != other.parallelResultsWithClock) return false
+        if (afterParallelStateRepresentation != other.afterParallelStateRepresentation) return false
+        if (postResults != other.postResults) return false
+        if (afterPostStateRepresentation != other.afterPostStateRepresentation) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = initResults.hashCode()
+        result = 31 * result + (afterInitStateRepresentation?.hashCode() ?: 0)
+        result = 31 * result + parallelResultsWithClock.hashCode()
+        result = 31 * result + (afterParallelStateRepresentation?.hashCode() ?: 0)
+        result = 31 * result + postResults.hashCode()
+        result = 31 * result + (afterPostStateRepresentation?.hashCode() ?: 0)
+        return result
+    }
 }
 
 val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
@@ -75,8 +101,6 @@ val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
     this.postResults,
     this.afterPostStateRepresentation
 )
-
-val ExecutionResult.withoutCrashes: ExecutionResult get() = if (crashes.isEmpty()) this else copy(crashes = emptyList())
 
 val ExecutionResult.parallelResults: List<List<Result>> get() = parallelResultsWithClock.map { it.map { r -> r.result } }
 
