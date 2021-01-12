@@ -31,18 +31,16 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 @OpGroupConfig(name = "write", nonParallel = true)
-@StressCTest(
-    sequentialSpecification = Sequential::class
-)
+@StressCTest(sequentialSpecification = Sequential::class)
 internal class PersistentTest {
     private val x = nonVolatile(0)
 
     @Operation
-    fun read() = x.read()
+    fun read() = x.value
 
     @Operation(group = "write")
     fun write(value: Int) {
-        x.write(value = value)
+        x.value = value
         x.flush()
     }
 

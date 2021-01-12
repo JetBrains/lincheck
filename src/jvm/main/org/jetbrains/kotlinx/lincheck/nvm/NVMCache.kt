@@ -21,6 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.nvm
 
+import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
+
 /** Volatile cache of non-volatile memory emulation. */
 object NVMCache {
     const val MAX_THREADS_NUMBER = 10
@@ -28,9 +30,10 @@ object NVMCache {
     private val cache = Array<HashSet<AbstractNonVolatilePrimitive>?>(MAX_THREADS_NUMBER) { null }
 
     /** Flushes all local variables of thread. */
-    fun flush(threadId: Int) {
+    fun flush() {
+        val threadId = RecoverableStateContainer.threadId()
         val localCache = cache[threadId] ?: return
-        localCache.forEach { it.flushInternal(threadId) }
+        localCache.forEach { it.flushInternal() }
         localCache.clear()
     }
 
@@ -46,7 +49,7 @@ object NVMCache {
 
     internal fun crash(threadId: Int) {
         val localCache = cache[threadId] ?: return
-        localCache.forEach { it.crash(threadId) }
+        localCache.forEach { it.crash() }
         localCache.clear()
     }
 }

@@ -73,7 +73,7 @@ private class NRLCounter @Recoverable constructor(threadsCount: Int) : VerifierS
     private val CurrentValue = MutableList(threadsCount) { nonVolatile(0) }
 
     init {
-        NVMCache.flush(0)
+        NVMCache.flush()
     }
 
     override fun extractState() = R.sumBy { it.read()!! }
@@ -81,8 +81,8 @@ private class NRLCounter @Recoverable constructor(threadsCount: Int) : VerifierS
     @Recoverable
     fun get(p: Int): Int {
         val returnValue = R.sumBy { it.read()!! }
-        Response[p].write(returnValue, p)
-        Response[p].flush(p)
+        Response[p].value = returnValue
+        Response[p].flush()
         return returnValue
     }
 
@@ -92,19 +92,19 @@ private class NRLCounter @Recoverable constructor(threadsCount: Int) : VerifierS
     }
 
     private fun incrementImpl(p: Int) {
-        R[p].write(1 + CurrentValue[p].read(p), p)
-        CheckPointer[p].write(1, p)
-        CheckPointer[p].flush(p)
+        R[p].write(1 + CurrentValue[p].value, p)
+        CheckPointer[p].value = 1
+        CheckPointer[p].flush()
     }
 
     private fun incrementRecover(p: Int) {
-        if (CheckPointer[p].read(p) == 0) return incrementImpl(p)
+        if (CheckPointer[p].value == 0) return incrementImpl(p)
     }
 
     private fun incrementBefore(p: Int) {
-        CurrentValue[p].write(R[p].read()!!, p)
-        CheckPointer[p].write(0, p)
-        CurrentValue[p].flush(p)
-        CheckPointer[p].flush(p)
+        CurrentValue[p].value = R[p].read()!!
+        CheckPointer[p].value = 0
+        CurrentValue[p].flush()
+        CheckPointer[p].flush()
     }
 }

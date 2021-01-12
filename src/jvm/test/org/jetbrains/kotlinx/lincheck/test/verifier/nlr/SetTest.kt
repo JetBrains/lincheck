@@ -122,28 +122,28 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
     fun add(p: Int, value: T) = addImpl(p, value)
 
     private fun addImpl(p: Int, value: T): Boolean {
-        val newNode = recoveryData[p].read(p)!!.node.read(p)!!
+        val newNode = recoveryData[p].value!!.node.value!!
         while (true) {
             val prevNext = findPrevNext(value)
             val previous = prevNext.previous
             val next = prevNext.next
             if (next != null && next.value.compareTo(value) == 0) {
-                recoveryData[p].read(p)!!.result.write(false, p)
-                recoveryData[p].read(p)!!.result.flush(p)
+                recoveryData[p].value!!.result.value = false
+                recoveryData[p].value!!.result.flush()
                 return false
             }
             newNode.next[next] = false
             // flush
             if (previous == null) {
                 if (head.compareAndSet(next, newNode)) {
-                    recoveryData[p].read(p)!!.result.write(true, p)
-                    recoveryData[p].read(p)!!.result.flush(p)
+                    recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
                     return true
                 }
             } else {
                 if (previous.next.compareAndSet(next, newNode, false, false)) {
-                    recoveryData[p].read(p)!!.result.write(true, p)
-                    recoveryData[p].read(p)!!.result.flush(p)
+                    recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
                     return true
                 }
             }
@@ -151,24 +151,24 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
     }
 
     fun addBefore(p: Int, value: T) {
-        checkPointer[p].write(0, p)
-        checkPointer[p].flush(p)
-        recoveryData[p].write(Info(nonVolatile(Node(value, null))), p)
-        recoveryData[p].flush(p)
-        checkPointer[p].write(1, p)
-        checkPointer[p].flush(p)
+        checkPointer[p].value = 0
+        checkPointer[p].flush()
+        recoveryData[p].value = Info(nonVolatile(Node(value, null)))
+        recoveryData[p].flush()
+        checkPointer[p].value = 1
+        checkPointer[p].flush()
     }
 
     fun addRecover(p: Int, value: T): Boolean {
-        if (checkPointer[p].read(p) == 0) return addImpl(p, value)
-        val node = recoveryData[p].read(p)!!.node.read(p)!!
-        val result = recoveryData[p].read(p)!!.result.read(p)
+        if (checkPointer[p].value == 0) return addImpl(p, value)
+        val node = recoveryData[p].value!!.node.value!!
+        val result = recoveryData[p].value!!.result.value
         if (result != null) return result
         val prevNext = findPrevNext(value)
         val current = prevNext.next
         if (current === node || node.next.isMarked) {
-            recoveryData[p].read(p)!!.result.write(true, p)
-            recoveryData[p].read(p)!!.result.flush(p)
+            recoveryData[p].value!!.result.value = true
+            recoveryData[p].value!!.result.flush()
             return true
         }
         return addImpl(p, value)
@@ -182,12 +182,12 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
         val previous = prevNext.previous
         val current = prevNext.next
         if (current == null || current.value.compareTo(value) != 0) {
-            recoveryData[p].read(p)!!.result.write(false, p)
-            recoveryData[p].read(p)!!.result.flush(p)
+            recoveryData[p].value!!.result.value = false
+            recoveryData[p].value!!.result.flush()
             return false
         }
-        recoveryData[p].read(p)!!.node.write(current, p)
-        recoveryData[p].read(p)!!.node.flush(p)
+        recoveryData[p].value!!.node.value = current
+        recoveryData[p].value!!.node.flush()
         while (!current.next.isMarked) {
             val next = current.next.reference
             current.next.compareAndSet(next, next, false, true)
@@ -195,30 +195,30 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
         val next = current.next.reference
         previous?.next?.compareAndSet(current, next, false, false) ?: head.compareAndSet(current, next)
         val result = current.deleter.compareAndSet(NULL_DELETER, p)
-        recoveryData[p].read(p)!!.result.write(result, p)
-        recoveryData[p].read(p)!!.result.flush(p)
+        recoveryData[p].value!!.result.value = result
+        recoveryData[p].value!!.result.flush()
         return result
     }
 
     fun removeBefore(p: Int, value: T) {
-        checkPointer[p].write(0, p)
-        checkPointer[p].flush(p)
-        recoveryData[p].write(Info(), p)
-        recoveryData[p].flush(p)
-        checkPointer[p].write(1, p)
-        checkPointer[p].flush(p)
+        checkPointer[p].value = 0
+        checkPointer[p].flush()
+        recoveryData[p].value = Info()
+        recoveryData[p].flush()
+        checkPointer[p].value = 1
+        checkPointer[p].flush()
     }
 
     fun removeRecover(p: Int, value: T): Boolean {
-        if (checkPointer[p].read(p) == 0) return removeImpl(p, value)
-        val result = recoveryData[p].read(p)!!.result.read(p)
+        if (checkPointer[p].value == 0) return removeImpl(p, value)
+        val result = recoveryData[p].value!!.result.value
         if (result != null) return result
-        val node = recoveryData[p].read(p)!!.node.read(p)
+        val node = recoveryData[p].value!!.node.value
         if (node != null && node.next.isMarked) {
             node.deleter.compareAndSet(NULL_DELETER, p)
             val res = node.deleter.value == p
-            recoveryData[p].read(p)!!.result.write(res, p)
-            recoveryData[p].read(p)!!.result.flush(p)
+            recoveryData[p].value!!.result.value = res
+            recoveryData[p].value!!.result.flush()
             return res
         }
         return removeImpl(p, value)

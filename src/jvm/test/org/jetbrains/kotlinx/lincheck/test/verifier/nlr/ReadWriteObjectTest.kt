@@ -97,18 +97,18 @@ class NRLReadWriteObject<T>(threadsCount: Int) : VerifierState() {
 
     fun writeImpl(value: T, p: Int) {
         val tmp = R
-        S[p].write(1 to tmp, p)
-        NVMCache.flush(p)
+        S[p].value = 1 to tmp
+        NVMCache.flush()
         R = value
-        S[p].write(0 to value, p)
-        NVMCache.flush(p)
+        S[p].value = 0 to value
+        NVMCache.flush()
     }
 
     fun writeRecover(value: T, p: Int) {
-        val (flag, current) = S[p].read(p)
+        val (flag, current) = S[p].value
         if (flag == 0 && current != value) return writeImpl(value, p)
         else if (flag == 1 && current == R) return writeImpl(value, p)
-        S[p].write(0 to value, p)
-        NVMCache.flush(p)
+        S[p].value = 0 to value
+        NVMCache.flush()
     }
 }

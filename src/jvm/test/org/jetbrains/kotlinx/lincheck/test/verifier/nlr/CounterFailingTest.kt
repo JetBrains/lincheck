@@ -21,8 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
-import junit.framework.Assert.assertTrue
-import junit.framework.Assert.fail
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -33,6 +31,8 @@ import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 private const val THREADS_NUMBER = 2
@@ -74,7 +74,7 @@ private class NRLFailingCounter @Recoverable constructor(threadsCount: Int) : Ve
     private val CurrentValue = MutableList(threadsCount) { nonVolatile(0) }
 
     init {
-        NVMCache.flush(0)
+        NVMCache.flush()
     }
 
     override fun extractState() = R.sumBy { it.read()!! }
@@ -82,8 +82,8 @@ private class NRLFailingCounter @Recoverable constructor(threadsCount: Int) : Ve
     @Recoverable
     fun get(p: Int): Int {
         val returnValue = R.sumBy { it.read()!! }
-        Response[p].write(returnValue, p)
-        Response[p].flush(p)
+        Response[p].value = returnValue
+        Response[p].flush()
         return returnValue
     }
 
@@ -93,19 +93,19 @@ private class NRLFailingCounter @Recoverable constructor(threadsCount: Int) : Ve
     }
 
     private fun incrementImpl(p: Int) {
-        R[p].write(1 + CurrentValue[p].read(p), p)
-        CheckPointer[p].write(1, p)
-        CheckPointer[p].flush(p)
+        R[p].write(1 + CurrentValue[p].value, p)
+        CheckPointer[p].value = 1
+        CheckPointer[p].flush()
     }
 
     private fun incrementRecover(p: Int) {
-        if (CheckPointer[p].read(p) == 0) return incrementImpl(p)
+        if (CheckPointer[p].value == 0) return incrementImpl(p)
     }
 
     private fun incrementBefore(p: Int) {
-        CurrentValue[p].write(R[p].read()!!, p)
-        CheckPointer[p].write(0, p)
-        CurrentValue[p].flush(p)
-        CurrentValue[p].flush(p) // should be CheckPointer[p].flush(p)
+        CurrentValue[p].value = R[p].read()!!
+        CheckPointer[p].value = 0
+        CurrentValue[p].flush()
+        CurrentValue[p].flush() // should be CheckPointer[p].flush(p)
     }
 }

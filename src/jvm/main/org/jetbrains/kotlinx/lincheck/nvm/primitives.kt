@@ -24,24 +24,22 @@ package org.jetbrains.kotlinx.lincheck.nvm
 import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
 
-
-private fun thread() = RecoverableStateContainer.threadId()
-
 abstract class AbstractNonVolatilePrimitive {
-    protected val empty = BooleanArray(NVMCache.MAX_THREADS_NUMBER) { true }
+    internal abstract fun flushInternal()
+    internal abstract fun systemCrash()
 
-    abstract fun flushInternal(threadId: Int = thread())
-    fun flush(threadId: Int = thread()) {
-        flushInternal(threadId)
-        NVMCache.remove(threadId, this)
+    fun flush() {
+        flushInternal()
+        NVMCache.remove(RecoverableStateContainer.threadId(), this)
     }
 
-    internal fun crash(threadId: Int) {
+    internal fun crash() {
         if (Probability.shouldFlush()) {
-            flushInternal(threadId)
+            flushInternal()
         }
-        empty[threadId] = true
     }
+
+    protected fun addToCache() = NVMCache.add(RecoverableStateContainer.threadId(), this)
 }
 
 fun nonVolatile(value: Int) = NonVolatileInt(value)
@@ -55,39 +53,40 @@ class NonVolatileRef<T> internal constructor(initialValue: T) : AbstractNonVolat
     private var nonVolatileValue = initialValue
     private val volatileValue = atomic(initialValue)
 
-    fun read(threadId: Int = thread()) = if (empty[threadId]) nonVolatileValue else volatileValue.value
+    var value: T
+        get() = volatileValue.value
+        set(_value) {
+            volatileValue.value = _value
+            addToCache()
+        }
 
-    fun write(value: T, threadId: Int = thread()) {
-        empty[threadId] = false
-        volatileValue.value = value
-        NVMCache.add(threadId, this)
-    }
-
-    override fun flushInternal(threadId: Int) {
-        if (empty[threadId]) return
+    override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
 
-    fun writeAndFlush(value: T, threadId: Int = RecoverableStateContainer.threadId()) {
-        empty[threadId] = false
+    override fun systemCrash() {
+        crash()
+        volatileValue.value = nonVolatileValue
+    }
+
+    fun setAndFlush(value: T) {
         volatileValue.value = value
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: T, update: T, threadId: Int = RecoverableStateContainer.threadId()): Boolean {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun compareAndSet(expect: T, update: T): Boolean {
+        addToCache()
         return volatileValue.compareAndSet(expect, update)
     }
 
-    fun getAndSet(value: T, threadId: Int = RecoverableStateContainer.threadId()): T {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun getAndSet(value: T): T {
+        addToCache()
         return volatileValue.getAndSet(value)
+    }
+
+    fun lazySet(value: T) {
+        addToCache()
+        volatileValue.lazySet(value)
     }
 }
 
@@ -96,39 +95,80 @@ class NonVolatileInt internal constructor(initialValue: Int) : AbstractNonVolati
     private var nonVolatileValue = initialValue
     private val volatileValue = atomic(initialValue)
 
-    fun read(threadId: Int = thread()) = if (empty[threadId]) nonVolatileValue else volatileValue.value
+    var value: Int
+        get() = volatileValue.value
+        set(_value) {
+            volatileValue.value = _value
+            addToCache()
+        }
 
-    fun write(value: Int, threadId: Int = thread()) {
-        empty[threadId] = false
-        volatileValue.value = value
-        NVMCache.add(threadId, this)
-    }
-
-    override fun flushInternal(threadId: Int) {
-        if (empty[threadId]) return
+    override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
 
-    fun writeAndFlush(value: Int, threadId: Int = RecoverableStateContainer.threadId()) {
-        empty[threadId] = false
+    override fun systemCrash() {
+        crash()
+        volatileValue.value = nonVolatileValue
+    }
+
+    fun setAndFlush(value: Int) {
         volatileValue.value = value
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: Int, update: Int, threadId: Int = RecoverableStateContainer.threadId()): Boolean {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun compareAndSet(expect: Int, update: Int): Boolean {
+        addToCache()
         return volatileValue.compareAndSet(expect, update)
     }
 
-    fun getAndSet(value: Int, threadId: Int = RecoverableStateContainer.threadId()): Int {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun getAndSet(value: Int): Int {
+        addToCache()
         return volatileValue.getAndSet(value)
+    }
+
+    fun lazySet(value: Int) {
+        addToCache()
+        volatileValue.lazySet(value)
+    }
+
+    fun getAndIncrement(): Int {
+        addToCache()
+        return volatileValue.getAndIncrement()
+    }
+
+    fun getAndDecrement(): Int {
+        addToCache()
+        return volatileValue.getAndDecrement()
+    }
+
+    fun incrementAndGet(): Int {
+        addToCache()
+        return volatileValue.incrementAndGet()
+    }
+
+    fun decrementAndGet(): Int {
+        addToCache()
+        return volatileValue.decrementAndGet()
+    }
+
+    fun getAndAdd(delta: Int): Int {
+        addToCache()
+        return volatileValue.getAndAdd(delta)
+    }
+
+    fun addAndGet(delta: Int): Int {
+        addToCache()
+        return volatileValue.addAndGet(delta)
+    }
+
+    operator fun plusAssign(delta: Int) {
+        addToCache()
+        return volatileValue.plusAssign(delta)
+    }
+
+    operator fun minusAssign(delta: Int) {
+        addToCache()
+        return volatileValue.minusAssign(delta)
     }
 }
 
@@ -138,39 +178,80 @@ class NonVolatileLong internal constructor(initialValue: Long) : AbstractNonVola
     private var nonVolatileValue = initialValue
     private val volatileValue = atomic(initialValue)
 
-    fun read(threadId: Int = thread()) = if (empty[threadId]) nonVolatileValue else volatileValue.value
+    var value: Long
+        get() = volatileValue.value
+        set(_value) {
+            volatileValue.value = _value
+            addToCache()
+        }
 
-    fun write(value: Long, threadId: Int = thread()) {
-        empty[threadId] = false
-        volatileValue.value = value
-        NVMCache.add(threadId, this)
-    }
-
-    override fun flushInternal(threadId: Int) {
-        if (empty[threadId]) return
+    override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
 
-    fun writeAndFlush(value: Long, threadId: Int = RecoverableStateContainer.threadId()) {
-        empty[threadId] = false
+    override fun systemCrash() {
+        crash()
+        volatileValue.value = nonVolatileValue
+    }
+
+    fun setAndFlush(value: Long) {
         volatileValue.value = value
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: Long, update: Long, threadId: Int = RecoverableStateContainer.threadId()): Boolean {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun compareAndSet(expect: Long, update: Long): Boolean {
+        addToCache()
         return volatileValue.compareAndSet(expect, update)
     }
 
-    fun getAndSet(value: Long, threadId: Int = RecoverableStateContainer.threadId()): Long {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun getAndSet(value: Long): Long {
+        addToCache()
         return volatileValue.getAndSet(value)
+    }
+
+    fun lazySet(value: Long) {
+        addToCache()
+        volatileValue.lazySet(value)
+    }
+
+    fun getAndIncrement(): Long {
+        addToCache()
+        return volatileValue.getAndIncrement()
+    }
+
+    fun getAndDecrement(): Long {
+        addToCache()
+        return volatileValue.getAndDecrement()
+    }
+
+    fun incrementAndGet(): Long {
+        addToCache()
+        return volatileValue.incrementAndGet()
+    }
+
+    fun decrementAndGet(): Long {
+        addToCache()
+        return volatileValue.decrementAndGet()
+    }
+
+    fun getAndAdd(delta: Long): Long {
+        addToCache()
+        return volatileValue.getAndAdd(delta)
+    }
+
+    fun addAndGet(delta: Long): Long {
+        addToCache()
+        return volatileValue.addAndGet(delta)
+    }
+
+    operator fun plusAssign(delta: Long) {
+        addToCache()
+        return volatileValue.plusAssign(delta)
+    }
+
+    operator fun minusAssign(delta: Long) {
+        addToCache()
+        return volatileValue.minusAssign(delta)
     }
 }
 
@@ -179,39 +260,39 @@ class NonVolatileBoolean internal constructor(initialValue: Boolean) : AbstractN
     private var nonVolatileValue = initialValue
     private val volatileValue = atomic(initialValue)
 
-    fun read(threadId: Int = thread()) = if (empty[threadId]) nonVolatileValue else volatileValue.value
+    var value: Boolean
+        get() = volatileValue.value
+        set(_value) {
+            volatileValue.value = _value
+            addToCache()
+        }
 
-    fun write(value: Boolean, threadId: Int = thread()) {
-        empty[threadId] = false
-        volatileValue.value = value
-        NVMCache.add(threadId, this)
-    }
-
-    override fun flushInternal(threadId: Int) {
-        if (empty[threadId]) return
+    override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
 
-    fun writeAndFlush(value: Boolean, threadId: Int = RecoverableStateContainer.threadId()) {
-        empty[threadId] = false
+    override fun systemCrash() {
+        crash()
+        volatileValue.value = nonVolatileValue
+    }
+
+    fun setAndFlush(value: Boolean) {
         volatileValue.value = value
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: Boolean, update: Boolean, threadId: Int = RecoverableStateContainer.threadId()): Boolean {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun compareAndSet(expect: Boolean, update: Boolean): Boolean {
+        addToCache()
         return volatileValue.compareAndSet(expect, update)
     }
 
-    fun getAndSet(value: Boolean, threadId: Int = RecoverableStateContainer.threadId()): Boolean {
-        if (empty[threadId]) {
-            volatileValue.value = nonVolatileValue
-        }
-        NVMCache.add(threadId, this)
+    fun getAndSet(value: Boolean): Boolean {
+        addToCache()
         return volatileValue.getAndSet(value)
     }
-}
 
+    fun lazySet(value: Boolean) {
+        addToCache()
+        volatileValue.lazySet(value)
+    }
+}

@@ -86,43 +86,43 @@ class NRLTestAndSet(private val threadsCount: Int) : VerifierState() {
 
     @Recoverable(recoverMethod = "testAndSetRecover")
     fun testAndSet(p: Int): Int {
-        R[p].writeAndFlush(value = 1)
+        R[p].setAndFlush(value = 1)
         val returnValue: Int
         if (!Doorway) {
             returnValue = 1
         } else {
-            R[p].writeAndFlush(value = 2)
+            R[p].setAndFlush(value = 2)
             Doorway = false
             returnValue = tas.testAndSet()
             if (returnValue == 0) {
                 Winner = p
             }
         }
-        Response[p].writeAndFlush(value = returnValue)
-        R[p].writeAndFlush(value = 3)
+        Response[p].setAndFlush(value = returnValue)
+        R[p].setAndFlush(value = 3)
         return returnValue
     }
 
     private fun testAndSetRecover(p: Int): Int {
-        if (R[p].read() < 2) return testAndSet(p)
-        if (R[p].read() == 3) return Response[p].read()
+        if (R[p].value < 2) return testAndSet(p)
+        if (R[p].value == 3) return Response[p].value
         if (Winner == -1) {
             Doorway = false
-            R[p].writeAndFlush(value = 4)
+            R[p].setAndFlush(value = 4)
             tas.testAndSet()
             for (i in 0 until p) {
-                wailUntil { R[i].read().let { it == 0 || it == 3 } }
+                wailUntil { R[i].value.let { it == 0 || it == 3 } }
             }
             for (i in p + 1 until threadsCount) {
-                wailUntil { R[i].read().let { it == 0 || it > 2 } }
+                wailUntil { R[i].value.let { it == 0 || it > 2 } }
             }
             if (Winner == -1) {
                 Winner = p
             }
         }
         val returnValue = if (Winner == p) 0 else 1
-        Response[p].writeAndFlush(value = returnValue)
-        R[p].writeAndFlush(value = 3)
+        Response[p].setAndFlush(value = returnValue)
+        R[p].setAndFlush(value = 3)
         return returnValue
     }
 
