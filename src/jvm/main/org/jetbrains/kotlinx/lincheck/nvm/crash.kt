@@ -22,9 +22,9 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.locks.withLock
 import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * This exception is used to emulate system crash.
@@ -37,15 +37,18 @@ object Crash {
      * Crash simulation.
      * @throws CrashError
      */
-    private fun crash(threadId: Int) {
-        NVMCache.crash(threadId)
+    private fun crash(threadId: Int, systemCrash: Boolean) {
+        NVMCache.crash(threadId, systemCrash)
         throw CRASH.also { RecoverableStateContainer.registerCrash(threadId, it) }
     }
 
     private val CRASH = CrashError()
 
-    private val threads: MutableSet<Int> = Collections.newSetFromMap(ConcurrentHashMap())
-    private val waitingCont = atomic(0)
+    private var threadsCount = 0
+    private var waitingCount = 0
+    private val lock = ReentrantLock()
+    private val condition = lock.newCondition()
+    private val waiting = atomic(false)
 
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
@@ -53,33 +56,48 @@ object Crash {
      */
     @JvmStatic
     fun possiblyCrash() {
-//        if (waitingCont.value > 0) {
-//            val threadId = threadId()
-//            awaitSystemCrash(threadId)
-//            crash(threadId)
-//        }
+        if (waitingCount > 0) {
+            val threadId = RecoverableStateContainer.threadId()
+            awaitSystemCrash(threadId)
+            crash(threadId, systemCrash = true)
+        }
         if (Probability.shouldCrash()) {
             val threadId = RecoverableStateContainer.threadId()
-//            if (Probability.shouldSystemCrash()) {
-//                awaitSystemCrash(threadId)
-//            }
-            crash(threadId)
+            if (Probability.shouldSystemCrash()) {
+                awaitSystemCrash(threadId)
+                crash(threadId, systemCrash = true)
+            } else {
+                crash(threadId, systemCrash = false)
+            }
         }
     }
 
-    private fun awaitSystemCrash(threadId: Int) {
-        waitingCont.incrementAndGet()
-        threads.add(threadId)
-        var threadsCount: Int
-        do {
-            threadsCount = threads.size
-        } while (waitingCont.value < threadsCount)
-        waitingCont.compareAndSet(threadsCount, 0)
+    private fun awaitSystemCrash(threadId: Int) = lock.withLock {
+        waitingCount++
+        if (threadsCount == waitingCount) {
+            waitingCount = 0
+            condition.signalAll()
+        } else {
+            condition.await()
+        }
     }
 
     /** Should be called when thread finished. */
-    @JvmStatic
-    fun exit(threadId: Int) {
-        threads.remove(threadId)
+    fun exit(threadId: Int) = lock.withLock {
+        threadsCount--
+        if (threadsCount == waitingCount) {
+            waitingCount = 0
+            condition.signalAll()
+        }
+    }
+
+    /** Should be called when thread started. */
+    fun register(threadId: Int) = lock.withLock {
+        threadsCount++
+    }
+
+    fun reset() {
+        threadsCount = 0
+        waitingCount = 0
     }
 }

@@ -24,10 +24,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.nvm.CrashError
-import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
-import org.jetbrains.kotlinx.lincheck.nvm.Probability
-import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityTransformer
+import org.jetbrains.kotlinx.lincheck.nvm.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -295,6 +292,8 @@ internal open class ParallelThreadsRunner(
         beforeInit()
         reset()
         RecoverableStateContainer.crashesEnabled = true
+        Crash.reset()
+        Crash.register(0)
         val initResults = scenario.initExecution.mapIndexed { i, initActor ->
             RecoverableStateContainer.actorStarted(0)
             executeActor(testInstance, initActor).also {
@@ -309,6 +308,7 @@ internal open class ParallelThreadsRunner(
             }
         }
         val afterInitStateRepresentation = constructStateRepresentation()
+        Crash.exit(0)
         beforeParallel(scenario.threads)
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
@@ -333,6 +333,7 @@ internal open class ParallelThreadsRunner(
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
         beforePost()
+        Crash.register(scenario.threads + 1)
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
             RecoverableStateContainer.actorStarted(scenario.parallelExecution.size + 1)
             // no actors are executed after suspension of a post part
@@ -355,6 +356,7 @@ internal open class ParallelThreadsRunner(
             result
         }
         val afterPostStateRepresentation = constructStateRepresentation()
+        Crash.exit(scenario.threads + 1)
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,
@@ -386,6 +388,7 @@ internal open class ParallelThreadsRunner(
 
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
+        Crash.register(iThread + 1)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1
@@ -396,6 +399,11 @@ internal open class ParallelThreadsRunner(
             }
             i++
         }
+    }
+
+    override fun onFinish(iThread: Int) {
+        super.onFinish(iThread)
+        Crash.exit(iThread + 1)
     }
 
     override fun needsTransformation() = true

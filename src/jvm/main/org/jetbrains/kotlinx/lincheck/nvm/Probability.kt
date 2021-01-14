@@ -57,7 +57,7 @@ object Probability {
     }
 
     private const val RANDOM_FLUSH_PROBABILITY = 0.2f
-    private const val RANDOM_SYSTEM_CRASH_PROBABILITY = 0.3f
+    private const val RANDOM_SYSTEM_CRASH_PROBABILITY = 0.5f
 
     fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
     fun shouldCrash() = RecoverableStateContainer.crashesEnabled
