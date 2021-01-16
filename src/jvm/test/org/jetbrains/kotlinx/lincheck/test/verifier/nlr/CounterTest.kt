@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-private const val THREADS_NUMBER = 2
+private const val THREADS_NUMBER = 3
 
 /**
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>

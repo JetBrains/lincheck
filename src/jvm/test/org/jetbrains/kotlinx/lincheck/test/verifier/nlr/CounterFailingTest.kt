@@ -35,7 +35,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-private const val THREADS_NUMBER = 2
+private const val THREADS_NUMBER = 3
 
 
 @StressCTest(

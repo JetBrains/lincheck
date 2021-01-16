@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQu
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-private const val THREADS_NUMBER = 2
+private const val THREADS_NUMBER = 3
 
 /**
  * @see  <a href="http://www.cs.technion.ac.il/~erez/Papers/nvm-queue-full.pdf">A Persistent Lock-Free Queue for Non-Volatile Memory</a>

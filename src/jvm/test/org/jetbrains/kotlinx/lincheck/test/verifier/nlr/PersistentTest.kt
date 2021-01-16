@@ -31,7 +31,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 @OpGroupConfig(name = "write", nonParallel = true)
-@StressCTest(sequentialSpecification = Sequential::class)
+@StressCTest(sequentialSpecification = Sequential::class, threads = 3)
 internal class PersistentTest {
     private val x = nonVolatile(0)
 
