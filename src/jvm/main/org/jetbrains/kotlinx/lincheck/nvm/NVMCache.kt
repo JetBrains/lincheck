@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
 object NVMCache {
     const val MAX_THREADS_NUMBER = 10
 
-    private val cache = Array<HashSet<AbstractNonVolatilePrimitive>?>(MAX_THREADS_NUMBER) { null }
+    private val cache = Array<SmartSet<AbstractNonVolatilePrimitive>?>(MAX_THREADS_NUMBER) { null }
 
     /** Flushes all local variables of thread. */
     fun flush() {
@@ -38,7 +38,7 @@ object NVMCache {
     }
 
     internal fun add(threadId: Int, variable: AbstractNonVolatilePrimitive) {
-        val localCache = cache[threadId] ?: hashSetOf<AbstractNonVolatilePrimitive>().also { cache[threadId] = it }
+        val localCache = cache[threadId] ?: SmartSet<AbstractNonVolatilePrimitive>().also { cache[threadId] = it }
         localCache.add(variable)
     }
 
