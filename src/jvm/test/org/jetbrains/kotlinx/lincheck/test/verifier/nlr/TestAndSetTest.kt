@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
+import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
@@ -38,7 +39,7 @@ private const val THREADS_NUMBER = 5
 @StressCTest(
     sequentialSpecification = SequentialTestAndSet::class,
     threads = THREADS_NUMBER,
-    addCrashes = true,
+    recover = Recover.NRL,
     actorsBefore = 0,
     actorsPerThread = 1
 )

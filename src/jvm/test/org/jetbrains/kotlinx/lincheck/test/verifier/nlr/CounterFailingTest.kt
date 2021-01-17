@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
+import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
@@ -41,7 +42,7 @@ private const val THREADS_NUMBER = 3
 @StressCTest(
     sequentialSpecification = SequentialCounter::class,
     threads = THREADS_NUMBER,
-    addCrashes = true
+    recover = Recover.NRL
 )
 internal class CounterFailingTest {
     private val counter = NRLFailingCounter(THREADS_NUMBER + 2)

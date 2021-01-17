@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -33,12 +35,12 @@ class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: In
                                generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
                                val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
                                sequentialSpecification: Class<*>?, timeoutMs: Long,
-                               val addCrashes: Boolean = false
+                               val recoverabilityModel: RecoverabilityModel = NoRecoverModel()
 ) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier) =
-        StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier, addCrashes)
+        StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier, recoverabilityModel)
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000

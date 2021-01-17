@@ -72,7 +72,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
                 chooseSequentialSpecification(ann.sequentialSpecification.java, testClass), DEFAULT_TIMEOUT_MS,
-                ann.addCrashes
+                ann.recover.createModel()
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)

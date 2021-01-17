@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -34,20 +35,10 @@ class StressStrategy(
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
     private val verifier: Verifier,
-    addCrashes: Boolean = false
+    recoverabilityModel: RecoverabilityModel
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: Runner = if (addCrashes) {
-        RecoverableParallelThreadsRunner(
-            this, testClass, validationFunctions, stateRepresentationFunction,
-            testCfg.timeoutMs, UseClocks.RANDOM
-        )
-    } else {
-        ParallelThreadsRunner(
-            this, testClass, validationFunctions, stateRepresentationFunction,
-            testCfg.timeoutMs, UseClocks.RANDOM
-        )
-    }
+    private val runner: Runner = recoverabilityModel.createRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg)
 
     init {
         try {
