@@ -101,7 +101,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susWithoutException), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
+                        actor(susWithoutException), createExceptionResult(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -126,7 +126,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susResumeThrow), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
+                        actor(susResumeThrow), createExceptionResult(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -149,7 +149,7 @@ class ParallelThreadsRunnerExceptionTest {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
-                    operation(actor(susThrow), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java))
+                    operation(actor(susThrow), createExceptionResult(SuspendResumeScenarios.TestException::class.java))
                 }
             }
         }

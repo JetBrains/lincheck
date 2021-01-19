@@ -20,13 +20,13 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.*
 import java.io.Serializable
-import kotlin.coroutines.*
 
 /**
  * Type of result used if the actor invocation returns any value.
  */
-class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
+actual class ValueResult @JvmOverloads constructor(actual val value: Any?, override val wasSuspended: Boolean = false) : Result() {
     private val valueClassTransformed: Boolean get() = value?.javaClass?.classLoader is TransformationClassLoader
     private val serializedObject: ByteArray by lazy(LazyThreadSafetyMode.NONE) {
         check(value is Serializable) {
@@ -45,7 +45,7 @@ class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSus
 
     override fun toString() = wasSuspendedPrefix + "$value"
 
-    override fun equals(other: Any?): Boolean {
+    actual override fun equals(other: Any?): Boolean {
         // Check that the classes are equal by names
         // since they can be loaded via different class loaders.
         if (javaClass.name != other?.javaClass?.name) return false
@@ -57,23 +57,9 @@ class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSus
                else serializedObject.contentEquals(other.serializedObject)
     }
 
-    override fun hashCode(): Int = if (wasSuspended) 0 else 1  // we cannot use the value here
-}
-
-/**
- * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
- */
-@Suppress("DataClassPrivateConstructor")
-data class ExceptionResult private constructor(val tClazz: Class<out Throwable>, override val wasSuspended: Boolean) : Result() {
-    override fun toString() = wasSuspendedPrefix + tClazz.simpleName
-
-    companion object {
-        @Suppress("UNCHECKED_CAST")
-        @JvmOverloads
-        fun create(tClazz: Class<out Throwable>, wasSuspended: Boolean = false) = ExceptionResult(tClazz.normalize(), wasSuspended)
-    }
+    actual override fun hashCode(): Int = if (wasSuspended) 0 else 1  // we cannot use the value here
 }
 
 // for byte-code generation
-@JvmSynthetic
-fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
+@JvmOverloads
+fun createExceptionResult(tClazz: Class<out Throwable>, wasSuspended: Boolean = false) = ExceptionResult(tClazz.normalize().kotlin, false)

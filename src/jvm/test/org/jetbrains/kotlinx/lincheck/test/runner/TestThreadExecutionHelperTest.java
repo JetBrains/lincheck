@@ -108,8 +108,8 @@ public class TestThreadExecutionHelperTest {
         Assert.assertArrayEquals(new Result[]{
             VoidResult.INSTANCE,
             new ValueResult(1),
-            ExceptionResult.Companion.create(NoSuchElementException.class),
-            ExceptionResult.Companion.create(NoSuchElementException.class)
+            ResultKt.createExceptionResult(NoSuchElementException.class),
+            ResultKt.createExceptionResult(NoSuchElementException.class)
         }, ex.results);
     }
 }

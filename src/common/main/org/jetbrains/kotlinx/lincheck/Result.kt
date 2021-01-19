@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlin.coroutines.*
 import kotlin.jvm.*
+import kotlin.reflect.*
 
 /**
  * The instance of this class represents a result of actor invocation.
@@ -38,6 +39,14 @@ import kotlin.jvm.*
 abstract class Result {
     abstract val wasSuspended: Boolean
     protected val wasSuspendedPrefix: String get() = (if (wasSuspended) "SUSPENDED + " else "")
+}
+
+/**
+ * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
+ */
+@Suppress("DataClassPrivateConstructor")
+data class ExceptionResult internal constructor(val tClazz: KClass<out Throwable>, override val wasSuspended: Boolean) : Result() {
+    override fun toString() = wasSuspendedPrefix + tClazz.simpleName
 }
 
 /**

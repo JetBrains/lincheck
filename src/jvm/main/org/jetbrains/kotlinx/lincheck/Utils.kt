@@ -65,7 +65,7 @@ internal fun executeActor(
         val eClass = (invE.cause ?: invE).javaClass.normalize()
         for (ec in actor.handledExceptions) {
             if (ec.isAssignableFrom(eClass))
-                return ExceptionResult.create(eClass)
+                return createExceptionResult(eClass)
         }
         throw IllegalStateException("Invalid exception as a result of $actor", invE)
     } catch (e: Exception) {
@@ -140,7 +140,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  */
 internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
-    res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
+    res != null && res is Throwable -> createExceptionResult(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
     else -> ValueResult(res, wasSuspended)
@@ -154,7 +154,7 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Throwable -> ValueResult(value::class.java, wasSuspended)
             else -> ValueResult(value, wasSuspended)
         }
-    } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
+    } else createExceptionResult(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
