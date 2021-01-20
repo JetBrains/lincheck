@@ -1,32 +1,33 @@
-/*-
- * #%L
+/*
  * Lincheck
- * %%
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
- * %%
+ *
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
-import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
+import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -35,7 +36,12 @@ private const val THREADS_NUMBER = 3
 /**
  * @see  <a href="http://www.cs.technion.ac.il/~erez/Papers/nvm-queue-full.pdf">A Persistent Lock-Free Queue for Non-Volatile Memory</a>
  */
-class DurableMSQueueTest : AbstractLincheckTest() {
+@StressCTest(
+    sequentialSpecification = SequentialQueue::class,
+    threads = THREADS_NUMBER,
+    recover = Recover.DURABLE
+)
+class DurableMSQueueTest {
     private val q = DurableMSQueue<Int>(2 + THREADS_NUMBER)
 
     @Operation
@@ -44,10 +50,9 @@ class DurableMSQueueTest : AbstractLincheckTest() {
     @Operation
     fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId)
 
-    override fun <O : Options<O, *>> O.customize() {
-        sequentialSpecification(SequentialQueue::class.java)
-        threads(THREADS_NUMBER)
-    }
+    // verification is incomplete
+    @Test(expected = LincheckAssertionError::class)
+    fun test() = LinChecker.check(this::class.java)
 }
 
 

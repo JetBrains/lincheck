@@ -82,8 +82,8 @@ internal class RecoverableParallelThreadsRunner(
     stateRepresentationFunction: Method?,
     timeoutMs: Long,
     useClocks: UseClocks,
-    private val recoverModel: RecoverabilityModel
-) : ParallelThreadsRunner(strategy, testClass, validationFunctions, stateRepresentationFunction, timeoutMs, useClocks) {
+    recoverModel: RecoverabilityModel
+) : ParallelThreadsRunner(strategy, testClass, validationFunctions, stateRepresentationFunction, timeoutMs, useClocks, recoverModel) {
     override fun needsTransformation() = true
     override fun createTransformer(cv: ClassVisitor) =
         recoverModel.createTransformer(super.createTransformer(cv), _testClass)
@@ -104,7 +104,6 @@ internal class RecoverableParallelThreadsRunner(
             scenario.initExecution.size + scenario.parallelExecution.sumBy { it.size } + scenario.postExecution.size
         Crash.reset()
         RecoverableStateContainer.state = ExecutionState.INIT
-        RecoverableStateContainer.crashesEnabled = true
         Crash.register(0)
     }
 
@@ -113,10 +112,12 @@ internal class RecoverableParallelThreadsRunner(
         super.beforeParallel(threads)
         RecoverableStateContainer.threads = threads
         RecoverableStateContainer.state = ExecutionState.PARALLEL
+        RecoverableStateContainer.crashesEnabled = true
     }
 
     override fun beforePost() {
         super.beforePost()
+        RecoverableStateContainer.crashesEnabled = false
         RecoverableStateContainer.state = ExecutionState.POST
         Crash.register(scenario.threads + 1)
     }
@@ -124,7 +125,6 @@ internal class RecoverableParallelThreadsRunner(
     override fun afterPost() {
         super.afterPost()
         Crash.exit(scenario.threads + 1)
-        RecoverableStateContainer.crashesEnabled = false
         RecoverableStateContainer.state = ExecutionState.INIT
     }
 

@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck.runner
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
+import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -49,7 +51,8 @@ internal open class ParallelThreadsRunner(
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
-    private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
+    private val useClocks: UseClocks, // specifies whether `HBClock`-s should always be used or with some probability
+    protected val recoverModel: RecoverabilityModel = NoRecoverModel()
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
@@ -81,7 +84,7 @@ internal open class ParallelThreadsRunner(
     override fun initialize() {
         super.initialize()
         testThreadExecutions = Array(scenario.threads) { t ->
-            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), recoverModel.createActorCrashHandlerGenerator())
         }
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }

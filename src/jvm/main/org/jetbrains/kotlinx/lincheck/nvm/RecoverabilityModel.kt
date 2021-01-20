@@ -20,21 +20,19 @@
 
 package org.jetbrains.kotlinx.lincheck.nvm
 
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
-import org.jetbrains.kotlinx.lincheck.runner.RecoverableParallelThreadsRunner
-import org.jetbrains.kotlinx.lincheck.runner.Runner
-import org.jetbrains.kotlinx.lincheck.runner.UseClocks
+import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.objectweb.asm.ClassVisitor
 import java.lang.reflect.Method
 
 enum class Recover {
-    NO_RECOVER, NRL;
+    NO_RECOVER, NRL, DURABLE;
 
     fun createModel() = when (this) {
         NO_RECOVER -> NoRecoverModel()
         NRL -> NRLModel()
+        DURABLE -> DurableModel()
     }
 }
 
@@ -49,6 +47,8 @@ interface RecoverabilityModel {
         stateRepresentationFunction: Method?,
         testCfg: StressCTestConfiguration
     ): Runner
+
+    fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
 }
 
 class NoRecoverModel : RecoverabilityModel {
@@ -62,8 +62,10 @@ class NoRecoverModel : RecoverabilityModel {
         testCfg: StressCTestConfiguration
     ): Runner = ParallelThreadsRunner(
         strategy, testClass, validationFunctions, stateRepresentationFunction,
-        testCfg.timeoutMs, UseClocks.RANDOM
+        testCfg.timeoutMs, UseClocks.RANDOM, this
     )
+
+    override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
 }
 
 class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
@@ -85,4 +87,27 @@ class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
         strategy, testClass, validationFunctions, stateRepresentationFunction,
         testCfg.timeoutMs, UseClocks.RANDOM, this
     )
+
+    override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
+}
+
+class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
+    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) = if (crashes) {
+        CrashTransformer(cv, clazz)
+    } else {
+        cv
+    }
+
+    override fun createRunner(
+        strategy: StressStrategy,
+        testClass: Class<*>,
+        validationFunctions: List<Method>,
+        stateRepresentationFunction: Method?,
+        testCfg: StressCTestConfiguration
+    ): Runner = RecoverableParallelThreadsRunner(
+        strategy, testClass, validationFunctions, stateRepresentationFunction,
+        testCfg.timeoutMs, UseClocks.RANDOM, this
+    )
+
+    override fun createActorCrashHandlerGenerator() = DurableActorCrashHandlerGenerator()
 }

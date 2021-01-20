@@ -1,5 +1,6 @@
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.nvm.CrashError
 import java.io.Serializable
 import kotlin.coroutines.*
 
@@ -139,3 +140,11 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
     lateinit var resumedActor: Actor
     lateinit var by: Actor
 }
+
+data class CrashResult(val e: CrashError) : Result() {
+    override val wasSuspended get() = false
+}
+
+// for byte-code generation
+@JvmSynthetic
+fun creteCrashResult(e: CrashError) = CrashResult(e)
