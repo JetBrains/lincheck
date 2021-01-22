@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.Probability
@@ -117,7 +116,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
         }
         if (testCfg is StressCTestConfiguration && testCfg.recoverabilityModel.crashes && this is IncorrectResultsFailure)
-            return minimizeCrashes(testCfg, verifier).also { Probability.expectedCrashes = 10 }
+            return minimizeCrashes(testCfg, verifier).also { Probability.expectedCrashes = Probability.defaultCrashes }
         return this
     }
 

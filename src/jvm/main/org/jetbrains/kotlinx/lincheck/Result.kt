@@ -141,10 +141,11 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
     lateinit var by: Actor
 }
 
-data class CrashResult(val e: CrashError) : Result() {
+object CrashResult : Result() {
     override val wasSuspended get() = false
+    override fun toString() = "CRASH"
 }
 
 // for byte-code generation
 @JvmSynthetic
-fun creteCrashResult(e: CrashError) = CrashResult(e)
+fun creteCrashResult() = CrashResult

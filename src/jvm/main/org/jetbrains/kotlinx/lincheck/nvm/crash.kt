@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.nvm
 
-import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.withLock
 import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
 import java.util.concurrent.locks.ReentrantLock
@@ -48,7 +47,6 @@ object Crash {
     private var waitingCount = 0
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()
-    private val waiting = atomic(false)
 
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
@@ -58,13 +56,11 @@ object Crash {
     fun possiblyCrash() {
         if (waitingCount > 0) {
             val threadId = RecoverableStateContainer.threadId()
-            awaitSystemCrash(threadId)
             crash(threadId, systemCrash = true)
         }
         if (Probability.shouldCrash()) {
             val threadId = RecoverableStateContainer.threadId()
             if (Probability.shouldSystemCrash()) {
-                awaitSystemCrash(threadId)
                 crash(threadId, systemCrash = true)
             } else {
                 crash(threadId, systemCrash = false)
@@ -72,7 +68,8 @@ object Crash {
         }
     }
 
-    private fun awaitSystemCrash(threadId: Int) = lock.withLock {
+    @JvmStatic
+    fun awaitSystemCrash() = lock.withLock {
         waitingCount++
         if (threadsCount == waitingCount) {
             waitingCount = 0

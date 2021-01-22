@@ -49,6 +49,8 @@ interface RecoverabilityModel {
     ): Runner
 
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
+    fun systemCrashProbability(): Float
+    fun defaultExpectedCrashes(): Int
 }
 
 class NoRecoverModel : RecoverabilityModel {
@@ -66,6 +68,8 @@ class NoRecoverModel : RecoverabilityModel {
     )
 
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
+    override fun systemCrashProbability() = 0.0f
+    override fun defaultExpectedCrashes() = 0
 }
 
 class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
@@ -89,6 +93,8 @@ class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
     )
 
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
+    override fun systemCrashProbability() = 0.1f
+    override fun defaultExpectedCrashes() = 10
 }
 
 class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
@@ -106,8 +112,10 @@ class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
         testCfg: StressCTestConfiguration
     ): Runner = RecoverableParallelThreadsRunner(
         strategy, testClass, validationFunctions, stateRepresentationFunction,
-        testCfg.timeoutMs, UseClocks.RANDOM, this
+        testCfg.timeoutMs, UseClocks.ALWAYS, this
     )
 
     override fun createActorCrashHandlerGenerator() = DurableActorCrashHandlerGenerator()
+    override fun systemCrashProbability() = 1.0f
+    override fun defaultExpectedCrashes() = 1
 }

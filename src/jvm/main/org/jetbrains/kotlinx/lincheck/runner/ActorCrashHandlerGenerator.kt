@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.CrashResult
+import org.jetbrains.kotlinx.lincheck.nvm.Crash
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
@@ -29,9 +30,9 @@ import org.objectweb.asm.commons.Method
 
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
-private val RESULT_KT_CREATE_CRASH_RESULT_METHOD =
-    Method("creteCrashResult", CRASH_RESULT_TYPE, arrayOf(CRASH_ERROR_TYPE))
-
+private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("creteCrashResult", CRASH_RESULT_TYPE, emptyArray())
+private val CRASH_TYPE = Type.getType(Crash::class.java)
+private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", Type.VOID_TYPE, emptyArray())
 
 open class ActorCrashHandlerGenerator {
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
@@ -54,19 +55,17 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
     }
 
     private fun storeExceptionResultFromCrash(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
-        mv.checkCast(CRASH_ERROR_TYPE)
-        val eLocal = mv.newLocal(CRASH_ERROR_TYPE)
-        mv.storeLocal(eLocal)
+        mv.pop()
 
         mv.loadLocal(resLocal)
         mv.loadLocal(iLocal)
 
-        // Load exception result
-        mv.loadLocal(eLocal)
         // Create crash result instance
         mv.invokeStatic(TestThreadExecutionGenerator.RESULT_KT_TYPE, RESULT_KT_CREATE_CRASH_RESULT_METHOD)
         mv.checkCast(TestThreadExecutionGenerator.RESULT_TYPE)
         mv.arrayStore(TestThreadExecutionGenerator.RESULT_TYPE)
+
+        mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
 
         mv.goTo(skip)
     }

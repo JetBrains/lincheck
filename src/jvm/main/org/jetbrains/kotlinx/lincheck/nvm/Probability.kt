@@ -27,6 +27,12 @@ import kotlin.random.Random
 
 object Probability {
     private val random = Random(42)
+    @Volatile
+    var defaultCrashes = 0
+        set(value) {
+            field = value
+            expectedCrashes = defaultCrashes
+        }
 
     @Volatile
     var totalPossibleCrashes = 0
@@ -43,7 +49,7 @@ object Probability {
         }
 
     @Volatile
-    var expectedCrashes = 10
+    var expectedCrashes = 0
         set(value) {
             field = value
             updateSingleCrashProbability()
@@ -57,14 +63,16 @@ object Probability {
     }
 
     private const val RANDOM_FLUSH_PROBABILITY = 0.2f
-    private const val RANDOM_SYSTEM_CRASH_PROBABILITY = 0.5f
+
+    @Volatile
+    var randomSystemCrashProbability = 0.0f
 
     fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
     fun shouldCrash() = RecoverableStateContainer.crashesEnabled
         && (RecoverableStateContainer.crashesCount() <= expectedCrashes)
         && bernoulli(singleCrashProbability)
 
-    fun shouldSystemCrash() = bernoulli(RANDOM_SYSTEM_CRASH_PROBABILITY)
+    fun shouldSystemCrash() = bernoulli(randomSystemCrashProbability)
 
     private fun bernoulli(probability: Float) = random.nextFloat() < probability
 }

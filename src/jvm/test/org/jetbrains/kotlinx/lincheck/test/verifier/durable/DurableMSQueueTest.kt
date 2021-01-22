@@ -17,10 +17,9 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
+package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
@@ -50,8 +49,7 @@ class DurableMSQueueTest {
     @Operation
     fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId)
 
-    // verification is incomplete
-    @Test(expected = LincheckAssertionError::class)
+    @Test
     fun test() = LinChecker.check(this::class.java)
 }
 
