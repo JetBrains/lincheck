@@ -45,8 +45,11 @@ abstract class AbstractLTSVerifier(protected val sequentialSpecification: Class<
         // Traverse through next possible transitions using depth-first search (DFS). Note that
         // initial and post parts are represented as threads with ids `0` and `threads + 1` respectively.
         for (threadId in threads) {
-            for (nextContext in nextContext(threadId)) {
+            val contexts = nextContext(threadId)
+            var nextContext = contexts.take()
+            while (nextContext != null) {
                 if (nextContext.verify()) return true
+                nextContext = contexts.take()
             }
         }
         return false
@@ -93,7 +96,7 @@ abstract class VerifierContext(
     /**
      * Counts next possible states and the corresponding contexts if the specified thread is executed.
      */
-    abstract fun nextContext(threadId: Int): List<VerifierContext>
+    abstract fun nextContext(threadId: Int): ContextContainer
 
     /**
      * Returns `true` if all actors in the specified thread are executed.
@@ -135,3 +138,41 @@ abstract class VerifierContext(
      */
     private val completedThreads: Int get() = completedThreads(threads)
 }
+
+class ContextContainer() {
+    constructor(context: VerifierContext) : this() {
+        context1 = context
+    }
+
+    private var context1: VerifierContext? = null
+    private var context2: VerifierContext? = null
+
+    fun addContext(context: VerifierContext) {
+        if (context1 == null) {
+            context1 = context
+        } else if (context2 == null) {
+            context2 = context
+        } else {
+            error("Container size exceeded")
+        }
+    }
+
+    fun take(): VerifierContext? {
+        val tmp1 = context1
+        if (tmp1 != null) {
+            context1 = null
+            return tmp1
+        }
+        val tmp2 = context2
+        if (tmp2 != null) {
+            context2 = null
+            return tmp2
+        }
+        return null
+    }
+
+    companion object {
+        val EMPTY = ContextContainer()
+    }
+}
+

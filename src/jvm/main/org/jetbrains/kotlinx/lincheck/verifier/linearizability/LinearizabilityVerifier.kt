@@ -46,8 +46,8 @@ class LinearizabilityContext : VerifierContext {
     constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
                 executed: IntArray, suspended: BooleanArray, tickets: IntArray) : super(scenario, results, state, executed, suspended, tickets)
 
-    override fun nextContext(threadId: Int): List<LinearizabilityContext> {
-        if (isCompleted(threadId)) return emptyList()
+    override fun nextContext(threadId: Int): ContextContainer {
+        if (isCompleted(threadId)) return ContextContainer.EMPTY
         // Check whether an actorWithToken from the specified thread can be executed
         // in accordance with the rule that all actors from init part should be
         // executed at first, after that all actors from parallel part, and
@@ -57,7 +57,7 @@ class LinearizabilityContext : VerifierContext {
             in 1..scenario.threads -> isCompleted(0) && hblegal(threadId) // PARALLEL
             else -> initCompleted && parallelCompleted // POST
         }
-        if (!legal) return emptyList()
+        if (!legal) return ContextContainer.EMPTY
         val actorId = executed[threadId]
         val actor = scenario[threadId][actorId]
         val expectedResult = results[threadId][actorId]
@@ -66,19 +66,19 @@ class LinearizabilityContext : VerifierContext {
         val promptCancel = actor.promptCancellation && ticket != NO_TICKET && expectedResult === Cancelled
         if (suspended[threadId] || promptCancel) {
             return if (actor.cancelOnSuspension && expectedResult === Cancelled)
-                listOf(state.nextByCancellation(actor, ticket).createContext(threadId))
-            else emptyList()
+                ContextContainer(state.nextByCancellation(actor, ticket).createContext(threadId))
+            else ContextContainer.EMPTY
         }
-        val result = mutableListOf<LinearizabilityContext>()
+        val result = ContextContainer()
         if (expectedResult is CrashResult) {
-            result.add(skipOperation(threadId))
+            result.addContext(skipOperation(threadId))
         }
 
         // Try to make a transition by the next actor from the current thread,
         // passing the ticket corresponding to the current thread.
         val nextContext = state.next(actor, expectedResult, tickets[threadId])?.createContext(threadId)
         if (nextContext !== null) {
-            result.add(nextContext)
+            result.addContext(nextContext)
         }
         return result
     }
