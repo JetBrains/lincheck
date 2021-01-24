@@ -52,4 +52,11 @@ object NVMCache {
         localCache.forEach { if (systemCrash) it.systemCrash() else it.crash() }
         localCache.clear()
     }
+
+    internal fun clear() {
+        for (i in cache.indices) {
+            cache[i] = null
+        }
+    }
+
 }

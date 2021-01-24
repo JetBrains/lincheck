@@ -100,12 +100,14 @@ internal class RecoverableParallelThreadsRunner(
 
     override fun beforeInit() {
         super.beforeInit()
+        NVMCache.clear()
         Probability.defaultCrashes = recoverModel.defaultExpectedCrashes()
         Probability.randomSystemCrashProbability = recoverModel.systemCrashProbability()
         Probability.totalActors = scenario.initExecution.size + scenario.parallelExecution.sumBy { it.size } + scenario.postExecution.size
         Crash.reset()
         RecoverableStateContainer.state = ExecutionState.INIT
         Crash.register(0)
+        RecoverableStateContainer.crashesEnabled = false
     }
 
     override fun beforeParallel(threads: Int) {
