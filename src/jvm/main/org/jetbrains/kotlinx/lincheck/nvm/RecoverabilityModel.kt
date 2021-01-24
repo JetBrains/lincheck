@@ -27,12 +27,18 @@ import org.objectweb.asm.ClassVisitor
 import java.lang.reflect.Method
 
 enum class Recover {
-    NO_RECOVER, NRL, DURABLE;
+    NO_RECOVER,
+    NRL,
+    NRL_NO_CRASHES,
+    DURABLE,
+    DURABLE_NO_CRASHES;
 
     fun createModel() = when (this) {
         NO_RECOVER -> NoRecoverModel()
         NRL -> NRLModel()
+        NRL_NO_CRASHES -> NRLModel(crashes = false)
         DURABLE -> DurableModel()
+        DURABLE_NO_CRASHES -> DurableModel(crashes = false)
     }
 }
 
