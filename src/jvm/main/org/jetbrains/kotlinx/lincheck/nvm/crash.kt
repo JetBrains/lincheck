@@ -21,9 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.nvm
 
-import kotlinx.atomicfu.locks.withLock
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
-import java.util.concurrent.locks.ReentrantLock
 
 /**
  * This exception is used to emulate system crash.
@@ -43,10 +42,9 @@ object Crash {
 
     private val CRASH = CrashError()
 
-    private var threadsCount = 0
-    private var waitingCount = 0
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val threadsCount = atomic(0)
+    internal val barrier = atomic<BusyWaitingBarrier?>(null)
+    val threads get() = threadsCount.value
 
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
@@ -54,7 +52,7 @@ object Crash {
      */
     @JvmStatic
     fun possiblyCrash() {
-        if (waitingCount > 0) {
+        if (barrier.value !== null) {
             val threadId = RecoverableStateContainer.threadId()
             crash(threadId, systemCrash = true)
         }
@@ -69,32 +67,42 @@ object Crash {
     }
 
     @JvmStatic
-    fun awaitSystemCrash() = lock.withLock {
-        waitingCount++
-        if (threadsCount == waitingCount) {
-            waitingCount = 0
-            condition.signalAll()
-        } else {
-            condition.await()
+    fun awaitSystemCrash() {
+        var b = barrier.value
+        if (b == null) {
+            barrier.compareAndSet(null, BusyWaitingBarrier())
+            b = barrier.value!!
         }
+        b.await()
     }
 
     /** Should be called when thread finished. */
-    fun exit(threadId: Int) = lock.withLock {
-        threadsCount--
-        if (threadsCount == waitingCount) {
-            waitingCount = 0
-            condition.signalAll()
-        }
+    fun exit(threadId: Int) {
+        threadsCount.decrementAndGet()
     }
 
     /** Should be called when thread started. */
-    fun register(threadId: Int) = lock.withLock {
-        threadsCount++
+    fun register(threadId: Int) {
+        threadsCount.incrementAndGet()
     }
 
     fun reset() {
-        threadsCount = 0
-        waitingCount = 0
+        threadsCount.value = 0
+        barrier.value = null
+    }
+}
+
+class BusyWaitingBarrier {
+    @Volatile
+    private var free = false
+    private val waitingCount = atomic(0)
+
+    fun await() {
+        waitingCount.incrementAndGet()
+        // wait for all to access the barrier
+        while (waitingCount.value < Crash.threads && !free) {
+        }
+        free = true
+        Crash.barrier.compareAndSet(this, null)
     }
 }
