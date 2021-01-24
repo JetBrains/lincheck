@@ -115,6 +115,20 @@ data class ExceptionResult private constructor(val tClazz: Class<out Throwable>,
 @JvmSynthetic
 fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
 
+@Suppress("DataClassPrivateConstructor")
+data class NodeFailureResult private constructor(override val wasSuspended: Boolean) : Result() {
+    override fun toString() = wasSuspendedPrefix + "F"
+    companion object {
+        @Suppress("UNCHECKED_CAST")
+        @JvmOverloads
+        fun create(wasSuspended: Boolean = false) = NodeFailureResult(wasSuspended)
+    }
+}
+// for byte-code generation
+@JvmSynthetic
+fun createNodeFailureResult() = NodeFailureResult.create(false)
+
+
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet
  * though it can be resumed later
