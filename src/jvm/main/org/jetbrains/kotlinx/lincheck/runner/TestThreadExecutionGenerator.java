@@ -280,7 +280,8 @@ public class TestThreadExecutionGenerator {
             // End of try-catch block for all other exceptions
             mv.goTo(skipHandlers);
 
-            actorCrashHandlerGenerator.addCrashCatchBlock(mv, resLocal, iLocal, skipHandlers);
+            Label launchNextActor = mv.newLabel();
+            actorCrashHandlerGenerator.addCrashCatchBlock(mv, resLocal, iLocal, launchNextActor);
 
             // Unexpected exception handler
             mv.visitLabel(unexpectedExceptionHandler);
@@ -297,12 +298,7 @@ public class TestThreadExecutionGenerator {
             mv.throwException();
             mv.visitLabel(skipHandlers);
 
-            // Increment the clock
-            mv.loadThis();
-            mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);
-            // Increment number of current operation
-            mv.iinc(iLocal, 1);
-            Label launchNextActor = mv.newLabel();
+            incrementClock(mv, iLocal);
             mv.visitJumpInsn(GOTO, launchNextActor);
 
             // write NoResult if all threads were suspended or completed
@@ -324,6 +320,13 @@ public class TestThreadExecutionGenerator {
         mv.visitInsn(RETURN);
         mv.visitMaxs(2, 2);
         mv.visitEnd();
+    }
+
+    static void incrementClock(GeneratorAdapter mv, int iLocal) {
+        mv.loadThis();
+        mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);
+        // Increment number of current operation
+        mv.iinc(iLocal, 1);
     }
 
     // `actorNumber` starts with 0

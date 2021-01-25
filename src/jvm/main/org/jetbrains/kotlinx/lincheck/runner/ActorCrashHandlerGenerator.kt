@@ -65,6 +65,9 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.checkCast(TestThreadExecutionGenerator.RESULT_TYPE)
         mv.arrayStore(TestThreadExecutionGenerator.RESULT_TYPE)
 
+        // clock increment must go before barrier
+        TestThreadExecutionGenerator.incrementClock(mv, iLocal)
+
         mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
 
         mv.goTo(skip)
