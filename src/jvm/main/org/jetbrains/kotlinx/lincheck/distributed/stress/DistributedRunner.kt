@@ -235,7 +235,8 @@ open class DistributedRunner<Message, Log>(
         if (e is NodeFailureException && testCfg.supportRecovery) {
             testInstances[iThread] =
                 testClass.getConstructor(Environment::class.java).newInstance(environments[iThread]) as Node<Message>
-            events.put(ProcessFailureEvent(iThread))
+            events.put(ProcessRecoveryEvent(iThread))
+            failures[iThread] = false
             if (testClass is RecoverableNode<*, *>) {
                 (testInstances[iThread] as RecoverableNode<Message, Log>).recover(logs[iThread])
             } else {
