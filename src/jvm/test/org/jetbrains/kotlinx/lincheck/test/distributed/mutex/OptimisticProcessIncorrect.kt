@@ -110,7 +110,7 @@ class OptimisticMutexIncorrectTest {
     @Test(expected = LincheckAssertionError::class)
     fun testSimple() {
         LinChecker.check(OptimisticMutexIncorrect::class
-                .java, DistributedOptions<MutexMessage>().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(Counter::class.java).threads
         (5).messageOrder(MessageOrder.SYNCHRONOUS)
                 .invocationsPerIteration(100).iterations(1000))

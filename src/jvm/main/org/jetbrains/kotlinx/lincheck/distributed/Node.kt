@@ -1,6 +1,10 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import java.util.concurrent.LinkedBlockingQueue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import java.util.concurrent.TimeUnit
 
 /**
@@ -13,34 +17,39 @@ interface Node<Message> {
      */
     fun onMessage(message : Message, sender : Int)
 
-    /**
-     * Called if the [timer] expires. The timer can be set using the environment
-     * @see Environment#setTimer(String, Int, TimeUnit)
-     */
-    fun onTimer(timer : String) {}
-
-    /**
-     * Called before a process is recovered from failure. Used to define process state after failure
-     * (e.g. default values should be set for all fields).
-     */
-    fun beforeRecovery() {}
+    fun recover() {}
 
     fun onNodeUnavailable(nodeId : Int) {}
 }
 
 
 abstract class BlockingReceiveNodeImp<Message> : Node<Message> {
-    private val messageQueue = LinkedBlockingQueue<Pair<Message, Int>>()
+    private val messageQueue = FastQueue<Pair<Message, Int>>()
 
     override fun onMessage(message: Message, sender : Int) {
-        messageQueue.add(Pair(message, sender))
+        messageQueue.put(Pair(message, sender))
     }
 
     fun receive(timeout : Long, timeUnit: TimeUnit = TimeUnit.MILLISECONDS) : Pair<Message, Int>? {
-        return messageQueue.poll(timeout, timeUnit)
+        return runBlocking {
+            // launch a new coroutine in background and continue
+            // non-blocking delay for 1 second (default time unit is ms)
+            // print after delay
+            withContext(Dispatchers.Default) { // launch a new coroutine in background and continue
+                delay(timeout) // non-blocking delay for 1 second (default time unit is ms)
+                messageQueue.poll() // print after delay
+            }
+        }
     }
 
     fun receive() : Pair<Message, Int> {
-        return messageQueue.peek()
+        while (true) {
+            return messageQueue.poll() ?: continue
+        }
     }
+}
+
+
+interface RecoverableNode<Message, Log> : Node<Message> {
+    fun recover(logs : List<Log>)
 }

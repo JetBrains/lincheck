@@ -35,28 +35,31 @@ import java.util.concurrent.locks.ReentrantLock
 
 sealed class MutexMessage(val msgTime: Int)
 
-class Req(msgTime : Int, val reqTime : Int) : MutexMessage(msgTime) {
+class Req(msgTime: Int, val reqTime: Int) : MutexMessage(msgTime) {
     override fun toString(): String {
         return "REQ($msgTime, $reqTime)"
     }
 }
-class Ok(msgTime : Int) : MutexMessage(msgTime){
+
+class Ok(msgTime: Int) : MutexMessage(msgTime) {
     override fun toString(): String {
         return "OK($msgTime)"
     }
 }
+
 class Rel(msgTime: Int) : MutexMessage(msgTime) {
     override fun toString(): String {
         return "REL($msgTime)"
     }
 }
+
 class Lock(msgTime: Int) : MutexMessage(msgTime)
 class Unlock(msgTime: Int) : MutexMessage(msgTime)
 
 @Volatile
 internal var counter = 0
 
-class LamportMutex(private val env : Environment<MutexMessage>) : Node<MutexMessage> {
+class LamportMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
@@ -65,11 +68,11 @@ class LamportMutex(private val env : Environment<MutexMessage>) : Node<MutexMess
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()
 
-    override fun onMessage(message: MutexMessage, sender : Int) {
+    override fun onMessage(message: MutexMessage, sender: Int) {
         lock.withLock {
             val time = message.msgTime
             clock = max(clock, time) + 1
-            when(message) {
+            when (message) {
                 is Req -> {
                     req[sender] = message.reqTime
                     env.send(Ok(++clock), sender)
@@ -96,27 +99,31 @@ class LamportMutex(private val env : Environment<MutexMessage>) : Node<MutexMess
         if (myReqTime == inf || inCS) {
             return
         }
+       // println("[${env.nodeId}]: In check CS enter, myReq=$myReqTime, req=${req.toList()}, ok=${ok.toList()}")
         for (i in 0 until env.numberOfNodes) {
             if (i == env.nodeId) {
                 continue
             }
             if (req[i] < myReqTime || req[i] == myReqTime && i < env.nodeId) {
+               // println("[${env.nodeId}]: Condition not met $i (req[i] < myReqTime)=${req[i] < myReqTime} || (req[i] == myReqTime && i < env.nodeId)=${req[i] == myReqTime && i < env.nodeId}")
                 return
             }
             if (ok[i] <= myReqTime) {
+              //  println("[${env.nodeId}]: Ok condition not met, $i, ${ok[i]}, $myReqTime")
                 return
             }
         }
+        //println("[${env.nodeId}]: Acquire lock")
         inCS = true
         condition.signal()
-      //  env.sendLocal(Lock(clock))
+        //  env.sendLocal(Lock(clock))
     }
 
     @Operation
-    fun lock() : Int {
+    fun lock(): Int {
        // println("[${env.nodeId}]: request lock")
         lock.withLock {
-            check (req[env.nodeId] == inf) {
+            check(req[env.nodeId] == inf) {
                 Thread.currentThread()
             }
             val myReqTime = ++clock
@@ -125,7 +132,7 @@ class LamportMutex(private val env : Environment<MutexMessage>) : Node<MutexMess
             if (env.numberOfNodes == 1) {
                 inCS = true
             }
-            while(!inCS) {
+            while (!inCS) {
                 condition.await()
             }
         }
@@ -145,7 +152,7 @@ class LamportMutex(private val env : Environment<MutexMessage>) : Node<MutexMess
         }
     }
 
-    private fun broadcast(msg : MutexMessage) {
+    private fun broadcast(msg: MutexMessage) {
         for (i in 0 until env.numberOfNodes) {
             if (i == env.nodeId) {
                 continue
@@ -157,7 +164,7 @@ class LamportMutex(private val env : Environment<MutexMessage>) : Node<MutexMess
 
 class Counter {
     var cnt = 0
-    fun lock() : Int {
+    fun lock(): Int {
         return ++cnt
     }
 }
@@ -166,16 +173,16 @@ class LamportMutexTest {
     @Test
     fun testSimple() {
         LinChecker.check(LamportMutex::class
-                .java, DistributedOptions<MutexMessage>().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(Counter::class.java).threads
-        (5).messageOrder(MessageOrder.SYNCHRONOUS)
+        (5).messageOrder(MessageOrder.FIFO)
                 .invocationsPerIteration(100).iterations(1000))
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(LamportMutex::class
-                .java, DistributedOptions<MutexMessage>().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(Counter::class.java).threads
         (3).messageOrder(MessageOrder.ASYNCHRONOUS)
                 .invocationsPerIteration(100).iterations(1000))

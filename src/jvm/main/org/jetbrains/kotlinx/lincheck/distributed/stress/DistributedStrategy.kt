@@ -31,12 +31,12 @@ import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
-class DistributedStrategy<Message>(val testCfg: DistributedCTestConfiguration<Message>,
-                          testClass: Class<*>,
-                          scenario: ExecutionScenario,
-                          validationFunctions: List<Method>,
-                          stateRepresentationFunction: Method?,
-                          private val verifier: Verifier
+class DistributedStrategy<Message, Log>(val testCfg: DistributedCTestConfiguration<Message, Log>,
+                                   testClass: Class<*>,
+                                   scenario: ExecutionScenario,
+                                   validationFunctions: List<Method>,
+                                   stateRepresentationFunction: Method?,
+                                   private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
@@ -56,7 +56,7 @@ class DistributedStrategy<Message>(val testCfg: DistributedCTestConfiguration<Me
         try {
             // Run invocations
             for (invocation in 0 until invocations) {
-               println("INVOCATION $invocation")
+                //println("INVOCATION $invocation")
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {
@@ -64,8 +64,7 @@ class DistributedStrategy<Message>(val testCfg: DistributedCTestConfiguration<Me
                             return IncorrectResultsFailure(scenario, ir.results)
                         }
                     }
-                    else ->
-                    {
+                    else -> {
                         return ir.toLincheckFailure(scenario)
                     }
                 }

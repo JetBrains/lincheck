@@ -31,19 +31,17 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
 
-class DistributedCTestConfiguration<Message>(testClass: Class<*>, iterations: Int,
+class DistributedCTestConfiguration<Message, Log>(testClass: Class<*>, iterations: Int,
                                              threads: Int, actorsPerThread: Int,
                                              generatorClass: Class<out ExecutionGenerator>,
                                              verifierClass: Class<out Verifier>,
                                              val invocationsPerIteration: Int,
-                                             val networkReliability: Double,
+                                             val isNetworkReliable: Boolean,
                                              val messageOrder: MessageOrder,
-                                             val maxNumberOfFailedNodes: Int,
+                                             val maxNumberOfFailedNodes: (Int) -> Int,
                                              val supportRecovery: Boolean,
-                                             val maxDelay: Int,
-                                             val totalMessageCount: Int,
-                                             val messagePerProcess: Int,
-                                             val duplicationRate: Int,
+                                             val messageDuplication: Boolean,
+                                             val networkPartitions : Boolean,
                                              val nodeTypes: HashMap<Class<out Node<Message>>, Int>,
                                              requireStateEquivalenceCheck: Boolean,
                                              minimizeFailedScenario: Boolean,
@@ -58,6 +56,6 @@ class DistributedCTestConfiguration<Message>(testClass: Class<*>, iterations: In
     }
 
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>, stateRepresentationMethod: Method?, verifier: Verifier): Strategy {
-        return DistributedStrategy<Message>(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        return DistributedStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
     }
 }

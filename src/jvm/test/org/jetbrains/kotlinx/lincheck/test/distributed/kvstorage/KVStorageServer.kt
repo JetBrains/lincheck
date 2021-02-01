@@ -92,7 +92,7 @@ class KVStorageServerTestClass {
     @Test(expected = IllegalArgumentException::class)
     fun testSimple() {
         LinChecker.check(KVStorageServer::class.java,
-                DistributedOptions<Command>().requireStateEquivalenceImplCheck(false)
+                DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck(false)
                         .sequentialSpecification(SingleNode::class.java)
                         .nodeType(KVStorageServer::class.java, 1)
                         .nodeType(KVStorageClient::class.java, 1)
@@ -103,13 +103,13 @@ class KVStorageServerTestClass {
     @Test(expected = IllegalArgumentException::class)
     fun testFull() {
         LinChecker.check(KVStorageServer::class.java,
-                DistributedOptions<Command>()
+                DistributedOptions<Command, Unit>()
                         .requireStateEquivalenceImplCheck(false)
                         .sequentialSpecification(SingleNode::class.java)
                         .nodeType(KVStorageServer::class.java, 1)
                         .nodeType(KVStorageClient::class.java, 5)
-                        .duplicationRate(2)
-                        .networkReliability(0.7)
+                        .messageDuplications(true)
+                        .networkReliable(false)
                         .invocationsPerIteration(100)
                         .iterations(100))
     }

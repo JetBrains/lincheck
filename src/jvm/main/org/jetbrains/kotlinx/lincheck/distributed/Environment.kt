@@ -30,18 +30,6 @@ interface Environment<Message> {
     fun getNumberOfNodeType(cls: Class<out Node<Message>>) : Int
 
     /**
-     * @param timer
-     * @param time
-     * @param timeUnit
-     */
-    fun setTimer(timer: String, time: Int, timeUnit: TimeUnit = TimeUnit.MILLISECONDS)
-
-    /**
-     * @param timer
-     */
-    fun cancelTimer(timer: String)
-
-    /**
      * Sends the specified [message] to the process [receiver] (from 0 to [numberOfNodes]).
      */
     fun send(message: Message, receiver: Int)
@@ -71,7 +59,6 @@ data class MessageReceivedEvent<Message>(val message: Message, val sender: Int, 
 data class LocalMessageSentEvent<Message>(val message: Message, val sender: Int) : Event()
 data class ProcessFailureEvent(val processId: Int) : Event()
 data class ProcessRecoveryEvent(val processId: Int) : Event()
-data class TimerEvent(val processId: Int, val timer: String) : Event()
 
 fun <Message> Environment<Message>.correctProcesses() = (0 until numberOfNodes).subtract(events.filterIsInstance<ProcessFailureEvent>().map { it.processId })
 fun <Message> Environment<Message>.sentMessages(processId: Int = nodeId) = events.filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }

@@ -26,9 +26,14 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.queue.cntGet
 import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeFailureException
+import org.jetbrains.kotlinx.lincheck.distributed.stress.cntNullGet
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.util.*
+import kotlin.random.Random
+
 
 /**
  *
@@ -45,7 +50,7 @@ class Peer(private val env: Environment<Message>) : Node<Message> {
         //println("[${env.nodeId}]: In deliver ${undeliveredMessages[sender]}")
         while (undeliveredMessages[sender].isNotEmpty()) {
             val lastMessage = undeliveredMessages[sender].peek()
-            if (lastMessage.id != lastDeliveredId[sender] + 1 || receivedMessages[sender][lastMessage.id]!! < env.numberOfNodes / 2) {
+            if (lastMessage.id != lastDeliveredId[sender] + 1 || receivedMessages[sender][lastMessage.id]!! < (env.numberOfNodes + 1) / 2) {
                 //println("[${env.nodeId}]: Last delivered id ${lastDeliveredId[sender]}, $lastMessage, ${receivedMessages[sender][lastMessage.id]!!}")
                 return
             }
@@ -57,7 +62,6 @@ class Peer(private val env: Environment<Message>) : Node<Message> {
 
     @Validate
     fun validateResults() {
-        //env.events.forEach { println(it) }
         // All messages were delivered at most once.
         check(env.localMessages().isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
@@ -68,7 +72,9 @@ class Peer(private val env: Environment<Message>) : Node<Message> {
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
         //println(env.correctProcesses())
-        env.localMessages().forEach { m -> env.correctProcesses().forEach { check(env.localMessages(it).contains(m)) { env.localMessages() } } }
+        env.localMessages().forEach { m ->
+            env.correctProcesses().forEach { check(env.localMessages(it).contains(m)) { env.localMessages() } }
+        }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
             env.localMessages().filter { it.from == i }.map { m -> env.sentMessages(i).map { it.message }.indexOf(m) }
@@ -97,6 +103,7 @@ class Peer(private val env: Environment<Message>) : Node<Message> {
         deliver(from)
     }
 
+    //@Operation(handleExceptionsAsResult = [NodeFailureException::class])
     @Operation
     fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
@@ -105,29 +112,26 @@ class Peer(private val env: Environment<Message>) : Node<Message> {
 }
 
 
-class BroadcastEmptyClass {
-    @Operation
-    fun send(msg: String) {
-    }
-}
-
-
 class BroadcastTest {
-    // Just an API example, doesn't work
-    /*@Test(expected = LincheckAssertionError::class)
+    @Test
     fun test() {
-        LinChecker.check(PeerIncorrect::class
-                .java, DistributedOptions<Message>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(BroadcastEmptyClass::class.java).threads
-        (5).maxNumberOfFailedNodes(2).supportRecovery(false)
-                .invocationsPerIteration(100).iterations(1000))
-    }*/
+        LinChecker.check(Peer::class
+            .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
+            (false).threads
+            (3).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(false)
+            .invocationsPerIteration(30).iterations(1000).verifier(EpsilonVerifier::class.java)
+            .messageOrder(MessageOrder.SYNCHRONOUS))
+        println("Get $cntGet, nulls $cntNullGet, not null ${cntGet - cntNullGet}")
+    }
 
     @Test
     fun testNoFailures() {
-        LinChecker.check(Peer::class
-                .java, DistributedOptions<Message>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(BroadcastEmptyClass::class.java).threads
-        (5).invocationsPerIteration(100).iterations(100))
+        LinChecker.check(
+            Peer::class
+                .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
+                (false).threads
+                (3).invocationsPerIteration(30).iterations(1000).verifier(EpsilonVerifier::class.java)
+        )
+        println("Get $cntGet, nulls $cntNullGet, not null ${cntGet - cntNullGet}")
     }
 }

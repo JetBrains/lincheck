@@ -121,7 +121,7 @@ class  SyncCoordinateMutexTest {
     @Test
     fun testSimple() {
         LinChecker.check(SyncCoordinateMutex::class
-                .java, DistributedOptions<MutexMessage>().requireStateEquivalenceImplCheck
+                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(Counter::class.java).threads
         (2).messageOrder(MessageOrder.SYNCHRONOUS)
                 .invocationsPerIteration(100).iterations(1000))
@@ -129,7 +129,7 @@ class  SyncCoordinateMutexTest {
 
     @Test
     fun testNoFifo() {
-        LinChecker.check(SyncCoordinateMutex::class.java, DistributedOptions<MutexMessage>().requireStateEquivalenceImplCheck
+        LinChecker.check(SyncCoordinateMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(Counter::class.java).threads
         (5).messageOrder(MessageOrder.ASYNCHRONOUS)
                 .invocationsPerIteration(100).iterations(1000))

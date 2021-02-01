@@ -5,6 +5,7 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeFailureException
 import org.junit.Test
 import java.lang.reflect.InvocationTargetException
 import java.util.*
@@ -13,9 +14,7 @@ import kotlin.collections.HashSet
 
 data class Message(val body: String, val id: Int, val from: Int)
 
-/**
- *
- */
+
 class PeerIncorrect(private val env: Environment<Message>) : Node<Message> {
     private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
     private var messageId = 0
@@ -51,7 +50,7 @@ class PeerIncorrect(private val env: Environment<Message>) : Node<Message> {
         }
     }
 
-    @Operation
+    @Operation(handleExceptionsAsResult = [NodeFailureException::class])
     fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         env.broadcast(message)
