@@ -36,7 +36,6 @@ object Crash {
      * @throws CrashError
      */
     private fun crash(threadId: Int, systemCrash: Boolean) {
-        NVMCache.crash(threadId, systemCrash)
         throw CRASH.also { RecoverableStateContainer.registerCrash(threadId, it) }
     }
 
@@ -93,16 +92,21 @@ object Crash {
 }
 
 class BusyWaitingBarrier {
-    @Volatile
-    private var free = false
+    private val free = atomic(false)
     private val waitingCount = atomic(0)
 
     fun await() {
         waitingCount.incrementAndGet()
         // wait for all to access the barrier
-        while (waitingCount.value < Crash.threads && !free) {
+        while (waitingCount.value < Crash.threads && !free.value) {
         }
-        free = true
+        if (free.compareAndSet(expect = false, update = true)) {
+            NVMCache.systemCrash()
+        }
         Crash.barrier.compareAndSet(this, null)
+        waitingCount.decrementAndGet()
+        // wait for cache reset
+        while (waitingCount.value > 0) {
+        }
     }
 }

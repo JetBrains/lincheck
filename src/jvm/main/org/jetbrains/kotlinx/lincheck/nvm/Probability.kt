@@ -27,6 +27,7 @@ import kotlin.random.Random
 
 object Probability {
     private val random = Random(42)
+
     @Volatile
     var defaultCrashes = 0
         set(value) {
@@ -69,7 +70,7 @@ object Probability {
 
     fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
     fun shouldCrash() = RecoverableStateContainer.crashesEnabled
-        && (RecoverableStateContainer.crashesCount() <= expectedCrashes)
+        && (RecoverableStateContainer.crashesCount() < expectedCrashes)
         && bernoulli(singleCrashProbability)
 
     fun shouldSystemCrash() = bernoulli(randomSystemCrashProbability)

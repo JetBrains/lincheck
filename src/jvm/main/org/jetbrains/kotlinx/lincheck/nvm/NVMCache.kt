@@ -47,10 +47,17 @@ object NVMCache {
         localCache.remove(variable)
     }
 
-    internal fun crash(threadId: Int, systemCrash: Boolean) {
+    internal fun crash(threadId: Int) {
         val localCache = cache[threadId] ?: return
-        localCache.forEach { if (systemCrash) it.systemCrash() else it.crash() }
+        localCache.forEach { it.crash() }
         localCache.clear()
+    }
+
+    internal fun systemCrash() {
+        cache.filterNotNull().forEach { localCache ->
+            localCache.forEach { it.systemCrash() }
+            localCache.clear()
+        }
     }
 
     internal fun clear() {
