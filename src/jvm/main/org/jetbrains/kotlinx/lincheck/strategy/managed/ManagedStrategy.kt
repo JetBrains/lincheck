@@ -332,7 +332,7 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
     }
 
     override fun onActorStart(iThread: Int) {
