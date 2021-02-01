@@ -44,7 +44,7 @@ public class TestThreadExecutionGenerator {
     private static final Type[] NO_ARGS = new Type[] {};
 
     private static final Type CLASS_TYPE = getType(Class.class);
-    private static final Type OBJECT_TYPE = getType(Object.class);
+    static final Type OBJECT_TYPE = getType(Object.class);
     private static final Method OBJECT_GET_CLASS = new Method("getClass", CLASS_TYPE, NO_ARGS);
     private static final Type OBJECT_ARRAY_TYPE = getType(Object[].class);
     private static final Type THROWABLE_TYPE = getType(Throwable.class);
@@ -56,7 +56,7 @@ public class TestThreadExecutionGenerator {
     private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
-    private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
+    static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
     private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
     private static final Method TEST_THREAD_EXECUTION_READ_CLOCKS = new Method("readClocks", VOID_TYPE, new Type[]{INT_TYPE});
@@ -106,7 +106,7 @@ public class TestThreadExecutionGenerator {
                                              List<ParallelThreadsRunner.Completion> completions,
                                              boolean scenarioContainsSuspendableActors
     ) {
-        return create(runner, iThread, actors, completions, scenarioContainsSuspendableActors, new ActorCrashHandlerGenerator());
+        return create(runner, iThread, actors, completions, scenarioContainsSuspendableActors, new ActorCrashHandlerGenerator(), null);
     }
 
     /**
@@ -115,13 +115,14 @@ public class TestThreadExecutionGenerator {
     public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors,
                                              List<ParallelThreadsRunner.Completion> completions,
                                              boolean scenarioContainsSuspendableActors,
-                                             ActorCrashHandlerGenerator actorCrashHandlerGenerator
+                                             ActorCrashHandlerGenerator actorCrashHandlerGenerator,
+                                             Class<?> _class
     ) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
         Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
-                generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, actorCrashHandlerGenerator));
+                generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, actorCrashHandlerGenerator, _class));
         try {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
@@ -135,13 +136,14 @@ public class TestThreadExecutionGenerator {
     private static byte[] generateClass(String internalClassName, Type testClassType, int iThread, List<Actor> actors,
                                         List<Object> objArgs, List<ParallelThreadsRunner.Completion> completions,
                                         boolean scenarioContainsSuspendableActors,
-                                        ActorCrashHandlerGenerator actorCrashHandlerGenerator)
+                                        ActorCrashHandlerGenerator actorCrashHandlerGenerator,
+                                        Class<?> _class)
     {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
         cca.visit(52, ACC_PUBLIC + ACC_SUPER, internalClassName, null, TEST_THREAD_EXECUTION_TYPE.getInternalName(), null);
         generateConstructor(cca);
-        generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, actorCrashHandlerGenerator);
+        generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, actorCrashHandlerGenerator, _class);
         cca.visitEnd();
         return cw.toByteArray();
     }
@@ -159,7 +161,8 @@ public class TestThreadExecutionGenerator {
     private static void generateRun(ClassVisitor cv, Type testType, int iThread, List<Actor> actors,
                                     List<Object> objArgs, List<Completion> completions,
                                     boolean scenarioContainsSuspendableActors,
-                                    ActorCrashHandlerGenerator actorCrashHandlerGenerator)
+                                    ActorCrashHandlerGenerator actorCrashHandlerGenerator,
+                                    Class<?> _class)
     {
         int access = ACC_PUBLIC;
         Method m = new Method("run", VOID_TYPE, NO_ARGS);
@@ -281,7 +284,7 @@ public class TestThreadExecutionGenerator {
             mv.goTo(skipHandlers);
 
             Label launchNextActor = mv.newLabel();
-            actorCrashHandlerGenerator.addCrashCatchBlock(mv, resLocal, iLocal, launchNextActor);
+            actorCrashHandlerGenerator.addCrashCatchBlock(mv, resLocal, iLocal, launchNextActor, _class);
 
             // Unexpected exception handler
             mv.visitLabel(unexpectedExceptionHandler);

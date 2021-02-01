@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck.runner
 import org.jetbrains.kotlinx.lincheck.CrashResult
 import org.jetbrains.kotlinx.lincheck.nvm.Crash
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
+import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator.OBJECT_TYPE
+import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator.TEST_THREAD_EXECUTION_TYPE
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -36,7 +38,14 @@ private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", Type.VOID_TYPE
 
 open class ActorCrashHandlerGenerator {
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
-    open fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {}
+    open fun addCrashCatchBlock(
+        mv: GeneratorAdapter,
+        resLocal: Int,
+        iLocal: Int,
+        skip: Label,
+        _class: Class<*>?
+    ) {
+    }
 }
 
 class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
@@ -48,13 +57,19 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.visitTryCatchBlock(start, end, handlerLabel, CRASH_ERROR_TYPE.internalName)
     }
 
-    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
-        super.addCrashCatchBlock(mv, resLocal, iLocal, skip)
+    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label, _class: Class<*>?) {
+        super.addCrashCatchBlock(mv, resLocal, iLocal, skip, _class)
         mv.visitLabel(handlerLabel)
-        storeExceptionResultFromCrash(mv, resLocal, iLocal, skip)
+        storeExceptionResultFromCrash(mv, resLocal, iLocal, skip, _class)
     }
 
-    private fun storeExceptionResultFromCrash(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
+    private fun storeExceptionResultFromCrash(
+        mv: GeneratorAdapter,
+        resLocal: Int,
+        iLocal: Int,
+        skip: Label,
+        _class: Class<*>?
+    ) {
         mv.pop()
 
         mv.loadLocal(resLocal)
@@ -69,6 +84,20 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         TestThreadExecutionGenerator.incrementClock(mv, iLocal)
 
         mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
+
+        // call recover if exists
+        if (_class != null) {
+            try {
+                val type = Type.getType(_class)
+                val method = _class.getMethod("recover")
+                // Load test instance
+                mv.loadThis()
+                mv.getField(TEST_THREAD_EXECUTION_TYPE, "testInstance", OBJECT_TYPE)
+                mv.checkCast(type)
+                mv.invokeVirtual(type, Method.getMethod(method))
+            } catch (e: NoSuchMethodException) {
+            }
+        }
 
         mv.goTo(skip)
     }

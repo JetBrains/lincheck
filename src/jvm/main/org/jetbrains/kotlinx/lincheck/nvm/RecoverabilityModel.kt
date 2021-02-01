@@ -104,10 +104,12 @@ class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
 }
 
 class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
-    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) = if (crashes) {
-        CrashTransformer(cv, clazz)
-    } else {
-        cv
+    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
+        var result: ClassVisitor = RecoverabilityTransformer(cv)
+        if (crashes) {
+            result = CrashTransformer(result, clazz)
+        }
+        return result
     }
 
     override fun createRunner(
