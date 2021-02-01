@@ -20,15 +20,18 @@
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
+import org.jetbrains.kotlinx.lincheck.nvm.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
+import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.junit.Test
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
 
 private const val THREADS_NUMBER = 3
 
@@ -40,6 +43,7 @@ private const val THREADS_NUMBER = 3
     threads = THREADS_NUMBER,
     recover = Recover.DURABLE
 )
+@LogLevel(LoggingLevel.INFO)
 class DurableMSQueueTest {
     private val q = DurableMSQueue<Int>(2 + THREADS_NUMBER)
 
@@ -49,91 +53,142 @@ class DurableMSQueueTest {
     @Operation
     fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId)
 
-    @Test
+    @Recoverable
+    fun recover() = q.recover()
+
+    @Test(timeout = 3 * 60_000)
     fun test() = LinChecker.check(this::class.java)
-}
-
-
-private fun flush(value: Any) {
-
 }
 
 private const val DEFAULT_DELETER = -1
 
+private class Node<T>(
+    val next: NonVolatileRef<Node<T>?> = nonVolatile(null),
+    val v: T
+) {
+    val deleter = nonVolatile(DEFAULT_DELETER)
+}
+
 class DurableMSQueue<T>(threadsCount: Int) {
-    private class Node<S>(
-        val next: AtomicReference<Node<S>> = AtomicReference<Node<S>>(null),
-        val value: S,
-        val deleter: AtomicInteger = AtomicInteger(DEFAULT_DELETER)
-    )
+    private val dummy = Node<T?>(v = null)
+    private val head = nonVolatile(dummy)
+    private val tail = nonVolatile(dummy)
 
-    private val head: AtomicReference<Node<T?>>
-    private val tail: AtomicReference<Node<T?>>
-    private val response: MutableList<Any>
-
-    private val empty = Any()
     private val unknown = Any()
-
-    init {
-        val dummy = Node<T?>(value = null)
-        flush(dummy)
-
-        head = AtomicReference(dummy)
-        flush(head)
-
-
-        tail = AtomicReference(dummy)
-        flush(tail)
-
-        response = MutableList(threadsCount) { unknown }
-        flush(response)
-    }
+    private val empty = Any()
+    private val response = MutableList(threadsCount) { nonVolatile(unknown) }
 
     fun push(value: T) {
-        val newNode = Node<T?>(value = value)
-        flush(newNode)
+        val newNode = Node<T?>(v = value)
         while (true) {
-            val tailNode = tail.get()
-            if (tailNode.next.compareAndSet(null, newNode)) {
-                flush(tailNode.next)
-                tail.compareAndSet(tailNode, newNode)
-                return
+            val last: Node<T?> = tail.value
+            val nextNode: Node<T?>? = last.next.value
+            if (last !== tail.value) continue
+            if (nextNode === null) {
+                if (last.next.compareAndSet(null, newNode)) {
+                    last.next.flush()
+                    tail.compareAndSet(last, newNode)
+                    return
+                }
             } else {
-                flush(tailNode.next)
-                tail.compareAndSet(tailNode, tailNode.next.get())
+                last.next.flush()
+                tail.compareAndSet(last, nextNode)
             }
         }
     }
 
     fun pop(p: Int): T? {
-        response[p] = unknown
-        flush(response[p])
+        response[p].value = unknown
+        response[p].flush()
 
         while (true) {
-            val h = head.get()
-            val next = h.next.get()
-            if (next == null) {
-                response[p] = empty
-                flush(response[p])
-                return null
-            }
-            flush(next)
-            tail.compareAndSet(h, next)
-            if (next.deleter.compareAndSet(DEFAULT_DELETER, p)) {
-                flush(next.deleter.get())
-                response[p] = next.value!!
-                flush(response[p])
-                head.compareAndSet(h, next)
-                return next.value
+            val first: Node<T?> = head.value
+            val last: Node<T?> = tail.value
+            val nextNode: Node<T?>? = first.next.value
+            if (first !== head.value) continue
+            if (first === last) {
+                if (nextNode === null) {
+                    response[p].value = empty
+                    response[p].flush()
+                    return null
+                }
+                last.next.flush()
+                tail.compareAndSet(last, nextNode)
             } else {
-                val deleter = next.deleter.get()
-                if (head.get() == h) {
-                    flush(h.next.get().deleter)
-                    response[deleter] = next.value!! // previous operation has completed before this operation
-                    flush(response[deleter])
-                    head.compareAndSet(h, next)
+                checkNotNull(nextNode)
+                val currentValue: T = nextNode.v!!
+                if (nextNode.deleter.compareAndSet(DEFAULT_DELETER, p)) {
+                    nextNode.deleter.flush()
+                    response[p].value = currentValue!!
+                    response[p].flush()
+                    head.compareAndSet(first, nextNode)
+                    return currentValue
+                } else {
+                    val d = nextNode.deleter.value
+                    if (head.value === first) {
+                        nextNode.deleter.flush()
+                        response[d].value = currentValue!!
+                        response[d].flush()
+                        head.compareAndSet(first, nextNode)
+                    }
                 }
             }
+        }
+    }
+
+    fun recover() {
+        val h = head.value
+        val t = tail.value
+
+        val predA = predA()
+        if (predA != null) {
+            if (reachableFrom(predA, h)) {
+                head.compareAndSet(h, predA)
+                val a = predA.next.value!!
+                a.deleter.flush()
+                head.compareAndSet(predA, a)
+            }
+        }
+
+        val predB = predB()
+        if (predB != null) {
+            if (reachableFrom(predB, h)) {
+                tail.compareAndSet(t, predB)
+                tail.value.next.flush()
+                tail.compareAndSet(predB, predB.next.value!!)
+            } else {
+                tail.compareAndSet(t, predB.next.value!!)
+            }
+        }
+    }
+
+    private fun predA(): Node<T?>? {
+        var prev = dummy
+        var n = prev.next.value ?: return null
+        if (n.deleter.value == DEFAULT_DELETER) return null
+        while (true) {
+            val next = n.next.value ?: return prev
+            if (next.deleter.value == DEFAULT_DELETER) return prev
+            prev = n
+            n = next
+        }
+    }
+
+    private fun predB(): Node<T?>? {
+        var prev = dummy
+        var n = prev.next.value ?: return null
+        while (true) {
+            val next = n.next.value ?: return prev
+            prev = n
+            n = next
+        }
+    }
+
+    private fun reachableFrom(node: Node<T?>, h: Node<T?>): Boolean {
+        var c = h
+        while (true) {
+            if (c === node) return true
+            c = c.next.value ?: return false
         }
     }
 }
