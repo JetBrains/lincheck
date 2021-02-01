@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.CrashResult
+import org.jetbrains.kotlinx.lincheck.nvm.BusyWaitingBarrier
 import org.jetbrains.kotlinx.lincheck.nvm.Crash
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator.OBJECT_TYPE
@@ -34,7 +35,9 @@ private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
 private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("creteCrashResult", CRASH_RESULT_TYPE, emptyArray())
 private val CRASH_TYPE = Type.getType(Crash::class.java)
-private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", Type.VOID_TYPE, emptyArray())
+private val BARRIER_TYPE = Type.getType(BusyWaitingBarrier::class.java)
+private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", BARRIER_TYPE, emptyArray())
+private val CRASH_AWAIT_SYSTEM_RECOVER = Method("awaitSystemRecover", Type.VOID_TYPE, arrayOf(BARRIER_TYPE))
 
 open class ActorCrashHandlerGenerator {
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
@@ -87,17 +90,19 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
 
         // call recover if exists
         if (_class != null) {
-            try {
-                val type = Type.getType(_class)
-                val method = _class.getMethod("recover")
+            val method = _class.methods
+                .singleOrNull { it.name == "recover" && it.parameterCount == 0 && it.returnType == Void.TYPE }
+            val type = Type.getType(_class)
+            if (method != null) {
                 // Load test instance
                 mv.loadThis()
                 mv.getField(TEST_THREAD_EXECUTION_TYPE, "testInstance", OBJECT_TYPE)
                 mv.checkCast(type)
                 mv.invokeVirtual(type, Method.getMethod(method))
-            } catch (e: NoSuchMethodException) {
             }
         }
+        mv.checkCast(BARRIER_TYPE)
+        mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_RECOVER)
 
         mv.goTo(skip)
     }

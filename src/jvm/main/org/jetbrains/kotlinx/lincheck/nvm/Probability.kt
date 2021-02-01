@@ -26,7 +26,8 @@ import java.lang.Integer.max
 import kotlin.random.Random
 
 object Probability {
-    private val random = Random(42)
+    private val random_ = ThreadLocal.withInitial { Random(42) }
+    private val random get() = random_.get()
 
     @Volatile
     var defaultCrashes = 0

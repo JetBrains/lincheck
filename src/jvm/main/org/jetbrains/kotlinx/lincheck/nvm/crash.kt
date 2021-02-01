@@ -35,14 +35,15 @@ object Crash {
      * Crash simulation.
      * @throws CrashError
      */
-    private fun crash(threadId: Int, systemCrash: Boolean) {
+    private fun crash(threadId: Int) {
         throw CRASH.also { RecoverableStateContainer.registerCrash(threadId, it) }
     }
 
     private val CRASH = CrashError()
 
     private val threadsCount = atomic(0)
-    internal val barrier = atomic<BusyWaitingBarrier?>(null)
+    private val barrier = atomic<BusyWaitingBarrier?>(null)
+    private val crash = atomic(false)
     val threads get() = threadsCount.value
 
     /**
@@ -53,26 +54,38 @@ object Crash {
     fun possiblyCrash() {
         if (barrier.value !== null) {
             val threadId = RecoverableStateContainer.threadId()
-            crash(threadId, systemCrash = true)
+            crash(threadId)
         }
         if (Probability.shouldCrash()) {
             val threadId = RecoverableStateContainer.threadId()
             if (Probability.shouldSystemCrash()) {
-                crash(threadId, systemCrash = true)
+                crash(threadId)
             } else {
-                crash(threadId, systemCrash = false)
+                crash(threadId)
             }
         }
     }
 
+    val s = StringBuilder()
+
     @JvmStatic
-    fun awaitSystemCrash() {
+    fun awaitSystemCrash(): BusyWaitingBarrier {
+        crash.compareAndSet(expect = false, update = true)
         var b = barrier.value
         if (b == null) {
             barrier.compareAndSet(null, BusyWaitingBarrier())
             b = barrier.value!!
         }
-        b.await()
+        b.await { first ->
+            if (first) NVMCache.systemCrash()
+            barrier.compareAndSet(b, null)
+        }
+        return b
+    }
+
+    @JvmStatic
+    fun awaitSystemRecover(b: BusyWaitingBarrier) {
+        b.await { crash.compareAndSet(expect = true, update = false) }
     }
 
     /** Should be called when thread finished. */
@@ -82,6 +95,10 @@ object Crash {
 
     /** Should be called when thread started. */
     fun register(threadId: Int) {
+        var c: Boolean
+        do {
+            c = crash.value
+        } while (c)
         threadsCount.incrementAndGet()
     }
 
@@ -92,21 +109,20 @@ object Crash {
 }
 
 class BusyWaitingBarrier {
-    private val free = atomic(false)
-    private val waitingCount = atomic(0)
+    internal val free = atomic(false)
+    internal val waitingCount = atomic(0)
 
-    fun await() {
+    internal inline fun await(action: (Boolean) -> Unit) {
         waitingCount.incrementAndGet()
         // wait for all to access the barrier
         while (waitingCount.value < Crash.threads && !free.value) {
         }
-        if (free.compareAndSet(expect = false, update = true)) {
-            NVMCache.systemCrash()
-        }
-        Crash.barrier.compareAndSet(this, null)
+        val firstExit = free.compareAndSet(expect = false, update = true)
+        action(firstExit)
         waitingCount.decrementAndGet()
         // wait for cache reset
-        while (waitingCount.value > 0) {
+        while (waitingCount.value > 0 && free.value) {
         }
+        free.compareAndSet(expect = true, update = false)
     }
 }
