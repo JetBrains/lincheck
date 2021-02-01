@@ -30,6 +30,12 @@ import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
  */
 class CrashError(var actorIndex: Int = -1) : Error()
 
+private data class SystemContext(
+    val barrier: BusyWaitingBarrier?,
+    val threads: Int,
+    val crash: Boolean
+)
+
 object Crash {
     /**
      * Crash simulation.
@@ -41,10 +47,8 @@ object Crash {
 
     private val CRASH = CrashError()
 
-    private val threadsCount = atomic(0)
-    private val barrier = atomic<BusyWaitingBarrier?>(null)
-    private val crash = atomic(false)
-    val threads get() = threadsCount.value
+    private val context = atomic(SystemContext(null, 0, false))
+    val threads get() = context.value.threads
 
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
@@ -52,7 +56,7 @@ object Crash {
      */
     @JvmStatic
     fun possiblyCrash() {
-        if (barrier.value !== null) {
+        if (context.value.barrier !== null) {
             val threadId = RecoverableStateContainer.threadId()
             crash(threadId)
         }
@@ -66,45 +70,59 @@ object Crash {
         }
     }
 
-    val s = StringBuilder()
-
     @JvmStatic
     fun awaitSystemCrash(): BusyWaitingBarrier {
-        crash.compareAndSet(expect = false, update = true)
-        var b = barrier.value
-        if (b == null) {
-            barrier.compareAndSet(null, BusyWaitingBarrier())
-            b = barrier.value!!
-        }
+        var c: SystemContext
+        val newBarrier = lazy { BusyWaitingBarrier() }
+        do {
+            c = context.value
+            if (c.crash && c.barrier !== null) break
+        } while (!context.compareAndSet(c, c.copy(barrier = newBarrier.value, crash = true)))
+        val b = context.value.barrier!!
         b.await { first ->
-            if (first) NVMCache.systemCrash()
-            barrier.compareAndSet(b, null)
+            if (!first) return@await
+            NVMCache.systemCrash()
+            var currentContext: SystemContext
+            do {
+                currentContext = context.value
+                check(currentContext.crash)
+                checkNotNull(currentContext.barrier)
+            } while (!context.compareAndSet(currentContext, currentContext.copy(barrier = null)))
         }
         return b
     }
 
     @JvmStatic
     fun awaitSystemRecover(b: BusyWaitingBarrier) {
-        b.await { crash.compareAndSet(expect = true, update = false) }
+        b.await { first ->
+            if (!first) return@await
+            var currentContext: SystemContext
+            do {
+                currentContext = context.value
+                check(currentContext.crash)
+            } while (!context.compareAndSet(currentContext, currentContext.copy(crash = false)))
+        }
     }
 
     /** Should be called when thread finished. */
     fun exit(threadId: Int) {
-        threadsCount.decrementAndGet()
+        var c: SystemContext
+        do {
+            c = context.value
+        } while (!context.compareAndSet(c, c.copy(threads = c.threads - 1)))
     }
 
     /** Should be called when thread started. */
     fun register(threadId: Int) {
-        var c: Boolean
-        do {
-            c = crash.value
-        } while (c)
-        threadsCount.incrementAndGet()
+        while (true) {
+            val c = context.value
+            if (c.crash) continue
+            if (context.compareAndSet(c, c.copy(threads = c.threads + 1))) break
+        }
     }
 
     fun reset() {
-        threadsCount.value = 0
-        barrier.value = null
+        context.value = SystemContext(null, 0, false)
     }
 }
 
@@ -120,7 +138,7 @@ class BusyWaitingBarrier {
         val firstExit = free.compareAndSet(expect = false, update = true)
         action(firstExit)
         waitingCount.decrementAndGet()
-        // wait for cache reset
+        // wait for action completed in all threads
         while (waitingCount.value > 0 && free.value) {
         }
         free.compareAndSet(expect = true, update = false)

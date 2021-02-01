@@ -41,7 +41,8 @@ private const val THREADS_NUMBER = 3
 @StressCTest(
     sequentialSpecification = SequentialQueue::class,
     threads = THREADS_NUMBER,
-    recover = Recover.DURABLE
+    recover = Recover.DURABLE,
+    iterations = 38
 )
 @LogLevel(LoggingLevel.INFO)
 class DurableMSQueueTest {
@@ -56,7 +57,7 @@ class DurableMSQueueTest {
     @Recoverable
     fun recover() = q.recover()
 
-    @Test(timeout = 3 * 60_000)
+    @Test
     fun test() = LinChecker.check(this::class.java)
 }
 
