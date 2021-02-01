@@ -38,6 +38,7 @@ private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val BARRIER_TYPE = Type.getType(BusyWaitingBarrier::class.java)
 private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", BARRIER_TYPE, emptyArray())
 private val CRASH_AWAIT_SYSTEM_RECOVER = Method("awaitSystemRecover", Type.VOID_TYPE, arrayOf(BARRIER_TYPE))
+private val SET_USE_CLOCKS = Method("useClocksOnce", Type.VOID_TYPE, emptyArray())
 
 open class ActorCrashHandlerGenerator {
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
@@ -85,6 +86,10 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
 
         // clock increment must go before barrier
         TestThreadExecutionGenerator.incrementClock(mv, iLocal)
+
+        // force read clocks for next actor
+        mv.loadThis()
+        mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, SET_USE_CLOCKS)
 
         mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
 

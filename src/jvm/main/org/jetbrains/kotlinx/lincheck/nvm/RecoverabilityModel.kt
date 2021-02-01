@@ -120,7 +120,7 @@ class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
         testCfg: StressCTestConfiguration
     ): Runner = RecoverableParallelThreadsRunner(
         strategy, testClass, validationFunctions, stateRepresentationFunction,
-        testCfg.timeoutMs, UseClocks.ALWAYS, this
+        testCfg.timeoutMs, UseClocks.RANDOM, this
     )
 
     override fun createActorCrashHandlerGenerator() = DurableActorCrashHandlerGenerator()

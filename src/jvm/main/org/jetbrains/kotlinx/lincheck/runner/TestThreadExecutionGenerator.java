@@ -60,6 +60,7 @@ public class TestThreadExecutionGenerator {
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
     private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
     private static final Method TEST_THREAD_EXECUTION_READ_CLOCKS = new Method("readClocks", VOID_TYPE, new Type[]{INT_TYPE});
+    private static final Method TEST_THREAD_EXECUTION_RESET_USE_CLOCKS = new Method("resetUseClocksOnce", VOID_TYPE, NO_ARGS);
 
     static final Type RESULT_TYPE = getType(Result.class);
 
@@ -335,13 +336,18 @@ public class TestThreadExecutionGenerator {
     // `actorNumber` starts with 0
     private static void readClocksIfNeeded(int actorNumber, GeneratorAdapter mv) {
         mv.loadThis();
+        mv.getField(TEST_THREAD_EXECUTION_TYPE, "useClocksOnce", BOOLEAN_TYPE);
+        mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "useClocks", BOOLEAN_TYPE);
+        mv.visitInsn(IOR);
         Label l = new Label();
         mv.visitJumpInsn(IFEQ, l);
         mv.loadThis();
         mv.push(actorNumber);
         mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_READ_CLOCKS);
         mv.visitLabel(l);
+        mv.loadThis();
+        mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_RESET_USE_CLOCKS);
     }
 
     private static void createVoidResult(Actor actor, GeneratorAdapter mv) {
