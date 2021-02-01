@@ -27,8 +27,6 @@ import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
-data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
-
 /**
  * Essentially, a trace is a list of trace points, which represent
  * interleaving events, such as code location passing or thread switches,

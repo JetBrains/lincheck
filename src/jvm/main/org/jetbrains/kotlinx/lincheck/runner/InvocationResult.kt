@@ -20,9 +20,4 @@
 
 package org.jetbrains.kotlinx.lincheck.runner
 
-/**
- * Indicates that the invocation has run into deadlock or livelock.
- */
-class DeadlockInvocationResult(
-    val threadDump: Map<Thread, Array<StackTraceElement>>
-) : InvocationResult()
+actual class ThreadDump(val dump: Map<Thread, Array<StackTraceElement>>)

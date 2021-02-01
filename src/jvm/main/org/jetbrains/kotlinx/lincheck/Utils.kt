@@ -302,9 +302,9 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
  */
-internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
+internal fun collectThreadDump(runner: Runner) = ThreadDump(Thread.getAllStackTraces().filter { (t, _) ->
     t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
-}
+})
 
 /**
  * This method helps to encapsulate remapper logic from strategy interface.

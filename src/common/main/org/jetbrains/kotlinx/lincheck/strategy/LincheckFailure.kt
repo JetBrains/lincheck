@@ -21,6 +21,54 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
-expect open class LincheckFailure{
-    override fun toString(): String
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.*
+
+expect class Trace
+
+open class LincheckFailure(
+    val scenario: ExecutionScenario,
+    val trace: Trace?
+) {
+    override fun toString() = StringBuilder().appendFailure(this).toString()
+}
+
+internal class IncorrectResultsFailure(
+    scenario: ExecutionScenario,
+    val results: ExecutionResult,
+    trace: Trace? = null
+) : LincheckFailure(scenario, trace)
+
+internal class DeadlockWithDumpFailure(
+    scenario: ExecutionScenario,
+    val threadDump: ThreadDump,
+    trace: Trace? = null
+) : LincheckFailure(scenario, trace)
+
+internal class UnexpectedExceptionFailure(
+    scenario: ExecutionScenario,
+    val exception: Throwable,
+    trace: Trace? = null
+) : LincheckFailure(scenario, trace)
+
+internal class ValidationFailure(
+    scenario: ExecutionScenario,
+    val functionName: String,
+    val exception: Throwable,
+    trace: Trace? = null
+) : LincheckFailure(scenario, trace)
+
+internal class ObstructionFreedomViolationFailure(
+    scenario: ExecutionScenario,
+    val reason: String,
+    trace: Trace? = null
+) : LincheckFailure(scenario, trace)
+
+internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
+    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
+    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, trace)
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)
+    else -> error("Unexpected invocation result type: ${this::class.simpleName}")
 }

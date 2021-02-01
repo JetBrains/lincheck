@@ -22,6 +22,8 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 
+expect class ThreadDump
+
 /**
  * Represents results for invocations, see [Runner.run].
  */
@@ -58,4 +60,11 @@ class ValidationFailureInvocationResult(
  */
 class ObstructionFreedomViolationInvocationResult(
     val reason: String
+) : InvocationResult()
+
+/**
+ * Indicates that the invocation has run into deadlock or livelock.
+ */
+class DeadlockInvocationResult(
+    val threadDump: ThreadDump
 ) : InvocationResult()
