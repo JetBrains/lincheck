@@ -57,6 +57,7 @@ interface RecoverabilityModel {
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
     fun systemCrashProbability(): Float
     fun defaultExpectedCrashes(): Int
+    val awaitSystemCrashBeforeThrow: Boolean
 }
 
 class NoRecoverModel : RecoverabilityModel {
@@ -76,6 +77,7 @@ class NoRecoverModel : RecoverabilityModel {
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 0.0f
     override fun defaultExpectedCrashes() = 0
+    override val awaitSystemCrashBeforeThrow get() = true
 }
 
 class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
@@ -101,6 +103,7 @@ class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 0.1f
     override fun defaultExpectedCrashes() = 10
+    override val awaitSystemCrashBeforeThrow get() = true
 }
 
 class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
@@ -126,4 +129,5 @@ class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
     override fun createActorCrashHandlerGenerator() = DurableActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 1.0f
     override fun defaultExpectedCrashes() = 1
+    override val awaitSystemCrashBeforeThrow get() = false
 }

@@ -36,7 +36,7 @@ private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
 private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("creteCrashResult", CRASH_RESULT_TYPE, emptyArray())
 private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val BARRIER_TYPE = Type.getType(BusyWaitingBarrier::class.java)
-private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", BARRIER_TYPE, emptyArray())
+private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", BARRIER_TYPE, arrayOf(Type.BOOLEAN_TYPE))
 private val CRASH_AWAIT_SYSTEM_RECOVER = Method("awaitSystemRecover", Type.VOID_TYPE, arrayOf(BARRIER_TYPE))
 private val SET_USE_CLOCKS = Method("useClocksOnce", Type.VOID_TYPE, emptyArray())
 
@@ -91,6 +91,7 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.loadThis()
         mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, SET_USE_CLOCKS)
 
+        mv.push(true)
         mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
 
         // call recover if exists

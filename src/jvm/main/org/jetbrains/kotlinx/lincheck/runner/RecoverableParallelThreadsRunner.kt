@@ -104,7 +104,7 @@ internal class RecoverableParallelThreadsRunner(
         Probability.defaultCrashes = recoverModel.defaultExpectedCrashes()
         Probability.randomSystemCrashProbability = recoverModel.systemCrashProbability()
         Probability.totalActors = scenario.initExecution.size + scenario.parallelExecution.sumBy { it.size } + scenario.postExecution.size
-        Crash.reset()
+        Crash.reset(recoverModel)
         RecoverableStateContainer.state = ExecutionState.INIT
         Crash.register(0)
         RecoverableStateContainer.crashesEnabled = false

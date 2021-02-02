@@ -49,6 +49,7 @@ object Crash {
 
     private val context = atomic(SystemContext(null, 0, false))
     val threads get() = context.value.threads
+    var awaitSystemCrashBeforeThrow = true
 
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
@@ -58,11 +59,13 @@ object Crash {
     fun possiblyCrash() {
         if (context.value.barrier !== null) {
             val threadId = RecoverableStateContainer.threadId()
+            if (awaitSystemCrashBeforeThrow) awaitSystemCrash(false)
             crash(threadId)
         }
         if (Probability.shouldCrash()) {
             val threadId = RecoverableStateContainer.threadId()
             if (Probability.shouldSystemCrash()) {
+                if (awaitSystemCrashBeforeThrow) awaitSystemCrash(false)
                 crash(threadId)
             } else {
                 crash(threadId)
@@ -70,8 +73,13 @@ object Crash {
         }
     }
 
+    /**
+     * Await for all active threads to access this point and crash the cache.
+     * @param recoverEnabled true iff [awaitSystemRecover] should be called after this method;
+     * true for NRL, false for durable
+     */
     @JvmStatic
-    fun awaitSystemCrash(): BusyWaitingBarrier {
+    fun awaitSystemCrash(recoverEnabled: Boolean): BusyWaitingBarrier {
         var c: SystemContext
         val newBarrier = lazy { BusyWaitingBarrier() }
         do {
@@ -87,7 +95,7 @@ object Crash {
                 currentContext = context.value
                 check(currentContext.crash)
                 checkNotNull(currentContext.barrier)
-            } while (!context.compareAndSet(currentContext, currentContext.copy(barrier = null)))
+            } while (!context.compareAndSet(currentContext, currentContext.copy(barrier = null, crash = recoverEnabled)))
         }
         return b
     }
@@ -121,7 +129,8 @@ object Crash {
         }
     }
 
-    fun reset() {
+    fun reset(recoverModel: RecoverabilityModel) {
+        awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
         context.value = SystemContext(null, 0, false)
     }
 }
