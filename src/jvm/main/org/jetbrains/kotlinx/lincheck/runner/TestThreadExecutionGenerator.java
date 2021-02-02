@@ -94,7 +94,9 @@ public class TestThreadExecutionGenerator {
     private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", BOOLEAN_TYPE, new Type[]{});
 
     private static final Type PARALLEL_THREADS_RUNNER_TYPE = getType(ParallelThreadsRunner.class);
-    private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{OBJECT_TYPE, INT_TYPE, INT_TYPE});
+    private static final Type DISTRIBUTED_RUNNER_TYPE = getType(DistributedRunner.class);
+    static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{OBJECT_TYPE, INT_TYPE, INT_TYPE});
+    private static final Method DISTRIBUTED_RUNNER_ON_NODE_FAILURE_METHOD = new Method("onNodeFailure",  Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
     private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
     private static int generatedClassNumber = 0;
@@ -142,14 +144,14 @@ public class TestThreadExecutionGenerator {
         generateConstructor(cca);
         generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, supportRecovery);
         cca.visitEnd();
-        /*String outputFile = "Broadcast" + iThread + ".class";
+        /*String outputFile = "BroadcastNew" + iThread + ".class";
         //System.out.println(cw.toByteArray().length);
         try (OutputStream outputStream = new FileOutputStream(outputFile)) {
             outputStream.write(cw.toByteArray());
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-        throw new RuntimeException();*/
+        //throw new RuntimeException();*/
         return cw.toByteArray();
         //
     }
@@ -408,13 +410,16 @@ public class TestThreadExecutionGenerator {
     }
 
     private static void storeNodeFailureResult(GeneratorAdapter mv, int resLocal, int iLocal, boolean supportRecovery, int numberOfActors, int current, int iThread) {
-        int eLocal = mv.newLocal(CLASS_TYPE);
-        mv.storeLocal(eLocal);
         mv.loadLocal(resLocal);
         mv.loadLocal(iLocal);
         mv.invokeStatic(RESULT_KT_TYPE, RESULT_KT_CREATE_NODE_FAILURE_RESULT_METHOD);
         mv.checkCast(RESULT_TYPE);
         mv.arrayStore(RESULT_TYPE);
+        mv.loadThis();
+        mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+        mv.checkCast(DISTRIBUTED_RUNNER_TYPE);
+        mv.push(iThread);
+        mv.invokeVirtual(DISTRIBUTED_RUNNER_TYPE, DISTRIBUTED_RUNNER_ON_NODE_FAILURE_METHOD);
         if (!supportRecovery) {
             for (int i = current + 1; i < numberOfActors; i++) {
                 mv.iinc(iLocal, 1);
@@ -429,12 +434,6 @@ public class TestThreadExecutionGenerator {
             mv.push(iThread);
             mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FINISH_METHOD);
             mv.returnValue();
-        } else {
-            mv.loadThis();
-            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
-            mv.push(iThread);
-            mv.loadLocal(eLocal);
-            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FAILURE_METHOD);
         }
     }
 
