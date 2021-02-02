@@ -35,7 +35,7 @@ import java.util.concurrent.locks.ReentrantLock
 @Volatile
 var syncCounter = 0
 
-class SyncCoordinateMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
+class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
     private val coordinatorId = 0
     private val isCoordinator = env.nodeId == coordinatorId
     private val queue = ArrayDeque<Int>()

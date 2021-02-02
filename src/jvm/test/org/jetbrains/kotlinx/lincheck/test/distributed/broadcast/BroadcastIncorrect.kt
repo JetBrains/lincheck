@@ -9,13 +9,12 @@ import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeFailureException
 import org.junit.Test
 import java.lang.reflect.InvocationTargetException
 import java.util.*
-import kotlin.collections.HashSet
 
 
 data class Message(val body: String, val id: Int, val from: Int)
 
 
-class PeerIncorrect(private val env: Environment<Message>) : Node<Message> {
+class PeerIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
     private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
     private var messageId = 0
     private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {

@@ -34,7 +34,7 @@ import java.util.concurrent.locks.ReentrantLock
 @Volatile
 var tokenCounter = 0
 
-class TokenMutex(private val env: Environment<Int>) : Node<Int> {
+class TokenMutex(private val env: Environment<Int, Unit>) : Node<Int> {
     private var status = Status.WAIT
     private var token = 0
     private val lock = ReentrantLock()

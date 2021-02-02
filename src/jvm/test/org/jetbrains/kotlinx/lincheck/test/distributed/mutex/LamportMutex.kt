@@ -59,7 +59,7 @@ class Unlock(msgTime: Int) : MutexMessage(msgTime)
 @Volatile
 internal var counter = 0
 
-class LamportMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
+class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?

@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import java.util.concurrent.locks.ReentrantLock
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamportIncorrect(private val env: Environment<Message>) : Node<Message> {
+class ChandyLamportIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
     private val currentSum = atomic(100)
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()

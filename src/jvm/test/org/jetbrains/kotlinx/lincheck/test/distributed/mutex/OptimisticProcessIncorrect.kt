@@ -35,7 +35,7 @@ import java.util.concurrent.locks.ReentrantLock
 @Volatile
 internal var optimisticIncorrect = 0
 
-class OptimisticMutexIncorrect(private val env : Environment<MutexMessage>) : Node<MutexMessage> {
+class OptimisticMutexIncorrect(private val env : Environment<MutexMessage, Unit>) : Node<MutexMessage> {
     private val requested = BooleanArray(env.numberOfNodes)
     private var inCS = false
     private val lock = ReentrantLock()

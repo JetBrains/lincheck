@@ -31,7 +31,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class NaiveSnaphotIncorrect(private val env: Environment<Message>) : Node<Message> {
+class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
     private val currentSum = atomic(100)
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()

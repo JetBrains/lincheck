@@ -17,11 +17,10 @@ import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.collections.HashMap
 import kotlin.concurrent.withLock
 
 
-class KVStorageCentralSimple(private val environment: Environment<Command>) : Node<Command> {
+class KVStorageCentralSimple(private val environment: Environment<Command, Unit>) : Node<Command> {
     private val lock = ReentrantLock()
     private var commandId = 0
     private val commandResults = Array(environment.numberOfNodes) { HashMap<Int, Command>()}

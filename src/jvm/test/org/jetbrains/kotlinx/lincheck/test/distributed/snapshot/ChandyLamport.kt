@@ -51,7 +51,7 @@ class Value(val sum: Int) : State()
 object Empty : State()
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamport(private val env: Environment<Message>) : Node<Message> {
+class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message> {
     private val currentSum = atomic(100)
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()
@@ -201,7 +201,7 @@ class SnapshotTest {
     @Test(expected = LincheckAssertionError::class)
     fun testNaiveIncorrect() {
         LinChecker.check(
-            NaiveSnaphotIncorrect::class
+            NaiveSnapshotIncorrect::class
                 .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(MockSnapshot::class.java).threads
                 (3).messageOrder(MessageOrder.FIFO)

@@ -31,7 +31,7 @@ import java.util.concurrent.locks.ReentrantLock
 @Volatile
 internal var cnt = 0
 
-class RickartAgrawalaMutex(private val env : Environment<MutexMessage>) : Node<MutexMessage> {
+class RickartAgrawalaMutex(private val env : Environment<MutexMessage, Unit>) : Node<MutexMessage> {
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?

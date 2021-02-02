@@ -5,11 +5,12 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.lang.RuntimeException
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class KVStorageServer(private val env: Environment<Command>) : Node<Command> {
+class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command> {
     private val storage = HashMap<Int, Int>()
     private val commandResults = Array<HashMap<Int, Command>>(env.numberOfNodes) {
         HashMap()
@@ -40,7 +41,7 @@ class KVStorageServer(private val env: Environment<Command>) : Node<Command> {
     }
 }
 
-class KVStorageClient(private val environment: Environment<Command>) : BlockingReceiveNodeImp<Command>() {
+class KVStorageClient(private val environment: Environment<Command, Unit>) : BlockingReceiveNodeImp<Command>() {
     private var commandId = 0
     private val commandResults = HashMap<Int, Command>()
     private val serverAddr = environment.getAddress(KVStorageServer::class.java, 0)

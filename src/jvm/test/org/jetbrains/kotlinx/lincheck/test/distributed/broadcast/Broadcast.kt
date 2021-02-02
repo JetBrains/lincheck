@@ -38,7 +38,7 @@ import kotlin.random.Random
 /**
  *
  */
-class Peer(private val env: Environment<Message>) : Node<Message> {
+class Peer(private val env: Environment<Message, Unit>) : Node<Message> {
     private val receivedMessages = Array<HashMap<Int, Int>>(env.numberOfNodes) { HashMap() }
     private var messageId = 0
     private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
