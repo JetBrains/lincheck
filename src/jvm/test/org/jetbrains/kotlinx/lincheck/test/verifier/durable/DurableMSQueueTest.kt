@@ -41,8 +41,7 @@ private const val THREADS_NUMBER = 3
 @StressCTest(
     sequentialSpecification = SequentialQueue::class,
     threads = THREADS_NUMBER,
-    recover = Recover.DURABLE,
-    iterations = 38
+    recover = Recover.DURABLE
 )
 @LogLevel(LoggingLevel.INFO)
 class DurableMSQueueTest {
