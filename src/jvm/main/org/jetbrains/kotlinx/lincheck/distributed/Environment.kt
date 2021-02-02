@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Environment interface for communication with other processes.
  */
-interface Environment<Message> {
+interface Environment<Message, Log> {
     /**
      * Identifier of this node (from 0 to [numberOfNodes]).
      */
@@ -38,11 +38,16 @@ interface Environment<Message> {
      * Sends the specified [message] to all processes (from 0 to
      * [numberOfNodes]).
      */
-    fun broadcast(message: Message) {
+    fun broadcast(message: Message, skipItself : Boolean = false) {
         for (i in 0 until numberOfNodes) {
+            if (i == nodeId && skipItself) {
+                continue
+            }
             send(message, i)
         }
     }
+
+    val log : MutableList<Log>
 
     /**
      * Sends local message. Can be used to point out that some action is completed
@@ -60,9 +65,9 @@ data class LocalMessageSentEvent<Message>(val message: Message, val sender: Int)
 data class ProcessFailureEvent(val processId: Int) : Event()
 data class ProcessRecoveryEvent(val processId: Int) : Event()
 
-fun <Message> Environment<Message>.correctProcesses() = (0 until numberOfNodes).subtract(events.filterIsInstance<ProcessFailureEvent>().map { it.processId })
-fun <Message> Environment<Message>.sentMessages(processId: Int = nodeId) = events.filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
-fun <Message> Environment<Message>.receivedMessages(processId: Int = nodeId) = events.filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
-fun <Message> Environment<Message>.localMessages(processId: Int = nodeId) = events.filterIsInstance<LocalMessageSentEvent<Message>>().filter { it.sender == processId }.map { it.message }
+fun <Message, Log> Environment<Message, Log>.correctProcesses() = (0 until numberOfNodes).subtract(events.filterIsInstance<ProcessFailureEvent>().map { it.processId })
+fun <Message, Log> Environment<Message, Log>.sentMessages(processId: Int = nodeId) = events.filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
+fun <Message, Log> Environment<Message, Log>.receivedMessages(processId: Int = nodeId) = events.filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
+fun <Message, Log> Environment<Message, Log>.localMessages(processId: Int = nodeId) = events.filterIsInstance<LocalMessageSentEvent<Message>>().filter { it.sender == processId }.map { it.message }
 fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
-fun <Message> Environment<Message>.isCorrect() = correctProcesses().contains(nodeId)
+fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().contains(nodeId)

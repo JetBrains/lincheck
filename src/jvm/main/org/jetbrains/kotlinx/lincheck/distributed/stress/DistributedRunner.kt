@@ -124,7 +124,7 @@ open class DistributedRunner<Message, Log>(
     private var isClosed = false
 
 
-    private val environments: Array<Environment<Message>> = Array(testCfg.threads) {
+    private val environments: Array<Environment<Message, Log>> = Array(testCfg.threads) {
         EnvironmentImpl(it, testCfg.threads)
     }
 
@@ -231,8 +231,9 @@ open class DistributedRunner<Message, Log>(
         executor.close()
     }
 
-    override fun onFailure(iThread: Int, e: Throwable) {
-        if (e is NodeFailureException && testCfg.supportRecovery) {
+    fun onNodeFailure(iThread: Int) {
+        testInstances.filterIndexed { index, _ -> !failures[index] }.forEach { it.onNodeUnavailable(iThread) }
+        if (testCfg.supportRecovery) {
             testInstances[iThread] =
                 testClass.getConstructor(Environment::class.java).newInstance(environments[iThread]) as Node<Message>
             events.put(ProcessRecoveryEvent(iThread))
@@ -245,11 +246,17 @@ open class DistributedRunner<Message, Log>(
         }
     }
 
+    override fun onFailure(iThread: Int, e: Throwable) {
+        if (e is NodeFailureException && testCfg.supportRecovery) {
+
+        }
+    }
+
     private inner class EnvironmentImpl(
         override val nodeId: Int,
         override val numberOfNodes:
         Int
-    ) : Environment<Message> {
+    ) : Environment<Message, Log> {
         override fun send(message: Message, receiver: Int) {
             if (failures[nodeId]) {
                 throw NodeFailureException(nodeId)
@@ -285,7 +292,8 @@ open class DistributedRunner<Message, Log>(
         override fun getNumberOfNodeType(cls: Class<out Node<Message>>): Int {
             TODO("Not yet implemented")
         }
-    }
 
-    fun Environment<Message>.addLogEntry(log: Log) = logs[nodeId].add(log)
+        override val log: MutableList<Log>
+            get() = logs[nodeId]
+    }
 }
