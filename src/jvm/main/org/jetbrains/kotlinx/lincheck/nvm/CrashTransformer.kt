@@ -26,14 +26,12 @@ import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
-import java.util.concurrent.atomic.AtomicInteger
 
 private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
 
 class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = true
     private val testClassName = Type.getInternalName(testClass)
-    private val possibleCrashes = AtomicInteger(0)
 
     override fun visit(
         version: Int,
@@ -67,8 +65,8 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (!shouldTransform) return mv
         if (name == "<clinit>") return mv
-        if (name == "<init>") return CrashConstructorTransformer(mv, access, name, descriptor, possibleCrashes)
-        return CrashMethodTransformer(mv, access, name, descriptor, possibleCrashes)
+        if (name == "<init>") return CrashConstructorTransformer(mv, access, name, descriptor)
+        return CrashMethodTransformer(mv, access, name, descriptor)
     }
 }
 
@@ -76,8 +74,7 @@ private open class CrashBaseMethodTransformer(
     mv: MethodVisitor,
     access: Int,
     name: String?,
-    descriptor: String?,
-    private val possibleCrashes: AtomicInteger
+    descriptor: String?
 ) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
 
     private val crashOwnerType = Type.getType(Crash::class.java)
@@ -85,7 +82,6 @@ private open class CrashBaseMethodTransformer(
 
     protected open fun callCrash() {
         if (!shouldTransform) return
-        Probability.totalPossibleCrashes = possibleCrashes.incrementAndGet()
         super.invokeStatic(crashOwnerType, Method("possiblyCrash", "()V"))
     }
 
@@ -101,9 +97,8 @@ private class CrashMethodTransformer(
     mv: MethodVisitor,
     access: Int,
     name: String?,
-    descriptor: String?,
-    possibleCrashes: AtomicInteger
-) : CrashBaseMethodTransformer(mv, access, name, descriptor, possibleCrashes) {
+    descriptor: String?
+) : CrashBaseMethodTransformer(mv, access, name, descriptor) {
     override fun visitCode() {
         super.visitCode()
         callCrash()
@@ -125,9 +120,8 @@ private class CrashConstructorTransformer(
     mv: MethodVisitor,
     access: Int,
     name: String?,
-    descriptor: String?,
-    possibleCrashes: AtomicInteger
-) : CrashBaseMethodTransformer(mv, access, name, descriptor, possibleCrashes) {
+    descriptor: String?
+) : CrashBaseMethodTransformer(mv, access, name, descriptor) {
     private var superConstructorCalled = false
 
     override fun visitMethodInsn(

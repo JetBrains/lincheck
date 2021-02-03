@@ -44,6 +44,7 @@ object RecoverableStateContainer {
 
     private var crashes = initCrashes()
     private val crashesCount = atomic(0)
+    private val maxCrashesPerThread = atomic(0)
     private var executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER) { -1 }
 
     private fun initCrashes() = Array(NVMCache.MAX_THREADS_NUMBER) { mutableListOf<CrashError>() }
@@ -60,10 +61,17 @@ object RecoverableStateContainer {
         crash.actorIndex = executedActors[threadId]
         crashes[threadId].add(crash)
         crashesCount.incrementAndGet()
+        val myThreadCrashes = crashes[threadId].size
+        while (true) {
+            val curMax = maxCrashesPerThread.value
+            if (curMax >= myThreadCrashes) break
+            if (maxCrashesPerThread.compareAndSet(curMax, myThreadCrashes)) break
+        }
     }
 
     internal fun clearCrashes() = crashes.also {
         crashesCount.value = 0
+        maxCrashesPerThread.value = 0
         crashes = initCrashes()
         executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER) { -1 }
     }
@@ -73,6 +81,7 @@ object RecoverableStateContainer {
     }
 
     fun crashesCount() = crashesCount.value
+    fun maxCrashesCountPerThread() = maxCrashesPerThread.value
 }
 
 internal class RecoverableParallelThreadsRunner(
@@ -101,9 +110,8 @@ internal class RecoverableParallelThreadsRunner(
     override fun beforeInit() {
         super.beforeInit()
         NVMCache.clear()
-        Probability.defaultCrashes = recoverModel.defaultExpectedCrashes()
-        Probability.randomSystemCrashProbability = recoverModel.systemCrashProbability()
-        Probability.totalActors = scenario.initExecution.size + scenario.parallelExecution.sumBy { it.size } + scenario.postExecution.size
+        val actors = scenario.parallelExecution.sumBy { it.size }
+        Probability.setNewInvocation(actors, recoverModel)
         Crash.reset(recoverModel)
         RecoverableStateContainer.state = ExecutionState.INIT
         Crash.register(0)

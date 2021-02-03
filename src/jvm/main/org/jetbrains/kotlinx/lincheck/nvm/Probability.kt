@@ -21,60 +21,77 @@
  */
 package org.jetbrains.kotlinx.lincheck.nvm
 
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
-import java.lang.Integer.max
 import kotlin.random.Random
 
 object Probability {
+    private const val RANDOM_FLUSH_PROBABILITY = 0.2f
     private val random_ = ThreadLocal.withInitial { Random(42) }
     private val random get() = random_.get()
 
-    @Volatile
-    var defaultCrashes = 0
-        set(value) {
-            field = value
-            expectedCrashes = defaultCrashes
-        }
+    private var defaultCrashes = 0
+    private var minimizeCrashes = false
+    private var totalActors = 0L
+    private val totalPossibleCrashes = atomic(0L)
 
     @Volatile
-    var totalPossibleCrashes = 0
-        set(value) {
-            field = value
-            updateSingleCrashProbability()
-        }
+    private var randomSystemCrashProbability = 0.0f
 
     @Volatile
-    var totalActors = 0
-        set(value) {
-            field = value
-            updateSingleCrashProbability()
-        }
+    private var singleCrashProbability = 0.001f
 
     @Volatile
-    var expectedCrashes = 0
-        set(value) {
-            field = value
-            updateSingleCrashProbability()
-        }
-
-    @Volatile
-    private var singleCrashProbability = 0.0f
-
-    private fun updateSingleCrashProbability() {
-        singleCrashProbability = expectedCrashes / max(1, totalPossibleCrashes * totalActors).toFloat()
-    }
-
-    private const val RANDOM_FLUSH_PROBABILITY = 0.2f
-
-    @Volatile
-    var randomSystemCrashProbability = 0.0f
+    private var expectedCrashes = 0
 
     fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
-    fun shouldCrash() = RecoverableStateContainer.crashesEnabled
-        && (RecoverableStateContainer.crashesCount() < expectedCrashes)
-        && bernoulli(singleCrashProbability)
+    fun shouldCrash(): Boolean {
+        if (RecoverableStateContainer.crashesEnabled && moreCrashesPermitted()) {
+            totalPossibleCrashes.incrementAndGet()
+            return bernoulli(singleCrashProbability)
+        }
+        return false
+    }
 
     fun shouldSystemCrash() = bernoulli(randomSystemCrashProbability)
+
+    fun resetExpectedCrashes() {
+        minimizeCrashes = false
+        expectedCrashes = defaultCrashes
+        totalActors = 0
+        totalPossibleCrashes.value = 0
+    }
+
+    fun minimizeCrashes() {
+        minimizeCrashes = true
+        expectedCrashes--
+        totalActors = 0
+        totalPossibleCrashes.value = 0
+    }
+
+    fun setNewInvocation(actors: Int, model: RecoverabilityModel) {
+        randomSystemCrashProbability = model.systemCrashProbability()
+        defaultCrashes = model.defaultExpectedCrashes()
+        if (!minimizeCrashes && expectedCrashes != defaultCrashes) {
+           resetExpectedCrashes()
+        }
+        updateSingleCrashProbability(actors)
+        totalActors += actors.toLong()
+    }
+
+    private fun updateSingleCrashProbability(actors: Int) {
+        val crashes = totalPossibleCrashes.value
+        if (crashes == 0L) return
+        singleCrashProbability = expectedCrashes / (actors * (crashes.toFloat() / totalActors))
+    }
+
+    private fun moreCrashesPermitted() = occurredCrashes() < expectedCrashes
+
+    private fun occurredCrashes() = if (randomSystemCrashProbability < 1.0) {
+        RecoverableStateContainer.crashesCount()
+    } else {
+        RecoverableStateContainer.maxCrashesCountPerThread()
+    }
 
     private fun bernoulli(probability: Float) = random.nextFloat() < probability
 }
