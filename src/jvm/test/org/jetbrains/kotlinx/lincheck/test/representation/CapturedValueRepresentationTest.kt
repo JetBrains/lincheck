@@ -24,11 +24,12 @@ package org.jetbrains.kotlinx.lincheck.test.representation
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 /**
- * This test check that values captured in an incorrect interleaving have proper representation.
+ * This test checks that values captured in an incorrect interleaving have proper representation.
  * `toString` method is used only for primitive types and their wrappers.
  * For other classes we use simplified representation to avoid problems with concurrent modification or
  * not completely initialized objects (e.g, with `ConcurrentModificationException`)
@@ -68,6 +69,7 @@ class CapturedValueRepresentationTest : VerifierState() {
         check(" int[]@1" in log)
         check(" String[]@1" in log)
         check(" 0" in log)
+        checkTraceHasNoLincheckEvents(log)
     }
 
     override fun extractState(): Any = counter

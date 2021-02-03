@@ -21,7 +21,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
 import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
@@ -101,7 +103,7 @@ internal open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler()
+        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
 
         override fun resumeWith(result: kotlin.Result<Any?>) {
             // decrement completed or suspended threads only if the operation was not cancelled and
@@ -129,7 +131,7 @@ internal open class ParallelThreadsRunner(
             private var resWithCont: SuspensionPointResultWithContinuation
         ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
             override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
-                return Continuation(StoreExceptionHandler()) { result ->
+                return Continuation(StoreExceptionHandler() + Job()) { result ->
                     // decrement completed or suspended threads only if the operation was not cancelled
                     if (!result.cancelledByLincheck()) {
                         completedOrSuspendedThreads.decrementAndGet()
@@ -184,12 +186,11 @@ internal open class ParallelThreadsRunner(
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cont.cancelByLincheck(actor.promptCancellation)) {
+            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
                 }
-                afterCoroutineCancelled(iThread)
                 Cancelled
             } else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
@@ -229,13 +230,18 @@ internal open class ParallelThreadsRunner(
         return suspensionPointResults[iThread][actorId]
     }
 
+    /**
+     * This method is used for communication between `ParallelThreadsRunner` and `ManagedStrategy` via overriding,
+     * so that runner do not know about managed strategy details.
+     */
+    internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
+        cont.cancelByLincheck(promptCancellation)
+
     override fun afterCoroutineSuspended(iThread: Int) {
         completedOrSuspendedThreads.incrementAndGet()
     }
 
     override fun afterCoroutineResumed(iThread: Int) {}
-
-    override fun afterCoroutineCancelled(iThread: Int) {}
 
     // We cannot use `completionStatuses` here since
     // they are set _before_ the result is published.

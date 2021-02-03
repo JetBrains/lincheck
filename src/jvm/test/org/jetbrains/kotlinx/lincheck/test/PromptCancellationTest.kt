@@ -20,11 +20,13 @@
 
 package org.jetbrains.kotlinx.lincheck.test
 
+import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import kotlin.coroutines.*
 import kotlin.reflect.*
 
@@ -33,22 +35,42 @@ abstract class AbstractPromptCancellationTest(
     val sequentialSpecification: KClass<*>? = null
 ) : AbstractLincheckTest(*expectedFailures) {
     @Volatile
-    var returnResult = 0
+    private var returnResult = 0
 
     @Volatile
-    var cont: CancellableContinuation<Unit>? = null
+    private var cont: CancellableContinuation<Unit>? = null
 
-    @Operation(cancellableOnSuspension = true, promptCancellation = true, runOnce = true)
+    private val completedOrCancelled = atomic(false)
+
+    @Operation(promptCancellation = true, runOnce = true)
     suspend fun suspendOp() {
         suspendCancellableCoroutine<Unit> { cont ->
             this.cont = cont
         }
+        check(completedOrCancelled.compareAndSet(false, true))
     }
 
     @ExperimentalCoroutinesApi
+    @InternalCoroutinesApi
     @Operation(runOnce = true)
-    fun resumeOp(): Int {
-        cont?.resume(Unit, { returnResult = 42 })
+    fun resumeOp(@Param(gen = IntGen::class, conf = "1:2") mode: Int): Int {
+        val cont = cont ?: return -1
+        when (mode) {
+            1 -> { // resume
+                cont.resume(Unit) {
+                    check(completedOrCancelled.compareAndSet(false, true))
+                    returnResult = 42
+                }
+            }
+            2 -> { // tryResume
+                val token = cont.tryResume(Unit, null) {
+                    check(completedOrCancelled.compareAndSet(false, true))
+                    returnResult = 42
+                }
+                if (token != null) cont.completeResume(token)
+            }
+            else -> error("Unexpected")
+        }
         return returnResult
     }
 
@@ -57,7 +79,6 @@ abstract class AbstractPromptCancellationTest(
         threads(2)
         actorsPerThread(1)
         actorsAfter(0)
-        if (this is StressOptions) invocationsPerIteration(200_000)
         requireStateEquivalenceImplCheck(false)
         sequentialSpecification?.let { sequentialSpecification(it.java) }
     }
@@ -79,8 +100,9 @@ class IncorrectPromptCancellationSequential {
         }
     }
 
-    fun resumeOp(): Int {
-        cont?.resume(Unit)
+    fun resumeOp(mode: Int): Int {
+        val cont = cont ?: return -1
+        cont.resume(Unit)
         return 0
     }
 }

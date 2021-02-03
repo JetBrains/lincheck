@@ -13,6 +13,7 @@ plugins {
     java
     kotlin("multiplatform")
     id("maven-publish")
+    id("maven")
     id("kotlinx.team.infra") version "0.2.0-dev-55"
 }
 
@@ -108,6 +109,40 @@ publishing {
         // add empty javadoc
         if (name == "jvm") {
             artifact(tasks.getByName("javadocJar"))
+        }
+        mavenCentralMetadata()
+    }
+    publications {
+        mavenCentralMetadata()
+    }
+}
+
+fun PublishingExtension.mavenCentralMetadata() {
+    publications.withType(MavenPublication::class) {
+        pom {
+            if (!name.isPresent) {
+                name.set(artifactId)
+            }
+            description.set("Lincheck - Framework for testing concurrent data structures")
+            url.set("https://github.com/Kotlin/kotlinx-lincheck")
+            licenses {
+                license {
+                    name.set("GNU Lesser General Public License v3.0")
+                    url.set("https://www.gnu.org/licenses/lgpl-3.0.en.html")
+                    distribution.set("repo")
+                }
+            }
+            developers {
+                developer {
+                    id.set("JetBrains")
+                    name.set("JetBrains Team")
+                    organization.set("JetBrains")
+                    organizationUrl.set("https://www.jetbrains.com")
+                }
+            }
+            scm {
+                url.set("https://github.com/Kotlin/kotlinx-lincheck")
+            }
         }
     }
 }

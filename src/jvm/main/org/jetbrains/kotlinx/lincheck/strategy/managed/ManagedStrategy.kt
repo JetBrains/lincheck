@@ -21,7 +21,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -194,7 +196,7 @@ abstract class ManagedStrategy(
     /**
      * Re-runs the last invocation to collect its trace.
      */
-    private fun collectTrace(failingResult: InvocationResult): List<TracePoint>? {
+    private fun collectTrace(failingResult: InvocationResult): Trace? {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
@@ -226,7 +228,7 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.asLincheckFailureWithoutTrace().toString())
             }.toString()
         }
-        return traceCollector!!.trace
+        return Trace(traceCollector!!.trace, testCfg.verboseTrace)
     }
 
     /**
@@ -286,7 +288,7 @@ abstract class ManagedStrategy(
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired {
                 // Log the last event that caused obstruction freedom violation
-                traceCollector?.passCodeLocation(codeLocation, tracePoint)
+                traceCollector?.passCodeLocation(tracePoint)
                 "Obstruction-freedom is required but an active lock has been found"
             }
             checkLiveLockHappened(loopDetector.totalOperations)
@@ -297,7 +299,7 @@ abstract class ManagedStrategy(
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(iThread, reason)
         }
-        traceCollector?.passCodeLocation(codeLocation, tracePoint)
+        traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
     }
 
@@ -330,7 +332,7 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
     }
 
     override fun onActorStart(iThread: Int) {
@@ -462,7 +464,7 @@ abstract class ManagedStrategy(
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (inIgnoredSection(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
-        traceCollector?.passCodeLocation(codeLocation, tracePoint)
+        traceCollector?.passCodeLocation(tracePoint)
         return false
     }
 
@@ -485,7 +487,7 @@ abstract class ManagedStrategy(
      */
     @Suppress("UNUSED_PARAMETER")
     internal fun afterUnpark(iThread: Int, codeLocation: Int, tracePoint: UnparkTracePoint?, thread: Any) {
-        traceCollector?.passCodeLocation(codeLocation, tracePoint)
+        traceCollector?.passCodeLocation(tracePoint)
     }
 
     /**
@@ -515,7 +517,7 @@ abstract class ManagedStrategy(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        traceCollector?.passCodeLocation(codeLocation, tracePoint)
+        traceCollector?.passCodeLocation(tracePoint)
     }
 
     /**
@@ -586,7 +588,7 @@ abstract class ManagedStrategy(
      */
     @Suppress("UNUSED_PARAMETER")
     internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint) {
-        if (isTestThread(iThread)) {
+        if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
             check(collectTrace) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
             val suspendedMethodStack = suspendedFunctionsStack[iThread]
@@ -611,7 +613,7 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     internal fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        if (isTestThread(iThread)) {
+        if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
             check(collectTrace) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
             if (tracePoint.wasSuspended) {
@@ -631,11 +633,26 @@ abstract class ManagedStrategy(
      * @param constructorId which constructor to use for creating code location
      * @return the created interleaving point
      */
-    fun createTracePoint(constructorId: Int): TracePoint {
+    fun createTracePoint(constructorId: Int): TracePoint = doCreateTracePoint(tracePointConstructors[constructorId])
+
+    /**
+     * Creates a new [CoroutineCancellationTracePoint].
+     * This method is similar to [createTracePoint] method, but also adds the new trace point to the trace.
+     */
+    internal fun createAndLogCancellationTracePoint(): CoroutineCancellationTracePoint? {
+        if (collectTrace) {
+            val cancellationTracePoint = doCreateTracePoint(::CoroutineCancellationTracePoint)
+            traceCollector?.passCodeLocation(cancellationTracePoint)
+            return cancellationTracePoint
+        }
+        return null
+    }
+
+    private fun <T : TracePoint> doCreateTracePoint(constructor: (iThread: Int, actorId: Int, CallStackTrace) -> T): T {
         val iThread = currentThreadNumber()
         // use any actor id for non-test threads
         val actorId = if (!isTestThread(iThread)) Int.MIN_VALUE else currentActorId[iThread]
-        return tracePointConstructors[constructorId](iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
+        return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
     }
 
     /**
@@ -688,17 +705,12 @@ abstract class ManagedStrategy(
             _trace += FinishThreadTracePoint(iThread)
         }
 
-        fun passCodeLocation(codeLocation: Int, tracePoint: TracePoint?) {
-            // Ignore coroutine suspensions - they are processed in another place.
-            if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return
+        fun passCodeLocation(tracePoint: TracePoint?) {
             _trace += tracePoint!!
         }
 
         fun addStateRepresentation(iThread: Int) {
-            // enter ignored section, because stateRepresentation invokes transformed method with switch points
-            enterIgnoredSection(iThread)
             val stateRepresentation = runner.constructStateRepresentation()!!
-            leaveIgnoredSection(iThread)
             // use call stack trace of the previous trace point
             val callStackTrace = _trace.last().callStackTrace.toList()
             _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace)
@@ -742,6 +754,34 @@ private class ManagedStrategyRunner(
     override fun afterCoroutineCancelled(iThread: Int) {
         super.afterCoroutineCancelled(iThread)
         managedStrategy.afterCoroutineCancelled(iThread)
+    }
+
+    override fun constructStateRepresentation(): String? {
+        // Enter ignored section, because Runner will call transformed state representation method
+        val iThread = managedStrategy.currentThreadNumber()
+        managedStrategy.enterIgnoredSection(iThread)
+        val stateRepresentation = super.constructStateRepresentation()
+        managedStrategy.leaveIgnoredSection(iThread)
+        return stateRepresentation
+    }
+
+    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
+        // Create a cancellation trace point before `cancel`, so that cancellation trace point
+        // precede the events in `onCancellation` handler.
+        val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
+        try {
+            // Call the `cancel` method.
+            val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
+            // Pass the result to `cancellationTracePoint`.
+            cancellationTracePoint?.initializeCancellationResult(cancellationResult)
+            // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
+            if (cancellationResult != CANCELLATION_FAILED)
+                managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
+            return cancellationResult
+        } catch(e: Throwable) {
+            cancellationTracePoint?.initializeException(e)
+            throw e // throw further
+        }
     }
 }
 

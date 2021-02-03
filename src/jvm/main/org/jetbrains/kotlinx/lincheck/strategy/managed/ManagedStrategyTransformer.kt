@@ -91,10 +91,10 @@ internal class ManagedStrategyTransformer(
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CancellabilitySupportMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
 
@@ -688,6 +688,16 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
+     * Removes all `Thread.yield` invocations, because model checking strategy manages the execution itself
+     */
+    private class ThreadYieldTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            if (opcode == INVOKESTATIC && owner == "java/lang/Thread" && name == "yield") return
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+        }
+    }
+
+    /**
      * Adds invocations of ManagedStrategy methods before monitorenter and monitorexit instructions
      */
     private inner class SynchronizedBlockTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
@@ -946,31 +956,6 @@ internal class ManagedStrategyTransformer(
             loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, ::UnparkTracePoint)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
-        }
-    }
-
-    /**
-     * Removes switch points in CancellableContinuationImpl.cancel, so that they will not be reported
-     * when a continuation is cancelled by lincheck
-     */
-    private inner class CancellabilitySupportMethodTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isCancel = className == "kotlinx/coroutines/CancellableContinuationImpl" &&
-            (methodName == "cancel" || methodName == "cancelCompletedResult")
-
-        override fun visitCode() {
-            if (isCancel)
-                invokeBeforeIgnoredSectionEntering()
-            mv.visitCode()
-        }
-
-        override fun visitInsn(opcode: Int) {
-            if (isCancel) {
-                when (opcode) {
-                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
-                    else -> { }
-                }
-            }
-            mv.visitInsn(opcode)
         }
     }
 
@@ -1497,7 +1482,7 @@ internal object UnsafeHolder {
                 f.isAccessible = true
                 theUnsafe = f.get(null)
             } catch (e: Exception) {
-                throw RuntimeException(e)
+                throw RuntimeException(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e))
             }
         }
         return theUnsafe!!

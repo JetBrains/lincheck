@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.CancellableContinuation
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.io.*
 import java.lang.*
@@ -161,7 +162,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
             try {
                 runnable.run()
             } catch(e: Throwable) {
-                setResult(iThread, e)
+                setResult(iThread, wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e))
                 continue@loop
             }
             setResult(iThread, DONE)

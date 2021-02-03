@@ -190,20 +190,24 @@ internal class StoreExceptionHandler : AbstractCoroutineContextElement(Coroutine
 }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): Boolean {
+internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
     val cancelled = cancel(cancellationByLincheckException)
     exceptionHandler.exception?.let {
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
-    if (!cancelled && promptCancellation) {
-        // TODO we can invoke the method directly if the transformation is disabled
-        getMethod(this, cancelCompletedResultMethod).invoke(this, null, cancellationByLincheckException)
-        return true
+    return when {
+        cancelled -> CancellationResult.CANCELLED_BEFORE_RESUMPTION
+        promptCancellation -> {
+            context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
+            CancellationResult.CANCELLED_AFTER_RESUMPTION
+        }
+        else -> CancellationResult.CANCELLATION_FAILED
     }
-    return cancelled
 }
+
+internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!
@@ -314,3 +318,15 @@ internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): R
 
 internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
+
+fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e: Throwable): Throwable {
+    if (e.message?.contains("to unnamed module") ?: false) {
+        return RuntimeException(ADD_OPENS_MESSAGE, e)
+    }
+    return e
+}
+
+private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
+    "Please add the following lines to your test running configuration:\n" +
+    "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
+    "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"

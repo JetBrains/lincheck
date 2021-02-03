@@ -25,12 +25,13 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.lang.StringBuilder
 
 /**
- * This test check interleaving reporting features related to methods, such as reporting of atomic functions with
+ * This test checks interleaving reporting features related to methods, such as reporting of atomic functions with
  * and their parameters and results compression of calls that are executed without a context switch in the middle.
  */
 class MethodReportingTest : VerifierState() {
@@ -87,10 +88,7 @@ class MethodReportingTest : VerifierState() {
         check("ignored" !in log) { "ignored methods should not be present in log" }
         check("nonPrimitiveParameter(IllegalStateException@1)" in log)
         check("nonPrimitiveResult(): IllegalStateException@2" in log)
-    }
-
-    private class BooleanHolder(var value: Boolean) {
-        override fun toString(): String = value.toString()
+        checkTraceHasNoLincheckEvents(log)
     }
 }
 
@@ -130,5 +128,6 @@ class CaughtExceptionMethodReportingTest : VerifierState() {
         val log = StringBuilder().appendFailure(failure).toString()
         check("useless" !in log) { "Due to bad call stack these accesses appear to be in the same method as thread switches" }
         check("badMethod(): threw NotImplementedError" in log) { "thrown exception is not shown properly" }
+        checkTraceHasNoLincheckEvents(log)
     }
 }

@@ -24,10 +24,11 @@ package org.jetbrains.kotlinx.lincheck.test.representation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.*
 import org.junit.*
 
 /**
- * This test check basic interleaving reporting features,
+ * This test checks basic interleaving reporting features,
  * including reporting of lock acquiring/releasing, reads/writes with parameter/result capturing.
  */
 class TraceReportingTest {
@@ -83,13 +84,14 @@ class TraceReportingTest {
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
         check("foo" in log)
-        check("canEnterForbiddenSection.WRITE(true) at TraceReportingTest.resetFlag(TraceReportingTest.kt:64)" in log)
-        check("canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:65)" in log)
+        check("canEnterForbiddenSection.WRITE(true) at TraceReportingTest.resetFlag(TraceReportingTest.kt:65)" in log)
+        check("canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:66)" in log)
         check("a.READ: 0 at TraceReportingTest.bar" in log)
         check("a.WRITE(1) at TraceReportingTest.bar" in log)
         check("a.READ: 1 at TraceReportingTest.bar" in log)
         check("a.WRITE(2) at TraceReportingTest.bar" in log)
         check("MONITORENTER at TraceReportingTest.resetFlag" in log)
         check("MONITOREXIT at TraceReportingTest.resetFlag" in log)
+        checkTraceHasNoLincheckEvents(log)
     }
 }
