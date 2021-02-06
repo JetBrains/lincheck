@@ -23,9 +23,10 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import kotlinx.atomicfu.locks.*
 import kotlin.jvm.*
 
-class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel) {
+class Reporter @JvmOverloads constructor(private val logLevel: LoggingLevel) : SynchronizedObject() {
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
         appendLine("\n= Iteration $iteration / $maxIterations =")
         appendExecutionScenario(scenario)
@@ -40,7 +41,7 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
-    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit { // TODO fix this with some mutex
+    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit) = synchronized(this) {
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
         msg(sb)

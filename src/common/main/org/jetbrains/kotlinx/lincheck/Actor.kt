@@ -30,5 +30,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
  */
 expect class Actor {
     val isSuspendable: Boolean
+    val allowExtraSuspension: Boolean
+    val promptCancellation: Boolean
+
     override fun toString(): String
 }

@@ -22,6 +22,12 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 
+expect class ValidationFunction
+
+expect val ValidationFunction.name: String
+
+expect class StateRepresentationFunction
+
 /**
  * Contains information about the provided operations (see [Operation]).
  * Several [tests][StressCTest] can refer to one structure

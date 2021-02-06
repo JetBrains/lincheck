@@ -35,7 +35,7 @@ abstract class ManagedCTestConfiguration(
     generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
     val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-    sequentialSpecification: KClass<*>?, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean
+    sequentialSpecification: SequentialSpecification?, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean
 ) : CTestConfiguration(
     testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs

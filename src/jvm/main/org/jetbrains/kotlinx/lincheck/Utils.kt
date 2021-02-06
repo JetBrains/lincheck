@@ -40,17 +40,18 @@ import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
+actual class SequentialSpecification(val kClass: KClass<*>) {
+    actual fun getInitialState(): Any = kClass.getConstructor().newInstance()
+}
 
-fun chooseSequentialSpecification(sequentialSpecificationByUser: KClass<*>?, testClass: Class<*>): KClass<*> =
-    if (sequentialSpecificationByUser === DummySequentialSpecification::class || sequentialSpecificationByUser == null) testClass.kotlin
-    else sequentialSpecificationByUser
-
-internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
+fun chooseSequentialSpecification(sequentialSpecificationByUser: KClass<*>?, testClass: Class<*>): SequentialSpecification =
+    if (sequentialSpecificationByUser === DummySequentialSpecification::class || sequentialSpecificationByUser == null) SequentialSpecification(testClass.kotlin)
+    else SequentialSpecification(sequentialSpecificationByUser)
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.
  */
-internal fun executeActor(
+internal actual fun executeActor(
     instance: Any,
     actor: Actor,
     completion: Continuation<Any?>?
@@ -78,18 +79,7 @@ internal fun executeActor(
     }
 }
 
-internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
-                                               onError: (functionName: String, exception: Throwable) -> Unit) {
-    for (f in validationFunctions) {
-        val validationException = executeValidationFunction(instance, f)
-        if (validationException != null) {
-            onError(f.name, validationException)
-            return
-        }
-    }
-}
-
-private fun executeValidationFunction(instance: Any, validationFunction: Method): Throwable? {
+internal actual fun executeValidationFunction(instance: Any, validationFunction: ValidationFunction): Throwable? {
     val m = getMethod(instance, validationFunction)
     try {
         m.invoke(instance)
@@ -138,7 +128,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  * Success values of [kotlin.Result] instances are represented as either [VoidResult] or [ValueResult].
  * Failure values of [kotlin.Result] instances are represented as [ExceptionResult].
  */
-internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
+internal actual fun createLincheckResult(res: Any?, wasSuspended: Boolean) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
     res != null && res is Throwable -> createExceptionResult(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
@@ -182,49 +172,10 @@ internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (t
     else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
-internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
-    var exception: Throwable? = null
-
-    override fun handleException(context: CoroutineContext, exception: Throwable) {
-        this.exception = exception
-    }
-}
-
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
-    val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
-    exceptionHandler.exception = null
-    val cancelled = cancel(cancellationByLincheckException)
-    exceptionHandler.exception?.let {
-        throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
-    }
-    return when {
-        cancelled -> CancellationResult.CANCELLED_BEFORE_RESUMPTION
-        promptCancellation -> {
-            context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
-            CancellationResult.CANCELLED_AFTER_RESUMPTION
-        }
-        else -> CancellationResult.CANCELLATION_FAILED
-    }
-}
-
-internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
-
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!
 
-/**
- * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
- */
-fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
-
-private val cancellationByLincheckException = Exception("Cancelled by lincheck")
-
-object CancellableContinuationHolder {
-    var storedLastCancellableCont: CancellableContinuation<*>? = null
-}
-
-fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
+actual fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     val t = Thread.currentThread()
     if (t is FixedActiveThreadsExecutor.TestThread) {
         t.cont = cont
@@ -315,6 +266,3 @@ internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): R
         classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
         else -> null
     }
-
-internal val String.canonicalClassName get() = this.replace('/', '.')
-internal val String.internalClassName get() = this.replace('.', '/')

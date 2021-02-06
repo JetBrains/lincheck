@@ -18,11 +18,12 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.kotlinx.lincheck.verifier
 
-import java.lang.reflect.*
-import kotlin.reflect.*
+import org.jetbrains.kotlinx.lincheck.*
 
-fun <T : Any> KClass<T>.getConstructor(vararg args: Class<*>) : Constructor<T> {
-    return this.java.getConstructor(*args)
-}
+actual fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification): SequentialSpecification =
+    SequentialSpecification(
+        TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv) }
+        .loadClass(sequentialSpecification.kClass.java.name)!!.kotlin
+    )

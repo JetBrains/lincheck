@@ -35,7 +35,7 @@ import kotlin.reflect.*
  * This verifier is based on [AbstractLTSVerifier] and caches the already processed results
  * for performance improvement (see [CachedVerifier]).
  */
-class LinearizabilityVerifier(sequentialSpecification: KClass<*>) : AbstractLTSVerifier(sequentialSpecification) {
+class LinearizabilityVerifier(sequentialSpecification: SequentialSpecification) : AbstractLTSVerifier(sequentialSpecification) {
     override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
 
     override fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult) =

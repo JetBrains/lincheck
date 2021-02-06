@@ -37,7 +37,7 @@ import java.util.function.*;
 import java.util.stream.Collectors;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
-import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
+import static org.jetbrains.kotlinx.lincheck.CommonUtilsKt.getCanonicalClassName;
 import static org.objectweb.asm.Opcodes.*;
 
 /**

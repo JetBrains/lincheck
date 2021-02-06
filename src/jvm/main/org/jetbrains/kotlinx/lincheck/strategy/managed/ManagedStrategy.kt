@@ -46,8 +46,8 @@ abstract class ManagedStrategy(
     private val testClass: Class<*>,
     scenario: ExecutionScenario,
     private val verifier: Verifier,
-    private val validationFunctions: List<Method>,
-    private val stateRepresentationFunction: Method?,
+    private val validationFunctions: List<ValidationFunction>,
+    private val stateRepresentationFunction: StateRepresentationFunction?,
     private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
@@ -723,9 +723,9 @@ abstract class ManagedStrategy(
  * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
-    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
-    stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
+    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<ValidationFunction>,
+    stateRepresentationFunction: StateRepresentationFunction?, timeoutMs: Long, useClocks: UseClocks
+) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationFunction, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         managedStrategy.onStart(iThread)

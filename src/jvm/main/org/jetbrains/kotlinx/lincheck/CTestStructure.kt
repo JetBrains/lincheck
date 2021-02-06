@@ -31,6 +31,12 @@ import java.util.*
 import java.util.stream.Collectors
 import kotlin.collections.HashMap
 
+actual typealias ValidationFunction = Method
+
+actual val ValidationFunction.name get() = this.name
+
+actual typealias StateRepresentationFunction = Method
+
 /**
  * Contains information about the provided operations (see [Operation]).
  * Several [tests][StressCTest] can refer to one structure
@@ -39,8 +45,8 @@ import kotlin.collections.HashMap
 actual class CTestStructure private constructor(
     actual val actorGenerators: List<ActorGenerator>,
     actual val operationGroups: List<OperationGroup>,
-    val validationFunctions: List<Method>,
-    val stateRepresentation: Method?
+    val validationFunctions: List<ValidationFunction>,
+    val stateRepresentation: StateRepresentationFunction?
 ) {
     companion object {
         /**
@@ -50,8 +56,8 @@ actual class CTestStructure private constructor(
             val namedGens: MutableMap<String, ParameterGenerator<*>> = HashMap()
             val groupConfigs: MutableMap<String, OperationGroup> = HashMap()
             val actorGenerators: MutableList<ActorGenerator> = ArrayList()
-            val validationFunctions: MutableList<Method> = ArrayList()
-            val stateRepresentations: MutableList<Method> = ArrayList()
+            val validationFunctions: MutableList<ValidationFunction> = ArrayList()
+            val stateRepresentations: MutableList<StateRepresentationFunction> = ArrayList()
             var clazz = testClass
             while (clazz != null) {
                 readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions, stateRepresentations)
@@ -60,10 +66,10 @@ actual class CTestStructure private constructor(
             check(stateRepresentations.size <= 1) {
                 "Several functions marked with " + StateRepresentation::class.java.simpleName +
                         " were found, while at most one should be specified: " +
-                        stateRepresentations.stream().map { obj: Method -> obj.name }.collect(Collectors.joining(", "))
+                        stateRepresentations.stream().map { obj: StateRepresentationFunction -> obj.name }.collect(Collectors.joining(", "))
             }
-            var stateRepresentation: Method? = null
-            if (!stateRepresentations.isEmpty()) stateRepresentation = stateRepresentations[0]
+            var stateRepresentation: StateRepresentationFunction? = null
+            if (stateRepresentations.isNotEmpty()) stateRepresentation = stateRepresentations[0]
             // Create StressCTest class configuration
             return CTestStructure(actorGenerators, ArrayList(groupConfigs.values), validationFunctions, stateRepresentation)
         }
@@ -71,8 +77,8 @@ actual class CTestStructure private constructor(
         private fun readTestStructureFromClass(clazz: Class<*>, namedGens: MutableMap<String, ParameterGenerator<*>>,
                                                groupConfigs: MutableMap<String, OperationGroup>,
                                                actorGenerators: MutableList<ActorGenerator>,
-                                               validationFunctions: MutableList<Method>,
-                                               stateRepresentations: MutableList<Method>) {
+                                               validationFunctions: MutableList<ValidationFunction>,
+                                               stateRepresentations: MutableList<StateRepresentationFunction>) {
             // Read named parameter paramgen (declared for class)
             for (paramAnn in clazz.getAnnotationsByType(Param::class.java)) {
                 require(!paramAnn.name.isEmpty()) { "@Param name in class declaration cannot be empty" }

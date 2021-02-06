@@ -58,7 +58,7 @@ fun verify(
     correct: Boolean
 ) {
     val (scenario, results) = scenarioWithResults(block)
-    val verifier = verifierClass.getConstructor(KClass::class.java).newInstance(testClass.kotlin)
+    val verifier = verifierClass.getConstructor(SequentialSpecification::class.java).newInstance(SequentialSpecification(testClass.kotlin))
     val res = verifier.verifyResults(scenario, results)
     assert(res == correct)
 }

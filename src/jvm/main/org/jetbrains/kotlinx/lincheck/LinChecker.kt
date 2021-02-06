@@ -142,7 +142,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             testClass = testClass,
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
-            stateRepresentationMethod = testStructure.stateRepresentation,
+            stateRepresentationFunction = testStructure.stateRepresentation,
             verifier = verifier
         ).run()
 
@@ -179,7 +179,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
 
     private fun CTestConfiguration.createVerifier() =
-            verifierClass.constructors.find { it.parameters.size == 1 && it.parameters[0].type == KClass::class.createType(listOf(STAR)) }!!
+            verifierClass.constructors.find { it.parameters.size == 1 && it.parameters[0].type == SequentialSpecification::class.createType() }!!
                 .call(sequentialSpecification).also {
                     if (requireStateEquivalenceImplCheck) it.checkStateEquivalenceImplementation()
                 }

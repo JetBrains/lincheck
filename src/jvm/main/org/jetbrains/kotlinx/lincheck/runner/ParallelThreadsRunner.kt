@@ -48,8 +48,8 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
-    validationFunctions: List<Method>,
-    stateRepresentationFunction: Method?,
+    validationFunctions: List<ValidationFunction>,
+    stateRepresentationFunction: StateRepresentationFunction?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {

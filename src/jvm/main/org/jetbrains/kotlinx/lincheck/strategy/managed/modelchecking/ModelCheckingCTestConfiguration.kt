@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -35,11 +36,11 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
                                       actorsAfter: Int, generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
                                       checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
                                       guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                                      sequentialSpecification: KClass<*>?, timeoutMs: Long, eliminateLocalObjects: Boolean, verboseTrace: Boolean
+                                      sequentialSpecification: SequentialSpecification?, timeoutMs: Long, eliminateLocalObjects: Boolean, verboseTrace: Boolean
 ) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
     minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-                                stateRepresentationMethod: Method?, verifier: Verifier): Strategy
-        = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
+                                stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier): Strategy
+        = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationFunction, verifier)
 }

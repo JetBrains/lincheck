@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -47,8 +48,8 @@ internal class ModelCheckingStrategy(
     testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
-    validationFunctions: List<Method>,
-    stateRepresentation: Method?,
+    validationFunctions: List<ValidationFunction>,
+    stateRepresentation: StateRepresentationFunction?,
     verifier: Verifier
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.

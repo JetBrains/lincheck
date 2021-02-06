@@ -1,9 +1,8 @@
-/*-
- * #%L
+/*
  * Lincheck
- * %%
- * Copyright (C) 2019 JetBrains s.r.o.
- * %%
+ *
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
@@ -16,8 +15,7 @@
  *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
 package org.jetbrains.kotlinx.lincheck.verifier
@@ -27,15 +25,15 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
-import java.util.*
 import kotlin.collections.HashMap
 import kotlin.coroutines.*
 import kotlin.math.*
 import kotlin.reflect.*
-import kotlin.reflect.full.*
 
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
+
+expect fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification): SequentialSpecification
 
 /**
  * Common interface for different labeled transition systems, which several correctness formalisms use.
@@ -57,10 +55,9 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: KClass<*>) {
+class LTS(sequentialSpecification: SequentialSpecification) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: KClass<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
-                                                    .loadClass(sequentialSpecification.java.name)!!.kotlin
+    private val sequentialSpecification: SequentialSpecification = loadSequentialSpecification(sequentialSpecification)
 
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
@@ -124,7 +121,7 @@ class LTS(sequentialSpecification: KClass<*>) {
                 }
             }
             check(transitionInfo.result != Suspended) {
-                "Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported"
+                "Execution of the follow-up part of this operation ${actor} suspended - this behaviour is not supported"
             }
             return if (expectedResult.isLegalByFollowUp(transitionInfo, actor.allowExtraSuspension)) transitionInfo else null
         }
@@ -196,7 +193,7 @@ class LTS(sequentialSpecification: KClass<*>) {
 
         private fun getResumedOperations(resumedTicketsWithResults: Map<Int, ResumedResult>): List<ResumptionInfo> {
             val resumedOperations = mutableListOf<ResumptionInfo>()
-            resumedTicketsWithResults.forEach { resumedTicket, res ->
+            resumedTicketsWithResults.forEach { (resumedTicket, res) ->
                 resumedOperations.add(ResumptionInfo(res.resumedActor, res.by, resumedTicket))
             }
             // Ignore the order of resumption by sorting the list of resumptions.
@@ -227,7 +224,7 @@ class LTS(sequentialSpecification: KClass<*>) {
             }
             CANCELLATION -> {
                 continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancelByLincheck(promptCancellation = actor.promptCancellation)
-                val wasSuspended = suspendedOperations.removeIf { it.actor == actor && it.ticket == ticket }
+                val wasSuspended = suspendedOperations.removeAll { it.actor == actor && it.ticket == ticket }
                 if (!actor.promptCancellation) {
                     check(wasSuspended) { "The operation can be cancelled after resumption only in the prompt cancellation mode" }
                 }
@@ -246,7 +243,7 @@ class LTS(sequentialSpecification: KClass<*>) {
         }
         resumedOperations.forEach { (resumedTicket, res) ->
             if (!prevResumedTickets.contains(resumedTicket)) {
-                suspendedOperations.removeIf { it.ticket == resumedTicket }
+                suspendedOperations.removeAll { it.ticket == resumedTicket }
                 res.by = actor
             }
         }
@@ -281,7 +278,7 @@ class LTS(sequentialSpecification: KClass<*>) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.getConstructor().newInstance()
+    private fun createInitialStateInstance() = sequentialSpecification.getInitialState()
 
     fun checkStateEquivalenceImplementation() {
         val i1 = createInitialStateInstance()
@@ -324,24 +321,24 @@ class LTS(sequentialSpecification: KClass<*>) {
 
     fun generateDotGraph(): String {
         val builder = StringBuilder()
-        builder.appendln("digraph {")
-        builder.appendln("\"${initialState.hashCode()}\" [style=filled, fillcolor=green]")
-        builder.appendTransitions(initialState, IdentityHashMap())
-        builder.appendln("}")
+        builder.appendLine("digraph {")
+        builder.appendLine("\"${initialState.hashCode()}\" [style=filled, fillcolor=green]")
+        builder.appendTransitions(initialState, HashMap<State, Unit>())
+        builder.appendLine("}")
         return builder.toString()
     }
 
-    private fun StringBuilder.appendTransitions(state: State, visitedStates: IdentityHashMap<State, Unit>) {
-        state.transitionsByRequests.forEach { actor, transition ->
-            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+    private fun StringBuilder.appendTransitions(state: State, visitedStates: HashMap<State, Unit>) {
+        state.transitionsByRequests.forEach { (actor, transition) ->
+            appendLine("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
         }
-        state.transitionsByFollowUps.forEach { ticket, transition ->
-            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<F,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+        state.transitionsByFollowUps.forEach { (ticket, transition) ->
+            appendLine("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<F,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
         }
-        state.transitionsByCancellations.forEach { ticket, transition ->
-            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<C,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+        state.transitionsByCancellations.forEach { (ticket, transition) ->
+            appendLine("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<C,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
         }
     }
@@ -369,7 +366,16 @@ private class StateInfo(
             resumedOperations == other.resumedOperations
     }
 
-    override fun hashCode() = Objects.hash(
+    private fun hashAll(vararg vals: Any?): Int {
+        var res = 0
+        for (v in vals) {
+            res += v.hashCode()
+            res *= 31
+        }
+        return res
+    }
+
+    override fun hashCode() = hashAll(
         instance,
         suspendedOperations.map { it.actor },
         resumedOperations

@@ -48,11 +48,11 @@ actual abstract class CTestConfiguration(
     val verifierClass: KClass<out Verifier>,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
-    val sequentialSpecification: KClass<*>?,
+    val sequentialSpecification: SequentialSpecification?,
     val timeoutMs: Long
 ) {
-    abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-                                stateRepresentationMethod: Method?, verifier: Verifier): Strategy
+    abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
+                                stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier): Strategy
 
     companion object {
         const val DEFAULT_ITERATIONS = 100

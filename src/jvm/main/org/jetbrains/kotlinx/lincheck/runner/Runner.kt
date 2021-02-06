@@ -38,8 +38,8 @@ import java.io.*
 actual abstract class Runner protected constructor(
     protected val strategy: Strategy,
     private val _testClass: Class<*>, // will be transformed later
-    protected val validationFunctions: List<Method>,
-    protected val stateRepresentationFunction: Method?
+    protected val validationFunctions: List<ValidationFunction>,
+    protected val stateRepresentationFunction: StateRepresentationFunction?
 ) : Closeable {
     protected actual var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     protected lateinit var testClass: Class<*> // not available before `initialize` call
