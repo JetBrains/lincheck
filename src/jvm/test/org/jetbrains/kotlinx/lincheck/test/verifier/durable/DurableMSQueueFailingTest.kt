@@ -22,7 +22,9 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.nvm.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
+import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
@@ -36,8 +38,8 @@ private const val THREADS_NUMBER = 3
     threads = THREADS_NUMBER,
     recover = Recover.DURABLE
 )
-class DurableMSQueueFailingTest { // no recover method
-    private val q = DurableMSQueue<Int>(2 + THREADS_NUMBER)
+class DurableMSQueueFailingTest {
+    private val q = NoRecoverDurableMSQueue<Int>()
 
     @Operation
     fun push(value: Int) = q.push(value)
@@ -50,3 +52,65 @@ class DurableMSQueueFailingTest { // no recover method
         assertThrows(Throwable::class.java) { LinChecker.check(this::class.java) }
     }
 }
+
+
+private class NoRecoverDurableMSQueue<T> {
+    private val head: NonVolatileRef<Node<T?>>
+    private val tail: NonVolatileRef<Node<T?>>
+
+    init {
+        val dummy = Node<T?>(v = null)
+        head = nonVolatile(dummy)
+        tail = nonVolatile(dummy)
+    }
+
+    fun push(value: T) {
+        val newNode = Node<T?>(v = value)
+        while (true) {
+            val last: Node<T?> = tail.value
+            val nextNode: Node<T?>? = last.next.value
+            if (last !== tail.value) continue
+            if (nextNode === null) {
+                if (last.next.compareAndSet(null, newNode)) {
+                    last.next.flush()
+                    tail.compareAndSet(last, newNode)
+                    return
+                }
+            } else {
+                last.next.flush()
+                tail.compareAndSet(last, nextNode)
+            }
+        }
+    }
+
+    fun pop(p: Int): T? {
+        // recover should be here
+        while (true) {
+            val first: Node<T?> = head.value
+            val last: Node<T?> = tail.value
+            val nextNode: Node<T?>? = first.next.value
+            if (first !== head.value) continue
+            if (first === last) {
+                if (nextNode === null) {
+                    return null
+                }
+                last.next.flush()
+                tail.compareAndSet(last, nextNode)
+            } else {
+                checkNotNull(nextNode)
+                val currentValue: T = nextNode.v!!
+                if (nextNode.deleter.compareAndSet(DEFAULT_DELETER, p)) {
+                    nextNode.deleter.flush()
+                    head.compareAndSet(first, nextNode)
+                    return currentValue
+                } else {
+                    if (head.value === first) {
+                        nextNode.deleter.flush()
+                        head.compareAndSet(first, nextNode)
+                    }
+                }
+            }
+        }
+    }
+}
+

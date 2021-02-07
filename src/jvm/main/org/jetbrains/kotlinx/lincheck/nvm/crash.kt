@@ -30,11 +30,7 @@ import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
  */
 class CrashError(var actorIndex: Int = -1) : Error()
 
-private data class SystemContext(
-    val barrier: BusyWaitingBarrier?,
-    val threads: Int,
-    val crash: Boolean
-)
+private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)
 
 object Crash {
     /**
@@ -47,7 +43,7 @@ object Crash {
 
     private val CRASH = CrashError()
 
-    private val context = atomic(SystemContext(null, 0, false))
+    private val context = atomic(SystemContext(null, 0))
     val threads get() = context.value.threads
     var awaitSystemCrashBeforeThrow = true
 
@@ -59,79 +55,59 @@ object Crash {
     fun possiblyCrash() {
         if (context.value.barrier !== null) {
             val threadId = RecoverableStateContainer.threadId()
-            if (awaitSystemCrashBeforeThrow) awaitSystemCrash(false)
+            if (awaitSystemCrashBeforeThrow) awaitSystemCrash()
             crash(threadId)
         }
         if (Probability.shouldCrash()) {
             val threadId = RecoverableStateContainer.threadId()
-            if (Probability.shouldSystemCrash()) {
-                if (awaitSystemCrashBeforeThrow) awaitSystemCrash(false)
-                crash(threadId)
-            } else {
-                crash(threadId)
-            }
+            if (awaitSystemCrashBeforeThrow && Probability.shouldSystemCrash()) awaitSystemCrash()
+            crash(threadId)
         }
     }
 
     /**
      * Await for all active threads to access this point and crash the cache.
-     * @param recoverEnabled true iff [awaitSystemRecover] should be called after this method;
-     * true for NRL, false for durable
      */
     @JvmStatic
-    fun awaitSystemCrash(recoverEnabled: Boolean): BusyWaitingBarrier {
-        var c: SystemContext
-        val newBarrier = lazy { BusyWaitingBarrier() }
-        do {
-            c = context.value
-            if (c.crash && c.barrier !== null) break
-        } while (!context.compareAndSet(c, c.copy(barrier = newBarrier.value, crash = true)))
-        val b = context.value.barrier!!
-        b.await { first ->
+    fun awaitSystemCrash() {
+        var newBarrier: BusyWaitingBarrier? = null
+        while (true) {
+            val c = context.value
+            if (c.barrier !== null) break
+            if (newBarrier === null) newBarrier = BusyWaitingBarrier()
+            if (context.compareAndSet(c, c.copy(barrier = newBarrier))) break
+        }
+        context.value.barrier!!.await { first ->
             if (!first) return@await
             NVMCache.systemCrash()
-            var currentContext: SystemContext
-            do {
-                currentContext = context.value
-                check(currentContext.crash)
+            while (true) {
+                val currentContext = context.value
                 checkNotNull(currentContext.barrier)
-            } while (!context.compareAndSet(currentContext, currentContext.copy(barrier = null, crash = recoverEnabled)))
-        }
-        return b
-    }
-
-    @JvmStatic
-    fun awaitSystemRecover(b: BusyWaitingBarrier) {
-        b.await { first ->
-            if (!first) return@await
-            var currentContext: SystemContext
-            do {
-                currentContext = context.value
-                check(currentContext.crash)
-            } while (!context.compareAndSet(currentContext, currentContext.copy(crash = false)))
+                if (context.compareAndSet(currentContext, currentContext.copy(barrier = null))) break
+            }
         }
     }
 
     /** Should be called when thread finished. */
     fun exit(threadId: Int) {
-        var c: SystemContext
-        do {
-            c = context.value
-        } while (!context.compareAndSet(c, c.copy(threads = c.threads - 1)))
+        while (true) {
+            val currentContext = context.value
+            if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads - 1))) break
+        }
     }
 
     /** Should be called when thread started. */
     fun register(threadId: Int) {
         while (true) {
-            val c = context.value
-            if (c.crash) continue
-            if (context.compareAndSet(c, c.copy(threads = c.threads + 1))) break
+            val currentContext = context.value
+            if (currentContext.barrier !== null) continue
+            if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads + 1))) break
         }
     }
 
     fun reset(recoverModel: RecoverabilityModel) {
         awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
-        context.value = SystemContext(null, 0, false)
+        context.value = SystemContext(null, 0)
     }
 }
 
@@ -142,14 +118,11 @@ class BusyWaitingBarrier {
     internal inline fun await(action: (Boolean) -> Unit) {
         waitingCount.incrementAndGet()
         // wait for all to access the barrier
-        while (waitingCount.value < Crash.threads && !free.value) {
-        }
+        while (waitingCount.value < Crash.threads && !free.value);
         val firstExit = free.compareAndSet(expect = false, update = true)
         action(firstExit)
         waitingCount.decrementAndGet()
         // wait for action completed in all threads
-        while (waitingCount.value > 0 && free.value) {
-        }
-        free.compareAndSet(expect = true, update = false)
+        while (waitingCount.value > 0 && free.value);
     }
 }

@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
@@ -45,7 +44,7 @@ private const val THREADS_NUMBER = 3
 )
 @LogLevel(LoggingLevel.INFO)
 class DurableMSQueueTest {
-    private val q = DurableMSQueue<Int>(2 + THREADS_NUMBER)
+    private val q = DurableMSQueue<Int>()
 
     @Operation
     fun push(value: Int) = q.push(value)
@@ -53,30 +52,28 @@ class DurableMSQueueTest {
     @Operation
     fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId)
 
-    @Recoverable
-    fun recover() = q.recover()
-
     @Test
     fun test() = LinChecker.check(this::class.java)
 }
 
-private const val DEFAULT_DELETER = -1
+internal const val DEFAULT_DELETER = -1
 
-private class Node<T>(
+internal class Node<T>(
     val next: NonVolatileRef<Node<T>?> = nonVolatile(null),
     val v: T
 ) {
     val deleter = nonVolatile(DEFAULT_DELETER)
 }
 
-class DurableMSQueue<T>(threadsCount: Int) {
-    private val dummy = Node<T?>(v = null)
-    private val head = nonVolatile(dummy)
-    private val tail = nonVolatile(dummy)
+private class DurableMSQueue<T> {
+    private val head: NonVolatileRef<Node<T?>>
+    private val tail: NonVolatileRef<Node<T?>>
 
-    private val unknown = Any()
-    private val empty = Any()
-    private val response = MutableList(threadsCount) { nonVolatile(unknown) }
+    init {
+        val dummy = Node<T?>(v = null)
+        head = nonVolatile(dummy)
+        tail = nonVolatile(dummy)
+    }
 
     fun push(value: T) {
         val newNode = Node<T?>(v = value)
@@ -98,8 +95,7 @@ class DurableMSQueue<T>(threadsCount: Int) {
     }
 
     fun pop(p: Int): T? {
-        response[p].value = unknown
-        response[p].flush()
+        recover()
 
         while (true) {
             val first: Node<T?> = head.value
@@ -108,8 +104,6 @@ class DurableMSQueue<T>(threadsCount: Int) {
             if (first !== head.value) continue
             if (first === last) {
                 if (nextNode === null) {
-                    response[p].value = empty
-                    response[p].flush()
                     return null
                 }
                 last.next.flush()
@@ -119,16 +113,11 @@ class DurableMSQueue<T>(threadsCount: Int) {
                 val currentValue: T = nextNode.v!!
                 if (nextNode.deleter.compareAndSet(DEFAULT_DELETER, p)) {
                     nextNode.deleter.flush()
-                    response[p].value = currentValue!!
-                    response[p].flush()
                     head.compareAndSet(first, nextNode)
                     return currentValue
                 } else {
-                    val d = nextNode.deleter.value
                     if (head.value === first) {
                         nextNode.deleter.flush()
-                        response[d].value = currentValue!!
-                        response[d].flush()
                         head.compareAndSet(first, nextNode)
                     }
                 }
@@ -136,56 +125,25 @@ class DurableMSQueue<T>(threadsCount: Int) {
         }
     }
 
-    fun recover() {
-        val h = head.value
-        val t = tail.value
-
-        val predA = predA()
-        if (predA != null) {
-            if (reachableFrom(predA, h)) {
-                head.compareAndSet(h, predA)
-                val a = predA.next.value!!
-                a.deleter.flush()
-                head.compareAndSet(predA, a)
-            }
-        }
-
-        val predB = predB()
-        if (predB != null) {
-            if (reachableFrom(predB, h)) {
-                tail.compareAndSet(t, predB)
-                tail.value.next.flush()
-                tail.compareAndSet(predB, predB.next.value!!)
-            } else {
-                tail.compareAndSet(t, predB.next.value!!)
-            }
-        }
-    }
-
-    private fun predA(): Node<T?>? {
-        var prev = dummy
-        var n = prev.next.value ?: return null
-        if (n.deleter.value == DEFAULT_DELETER) return null
+    private fun recover() {
         while (true) {
-            val next = n.next.value ?: return prev
-            if (next.deleter.value == DEFAULT_DELETER) return prev
-            prev = n
-            n = next
+            val h = head.value
+            val next = h.next.value ?: break
+            if (next.deleter.value == DEFAULT_DELETER) break
+            next.deleter.flush()
+            head.compareAndSet(h, next)
         }
-    }
-
-    private fun predB(): Node<T?>? {
-        var prev = dummy
-        var n = prev.next.value ?: return null
         while (true) {
-            val next = n.next.value ?: return prev
-            prev = n
-            n = next
+            val t = tail.value
+            val next = t.next.value ?: break
+            t.next.flush()
+            tail.compareAndSet(t, next)
         }
+        check(reachableFrom(head.value, tail.value))
     }
 
-    private fun reachableFrom(node: Node<T?>, h: Node<T?>): Boolean {
-        var c = h
+    private fun reachableFrom(start: Node<T?>, node: Node<T?>): Boolean {
+        var c = start
         while (true) {
             if (c === node) return true
             c = c.next.value ?: return false

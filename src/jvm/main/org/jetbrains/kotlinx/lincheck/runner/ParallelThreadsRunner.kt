@@ -86,7 +86,7 @@ internal open class ParallelThreadsRunner(
     override fun initialize() {
         super.initialize()
         testThreadExecutions = Array(scenario.threads) { t ->
-            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), recoverModel.createActorCrashHandlerGenerator(), testClass)
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), recoverModel.createActorCrashHandlerGenerator())
         }
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }

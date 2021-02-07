@@ -21,10 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.CrashResult
-import org.jetbrains.kotlinx.lincheck.nvm.BusyWaitingBarrier
 import org.jetbrains.kotlinx.lincheck.nvm.Crash
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
-import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator.OBJECT_TYPE
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator.TEST_THREAD_EXECUTION_TYPE
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
@@ -35,21 +33,12 @@ private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
 private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("creteCrashResult", CRASH_RESULT_TYPE, emptyArray())
 private val CRASH_TYPE = Type.getType(Crash::class.java)
-private val BARRIER_TYPE = Type.getType(BusyWaitingBarrier::class.java)
-private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", BARRIER_TYPE, arrayOf(Type.BOOLEAN_TYPE))
-private val CRASH_AWAIT_SYSTEM_RECOVER = Method("awaitSystemRecover", Type.VOID_TYPE, arrayOf(BARRIER_TYPE))
+private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", Type.VOID_TYPE, emptyArray())
 private val SET_USE_CLOCKS = Method("useClocksOnce", Type.VOID_TYPE, emptyArray())
 
 open class ActorCrashHandlerGenerator {
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
-    open fun addCrashCatchBlock(
-        mv: GeneratorAdapter,
-        resLocal: Int,
-        iLocal: Int,
-        skip: Label,
-        _class: Class<*>?
-    ) {
-    }
+    open fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {}
 }
 
 class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
@@ -61,19 +50,13 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.visitTryCatchBlock(start, end, handlerLabel, CRASH_ERROR_TYPE.internalName)
     }
 
-    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label, _class: Class<*>?) {
-        super.addCrashCatchBlock(mv, resLocal, iLocal, skip, _class)
+    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
+        super.addCrashCatchBlock(mv, resLocal, iLocal, skip)
         mv.visitLabel(handlerLabel)
-        storeExceptionResultFromCrash(mv, resLocal, iLocal, skip, _class)
+        storeExceptionResultFromCrash(mv, resLocal, iLocal, skip)
     }
 
-    private fun storeExceptionResultFromCrash(
-        mv: GeneratorAdapter,
-        resLocal: Int,
-        iLocal: Int,
-        skip: Label,
-        _class: Class<*>?
-    ) {
+    private fun storeExceptionResultFromCrash(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
         mv.pop()
 
         mv.loadLocal(resLocal)
@@ -91,24 +74,7 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.loadThis()
         mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, SET_USE_CLOCKS)
 
-        mv.push(true)
         mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
-
-        // call recover if exists
-        if (_class != null) {
-            val method = _class.methods
-                .singleOrNull { it.name == "recover" && it.parameterCount == 0 && it.returnType == Void.TYPE }
-            val type = Type.getType(_class)
-            if (method != null) {
-                // Load test instance
-                mv.loadThis()
-                mv.getField(TEST_THREAD_EXECUTION_TYPE, "testInstance", OBJECT_TYPE)
-                mv.checkCast(type)
-                mv.invokeVirtual(type, Method.getMethod(method))
-            }
-        }
-        mv.checkCast(BARRIER_TYPE)
-        mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_RECOVER)
 
         mv.goTo(skip)
     }
