@@ -58,28 +58,28 @@ class DurableMSQueueTest {
 
 internal const val DEFAULT_DELETER = -1
 
-internal class Node<T>(
-    val next: NonVolatileRef<Node<T>?> = nonVolatile(null),
+internal class QueueNode<T>(
+    val next: NonVolatileRef<QueueNode<T>?> = nonVolatile(null),
     val v: T
 ) {
     val deleter = nonVolatile(DEFAULT_DELETER)
 }
 
 private class DurableMSQueue<T> {
-    private val head: NonVolatileRef<Node<T?>>
-    private val tail: NonVolatileRef<Node<T?>>
+    private val head: NonVolatileRef<QueueNode<T?>>
+    private val tail: NonVolatileRef<QueueNode<T?>>
 
     init {
-        val dummy = Node<T?>(v = null)
+        val dummy = QueueNode<T?>(v = null)
         head = nonVolatile(dummy)
         tail = nonVolatile(dummy)
     }
 
     fun push(value: T) {
-        val newNode = Node<T?>(v = value)
+        val newNode = QueueNode<T?>(v = value)
         while (true) {
-            val last: Node<T?> = tail.value
-            val nextNode: Node<T?>? = last.next.value
+            val last: QueueNode<T?> = tail.value
+            val nextNode: QueueNode<T?>? = last.next.value
             if (last !== tail.value) continue
             if (nextNode === null) {
                 if (last.next.compareAndSet(null, newNode)) {
@@ -98,9 +98,9 @@ private class DurableMSQueue<T> {
         recover()
 
         while (true) {
-            val first: Node<T?> = head.value
-            val last: Node<T?> = tail.value
-            val nextNode: Node<T?>? = first.next.value
+            val first: QueueNode<T?> = head.value
+            val last: QueueNode<T?> = tail.value
+            val nextNode: QueueNode<T?>? = first.next.value
             if (first !== head.value) continue
             if (first === last) {
                 if (nextNode === null) {
@@ -142,7 +142,7 @@ private class DurableMSQueue<T> {
         check(reachableFrom(head.value, tail.value))
     }
 
-    private fun reachableFrom(start: Node<T?>, node: Node<T?>): Boolean {
+    private fun reachableFrom(start: QueueNode<T?>, node: QueueNode<T?>): Boolean {
         var c = start
         while (true) {
             if (c === node) return true
