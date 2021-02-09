@@ -1,9 +1,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import java.util.concurrent.TimeUnit
 
@@ -11,6 +8,10 @@ import java.util.concurrent.TimeUnit
  * Interface for a single node in a distributed algorithm.
  */
 interface Node<Message> {
+    companion object {
+        const val TICK_TIME = 1
+    }
+
     /**
      * Called when a new message arrives.
      * @param message is a message from another node
@@ -20,6 +21,9 @@ interface Node<Message> {
     fun recover() {}
 
     fun onNodeUnavailable(nodeId : Int) {}
+
+    suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T): T? =
+        withTimeout(ticks * TICK_TIME, block)
 }
 
 

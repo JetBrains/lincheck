@@ -29,23 +29,24 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
+import java.util.*
 
 
 class DistributedCTestConfiguration<Message, Log>(testClass: Class<*>, iterations: Int,
-                                             threads: Int, actorsPerThread: Int,
-                                             generatorClass: Class<out ExecutionGenerator>,
-                                             verifierClass: Class<out Verifier>,
-                                             val invocationsPerIteration: Int,
-                                             val isNetworkReliable: Boolean,
-                                             val messageOrder: MessageOrder,
-                                             val maxNumberOfFailedNodes: (Int) -> Int,
-                                             val supportRecovery: Boolean,
-                                             val messageDuplication: Boolean,
-                                             val networkPartitions : Boolean,
-                                             val nodeTypes: HashMap<Class<out Node<Message>>, Int>,
-                                             requireStateEquivalenceCheck: Boolean,
-                                             minimizeFailedScenario: Boolean,
-                                             sequentialSpecification: Class<*>, timeoutMs: Long) :
+                                                  threads: Int, actorsPerThread: Int,
+                                                  generatorClass: Class<out ExecutionGenerator>,
+                                                  verifierClass: Class<out Verifier>,
+                                                  val invocationsPerIteration: Int,
+                                                  val isNetworkReliable: Boolean,
+                                                  val messageOrder: MessageOrder,
+                                                  val maxNumberOfFailedNodes: (Int) -> Int,
+                                                  val supportRecovery: Boolean,
+                                                  val messageDuplication: Boolean,
+                                                  val networkPartitions : Boolean,
+                                                  val nodeTypes: HashMap<Class<out Node<Message>>, Int>,
+                                                  requireStateEquivalenceCheck: Boolean,
+                                                  minimizeFailedScenario: Boolean,
+                                                  sequentialSpecification: Class<*>, timeoutMs: Long) :
         CTestConfiguration(testClass, iterations, threads, actorsPerThread,
                 0, 0, generatorClass, verifierClass,
                 requireStateEquivalenceCheck,

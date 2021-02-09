@@ -2,6 +2,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import java.util.*
 
 enum class MessageOrder {
     SYNCHRONOUS,
@@ -11,15 +12,15 @@ enum class MessageOrder {
 
 class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log>,
         DistributedCTestConfiguration<Message, Log>>() {
-    var isNetworkReliable: Boolean = true
-    var messageOrder: MessageOrder = MessageOrder.SYNCHRONOUS
-    var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
-    var supportRecovery: Boolean = true
-    var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
-    var messageDuplication: Boolean = false
-    var networkPartitions: Boolean = false
-    var testClasses = HashMap<Class<out Node<Message>>, Int>()
-    var useVectorClock = false
+    private var isNetworkReliable: Boolean = true
+    private var messageOrder: MessageOrder = MessageOrder.SYNCHRONOUS
+    private var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
+    private var supportRecovery: Boolean = true
+    private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
+    private var messageDuplication: Boolean = false
+    private var networkPartitions: Boolean = false
+    private var testClasses = HashMap<Class<out Node<Message>>, Int>()
+    private var useVectorClock = false
 
     fun networkReliable(isReliable: Boolean): DistributedOptions<Message, Log> {
         this.isNetworkReliable = isReliable
