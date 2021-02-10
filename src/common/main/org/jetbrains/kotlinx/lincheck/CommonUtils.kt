@@ -22,7 +22,12 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.execution.*
 import kotlin.coroutines.*
+
+expect class TestClass {
+    fun createInstance(): Any
+}
 
 expect class SequentialSpecification {
     fun getInitialState(): Any
@@ -88,6 +93,26 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
         }
         else -> CancellationResult.CANCELLATION_FAILED
     }
+}
+
+/**
+ * Returns scenario for the specified thread. Note that initial and post parts
+ * are represented as threads with ids `0` and `threads + 1` respectively.
+ */
+internal operator fun ExecutionScenario.get(threadId: Int): List<Actor> = when (threadId) {
+    0 -> initExecution
+    threads + 1 -> postExecution
+    else -> parallelExecution[threadId - 1]
+}
+
+/**
+ * Returns results for the specified thread. Note that initial and post parts
+ * are represented as threads with ids `0` and `threads + 1` respectively.
+ */
+internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (threadId) {
+    0 -> initResults
+    parallelResultsWithClock.size + 1 -> postResults
+    else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
 internal val String.canonicalClassName get() = this.replace('/', '.')

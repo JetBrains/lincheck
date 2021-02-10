@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
 
 /**
  * The actor entity describe the operation with its parameters
@@ -32,6 +33,9 @@ expect class Actor {
     val isSuspendable: Boolean
     val allowExtraSuspension: Boolean
     val promptCancellation: Boolean
+    val cancelOnSuspension: Boolean
 
     override fun toString(): String
 }
+
+expect val Actor.isQuiescentConsistent: Boolean

@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.*
-
 /**
  * Returns `true` if there is at least one suspendable actor in the generated scenario
  */

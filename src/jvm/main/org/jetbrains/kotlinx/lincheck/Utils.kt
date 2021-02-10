@@ -40,6 +40,10 @@ import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
+actual class TestClass(val clazz: Class<*>) {
+    actual fun createInstance(): Any = clazz.getDeclaredConstructor().newInstance()
+}
+
 actual class SequentialSpecification(val kClass: KClass<*>) {
     actual fun getInitialState(): Any = kClass.getConstructor().newInstance()
 }
@@ -150,26 +154,6 @@ inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
         return block()
     } else throw this
-}
-
-/**
- * Returns scenario for the specified thread. Note that initial and post parts
- * are represented as threads with ids `0` and `threads + 1` respectively.
- */
-internal operator fun ExecutionScenario.get(threadId: Int): List<Actor> = when (threadId) {
-    0 -> initExecution
-    threads + 1 -> postExecution
-    else -> parallelExecution[threadId - 1]
-}
-
-/**
- * Returns results for the specified thread. Note that initial and post parts
- * are represented as threads with ids `0` and `threads + 1` respectively.
- */
-internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (threadId) {
-    0 -> initResults
-    parallelResultsWithClock.size + 1 -> postResults
-    else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")

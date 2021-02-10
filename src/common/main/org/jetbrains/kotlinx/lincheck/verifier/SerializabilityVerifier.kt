@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import kotlin.reflect.*
 
 /**
  * This verifier checks that the specified results could be happen in serializable execution.
