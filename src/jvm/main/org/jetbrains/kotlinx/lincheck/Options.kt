@@ -131,7 +131,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
         this.minimizeFailedScenario = minimizeFailedScenario
     }
 
-    abstract fun createTestConfigurations(testClass: Class<*>): CTEST
+    abstract fun createTestConfigurations(testClass: TestClass): CTEST
 
     /**
      * Set logging level, [DEFAULT_LOG_LEVEL] is used by default.

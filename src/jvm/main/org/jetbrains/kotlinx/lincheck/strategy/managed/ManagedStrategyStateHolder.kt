@@ -41,7 +41,7 @@ internal object ManagedStrategyStateHolder {
     /**
      * Sets the strategy and its initial state for the specified class loader.
      */
-    fun setState(loader: ClassLoader, strategy: ManagedStrategy?, testClass: Class<out Any>) {
+    fun setState(loader: ClassLoader, strategy: ManagedStrategy?, testClass: TestClass) {
         try {
             val clazz = loader.loadClass(ManagedStrategyStateHolder::class.java.canonicalName)
             clazz.getField("strategy")[null] = strategy
@@ -57,17 +57,17 @@ internal object ManagedStrategyStateHolder {
     /**
      * Prepare the state for the specified class loader for the next invocation.
      */
-    fun resetState(loader: ClassLoader, testClass: Class<out Any>) {
+    fun resetState(loader: ClassLoader, testClass: TestClass) {
         try {
             val clazz = loader.loadClass(ManagedStrategyStateHolder::class.java.canonicalName)
-            clazz.getMethod("resetStateImpl", Class::class.java).invoke(null, testClass)
+            clazz.getMethod("resetStateImpl", TestClass::class.java).invoke(null, testClass)
         } catch (e: Exception) {
             throw IllegalStateException("Cannot set state to ManagedStateHolder", e)
         }
     }
 
     @JvmStatic
-    fun resetStateImpl(testClass: Class<out Any>) {
+    fun resetStateImpl(testClass: TestClass) {
         random!!.setSeed(INITIAL_SEED)
         objectManager = ObjectManager(testClass)
     }

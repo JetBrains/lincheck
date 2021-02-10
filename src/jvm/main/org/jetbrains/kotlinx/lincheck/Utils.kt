@@ -41,6 +41,8 @@ import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
 actual class TestClass(val clazz: Class<*>) {
+    actual val name = clazz.name
+
     actual fun createInstance(): Any = clazz.getDeclaredConstructor().newInstance()
 }
 
@@ -48,8 +50,8 @@ actual class SequentialSpecification(val kClass: KClass<*>) {
     actual fun getInitialState(): Any = kClass.getConstructor().newInstance()
 }
 
-fun chooseSequentialSpecification(sequentialSpecificationByUser: KClass<*>?, testClass: Class<*>): SequentialSpecification =
-    if (sequentialSpecificationByUser === DummySequentialSpecification::class || sequentialSpecificationByUser == null) SequentialSpecification(testClass.kotlin)
+fun chooseSequentialSpecification(sequentialSpecificationByUser: KClass<*>?, testClass: TestClass): SequentialSpecification =
+    if (sequentialSpecificationByUser === DummySequentialSpecification::class || sequentialSpecificationByUser == null) SequentialSpecification(testClass.clazz.kotlin)
     else SequentialSpecification(sequentialSpecificationByUser)
 
 /**

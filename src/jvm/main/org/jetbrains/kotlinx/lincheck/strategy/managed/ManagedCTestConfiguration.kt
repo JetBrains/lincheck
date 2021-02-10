@@ -30,7 +30,7 @@ import kotlin.reflect.*
  * A common configuration for managed strategies.
  */
 abstract class ManagedCTestConfiguration(
-    testClass: Class<*>, iterations: Int,
+    testClass: TestClass, iterations: Int,
     threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
     generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
     val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,

@@ -26,6 +26,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import kotlin.coroutines.*
 
 expect class TestClass {
+    val name: String
+
     fun createInstance(): Any
 }
 

@@ -37,12 +37,12 @@ import java.io.*
  */
 actual abstract class Runner protected constructor(
     protected val strategy: Strategy,
-    private val _testClass: Class<*>, // will be transformed later
+    private val _testClass: TestClass, // will be transformed later
     protected val validationFunctions: List<ValidationFunction>,
     protected val stateRepresentationFunction: StateRepresentationFunction?
 ) : Closeable {
     protected actual var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
-    protected lateinit var testClass: Class<*> // not available before `initialize` call
+    protected lateinit var testClass: TestClass // not available before `initialize` call
     @Suppress("LeakingThis")
     val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
                                             else ExecutionClassLoader()
@@ -54,7 +54,7 @@ actual abstract class Runner protected constructor(
      */
     actual open fun initialize() {
         scenario = strategy.scenario.convertForLoader(classLoader)
-        testClass = loadClass(_testClass.typeName)
+        testClass = TestClass(loadClass(_testClass.clazz.typeName))
     }
 
     /**

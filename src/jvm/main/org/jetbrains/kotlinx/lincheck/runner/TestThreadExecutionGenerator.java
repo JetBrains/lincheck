@@ -111,7 +111,7 @@ public class TestThreadExecutionGenerator {
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
         Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
-                generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
+                generateClass(internalClassName, getType(runner.getTestClass().getClazz()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
             TestThreadExecution execution = clz.getDeclaredConstructor().newInstance();
             execution.runner = runner;

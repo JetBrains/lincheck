@@ -21,8 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
-import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import org.jetbrains.kotlinx.lincheck.*
 
 /**
  * Options for [stress][StressStrategy] strategy.
@@ -37,7 +36,7 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
         invocationsPerIteration = invocations
     }
 
-    override fun createTestConfigurations(testClass: Class<*>): StressCTestConfiguration {
+    override fun createTestConfigurations(testClass: TestClass): StressCTestConfiguration {
         return StressCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator,
                 verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs)

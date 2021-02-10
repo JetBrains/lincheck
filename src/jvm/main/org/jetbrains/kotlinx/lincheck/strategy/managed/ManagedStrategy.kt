@@ -43,7 +43,7 @@ import kotlin.collections.set
  * and class loading problems.
  */
 abstract class ManagedStrategy(
-    private val testClass: Class<*>,
+    private val testClass: TestClass,
     scenario: ExecutionScenario,
     private val verifier: Verifier,
     private val validationFunctions: List<ValidationFunction>,
@@ -723,7 +723,7 @@ abstract class ManagedStrategy(
  * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
-    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<ValidationFunction>,
+    private val managedStrategy: ManagedStrategy, testClass: TestClass, validationFunctions: List<ValidationFunction>,
     stateRepresentationFunction: StateRepresentationFunction?, timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationFunction, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) {

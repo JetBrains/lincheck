@@ -38,7 +38,7 @@ import kotlin.reflect.*
  * Abstract configuration for different lincheck modes.
  */
 actual abstract class CTestConfiguration(
-    val testClass: Class<*>,
+    val testClass: TestClass,
     actual val iterations: Int,
     actual val threads: Int,
     actual val actorsPerThread: Int,
@@ -51,7 +51,7 @@ actual abstract class CTestConfiguration(
     val sequentialSpecification: SequentialSpecification?,
     val timeoutMs: Long
 ) {
-    abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
+    abstract fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
                                 stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier): Strategy
 
     companion object {
@@ -70,20 +70,20 @@ actual abstract class CTestConfiguration(
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->
-            StressCTestConfiguration(testClass, ann.iterations,
+            StressCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
                 ann.generator, ann.verifier, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
-                chooseSequentialSpecification(ann.sequentialSpecification, testClass), DEFAULT_TIMEOUT_MS
+                chooseSequentialSpecification(ann.sequentialSpecification, TestClass(testClass)), DEFAULT_TIMEOUT_MS
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
         .map { ann: ModelCheckingCTest ->
-            ModelCheckingCTestConfiguration(testClass, ann.iterations,
+            ModelCheckingCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
                 ann.generator, ann.verifier, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
-                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification, testClass),
+                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification, TestClass(testClass)),
                 DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE
             )
         }

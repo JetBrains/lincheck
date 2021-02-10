@@ -42,7 +42,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     init {
         val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
         reporter = Reporter(logLevel)
-        testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
+        testConfigurations = if (options != null) listOf(options.createTestConfigurations(TestClass(testClass)))
                              else createFromTestClassAnnotations(testClass)
     }
 
@@ -139,7 +139,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
-            testClass = testClass,
+            testClass = TestClass(testClass),
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationFunction = testStructure.stateRepresentation,

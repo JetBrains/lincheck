@@ -29,13 +29,13 @@ import kotlin.reflect.*
 /**
  * Configuration for [stress][StressStrategy] strategy.
  */
-class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
+class StressCTestConfiguration(testClass: TestClass, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
                                generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
                                val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
                                sequentialSpecification: SequentialSpecification?, timeoutMs: Long
 ) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
+    override fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
                                 stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier) =
         StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationFunction, verifier)
 

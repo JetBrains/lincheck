@@ -30,7 +30,7 @@ import java.lang.reflect.*
 
 class StressStrategy(
     testCfg: StressCTestConfiguration,
-    testClass: Class<*>,
+    testClass: TestClass,
     scenario: ExecutionScenario,
     validationFunctions: List<ValidationFunction>,
     stateRepresentationFunction: StateRepresentationFunction?,

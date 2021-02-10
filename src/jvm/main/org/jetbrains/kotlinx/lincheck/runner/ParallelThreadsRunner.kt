@@ -47,7 +47,7 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  */
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
-    testClass: Class<*>,
+    testClass: TestClass,
     validationFunctions: List<ValidationFunction>,
     stateRepresentationFunction: StateRepresentationFunction?,
     private val timeoutMs: Long, // for deadlock or livelock detection
@@ -144,7 +144,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun reset() {
-        testInstance = testClass.getDeclaredConstructor().newInstance()
+        testInstance = testClass.createInstance()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
             val threads = scenario.threads

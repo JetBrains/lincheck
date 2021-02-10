@@ -46,7 +46,7 @@ import kotlin.random.*
  */
 internal class ModelCheckingStrategy(
     testCfg: ModelCheckingCTestConfiguration,
-    testClass: Class<*>,
+    testClass: TestClass,
     scenario: ExecutionScenario,
     validationFunctions: List<ValidationFunction>,
     stateRepresentation: StateRepresentationFunction?,
