@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_VERBOSE_TRACE
@@ -31,59 +30,28 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import java.lang.reflect.*
 import kotlin.reflect.*
 
-/**
- * Abstract configuration for different lincheck modes.
- */
-actual abstract class CTestConfiguration(
-    val testClass: TestClass,
-    actual val iterations: Int,
-    actual val threads: Int,
-    actual val actorsPerThread: Int,
-    actual val actorsBefore: Int,
-    actual val actorsAfter: Int,
-    actual val generatorClass: KClass<out ExecutionGenerator>,
-    val verifierClass: KClass<out Verifier>,
-    val requireStateEquivalenceImplCheck: Boolean,
-    val minimizeFailedScenario: Boolean,
-    val sequentialSpecification: SequentialSpecification?,
-    val timeoutMs: Long
-) {
-    abstract fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
-                                stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier): Strategy
-
-    companion object {
-        const val DEFAULT_ITERATIONS = 100
-        const val DEFAULT_THREADS = 2
-        const val DEFAULT_ACTORS_PER_THREAD = 5
-        const val DEFAULT_ACTORS_BEFORE = 5
-        const val DEFAULT_ACTORS_AFTER = 5
-        val DEFAULT_EXECUTION_GENERATOR: KClass<out ExecutionGenerator> = RandomExecutionGenerator::class
-        val DEFAULT_VERIFIER: KClass<out Verifier> = LinearizabilityVerifier::class
-        const val DEFAULT_MINIMIZE_ERROR = true
-        const val DEFAULT_TIMEOUT_MS: Long = 10000
-    }
-}
+actual val DEFAULT_EXECUTION_GENERATOR: ExecutionGeneratorClass<out ExecutionGenerator> = RandomExecutionGenerator::class.java
+actual val DEFAULT_VERIFIER: VerifierClass<out Verifier> = LinearizabilityVerifier::class.java
 
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->
             StressCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator, ann.verifier, ann.invocationsPerIteration,
+                ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
-                chooseSequentialSpecification(ann.sequentialSpecification, TestClass(testClass)), DEFAULT_TIMEOUT_MS
+                chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)), DEFAULT_TIMEOUT_MS
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
         .map { ann: ModelCheckingCTest ->
             ModelCheckingCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator, ann.verifier, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
+                ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
-                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification, TestClass(testClass)),
+                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)),
                 DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE
             )
         }

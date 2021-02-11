@@ -21,15 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.reflect.*
 import kotlin.reflect.*
-import kotlin.reflect.KTypeProjection.Companion.STAR
-import kotlin.reflect.full.*
 
 /**
  * This class runs concurrent tests.
@@ -179,10 +175,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
 
     private fun CTestConfiguration.createVerifier() =
-            verifierClass.constructors.find { it.parameters.size == 1 && it.parameters[0].type == SequentialSpecification::class.createType() }!!
-                .call(sequentialSpecification).also {
-                    if (requireStateEquivalenceImplCheck) it.checkStateEquivalenceImplementation()
-                }
+        verifierClass.constructors.find{ it.parameters.size == 1 && it.parameters[0].type == SequentialSpecification::class.java }!!
+            .newInstance(sequentialSpecification).also {
+                if (requireStateEquivalenceImplCheck) (it as Verifier).checkStateEquivalenceImplementation()
+            } as Verifier
 
     private fun CTestConfiguration.createExecutionGenerator() =
         generatorClass.getConstructor(

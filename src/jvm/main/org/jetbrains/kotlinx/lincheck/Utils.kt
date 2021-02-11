@@ -46,13 +46,9 @@ actual class TestClass(val clazz: Class<*>) {
     actual fun createInstance(): Any = clazz.getDeclaredConstructor().newInstance()
 }
 
-actual class SequentialSpecification(val kClass: KClass<*>) {
-    actual fun getInitialState(): Any = kClass.getConstructor().newInstance()
-}
-
-fun chooseSequentialSpecification(sequentialSpecificationByUser: KClass<*>?, testClass: TestClass): SequentialSpecification =
-    if (sequentialSpecificationByUser === DummySequentialSpecification::class || sequentialSpecificationByUser == null) SequentialSpecification(testClass.clazz.kotlin)
-    else SequentialSpecification(sequentialSpecificationByUser)
+actual fun chooseSequentialSpecification(sequentialSpecificationByUser: SequentialSpecification<*>?, testClass: TestClass): SequentialSpecification<*> =
+    if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass.clazz
+    else sequentialSpecificationByUser
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.

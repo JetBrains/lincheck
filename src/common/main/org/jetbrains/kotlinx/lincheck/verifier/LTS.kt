@@ -33,7 +33,7 @@ import kotlin.reflect.*
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
 
-expect fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification): SequentialSpecification
+expect fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any>
 
 /**
  * Common interface for different labeled transition systems, which several correctness formalisms use.
@@ -55,9 +55,9 @@ expect fun loadSequentialSpecification(sequentialSpecification: SequentialSpecif
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: SequentialSpecification) {
+class LTS(sequentialSpecification: SequentialSpecification<*>) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: SequentialSpecification = loadSequentialSpecification(sequentialSpecification)
+    private val sequentialSpecification: SequentialSpecification<out Any> = loadSequentialSpecification(sequentialSpecification)
 
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
@@ -278,7 +278,7 @@ class LTS(sequentialSpecification: SequentialSpecification) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.getInitialState()
+    private fun createInitialStateInstance(): Any = sequentialSpecification.getInitialState()
 
     fun checkStateEquivalenceImplementation() {
         val i1 = createInitialStateInstance()

@@ -33,10 +33,11 @@ import kotlin.reflect.*
  * Configuration for [random search][ModelCheckingStrategy] strategy.
  */
 class ModelCheckingCTestConfiguration(testClass: TestClass, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
-                                      actorsAfter: Int, generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
-                                      checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
-                                      guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                                      sequentialSpecification: SequentialSpecification?, timeoutMs: Long, eliminateLocalObjects: Boolean, verboseTrace: Boolean
+                                      actorsAfter: Int, generatorClass: ExecutionGeneratorClass<out ExecutionGenerator>,
+                                      verifierClass: VerifierClass<out Verifier>, checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int,
+                                      invocationsPerIteration: Int, guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean,
+                                      minimizeFailedScenario: Boolean, sequentialSpecification: SequentialSpecification<*>?, timeoutMs: Long,
+                                      eliminateLocalObjects: Boolean, verboseTrace: Boolean
 ) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
     minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace) {

@@ -32,10 +32,10 @@ import kotlin.reflect.*
 abstract class ManagedCTestConfiguration(
     testClass: TestClass, iterations: Int,
     threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-    generatorClass: KClass<out ExecutionGenerator>, verifierClass: KClass<out Verifier>,
+    generatorClass: ExecutionGeneratorClass<out ExecutionGenerator>, verifierClass: VerifierClass<out Verifier>,
     val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-    sequentialSpecification: SequentialSpecification?, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean
+    sequentialSpecification: SequentialSpecification<*>?, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean
 ) : CTestConfiguration(
     testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs

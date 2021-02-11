@@ -22,8 +22,5 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 
-actual fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification): SequentialSpecification =
-    SequentialSpecification(
-        TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv) }
-        .loadClass(sequentialSpecification.kClass.java.name)!!.kotlin
-    )
+actual fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any> =
+        TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv) }.loadClass(sequentialSpecification.name)!!

@@ -32,7 +32,7 @@ import kotlin.reflect.*
 
 abstract class AbstractPromptCancellationTest(
     vararg expectedFailures: KClass<out LincheckFailure>,
-    val sequentialSpecification: KClass<*>? = null
+    val sequentialSpecification: SequentialSpecification<*>? = null
 ) : AbstractLincheckTest(*expectedFailures) {
     @Volatile
     private var returnResult = 0
@@ -80,7 +80,7 @@ abstract class AbstractPromptCancellationTest(
         actorsPerThread(1)
         actorsAfter(0)
         requireStateEquivalenceImplCheck(false)
-        sequentialSpecification?.let { sequentialSpecification(it.java) }
+        sequentialSpecification(this@AbstractPromptCancellationTest.sequentialSpecification)
     }
 }
 
@@ -88,7 +88,7 @@ class CorrectPromptCancellationTest : AbstractPromptCancellationTest()
 
 class IncorrectPromptCancellationTest : AbstractPromptCancellationTest(
     IncorrectResultsFailure::class,
-    sequentialSpecification = IncorrectPromptCancellationSequential::class
+    sequentialSpecification = IncorrectPromptCancellationSequential::class.java
 )
 
 class IncorrectPromptCancellationSequential {

@@ -31,7 +31,7 @@ import kotlin.collections.HashSet
  *
  *
  * IMPORTANT!
- * All implementations should have `(sequentialSpecification: SequentialSpecification)` constructor,
+ * All implementations should have `(sequentialSpecification: SequentialSpecification<*>)` constructor,
  * which takes the scenario to be tested and the correct sequential implementation of the testing data structure.
  */
 interface Verifier {

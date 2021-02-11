@@ -34,7 +34,7 @@ import kotlin.reflect.*
  * the next possible transitions using [VerifierContext.nextContext] function. This verifier
  * uses depth-first search to find a proper path.
  */
-abstract class AbstractLTSVerifier(protected val sequentialSpecification: SequentialSpecification) : CachedVerifier() {
+abstract class AbstractLTSVerifier(protected val sequentialSpecification: SequentialSpecification<*>) : CachedVerifier() {
     abstract val lts: LTS
     abstract fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult): VerifierContext
 

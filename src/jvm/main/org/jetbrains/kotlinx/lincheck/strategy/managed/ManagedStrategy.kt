@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
-import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
 

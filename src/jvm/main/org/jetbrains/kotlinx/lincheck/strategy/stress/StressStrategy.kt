@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.reflect.*
 
 class StressStrategy(
     testCfg: StressCTestConfiguration,

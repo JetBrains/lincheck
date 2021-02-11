@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import kotlin.coroutines.*
+import kotlin.reflect.*
 
 expect class TestClass {
     val name: String
@@ -31,9 +32,10 @@ expect class TestClass {
     fun createInstance(): Any
 }
 
-expect class SequentialSpecification {
-    fun getInitialState(): Any
-}
+expect class SequentialSpecification<T>
+expect fun <T : Any> SequentialSpecification<T>.getInitialState(): T
+
+expect fun chooseSequentialSpecification(sequentialSpecificationByUser: SequentialSpecification<*>?, testClass: TestClass): SequentialSpecification<*>
 
 object CancellableContinuationHolder {
     var storedLastCancellableCont: CancellableContinuation<*>? = null

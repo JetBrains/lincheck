@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThre
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
-import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*

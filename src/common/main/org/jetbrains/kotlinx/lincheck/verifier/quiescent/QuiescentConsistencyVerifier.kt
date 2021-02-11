@@ -35,7 +35,7 @@ import kotlin.reflect.*
  * However, we believe that quiescent points do not occur
  * in practice while supporting them complicates the implementation.
  */
-class QuiescentConsistencyVerifier(sequentialSpecification: SequentialSpecification) : Verifier {
+class QuiescentConsistencyVerifier(sequentialSpecification: SequentialSpecification<*>) : Verifier {
     private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
     private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = HashMap() // TODO change logic to WeakHashMap
 
