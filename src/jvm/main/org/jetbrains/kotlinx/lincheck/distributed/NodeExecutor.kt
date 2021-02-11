@@ -20,15 +20,15 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.atomicfu.AtomicBoolean
 import kotlinx.atomicfu.AtomicInt
 import org.jetbrains.kotlinx.lincheck.distributed.NodeExecutorStatus.*
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 private enum class NodeExecutorStatus { INIT, RUNNING, STOPPED }
 
-class NodeExecutor(val counter: AtomicInt, val numberOfNodes: Int) : Executor {
+class NodeExecutor(val counter: AtomicInteger, val numberOfNodes: Int) : Executor {
     companion object {
        private const val NO_TASK_LIMIT = 3
     }
@@ -39,30 +39,27 @@ class NodeExecutor(val counter: AtomicInt, val numberOfNodes: Int) : Executor {
     private val thread = Thread {
         while (executorStatus != STOPPED) {
             val task = queue.poll()
-            if (task != null) {
-                onTask(task)
-            } else {
-                onNull()
-            }
+            task?.process() ?: onNull()
         }
     }
 
-    private val unknownState = executorStatus == RUNNING && nullTasksCounter >= NO_TASK_LIMIT
-
-    private fun onTask(command: Runnable) {
+    private fun Runnable.process() {
         if (unknownState) {
             counter.decrementAndGet()
         }
         nullTasksCounter = 0
-        command.run()
+        run()
     }
+
+    private val unknownState = executorStatus == RUNNING && nullTasksCounter >= NO_TASK_LIMIT
+
 
     private fun onNull() {
         nullTasksCounter++
         if (nullTasksCounter == NO_TASK_LIMIT) {
             counter.incrementAndGet()
         }
-        if (counter.value == numberOfNodes) {
+        if (counter.get() == numberOfNodes) {
             executorStatus = STOPPED
         }
     }
@@ -73,5 +70,9 @@ class NodeExecutor(val counter: AtomicInt, val numberOfNodes: Int) : Executor {
             executorStatus = RUNNING
             thread.start()
         }
+    }
+
+    fun shutdown() {
+        thread.join()
     }
 }
