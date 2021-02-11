@@ -146,7 +146,7 @@ public class TestNodeExecutionGenerator {
         generateConstructor(cca);
         generateMethod(cca, testClassType, iThread, actors, objArgs, supportRecovery);
         cca.visitEnd();
-        String outputFile = "MyBroadcast" + iThread + ".class";
+        String outputFile = "BroadcastRecover" + iThread + ".class";
         //System.out.println(cw.toByteArray().length);
         try (OutputStream outputStream = new FileOutputStream(outputFile)) {
             outputStream.write(cw.toByteArray());
@@ -351,8 +351,10 @@ public class TestNodeExecutionGenerator {
     }
 
     private static void storeNodeFailureResult(GeneratorAdapter mv, int resLocal, int iLocal, boolean supportRecovery, int numberOfActors, int current, int iThread) {
+        mv.pop();
         mv.loadLocal(resLocal);
         mv.loadLocal(iLocal);
+        // Create exception result instance
         mv.invokeStatic(RESULT_KT_TYPE, RESULT_KT_CREATE_NODE_FAILURE_RESULT_METHOD);
         mv.checkCast(RESULT_TYPE);
         mv.arrayStore(RESULT_TYPE);
@@ -361,6 +363,7 @@ public class TestNodeExecutionGenerator {
         mv.checkCast(DISTRIBUTED_RUNNER_TYPE);
         mv.push(iThread);
         mv.invokeVirtual(DISTRIBUTED_RUNNER_TYPE, DISTRIBUTED_RUNNER_ON_NODE_FAILURE_METHOD);
+        // mv.returnValue();
         if (!supportRecovery) {
             for (int i = current + 1; i < numberOfActors; i++) {
                 mv.iinc(iLocal, 1);
