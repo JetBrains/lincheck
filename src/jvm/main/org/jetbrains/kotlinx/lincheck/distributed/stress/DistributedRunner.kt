@@ -20,11 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.atomicfu.AtomicInt
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.scheduling.ExperimentalCoroutineDispatcher
-import org.jetbrains.kotlinx.lincheck.collectThreadDump
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.*
 import org.jetbrains.kotlinx.lincheck.distributed.queue.*
@@ -85,11 +84,11 @@ open class DistributedRunner<Message, Log>(
         ASYNCHRONOUS -> AsynchronousMessageQueue(testCfg.threads)
     }
     private lateinit var testInstances: Array<Node<Message>>
-    private lateinit var dispatchers: Array<CoroutineDispatcher>
+    lateinit var dispatchers: Array<CoroutineDispatcher>
     private val environments: Array<Environment<Message, Log>> = Array(testCfg.threads) {
         EnvironmentImpl(it, testCfg.threads)
     }
-    private lateinit var testThreadExecutions: Array<TestThreadExecution>
+    private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private val incomeMessages: Array<Channel<MessageSentEvent<Message>>> = Array(testCfg.threads) { Channel { } }
     private val failureNotifications: Array<Channel<Int>> = Array(testCfg.threads) { Channel { } }
     private val failures = FailureStatistics(testCfg.threads, testCfg.maxNumberOfFailedNodes(testCfg.threads))
@@ -108,6 +107,7 @@ open class DistributedRunner<Message, Log>(
         }
     }
 
+
     private suspend fun receiveUnavailableNodes(i: Int) {
         while (true) {
             val node = failureNotifications[i].receive()
@@ -121,10 +121,10 @@ open class DistributedRunner<Message, Log>(
         check(scenario.parallelExecution.size == testCfg.threads) {
             "Parallel execution size is ${scenario.parallelExecution.size}"
         }
-        testThreadExecutions = Array(testCfg.threads) { t ->
-            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], null, false)
+        testNodeExecutions = Array(testCfg.threads) { t ->
+            TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
-        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
+        testNodeExecutions.forEach { it.allTestNodeExecutions = testNodeExecutions }
     }
 
     private fun reset() {
@@ -136,13 +136,13 @@ open class DistributedRunner<Message, Log>(
         testInstances = Array(testCfg.threads) {
             testClass.getConstructor(Environment::class.java).newInstance(environments[it]) as Node<Message>
         }
-        val executionFinishedCounter = atomic(0)
+        val executionFinishedCounter = AtomicInteger(0)
         dispatchers = Array(testCfg.threads) {
             NodeExecutor(executionFinishedCounter, testCfg.threads).asCoroutineDispatcher()
         }
 
         val useClocks = Random.nextBoolean()
-        testThreadExecutions.forEachIndexed { t, ex ->
+        testNodeExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstances[t]
             val threads = testCfg.threads
             val actors = scenario.parallelExecution[t].size
@@ -173,7 +173,7 @@ open class DistributedRunner<Message, Log>(
                 receiveUnavailableNodes(i)
             }
         }
-        testThreadExecutions.forEach { it.run() }
+        testNodeExecutions.forEachIndexed { index, testNodeExecution -> GlobalScope.launch(dispatchers[index]) { testNodeExecution.runOperations() } }
         runningStatus = ITERATION_FINISHED
         testInstances.forEach {
             executeValidationFunctions(
@@ -190,8 +190,8 @@ open class DistributedRunner<Message, Log>(
             }
         }
 
-        val parallelResultsWithClock = testThreadExecutions.map { ex ->
-            ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second)) }
+        val parallelResultsWithClock = testNodeExecutions.map { ex ->
+            ex.results.zip(ex.clocks).map { ResultWithClock(it.first!!, HBClock(it.second)) }
         }
         val results = ExecutionResult(
             emptyList(), null, parallelResultsWithClock, constructStateRepresentation(),
@@ -200,6 +200,7 @@ open class DistributedRunner<Message, Log>(
         return CompletedInvocationResult(results)
     }
 
+    @Suppress("unused")
     fun onNodeFailure(iThread: Int) {
         testInstances.filterIndexed { index, _ -> !failures[index] }.forEach { it.onNodeUnavailable(iThread) }
         if (testCfg.supportRecovery) {
@@ -213,6 +214,10 @@ open class DistributedRunner<Message, Log>(
                 testInstances[iThread].recover()
             }
         }
+    }
+
+    fun isFailed(iNode : Int) : Boolean {
+        return failures[iNode]
     }
 
     private inner class EnvironmentImpl(
