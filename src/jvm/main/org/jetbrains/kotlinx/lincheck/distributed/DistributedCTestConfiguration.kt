@@ -43,6 +43,7 @@ class DistributedCTestConfiguration<Message, Log>(testClass: Class<*>, iteration
                                                   val supportRecovery: Boolean,
                                                   val messageDuplication: Boolean,
                                                   val networkPartitions : Boolean,
+                                                  val asyncRun : Boolean,
                                                   val nodeTypes: HashMap<Class<out Node<Message>>, Int>,
                                                   requireStateEquivalenceCheck: Boolean,
                                                   minimizeFailedScenario: Boolean,

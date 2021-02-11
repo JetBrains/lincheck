@@ -21,6 +21,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var networkPartitions: Boolean = false
     private var testClasses = HashMap<Class<out Node<Message>>, Int>()
     private var useVectorClock = false
+    private var asyncRun = false
 
     fun networkReliable(isReliable: Boolean): DistributedOptions<Message, Log> {
         this.isNetworkReliable = isReliable
@@ -57,6 +58,11 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
+    fun runOperationsAsynchronously(asyncRun: Boolean): DistributedOptions<Message, Log> {
+        this.asyncRun = asyncRun
+        return this
+    }
+
     fun networkPartitions(partitions: Boolean): DistributedOptions<Message, Log> {
         this.networkPartitions = partitions
         return this
@@ -73,7 +79,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, isNetworkReliable,
             messageOrder, maxNumberOfFailedNodes, supportRecovery,
-            messageDuplication, networkPartitions, testClasses,
+            messageDuplication, networkPartitions, asyncRun, testClasses,
             requireStateEquivalenceImplementationCheck, false,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs
         )
