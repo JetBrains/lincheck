@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
 
-import com.sun.org.apache.xpath.internal.operations.Bool
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.RecoverableNode
 
