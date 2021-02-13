@@ -77,8 +77,8 @@ private const val NULL_DELETER = -1
 class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
 
     private inner class Node(val value: T, next: Node?) {
-        val next: AtomicMarkableReference<Node?> = AtomicMarkableReference(next, false)
-        val deleter = atomic(NULL_DELETER)
+        val next: AtomicMarkableReference<Node?> = AtomicMarkableReference(next, false) // TODO use nonVolatile here
+        val deleter = atomic(NULL_DELETER) // TODO use nonVolatile here
     }
 
     private inner class Info(var node: NonVolatileRef<Node?> = nonVolatile(null)) {
@@ -89,19 +89,20 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
 
     private val recoveryData = MutableList(threadsCount) { nonVolatile<Info?>(null) }
     private val checkPointer = Array(threadsCount) { nonVolatile(0) }
-    private val head = atomic<Node?>(null)
+    private val head = nonVolatile<Node?>(null)
 
     @Recoverable
     private fun findPrevNext(value: T): PrevNextPair {
         start@ while (true) {
             var previous: Node? = null
             var current = head.value
+            head.flush()
             while (current != null) {
                 val isDeleted = booleanArrayOf(false)
                 val next = current.next[isDeleted]
                 if (isDeleted[0]) {
                     if (previous?.next?.compareAndSet(current, next, false, false)
-                            ?: head.compareAndSet(current, next)
+                            ?: head.compareAndSet(current, next).also { head.flush() }
                     ) {
                         current = next
                         continue
@@ -137,10 +138,12 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
             // flush
             if (previous == null) {
                 if (head.compareAndSet(next, newNode)) {
+                    head.flush()
                     recoveryData[p].value!!.result.value = true
                     recoveryData[p].value!!.result.flush()
                     return true
                 }
+                head.flush()
             } else {
                 if (previous.next.compareAndSet(next, newNode, false, false)) {
                     recoveryData[p].value!!.result.value = true
@@ -194,7 +197,8 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
             current.next.compareAndSet(next, next, false, true)
         }
         val next = current.next.reference
-        previous?.next?.compareAndSet(current, next, false, false) ?: head.compareAndSet(current, next)
+        previous?.next?.compareAndSet(current, next, false, false)
+            ?: head.compareAndSet(current, next).also { head.flush() }
         val result = current.deleter.compareAndSet(NULL_DELETER, p)
         recoveryData[p].value!!.result.value = result
         recoveryData[p].value!!.result.flush()
@@ -228,6 +232,7 @@ class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) {
     @Recoverable
     operator fun contains(value: T): Boolean {
         var current = head.value
+        head.flush()
         val isDeleted = booleanArrayOf(false)
         while (current != null && current.value <= value) {
             val next = current.next[isDeleted]
