@@ -20,17 +20,14 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.Result
-import kotlin.coroutines.Continuation
 
 abstract class TestNodeExecution {
     var runner: Runner? = null
     var testInstance: Any? = null
     protected lateinit var objArgs: Array<Any>
     lateinit var allTestNodeExecutions: Array<TestNodeExecution>
-    lateinit var results // for ExecutionResult
-            : Array<Result?>
-    lateinit var clocks // for HBClock
-            : Array<IntArray>
+    lateinit var results: Array<Result?>
+    lateinit var clocks: Array<IntArray>
 
     @Volatile
     var curClock = 0
@@ -45,5 +42,6 @@ abstract class TestNodeExecution {
         curClock++
     }
 
-    abstract suspend fun runOperations()
+
+    abstract suspend fun runOperation(i: Int): Any?
 }
