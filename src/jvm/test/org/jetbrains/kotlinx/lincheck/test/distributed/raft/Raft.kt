@@ -17,7 +17,7 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-
+/*
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
 
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
@@ -80,4 +80,4 @@ class RaftServer(val env : Environment<Message, Log>) : RecoverableNode<Message,
         votedFor = env.nodeId
         env.broadcast(RequestVote(currentTerm, env.nodeId), true)
     }
-}
+}*/

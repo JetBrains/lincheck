@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-
+/*
 class KVStorageCentralSimple(private val environment: Environment<Command, Unit>) : Node<Command> {
     private val lock = ReentrantLock()
     private var commandId = 0
@@ -226,4 +226,4 @@ class KVStorageCentralTestClass  {
         (2).networkReliable(false)
                 .invocationsPerIteration(100).iterations(1000))
     }
-}
+}*/

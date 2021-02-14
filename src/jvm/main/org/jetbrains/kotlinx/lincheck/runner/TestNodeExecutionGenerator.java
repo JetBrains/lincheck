@@ -97,9 +97,8 @@ public class TestNodeExecutionGenerator {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-        throw new RuntimeException();
-        //return cw.toByteArray();
-        //
+       // throw new RuntimeException();
+        return cw.toByteArray();
     }
 
     private static void generateConstructor(ClassVisitor cv) {
@@ -138,7 +137,7 @@ public class TestNodeExecutionGenerator {
         for (int i = 0; i < actors.size(); i++) {
             mv.visitLabel(switchLabels[i]);
             mv.loadThis();
-            mv.getField(TEST_NODE_EXECUTION_TYPE, "testInstance", OBJECT_TYPE);
+            mv.invokeVirtual(TEST_NODE_EXECUTION_TYPE, new Method("getTestInstance", OBJECT_TYPE, NO_ARGS));
             mv.checkCast(testType);
             Actor actor = actors.get(i);
             loadArguments(mv, actor, objArgs);

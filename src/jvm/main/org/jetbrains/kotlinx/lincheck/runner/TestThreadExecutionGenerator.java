@@ -87,7 +87,7 @@ public class TestThreadExecutionGenerator {
     private static final Type NODE_FAILURE_RESULT_TYPE = getType(NodeFailureResult.class);
     private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
     private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[]{CLASS_TYPE});
-    private static final Method RESULT_KT_CREATE_NODE_FAILURE_RESULT_METHOD = new Method("createNodeFailureResult", NODE_FAILURE_RESULT_TYPE, new Type[]{});
+    private static final Method RESULT_KT_CREATE_NODE_FAILURE_RESULT_METHOD = new Method("createNodeFailureResult", NODE_FAILURE_RESULT_TYPE, NO_ARGS);
 
     private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
 
@@ -144,15 +144,15 @@ public class TestThreadExecutionGenerator {
         generateConstructor(cca);
         generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, supportRecovery);
         cca.visitEnd();
-        /*String outputFile = "BroadcastNew" + iThread + ".class";
+        String outputFile = "BroadcastThread" + iThread + ".class";
         //System.out.println(cw.toByteArray().length);
         try (OutputStream outputStream = new FileOutputStream(outputFile)) {
             outputStream.write(cw.toByteArray());
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-        //throw new RuntimeException();*/
-        return cw.toByteArray();
+        throw new RuntimeException();
+        //return cw.toByteArray();
         //
     }
 
@@ -282,12 +282,13 @@ public class TestThreadExecutionGenerator {
             Label skipHandlers = mv.newLabel();
             mv.goTo(skipHandlers);
 
-            if (nodeFailureHandler != null) {
+           if (nodeFailureHandler != null) {
                 mv.visitLabel(nodeFailureHandler);
                 if (scenarioContainsSuspendableActors) {
                     storeNodeFailureResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
                 } else {
                     storeNodeFailureResult(mv, resLocal, iLocal, supportRecovery, actors.size(), i, iThread);
+                    //storeExceptionResultFromThrowable(mv, resLocal, iLocal);
                 }
             }
             mv.goTo(skipHandlers);
@@ -410,8 +411,10 @@ public class TestThreadExecutionGenerator {
     }
 
     private static void storeNodeFailureResult(GeneratorAdapter mv, int resLocal, int iLocal, boolean supportRecovery, int numberOfActors, int current, int iThread) {
+        mv.pop();
         mv.loadLocal(resLocal);
         mv.loadLocal(iLocal);
+        // Create exception result instance
         mv.invokeStatic(RESULT_KT_TYPE, RESULT_KT_CREATE_NODE_FAILURE_RESULT_METHOD);
         mv.checkCast(RESULT_TYPE);
         mv.arrayStore(RESULT_TYPE);
@@ -420,6 +423,7 @@ public class TestThreadExecutionGenerator {
         mv.checkCast(DISTRIBUTED_RUNNER_TYPE);
         mv.push(iThread);
         mv.invokeVirtual(DISTRIBUTED_RUNNER_TYPE, DISTRIBUTED_RUNNER_ON_NODE_FAILURE_METHOD);
+       // mv.returnValue();
         if (!supportRecovery) {
             for (int i = current + 1; i < numberOfActors; i++) {
                 mv.iinc(iLocal, 1);

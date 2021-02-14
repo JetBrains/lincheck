@@ -17,7 +17,7 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-
+/*
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import kotlinx.atomicfu.locks.withLock
@@ -153,4 +153,4 @@ class  RickartAgrawalaMutexTest {
         (5).messageOrder(MessageOrder.ASYNCHRONOUS)
                 .invocationsPerIteration(100).iterations(1000))
     }
-}
+}*/

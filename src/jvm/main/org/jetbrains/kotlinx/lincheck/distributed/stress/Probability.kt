@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.atomicfu.AtomicBooleanArray
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import java.util.concurrent.ThreadLocalRandom
 
@@ -51,24 +53,31 @@ class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val 
 class FailureStatistics(
     val numberOfNodes: Int, val maxNumberOfFailedNodes: Int
 ) {
-    private val failedNodes = BooleanArray(numberOfNodes) { false }
+    private val failedNodes = AtomicBooleanArray(numberOfNodes)
+    private val failedNodesCnt = atomic(0)
 
-    @Synchronized
-    fun numberOfFailedNodes() = failedNodes.sumBy { if (it) 1 else 0 }
+    val numberOfFailedNodes = failedNodesCnt.value
 
-    @Synchronized
     operator fun set(node: Int, value: Boolean) {
-        failedNodes[node] = value
+        if (failedNodes[node].value == value) {
+            return
+        }
+        failedNodes[node].lazySet(value)
+        if (value) {
+            failedNodesCnt.incrementAndGet()
+        } else {
+            failedNodesCnt.decrementAndGet()
+        }
     }
 
-    @Synchronized
     fun clear() {
-        failedNodes.fill(false)
+        for (i in 0 until numberOfNodes) {
+            failedNodes[i].lazySet(false)
+        }
+        failedNodesCnt.lazySet(0)
     }
 
-    @Synchronized
-    operator fun get(node: Int) = failedNodes[node]
+    operator fun get(node: Int) = failedNodes[node].value
 
-    @Synchronized
-    fun isFull(): Boolean = maxNumberOfFailedNodes == numberOfFailedNodes()
+    fun isFull(): Boolean = maxNumberOfFailedNodes == numberOfFailedNodes
 }

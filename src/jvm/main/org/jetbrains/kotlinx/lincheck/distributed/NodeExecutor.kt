@@ -20,23 +20,31 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.atomicfu.AtomicInt
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.distributed.NodeExecutorStatus.*
+import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
+import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 private enum class NodeExecutorStatus { INIT, RUNNING, STOPPED }
 
-class NodeExecutor(val counter: AtomicInteger, val numberOfNodes: Int) : Executor {
+class NodeExecutor(
+    val counter: AtomicInteger,
+    val numberOfNodes: Int,
+    val id : Int,
+    val semaphore: Semaphore
+) : Executor {
     companion object {
-       private const val NO_TASK_LIMIT = 3
+        private const val NO_TASK_LIMIT = 100
     }
 
     private var executorStatus = INIT
     private val queue = LinkedBlockingQueue<Runnable>()
     private var nullTasksCounter = 0
-    private val thread = Thread {
+    private val worker = thread(start = false, name = "NodeExecutorThread-$id") {
         while (executorStatus != STOPPED) {
             val task = queue.poll()
             task?.process() ?: onNull()
@@ -45,6 +53,9 @@ class NodeExecutor(val counter: AtomicInteger, val numberOfNodes: Int) : Executo
 
     private fun Runnable.process() {
         if (unknownState) {
+            logMessage(LogLevel.ALL_EVENTS) {
+                println("$id Decrement counter")
+            }
             counter.decrementAndGet()
         }
         nullTasksCounter = 0
@@ -57,10 +68,20 @@ class NodeExecutor(val counter: AtomicInteger, val numberOfNodes: Int) : Executo
     private fun onNull() {
         nullTasksCounter++
         if (nullTasksCounter == NO_TASK_LIMIT) {
+            logMessage(LogLevel.ALL_EVENTS) {
+                println("$id Increment counter")
+            }
             counter.incrementAndGet()
         }
-        if (counter.get() == numberOfNodes) {
+        if (counter.get() == numberOfNodes && executorStatus != STOPPED) {
             executorStatus = STOPPED
+            logMessage(LogLevel.ALL_EVENTS) {
+                println("NodeExecutors stopped ${semaphore.availablePermits}")
+            }
+            logMessage(LogLevel.ALL_EVENTS) {
+                println("Semaphore release")
+            }
+            semaphore.release()
         }
     }
 
@@ -68,11 +89,9 @@ class NodeExecutor(val counter: AtomicInteger, val numberOfNodes: Int) : Executo
         queue.put(command)
         if (executorStatus == INIT) {
             executorStatus = RUNNING
-            thread.start()
+            worker.start()
         }
     }
 
-    fun shutdown() {
-        thread.join()
-    }
+    fun join() = worker.join()
 }

@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
+/*package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
@@ -11,7 +11,7 @@ import java.lang.reflect.InvocationTargetException
 import java.util.*
 
 
-data class Message(val body: String, val id: Int, val from: Int)
+
 
 
 class PeerIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
@@ -55,3 +55,4 @@ class PeerIncorrect(private val env: Environment<Message, Unit>) : Node<Message>
         env.broadcast(message)
     }
 }
+*/

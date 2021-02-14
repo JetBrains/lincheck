@@ -21,10 +21,10 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.Result
 
-abstract class TestNodeExecution {
-    var runner: Runner? = null
+public abstract class TestNodeExecution {
+    public var runner: Runner? = null
     var testInstance: Any? = null
-    protected lateinit var objArgs: Array<Any>
+    lateinit var objArgs: Array<Any>
     lateinit var allTestNodeExecutions: Array<TestNodeExecution>
     lateinit var results: Array<Result?>
     lateinit var clocks: Array<IntArray>

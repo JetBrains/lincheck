@@ -16,17 +16,17 @@ interface Node<Message> {
      * Called when a new message arrives.
      * @param message is a message from another node
      */
-    fun onMessage(message : Message, sender : Int)
+    suspend fun onMessage(message : Message, sender : Int)
 
     fun recover() {}
 
-    fun onNodeUnavailable(nodeId : Int) {}
+    suspend fun onNodeUnavailable(nodeId : Int) {}
 
     suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T): T? =
         withTimeout(ticks * TICK_TIME, block)
 }
 
-
+/*
 abstract class BlockingReceiveNodeImp<Message> : Node<Message> {
     private val messageQueue = FastQueue<Pair<Message, Int>>()
 
@@ -52,7 +52,7 @@ abstract class BlockingReceiveNodeImp<Message> : Node<Message> {
         }
     }
 }
-
+*/
 
 interface RecoverableNode<Message, Log> : Node<Message> {
     fun recover(logs : List<Log>)

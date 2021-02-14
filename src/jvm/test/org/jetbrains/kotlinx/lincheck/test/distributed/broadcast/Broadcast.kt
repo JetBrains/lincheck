@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
+import kotlinx.coroutines.delay
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -27,13 +28,16 @@ import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.queue.cntGet
+import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeFailureException
 import org.jetbrains.kotlinx.lincheck.distributed.stress.cntNullGet
+import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.util.*
 import kotlin.random.Random
 
+data class Message(val body: String, val id: Int, val from: Int)
 
 /**
  *
@@ -87,7 +91,7 @@ class Peer(private val env: Environment<Message, Unit>) : Node<Message> {
         return env.localMessages().toString()
     }
 
-    override fun onMessage(message: Message, sender: Int) {
+    override suspend fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
         val from = message.from
         if (!receivedMessages[from].contains(msgId)) {
@@ -105,9 +109,13 @@ class Peer(private val env: Environment<Message, Unit>) : Node<Message> {
 
     //@Operation(handleExceptionsAsResult = [NodeFailureException::class])
     @Operation
-    fun send(msg: String) {
+    suspend fun send(msg: String) : String {
+        logMessage(LogLevel.ALL_EVENTS) {
+            println("[${env.nodeId}]: Start operation")
+        }
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         env.broadcast(message)
+        return msg
     }
 }
 

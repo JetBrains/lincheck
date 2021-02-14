@@ -1,4 +1,4 @@
-package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
+/*package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -115,3 +115,4 @@ class KVStorageServerTestClass {
                         .iterations(100))
     }
 }
+*/
