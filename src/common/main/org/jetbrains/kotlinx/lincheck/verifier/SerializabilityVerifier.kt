@@ -33,8 +33,8 @@ class SerializabilityVerifier(
     private val linerizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
 
     // always ignore clocks
-    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult) =
-        super.verifyResults(scenario, results.withEmptyClocks)
+    override fun verifyResults(scenario: ExecutionScenario, result: ExecutionResult) =
+        super.verifyResults(scenario, result.withEmptyClocks)
 
     override fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult) =
         linerizabilityVerifier.verifyResultsImpl(scenario.converted, results.converted)

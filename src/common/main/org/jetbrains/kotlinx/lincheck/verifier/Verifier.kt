@@ -39,7 +39,7 @@ interface Verifier {
      * Verifies the specified results for correctness.
      * Returns `true` if results are possible, `false` otherwise.
      */
-    fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean
+    fun verifyResults(scenario: ExecutionScenario, result: ExecutionResult): Boolean
 
     /**
      * Verifiers which use sequential implementation instances as states (or parts of them)
@@ -66,10 +66,16 @@ internal inline fun <K, V> Map<K, V>.computeIfAbsent(key: K, defaultValue: (K) -
  * phase significantly.
  */
 abstract class CachedVerifier : Verifier {
-    private val previousResults: MutableMap<ExecutionScenario, MutableSet<ExecutionResult>> = HashMap()
-    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
-        val newResult = previousResults.computeIfAbsent(scenario) { s: ExecutionScenario -> HashSet() }.add(results)
-        return if (!newResult) true else verifyResultsImpl(scenario, results)
+    private var lastScenario: ExecutionScenario? = null
+    private val previousResults = HashSet<ExecutionResult>()
+
+    override fun verifyResults(scenario: ExecutionScenario, result: ExecutionResult): Boolean {
+        if (lastScenario != scenario) {
+            lastScenario = scenario
+            previousResults.clear()
+        }
+        val newResult = previousResults.add(result)
+        return if (!newResult) true else verifyResultsImpl(scenario, result)
     }
 
     abstract fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult): Boolean
