@@ -33,6 +33,8 @@ class CrashError(var actorIndex: Int = -1) : Error()
 private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)
 
 object Crash {
+    val systemCrashOccurred = java.util.concurrent.atomic.AtomicBoolean(false)
+
     /**
      * Crash simulation.
      * @throws CrashError
@@ -79,6 +81,7 @@ object Crash {
         }
         context.value.barrier!!.await { first ->
             if (!first) return@await
+            systemCrashOccurred.compareAndSet(false, true)
             NVMCache.systemCrash()
             while (true) {
                 val currentContext = context.value
@@ -108,6 +111,7 @@ object Crash {
     fun reset(recoverModel: RecoverabilityModel) {
         awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
         context.value = SystemContext(null, 0)
+        systemCrashOccurred.set(false)
     }
 }
 
