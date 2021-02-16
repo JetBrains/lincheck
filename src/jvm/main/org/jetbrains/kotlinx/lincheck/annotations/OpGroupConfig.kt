@@ -32,17 +32,17 @@ import java.lang.annotation.Repeatable
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
 @Repeatable(OpGroupConfig.OpGroupConfigs::class)
 @Inherited
-actual annotation class OpGroupConfig actual constructor(
-        /**
-         * Name of this group used by [Operation.group].
-         */
-        actual val name: String = "",
-        /**
-         * Set it to `true` for executing all actors in this group
-         * from one thread. This restriction allows to test single-reader
-         * and/or single-writer data structures and similar solutions.
-         */
-        actual val nonParallel: Boolean = false) {
+annotation class OpGroupConfig constructor(
+    /**
+     * Name of this group used by [Operation.group].
+     */
+    val name: String = "",
+    /**
+     * Set it to `true` for executing all actors in this group
+     * from one thread. This restriction allows to test single-reader
+     * and/or single-writer data structures and similar solutions.
+     */
+    val nonParallel: Boolean = false) {
     /**
      * Holder annotation for [OpGroupConfig].
      * Not a public API.
@@ -50,5 +50,5 @@ actual annotation class OpGroupConfig actual constructor(
     @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
     @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
     @Inherited
-    actual annotation class OpGroupConfigs actual constructor(actual vararg val value: OpGroupConfig)
+    annotation class OpGroupConfigs constructor(vararg val value: OpGroupConfig)
 }

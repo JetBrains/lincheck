@@ -65,6 +65,11 @@ class ExecutionScenario(
 val ExecutionScenario.threads: Int
     get() = parallelExecution.size
 
+/**
+ * Returns `true` if there is at least one suspendable actor in the generated scenario
+ */
+fun ExecutionScenario.hasSuspendableActors() = parallelExecution.any { actors -> actors.any { it.isSuspendable } } || postExecution.any { it.isSuspendable }
+
 internal fun <T> printInColumnsCustom(
     groupedObjects: List<List<T>>,
     joinColumns: (List<String>) -> String

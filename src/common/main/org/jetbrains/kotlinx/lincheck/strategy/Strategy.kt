@@ -30,11 +30,12 @@ import org.jetbrains.kotlinx.lincheck.execution.*
  * without any code change.
  */
 expect abstract class Strategy protected constructor(scenario: ExecutionScenario) {
+    val scenario: ExecutionScenario
+
     abstract fun run(): LincheckFailure?
 
     /**
      * Is invoked before each actor execution.
      */
     open fun onActorStart(iThread: Int)
-    val scenario: ExecutionScenario
 }
