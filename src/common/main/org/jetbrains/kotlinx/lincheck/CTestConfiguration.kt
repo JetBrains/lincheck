@@ -20,7 +20,7 @@ abstract class CTestConfiguration(
     val verifierClass: VerifierClass<out Verifier>,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
-    val sequentialSpecification: SequentialSpecification<*>?,
+    val sequentialSpecification: SequentialSpecification<*>,
     val timeoutMs: Long
 ) {
     abstract fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
@@ -38,4 +38,3 @@ abstract class CTestConfiguration(
 }
 
 expect val DEFAULT_EXECUTION_GENERATOR: ExecutionGeneratorClass<out ExecutionGenerator>
-expect val DEFAULT_VERIFIER: VerifierClass<out Verifier>

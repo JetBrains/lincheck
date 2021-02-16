@@ -40,7 +40,9 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
         .map { ann: StressCTest ->
             StressCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
+                ann.generator.java, { sequentialSpecification ->
+                    ann.verifier.java.getConstructor(SequentialSpecification::class.java).newInstance(sequentialSpecification)
+                }, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
                 chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)), DEFAULT_TIMEOUT_MS
             )
@@ -49,7 +51,9 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
         .map { ann: ModelCheckingCTest ->
             ModelCheckingCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
+                ann.generator.java, { sequentialSpecification ->
+                    ann.verifier.java.getConstructor(SequentialSpecification::class.java).newInstance(sequentialSpecification)
+                }, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
                 ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)),
                 DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE

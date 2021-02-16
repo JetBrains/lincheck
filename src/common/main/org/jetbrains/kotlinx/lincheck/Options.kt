@@ -21,10 +21,10 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import kotlin.reflect.*
 
 expect class ExecutionGeneratorClass<T>
-expect class VerifierClass<T>
 
 /**
  * Abstract class for test options.
@@ -37,7 +37,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
     protected var actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER
     var executionGenerator = DEFAULT_EXECUTION_GENERATOR
-    var verifier = DEFAULT_VERIFIER
+    var verifierGenerator: (sequentialSpecification: SequentialSpecification<*>) -> Verifier = { sequentialSpecification -> LinearizabilityVerifier(sequentialSpecification) }
     protected var requireStateEquivalenceImplementationCheck = true
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
     var sequentialSpecification: SequentialSpecification<*>? = null
@@ -108,8 +108,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Use the specified verifier.
      */
-    fun verifier(verifier: VerifierClass<out Verifier>): OPT = applyAndCast {
-        this.verifier = verifier
+    fun verifier(verifier: (sequentialSpecification: SequentialSpecification<*>) -> Verifier): OPT = applyAndCast {
+        this.verifierGenerator = verifier
     }
 
     /**

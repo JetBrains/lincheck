@@ -34,9 +34,9 @@ import kotlin.reflect.*
  */
 class ModelCheckingCTestConfiguration(testClass: TestClass, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
                                       actorsAfter: Int, generatorClass: ExecutionGeneratorClass<out ExecutionGenerator>,
-                                      verifierClass: VerifierClass<out Verifier>, checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int,
+                                      verifierClass: (sequentialSpecification: SequentialSpecification<*>) -> Verifier, checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int,
                                       invocationsPerIteration: Int, guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean,
-                                      minimizeFailedScenario: Boolean, sequentialSpecification: SequentialSpecification<*>?, timeoutMs: Long,
+                                      minimizeFailedScenario: Boolean, sequentialSpecification: SequentialSpecification<*>, timeoutMs: Long,
                                       eliminateLocalObjects: Boolean, verboseTrace: Boolean
 ) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,

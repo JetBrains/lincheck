@@ -175,10 +175,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
 
     private fun CTestConfiguration.createVerifier() =
-        verifierClass.constructors.find{ it.parameters.size == 1 && it.parameters[0].type == SequentialSpecification::class.java }!!
-            .newInstance(sequentialSpecification).also {
-                if (requireStateEquivalenceImplCheck) (it as Verifier).checkStateEquivalenceImplementation()
-            } as Verifier
+        verifierClass(this.sequentialSpecification).also {
+            if (requireStateEquivalenceImplCheck) it.checkStateEquivalenceImplementation()
+        }
 
     private fun CTestConfiguration.createExecutionGenerator() =
         generatorClass.getConstructor(

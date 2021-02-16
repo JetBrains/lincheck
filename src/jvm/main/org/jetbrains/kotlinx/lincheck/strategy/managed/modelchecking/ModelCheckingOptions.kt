@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
     override fun createTestConfigurations(testClass: TestClass): ModelCheckingCTestConfiguration {
         return ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-                executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
+                executionGenerator, verifierGenerator, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
                 guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects, verboseTrace)
     }
