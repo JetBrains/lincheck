@@ -37,34 +37,39 @@ import kotlin.reflect.*
  */
 class QuiescentConsistencyVerifier(sequentialSpecification: SequentialSpecification<*>) : Verifier {
     private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
-    private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = HashMap() // TODO change logic to WeakHashMap
+    private var lastScenario: ExecutionScenario? = null
+    private lateinit var lastConvertedScenario: ExecutionScenario
 
     override fun checkStateEquivalenceImplementation() = linearizabilityVerifier.checkStateEquivalenceImplementation()
 
-    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
+    override fun verifyResults(scenario: ExecutionScenario, result: ExecutionResult): Boolean {
         val convertedScenario = scenario.converted
-        val convertedResults = results.convert(scenario, convertedScenario.threads)
+        val convertedResults = result.convert(scenario, convertedScenario.threads)
         checkScenarioAndResultsAreSimilarlyConverted(convertedScenario, convertedResults)
         return linearizabilityVerifier.verifyResults(convertedScenario, convertedResults)
     }
 
     private val ExecutionScenario.converted: ExecutionScenario
-        get() = scenarioMapping.computeIfAbsent(this) {
-        val parallelExecutionConverted = ArrayList<MutableList<Actor>>()
-        repeat(threads) {
-            parallelExecutionConverted.add(ArrayList())
-        }
-        parallelExecution.forEachIndexed { t, threadActors ->
-            for (a in threadActors) {
-                if (a.isQuiescentConsistent) {
-                    parallelExecutionConverted.add(mutableListOf(a))
-                } else {
-                    parallelExecutionConverted[t].add(a)
+        get() {
+            if (lastScenario != this) {
+                lastScenario = this
+                val parallelExecutionConverted = ArrayList<MutableList<Actor>>()
+                repeat(threads) {
+                    parallelExecutionConverted.add(ArrayList())
                 }
+                parallelExecution.forEachIndexed { t, threadActors ->
+                    for (a in threadActors) {
+                        if (a.isQuiescentConsistent) {
+                            parallelExecutionConverted.add(mutableListOf(a))
+                        } else {
+                            parallelExecutionConverted[t].add(a)
+                        }
+                    }
+                }
+                lastConvertedScenario = ExecutionScenario(initExecution, parallelExecutionConverted, postExecution)
             }
+            return lastConvertedScenario
         }
-        ExecutionScenario(initExecution, parallelExecutionConverted, postExecution)
-    }
 
     private fun ExecutionResult.convert(originalScenario: ExecutionScenario, newThreads: Int): ExecutionResult {
         val parallelResults = ArrayList<MutableList<ResultWithClock>>()
