@@ -146,7 +146,7 @@ internal class MethodCallTracePoint(
         append(")")
         if (returnedValue != NO_VALUE)
             append(": ${adornedStringRepresentation(returnedValue)}")
-        else if (thrownException != null)
+        else if (thrownException != null && thrownException != ForcibleExecutionFinishException)
             append(": threw ${thrownException!!.javaClass.simpleName}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()
