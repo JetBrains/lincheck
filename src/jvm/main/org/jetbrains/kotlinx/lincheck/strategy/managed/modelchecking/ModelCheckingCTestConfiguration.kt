@@ -26,19 +26,17 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.reflect.*
-import kotlin.reflect.*
 
 /**
  * Configuration for [random search][ModelCheckingStrategy] strategy.
  */
 class ModelCheckingCTestConfiguration(testClass: TestClass, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
-                                      actorsAfter: Int, generatorClass: ExecutionGeneratorClass<out ExecutionGenerator>,
+                                      actorsAfter: Int, executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator,
                                       verifierClass: (sequentialSpecification: SequentialSpecification<*>) -> Verifier, checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int,
                                       invocationsPerIteration: Int, guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean,
                                       minimizeFailedScenario: Boolean, sequentialSpecification: SequentialSpecification<*>, timeoutMs: Long,
                                       eliminateLocalObjects: Boolean, verboseTrace: Boolean
-) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
+) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator, verifierClass,
     checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
     minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace) {
     override fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,

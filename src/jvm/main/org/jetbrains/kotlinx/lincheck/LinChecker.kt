@@ -175,15 +175,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
 
     private fun CTestConfiguration.createVerifier() =
-        verifierClass(this.sequentialSpecification).also {
+        verifierGenerator(this.sequentialSpecification).also {
             if (requireStateEquivalenceImplCheck) it.checkStateEquivalenceImplementation()
         }
 
     private fun CTestConfiguration.createExecutionGenerator() =
-        generatorClass.getConstructor(
-            CTestConfiguration::class.java,
-            CTestStructure::class.java
-        ).newInstance(this, testStructure)
+        executionGenerator(this, testStructure)
 
     // This companion object is used for backwards compatibility.
     companion object {

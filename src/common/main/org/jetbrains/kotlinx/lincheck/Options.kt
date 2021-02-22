@@ -24,8 +24,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import kotlin.reflect.*
 
-expect class ExecutionGeneratorClass<T>
-
 /**
  * Abstract class for test options.
  */
@@ -36,7 +34,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
     protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
     protected var actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER
-    var executionGenerator = DEFAULT_EXECUTION_GENERATOR
+    var executionGeneratorGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator =
+        { testConfiguration, testStructure -> RandomExecutionGenerator(testConfiguration, testStructure) }
     var verifierGenerator: (sequentialSpecification: SequentialSpecification<*>) -> Verifier = { sequentialSpecification -> LinearizabilityVerifier(sequentialSpecification) }
     protected var requireStateEquivalenceImplementationCheck = true
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
@@ -101,8 +100,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Use the specified execution generator.
      */
-    fun executionGenerator(executionGenerator: ExecutionGeneratorClass<out ExecutionGenerator>): OPT = applyAndCast {
-        this.executionGenerator = executionGenerator
+    fun executionGenerator(executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator): OPT = applyAndCast {
+        this.executionGeneratorGenerator = executionGenerator
     }
 
     /**

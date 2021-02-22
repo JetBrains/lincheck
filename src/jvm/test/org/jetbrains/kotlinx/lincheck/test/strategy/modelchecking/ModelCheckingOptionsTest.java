@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.LoggingLevel;
+import org.jetbrains.kotlinx.lincheck.OptionsKt;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
@@ -57,6 +58,8 @@ public class ModelCheckingOptionsTest {
             .addGuarantee(forClasses("java.util.WeakHashMap").allMethods().ignore())
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
+        OptionsKt.executionGenerator(opts, RandomExecutionGenerator.class); // TODO broken java api https://stackoverflow.com/questions/28294509/accessing-kotlin-extension-functions-from-java
+        OptionsKt.verifier(opts, LinearizabilityVerifier.class);
         LinChecker.check(ModelCheckingOptionsTest.class, opts);
     }
 }

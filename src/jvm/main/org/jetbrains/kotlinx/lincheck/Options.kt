@@ -19,12 +19,19 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
-actual typealias ExecutionGeneratorClass<T> = Class<T>
-actual typealias VerifierClass<T> = Class<T>
 actual typealias SequentialSpecification<T> = Class<T>
-actual fun <T : Any> SequentialSpecification<T>.getInitialState(): T = this.newInstance()
+actual fun <T : Any> SequentialSpecification<T>.getInitialState(): T = this.getDeclaredConstructor().newInstance()
+
+fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> Options<OPT, CTEST>.executionGenerator(executionGeneratorClass: Class<out ExecutionGenerator>): OPT {
+    executionGenerator {
+        testConfiguration, testStructure -> executionGeneratorClass.getConstructor(CTestConfiguration::class.java, CTestStructure::class.java)
+        .newInstance(testConfiguration, testStructure)
+    }
+    return this as OPT
+}
 
 fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> Options<OPT, CTEST>.verifier(verifierClass: Class<out Verifier>): OPT {
     verifier { sequentialSpecification ->

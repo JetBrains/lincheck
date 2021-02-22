@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlin.reflect.*
 
 /**
  * A common configuration for managed strategies.
@@ -32,12 +31,12 @@ import kotlin.reflect.*
 abstract class ManagedCTestConfiguration(
     testClass: TestClass, iterations: Int,
     threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-    generatorClass: ExecutionGeneratorClass<out ExecutionGenerator>, verifierClass: (sequentialSpecification: SequentialSpecification<*>) -> Verifier,
+    executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator, verifierClass: (sequentialSpecification: SequentialSpecification<*>) -> Verifier,
     val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-    sequentialSpecification: SequentialSpecification<*>?, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean
+    sequentialSpecification: SequentialSpecification<*>, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean
 ) : CTestConfiguration(
-    testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
+    testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator, verifierClass,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs
 ) {
     companion object {

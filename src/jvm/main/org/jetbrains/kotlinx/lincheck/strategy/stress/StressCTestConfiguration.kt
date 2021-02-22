@@ -24,16 +24,15 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlin.reflect.*
 
 /**
  * Configuration for [stress][StressStrategy] strategy.
  */
 class StressCTestConfiguration(testClass: TestClass, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-                               generatorClass: ExecutionGeneratorClass<out ExecutionGenerator>, verifierClass: (sequentialSpecification: SequentialSpecification<*>) -> Verifier,
+                               executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator, verifierGenerator: (sequentialSpecification: SequentialSpecification<*>) -> Verifier,
                                val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
                                sequentialSpecification: SequentialSpecification<*>, timeoutMs: Long
-) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
+) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator, verifierGenerator,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
     override fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
                                 stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier) =

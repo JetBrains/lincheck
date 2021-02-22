@@ -32,17 +32,17 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import kotlin.reflect.*
 
-actual val DEFAULT_EXECUTION_GENERATOR: ExecutionGeneratorClass<out ExecutionGenerator> = RandomExecutionGenerator::class.java
-actual val DEFAULT_VERIFIER: VerifierClass<out Verifier> = LinearizabilityVerifier::class.java
-
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->
             StressCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, { sequentialSpecification ->
-                    ann.verifier.java.getConstructor(SequentialSpecification::class.java).newInstance(sequentialSpecification)
-                }, ann.invocationsPerIteration,
+                { testConfiguration, testStructure ->
+                    ann.generator.java.getConstructor(CTestConfiguration::class.java, CTestStructure::class.java)
+                        .newInstance(testConfiguration, testStructure)
+                }, { sequentialSpecification ->
+                ann.verifier.java.getConstructor(SequentialSpecification::class.java).newInstance(sequentialSpecification)
+            }, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
                 chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)), DEFAULT_TIMEOUT_MS
             )
@@ -51,9 +51,12 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
         .map { ann: ModelCheckingCTest ->
             ModelCheckingCTestConfiguration(TestClass(testClass), ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, { sequentialSpecification ->
-                    ann.verifier.java.getConstructor(SequentialSpecification::class.java).newInstance(sequentialSpecification)
-                }, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
+                { testConfiguration, testStructure ->
+                    ann.generator.java.getConstructor(CTestConfiguration::class.java, CTestStructure::class.java)
+                        .newInstance(testConfiguration, testStructure)
+                }, { sequentialSpecification ->
+                ann.verifier.java.getConstructor(SequentialSpecification::class.java).newInstance(sequentialSpecification)
+            }, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
                 ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)),
                 DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE

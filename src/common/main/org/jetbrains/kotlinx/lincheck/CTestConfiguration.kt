@@ -16,8 +16,8 @@ abstract class CTestConfiguration(
     val actorsPerThread: Int,
     val actorsBefore: Int,
     val actorsAfter: Int,
-    val generatorClass: ExecutionGeneratorClass<out ExecutionGenerator>,
-    val verifierClass: VerifierClass<out Verifier>,
+    val executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator,
+    val verifierGenerator: (sequentialSpecification: SequentialSpecification<*>) -> Verifier,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: SequentialSpecification<*>,
@@ -36,5 +36,3 @@ abstract class CTestConfiguration(
         const val DEFAULT_TIMEOUT_MS: Long = 10000
     }
 }
-
-expect val DEFAULT_EXECUTION_GENERATOR: ExecutionGeneratorClass<out ExecutionGenerator>
