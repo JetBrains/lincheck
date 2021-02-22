@@ -56,18 +56,22 @@ class StressStrategy(
     }
 
     override fun run(): LincheckFailure? {
-        runner.use {
-            // Run invocations
-            for (invocation in 0 until invocations) {
-                when (val ir = runner.run()) {
-                    is CompletedInvocationResult -> {
-                        if (!verifier.verifyResults(scenario, ir.results))
-                            return IncorrectResultsFailure(scenario, ir.results)
+        try {
+            runner.also {
+                // Run invocations
+                for (invocation in 0 until invocations) {
+                    when (val ir = runner.run()) {
+                        is CompletedInvocationResult -> {
+                            if (!verifier.verifyResults(scenario, ir.results))
+                                return IncorrectResultsFailure(scenario, ir.results)
+                        }
+                        else -> return ir.toLincheckFailure(scenario)
                     }
-                    else -> return ir.toLincheckFailure(scenario)
                 }
+                return null
             }
-            return null
+        } finally {
+            runner.close()
         }
     }
 }

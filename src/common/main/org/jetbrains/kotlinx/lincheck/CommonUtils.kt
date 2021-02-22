@@ -65,6 +65,11 @@ internal inline fun executeValidationFunctions(instance: Any, validationFunction
 }
 
 /**
+ * loader class type should be ClassLoader in jvm
+ */
+internal expect fun ExecutionScenario.convertForLoader(loader: Any): ExecutionScenario
+
+/**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
  */
 fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException

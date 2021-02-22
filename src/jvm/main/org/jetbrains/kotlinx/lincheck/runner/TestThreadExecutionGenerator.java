@@ -110,7 +110,7 @@ public class TestThreadExecutionGenerator {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
-        Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
+        Class<? extends TestThreadExecution> clz = ((ExecutionClassLoader)runner.getClassLoader()).defineClass(className,
                 generateClass(internalClassName, getType(runner.getTestClass().getClazz()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
             TestThreadExecution execution = clz.getDeclaredConstructor().newInstance();
