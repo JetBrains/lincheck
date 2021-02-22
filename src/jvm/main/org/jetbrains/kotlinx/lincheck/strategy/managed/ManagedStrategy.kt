@@ -281,8 +281,8 @@ abstract class ManagedStrategy(
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (!isTestThread(iThread)) return // can switch only test threads
-        check(iThread == currentThread)
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
+        check(iThread == currentThread)
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             failIfObstructionFreedomIsRequired {
@@ -331,7 +331,7 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
     }
 
     override fun onActorStart(iThread: Int) {
@@ -401,7 +401,12 @@ abstract class ManagedStrategy(
 
     private fun isTestThread(iThread: Int) = iThread < nThreads
 
-    private fun inIgnoredSection(iThread: Int): Boolean = !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0
+    /**
+     * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
+     * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
+     */
+    private fun inIgnoredSection(iThread: Int): Boolean =
+        !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
 
     // == LISTENING METHODS ==
 
@@ -461,7 +466,7 @@ abstract class ManagedStrategy(
      * @return whether lock should be actually released
      */
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
-        if (inIgnoredSection(iThread)) return true
+        if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
         traceCollector?.passCodeLocation(tracePoint)
         return false
@@ -475,7 +480,6 @@ abstract class ManagedStrategy(
      */
     @Suppress("UNUSED_PARAMETER")
     internal fun beforePark(iThread: Int, codeLocation: Int, tracePoint: ParkTracePoint?, withTimeout: Boolean): Boolean {
-        if (inIgnoredSection(iThread)) return true
         newSwitchPoint(iThread, codeLocation, tracePoint)
         return false
     }
@@ -486,6 +490,7 @@ abstract class ManagedStrategy(
      */
     @Suppress("UNUSED_PARAMETER")
     internal fun afterUnpark(iThread: Int, codeLocation: Int, tracePoint: UnparkTracePoint?, thread: Any) {
+        if (!isTestThread(iThread)) return
         traceCollector?.passCodeLocation(tracePoint)
     }
 
