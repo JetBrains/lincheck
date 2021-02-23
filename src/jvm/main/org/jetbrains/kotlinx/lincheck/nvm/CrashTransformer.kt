@@ -86,6 +86,8 @@ private val storeInstructions = hashSetOf(
 private val STRING_TYPE = Type.getType(String::class.java)
 private val POSSIBLY_CRASH_METHOD =
     Method("possiblyCrash", Type.VOID_TYPE, arrayOf(STRING_TYPE, STRING_TYPE, STRING_TYPE, Type.INT_TYPE))
+private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
+private val THROWABLE_TYPE = Type.getType(Throwable::class.java)
 
 private open class CrashBaseMethodTransformer(
     mv: MethodVisitor,
@@ -98,6 +100,7 @@ private open class CrashBaseMethodTransformer(
     private val crashOwnerType = Type.getType(Crash::class.java)
     private var shouldTransform = true
     private var lineNumber = -1
+    private val catchLabels = hashSetOf<Label>()
 
     protected open fun callCrash() {
         if (!shouldTransform) return
@@ -145,6 +148,25 @@ private open class CrashBaseMethodTransformer(
             callCrash()
         }
         super.visitInsn(opcode)
+    }
+
+    override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
+        super.visitTryCatchBlock(start, end, handler, type)
+        check(type != CRASH_ERROR_TYPE.internalName) { "Catch CrashError is prohibited." }
+        if (type == THROWABLE_TYPE.internalName && handler !== null) {
+            catchLabels.add(handler)
+        }
+    }
+
+    override fun visitLabel(label: Label?) {
+        super.visitLabel(label)
+        if (label !in catchLabels) return
+        val continueCatch = newLabel()
+        dup()
+        instanceOf(CRASH_ERROR_TYPE)
+        ifZCmp(EQ, continueCatch)
+        throwException()
+        mark(continueCatch)
     }
 }
 
