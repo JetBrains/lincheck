@@ -152,3 +152,25 @@ private class DurableMSQueue<T> {
         }
     }
 }
+
+@StressCTest(
+    sequentialSpecification = SequentialQueue::class,
+    threads = THREADS_NUMBER,
+    recover = Recover.DURABLE
+)
+class DurableMSQueueFailingTest {
+    private val q = DurableMSQueue<Int>()
+
+    @Operation
+    fun push(value: Int) = q.push(value)
+
+    @Operation
+    fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId)
+
+    /** This test fails as no recovery is provided. */
+    @Test(expected = Throwable::class)
+    fun testFails() {
+        LinChecker.check(this::class.java)
+    }
+}
+
