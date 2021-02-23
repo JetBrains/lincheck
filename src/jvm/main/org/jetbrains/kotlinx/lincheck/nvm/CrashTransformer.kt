@@ -32,6 +32,8 @@ private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
 class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = true
     private val testClassName = Type.getInternalName(testClass)
+    private var name: String? = null
+    private var fileName: String? = null
 
     override fun visit(
         version: Int,
@@ -42,6 +44,7 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
         interfaces: Array<out String>?
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
+        this.name = name
         if (name == testClassName) {
             shouldTransform = false
         }
@@ -52,6 +55,11 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
             shouldTransform = false
         }
         return super.visitAnnotation(descriptor, visible)
+    }
+
+    override fun visitSource(source: String?, debug: String?) {
+        super.visitSource(source, debug)
+        fileName = source
     }
 
 
@@ -65,8 +73,8 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (!shouldTransform) return mv
         if (name == "<clinit>") return mv
-        if (name == "<init>") return CrashConstructorTransformer(mv, access, name, descriptor)
-        return CrashBaseMethodTransformer(mv, access, name, descriptor)
+        if (name == "<init>") return CrashConstructorTransformer(mv, access, name, descriptor, this.name, fileName)
+        return CrashBaseMethodTransformer(mv, access, name, descriptor, this.name, fileName)
     }
 }
 
@@ -75,18 +83,34 @@ private val storeInstructions = hashSetOf(
     Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.LASTORE, Opcodes.DASTORE
 )
 
+private val STRING_TYPE = Type.getType(String::class.java)
+private val POSSIBLY_CRASH_METHOD =
+    Method("possiblyCrash", Type.VOID_TYPE, arrayOf(STRING_TYPE, STRING_TYPE, STRING_TYPE, Type.INT_TYPE))
+
 private open class CrashBaseMethodTransformer(
     mv: MethodVisitor,
     access: Int,
     name: String?,
-    descriptor: String?
+    descriptor: String?,
+    private val className: String?,
+    private val fileName: String?
 ) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
     private val crashOwnerType = Type.getType(Crash::class.java)
     private var shouldTransform = true
+    private var lineNumber = -1
 
     protected open fun callCrash() {
         if (!shouldTransform) return
-        super.invokeStatic(crashOwnerType, Method("possiblyCrash", "()V"))
+        push(className)
+        push(fileName)
+        push(name)
+        push(lineNumber)
+        super.invokeStatic(crashOwnerType, POSSIBLY_CRASH_METHOD)
+    }
+
+    override fun visitLineNumber(line: Int, start: Label?) {
+        super.visitLineNumber(line, start)
+        lineNumber = line
     }
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
@@ -128,8 +152,10 @@ private class CrashConstructorTransformer(
     mv: MethodVisitor,
     access: Int,
     name: String?,
-    descriptor: String?
-) : CrashBaseMethodTransformer(mv, access, name, descriptor) {
+    descriptor: String?,
+    className: String?,
+    fileName: String?
+) : CrashBaseMethodTransformer(mv, access, name, descriptor, className, fileName) {
     private var superConstructorCalled = false
 
     override fun visitMethodInsn(

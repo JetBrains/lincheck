@@ -29,7 +29,25 @@ import java.util.concurrent.atomic.AtomicBoolean
  * This exception is used to emulate system crash.
  * Must be ignored by user code, namely 'catch (e: Throwable)' constructions should pass this exception.
  */
-class CrashError(var actorIndex: Int = -1) : Error()
+abstract class CrashError(enableStackTrace: Boolean) : Throwable(null, null, false, enableStackTrace) {
+    abstract var actorIndex: Int
+    abstract val crashStackTrace: Array<StackTraceElement>
+}
+
+class CrashErrorImpl(override var actorIndex: Int = -1) : CrashError(true) {
+    override val crashStackTrace: Array<StackTraceElement> = stackTrace
+}
+
+/** Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot. */
+class CrashErrorProxy(
+    private val className: String?,
+    private val fileName: String?,
+    private val methodName: String?,
+    private val lineNumber: Int,
+    override var actorIndex: Int = -1
+) : CrashError(false) {
+    override val crashStackTrace get() = arrayOf(StackTraceElement(className, methodName, fileName, lineNumber))
+}
 
 private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)
 
@@ -48,31 +66,40 @@ object Crash {
      * Crash simulation.
      * @throws CrashError
      */
-    private fun crash(threadId: Int) {
-        throw CRASH.also { RecoverableStateContainer.registerCrash(threadId, it) }
+    private fun crash(threadId: Int, className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
+        val crash = createCrash(className, fileName, methodName, lineNumber)
+        RecoverableStateContainer.registerCrash(threadId, crash)
+        throw crash
     }
 
-    private val CRASH = CrashError()
+    private fun createCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int): CrashError {
+        return if (useProxyCrash) {
+            CrashErrorProxy(className, fileName, methodName, lineNumber)
+        } else {
+            CrashErrorImpl()
+        }
+    }
 
     private val context = atomic(SystemContext(null, 0))
-    val threads get() = context.value.threads
-    var awaitSystemCrashBeforeThrow = true
+    internal val threads get() = context.value.threads
+    private var awaitSystemCrashBeforeThrow = true
+    var useProxyCrash = true
 
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
      * On a system crash a thread waits for other threads to reach this method call.
      */
     @JvmStatic
-    fun possiblyCrash() {
+    fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
         if (context.value.barrier !== null) {
             val threadId = RecoverableStateContainer.threadId()
             if (awaitSystemCrashBeforeThrow) awaitSystemCrash()
-            crash(threadId)
+            crash(threadId, className, fileName, methodName, lineNumber)
         }
         if (Probability.shouldCrash()) {
             val threadId = RecoverableStateContainer.threadId()
             if (awaitSystemCrashBeforeThrow && Probability.shouldSystemCrash()) awaitSystemCrash()
-            crash(threadId)
+            crash(threadId, className, fileName, methodName, lineNumber)
         }
     }
 

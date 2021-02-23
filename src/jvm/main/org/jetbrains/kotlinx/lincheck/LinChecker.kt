@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.Crash
 import org.jetbrains.kotlinx.lincheck.nvm.Probability
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
@@ -129,7 +130,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         Probability.minimizeCrashes()
         val currentCrashesNumber = crashesNumber()
         repeat(100) {
+            Crash.useProxyCrash = false
             val newIteration = scenario.tryMinimize(testCfg, verifier)
+            Crash.useProxyCrash = true
             if (newIteration != null
                 && newIteration is IncorrectResultsFailure
                 && newIteration.crashesNumber() < currentCrashesNumber

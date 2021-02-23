@@ -254,5 +254,5 @@ private fun StringBuilder.appendException(t: Throwable) {
 }
 
 private fun StringBuilder.appendCrash(crash: CrashError) {
-    appendStackTrace(crash.stackTrace)
+    appendStackTrace(crash.crashStackTrace)
 }
