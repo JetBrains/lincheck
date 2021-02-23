@@ -66,9 +66,14 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
         if (!shouldTransform) return mv
         if (name == "<clinit>") return mv
         if (name == "<init>") return CrashConstructorTransformer(mv, access, name, descriptor)
-        return CrashMethodTransformer(mv, access, name, descriptor)
+        return CrashBaseMethodTransformer(mv, access, name, descriptor)
     }
 }
+
+private val storeInstructions = hashSetOf(
+    Opcodes.AASTORE, Opcodes.IASTORE, Opcodes.FASTORE, Opcodes.BASTORE,
+    Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.LASTORE, Opcodes.DASTORE
+)
 
 private open class CrashBaseMethodTransformer(
     mv: MethodVisitor,
@@ -76,7 +81,6 @@ private open class CrashBaseMethodTransformer(
     name: String?,
     descriptor: String?
 ) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
-
     private val crashOwnerType = Type.getType(Crash::class.java)
     private var shouldTransform = true
 
@@ -91,14 +95,7 @@ private open class CrashBaseMethodTransformer(
         }
         return super.visitAnnotation(descriptor, visible)
     }
-}
 
-private class CrashMethodTransformer(
-    mv: MethodVisitor,
-    access: Int,
-    name: String?,
-    descriptor: String?
-) : CrashBaseMethodTransformer(mv, access, name, descriptor) {
     override fun visitMethodInsn(
         opcode: Int,
         owner: String?,
@@ -110,6 +107,20 @@ private class CrashMethodTransformer(
             callCrash()
         }
         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+    }
+
+    override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
+        if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
+            callCrash()
+        }
+        super.visitFieldInsn(opcode, owner, name, desc)
+    }
+
+    override fun visitInsn(opcode: Int) {
+        if (opcode in storeInstructions) {
+            callCrash()
+        }
+        super.visitInsn(opcode)
     }
 }
 
