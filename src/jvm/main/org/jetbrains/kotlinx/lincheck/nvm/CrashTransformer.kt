@@ -99,11 +99,6 @@ private class CrashMethodTransformer(
     name: String?,
     descriptor: String?
 ) : CrashBaseMethodTransformer(mv, access, name, descriptor) {
-    override fun visitCode() {
-        super.visitCode()
-        callCrash()
-    }
-
     override fun visitMethodInsn(
         opcode: Int,
         owner: String?,
@@ -111,7 +106,9 @@ private class CrashMethodTransformer(
         descriptor: String?,
         isInterface: Boolean
     ) {
-        callCrash()
+        if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) {
+            callCrash()
+        }
         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
     }
 }

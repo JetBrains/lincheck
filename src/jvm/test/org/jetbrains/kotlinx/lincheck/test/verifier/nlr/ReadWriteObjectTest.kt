@@ -28,7 +28,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
-import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
+import org.jetbrains.kotlinx.lincheck.nvm.api.flush
+import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState

@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.nvm
 
+import org.jetbrains.kotlinx.lincheck.nvm.api.AbstractNonVolatilePrimitive
 import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
 
 /** Volatile cache of non-volatile memory emulation. */
@@ -30,7 +31,7 @@ object NVMCache {
     private val cache = Array<SmartSet<AbstractNonVolatilePrimitive>?>(MAX_THREADS_NUMBER) { null }
 
     /** Flushes all local variables of thread. */
-    fun flush() {
+    internal fun flushAll() {
         val threadId = RecoverableStateContainer.threadId()
         val localCache = cache[threadId] ?: return
         localCache.forEach { it.flushInternal() }
