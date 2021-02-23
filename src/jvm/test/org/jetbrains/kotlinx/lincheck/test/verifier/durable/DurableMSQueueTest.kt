@@ -21,6 +21,7 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverPerThread
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -51,6 +52,9 @@ class DurableMSQueueTest {
 
     @Operation
     fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId)
+
+    @DurableRecoverPerThread
+    fun recover() = q.recover()
 
     @Test
     fun test() = LinChecker.check(this::class.java)
@@ -95,8 +99,6 @@ private class DurableMSQueue<T> {
     }
 
     fun pop(p: Int): T? {
-        recover()
-
         while (true) {
             val first: QueueNode<T?> = head.value
             val last: QueueNode<T?> = tail.value
@@ -125,7 +127,7 @@ private class DurableMSQueue<T> {
         }
     }
 
-    private fun recover() {
+    fun recover() {
         while (true) {
             val h = head.value
             val next = h.next.value ?: break

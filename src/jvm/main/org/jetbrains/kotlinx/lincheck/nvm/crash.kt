@@ -41,7 +41,7 @@ object Crash {
 
     @JvmStatic
     fun resetAllCrashed() {
-        systemCrashOccurred.set(false)
+        systemCrashOccurred.compareAndSet(true, false)
     }
 
     /**

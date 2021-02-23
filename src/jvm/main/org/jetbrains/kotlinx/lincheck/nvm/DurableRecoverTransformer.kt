@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.nvm
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
+import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverPerThread
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -40,13 +41,15 @@ private val OPERATION_TYPE = Type.getType(Operation::class.java)
 class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: Class<*>) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = false
     internal var recoverAllMethod: String? = null
+    internal var recoverPerThreadMethod: String? = null
     internal lateinit var name: String
 
     init {
-        val recover = listOf(DurableRecoverAll::class)
+        val recover = listOf(DurableRecoverAll::class, DurableRecoverPerThread::class)
             .map { a -> _class.methods.singleOrNull { m -> m.annotations.any { it.annotationClass == a } } }
             .onEach { check(it == null || Type.getMethodDescriptor(it) == RECOVER_DESCRIPTOR) }
         recoverAllMethod = recover[0]?.name
+        recoverPerThreadMethod = recover[1]?.name
     }
 
     override fun visit(
@@ -76,26 +79,7 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
         RECOVER_ALL_GENERATED_ACCESS, RECOVER_ALL_GENERATED_NAME, RECOVER_ALL_GENERATED_DESCRIPTOR
     ).run {
         visitCode()
-        val endLabel = newLabel()
-        visitMethodInsn(
-            Opcodes.INVOKESTATIC,
-            CRASH_TYPE.internalName,
-            CRASH_IS_CRASHED.name,
-            CRASH_IS_CRASHED.descriptor,
-            false
-        )
-        visitJumpInsn(Opcodes.IFEQ, endLabel)
-        loadThis()
-        val className = this@DurableOperationRecoverTransformer.name
-        visitMethodInsn(Opcodes.INVOKEVIRTUAL, className, recoverAllMethod, RECOVER_DESCRIPTOR, false)
-        visitMethodInsn(
-            Opcodes.INVOKESTATIC,
-            CRASH_TYPE.internalName,
-            CRASH_RESET_ALL_CRASHED.name,
-            CRASH_RESET_ALL_CRASHED.descriptor,
-            false
-        )
-        visitLabel(endLabel)
+        generateRecoverCode(this@DurableOperationRecoverTransformer.name, recoverAllMethod!!)
         visitInsn(Opcodes.RETURN)
         visitMaxs(1, 0)
         visitEnd()
@@ -113,6 +97,28 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
         if (!shouldTransform) return mv
         return DurableRecoverOperationTransformer(this, mv, access, name, descriptor)
     }
+}
+
+private fun GeneratorAdapter.generateRecoverCode(className: String, recoverMethod: String) {
+    val endLabel = newLabel()
+    visitMethodInsn(
+        Opcodes.INVOKESTATIC,
+        CRASH_TYPE.internalName,
+        CRASH_IS_CRASHED.name,
+        CRASH_IS_CRASHED.descriptor,
+        false
+    )
+    visitJumpInsn(Opcodes.IFEQ, endLabel)
+    loadThis()
+    visitMethodInsn(Opcodes.INVOKEVIRTUAL, className, recoverMethod, RECOVER_DESCRIPTOR, false)
+    visitMethodInsn(
+        Opcodes.INVOKESTATIC,
+        CRASH_TYPE.internalName,
+        CRASH_RESET_ALL_CRASHED.name,
+        CRASH_RESET_ALL_CRASHED.descriptor,
+        false
+    )
+    visitLabel(endLabel)
 }
 
 /** Adds recover call to methods annotated with [Operation]. */
@@ -135,7 +141,8 @@ private class DurableRecoverOperationTransformer(
         if (!isOperation) return
 
         val recoverAll = cv.recoverAllMethod
-        if (recoverAll != null) {
+        val recoverPerThread = cv.recoverPerThreadMethod
+        if (recoverAll !== null) {
             val endLabel = newLabel()
             visitMethodInsn(
                 Opcodes.INVOKESTATIC,
@@ -154,6 +161,8 @@ private class DurableRecoverOperationTransformer(
                 false
             )
             mark(endLabel)
+        } else if (recoverPerThread !== null) {
+            generateRecoverCode(cv.name, recoverPerThread)
         }
     }
 }
