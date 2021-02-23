@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * This exception is used to emulate system crash.
@@ -33,7 +34,15 @@ class CrashError(var actorIndex: Int = -1) : Error()
 private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)
 
 object Crash {
-    val systemCrashOccurred = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val systemCrashOccurred = AtomicBoolean(false)
+
+    @JvmStatic
+    fun isCrashed() = systemCrashOccurred.get()
+
+    @JvmStatic
+    fun resetAllCrashed() {
+        systemCrashOccurred.set(false)
+    }
 
     /**
      * Crash simulation.
@@ -111,7 +120,7 @@ object Crash {
     fun reset(recoverModel: RecoverabilityModel) {
         awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
         context.value = SystemContext(null, 0)
-        systemCrashOccurred.set(false)
+        resetAllCrashed()
     }
 }
 

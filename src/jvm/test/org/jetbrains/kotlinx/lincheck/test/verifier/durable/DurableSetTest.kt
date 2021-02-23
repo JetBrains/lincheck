@@ -22,9 +22,9 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.nvm.Crash
 import org.jetbrains.kotlinx.lincheck.nvm.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.nonVolatile
@@ -33,7 +33,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.util.concurrent.ConcurrentLinkedDeque
 
-private const val THREADS_NUMBER = 3
+private const val THREADS_NUMBER = 2
 
 /**
  * @see  <a https://arxiv.org/pdf/1909.02852.pdf">Efficient Lock-Free Durable Sets</a>
@@ -55,6 +55,9 @@ class DurableLinkFreeListTest {
 
     @Operation
     fun contains(key: Int) = s.contains(key)
+
+    @DurableRecoverAll
+    fun recover() = s.recover()
 
     @Test
     fun test() = LinChecker.check(this::class.java)
@@ -159,7 +162,6 @@ class DurableLinkFreeList<T> {
     }
 
     fun add(key: Int): Boolean {
-        recover()
         while (true) {
             val (pred, curr) = find(key)
             if (curr.key == key) {
@@ -179,7 +181,6 @@ class DurableLinkFreeList<T> {
     }
 
     fun remove(key: Int): Boolean {
-        recover()
         while (true) {
             val (pred, curr) = find(key)
             if (curr.key != key) return false
@@ -194,7 +195,6 @@ class DurableLinkFreeList<T> {
     }
 
     fun contains(key: Int): Boolean {
-        recover()
         var curr = head.value.nextRef.value.next!!
         while (curr.key < key) {
             curr = curr.nextRef.value.next!!
@@ -209,16 +209,7 @@ class DurableLinkFreeList<T> {
         return true
     }
 
-    private fun recover() {
-        if (!Crash.systemCrashOccurred.get()) return
-        synchronized("RecoverLock") {
-            if (Crash.systemCrashOccurred.get()) {
-                doRecover()
-                Crash.systemCrashOccurred.compareAndSet(true, false)
-            }
-        }
-
-    }
+    fun recover() = doRecover()
 
     private fun fastAdd(newNode: ListNode<T>) {
         val key = newNode.key
