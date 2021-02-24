@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import java.util.concurrent.LinkedBlockingQueue
 
 
@@ -39,12 +40,8 @@ class FastQueueTest : AbstractLincheckTest() {
     fun poll() = queue.poll()
 
     override fun <O : Options<O, *>> O.customize() {
-        //actorsBefore(2)
         threads(4)
         actorsPerThread(2)
-        //actorsAfter(2)
-       // iterations(1)
-        //minimizeFailedScenario(true)
         //verifier(EpsilonVerifier::class.java)
         requireStateEquivalenceImplCheck(false)
     }

@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed.queue
+package org.jetbrains.kotlinx.lincheck.test.distributed.common
 
 class MessageQueueTest {
 }

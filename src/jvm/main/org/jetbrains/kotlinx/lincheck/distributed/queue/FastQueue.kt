@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.distributed.queue
 
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
-import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlinx.atomicfu.atomicArrayOfNulls
 
 
 class FastQueue<E> {
@@ -31,6 +31,7 @@ class FastQueue<E> {
 
     init {
         val segment = Segment<E>(null)
+        segment.enqIdx.value = 0
         tail = atomic(segment)
         head = atomic(segment)
     }
@@ -38,14 +39,14 @@ class FastQueue<E> {
     fun put(item: E) {
         while (true) {
             val tmpTail = tail.value
-            val idx = tmpTail.enqIdx.incrementAndGet()
+            val idx = tmpTail.enqIdx.getAndIncrement()
             if (idx >= BUFFER_SIZE) {
                 if (tail.value != tmpTail) continue
                 val tmpNext = tmpTail.next.value
                 if (tmpNext == null) {
                     val newSegment = Segment(item)
                     if (tmpTail.next.compareAndSet(null, newSegment)) {
-                        tail.compareAndSet(tmpTail, newSegment);
+                        tail.compareAndSet(tmpTail, newSegment)
                         return
                     }
                 } else {
@@ -53,7 +54,7 @@ class FastQueue<E> {
                 }
                 continue
             }
-            if (tmpTail.items.compareAndSet(idx, null, ValueItem(item))) return
+            if (tmpTail.items[idx].compareAndSet( null, ValueItem(item))) return
         }
     }
 
@@ -61,13 +62,13 @@ class FastQueue<E> {
         while (true) {
             val tmpHead = head.value
             if (tmpHead.deqIdx.value >= tmpHead.enqIdx.value && tmpHead.next.value == null) return null
-            val idx = tmpHead.deqIdx.incrementAndGet()
+            val idx = tmpHead.deqIdx.getAndIncrement()
             if (idx >= BUFFER_SIZE) {
                 val tmpNext = tmpHead.next.value ?: return null
                 head.compareAndSet(tmpHead, tmpNext)
                 continue
             }
-            val item = tmpHead.items.getAndSet(idx, Taken)
+            val item = tmpHead.items[idx].getAndSet(Taken)
             if (item != null) {
                 return (item as ValueItem<E>).value
             }
@@ -79,14 +80,14 @@ class FastQueue<E> {
 internal const val BUFFER_SIZE = 128
 
 internal class Segment<E>(item: E?) {
-    val enqIdx = atomic(0)
+    val enqIdx = atomic(1)
     val deqIdx = atomic(0)
-    val items = AtomicReferenceArray<SegmentItem<E>>(BUFFER_SIZE)
+    val items = atomicArrayOfNulls<SegmentItem<E>>(BUFFER_SIZE)
 
     val next = atomic<Segment<E>?>(null)
 
     init {
-        items.lazySet(0, ValueItem(item))
+        items[0].lazySet(ValueItem(item))
     }
 }
 
