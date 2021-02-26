@@ -53,7 +53,7 @@ class DistributedStrategy<Message, Log>(val testCfg: DistributedCTestConfigurati
     }
 
     override fun run(): LincheckFailure? {
-        try {
+        runner.use { runner ->
             // Run invocations
             for (invocation in 0 until invocations) {
                 val ir = runner.run()
@@ -69,8 +69,6 @@ class DistributedStrategy<Message, Log>(val testCfg: DistributedCTestConfigurati
                 }
             }
             return null
-        } finally {
-            runner.close()
         }
     }
 }

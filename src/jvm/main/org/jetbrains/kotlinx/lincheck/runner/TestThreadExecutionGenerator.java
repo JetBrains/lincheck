@@ -151,8 +151,7 @@ public class TestThreadExecutionGenerator {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-        throw new RuntimeException();
-        //return cw.toByteArray();
+        return cw.toByteArray();
         //
     }
 

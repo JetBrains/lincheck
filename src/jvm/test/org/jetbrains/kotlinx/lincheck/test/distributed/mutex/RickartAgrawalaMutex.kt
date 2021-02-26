@@ -17,10 +17,11 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-/*
+
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import kotlinx.atomicfu.locks.withLock
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
@@ -28,43 +29,43 @@ import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.util.concurrent.locks.ReentrantLock
 
-@Volatile
-internal var cnt = 0
 
-class RickartAgrawalaMutex(private val env : Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+
+class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+    companion object {
+        @Volatile
+        private var cnt = 0
+    }
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
     private val req = IntArray(env.numberOfNodes) { inf } // time of last REQ message
     private val ok = IntArray(env.numberOfNodes) // time of last OK message
     private val pendingOk = BooleanArray(env.numberOfNodes)
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val semaphore = Semaphore(1, 1)
 
-    override fun onMessage(message: MutexMessage, sender : Int) {
-        lock.withLock {
-            val time = message.msgTime
-            clock = Integer.max(clock, time) + 1
-            when(message) {
-                is Req -> {
-                    val reqTime = message.reqTime
-                    req[sender] = reqTime
-                    val myReqTime = req[env.nodeId]
-                    //println("[${env.nodeId}]: myReqTime $myReqTime reqTime $reqTime sender $sender")
-                    if (reqTime < myReqTime || reqTime == myReqTime &&  sender < env.nodeId) {
-                        env.send(Ok(++clock), sender)
-                    } else {
-                        pendingOk[sender] = true
-                    }
+    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+        val time = message.msgTime
+        clock = Integer.max(clock, time) + 1
+        when (message) {
+            is Req -> {
+                val reqTime = message.reqTime
+                req[sender] = reqTime
+                val myReqTime = req[env.nodeId]
+                //println("[${env.nodeId}]: myReqTime $myReqTime reqTime $reqTime sender $sender")
+                if (reqTime < myReqTime || reqTime == myReqTime && sender < env.nodeId) {
+                    env.send(Ok(++clock), sender)
+                } else {
+                    pendingOk[sender] = true
                 }
-                is Ok -> {
-                    ok[sender] = time
-                    req[sender] = inf
-                }
-                else -> throw RuntimeException("Unexpected message type")
             }
-            checkInCS()
+            is Ok -> {
+                ok[sender] = time
+                req[sender] = inf
+            }
+            else -> throw RuntimeException("Unexpected message type")
         }
+        checkInCS()
     }
 
     @Validate
@@ -72,7 +73,7 @@ class RickartAgrawalaMutex(private val env : Environment<MutexMessage, Unit>) : 
         cnt = 0
     }
 
-    private fun checkInCS()  {
+    private fun checkInCS() {
         val myReqTime = req[env.nodeId]
         if (myReqTime == inf) return // did not request CS, do nothing
         if (inCS) return // already in CS, do nothing
@@ -83,74 +84,61 @@ class RickartAgrawalaMutex(private val env : Environment<MutexMessage, Unit>) : 
             }
         }
         inCS = true
-        //println("[${env.nodeId}]: Acquire lock")
-        condition.signal()
-        //  env.sendLocal(Lock(clock))
+        semaphore.release()
     }
 
     @Operation
-    fun lock() : Int {
+    suspend fun lock(): Int {
         //println("[${env.nodeId}]: Request lock")
-        lock.withLock {
-            check (req[env.nodeId] == inf) {
-                Thread.currentThread()
-            }
-            val myReqTime = ++clock
-            req[env.nodeId] = myReqTime
-            broadcast(Req(++clock, myReqTime))
-            if (env.numberOfNodes == 1) {
-                inCS = true
-            }
-            while(!inCS) {
-                condition.await()
-            }
+        check(req[env.nodeId] == inf) {
+            Thread.currentThread()
+        }
+        val myReqTime = ++clock
+        req[env.nodeId] = myReqTime
+        env.broadcast(Req(++clock, myReqTime))
+        if (env.numberOfNodes == 1) {
+            inCS = true
+        } else {
+            semaphore.acquire()
+            check(inCS)
         }
         val res = ++cnt
         unlock()
         return res
     }
 
-    private fun unlock() {
-       // println("[${env.nodeId}]: Unlock")
-        lock.withLock {
-            if (!inCS) return
-            //env.sendLocal(Unlock(clock))
-            inCS = false
-            req[env.nodeId] = inf
-            for (i in 0 until env.numberOfNodes) {
-                if (pendingOk[i]) {
-                    pendingOk[i] = false
-                    env.send(Ok(++clock), i)
-                }
-            }
-        }
-    }
-
-    private fun broadcast(msg : MutexMessage) {
+    private suspend fun unlock() {
+        if (!inCS) return
+        inCS = false
+        req[env.nodeId] = inf
         for (i in 0 until env.numberOfNodes) {
-            if (i == env.nodeId) {
-                continue
+            if (pendingOk[i]) {
+                pendingOk[i] = false
+                env.send(Ok(++clock), i)
             }
-            env.send(msg, i)
         }
     }
 }
 
-class  RickartAgrawalaMutexTest {
+class RickartAgrawalaMutexTest {
     @Test
     fun testSimple() {
-        LinChecker.check(RickartAgrawalaMutex::class
+        LinChecker.check(
+            RickartAgrawalaMutex::class
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(Counter::class.java).threads
-        (5).messageOrder(MessageOrder.SYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000))
+                (false).sequentialSpecification(Counter::class.java).threads
+                (3).messageOrder(MessageOrder.FIFO).actorsPerThread(2)
+                .invocationsPerIteration(30).iterations(1000)
+        )
     }
 
     @Test
     fun testNoFifo() {
-        LinChecker.check(RickartAgrawalaMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(Counter::class.java).threads
-        (5).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000))
+        LinChecker.check(
+            RickartAgrawalaMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
+                (false).sequentialSpecification(Counter::class.java).threads
+                (5).messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(100).iterations(1000)
+        )
     }
-}*/
+}

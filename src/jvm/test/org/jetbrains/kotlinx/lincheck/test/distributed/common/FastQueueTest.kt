@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed.queue
+package org.jetbrains.kotlinx.lincheck.test.distributed.common
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
@@ -26,23 +26,33 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
 
+class IntQueue {
+    val queue = LinkedBlockingQueue<Int>()
+    fun put(i: Int) = queue.put(i)
+    fun poll() = queue.poll()
+}
 
+@OpGroupConfig(name = "consumer", nonParallel = true)
 class FastQueueTest : AbstractLincheckTest() {
-    private val queue = FastQueue<Int>()
+    private val queue = LinkedBlockingQueue<Int>()
 
     @Operation
     fun put(value: Int) = queue.put(value)
 
-    @Operation
+    @Operation(group = "consumer")
     fun poll() = queue.poll()
 
     override fun <O : Options<O, *>> O.customize() {
-        threads(4)
-        actorsPerThread(2)
-        //verifier(EpsilonVerifier::class.java)
+        threads(3)
+        actorsPerThread(3)
         requireStateEquivalenceImplCheck(false)
+        sequentialSpecification(IntQueue::class.java)
+        actorsBefore(0)
+        actorsAfter(0)
+       // verifier(EpsilonVerifier::class.java)
     }
 }

@@ -19,7 +19,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.coroutines.delay
 import org.jetbrains.kotlinx.lincheck.Result
 
 abstract class TestNodeExecution {

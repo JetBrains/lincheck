@@ -17,10 +17,11 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-/*
+
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import kotlinx.atomicfu.locks.withLock
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -29,6 +30,8 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
+import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.junit.Test
 import java.lang.Integer.max
 import java.util.concurrent.locks.ReentrantLock
@@ -56,37 +59,36 @@ class Rel(msgTime: Int) : MutexMessage(msgTime) {
 class Lock(msgTime: Int) : MutexMessage(msgTime)
 class Unlock(msgTime: Int) : MutexMessage(msgTime)
 
-@Volatile
-internal var counter = 0
 
 class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+    companion object {
+        private var counter = 0
+    }
+
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
     private val req = IntArray(env.numberOfNodes) { inf } // time of last REQ message
     private val ok = IntArray(env.numberOfNodes) // time of last OK message
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val signal = Semaphore(1, 1)
 
-    override fun onMessage(message: MutexMessage, sender: Int) {
-        lock.withLock {
-            val time = message.msgTime
-            clock = max(clock, time) + 1
-            when (message) {
-                is Req -> {
-                    req[sender] = message.reqTime
-                    env.send(Ok(++clock), sender)
-                }
-                is Ok -> {
-                    ok[sender] = time
-                }
-                is Rel -> {
-                    req[sender] = inf
-                }
-                else -> throw RuntimeException("Unexpected message type")
+    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+        val time = message.msgTime
+        clock = max(clock, time) + 1
+        when (message) {
+            is Req -> {
+                req[sender] = message.reqTime
+                env.send(Ok(++clock), sender)
             }
-            checkInCS()
+            is Ok -> {
+                ok[sender] = time
+            }
+            is Rel -> {
+                req[sender] = inf
+            }
+            else -> throw RuntimeException("Unexpected message type")
         }
+        checkInCS()
     }
 
     @Validate
@@ -99,72 +101,52 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         if (myReqTime == inf || inCS) {
             return
         }
-       // println("[${env.nodeId}]: In check CS enter, myReq=$myReqTime, req=${req.toList()}, ok=${ok.toList()}")
         for (i in 0 until env.numberOfNodes) {
             if (i == env.nodeId) {
                 continue
             }
             if (req[i] < myReqTime || req[i] == myReqTime && i < env.nodeId) {
-               // println("[${env.nodeId}]: Condition not met $i (req[i] < myReqTime)=${req[i] < myReqTime} || (req[i] == myReqTime && i < env.nodeId)=${req[i] == myReqTime && i < env.nodeId}")
                 return
             }
             if (ok[i] <= myReqTime) {
-              //  println("[${env.nodeId}]: Ok condition not met, $i, ${ok[i]}, $myReqTime")
                 return
             }
         }
-        //println("[${env.nodeId}]: Acquire lock")
         inCS = true
-        condition.signal()
-        //  env.sendLocal(Lock(clock))
+        signal.release()
+        logMessage(LogLevel.MESSAGES) {
+            "[${env.nodeId}]: Acquire lock"
+        }
     }
 
     @Operation
-    fun lock(): Int {
-       // println("[${env.nodeId}]: request lock")
-        lock.withLock {
-            check(req[env.nodeId] == inf) {
-                Thread.currentThread()
-            }
-            val myReqTime = ++clock
-            req[env.nodeId] = myReqTime
-            broadcast(Req(++clock, myReqTime))
-            if (env.numberOfNodes == 1) {
-                inCS = true
-            }
-            while (!inCS) {
-                condition.await()
-            }
+    suspend fun lock(): Int {
+        check(req[env.nodeId] == inf) {
+            Thread.currentThread()
         }
+        val myReqTime = ++clock
+        req[env.nodeId] = myReqTime
+        env.broadcast(Req(++clock, myReqTime))
+        if (env.numberOfNodes == 1) {
+            inCS = true
+        }
+        signal.acquire()
         val res = ++counter
         unlock()
-        //println("[${env.nodeId}]: unlock")
         return res
     }
 
-    private fun unlock() {
-        lock.withLock {
-            if (!inCS) return
-            //env.sendLocal(Unlock(clock))
-            inCS = false
-            req[env.nodeId] = inf
-            broadcast(Rel(++clock))
-        }
-    }
-
-    private fun broadcast(msg: MutexMessage) {
-        for (i in 0 until env.numberOfNodes) {
-            if (i == env.nodeId) {
-                continue
-            }
-            env.send(msg, i)
-        }
+    private suspend fun unlock() {
+        if (!inCS) return
+        inCS = false
+        req[env.nodeId] = inf
+        env.broadcast(Rel(++clock))
     }
 }
 
 class Counter {
     var cnt = 0
-    fun lock(): Int {
+    suspend fun lock(): Int {
         return ++cnt
     }
 }
@@ -172,20 +154,24 @@ class Counter {
 class LamportMutexTest {
     @Test
     fun testSimple() {
-        LinChecker.check(LamportMutex::class
+        LinChecker.check(
+            LamportMutex::class
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(Counter::class.java).threads
-        (5).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(100).iterations(1000))
+                (false).sequentialSpecification(Counter::class.java).threads
+                (3).messageOrder(MessageOrder.FIFO).actorsPerThread(2)
+                .invocationsPerIteration(30).iterations(1000)
+        )
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
-        LinChecker.check(LamportMutex::class
+        LinChecker.check(
+            LamportMutex::class
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(Counter::class.java).threads
-        (3).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000))
+                (false).sequentialSpecification(Counter::class.java).threads
+                (3).messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(100).iterations(1000)
+        )
     }
 }
-*/
+

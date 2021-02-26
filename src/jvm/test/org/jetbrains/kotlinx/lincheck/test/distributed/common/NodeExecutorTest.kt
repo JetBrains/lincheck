@@ -1,24 +1,88 @@
-/*
- * Lincheck
- *
- * Copyright (C) 2019 - 2021 JetBrains s.r.o.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- *
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
- */
-
 package org.jetbrains.kotlinx.lincheck.test.distributed.common
 
-class MessageQueueTest {
+import kotlinx.atomicfu.*
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
+import org.junit.Test
+import java.util.*
+import java.util.concurrent.LinkedBlockingQueue
+import kotlin.concurrent.thread
+
+class NodeExecutorTest {
+    val expectedValues = HashSet<String>()
+    val queue = FastQueue<String>()
+    val finished = atomic(0)
+    val numberOfThreads = 3
+    val iterations = 10000
+
+    val consumer = thread(start = false) {
+        while (finished.value != numberOfThreads) {
+            val s = queue.poll()
+            if (s != null) {
+                expectedValues.add(s)
+            }
+        }
+        while (true) {
+            val s = queue.poll() ?: return@thread
+            expectedValues.add(s)
+        }
+    }
+
+    val producers = Array(numberOfThreads) {
+        thread(start = false) {
+            repeat(iterations) { i ->
+                queue.put("$it-$i")
+            }
+            finished.incrementAndGet()
+        }
+    }
+
+    @Test
+    fun test() {
+        consumer.start()
+        producers.forEach { it.start() }
+        producers.forEach { it.join() }
+        consumer.join()
+        println(expectedValues.size)
+        println(queue.poll())
+        for (i in 0 until numberOfThreads) {
+            repeat(iterations) {
+                check(expectedValues.contains("$i-$it")) {
+                    "$i-$it not present"
+                }
+            }
+        }
+        check(expectedValues.size == numberOfThreads * iterations)
+    }
+
+    @Test
+    fun testSimple() {
+        producers.forEach { it.start() }
+        producers.forEach { it.join() }
+        println(expectedValues.size)
+        repeat(numberOfThreads * iterations) {
+            println(queue.poll())
+        }
+    }
+
+    @Test
+    fun testSingleThread() {
+        repeat(3) {
+            println(queue.poll())
+        }
+        repeat(5) {
+            queue.put(it.toString())
+        }
+        println()
+        repeat(10) {
+            println(queue.poll())
+        }
+        println()
+        repeat(5) {
+            queue.put(it.toString())
+        }
+        println()
+        repeat(10) {
+            println(queue.poll())
+        }
+    }
 }

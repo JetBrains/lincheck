@@ -97,9 +97,7 @@ class Peer(private val env: Environment<Message, Unit>) : Node<Message> {
         if (!receivedMessages[from].contains(msgId)) {
             receivedMessages[from][msgId] = 1
             undeliveredMessages[from].add(message)
-            if (sender != env.nodeId) {
-                env.broadcast(message)
-            }
+            env.broadcast(message)
         } else {
             //println("[${env.nodeId}]: $message received ${receivedMessages[from][msgId]} times")
             receivedMessages[from][msgId] = receivedMessages[from][msgId]!! + 1
@@ -111,9 +109,12 @@ class Peer(private val env: Environment<Message, Unit>) : Node<Message> {
     @Operation
     suspend fun send(msg: String) : String {
         logMessage(LogLevel.ALL_EVENTS) {
-            println("[${env.nodeId}]: Start operation")
+            "[${env.nodeId}]: Start operation $msg"
         }
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
+        receivedMessages[env.nodeId][message.id] = 1
+        undeliveredMessages[env.nodeId].add(message)
+        deliver(env.nodeId)
         env.broadcast(message)
         return msg
     }
@@ -126,7 +127,7 @@ class BroadcastTest {
         LinChecker.check(Peer::class
             .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
             (false).threads
-            (3).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(false)
+            (2).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(false)
             .invocationsPerIteration(30).iterations(1000).verifier(EpsilonVerifier::class.java)
             .messageOrder(MessageOrder.SYNCHRONOUS))
         println("Get $cntGet, nulls $cntNullGet, not null ${cntGet - cntNullGet}")

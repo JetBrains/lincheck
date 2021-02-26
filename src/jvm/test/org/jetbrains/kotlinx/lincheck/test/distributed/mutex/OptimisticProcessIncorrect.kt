@@ -17,10 +17,10 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-/*
+
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import kotlinx.atomicfu.locks.withLock
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -30,30 +30,28 @@ import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.junit.Test
-import java.util.concurrent.locks.ReentrantLock
 
-@Volatile
-internal var optimisticIncorrect = 0
 
 class OptimisticMutexIncorrect(private val env : Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+    companion object {
+        @Volatile
+        private var optimisticIncorrect = 0
+    }
     private val requested = BooleanArray(env.numberOfNodes)
     private var inCS = false
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val semaphore = Semaphore(1, 1)
 
-    override fun onMessage(message: MutexMessage, sender : Int) {
-        lock.withLock {
-            when(message) {
-                is Req -> {
-                    requested[sender] = true
-                }
-                is Rel -> {
-                    requested[sender] = false
-                }
-                else -> throw RuntimeException("Unexpected message type")
+    override suspend fun onMessage(message: MutexMessage, sender : Int) {
+        when(message) {
+            is Req -> {
+                requested[sender] = true
             }
-            checkCSEnter()
+            is Rel -> {
+                requested[sender] = false
+            }
+            else -> throw RuntimeException("Unexpected message type")
         }
+        checkCSEnter()
     }
 
     @Validate
@@ -65,43 +63,31 @@ class OptimisticMutexIncorrect(private val env : Environment<MutexMessage, Unit>
         if (!requested[env.nodeId] || inCS) return
         for (i in 0 until env.nodeId) if (requested[i]) return // give way for lower numbered
         inCS = true
-        condition.signal()
+        semaphore.release()
     }
 
     @Operation
-    fun lock() : Int {
-        // println("[${env.nodeId}]: request lock")
-        lock.withLock {
-            check(!requested[env.nodeId])
-            requested[env.nodeId] = true
-            broadcast(Req(0, 0))
-            checkCSEnter()
-            while(!inCS) {
-                condition.await()
-            }
+    suspend fun lock() : Int {
+        check(!requested[env.nodeId])
+        requested[env.nodeId] = true
+        env.broadcast(Req(0, 0))
+        checkCSEnter()
+        if (env.numberOfNodes != 1) {
+            semaphore.acquire()
+        } else {
+            inCS = true
         }
+        check(inCS)
         val res = ++optimisticIncorrect
         unlock()
-        //println("[${env.nodeId}]: unlock")
         return res
     }
 
-    private fun unlock() {
-        lock.withLock {
-            check(inCS)
-            inCS = false
-            requested[env.nodeId] = false
-            broadcast(Rel(0))
-        }
-    }
-
-    private fun broadcast(msg : MutexMessage) {
-        for (i in 0 until env.numberOfNodes) {
-            if (i == env.nodeId) {
-                continue
-            }
-            env.send(msg, i)
-        }
+    private suspend fun unlock() {
+        check(inCS)
+        inCS = false
+        requested[env.nodeId] = false
+        env.broadcast(Rel(0))
     }
 }
 
@@ -112,8 +98,7 @@ class OptimisticMutexIncorrectTest {
         LinChecker.check(OptimisticMutexIncorrect::class
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
         (false).sequentialSpecification(Counter::class.java).threads
-        (5).messageOrder(MessageOrder.SYNCHRONOUS)
+        (5).messageOrder(MessageOrder.FIFO)
                 .invocationsPerIteration(100).iterations(1000))
     }
 }
-*/
