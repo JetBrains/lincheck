@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.distributed.queue
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
+import org.jetbrains.kotlinx.lincheck.distributed.stress.withProbability
 
 
 class FastQueue<E> {
@@ -54,7 +55,9 @@ class FastQueue<E> {
                 }
                 continue
             }
-            if (tmpTail.items[idx].compareAndSet( null, ValueItem(item))) return
+            if (tmpTail.items[idx].compareAndSet(null, ValueItem(item))) {
+                return
+            }
         }
     }
 
@@ -70,7 +73,7 @@ class FastQueue<E> {
             }
             val item = tmpHead.items[idx].getAndSet(Taken)
             if (item != null) {
-                return (item as ValueItem<E>).value
+                return (item as ValueItem<E>).value ?: continue
             }
         }
     }
@@ -92,5 +95,5 @@ internal class Segment<E>(item: E?) {
 }
 
 internal sealed class SegmentItem<out E>
-internal class ValueItem<E>(val value : E?) : SegmentItem<E>()
+internal class ValueItem<E>(val value: E?) : SegmentItem<E>()
 internal object Taken : SegmentItem<Nothing>()
