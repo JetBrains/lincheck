@@ -92,11 +92,11 @@ public class TestNodeExecutionGenerator {
         cca.visitEnd();
         String outputFile = "BroadcastRunOp" + iThread + ".class";
         //System.out.println(cw.toByteArray().length);
-        try (OutputStream outputStream = new FileOutputStream(outputFile)) {
+        /*try (OutputStream outputStream = new FileOutputStream(outputFile)) {
             outputStream.write(cw.toByteArray());
         } catch (IOException ex) {
             ex.printStackTrace();
-        }
+        }*/
        // throw new RuntimeException();
         return cw.toByteArray();
     }
