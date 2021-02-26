@@ -56,9 +56,6 @@ class DistributedStrategy<Message, Log>(val testCfg: DistributedCTestConfigurati
         try {
             // Run invocations
             for (invocation in 0 until invocations) {
-                logMessage(LogLevel.ITERATION_NUMBER) {
-                    println("INVOCATION $invocation")
-                }
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {

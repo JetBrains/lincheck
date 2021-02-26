@@ -20,78 +20,84 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.distributed.NodeExecutorStatus.*
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FifoTransportQueue
 import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import java.util.concurrent.Executor
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 
-private enum class NodeExecutorStatus { INIT, RUNNING, STOPPED }
+private enum class NodeExecutorStatus { RUNNING, STOPPED }
+
+class NodeExecutorContext(private val initialTaskCounter: Int, private val permits: Int) {
+    private val taskCounter = atomic(initialTaskCounter)
+    val semaphore = Semaphore(permits, permits)
+
+    fun checkIsFinished(f: () -> Unit) {
+        if (taskCounter.value == 0) {
+            semaphore.release()
+            f()
+        }
+    }
+
+    fun get() = taskCounter.value
+
+    fun increment() = taskCounter.incrementAndGet()
+
+    fun decrement() = taskCounter.decrementAndGet()
+}
 
 class NodeExecutor(
-    val counter: AtomicInteger,
-    val numberOfNodes: Int,
-    val id : Int,
-    val semaphore: Semaphore
+    val id: Int,
+    val context: NodeExecutorContext,
+    private val hash: Int
 ) : Executor {
-    companion object {
-        private const val NO_TASK_LIMIT = 100
-    }
+    private lateinit var semaphore: Semaphore
+    private val executor = Executors.newSingleThreadExecutor { r -> NodeTestThread(id, hash, r) }
 
-    private var executorStatus = INIT
-    private val queue = LinkedBlockingQueue<Runnable>()
-    private var nullTasksCounter = 0
-    private val worker = thread(start = false, name = "NodeExecutorThread-$id") {
-        while (executorStatus != STOPPED) {
-            val task = queue.poll()
-            task?.process() ?: onNull()
-        }
-    }
+    inner class NodeTestThread(val iThread: Int, val runnerHash: Int, r: Runnable) :
+        Thread(r, "NodeExecutor@$runnerHash-$iThread-${this@NodeExecutor.hashCode()}")
 
-    private fun Runnable.process() {
-        if (unknownState) {
-            logMessage(LogLevel.ALL_EVENTS) {
-                println("$id Decrement counter")
-            }
-            counter.decrementAndGet()
-        }
-        nullTasksCounter = 0
-        run()
-    }
-
-    private val unknownState = executorStatus == RUNNING && nullTasksCounter >= NO_TASK_LIMIT
-
-
-    private fun onNull() {
-        nullTasksCounter++
-        if (nullTasksCounter == NO_TASK_LIMIT) {
-            logMessage(LogLevel.ALL_EVENTS) {
-                println("$id Increment counter")
-            }
-            counter.incrementAndGet()
-        }
-        if (counter.get() == numberOfNodes && executorStatus != STOPPED) {
-            executorStatus = STOPPED
-            logMessage(LogLevel.ALL_EVENTS) {
-                println("NodeExecutors stopped ${semaphore.availablePermits}")
-            }
-            logMessage(LogLevel.ALL_EVENTS) {
-                println("Semaphore release")
-            }
-            semaphore.release()
-        }
-    }
+    private val executorStatus = atomic(RUNNING)
 
     override fun execute(command: Runnable) {
-        queue.put(command)
-        if (executorStatus == INIT) {
-            executorStatus = RUNNING
-            worker.start()
+        if (executorStatus.value == STOPPED) {
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$id]: Try to submit task ${command.hashCode()}"
+            }
+            throw RejectedExecutionException("The executor is finished")
+        }
+        val curThread = Thread.currentThread()
+        val r = if (curThread is NodeTestThread) {
+            context.increment()
+        } else {
+            context.get()
+        }
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[$id]: Submit task ${command.hashCode()} counter is $r"
+        }
+        executor.execute {
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$id]: Run task ${command.hashCode()} counter is ${context.get()}"
+            }
+            command.run()
+            val t = context.decrement()
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$id]: Finish task ${command.hashCode()} counter is ${t}"
+            }
+            context.checkIsFinished {
+                executorStatus.lazySet(STOPPED)
+            }
         }
     }
 
-    fun join() = worker.join()
+    fun shutdown() {
+        executor.shutdown()
+    }
 }
