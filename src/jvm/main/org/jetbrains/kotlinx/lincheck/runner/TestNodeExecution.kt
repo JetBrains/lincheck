@@ -25,22 +25,7 @@ abstract class TestNodeExecution {
     var runner: Runner? = null
     var testInstance: Any? = null
     lateinit var objArgs: Array<Any>
-    lateinit var allTestNodeExecutions: Array<TestNodeExecution>
     lateinit var results: Array<Result?>
-    lateinit var clocks: Array<IntArray>
-    @Volatile
-    var curClock = 0
-    var useClocks = false
-
-    fun readClocks(currentActor: Int) {
-        for (i in allTestNodeExecutions.indices) {
-            clocks[currentActor][i] = allTestNodeExecutions[i].curClock
-        }
-    }
-
-    fun incClock() {
-        curClock++
-    }
 
     abstract suspend fun runOperation(i: Int): Any?
 }

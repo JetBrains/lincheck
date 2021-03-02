@@ -31,6 +31,9 @@ import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -87,13 +90,13 @@ public class TestNodeExecutionGenerator {
         generateConstructor(cca);
         generateMethod(cca, testClassType, actors, objArgs);
         cca.visitEnd();
-        String outputFile = "BroadcastRunOp" + iThread + ".class";
+        String outputFile = "LamportMutex" + iThread + ".class";
         //System.out.println(cw.toByteArray().length);
-        /*try (OutputStream outputStream = new FileOutputStream(outputFile)) {
+        try (OutputStream outputStream = new FileOutputStream(outputFile)) {
             outputStream.write(cw.toByteArray());
         } catch (IOException ex) {
             ex.printStackTrace();
-        }*/
+        }
        // throw new RuntimeException();
         return cw.toByteArray();
     }
