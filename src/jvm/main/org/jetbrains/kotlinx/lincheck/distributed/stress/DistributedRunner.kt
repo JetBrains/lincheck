@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.*
@@ -33,22 +32,10 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 
 @Volatile
 var cntNullGet: Long = 0
-
-@Volatile
-private var consumedCPU = System.currentTimeMillis().toInt()
-
-fun consumeCPU(tokens: Int) {
-    var t = consumedCPU // volatile read
-    for (i in tokens downTo 1)
-        t += (t * 0x5DEECE66DL + 0xBL + i.toLong() and 0xFFFFFFFFFFFFL).toInt()
-    if (t == 42)
-        consumedCPU += t
-}
 
 internal class NodeFailureException(val nodeId: Int) : Exception()
 
@@ -63,15 +50,15 @@ private enum class RunningStatus { ITERATION_STARTED, ITERATION_FINISHED }
 
 enum class LogLevel { NO_OUTPUT, ITERATION_NUMBER, MESSAGES, ALL_EVENTS, KICKED }
 
-val logLevel = LogLevel.NO_OUTPUT
-
+val logLevel = LogLevel.ITERATION_NUMBER
 var debugLogs = FastQueue<String>()
 
 fun logMessage(givenLogLevel: LogLevel, f: () -> String) {
     if (logLevel >= givenLogLevel) {
         val s = Thread.currentThread().name + " " + f()
-        debugLogs.put(s)
-        //println(s)
+       // debugLogs.put(s)
+        println(s)
+        System.out.flush()
     }
 }
 
@@ -91,27 +78,22 @@ open class DistributedRunner<Message, Log>(
     }
 
     private val runnerHash = this.hashCode()
-    private lateinit var testInstances: Array<Node<Message>>
-    private lateinit var executorContext : NodeExecutorContext
-    private lateinit var executors : Array<NodeExecutor>
-    private val environments: Array<Environment<Message, Log>> = Array(testCfg.threads) {
-        EnvironmentImpl(it, testCfg.threads)
+    private val context = DistributedRunnerContext(testCfg, scenario)
+    private lateinit var executorContext: NodeExecutorContext
+    private lateinit var executors: Array<NodeExecutor>
+    private lateinit var dispatchers: Array<CoroutineDispatcher>
+    private var environments: Array<Environment<Message, Log>> = Array(testCfg.threads) {
+        EnvironmentImpl(context, it)
     }
-    private lateinit var testNodeExecutions: Array<TestNodeExecution>
-    private val incomeMessages: Array<Channel<MessageSentEvent<Message>>> = Array(testCfg.threads) { Channel { } }
-    private val failureNotifications: Array<Channel<Int>> = Array(testCfg.threads) { Channel { } }
-    private val failures = FailureStatistics(testCfg.threads, testCfg.maxNumberOfFailedNodes(testCfg.threads))
-    private val messageId = AtomicInteger(0)
-    private var events = FastQueue<Event>()
-    private val probability = Probability(testCfg, testCfg.threads)
-    private val logs = Array(testCfg.threads) { mutableListOf<Log>() }
 
     @Volatile
     private var runningStatus = ITERATION_FINISHED
     private var exception: Throwable? = null
-    private var jobs = mutableListOf<Job>()
 
-    private suspend fun handleNodeFailure(iNode : Int, f : suspend () -> Unit) {
+    private val numberOfNodes = context.addressResolver.totalNumberOfNodes
+
+    private suspend fun handleNodeFailure(iNode: Int, f: suspend () -> Unit) {
+        if (context.failureInfo[iNode]) return
         try {
             f()
         } catch (_: NodeFailureException) {
@@ -119,37 +101,60 @@ open class DistributedRunner<Message, Log>(
         }
     }
 
-    private suspend fun receiveMessages(i: Int) {
-        while (runningStatus != ITERATION_FINISHED) {
+    private suspend fun receiveMessages(
+        i: Int,
+        channel: Channel<MessageSentEvent<Message>>,
+        testInstance: Node<Message>
+    ) {
+        while (true) {
             logMessage(LogLevel.ALL_EVENTS) {
-                "Receiving message for node $i..."
+                "[$i]: Receiving message for node $i..."
             }
-            val m = incomeMessages[i].receive()
-            if (!failures[i]) {
-                logMessage(LogLevel.MESSAGES) {
-                    "[$i]: Received message ${m.id}  ${m.message} from node ${m.sender}"
-                }
-                events.put(MessageReceivedEvent(m.message, sender = m.sender, receiver = m.receiver, id = m.id))
-                GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
-                    handleNodeFailure(i) {
-                        testInstances[i].onMessage(m.message, m.sender)
-                    }
+            val m = channel.receive()
+            if (context.failureInfo[i]) return
+            val aaa = if (i == m.sender || i != m.receiver) {
+                "AAAAAAAAAAAAAAAAAAAA"
+            } else {
+                ""
+            }
+            logMessage(LogLevel.MESSAGES) {
+                "[$i]: $aaa Received $m ${channel.hashCode()}"
+            }
+            context.incClock(i)
+            val clock = context.maxClock(i, m.clock)
+            context.events[i].add(
+                MessageReceivedEvent(
+                    m.message,
+                    sender = m.sender,
+                    receiver = m.receiver,
+                    id = m.id,
+                    clock = clock
+                )
+            )
+            GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
+                handleNodeFailure(i) {
+                    testInstance.onMessage(m.message, m.sender)
                 }
             }
-           // withProbability(CONTEXT_SWITCH_PROBABILITY) { yield() }
+            withProbability(CONTEXT_SWITCH_PROBABILITY) { yield() }
         }
     }
 
 
-    private suspend fun receiveUnavailableNodes(i: Int) {
+    private suspend fun receiveUnavailableNodes(
+        i: Int, channel: Channel<Int>,
+        testInstance: Node<Message>
+    ) {
         logMessage(LogLevel.ALL_EVENTS) {
             "Receiving failed nodes for node $i..."
         }
         while (runningStatus != ITERATION_FINISHED) {
-            val node = failureNotifications[i].receive()
-            if (!failures[i]) {
-                GlobalScope.launch {
-                    testInstances[i].onNodeUnavailable(node)
+            val node = channel.receive()
+            if (context.failureInfo[i]) return
+            context.incClock(i)
+            GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
+                handleNodeFailure(i) {
+                    testInstance.onNodeUnavailable(node)
                 }
             }
             withProbability(CONTEXT_SWITCH_PROBABILITY) { yield() }
@@ -158,38 +163,34 @@ open class DistributedRunner<Message, Log>(
 
     override fun initialize() {
         super.initialize()
-        check(scenario.parallelExecution.size == testCfg.threads) {
-            "Parallel execution size is ${scenario.parallelExecution.size}"
-        }
-
-        testNodeExecutions = Array(testCfg.threads) { t ->
+        context.testNodeExecutions = Array(context.addressResolver.nodesWithScenario) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
-        testNodeExecutions.forEach { it.allTestNodeExecutions = testNodeExecutions }
     }
 
     private fun reset() {
-        debugLogs = FastQueue()
-        events = FastQueue()
-        jobs.clear()
-        messageId.set(0)
-        logs.forEach { it.clear() }
-        failures.clear()
-        testInstances = Array(testCfg.threads) {
-            testClass.getConstructor(Environment::class.java).newInstance(environments[it]) as Node<Message>
+        context.reset()
+        environments  = Array(testCfg.threads) {
+            EnvironmentImpl(context, it)
         }
-        executorContext = NodeExecutorContext(testCfg.threads * 3, testCfg.threads + 1)
-        executors = Array(testCfg.threads)  {
+        context.testInstances = Array(numberOfNodes) {
+            context.addressResolver[it].getConstructor(Environment::class.java)
+                .newInstance(environments[it]) as Node<Message>
+        }
+        executorContext = NodeExecutorContext(
+            numberOfNodes * 3,
+            numberOfNodes + 1
+        )
+
+        executors = Array(numberOfNodes) {
             NodeExecutor(it, executorContext, runnerHash)
         }
-        val useClocks = Random.nextBoolean()
-        testNodeExecutions.forEachIndexed { t, ex ->
-            ex.testInstance = testInstances[t]
-            val threads = testCfg.threads
+        dispatchers = Array(numberOfNodes) {
+            executors[it].asCoroutineDispatcher()
+        }
+        context.testNodeExecutions.forEachIndexed { t, ex ->
+            ex.testInstance = context.testInstances[t]
             val actors = scenario.parallelExecution[t].size
-            ex.useClocks = useClocks
-            ex.curClock = 0
-            ex.clocks = Array(actors) { emptyClockArray(threads) }
             ex.results = arrayOfNulls(actors)
         }
         runningStatus = ITERATION_STARTED
@@ -197,7 +198,7 @@ open class DistributedRunner<Message, Log>(
 
     override fun constructStateRepresentation(): String {
         var res = "NODE STATES\n"
-        for (testInstance in testInstances) {
+        for (testInstance in context.testInstances) {
             res += stateRepresentationFunction?.let { getMethod(testInstance, it) }
                 ?.invoke(testInstance) as String? + '\n'
         }
@@ -207,34 +208,32 @@ open class DistributedRunner<Message, Log>(
     override fun run(): InvocationResult {
         try {
             reset()
-            for (i in 0 until testCfg.threads) {
-                jobs.add(GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
+            //TODO: Fix this for different types of nodes
+            for (i in 0 until numberOfNodes) {
+                GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
                     launchNode(
                         i
                     )
-                })
-                jobs.add(GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
-                    receiveMessages(i)
-                })
-                jobs.add(GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
-                    receiveUnavailableNodes(i)
-                })
-            }
-            runBlocking {
-                withTimeout(20000) {
-                    executorContext.semaphore.acquire()
+                }
+                GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
+                    receiveMessages(i, context.incomeMessages[i], context.testInstances[i])
+                }
+                GlobalScope.launch(executors[i].asCoroutineDispatcher()) {
+                    receiveUnavailableNodes(i, context.failureNotifications[i], context.testInstances[i])
                 }
             }
-
-            runningStatus = ITERATION_FINISHED
-            jobs.forEach { it.cancel() }
+            runBlocking {
+                executorContext.semaphore.acquire()
+                //delay(10000)
+            }
             executors.forEach { it.shutdown() }
+            environments.forEach { (it as EnvironmentImpl).isFinished = true }
 
             if (exception != null) {
                 return UnexpectedExceptionInvocationResult(exception!!)
             }
 
-            testInstances.forEach {
+            context.testInstances.forEach {
                 executeValidationFunctions(
                     it,
                     validationFunctions
@@ -248,9 +247,15 @@ open class DistributedRunner<Message, Log>(
                     return ValidationFailureInvocationResult(s, functionName, exception)
                 }
             }
+            val fakeClock = Array(context.addressResolver.nodesWithScenario) {
+                IntArray(context.addressResolver.nodesWithScenario)
+            }
+            //TODO: handle null results
             //println("Total get operations=${getCnt.value}, null results=${getNull.value}, not null results=${getCnt.value - getNull.value}")
-            val parallelResultsWithClock = testNodeExecutions.map { ex ->
-                ex.results.zip(ex.clocks).map { ResultWithClock(it.first!!, HBClock(it.second)) }
+            val parallelResultsWithClock = context.testNodeExecutions.mapIndexed { i, ex ->
+                //TODO add vector clock
+                // ex.results
+                ex.results.zip(fakeClock).map { ResultWithClock(it.first!!, HBClock(it.second)) }
             }
             val results = ExecutionResult(
                 emptyList(), null, parallelResultsWithClock, constructStateRepresentation(),
@@ -262,10 +267,10 @@ open class DistributedRunner<Message, Log>(
                 val l = debugLogs.poll()
                 println(l)
             } while (l != null)
-            testNodeExecutions.forEachIndexed { i, t ->
+            context.testNodeExecutions.forEachIndexed { i, t ->
                 println("Results $i")
                 scenario.parallelExecution[i].forEach { println(it.arguments) }
-                t.results.forEach { println(it) }
+                t.results.forEach { println("$it ${t.hashCode()}") }
             }
             System.out.flush()
             throw e
@@ -273,44 +278,49 @@ open class DistributedRunner<Message, Log>(
     }
 
     private fun collectThreadDump() = Thread.getAllStackTraces().filter { (t, _) ->
-        t.name.startsWith("NodeExecutorThread")
+        t is NodeExecutor.NodeTestThread && t.runnerHash == runnerHash
     }
 
     private suspend fun launchNode(iNode: Int) {
         val scenarioSize = scenario.parallelExecution[iNode].size
-        for (i in 0 until scenarioSize) {
+        while (context.actorIds[iNode] < scenarioSize) {
+            val i = context.actorIds[iNode]
             logMessage(LogLevel.ALL_EVENTS) {
                 "[$iNode]: Operation $i"
             }
             val actor = scenario.parallelExecution[iNode][i]
             try {
-                val res = testNodeExecutions[iNode].runOperation(i)
-                testNodeExecutions[iNode].results[i] = if (actor.method.returnType == Void.TYPE) {
-                    if (actor.isSuspendable) {
-                        SuspendedVoidResult
+                handleNodeFailure(iNode) {
+                    val res = context.testNodeExecutions[iNode].runOperation(i)
+                    context.testNodeExecutions[iNode].results[i] = if (actor.method.returnType == Void.TYPE) {
+                        if (actor.isSuspendable) {
+                            SuspendedVoidResult
+                        } else {
+                            VoidResult
+                        }
                     } else {
-                        VoidResult
+                        createLincheckResult(res)
                     }
-                } else {
-                    createLincheckResult(res)
-                }
-            } catch (_: NodeFailureException) {
-                testNodeExecutions[iNode].results[i] = createNodeFailureResult()
-                onNodeFailure(iNode)
-                if (!testCfg.supportRecovery) {
-                    (i + 1 until scenarioSize).forEach { testNodeExecutions[iNode].results[it] = NoResult }
-                    return
+                    logMessage(LogLevel.ALL_EVENTS) {
+                        "[$iNode]: Wrote result $i ${context.testNodeExecutions[iNode].hashCode()} ${context.testNodeExecutions[iNode].results[i]}"
+                    }
+                    context.actorIds[iNode]++
                 }
             } catch (e: Throwable) {
                 if (e.javaClass in actor.handledExceptions) {
-                    testNodeExecutions[iNode].results[i] = createExceptionResult(e.javaClass)
+                    context.testNodeExecutions[iNode].results[i] = createExceptionResult(e.javaClass)
+                    context.actorIds[iNode]++
                 } else {
                     onFailure(iNode, e)
+                    context.actorIds[iNode] = scenarioSize
                 }
             }
             logMessage(LogLevel.ALL_EVENTS) {
-                "[$iNode]: Op $i ${testNodeExecutions[iNode].results[i]}"
+                "[$iNode]: Op $i ${context.testNodeExecutions[iNode].results[i]}"
             }
+        }
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[$iNode]: Operations over"
         }
     }
 
@@ -321,84 +331,45 @@ open class DistributedRunner<Message, Log>(
             "Exception $e"
         }
         exception = e
-        jobs.forEach { it.cancel() }
         executorContext.semaphore.release()
     }
 
-    private suspend fun onNodeFailure(iThread: Int) {
-        failureNotifications.filterIndexed { index, _ -> index != iThread }.forEach { it.send(iThread) }
-        // testInstances.filterIndexed { index, _ -> !failures[index] }.forEach { it.onNodeUnavailable(iThread) }
+    private suspend fun onNodeFailure(iNode: Int) {
+        context.failureNotifications.filterIndexed { index, _ -> index != iNode }.forEach { it.send(iNode) }
+        executors[iNode].shutdown()
+        (environments[iNode] as EnvironmentImpl).isFinished = true
+        context.incomeMessages[iNode] = Channel { }
+        context.failureNotifications[iNode] = Channel { }
+        context.testNodeExecutions[iNode].results[context.actorIds[iNode]++] = createNodeFailureResult()
+
         if (testCfg.supportRecovery) {
-            delay(1)
-            testInstances[iThread] =
-                testClass.getConstructor(Environment::class.java).newInstance(environments[iThread]) as Node<Message>
-            events.put(ProcessRecoveryEvent(iThread))
-            failures[iThread] = false
-            if (testClass is RecoverableNode<*, *>) {
-                (testInstances[iThread] as RecoverableNode<Message, Log>).recover(logs[iThread])
-            } else {
-                testInstances[iThread].recover()
+            executorContext.add(3)
+            val logs = environments[iNode].log.toMutableList()
+
+            environments[iNode] = EnvironmentImpl(context, iNode, logs)
+            context.testInstances[iNode] =
+                testClass.getConstructor(Environment::class.java).newInstance(environments[iNode]) as Node<Message>
+            context.testNodeExecutions[iNode].testInstance = context.testInstances[iNode]
+            executors[iNode] = NodeExecutor(iNode, executorContext, runnerHash)
+            dispatchers[iNode] = executors[iNode].asCoroutineDispatcher()
+            context.events[iNode].add(ProcessRecoveryEvent(iNode, context.vectorClock[iNode].copyOf()))
+            GlobalScope.launch(dispatchers[iNode]) {
+                receiveMessages(iNode, context.incomeMessages[iNode], context.testInstances[iNode])
             }
+            GlobalScope.launch(dispatchers[iNode]) {
+                receiveUnavailableNodes(iNode, context.failureNotifications[iNode], context.testInstances[iNode])
+            }
+            context.failureInfo.setRecovered(iNode)
+            GlobalScope.launch(dispatchers[iNode]) {
+                context.testInstances[iNode].recover()
+                launchNode(iNode)
+            }
+        } else {
+            val scenarioSize = scenario.parallelExecution[iNode].size
+            (context.actorIds[iNode] until scenarioSize).forEach {
+                context.testNodeExecutions[iNode].results[it] = createNodeFailureResult()
+            }
+            context.actorIds[iNode] = scenarioSize
         }
-    }
-
-    private inner class EnvironmentImpl(
-        override val nodeId: Int,
-        override val numberOfNodes:
-        Int
-    ) : Environment<Message, Log> {
-        override suspend fun send(message: Message, receiver: Int) {
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: Sending $message to $receiver"
-            }
-            check(receiver != nodeId) {
-                "Cannot send messages to itself"
-            }
-            if (failures[nodeId]) {
-                throw NodeFailureException(nodeId)
-            }
-            val messageSentEvent =
-                MessageSentEvent(message, sender = nodeId, receiver = receiver, id = messageId.getAndIncrement())
-            this@DistributedRunner.events.put(messageSentEvent)
-            if (probability.nodeFailed(failures)) {
-                logMessage(LogLevel.MESSAGES) {
-                    "[$nodeId]: Failed"
-                }
-                failures[nodeId] = true
-                this@DistributedRunner.events.put(ProcessFailureEvent(nodeId))
-                throw NodeFailureException(nodeId)
-            }
-            if (!probability.messageIsSent()) {
-                return
-            }
-            val duplicates = probability.duplicationRate()
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: Before sending message $message to node $receiver"
-            }
-            for (i in 0 until duplicates) {
-                incomeMessages[receiver].send(messageSentEvent)
-                logMessage(LogLevel.MESSAGES) {
-                    "[$nodeId]: Send message ${messageSentEvent.id} $message to node $receiver"
-                }
-            }
-        }
-
-        override fun sendLocal(message: Message) {
-            this@DistributedRunner.events.put(LocalMessageSentEvent(message, nodeId))
-        }
-
-        override val events: List<Event>
-            get() = emptyList()
-
-        override fun getAddress(cls: Class<out Node<Message>>, i: Int): Int {
-            TODO("Not yet implemented")
-        }
-
-        override fun getNumberOfNodeType(cls: Class<out Node<Message>>): Int {
-            TODO("Not yet implemented")
-        }
-
-        override val log: MutableList<Log>
-            get() = logs[nodeId]
     }
 }
