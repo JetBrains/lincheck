@@ -17,7 +17,7 @@ interface Environment<Message, Log> {
     /**
      * Returns identifiers of nodes of the exact class [cls].
      **/
-    fun getAddressesForClass(cls: Class<out Node<Message>>): List<Int>
+    fun getAddressesForClass(cls: Class<out Node<Message>>): List<Int>?
 
     /**
      * Sends the specified [message] to the process [receiver] (from 0 to [numberOfNodes]).
@@ -43,40 +43,45 @@ interface Environment<Message, Log> {
     val log: MutableList<Log>
 
     /**
-     * Test execution events for all nodes (including sending and receiving messages,
+     * Test execution events for each node (including sending and receiving messages,
      * node failures, logs and etc.)
      * Should be called only in validation functions to check the invariants.
      */
-    val events: List<Event>
+    fun events(): Array<List<Event>>
 
-    /**
-     * Causes the execution to await until the signal is received.
-     */
-    suspend fun await()
-
-    /**
-     * Resumes the awaiting execution.
-     */
-    fun signal()
+    suspend fun <T> withTimeout(ticks: Int, block: suspend () -> T): T?
 }
 
 sealed class Event
-data class MessageSentEvent<Message>(val message: Message, val sender: Int, val receiver: Int, val id: Int) : Event()
-data class MessageReceivedEvent<Message>(val message: Message, val sender: Int, val receiver: Int, val id: Int) :
+data class MessageSentEvent<Message>(
+    val message: Message,
+    val sender: Int,
+    val receiver: Int,
+    val id: Int,
+    val clock: IntArray
+) : Event()
+
+data class MessageReceivedEvent<Message>(
+    val message: Message,
+    val sender: Int,
+    val receiver: Int,
+    val id: Int,
+    val clock: IntArray
+) :
     Event()
 
-data class LogEvent<Log>(val message: Log, val sender: Int) : Event()
-data class ProcessFailureEvent(val processId: Int) : Event()
-data class ProcessRecoveryEvent(val processId: Int) : Event()
+data class LogEvent<Log>(val message: Log, val sender: Int, val clock: IntArray) : Event()
+data class ProcessFailureEvent(val processId: Int, val clock: IntArray) : Event()
+data class ProcessRecoveryEvent(val processId: Int, val clock: IntArray) : Event()
 
 fun <Message, Log> Environment<Message, Log>.correctProcesses() =
-    (0 until numberOfNodes).subtract(events.filterIsInstance<ProcessFailureEvent>().map { it.processId })
+    (0 until numberOfNodes).subtract(events().filterIsInstance<ProcessFailureEvent>().map { it.processId })
 
 fun <Message, Log> Environment<Message, Log>.sentMessages(processId: Int = nodeId) =
-    events.filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
+    events().filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
 
 fun <Message, Log> Environment<Message, Log>.receivedMessages(processId: Int = nodeId) =
-    events.filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
+    events().filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
 
 fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
 fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().contains(nodeId)
