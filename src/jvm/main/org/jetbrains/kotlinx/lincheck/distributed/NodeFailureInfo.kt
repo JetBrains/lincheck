@@ -32,7 +32,7 @@ class NodeFailureInfo(
     private val maxNumberOfFailedNodes: Int
 ) {
     private val failedNodes = AtomicBooleanArray(numberOfNodes)
-    private var semaphore = Semaphore(maxNumberOfFailedNodes, 0)
+    private var semaphore = if (maxNumberOfFailedNodes != 0) Semaphore(maxNumberOfFailedNodes, 0) else null
 
     /**
      * If the total number of failed nodes does not exceed the maximum possible number of failed nodes,
@@ -43,7 +43,7 @@ class NodeFailureInfo(
         if (failedNodes[iNode].value) {
             return true
         }
-        if (!semaphore.tryAcquire()) {
+        if (semaphore?.tryAcquire() != true) {
             return false
         }
         failedNodes[iNode].lazySet(true)
@@ -63,7 +63,7 @@ class NodeFailureInfo(
             return
         }
         failedNodes[iNode].lazySet(false)
-        semaphore.release()
+        semaphore?.release()
     }
 
     /**
@@ -73,6 +73,6 @@ class NodeFailureInfo(
         repeat(numberOfNodes) {
             failedNodes[it].lazySet(false)
         }
-        semaphore = Semaphore(maxNumberOfFailedNodes, 0)
+        semaphore = if (maxNumberOfFailedNodes != 0) Semaphore(maxNumberOfFailedNodes, 0) else null
     }
 }
