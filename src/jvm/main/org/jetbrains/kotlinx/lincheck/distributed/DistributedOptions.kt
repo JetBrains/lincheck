@@ -28,8 +28,8 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun nodeType(cls: Class<out Node<Message>>, minNumberOfInstances: Int): DistributedOptions<Message, Log> {
-        this.testClasses[cls] = minNumberOfInstances
+    fun nodeType(cls: Class<out Node<Message>>, numberOfInstances: Int): DistributedOptions<Message, Log> {
+        this.testClasses[cls] = numberOfInstances
         return this
     }
 
