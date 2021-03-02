@@ -20,64 +20,36 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
-import kotlinx.atomicfu.AtomicBooleanArray
-import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import java.util.concurrent.ThreadLocalRandom
 
 class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val numberOfNodes: Int) {
+    companion object {
+        const val MESSAGE_LOSE_PROBABILITY = 0.95
+        const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
+        const val NODE_FAIL_PROBABILITY = 0.2
+    }
+
+    private val rand = ThreadLocalRandom.current()
+
     fun duplicationRate(): Int {
+        if (!messageIsSent()) {
+            return 0
+        }
         if (!testCfg.messageDuplication) {
             return 1
         }
-        return if (ThreadLocalRandom.current().nextDouble(1.0) < 0.8) 1 else 2
+        return if (rand.nextDouble(1.0) < MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
     }
 
-    fun messageIsSent(): Boolean {
+    private fun messageIsSent(): Boolean {
         if (testCfg.isNetworkReliable) {
             return true
         }
-        return ThreadLocalRandom.current().nextDouble(1.0) < 0.95
+        return rand.nextDouble(1.0) < MESSAGE_LOSE_PROBABILITY
     }
 
-    fun nodeFailed(failures: FailureStatistics): Boolean {
-        if (failures.isFull()) {
-            return false
-        }
-        val failProb = failures.maxNumberOfFailedNodes * 0.2 / (numberOfNodes * testCfg.actorsPerThread)
-        return ThreadLocalRandom.current().nextDouble(0.0, 1.0) < failProb
+    fun nodeFailed(): Boolean {
+        return rand.nextDouble(1.0) < NODE_FAIL_PROBABILITY
     }
-}
-
-
-class FailureStatistics(
-    val numberOfNodes: Int, val maxNumberOfFailedNodes: Int
-) {
-    private val failedNodes = AtomicBooleanArray(numberOfNodes)
-    private val failedNodesCnt = atomic(0)
-
-    val numberOfFailedNodes = failedNodesCnt.value
-
-    operator fun set(node: Int, value: Boolean) {
-        if (failedNodes[node].value == value) {
-            return
-        }
-        failedNodes[node].lazySet(value)
-        if (value) {
-            failedNodesCnt.incrementAndGet()
-        } else {
-            failedNodesCnt.decrementAndGet()
-        }
-    }
-
-    fun clear() {
-        for (i in 0 until numberOfNodes) {
-            failedNodes[i].lazySet(false)
-        }
-        failedNodesCnt.lazySet(0)
-    }
-
-    operator fun get(node: Int) = failedNodes[node].value
-
-    fun isFull(): Boolean = maxNumberOfFailedNodes == numberOfFailedNodes
 }
