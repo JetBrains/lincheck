@@ -23,15 +23,11 @@ package org.jetbrains.kotlinx.lincheck.distributed
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.distributed.NodeExecutorStatus.*
-import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
-import org.jetbrains.kotlinx.lincheck.distributed.queue.FifoTransportQueue
 import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.ThreadFactory
-import java.util.concurrent.atomic.AtomicInteger
 
 private enum class NodeExecutorStatus { RUNNING, STOPPED }
 
@@ -51,6 +47,8 @@ class NodeExecutorContext(private val initialTaskCounter: Int, private val permi
     fun increment() = taskCounter.incrementAndGet()
 
     fun decrement() = taskCounter.decrementAndGet()
+
+    fun add(delta : Int) = taskCounter.addAndGet(delta)
 }
 
 class NodeExecutor(
@@ -87,12 +85,17 @@ class NodeExecutor(
                 "[$id]: Run task ${command.hashCode()} counter is ${context.get()}"
             }
             command.run()
-            val t = context.decrement()
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$id]: Finish task ${command.hashCode()} counter is ${t}"
-            }
-            context.checkIsFinished {
-                executorStatus.lazySet(STOPPED)
+            if (executorStatus.value != STOPPED) {
+                val t = context.decrement()
+                logMessage(LogLevel.ALL_EVENTS) {
+                    "[$id]: Finish task ${command.hashCode()} counter is ${t}"
+                }
+                context.checkIsFinished {
+                    logMessage(LogLevel.ALL_EVENTS) {
+                        "[$id]: Release semaphore"
+                    }
+                    executorStatus.lazySet(STOPPED)
+                }
             }
         }
     }
