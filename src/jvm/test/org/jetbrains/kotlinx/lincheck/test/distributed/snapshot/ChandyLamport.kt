@@ -17,11 +17,12 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-/*
+
 package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.withLock
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
@@ -51,10 +52,9 @@ class Value(val sum: Int) : State()
 object Empty : State()
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message> {
+class ChandyLamport(private val env: Environment<Message, Message>) : Node<Message> {
     private val currentSum = atomic(100)
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val semaphore = Semaphore(1, 1)
     private var state = 0
     private var token = 0
     private var markerCount = 0
@@ -65,41 +65,39 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message>
     @Volatile
     private var gotSnapshot = false
 
-    override fun onMessage(message: Message, sender: Int) {
-        lock.withLock {
-            when (message) {
-                is Transaction -> {
-                    currentSum.getAndAdd(message.sum)
-                    env.sendLocal(OpStateReceive(currentSum.value, message.sum))
-                    if (marker != null && (channels[sender].isEmpty() || channels[sender].last() !is Empty)) {
-                        channels[sender].add(Value(message.sum))
-                    }
-                }
-                is Marker -> {
-                    channels[sender].add(Empty)
-                    markerCount++
-                    if (marker == null) {
-                        state = currentSum.value
-                        env.sendLocal(CurState(state))
-                        marker = message
-                        broadcast(message)
-                    } else {
-                        check(marker == message) {
-                            "Execution is not non parallel"
-                        }
-                        if (markerCount == env.numberOfNodes - 1) {
-                            val res = finishSnapshot()
-                            env.send(Reply(res, marker!!.token), marker!!.initializer)
-                            marker = null
-                        }
-                    }
-                }
-                is Reply -> {
-                    replies[sender] = message
+    override suspend fun onMessage(message: Message, sender: Int) {
+        when (message) {
+            is Transaction -> {
+                currentSum.getAndAdd(message.sum)
+                env.log.add(OpStateReceive(currentSum.value, message.sum))
+                if (marker != null && (channels[sender].isEmpty() || channels[sender].last() !is Empty)) {
+                    channels[sender].add(Value(message.sum))
                 }
             }
-            checkAllRepliesReceived()
+            is Marker -> {
+                channels[sender].add(Empty)
+                markerCount++
+                if (marker == null) {
+                    state = currentSum.value
+                    env.log.add(CurState(state))
+                    marker = message
+                    env.broadcast(message)
+                } else {
+                    check(marker == message) {
+                        "Execution is not non parallel"
+                    }
+                    if (markerCount == env.numberOfNodes - 1) {
+                        val res = finishSnapshot()
+                        env.send(Reply(res, marker!!.token), marker!!.initializer)
+                        marker = null
+                    }
+                }
+            }
+            is Reply -> {
+                replies[sender] = message
+            }
         }
+        checkAllRepliesReceived()
     }
 
     private fun finishSnapshot(): Int {
@@ -116,20 +114,16 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message>
     private fun checkAllRepliesReceived() {
         if (replies.filterNotNull().size == env.numberOfNodes) {
             gotSnapshot = true
-            condition.signal()
-            //println("[${env.nodeId}]: Here $gotSnapshot")
-            condition.signalAll()
+            semaphore.release()
         }
     }
 
     @Operation()
-    fun transaction(sum: Int) {
-        lock.withLock {
-            val receiver = (0 until env.numberOfNodes).filter { it != env.nodeId }.shuffled()[0]
-            currentSum.getAndAdd(-sum)
-            env.sendLocal(OpStateSend(currentSum.value, sum))
-            env.send(Transaction(sum), receiver)
-        }
+    suspend fun transaction(sum: Int) {
+        val receiver = (0 until env.numberOfNodes).filter { it != env.nodeId }.shuffled()[0]
+        currentSum.getAndAdd(-sum)
+        env.log.add(OpStateSend(currentSum.value, sum))
+        env.send(Transaction(sum), receiver)
     }
 
     @StateRepresentation
@@ -143,47 +137,32 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message>
     }
 
     @Operation(group = "observer")
-    fun snapshot(): Int {
+    suspend fun snapshot(): Int {
         //println("[${env.nodeId}]: Start snapshot")
-        lock.withLock {
-            state = currentSum.value
-            env.sendLocal(CurState(state))
-            marker = Marker(env.nodeId, token++)
-            broadcast(marker!!)
-            while (!gotSnapshot) {
-                // println("[${env.nodeId}]: Sleep")
-                condition.await()
-                // println("[${env.nodeId}]: Woke up")
-            }
-            val res = replies.map { it as Reply }.map { it.state }.sum()
-            marker = null
-            gotSnapshot = false
-            //println("Res is $res")
-            replies.fill(null)
-            return res / env.numberOfNodes + res % env.numberOfNodes
+        state = currentSum.value
+        env.log.add(CurState(state))
+        marker = Marker(env.nodeId, token++)
+        env.broadcast(marker!!)
+        while (!gotSnapshot) {
+            // println("[${env.nodeId}]: Sleep")
+            semaphore.acquire()
+            // println("[${env.nodeId}]: Woke up")
         }
-
-        //println("[${env.nodeId}]: Made snapshot $res")
-        // check(res % env.numberOfNodes == 0)
-    }
-
-    private fun broadcast(msg: Message) {
-        for (i in 0 until env.numberOfNodes) {
-            if (i == env.nodeId) {
-                continue
-            }
-            env.send(msg, i)
-        }
+        val res = replies.map { it as Reply }.map { it.state }.sum()
+        marker = null
+        gotSnapshot = false
+        replies.fill(null)
+        return res / env.numberOfNodes + res % env.numberOfNodes
     }
 }
 
 class MockSnapshot {
     @Operation()
-    fun transaction(sum: Int) {
+    suspend fun transaction(sum: Int) {
     }
 
     @Operation
-    fun snapshot() = 100
+    suspend fun snapshot() = 100
 }
 
 class SnapshotTest {
@@ -194,10 +173,10 @@ class SnapshotTest {
                 .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(MockSnapshot::class.java).threads
                 (3).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(50).iterations(1000)
+                .invocationsPerIteration(30).iterations(1000)
         )
     }
-
+/*
     @Test(expected = LincheckAssertionError::class)
     fun testNaiveIncorrect() {
         LinChecker.check(
@@ -207,16 +186,6 @@ class SnapshotTest {
                 (3).messageOrder(MessageOrder.FIFO)
                 .invocationsPerIteration(50).iterations(1000)
         )
-    }
+    }*/
 
-    @Test(expected = LincheckAssertionError::class)
-    fun testChandyLamportIncorrect() {
-        LinChecker.check(
-           ChandyLamportIncorrect::class
-                .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(MockSnapshot::class.java).threads
-                (3).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(50).iterations(1000)
-        )
-    }
-}*/
+}
