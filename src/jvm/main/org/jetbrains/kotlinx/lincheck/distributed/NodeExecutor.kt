@@ -29,7 +29,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 
-private enum class NodeExecutorStatus { RUNNING, STOPPED }
+private enum class NodeExecutorStatus { RUNNING, STOPPED, SHUTDOWN }
 
 class NodeExecutorContext(private val initialTaskCounter: Int, private val permits: Int) {
     private val taskCounter = atomic(initialTaskCounter)
@@ -65,6 +65,15 @@ class NodeExecutor(
     private val executorStatus = atomic(RUNNING)
 
     override fun execute(command: Runnable) {
+        if (executorStatus.value == SHUTDOWN) {
+            if (Thread.currentThread() !is NodeTestThread) {
+                context.decrement()
+            }
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$id]: Shutdown, try to submit task ${command.hashCode()}, dangerous"
+            }
+            return
+        }
         if (executorStatus.value == STOPPED) {
             logMessage(LogLevel.ALL_EVENTS) {
                 "[$id]: Try to submit task ${command.hashCode()}"
@@ -84,7 +93,9 @@ class NodeExecutor(
             logMessage(LogLevel.ALL_EVENTS) {
                 "[$id]: Run task ${command.hashCode()} counter is ${context.get()}"
             }
-            command.run()
+            if (executorStatus.value == RUNNING) {
+                command.run()
+            }
             if (executorStatus.value != STOPPED) {
                 val t = context.decrement()
                 logMessage(LogLevel.ALL_EVENTS) {
@@ -100,7 +111,10 @@ class NodeExecutor(
         }
     }
 
+    fun lazyShutdown() = executorStatus.lazySet(SHUTDOWN)
+
     fun shutdown() {
+        //executorStatus.lazySet(SHUTDOWN)
         executor.shutdown()
     }
 }

@@ -73,15 +73,3 @@ data class MessageReceivedEvent<Message>(
 data class LogEvent<Log>(val message: Log, val sender: Int, val clock: IntArray) : Event()
 data class ProcessFailureEvent(val processId: Int, val clock: IntArray) : Event()
 data class ProcessRecoveryEvent(val processId: Int, val clock: IntArray) : Event()
-
-fun <Message, Log> Environment<Message, Log>.correctProcesses() =
-    (0 until numberOfNodes).subtract(events().filterIsInstance<ProcessFailureEvent>().map { it.processId })
-
-fun <Message, Log> Environment<Message, Log>.sentMessages(processId: Int = nodeId) =
-    events().filterIsInstance<MessageSentEvent<Message>>().filter { it.sender == processId }
-
-fun <Message, Log> Environment<Message, Log>.receivedMessages(processId: Int = nodeId) =
-    events().filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
-
-fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
-fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().contains(nodeId)

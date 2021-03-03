@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
@@ -38,11 +39,11 @@ class DistributedRunnerContext<Message, Log>(
     )
 
     var incomeMessages = Array<Channel<MessageSentEvent<Message>>>(addressResolver.totalNumberOfNodes) {
-        Channel { }
+        Channel(UNLIMITED)
     }
 
     var failureNotifications = Array<Channel<Int>>(addressResolver.totalNumberOfNodes) {
-        Channel { }
+        Channel(UNLIMITED)
     }
 
     val failureInfo = NodeFailureInfo(
@@ -72,10 +73,10 @@ class DistributedRunnerContext<Message, Log>(
         vectorClock.forEach { it.fill(0) }
         actorIds.fill(0)
         incomeMessages = Array(addressResolver.totalNumberOfNodes) {
-            Channel { }
+            Channel(UNLIMITED)
         }
         failureNotifications = Array(addressResolver.totalNumberOfNodes) {
-            Channel { }
+            Channel(UNLIMITED)
         }
     }
 

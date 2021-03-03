@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Event
@@ -44,10 +45,10 @@ internal class EnvironmentImpl<Message, Log>(
     override fun getAddressesForClass(cls: Class<out Node<Message>>) = context.addressResolver[cls]
 
     override suspend fun send(message: Message, receiver: Int) {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: In send $isFinished"
-        }
         if (isFinished) {
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$nodeId]: Cannot send, the environment is closed"
+            }
             return
         }
         if (context.failureInfo[nodeId] || context.failureInfo[receiver]) {
@@ -77,10 +78,16 @@ internal class EnvironmentImpl<Message, Log>(
             "[$nodeId]: $aaa Before sending $event"
         }
         context.events[nodeId].add(event)
-        repeat(probability.duplicationRate()) {
-            context.incomeMessages[event.receiver].send(event)
+        try {
+            repeat(probability.duplicationRate()) {
+                context.incomeMessages[event.receiver].send(event)
+                logMessage(LogLevel.MESSAGES) {
+                    "[$nodeId]: Send $event to $receiver ${context.incomeMessages[event.receiver].hashCode()}"
+                }
+            }
+        } catch (e: ClosedSendChannelException) {
             logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: Send $event to $receiver ${context.incomeMessages[event.receiver].hashCode()}"
+                "[$nodeId]: Channel $receiver is closed"
             }
         }
     }
