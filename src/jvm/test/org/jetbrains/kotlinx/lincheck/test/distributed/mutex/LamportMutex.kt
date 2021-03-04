@@ -56,10 +56,6 @@ class Rel(msgTime: Int) : MutexMessage(msgTime) {
     }
 }
 
-class Lock(msgTime: Int) : MutexMessage(msgTime)
-class Unlock(msgTime: Int) : MutexMessage(msgTime)
-
-
 class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
     companion object {
         private var counter = 0
@@ -73,6 +69,14 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     private val signal = Semaphore(1, 1)
 
     override suspend fun onMessage(message: MutexMessage, sender: Int) {
+        val aaa = if (env.nodeId == sender) {
+            "AAAAAAAAAAAAAAAAAAAA"
+        } else {
+            ""
+        }
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[${env.nodeId}]: $aaa On message $message, $sender"
+        }
         val time = message.msgTime
         clock = max(clock, time) + 1
         when (message) {
@@ -101,6 +105,9 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         if (myReqTime == inf || inCS) {
             return
         }
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[${env.nodeId}]: Check in CS myReqTime=$myReqTime, req=${req.toList()}, ok=${ok.toList()}"
+        }
         for (i in 0 until env.numberOfNodes) {
             if (i == env.nodeId) {
                 continue
@@ -121,6 +128,9 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
 
     @Operation
     suspend fun lock(): Int {
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[${env.nodeId}]: In lock"
+        }
         check(req[env.nodeId] == inf) {
             Thread.currentThread()
         }

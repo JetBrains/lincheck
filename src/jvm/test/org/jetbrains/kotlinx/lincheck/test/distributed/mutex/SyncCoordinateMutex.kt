@@ -17,10 +17,11 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-/*
+
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import kotlinx.atomicfu.locks.withLock
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
@@ -32,49 +33,54 @@ import org.junit.Test
 import java.util.ArrayDeque
 import java.util.concurrent.locks.ReentrantLock
 
-@Volatile
-var syncCounter = 0
 
 class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+    companion object {
+        @Volatile
+        var syncCounter = 0
+    }
+
     private val coordinatorId = 0
     private val isCoordinator = env.nodeId == coordinatorId
     private val queue = ArrayDeque<Int>()
     private var inCS = -1
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val condition = Semaphore(1, 1)
 
-    override fun onMessage(message: MutexMessage, sender: Int) {
-        lock.withLock {
-            when (message) {
-                is Req -> {
-                    check(isCoordinator)
-                    queue.addLast(sender)
-                    checkCSEnter()
-                }
-                is Ok -> {
-                    check(!isCoordinator)
-                    inCS = env.nodeId
-                    condition.signal()
-                }
-                is Rel -> {
-                    check(isCoordinator)
-                    check(inCS == sender)
-                    inCS = -1
-                    checkCSEnter()
-                }
+    fun signal() {
+        if (condition.availablePermits == 0) {
+            condition.release()
+        }
+    }
+
+    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+        when (message) {
+            is Req -> {
+                check(isCoordinator)
+                queue.addLast(sender)
+                checkCSEnter()
+            }
+            is Ok -> {
+                check(!isCoordinator)
+                inCS = env.nodeId
+                signal()
+            }
+            is Rel -> {
+                check(isCoordinator)
+                check(inCS == sender)
+                inCS = -1
+                checkCSEnter()
             }
         }
     }
 
-    private fun checkCSEnter() {
+    private suspend fun checkCSEnter() {
         if (inCS != -1) return
         val id = queue.pollFirst() ?: return
-        //println("Id $id")
         inCS = id
         if (id != coordinatorId) {
             env.send(Ok(0), id)
         } else {
-            condition.signal()
+            signal()
         }
     }
 
@@ -84,18 +90,16 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : No
     }
 
     @Operation
-    fun lock(): Int {
+    suspend fun lock(): Int {
         //println("[${env.nodeId}]: Request lock")
-        lock.withLock {
-            if (isCoordinator) {
-                queue.add(coordinatorId)
-                checkCSEnter()
-            } else {
-                env.send(Req(0, 0), coordinatorId)
-            }
-            while (inCS != env.nodeId) {
-                condition.await()
-            }
+        if (isCoordinator) {
+            queue.add(coordinatorId)
+            checkCSEnter()
+        } else {
+            env.send(Req(0, 0), coordinatorId)
+        }
+        if (inCS != env.nodeId) {
+            condition.acquire()
         }
         //println("[${env.nodeId}]: Acquire lock")
         val res = ++syncCounter
@@ -103,35 +107,37 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : No
         return res
     }
 
-    private fun unlock() {
+    private suspend fun unlock() {
         //println("[${env.nodeId}]: Release lock")
-        lock.withLock {
-            check(inCS == env.nodeId)
-            inCS = -1
-            if (isCoordinator) {
-                checkCSEnter()
-            } else {
-                env.send(Rel(0), coordinatorId)
-            }
+        check(inCS == env.nodeId)
+        inCS = -1
+        if (isCoordinator) {
+            checkCSEnter()
+        } else {
+            env.send(Rel(0), coordinatorId)
         }
     }
 }
 
-class  SyncCoordinateMutexTest {
+class SyncCoordinateMutexTest {
     @Test
     fun testSimple() {
-        LinChecker.check(SyncCoordinateMutex::class
+        LinChecker.check(
+            SyncCoordinateMutex::class
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(Counter::class.java).threads
-        (2).messageOrder(MessageOrder.SYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000))
+                (false).sequentialSpecification(Counter::class.java).threads
+                (3).messageOrder(MessageOrder.FIFO)
+                .invocationsPerIteration(30).iterations(1000)
+        )
     }
 
     @Test
     fun testNoFifo() {
-        LinChecker.check(SyncCoordinateMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(Counter::class.java).threads
-        (5).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000))
+        LinChecker.check(
+            SyncCoordinateMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
+                (false).sequentialSpecification(Counter::class.java).threads
+                (5).messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(100).iterations(1000)
+        )
     }
-}*/
+}
