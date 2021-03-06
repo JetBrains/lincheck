@@ -14,7 +14,7 @@ interface Node<Message> {
      */
     suspend fun onMessage(message : Message, sender : Int)
 
-    fun recover() {}
+    suspend fun recover() {}
 
     suspend fun onNodeUnavailable(nodeId : Int) {}
 }

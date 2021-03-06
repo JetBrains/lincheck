@@ -27,7 +27,7 @@ class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val 
     companion object {
         const val MESSAGE_LOSE_PROBABILITY = 0.95
         const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
-        const val NODE_FAIL_PROBABILITY = 0.2
+        const val NODE_FAIL_PROBABILITY = 0.05
     }
 
     private val rand = ThreadLocalRandom.current()

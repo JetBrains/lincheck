@@ -88,4 +88,6 @@ class DistributedRunnerContext<Message, Log>(
         }
         return vectorClock[iNode].copyOf()
     }
+
+    lateinit var executorContext: NodeExecutorContext
 }

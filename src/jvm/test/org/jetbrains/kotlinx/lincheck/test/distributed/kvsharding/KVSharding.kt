@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -18,77 +18,121 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-/*
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import java.lang.RuntimeException
+import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
+import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 
-class Member(private val env: Environment) : Node {
-    val T_FAIL = 5
-    val T_SEND = 2
-    private val availableNodes = Array(env.numberOfNodes) { -1 }
+sealed class LogEntry
+data class KVLogEntry(val key: String, val value: String) : LogEntry()
+data class OpIdEntry(val id: Int) : LogEntry()
 
-    private fun constructMessage(body : String) : Message = Message(body, headers = hashMapOf("from" to env.nodeId.toString()))
-    private fun sendToAvailableNodes(message: Message) = availableNodes.withIndex().filter { it.value != -1 && it.index != env.nodeId }.forEach { env.send(message, it.index) }
+class KVSharding(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
+    private var opId = 0
+    private val semaphore = Semaphore(1, 1)
+    private var response: KVMessage? = null
+    private var delegate: Int? = null
+    private var appliedOperations = Array(env.numberOfNodes) {
+        mutableMapOf<Int, KVMessage>()
+    }
 
-    override fun onMessage(message: Message) {
-        val node = message.headers["from"]!!.toInt()
-        when (message.body) {
-            "LEAVE" -> {
-                availableNodes[node] = -1
-                sendToAvailableNodes(message)
-            }
-            "JOIN" -> {
-                sendToAvailableNodes(message)
-                availableNodes[node] = 0
-                env.send(constructMessage("HEARTBEAT"), node)
-            }
-            "HEARTBEAT" -> {
-                availableNodes[node] = 0
-            }
-            else -> throw RuntimeException("Unknown message type")
+    private fun getNodeForKey(key: String) =
+        ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
+
+    private fun saveToLog(key: String, value: String): String? {
+        val log = env.log
+        val index = log.indexOfFirst { it is KVLogEntry && it.key == key }
+        return if (index == -1) {
+            log.add(KVLogEntry(key, value))
+            null
+        } else {
+            val res = (log[index] as KVLogEntry).value
+            log[index] = KVLogEntry(key, value)
+            res
         }
     }
 
-    override fun onTimer(timer: String) {
-        if (timer == "HEARTBEAT") {
-            val msg = constructMessage("HEARTBEAT")
-            sendToAvailableNodes(msg)
-            for (node in 0 until env.numberOfNodes) {
-                if (node != env.nodeId && availableNodes[node] > T_FAIL) {
-                    availableNodes[node] = -1
-                }
-            }
-            env.setTimer("HEARTBEAT", T_SEND)
+    private fun getFromLog(key: String): String? {
+        val log = env.log
+        val index = log.indexOfFirst { it is KVLogEntry && it.key == key }
+        return if (index == -1) {
+            null
+        } else {
+            (log[index] as KVLogEntry).value
         }
     }
 
     @Operation
-    fun join(id: Int) {
-        availableNodes[env.nodeId] = 0
-        if (id != env.nodeId) {
-            env.send(constructMessage("JOIN"), id)
+    suspend fun put(key: String, value: String): String? {
+        env.log.add(OpIdEntry(++opId))
+        val node = getNodeForKey(key)
+        if (node == env.nodeId) {
+            return saveToLog(key, value)
         }
-        env.setTimer("HEARTBEAT", T_SEND)
+        val request = PutRequest(key, value, opId)
+        return (send(request, node) as PutResponse).previousValue
+    }
+
+    private suspend fun send(request: KVMessage, receiver: Int): KVMessage {
+        response = null
+        delegate = receiver
+        while (true) {
+            env.send(request, receiver)
+            semaphore.acquire()
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[${env.nodeId}]: After semaphore acquire"
+            }
+            response ?: continue
+            delegate = null
+            return response!!
+        }
+    }
+
+    override suspend fun recover() {
+        val id = env.log.filterIsInstance(OpIdEntry::class.java).lastOrNull()?.id ?: -1
+        opId = id + 1
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[${env.nodeId}]: Recover, should send messages"
+        }
+        env.broadcast(Recover)
     }
 
     @Operation
-    fun leave() {
-        sendToAvailableNodes(constructMessage("LEAVE"))
-        availableNodes.fill(-1)
-        env.cancelTimer("HEARTBEAT")
+    suspend fun get(key: String): String? {
+        env.log.add(OpIdEntry(++opId))
+        val node = getNodeForKey(key)
+        if (node == env.nodeId) {
+            return getFromLog(key)
+        }
+        val request = GetRequest(key, opId)
+        return (send(request, node) as GetResponse).value
     }
 
-    private fun getMembersOnce(): List<Int> {
-        return availableNodes.withIndex().filter { it.value != -1 }.map { it.index }
-    }
-
-    @Operation
-    fun getMembers(): List<Int> {
-        return getMembersOnce()
+    override suspend fun onMessage(message: KVMessage, sender: Int) {
+        if (message is Recover) {
+            if (sender == delegate) {
+                semaphore.release()
+            }
+            return
+        }
+        if (!message.isRequest) {
+            if (message.id != opId) return
+            if (response == null) {
+                response = message
+                semaphore.release()
+            }
+            return
+        }
+        val msg = appliedOperations[sender][message.id] ?: when (message) {
+            is GetRequest -> GetResponse(getFromLog(message.key), message.id)
+            is PutRequest -> PutResponse(saveToLog(message.key, message.value), message.id)
+            else -> throw IllegalStateException()
+        }
+        appliedOperations[sender][message.id] = msg
+        env.send(msg, sender)
     }
 }
- */

@@ -20,13 +20,13 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.ClosedSendChannelException
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Event
 import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import java.lang.IllegalArgumentException
 
 internal class EnvironmentImpl<Message, Log>(
     val context: DistributedRunnerContext<Message, Log>,
@@ -52,6 +52,9 @@ internal class EnvironmentImpl<Message, Log>(
             return
         }
         if (context.failureInfo[nodeId] || context.failureInfo[receiver]) {
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$nodeId]: Cannot send, we are failed we=${context.failureInfo[nodeId]}, receiver=${context.failureInfo[receiver]}"
+            }
             return
             //TODO: it doesn't work:(
         }
@@ -100,6 +103,20 @@ internal class EnvironmentImpl<Message, Log>(
 
     @Volatile
     internal var isFinished = false
-    override suspend fun <T> withTimeout(ticks: Int, block: suspend () -> T): T? =
-        withTimeout(ticks * TICK_TIME, block)
+    override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) = try {
+        val r = context.executorContext.increment()
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[$nodeId]: With timeout, waiting, counter is $r"
+        }
+        kotlinx.coroutines.withTimeout((ticks * TICK_TIME).toLong(), block)
+    } catch (_: TimeoutCancellationException) {
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[$nodeId]: With timeout failed"
+        }
+    } finally {
+        val r = context.executorContext.decrement()
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[$nodeId]: With timeout, finished, counter is $r"
+        }
+    }
 }

@@ -63,7 +63,7 @@ class NodeFailureInfo(
             return
         }
         failedNodes[iNode].lazySet(false)
-        semaphore?.release()
+        //semaphore?.release()
     }
 
     /**

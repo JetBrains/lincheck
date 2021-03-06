@@ -1,5 +1,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.coroutines.CoroutineScope
+
 /**
  * Environment interface for communication with other processes.
  */
@@ -49,7 +51,7 @@ interface Environment<Message, Log> {
      */
     fun events(): Array<List<Event>>
 
-    suspend fun <T> withTimeout(ticks: Int, block: suspend () -> T): T?
+    suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit)
 }
 
 sealed class Event
