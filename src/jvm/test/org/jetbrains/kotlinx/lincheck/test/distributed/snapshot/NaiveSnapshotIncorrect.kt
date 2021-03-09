@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.withLock
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
@@ -33,47 +34,42 @@ import java.util.concurrent.locks.ReentrantLock
 @OpGroupConfig(name = "observer", nonParallel = true)
 class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
     private val currentSum = atomic(100)
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val semaphore = Semaphore(1, 1)
     private var token = 0
     private val replies = Array<Reply?>(env.numberOfNodes) { null }
 
     @Volatile
     private var gotSnapshot = false
 
-    override fun onMessage(message: Message, sender: Int) {
-        lock.withLock {
-            when (message) {
-                is Transaction -> {
-                    currentSum.getAndAdd(message.sum)
-                }
-                is Marker -> {
-                    env.send(Reply(currentSum.value, message.token), sender)
-                }
-                is Reply -> {
-                    replies[sender] = message
-                }
+    override suspend fun onMessage(message: Message, sender: Int) {
+        when (message) {
+            is Transaction -> {
+                currentSum.getAndAdd(message.sum)
             }
-            checkAllRepliesReceived()
+            is Marker -> {
+                env.send(Reply(currentSum.value, message.token), sender)
+            }
+            is Reply -> {
+                replies[sender] = message
+            }
         }
+        checkAllRepliesReceived()
     }
 
 
     private fun checkAllRepliesReceived() {
         if (replies.filterNotNull().size == env.numberOfNodes - 1) {
             gotSnapshot = true
-            condition.signal()
+            semaphore.release()
             //println("[${env.nodeId}]: Here $gotSnapshot")
         }
     }
 
     @Operation()
-    fun transaction(sum: Int) {
-        lock.withLock {
-            val receiver = (0 until env.numberOfNodes).filter { it != env.nodeId }.shuffled()[0]
-            currentSum.getAndAdd(-sum)
-            env.send(Transaction(sum), receiver)
-        }
+    suspend fun transaction(sum: Int) {
+        val receiver = (0 until env.numberOfNodes).filter { it != env.nodeId }.shuffled()[0]
+        currentSum.getAndAdd(-sum)
+        env.send(Transaction(sum), receiver)
     }
 
     @StateRepresentation
@@ -117,4 +113,5 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
         }
     }
 }
+
 */

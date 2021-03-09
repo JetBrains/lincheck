@@ -7,8 +7,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
-import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.junit.Test
 import java.util.concurrent.ThreadLocalRandom
 
@@ -43,33 +41,21 @@ class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message> {
             }
             is Result -> {
                 results[sender] = message.value
-                logMessage(LogLevel.MESSAGES) {
-                    "[${env.nodeId}]: Received result $message from $sender"
-                }
                 checkConsensusIsCorrect()
             }
         }
     }
 
     private suspend fun check() {
-        logMessage(LogLevel.MESSAGES) {
-            "[${env.nodeId}]: Check offers ${offers.toList()}"
-        }
         // Check if all offers received and we can form the result.
         for (offs in offers) {
             if (offs.size != env.numberOfNodes) continue
             val res = offs.map { it.value }.minOrNull()
             val sender = offs[0].initializer
-            logMessage(LogLevel.MESSAGES) {
-                "[${env.nodeId}]: Result $res for sender $sender"
-            }
             if (sender != env.nodeId) {
                 env.send(Result(res!!), sender)
             } else {
                 results[env.nodeId] = res
-                logMessage(LogLevel.MESSAGES) {
-                    "[${env.nodeId}]: Aggregate own result"
-                }
                 checkConsensusIsCorrect()
             }
             offs.clear()
@@ -79,37 +65,20 @@ class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message> {
     }
 
     private fun checkConsensusIsCorrect() {
-        logMessage(LogLevel.MESSAGES) {
-            "[${env.nodeId}]: Check consensus is correct ${results.toList()}"
-        }
         if (!results.any { it == null }) {
             ok = results.all { it == results[0] }
             results.fill(null)
-            logMessage(LogLevel.MESSAGES) {
-                "[${env.nodeId}]: Signal $ok"
-            }
-            if (semaphore.availablePermits == 1) {
-                logMessage(LogLevel.MESSAGES) {
-                    "[${env.nodeId}]: Oups, something went wrong"
-                }
-            }
             semaphore.release()
         }
     }
 
     @Operation
     suspend fun startElection(): Boolean {
-        logMessage(LogLevel.MESSAGES) {
-            "[${env.nodeId}]: Start election"
-        }
         ok = null
         val offer = Offer(nextValue(), initializer = env.nodeId)
         offers[env.nodeId].add(offer)
         env.broadcast(offer)
         semaphore.acquire()
-        logMessage(LogLevel.MESSAGES) {
-            "[${env.nodeId}]: Get result"
-        }
         return ok!!
     }
 

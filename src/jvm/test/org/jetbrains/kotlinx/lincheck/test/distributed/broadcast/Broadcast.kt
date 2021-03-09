@@ -20,21 +20,13 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
-import kotlinx.coroutines.delay
 import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
-import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeFailureException
-import org.jetbrains.kotlinx.lincheck.distributed.stress.cntNullGet
-import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.util.*
-import kotlin.random.Random
 
 data class Message(val body: String, val id: Int, val from: Int)
 
@@ -116,9 +108,6 @@ class Peer(private val env: Environment<Message, Message>) : Node<Message> {
     //@Operation(handleExceptionsAsResult = [NodeFailureException::class])
     @Operation
     suspend fun send(msg: String): String {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[${env.nodeId}]: Start operation $msg"
-        }
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         receivedMessages[env.nodeId][message.id] = 1
         undeliveredMessages[env.nodeId].add(message)
@@ -137,7 +126,7 @@ class BroadcastTest {
                 .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
                 (false).threads
                 (3).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(false)
-                .invocationsPerIteration(30).iterations(1000).verifier(EpsilonVerifier::class.java)
+                .invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
                 .messageOrder(MessageOrder.SYNCHRONOUS)
         )
     }
@@ -148,7 +137,7 @@ class BroadcastTest {
             Peer::class
                 .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
                 (false).actorsPerThread(2).threads
-                (3).invocationsPerIteration(30).iterations(1000).verifier(EpsilonVerifier::class.java)
+                (3).invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
         )
     }
 }
