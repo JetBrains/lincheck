@@ -56,7 +56,6 @@ internal class EnvironmentImpl<Message, Log>(
                 "[$nodeId]: Cannot send, we are failed we=${context.failureInfo[nodeId]}, receiver=${context.failureInfo[receiver]}"
             }
             return
-            //TODO: it doesn't work:(
         }
         if (probability.nodeFailed() &&
             context.failureInfo.trySetFailed(nodeId)
@@ -72,13 +71,8 @@ internal class EnvironmentImpl<Message, Log>(
             id = context.messageId.getAndIncrement(),
             clock = context.vectorClock[nodeId].copyOf()
         )
-        val aaa = if (nodeId == receiver) {
-            "AAAAAAAAAAAAAAAAAAAA"
-        } else {
-            ""
-        }
         logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: $aaa Before sending $event"
+            "[$nodeId]: Before sending $event"
         }
         context.events[nodeId].add(event)
         try {
@@ -103,6 +97,7 @@ internal class EnvironmentImpl<Message, Log>(
 
     @Volatile
     internal var isFinished = false
+
     override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) = try {
         val r = context.executorContext.increment()
         logMessage(LogLevel.ALL_EVENTS) {
@@ -110,8 +105,9 @@ internal class EnvironmentImpl<Message, Log>(
         }
         kotlinx.coroutines.withTimeout((ticks * TICK_TIME).toLong(), block)
     } catch (_: TimeoutCancellationException) {
+        val r = context.executorContext.get()
         logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: With timeout failed"
+            "[$nodeId]: With timeout failed $r"
         }
     } finally {
         val r = context.executorContext.decrement()

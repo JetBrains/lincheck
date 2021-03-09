@@ -51,7 +51,7 @@ private enum class RunningStatus { ITERATION_STARTED, ITERATION_FINISHED }
 
 enum class LogLevel { NO_OUTPUT, ITERATION_NUMBER, MESSAGES, ALL_EVENTS, KICKED }
 
-val logLevel = LogLevel.ALL_EVENTS
+val logLevel = LogLevel.NO_OUTPUT
 var debugLogs = FastQueue<String>()
 
 fun logMessage(givenLogLevel: LogLevel, f: () -> String) {
@@ -109,7 +109,9 @@ open class DistributedRunner<Message, Log>(
             while (true) {
                 try {
                     if (Thread.currentThread() !is NodeExecutor.NodeTestThread) {
-                        println("Here")
+                        logMessage(LogLevel.ALL_EVENTS) {
+                            "[$i]: Task is running by false thread"
+                        }
                     }
                     check(Thread.currentThread() is NodeExecutor.NodeTestThread)
                     logMessage(LogLevel.ALL_EVENTS) {
@@ -252,7 +254,7 @@ open class DistributedRunner<Message, Log>(
                 }
             }
             runBlocking {
-                withTimeout(testCfg.timeoutMs * 1000) {
+                withTimeout(testCfg.timeoutMs) {
                     executorContext.semaphore.acquire()
                 }
                 logMessage(LogLevel.ALL_EVENTS) {

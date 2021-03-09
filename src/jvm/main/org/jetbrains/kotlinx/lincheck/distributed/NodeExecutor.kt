@@ -87,7 +87,8 @@ class NodeExecutor(
         }
 
         // Check if it is initial task or task made by another task.
-        val r = if (curThread is NodeTestThread) {
+        val r = if (curThread is NodeTestThread ||
+            curThread.name.contains("kotlinx.coroutines.DefaultExecutor")) {
             context.increment()
         } else {
             context.get()
