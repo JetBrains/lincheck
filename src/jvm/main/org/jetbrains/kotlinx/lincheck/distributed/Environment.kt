@@ -51,6 +51,8 @@ interface Environment<Message, Log> {
      */
     fun events(): Array<List<Event>>
 
+    fun getLogs() : Array<List<Log>>
+
     suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit)
 }
 
