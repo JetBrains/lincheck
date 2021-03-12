@@ -1,58 +1,48 @@
-/*package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ */
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
+package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
+
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeFailureException
-import org.junit.Test
-import java.lang.reflect.InvocationTargetException
 import java.util.*
 
 
-
-
-
-class PeerIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
+class PeerIncorrect(env: Environment<Message, Message>) : AbstractPeer(env) {
     private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
     private var messageId = 0
-    private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
-        PriorityQueue { x, y -> x.id - y.id }
-    }
 
-    //@Validate
-    fun validateResults() {
-        // All messages were delivered at most once.
-        check(env.localMessages().isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
-        // If message m from process s was delivered, it was sent by process s before.
-        env.localMessages().forEach { m -> check(env.sentMessages(m.from).map { it.message }.contains(m)) }
-        // If the correct process sent message m, it should deliver m.
-        if (env.isCorrect()) {
-            env.localMessages().forEach { m -> check(env.sentMessages().map { it.message }.contains(m)) }
-        }
-        // If the message was delivered to one process, it was delivered to all correct processes.
-        env.localMessages().forEach { m -> env.correctProcesses().forEach { check(env.localMessages(it).contains(m)) } }
-        // If some process sent m1 before m2, every process which delivered m2 delivered m1.
-        val localMessagesOrder = Array(env.numberOfNodes) { i ->
-            env.localMessages().filter {it.from == i }.map { m -> env.sentMessages(i).map { it.message }.indexOf(m) }
-        }
-        localMessagesOrder.forEach { check(it.sorted() == it) }
-    }
-
-    override fun onMessage(message: Message, sender: Int) {
+    override suspend fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
         if (!receivedMessages[sender].contains(msgId)) {
             env.broadcast(message)
             receivedMessages[sender].add(msgId)
-            env.sendLocal(message)
+            env.log.add(message)
         }
     }
 
-    @Operation(handleExceptionsAsResult = [NodeFailureException::class])
-    fun send(msg: String) {
+    @Operation
+    suspend fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         env.broadcast(message)
+        env.log.add(message)
     }
 }
-*/

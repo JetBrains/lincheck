@@ -21,11 +21,13 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.util.*
 
 data class Message(val body: String, val id: Int, val from: Int)
@@ -44,33 +46,9 @@ fun <Message, Log> Environment<Message, Log>.receivedMessages(processId: Int = n
 fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
 fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().contains(nodeId)
 
-/**
- *
- */
-class Peer(private val env: Environment<Message, Message>) : Node<Message> {
-    private val receivedMessages = Array<HashMap<Int, Int>>(env.numberOfNodes) { HashMap() }
-    private var messageId = 0
-    private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
-        PriorityQueue { x, y -> x.id - y.id }
-    }
-    private val lastDeliveredId = Array(env.numberOfNodes) { -1 }
-
-    private fun deliver(sender: Int) {
-        //println("[${env.nodeId}]: In deliver ${undeliveredMessages[sender]}")
-        while (undeliveredMessages[sender].isNotEmpty()) {
-            val lastMessage = undeliveredMessages[sender].peek()
-            if (lastMessage.id != lastDeliveredId[sender] + 1 || receivedMessages[sender][lastMessage.id]!! < (env.numberOfNodes + 1) / 2) {
-                //println("[${env.nodeId}]: Last delivered id ${lastDeliveredId[sender]}, $lastMessage, ${receivedMessages[sender][lastMessage.id]!!}")
-                return
-            }
-            undeliveredMessages[sender].remove()
-            lastDeliveredId[sender]++
-            env.log.add(lastMessage)
-        }
-    }
-
+abstract class AbstractPeer(protected val env: Environment<Message, Message>) : Node<Message> {
     @Validate
-    fun validateResults() {
+    fun check() {
         // All messages were delivered at most once.
         check(env.log.isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
@@ -81,8 +59,13 @@ class Peer(private val env: Environment<Message, Message>) : Node<Message> {
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
         //println(env.correctProcesses())
-        env.log.forEach { m ->
-            env.correctProcesses().forEach { check(env.log.contains(m)) { env.log } }
+        val logs = env.getLogs()
+        try {
+            env.log.forEach { m ->
+                env.correctProcesses().forEach { check(logs[it].contains(m)) { m } }
+            }
+        } catch (e : IllegalStateException) {
+            throw e
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
@@ -90,30 +73,49 @@ class Peer(private val env: Environment<Message, Message>) : Node<Message> {
         }
         localMessagesOrder.forEach { check(it.sorted() == it) }
     }
+}
+
+class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
+    private val receivedMessages = Array<HashMap<Int, Int>>(env.numberOfNodes) { HashMap() }
+    private var messageId = 0
+    private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
+        PriorityQueue { x, y -> x.id - y.id }
+    }
+    private val lastDeliveredId = Array(env.numberOfNodes) { -1 }
+
+    private fun deliver(sender: Int) {
+        while (undeliveredMessages[sender].isNotEmpty()) {
+            val lastMessage = undeliveredMessages[sender].peek()
+            if (lastMessage.id != lastDeliveredId[sender] + 1 || receivedMessages[sender][lastMessage.id]!! < (env.numberOfNodes + 1) / 2) {
+                return
+            }
+            undeliveredMessages[sender].remove()
+            lastDeliveredId[sender]++
+            env.log.add(lastMessage)
+        }
+    }
+
 
     override suspend fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
         val from = message.from
         if (!receivedMessages[from].contains(msgId)) {
-            receivedMessages[from][msgId] = 1
+            receivedMessages[from][msgId] = 2
             undeliveredMessages[from].add(message)
             env.broadcast(message)
         } else {
-            //println("[${env.nodeId}]: $message received ${receivedMessages[from][msgId]} times")
             receivedMessages[from][msgId] = receivedMessages[from][msgId]!! + 1
         }
         deliver(from)
     }
 
-    //@Operation(handleExceptionsAsResult = [NodeFailureException::class])
     @Operation
-    suspend fun send(msg: String): String {
+    suspend fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         receivedMessages[env.nodeId][message.id] = 1
         undeliveredMessages[env.nodeId].add(message)
-        deliver(env.nodeId)
         env.broadcast(message)
-        return msg
+        deliver(env.nodeId)
     }
 }
 
@@ -138,6 +140,18 @@ class BroadcastTest {
                 .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
                 (false).actorsPerThread(2).threads
                 (3).invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
+        )
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testIncorrect() {
+        LinChecker.check(
+            PeerIncorrect::class
+                .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
+                (false).threads
+                (5).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(false)
+                .invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
+                .messageOrder(MessageOrder.SYNCHRONOUS)
         )
     }
 }
