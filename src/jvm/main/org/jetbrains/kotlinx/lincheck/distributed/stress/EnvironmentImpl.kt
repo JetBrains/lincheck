@@ -77,9 +77,9 @@ internal class EnvironmentImpl<Message, Log>(
         context.events[nodeId].add(event)
         try {
             repeat(probability.duplicationRate()) {
-                context.incomeMessages[event.receiver].send(event)
+                context.messageHandler[nodeId, event.receiver].send(event)
                 logMessage(LogLevel.MESSAGES) {
-                    "[$nodeId]: Send $event to $receiver ${context.incomeMessages[event.receiver].hashCode()}"
+                    "[$nodeId]: Send $event to $receiver ${context.messageHandler[nodeId, event.receiver].hashCode()}"
                 }
             }
         } catch (e: ClosedSendChannelException) {
@@ -115,4 +115,6 @@ internal class EnvironmentImpl<Message, Log>(
             "[$nodeId]: With timeout, finished, counter is $r"
         }
     }
+
+    override fun getLogs() = context.logs
 }

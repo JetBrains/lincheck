@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadLocalRandom
 
 class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val numberOfNodes: Int) {
     companion object {
-        const val MESSAGE_LOSE_PROBABILITY = 0.95
+        const val MESSAGE_SENT_PROBABILITY = 0.95
         const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
         const val NODE_FAIL_PROBABILITY = 0.05
     }
@@ -46,7 +46,7 @@ class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val 
         if (testCfg.isNetworkReliable) {
             return true
         }
-        return rand.nextDouble(1.0) < MESSAGE_LOSE_PROBABILITY
+        return rand.nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
     }
 
     fun nodeFailed(): Boolean {

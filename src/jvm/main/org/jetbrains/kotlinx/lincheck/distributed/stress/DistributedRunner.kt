@@ -27,6 +27,7 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.SYNCHRONOUS
 import org.jetbrains.kotlinx.lincheck.distributed.queue.*
 import org.jetbrains.kotlinx.lincheck.distributed.stress.RunningStatus.*
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -79,14 +80,11 @@ open class DistributedRunner<Message, Log>(
     }
 
     private val runnerHash = this.hashCode()
-    private val context = DistributedRunnerContext(testCfg, scenario)
+    private var context: DistributedRunnerContext<Message, Log> = DistributedRunnerContext(testCfg, scenario)
     private lateinit var taskCounter: DispatcherTaskCounter
-
-    //private lateinit var executors: Array<NodeExecutor>
+    private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var dispatchers: Array<NodeDispatcher>
-    private var environments: Array<Environment<Message, Log>> = Array(testCfg.threads) {
-        EnvironmentImpl(context, it)
-    }
+    private lateinit var environments: Array<Environment<Message, Log>>
 
     @Volatile
     private var runningStatus = ITERATION_FINISHED
@@ -103,8 +101,8 @@ open class DistributedRunner<Message, Log>(
         }
     }
 
-    private suspend fun receiveMessages(i: Int) {
-        val channel = context.incomeMessages[i]
+    private suspend fun receiveMessages(i: Int, sender: Int) {
+        val channel = context.messageHandler[sender, i]
         val testInstance = context.testInstances[i]
         try {
             while (true) {
@@ -186,15 +184,27 @@ open class DistributedRunner<Message, Log>(
 
     override fun initialize() {
         super.initialize()
-        context.testNodeExecutions = Array(context.addressResolver.nodesWithScenario) { t ->
+        testNodeExecutions = Array(context.addressResolver.nodesWithScenario) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
+    }
+
+    private fun initialNumberOfTasks() = if (testCfg.messageOrder == SYNCHRONOUS) {
+        2 * numberOfNodes + context.addressResolver.nodesWithScenario
+    } else {
+        numberOfNodes + numberOfNodes * numberOfNodes + context.addressResolver.nodesWithScenario
+    }
+
+    private fun initTasksForNode(iNode: Int) = if (testCfg.messageOrder == SYNCHRONOUS) {
+        if (iNode < context.addressResolver.nodesWithScenario) 3 else 2
+    } else {
+        if (iNode < context.addressResolver.nodesWithScenario) numberOfNodes + 2 else numberOfNodes + 1
     }
 
     private fun reset() {
         debugLogs = FastQueue()
 
-        context.reset()
+        context = DistributedRunnerContext(testCfg, scenario)
         environments = Array(testCfg.threads) {
             EnvironmentImpl(context, it)
         }
@@ -202,8 +212,9 @@ open class DistributedRunner<Message, Log>(
             context.addressResolver[it].getConstructor(Environment::class.java)
                 .newInstance(environments[it]) as Node<Message>
         }
+        context.testNodeExecutions = testNodeExecutions
         taskCounter = DispatcherTaskCounter(
-            numberOfNodes * 3,
+            initialNumberOfTasks(),
             numberOfNodes + 1
         )
 
@@ -238,20 +249,27 @@ open class DistributedRunner<Message, Log>(
         return res
     }
 
+    private fun launchReceiveMessage(i: Int) {
+        if (testCfg.messageOrder == SYNCHRONOUS) {
+            GlobalScope.launch(dispatchers[i] + AlreadyIncrementedCounter()) { receiveMessages(i, 0) }
+        } else {
+            repeat(numberOfNodes) {
+                GlobalScope.launch(dispatchers[i] + AlreadyIncrementedCounter()) { receiveMessages(i, it) }
+            }
+        }
+    }
+
     override fun run(): InvocationResult {
         try {
             reset()
-            //TODO: Fix this for different types of nodes
-            for (i in 0 until numberOfNodes) {
-                GlobalScope.launch(dispatchers[i] + AlreadyIncrementedCounter()) {
-                    launchNode(i)
-                }
-                GlobalScope.launch(dispatchers[i] + AlreadyIncrementedCounter()) {
-                    receiveMessages(i)
-                }
+            repeat(context.addressResolver.nodesWithScenario) { i ->
+                GlobalScope.launch(dispatchers[i] + AlreadyIncrementedCounter()) { runNode(i) }
+            }
+            repeat(numberOfNodes) { i ->
                 GlobalScope.launch(dispatchers[i] + AlreadyIncrementedCounter()) {
                     receiveUnavailableNodes(i)
                 }
+                launchReceiveMessage(i)
             }
             runBlocking {
                 withTimeout(testCfg.timeoutMs) {
@@ -271,6 +289,9 @@ open class DistributedRunner<Message, Log>(
                 //println(constructStateRepresentation())
                 throw exception!!
                 //return UnexpectedExceptionInvocationResult(exception!!)
+            }
+            repeat(numberOfNodes) {
+                context.logs[it] = environments[it].log
             }
 
             context.testInstances.forEach {
@@ -322,7 +343,7 @@ open class DistributedRunner<Message, Log>(
         t is NodeDispatcher.NodeTestThread && t.runnerHash == runnerHash
     }
 
-    private suspend fun launchNode(iNode: Int) {
+    private suspend fun runNode(iNode: Int) {
         handleNodeFailure(iNode) {
             val scenarioSize = scenario.parallelExecution[iNode].size
             while (context.actorIds[iNode] < scenarioSize) {
@@ -385,22 +406,22 @@ open class DistributedRunner<Message, Log>(
         logMessage(LogLevel.ALL_EVENTS) {
             "[$iNode]: Failure notifications sent"
         }
-        context.incomeMessages[iNode].close()
+        context.messageHandler.close(iNode)
         context.failureNotifications[iNode].close()
         context.events[iNode].add(ProcessFailureEvent(iNode, context.vectorClock[iNode].copyOf()))
         dispatchers[iNode].crash()
         (environments[iNode] as EnvironmentImpl).isFinished = true
         val scenarioSize = scenario.parallelExecution[iNode].size
-        if (context.actorIds[iNode] < scenarioSize) {
+        if (iNode < context.addressResolver.nodesWithScenario && context.actorIds[iNode] < scenarioSize) {
             context.testNodeExecutions[iNode].results[context.actorIds[iNode]++] = createNodeFailureResult()
         }
         if (testCfg.supportRecovery) {
-            taskCounter.add(3)
+            taskCounter.add(initTasksForNode(iNode))
             logMessage(LogLevel.ALL_EVENTS) {
                 "[$iNode]: Increment total counter before recovery"
             }
             val logs = environments[iNode].log.toMutableList()
-            context.incomeMessages[iNode] = Channel(UNLIMITED)
+            context.messageHandler.reset(iNode)
             context.failureNotifications[iNode] = Channel(UNLIMITED)
             environments[iNode] = EnvironmentImpl(context, iNode, logs)
             context.testInstances[iNode] =
@@ -408,12 +429,7 @@ open class DistributedRunner<Message, Log>(
             context.testNodeExecutions[iNode].testInstance = context.testInstances[iNode]
             dispatchers[iNode] = NodeDispatcher(iNode, taskCounter, runnerHash)
             context.events[iNode].add(ProcessRecoveryEvent(iNode, context.vectorClock[iNode].copyOf()))
-            GlobalScope.launch(dispatchers[iNode] + AlreadyIncrementedCounter()) {
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "[$iNode]: Launch receiving node after recover"
-                }
-                receiveMessages(iNode)
-            }
+            launchReceiveMessage(iNode)
             GlobalScope.launch(dispatchers[iNode] + AlreadyIncrementedCounter()) {
                 logMessage(LogLevel.ALL_EVENTS) {
                     "[$iNode]: Launch receiving failures after recover"
@@ -427,7 +443,7 @@ open class DistributedRunner<Message, Log>(
                     "[$iNode]: Launch recover"
                 }
                 context.testInstances[iNode].recover()
-                launchNode(iNode)
+                runNode(iNode)
             }
         } else {
 

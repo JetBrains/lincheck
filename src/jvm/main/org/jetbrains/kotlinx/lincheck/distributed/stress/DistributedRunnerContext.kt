@@ -38,9 +38,8 @@ class DistributedRunnerContext<Message, Log>(
         scenario.threads, tesCfg.nodeTypes
     )
 
-    var incomeMessages = Array<Channel<MessageSentEvent<Message>>>(addressResolver.totalNumberOfNodes) {
-        Channel(UNLIMITED)
-    }
+    val messageHandler =
+        ChannelHandler<MessageSentEvent<Message>>(tesCfg.messageOrder, addressResolver.totalNumberOfNodes)
 
     var failureNotifications = Array<Channel<Int>>(addressResolver.totalNumberOfNodes) {
         Channel(UNLIMITED)
@@ -67,19 +66,6 @@ class DistributedRunnerContext<Message, Log>(
 
     val actorIds = IntArray(addressResolver.nodesWithScenario)
 
-    fun reset() {
-        failureInfo.reset()
-        events.forEach { it.clear() }
-        vectorClock.forEach { it.fill(0) }
-        actorIds.fill(0)
-        incomeMessages = Array(addressResolver.totalNumberOfNodes) {
-            Channel(UNLIMITED)
-        }
-        failureNotifications = Array(addressResolver.totalNumberOfNodes) {
-            Channel(UNLIMITED)
-        }
-    }
-
     fun incClock(i: Int) = vectorClock[i][i]++
 
     fun maxClock(iNode: Int, clock: IntArray): IntArray {
@@ -89,5 +75,9 @@ class DistributedRunnerContext<Message, Log>(
         return vectorClock[iNode].copyOf()
     }
 
-    lateinit var executorContext: NodeExecutorContext
+    lateinit var executorContext: DispatcherTaskCounter
+
+    val logs = Array(addressResolver.totalNumberOfNodes) {
+        emptyList<Log>()
+    }
 }
