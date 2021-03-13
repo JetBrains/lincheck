@@ -18,8 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
-
+package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
@@ -43,16 +42,6 @@ class Smoke(val env : Environment<Int, Unit>) : Node<Int> {
 
 
 class SmokeTest {
-    @Test
-    fun testNoFailures() {
-        LinChecker.check(
-            KVShardingIncorrect::class
-                .java, DistributedOptions<Int, Unit>().requireStateEquivalenceImplCheck
-                (false).threads(3).invocationsPerIteration(30).iterations(1000)
-                .supportRecovery(true).verifier(EpsilonVerifier::class.java).setMaxNumberOfFailedNodes { it / 2 }
-        )
-    }
-
     @Test
     fun test() {
         LinChecker.check(

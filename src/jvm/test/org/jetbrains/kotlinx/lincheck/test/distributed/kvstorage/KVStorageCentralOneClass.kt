@@ -5,10 +5,7 @@ import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.junit.Test
@@ -16,7 +13,7 @@ import java.util.*
 
 
 class KVStorageCentralSimple(private val environment: Environment<Command, Unit>) : Node<Command> {
-    private val semaphore = Semaphore(1, 1)
+    private val semaphore = Signal()
     private var commandId = 0
     private val commandResults = Array(environment.numberOfNodes) { HashMap<Int, Command>() }
     private val storage = HashMap<Int, Int>()
@@ -31,13 +28,7 @@ class KVStorageCentralSimple(private val environment: Environment<Command, Unit>
     override suspend fun onMessage(message: Command, sender: Int) {
         if (environment.nodeId != 0) {
             queue.add(message)
-            try {
-                semaphore.release()
-            } catch (e: Throwable) {
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "[${environment.nodeId}]: Exception releasing semaphore $e"
-                }
-            }
+            semaphore.signal()
             return
         }
         val id = message.id
@@ -66,8 +57,8 @@ class KVStorageCentralSimple(private val environment: Environment<Command, Unit>
     private suspend fun sendOnce(command: Command): Command {
         while (true) {
             environment.send(command, 0)
-            environment.withTimeout(9) {
-                semaphore.acquire()
+            environment.withTimeout(3) {
+                semaphore.await()
             }
             val response = queue.poll()
             if (response != null) {
@@ -153,7 +144,7 @@ class KVStorageCentralTestClass {
                 .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(SingleNode::class.java).threads
                 (2).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(1).iterations(1)
+                .invocationsPerIteration(100).iterations(500)
         )
     }
 
@@ -164,7 +155,7 @@ class KVStorageCentralTestClass {
                 .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(SingleNode::class.java).threads
                 (2).messageDuplications(true).messageOrder(MessageOrder.ASYNCHRONOUS).networkReliable(false)
-                .invocationsPerIteration(100).iterations(1000)
+                .invocationsPerIteration(300).iterations(100)
         )
     }
 
@@ -174,8 +165,8 @@ class KVStorageCentralTestClass {
             KVStorageCentralSimple::class
                 .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(SingleNode::class.java).threads
-                (2).messageOrder(MessageOrder.ASYNCHRONOUS).networkReliable(false)
-                .invocationsPerIteration(1000).iterations(30)
+                (2).messageOrder(MessageOrder.FIFO).networkReliable(false)
+                .invocationsPerIteration(300).iterations(100)
         )
     }
 
@@ -186,7 +177,7 @@ class KVStorageCentralTestClass {
                 .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(SingleNode::class.java).threads
                 (2).messageOrder(MessageOrder.SYNCHRONOUS).networkReliable(false)
-                .invocationsPerIteration(100).iterations(1000)
+                .invocationsPerIteration(300).iterations(100)
         )
     }
 

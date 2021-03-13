@@ -60,11 +60,10 @@ class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message> {
             }
             offs.clear()
         }
-        // Check if all results received.
-
     }
 
     private fun checkConsensusIsCorrect() {
+        // Check if all results received.
         if (!results.any { it == null }) {
             ok = results.all { it == results[0] }
             results.fill(null)
@@ -96,7 +95,7 @@ class ConsensusNaiveTest {
             ConsensusNoFailures::class
                 .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(Checker::class.java).threads
-                (3).actorsPerThread(1).messageOrder(MessageOrder.FIFO).actorsPerThread(2)
+                (3).actorsPerThread(3).messageOrder(MessageOrder.FIFO)
                 .invocationsPerIteration(30).iterations(1000)
         )
     }

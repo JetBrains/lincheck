@@ -127,7 +127,7 @@ class SyncCoordinateMutexTest {
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(Counter::class.java).threads
                 (3).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(30).iterations(1000)
+                .invocationsPerIteration(300).iterations(100)
         )
     }
 
@@ -137,7 +137,7 @@ class SyncCoordinateMutexTest {
             SyncCoordinateMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(Counter::class.java).threads
                 (5).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000)
+                .invocationsPerIteration(300).iterations(100)
         )
     }
 }

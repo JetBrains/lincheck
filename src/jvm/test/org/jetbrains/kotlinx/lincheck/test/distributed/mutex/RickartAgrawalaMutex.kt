@@ -138,7 +138,7 @@ class RickartAgrawalaMutexTest {
             RickartAgrawalaMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(Counter::class.java).threads
                 (5).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000)
+                .invocationsPerIteration(30).iterations(1000)
         )
     }
 }

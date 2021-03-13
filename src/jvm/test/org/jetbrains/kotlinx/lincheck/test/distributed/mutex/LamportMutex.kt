@@ -148,7 +148,7 @@ class LamportMutexTest {
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(Counter::class.java).threads
                 (3).messageOrder(MessageOrder.FIFO).actorsPerThread(2)
-                .invocationsPerIteration(30).iterations(1000)
+                .invocationsPerIteration(1000).iterations(30)
         )
     }
 
@@ -159,7 +159,7 @@ class LamportMutexTest {
                 .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(Counter::class.java).threads
                 (3).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(1000)
+                .invocationsPerIteration(30).iterations(1000)
         )
     }
 }

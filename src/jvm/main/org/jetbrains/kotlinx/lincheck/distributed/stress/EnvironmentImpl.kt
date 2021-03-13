@@ -20,9 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.coroutines.CompletionHandlerException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.ClosedSendChannelException
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Event
 import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
@@ -103,11 +105,10 @@ internal class EnvironmentImpl<Message, Log>(
         logMessage(LogLevel.ALL_EVENTS) {
             "[$nodeId]: With timeout, waiting, counter is $r"
         }
-        kotlinx.coroutines.withTimeout((ticks * TICK_TIME).toLong(), block)
-    } catch (_: TimeoutCancellationException) {
-        val r = context.executorContext.get()
+        val res = withTimeoutOrNull((ticks * TICK_TIME).toLong(), block)
+    } catch(e : Throwable) {
         logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: With timeout failed $r"
+            "[$nodeId]: Exception in timeout $e"
         }
     } finally {
         val r = context.executorContext.decrement()

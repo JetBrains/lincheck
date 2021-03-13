@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
@@ -168,8 +169,8 @@ class KVShardingTest {
         )
     }
 
-    @Test
-    fun testIncorect() {
+    @Test(expected = LincheckAssertionError::class)
+    fun testIncorrect() {
         LinChecker.check(
             KVShardingIncorrect::class
                 .java, DistributedOptions<KVMessage, KVEntry>().requireStateEquivalenceImplCheck

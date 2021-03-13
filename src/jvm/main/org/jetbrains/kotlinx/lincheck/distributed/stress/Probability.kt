@@ -49,7 +49,5 @@ class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val 
         return rand.nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
     }
 
-    fun nodeFailed(): Boolean {
-        return rand.nextDouble(1.0) < NODE_FAIL_PROBABILITY
-    }
+    fun nodeFailed(): Boolean = rand.nextDouble(1.0) < NODE_FAIL_PROBABILITY
 }
