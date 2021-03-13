@@ -205,7 +205,7 @@ open class DistributedRunner<Message, Log>(
         debugLogs = FastQueue()
 
         context = DistributedRunnerContext(testCfg, scenario)
-        environments = Array(testCfg.threads) {
+        environments = Array(numberOfNodes) {
             EnvironmentImpl(context, it)
         }
         context.testInstances = Array(numberOfNodes) {
@@ -325,6 +325,7 @@ open class DistributedRunner<Message, Log>(
             )
             return CompletedInvocationResult(results)
         } catch (e: Throwable) {
+            e.printStackTrace()
             do {
                 val l = debugLogs.poll()
                 println(l)
