@@ -68,9 +68,9 @@ class PingPongMock {
 
 class SimpleTimeoutTest {
     @Test
-    fun testNetworkReliability() {
+    fun test() {
         LinChecker.check(
-           PingPongNode::class
+            PingPongNode::class
                 .java, DistributedOptions<PingPongMessage, Unit>().requireStateEquivalenceImplCheck
                 (false).threads(2).networkReliable(false)
                 .invocationsPerIteration(100).iterations(100)

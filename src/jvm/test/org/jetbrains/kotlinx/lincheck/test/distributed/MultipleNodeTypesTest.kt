@@ -60,7 +60,7 @@ class Ponger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
 
 class MultipleNodeTypesTest {
     @Test
-    fun testNetworkReliability() {
+    fun test() {
         LinChecker.check(
             Pinger::class
                 .java, DistributedOptions<PingPongMessage, Unit>().requireStateEquivalenceImplCheck
