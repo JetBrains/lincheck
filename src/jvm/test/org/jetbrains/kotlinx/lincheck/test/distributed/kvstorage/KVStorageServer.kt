@@ -1,12 +1,10 @@
-/*package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
+package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
-import java.lang.RuntimeException
 import java.util.*
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -17,7 +15,7 @@ class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Comman
     }
     private val lock = ReentrantLock()
 
-    override fun onMessage(message: Command, sender: Int) {
+    override suspend fun onMessage(message: Command, sender: Int) {
         val id = message.id
         if (commandResults[sender].containsKey(id)) {
             env.send(commandResults[sender][id]!!, sender)
@@ -41,17 +39,23 @@ class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Comman
     }
 }
 
-class KVStorageClient(private val environment: Environment<Command, Unit>) : BlockingReceiveNodeImp<Command>() {
+class KVStorageClient(private val environment: Environment<Command, Unit>) : Node<Command> {
     private var commandId = 0
     private val commandResults = HashMap<Int, Command>()
-    private val serverAddr = environment.getAddress(KVStorageServer::class.java, 0)
+    private val serverAddr = environment.getAddressesForClass(KVStorageServer::class.java)!![0]
+    private val signal = Signal()
+    private val queue = LinkedList<Command>()
 
-    fun sendOnce(command : Command): Command {
+
+    private suspend fun sendOnce(command: Command): Command {
         while (true) {
             environment.send(command, serverAddr)
-            val response = receive(10, TimeUnit.MILLISECONDS)
+            environment.withTimeout(1) {
+                signal.await()
+            }
+            val response = queue.poll()
             if (response != null) {
-                commandResults[response.first.id] = response.first
+                commandResults[response.id] = response
             }
             if (commandResults.containsKey(command.id)) {
                 val res = commandResults[command.id]!!
@@ -64,55 +68,62 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Blo
     }
 
     @Operation
-    fun contains(key: Int): Boolean {
+    suspend fun contains(key: Int): Boolean {
         val response = sendOnce(ContainsCommand(key, commandId++)) as ContainsResult
         return response.res
     }
 
     @Operation
-    fun put(key: Int, value: Int): Int? {
+    suspend fun put(key: Int, value: Int): Int? {
         val response = sendOnce(PutCommand(key, value, commandId++)) as PutResult
         return response.res
     }
 
     @Operation
-    fun remove(key: Int): Int? {
+    suspend fun remove(key: Int): Int? {
         val response = sendOnce(RemoveCommand(key, commandId++)) as RemoveResult
         return response.res
     }
 
 
     @Operation
-    fun get(key: Int): Int? {
+    suspend fun get(key: Int): Int? {
         val response = sendOnce(GetCommand(key, commandId++)) as GetResult
         return response.res
+    }
+
+    override suspend fun onMessage(message: Command, sender: Int) {
+        queue.add(message)
+        signal.signal()
     }
 }
 
 class KVStorageServerTestClass {
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun testSimple() {
-        LinChecker.check(KVStorageServer::class.java,
-                DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck(false)
-                        .sequentialSpecification(SingleNode::class.java)
-                        .nodeType(KVStorageServer::class.java, 1)
-                        .nodeType(KVStorageClient::class.java, 1)
-                        .messageOrder(MessageOrder.ASYNCHRONOUS)
-                        .invocationsPerIteration(100).iterations(1000))
+        LinChecker.check(
+            KVStorageClient::class.java,
+            DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .nodeType(KVStorageServer::class.java, 1)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(100).iterations(1000)
+        )
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun testFull() {
-        LinChecker.check(KVStorageServer::class.java,
-                DistributedOptions<Command, Unit>()
-                        .requireStateEquivalenceImplCheck(false)
-                        .sequentialSpecification(SingleNode::class.java)
-                        .nodeType(KVStorageServer::class.java, 1)
-                        .nodeType(KVStorageClient::class.java, 5)
-                        .messageDuplications(true)
-                        .networkReliable(false)
-                        .invocationsPerIteration(100)
-                        .iterations(100))
+        LinChecker.check(
+            KVStorageClient::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .nodeType(KVStorageServer::class.java, 1)
+                .messageDuplications(true)
+                .networkReliable(false)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(300)
+                .iterations(100)
+        )
     }
 }
-*/

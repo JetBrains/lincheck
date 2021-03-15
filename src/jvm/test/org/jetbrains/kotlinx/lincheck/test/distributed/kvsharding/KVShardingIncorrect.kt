@@ -196,7 +196,7 @@ class KVShardingTest {
             KVSharding::class
                 .java, DistributedOptions<KVMessage, KVLogEntry>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(SingleNode::class.java).actorsPerThread(2).threads
-                (3).invocationsPerIteration(30).setMaxNumberOfFailedNodes { it / 2 }
+                (3).invocationsPerIteration(300).setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(1000).supportRecovery(true).verifier(EpsilonVerifier::class.java)
         )
     }

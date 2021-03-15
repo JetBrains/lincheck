@@ -57,7 +57,7 @@ class KVStorageCentralSimple(private val environment: Environment<Command, Unit>
     private suspend fun sendOnce(command: Command): Command {
         while (true) {
             environment.send(command, 0)
-            environment.withTimeout(3) {
+            environment.withTimeout(1) {
                 semaphore.await()
             }
             val response = queue.poll()

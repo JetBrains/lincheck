@@ -68,6 +68,9 @@ class KVSharding(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
 
     @Operation
     suspend fun put(key: String, value: String): String? {
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[${env.nodeId}]: Put $key $value"
+        }
         env.log.add(OpIdEntry(++opId))
         val node = getNodeForKey(key)
         if (node == env.nodeId) {
@@ -103,6 +106,9 @@ class KVSharding(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
 
     @Operation
     suspend fun get(key: String): String? {
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[${env.nodeId}]: Get $key"
+        }
         env.log.add(OpIdEntry(++opId))
         val node = getNodeForKey(key)
         if (node == env.nodeId) {
