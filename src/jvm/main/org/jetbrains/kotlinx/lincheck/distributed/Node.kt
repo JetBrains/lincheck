@@ -18,3 +18,5 @@ interface Node<Message> {
 
     suspend fun onNodeUnavailable(nodeId : Int) {}
 }
+
+class CrashError : Exception()

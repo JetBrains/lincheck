@@ -22,13 +22,10 @@ package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.Runnable
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.distributed.NodeDispatcher.Companion.NodeDispatcherStatus.*
 import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
-import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
@@ -36,13 +33,13 @@ import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 
 
-class DispatcherTaskCounter(private val initialTaskCounter: Int, private val permits: Int) {
+class DispatcherTaskCounter(private val initialTaskCounter: Int) {
     private val taskCounter = atomic(initialTaskCounter)
-    val semaphore = Semaphore(permits, permits)
+    val signal = Signal()
 
     fun checkIsFinished(f: () -> Unit) {
         if (taskCounter.value == 0) {
-            if (semaphore.availablePermits != permits) semaphore.release()
+            signal.signal()
             f()
         }
     }
@@ -58,12 +55,6 @@ class DispatcherTaskCounter(private val initialTaskCounter: Int, private val per
 
 
 class AlreadyIncrementedCounter : AbstractCoroutineContextElement(Key) {
-    init {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "Create context ${hashCode()} $isUsed"
-        }
-    }
-
     @Volatile
     var isUsed = false
 
@@ -97,9 +88,6 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
                 "[$id]: Try ${hashCode()} to submit task ${block.hashCode()}"
             }
             throw RejectedExecutionException()
-        }
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$id]: Before sub task ${block.hashCode()} ${context[AlreadyIncrementedCounter.Key]?.isUsed} context hash ${context[AlreadyIncrementedCounter.Key]?.hashCode()} $block"
         }
         val r = if (context[AlreadyIncrementedCounter.Key]?.isUsed != false) {
             taskCounter.increment()

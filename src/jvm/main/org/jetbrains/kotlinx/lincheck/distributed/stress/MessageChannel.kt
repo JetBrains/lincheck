@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.atomicArrayOfNulls
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
@@ -81,13 +83,19 @@ class ChannelHandler<E>(
         MessageOrder.ASYNCHRONOUS -> Array(numberOfNodes) { AsynchronousChannel() }
     }
 
-    val channels = Array(numberOfNodes) { createChannels() }
+    private val channels = atomicArrayOfNulls<Array<MessageChannel<E>>>(numberOfNodes)
 
-    operator fun get(sender: Int, receiver: Int) = channels[receiver][sender]
+    init {
+        repeat(numberOfNodes) {
+            channels[it].lazySet(createChannels())
+        }
+    }
 
-    suspend fun close(i: Int) = channels[i].forEach { it.close() }
+    operator fun get(sender: Int, receiver: Int) = channels[receiver].value!![sender]
+
+    suspend fun close(i: Int) = channels[i].value!!.forEach { it.close() }
 
     fun reset(i: Int) {
-        channels[i] = createChannels()
+        channels[i].value = createChannels()
     }
 }

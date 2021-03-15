@@ -20,9 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
-import kotlinx.coroutines.CompletionHandlerException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
@@ -62,7 +60,7 @@ internal class EnvironmentImpl<Message, Log>(
         if (probability.nodeFailed() &&
             context.failureInfo.trySetFailed(nodeId)
         ) {
-            throw NodeFailureException(nodeId)
+            throw CrashError()
         }
         context.incClock(nodeId)
 
@@ -78,10 +76,11 @@ internal class EnvironmentImpl<Message, Log>(
         }
         context.events[nodeId].add(event)
         try {
+            //val channel = context.messageHandler[nodeId, event.receiver]
             repeat(probability.duplicationRate()) {
                 context.messageHandler[nodeId, event.receiver].send(event)
                 logMessage(LogLevel.MESSAGES) {
-                    "[$nodeId]: Send $event to $receiver ${context.messageHandler[nodeId, event.receiver].hashCode()}"
+                    "[$nodeId]: Send $event to $receiver ${context.messageHandler[nodeId, event.receiver].hashCode()}, by channel {channel.hashCode()}"
                 }
             }
         } catch (e: ClosedSendChannelException) {
@@ -106,7 +105,7 @@ internal class EnvironmentImpl<Message, Log>(
             "[$nodeId]: With timeout, waiting, counter is $r"
         }
         val res = withTimeoutOrNull((ticks * TICK_TIME).toLong(), block)
-    } catch(e : Throwable) {
+    } catch (e: Throwable) {
         logMessage(LogLevel.ALL_EVENTS) {
             "[$nodeId]: Exception in timeout $e"
         }

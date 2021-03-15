@@ -49,8 +49,8 @@ class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSus
     private val serializedObject: ByteArray by lazy(LazyThreadSafetyMode.NONE) {
         check(value is Serializable) {
             "The result should either be a type always loaded by the system class loader " +
-                "(e.g., Int, String, List<T>) or implement Serializable interface; " +
-                "the actual class is ${value?.javaClass}."
+                    "(e.g., Int, String, List<T>) or implement Serializable interface; " +
+                    "the actual class is ${value?.javaClass}."
         }
         if (!valueClassTransformed) {
             // The object is not transformed
@@ -72,7 +72,7 @@ class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSus
         if (wasSuspended != other.wasSuspended) return false
         // When both value are not transformed, then compare them directly, otherwise serialize to compare
         return if (!valueClassTransformed && !other.valueClassTransformed) value == other.value
-               else serializedObject.contentEquals(other.serializedObject)
+        else serializedObject.contentEquals(other.serializedObject)
     }
 
     override fun hashCode(): Int = if (wasSuspended) 0 else 1  // we cannot use the value here
@@ -115,20 +115,6 @@ data class ExceptionResult private constructor(val tClazz: Class<out Throwable>,
 @JvmSynthetic
 fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
 
-@Suppress("DataClassPrivateConstructor")
-data class NodeFailureResult private constructor(override val wasSuspended: Boolean) : Result() {
-    override fun toString() = wasSuspendedPrefix + "F"
-    companion object {
-        @Suppress("UNCHECKED_CAST")
-        @JvmOverloads
-        fun create(wasSuspended: Boolean = false) = NodeFailureResult(wasSuspended)
-    }
-}
-// for byte-code generation
-@JvmSynthetic
-fun createNodeFailureResult() = NodeFailureResult.create(false)
-
-
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet
  * though it can be resumed later
@@ -153,3 +139,12 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
     lateinit var resumedActor: Actor
     lateinit var by: Actor
 }
+
+object CrashResult : Result() {
+    override val wasSuspended get() = false
+    override fun toString() = "CRASH"
+}
+
+// for byte-code generation
+@JvmSynthetic
+fun creteCrashResult() = CrashResult

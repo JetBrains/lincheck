@@ -26,7 +26,7 @@ import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.distributed.Node;
 import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner;
-import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeFailureException;
+import org.jetbrains.kotlinx.lincheck.distributed.stress.CrashError;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
@@ -213,7 +213,7 @@ public class TestThreadExecutionGenerator {
             try {
                 if (Node.class.isAssignableFrom(Class.forName(testType.getClassName()))) {
                     nodeFailureHandler = mv.newLabel();
-                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, nodeFailureHandler, getType(NodeFailureException.class).getInternalName());
+                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, nodeFailureHandler, getType(CrashError.class).getInternalName());
                 }
             } catch (ClassNotFoundException e) {
                 System.out.println(testType.getClassName());
