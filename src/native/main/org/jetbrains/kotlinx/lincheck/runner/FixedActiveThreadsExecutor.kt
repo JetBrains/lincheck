@@ -33,13 +33,14 @@ internal actual class TestThread actual constructor(val iThread: Int, val runner
     val worker: Worker = Worker.start()
 
     actual fun start() {
+        //printErr("start() $iThread called")
         worker.execute(TransferMode.UNSAFE, { r }, { r -> r.run() })
     }
 
     actual fun stop() {
-        printErr("stop() $iThread called")
+        //printErr("stop() $iThread called")
         worker.requestTermination(false)
-        printErr("stop() $iThread finished")
+        //printErr("stop() $iThread finished")
     }
 
     actual companion object {
@@ -57,7 +58,7 @@ internal actual class LockSupport {
         }
 
         actual fun parkNanos(nanos: Long) {
-            platform.posix.sleep((nanos / 1_000_000).toUInt())
+            //platform.posix.sleep((nanos / 1_000_000_000).toUInt())
         }
     }
 }

@@ -60,7 +60,7 @@ class StressStrategy(
             runner.also {
                 // Run invocations
                 for (invocation in 0 until invocations) {
-                    println("run invocaton $invocation")
+                    //println("run invocaton $invocation")
                     when (val ir = runner.run()) {
                         is CompletedInvocationResult -> {
                             if (!verifier.verifyResults(scenario, ir.results))

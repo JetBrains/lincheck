@@ -66,8 +66,8 @@ class FirstTest: VerifierState() {
         )
 
         val options = StressOptions().run {
-            iterations(10)
-            invocationsPerIteration(10)
+            iterations(30)
+            invocationsPerIteration(100)
             actorsBefore(2)
             threads(3)
             actorsPerThread(2)

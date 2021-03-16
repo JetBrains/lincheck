@@ -148,9 +148,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private fun awaitTask(iThread: Int, deadline: Long) {
-        println("awaitTask $iThread")
         val result = getResult(iThread, deadline)
-        println("awaitTask $iThread RESULT GOT")
         // Check whether there was an exception during the execution.
         if (result != DONE) throw LincheckExecutionException(result as Throwable)
     }

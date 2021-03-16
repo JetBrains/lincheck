@@ -136,4 +136,9 @@ internal actual open class ParallelThreadsRunner actual constructor(
         )
         return CompletedInvocationResult(results)
     }
+
+    override fun close() {
+        super.close()
+        executor.close()
+    }
 }
