@@ -25,6 +25,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import kotlin.coroutines.*
+import kotlin.jvm.*
 import kotlin.reflect.*
 
 expect class TestClass {
@@ -34,13 +35,13 @@ expect class TestClass {
 }
 
 expect class SequentialSpecification<T>
+
 expect fun <T : Any> SequentialSpecification<T>.getInitialState(): T
 
 expect fun chooseSequentialSpecification(sequentialSpecificationByUser: SequentialSpecification<*>?, testClass: TestClass): SequentialSpecification<*>
 
-object CancellableContinuationHolder {
-    var storedLastCancellableCont: CancellableContinuation<*>? = null
-}
+//@Volatile
+internal var storedLastCancellableCont: CancellableContinuation<*>? = null
 
 expect fun storeCancellableContinuation(cont: CancellableContinuation<*>)
 

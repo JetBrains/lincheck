@@ -35,10 +35,12 @@ actual class Actor(
     actual val cancelOnSuspension: Boolean = false
 ) {
 
-    actual override fun toString(): String {
-        TODO("Not yet implemented")
-    }
-
+    actual override fun toString(): String =
+        function.toString() +
+        arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() } +
+        (if (cancelOnSuspension) " + " else "") +
+        (if (promptCancellation) "prompt_" else "") +
+        (if (cancelOnSuspension) "cancel" else "")
 }
 
 actual val Actor.isQuiescentConsistent: Boolean

@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 
-class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List<Actor>): Runnable {
+class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List<Actor>) : Runnable {
     lateinit var testInstance: Any
     lateinit var objArgs: Array<Any>
     lateinit var allThreadExecutions: Array<TestThreadExecution>
@@ -45,8 +45,20 @@ class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List
         curClock++
     }
 
-
     override fun run() {
-        TODO("Not yet implemented")
+        //printErr("RUN $iThread #1")
+        runner.onStart(iThread)
+        actors.forEachIndexed { index, actor ->
+            //printErr("RUN $iThread #2 $index")
+            readClocks(index)
+            // TODO add try-catch
+            runner.onActorStart(iThread)
+            // Load arguments for operation
+            val result = actor.function(testInstance, actor.arguments)
+            results[index] = ValueResult(result)
+            incClock()
+        }
+        //printErr("RUN $iThread #finish ")
+        runner.onFinish(iThread)
     }
 }

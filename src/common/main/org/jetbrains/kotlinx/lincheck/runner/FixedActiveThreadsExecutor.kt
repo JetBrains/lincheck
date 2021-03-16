@@ -136,7 +136,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         if (tasks[iThread].compareAndSet(null, task)) return
         // CAS failed => a test thread is parked.
         // Submit the task and unpark the waiting thread.
-        val thread = tasks[iThread].value as TestThread
+        val thread = tasks[iThread].value
         tasks[iThread].value = task
         LockSupport.unpark(thread)
     }
@@ -148,7 +148,9 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private fun awaitTask(iThread: Int, deadline: Long) {
+        println("awaitTask $iThread")
         val result = getResult(iThread, deadline)
+        println("awaitTask $iThread RESULT GOT")
         // Check whether there was an exception during the execution.
         if (result != DONE) throw LincheckExecutionException(result as Throwable)
     }

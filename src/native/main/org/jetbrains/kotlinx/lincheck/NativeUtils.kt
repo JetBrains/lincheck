@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import platform.posix.*
 import kotlin.coroutines.*
 
 actual class TestClass(
@@ -65,7 +67,7 @@ internal actual fun executeActor(
     actor: Actor,
     completion: Continuation<Any?>?
 ): Result {
-    TODO("Not yet implemented")
+    return ValueResult(actor.function(instance, actor.arguments))
 }
 
 /**
@@ -73,5 +75,40 @@ internal actual fun executeActor(
  * threads that are related to the specified [runner].
  */
 internal actual fun collectThreadDump(runner: Runner): ThreadDump {
-    TODO("Not yet implemented")
+    return ThreadDump() // No thread dumps in kotlin native
+}
+
+internal actual fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
+    when (failure) {
+        is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
+        is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
+        is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
+        is ValidationFailure -> appendValidationFailure(failure)
+        is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
+    }
+    val results = if (failure is IncorrectResultsFailure) failure.results else null
+    if (failure.trace != null) {
+        appendLine()
+        appendLine("= The following interleaving leads to the error =")
+        appendLine("Sorry, there are no trace in kotlin native :(")
+        if (failure is DeadlockWithDumpFailure) {
+            appendLine()
+            append("All threads are in deadlock")
+        }
+    }
+    return this
+}
+
+internal actual fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
+    appendLine("= The execution has hung, see the thread dump =")
+    appendExecutionScenario(failure.scenario)
+    appendLine()
+    appendLine("Sorry, there are no threadDumps in kotlin native :(")
+    return this
+}
+
+val STDERR = platform.posix.fdopen(2, "w")
+fun printErr(message: String) {
+    fprintf(STDERR, message + "\n")
+    fflush(STDERR)
 }

@@ -24,11 +24,7 @@ package org.jetbrains.kotlinx.lincheck
  * Type of result used if the actor invocation returns any value.
  */
 actual class ValueResult(actual val value: Any?, override val wasSuspended: Boolean = false) : Result() {
-    actual override fun equals(other: Any?): Boolean {
-        TODO("Not yet implemented")
-    }
+    actual override fun equals(other: Any?): Boolean = if (other !is ValueResult) false else other.wasSuspended == wasSuspended && other.value == value
 
-    actual override fun hashCode(): Int {
-        TODO("Not yet implemented")
-    }
+    actual override fun hashCode(): Int = if (wasSuspended) 0 else 1 // We can't use value here
 }

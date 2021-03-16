@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import kotlin.native.concurrent.*
 import kotlin.test.*
 
 class FirstTest: VerifierState() {
@@ -65,7 +66,8 @@ class FirstTest: VerifierState() {
         )
 
         val options = StressOptions().run {
-            iterations(30)
+            iterations(10)
+            invocationsPerIteration(10)
             actorsBefore(2)
             threads(3)
             actorsPerThread(2)
@@ -77,24 +79,24 @@ class FirstTest: VerifierState() {
     }
 
     class A : SynchronizedObject() {
-        private var sharedState = false
+        private val sharedState: AtomicInt = AtomicInt(0)
 
         fun a() = synchronized(this) {
-            sharedState = true
-            if (!sharedState) throw AssertionError()
+            sharedState.increment()
+            //printErr("a(), sharedState = ${sharedState.toString()}")
         }
 
         fun b() = synchronized(this) {
-            sharedState = false
-            if (!sharedState) throw AssertionError()
+            sharedState.decrement()
+            //printErr("b(), sharedState = ${sharedState.toString()}")
         }
 
         override fun equals(other: Any?): Boolean {
-            return this.sharedState == (other as A).sharedState
+            return this.sharedState.value == (other as A).sharedState.value
         }
 
         override fun hashCode(): Int {
-            return this.sharedState.toByte().toInt()
+            return this.sharedState.value
         }
     }
 }
