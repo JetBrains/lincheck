@@ -17,25 +17,39 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
+
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.coroutines.CancellableContinuation
-import java.lang.*
+import kotlinx.coroutines.*
+import kotlin.system.*
 
-internal actual class TestThread actual constructor(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {
-    var cont: CancellableContinuation<*>? = null
+@ThreadLocal
+val currentThreadId = Any()
+
+internal actual class TestThread actual constructor(iThread: Int, runnerHash: Int, r: Runnable) {
+    actual fun start() {
+    }
+
+    actual fun stop() {
+    }
 
     actual companion object {
-        actual fun currentThread(): Any? = Thread.currentThread() // For storing identifier and then call unpark()
+        actual fun currentThread(): Any? = currentThreadId
     }
+
 }
 
 internal actual class LockSupport {
     actual companion object {
-        actual fun park() = java.util.concurrent.locks.LockSupport.park()
-        actual fun unpark(thread: Any?) = java.util.concurrent.locks.LockSupport.unpark(thread as Thread)
-        actual fun parkNanos(nanos: Long) = java.util.concurrent.locks.LockSupport.parkNanos(nanos)
+        actual fun park() {
+        }
+
+        actual fun unpark(thread: Any?) {
+        }
+
+        actual fun parkNanos(nanos: Long) {
+        }
     }
 }
 
-internal actual fun currentTimeMillis() = System.currentTimeMillis()
+internal actual fun currentTimeMillis() = getTimeMillis()

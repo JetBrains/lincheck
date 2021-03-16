@@ -1,5 +1,7 @@
 import org.gradle.jvm.tasks.Jar
 
+apply(from = rootProject.file("gradle/native-targets.gradle"))
+
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
@@ -38,6 +40,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             kotlin.srcDir("src/common/main")
+
             val kotlinVersion: String by project
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
@@ -50,6 +53,16 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+            }
+        }
+
+        val commonTest by getting {
+            kotlin.srcDir("src/common/test")
+
+            val kotlinVersion: String by project
+            dependencies {
+                implementation(kotlin("test-common", kotlinVersion))
+                implementation(kotlin("test-annotations-common", kotlinVersion))
             }
         }
 
@@ -106,7 +119,7 @@ tasks {
     withType<Test> {
         maxParallelForks = 1
         jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-                "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
     }
 
     withType<Jar> {

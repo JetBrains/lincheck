@@ -22,35 +22,25 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 
-expect class ValidationFunction
+actual class ValidationFunction
 
-expect val ValidationFunction.name: String
+actual val ValidationFunction.name: String
+    get() = TODO("Not yet implemented")
 
-expect class StateRepresentationFunction
+actual class StateRepresentationFunction(
+    val function: (Any) -> Any?
+)
 
 /**
  * Contains information about the provided operations (see [Operation]).
  * Several [tests][StressCTest] can refer to one structure
  * (i.e. one test class could have several [StressCTest] annotations)
  */
-expect class CTestStructure {
-    val actorGenerators: List<ActorGenerator>
-    val operationGroups: List<OperationGroup>
-    val validationFunctions: List<ValidationFunction>
-    val stateRepresentation: StateRepresentationFunction?
-}
+actual class CTestStructure constructor(
+    actual val actorGenerators: List<ActorGenerator>,
+    actual val operationGroups: List<OperationGroup>,
+    actual val validationFunctions: List<ValidationFunction>,
+    actual val stateRepresentation: StateRepresentationFunction?
+) {
 
-class OperationGroup(val name: String, val nonParallel: Boolean) {
-    val actors: MutableList<ActorGenerator>
-    override fun toString(): String {
-        return "OperationGroup{" +
-            "name='" + name + '\'' +
-            ", nonParallel=" + nonParallel +
-            ", actors=" + actors +
-            '}'
-    }
-
-    init {
-        actors = ArrayList()
-    }
 }

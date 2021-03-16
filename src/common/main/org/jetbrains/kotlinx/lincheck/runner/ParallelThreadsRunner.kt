@@ -40,6 +40,10 @@ internal expect open class ParallelThreadsRunner(
     useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner
 
+internal class LincheckExecutionException(cause: Throwable?): Exception(cause)
+
+internal class LincheckTimeoutException: Exception()
+
 internal enum class UseClocks { ALWAYS, RANDOM }
 
 internal enum class CompletionStatus { CANCELLED, RESUMED }

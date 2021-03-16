@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.*
 import kotlin.coroutines.*
 import kotlin.reflect.*
 
@@ -51,6 +52,8 @@ internal expect fun executeActor(
 ): Result
 
 internal expect fun createLincheckResult(res: Any?, wasSuspended: Boolean = false): Result
+
+expect fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any>
 
 internal expect fun executeValidationFunction(instance: Any, validationFunction: ValidationFunction): Throwable?
 internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<ValidationFunction>,
@@ -124,5 +127,23 @@ internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (t
     else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
+fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e: Throwable): Throwable {
+    if (e.message?.contains("to unnamed module") ?: false) {
+        return RuntimeException(ADD_OPENS_MESSAGE, e)
+    }
+    return e
+}
+
+private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
+    "Please add the following lines to your test running configuration:\n" +
+    "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
+    "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+
 internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
+
+/**
+ * Collects the current thread dump and keeps only those
+ * threads that are related to the specified [runner].
+ */
+internal expect fun collectThreadDump(runner: Runner): ThreadDump

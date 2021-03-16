@@ -45,8 +45,8 @@ actual typealias StateRepresentationFunction = Method
 actual class CTestStructure private constructor(
     actual val actorGenerators: List<ActorGenerator>,
     actual val operationGroups: List<OperationGroup>,
-    val validationFunctions: List<ValidationFunction>,
-    val stateRepresentation: StateRepresentationFunction?
+    actual val validationFunctions: List<ValidationFunction>,
+    actual val stateRepresentation: StateRepresentationFunction?
 ) {
     companion object {
         /**
@@ -117,7 +117,7 @@ actual class CTestStructure private constructor(
                     actorGenerators.add(actorGenerator)
                     // Get list of groups and add this operation to specified ones
                     val opGroup = opAnn.group
-                    if (!opGroup.isEmpty()) {
+                    if (opGroup.isNotEmpty()) {
                         val operationGroup = groupConfigs[opGroup]
                                 ?: throw IllegalStateException("Operation group $opGroup is not configured")
                         operationGroup.actors.add(actorGenerator)

@@ -100,7 +100,7 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
 }
 
-expect internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder
+internal expect fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder
 
 internal fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
     appendLine("= The execution failed with an unexpected exception =")
@@ -110,7 +110,7 @@ internal fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedE
     return this
 }
 
-expect internal fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder
+internal expect fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder
 
 internal fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResultsFailure): StringBuilder {
     appendLine("= Invalid execution results =")

@@ -33,6 +33,7 @@ expect fun loadClass(classLoader: Any, testClass: TestClass): TestClass
 
 expect class AtomicInteger(value: Int) {
     fun get(): Int
+    fun set(value: Int)
 }
 
 /**

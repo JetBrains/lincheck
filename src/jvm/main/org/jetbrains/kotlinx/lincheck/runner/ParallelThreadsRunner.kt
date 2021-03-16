@@ -24,7 +24,6 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
@@ -51,7 +50,7 @@ internal actual open class ParallelThreadsRunner actual constructor(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // should be closed in `close()`
 
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
@@ -259,10 +258,10 @@ internal actual open class ParallelThreadsRunner actual constructor(
         val afterInitStateRepresentation = constructStateRepresentation()
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
-        } catch (e: TimeoutException) {
+        } catch (e: LincheckTimeoutException) {
             val threadDump = collectThreadDump(this)
             return DeadlockInvocationResult(threadDump)
-        } catch (e: ExecutionException) {
+        } catch (e: LincheckExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
         }
         val parallelResultsWithClock = testThreadExecutions.map { ex ->

@@ -18,9 +18,6 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.verifier
+package org.jetbrains.kotlinx.lincheck.runner
 
-import org.jetbrains.kotlinx.lincheck.*
-
-actual fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any> =
-        TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv) }.loadClass(sequentialSpecification.name)!!
+actual class ThreadDump

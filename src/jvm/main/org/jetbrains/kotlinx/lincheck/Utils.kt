@@ -36,7 +36,6 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
-import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
@@ -45,6 +44,9 @@ actual class TestClass(val clazz: Class<*>) {
 
     actual fun createInstance(): Any = clazz.getDeclaredConstructor().newInstance()
 }
+
+actual fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any> =
+    TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv) }.loadClass(sequentialSpecification.name)!!
 
 actual fun chooseSequentialSpecification(sequentialSpecificationByUser: SequentialSpecification<*>?, testClass: TestClass): SequentialSpecification<*> =
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass.clazz
@@ -159,7 +161,7 @@ private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunction
 
 actual fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     val t = Thread.currentThread()
-    if (t is FixedActiveThreadsExecutor.TestThread) {
+    if (t is TestThread) {
         t.cont = cont
     } else {
         storedLastCancellableCont = cont
@@ -235,8 +237,8 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
  */
-internal fun collectThreadDump(runner: Runner) = ThreadDump(Thread.getAllStackTraces().filter { (t, _) ->
-    t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
+internal actual fun collectThreadDump(runner: Runner) = ThreadDump(Thread.getAllStackTraces().filter { (t, _) ->
+    t is TestThread && t.runnerHash == runner.hashCode()
 })
 
 /**
@@ -248,15 +250,3 @@ internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): R
         classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
         else -> null
     }
-
-fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e: Throwable): Throwable {
-    if (e.message?.contains("to unnamed module") ?: false) {
-        return RuntimeException(ADD_OPENS_MESSAGE, e)
-    }
-    return e
-}
-
-private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
-    "Please add the following lines to your test running configuration:\n" +
-    "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
-    "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"

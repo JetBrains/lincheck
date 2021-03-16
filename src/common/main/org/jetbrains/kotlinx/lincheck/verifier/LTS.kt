@@ -33,8 +33,6 @@ import kotlin.reflect.*
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
 
-expect fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any>
-
 /**
  * Common interface for different labeled transition systems, which several correctness formalisms use.
  * Lincheck widely uses LTS-based formalisms for verification, see [AbstractLTSVerifier] implementations as examples.

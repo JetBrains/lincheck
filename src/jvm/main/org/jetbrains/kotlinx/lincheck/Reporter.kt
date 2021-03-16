@@ -51,7 +51,7 @@ internal actual fun StringBuilder.appendDeadlockWithDumpFailure(failure: Deadloc
     appendExecutionScenario(failure.scenario)
     appendLine()
     for ((t, stackTrace) in failure.threadDump.dump) {
-        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
+        val threadNumber = if (t is TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
         stackTrace.map {
             StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
