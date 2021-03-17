@@ -24,9 +24,6 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
-import org.jetbrains.kotlinx.lincheck.distributed.Node;
-import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner;
-import org.jetbrains.kotlinx.lincheck.distributed.stress.CrashError;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
@@ -34,9 +31,6 @@ import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +41,7 @@ import static org.objectweb.asm.Type.*;
  * This class is used to generate {@link TestThreadExecution thread executions}.
  */
 public class TestThreadExecutionGenerator {
-    private static final Type[] NO_ARGS = new Type[]{};
+    private static final Type[] NO_ARGS = new Type[] {};
 
     private static final Type CLASS_TYPE = getType(Class.class);
     private static final Type OBJECT_TYPE = getType(Object.class);
@@ -60,7 +54,7 @@ public class TestThreadExecutionGenerator {
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
-    private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+    private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
@@ -81,22 +75,18 @@ public class TestThreadExecutionGenerator {
     private static final String INSTANCE = "INSTANCE";
 
     private static final Type VALUE_RESULT_TYPE = getType(ValueResult.class);
-    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[]{OBJECT_TYPE});
+    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
 
     private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
-    private static final Type NODE_FAILURE_RESULT_TYPE = getType(NodeFailureResult.class);
     private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
-    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[]{CLASS_TYPE});
-    private static final Method RESULT_KT_CREATE_NODE_FAILURE_RESULT_METHOD = new Method("createNodeFailureResult", NODE_FAILURE_RESULT_TYPE, NO_ARGS);
+    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
 
     private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", BOOLEAN_TYPE, new Type[]{});
 
     private static final Type PARALLEL_THREADS_RUNNER_TYPE = getType(ParallelThreadsRunner.class);
-    private static final Type DISTRIBUTED_RUNNER_TYPE = getType(DistributedRunner.class);
-    static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{OBJECT_TYPE, INT_TYPE, INT_TYPE});
-    private static final Method DISTRIBUTED_RUNNER_ON_NODE_FAILURE_METHOD = new Method("onNodeFailure",  Type.VOID_TYPE, new Type[]{Type.INT_TYPE});
+    private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
     private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
     private static int generatedClassNumber = 0;
@@ -119,12 +109,8 @@ public class TestThreadExecutionGenerator {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
-        boolean supportRecovery = false;
-        if (runner instanceof DistributedRunner) {
-            supportRecovery = ((DistributedRunner<?, ?>) runner).getTestCfg().getSupportRecovery();
-        }
         Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
-                generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, supportRecovery));
+                generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
             TestThreadExecution execution = clz.newInstance();
             execution.runner = runner;
@@ -137,22 +123,15 @@ public class TestThreadExecutionGenerator {
 
     private static byte[] generateClass(String internalClassName, Type testClassType, int iThread, List<Actor> actors,
                                         List<Object> objArgs, List<ParallelThreadsRunner.Completion> completions,
-                                        boolean scenarioContainsSuspendableActors, boolean supportRecovery) {
+                                        boolean scenarioContainsSuspendableActors)
+    {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
         cca.visit(52, ACC_PUBLIC + ACC_SUPER, internalClassName, null, TEST_THREAD_EXECUTION_TYPE.getInternalName(), null);
         generateConstructor(cca);
-        generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors, supportRecovery);
+        generateRun(cca, testClassType, iThread, actors, objArgs, completions, scenarioContainsSuspendableActors);
         cca.visitEnd();
-        String outputFile = "BroadcastThread" + iThread + ".class";
-        //System.out.println(cw.toByteArray().length);
-        try (OutputStream outputStream = new FileOutputStream(outputFile)) {
-            outputStream.write(cw.toByteArray());
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
         return cw.toByteArray();
-        //
     }
 
     private static void generateConstructor(ClassVisitor cv) {
@@ -167,7 +146,8 @@ public class TestThreadExecutionGenerator {
 
     private static void generateRun(ClassVisitor cv, Type testType, int iThread, List<Actor> actors,
                                     List<Object> objArgs, List<Completion> completions,
-                                    boolean scenarioContainsSuspendableActors, boolean supportRecovery) {
+                                    boolean scenarioContainsSuspendableActors)
+    {
         int access = ACC_PUBLIC;
         Method m = new Method("run", VOID_TYPE, NO_ARGS);
         GeneratorAdapter mv = new GeneratorAdapter(access, m,
@@ -191,7 +171,6 @@ public class TestThreadExecutionGenerator {
         mv.push(0);
         mv.storeLocal(iLocal);
 
-        boolean failed = false;
         // Invoke actors
         for (int i = 0; i < actors.size(); i++) {
             readClocksIfNeeded(i, mv);
@@ -209,15 +188,6 @@ public class TestThreadExecutionGenerator {
             Label handledExceptionHandler = null;
             Label actorCatchBlockStart = mv.newLabel();
             Label actorCatchBlockEnd = mv.newLabel();
-            Label nodeFailureHandler = null;
-            try {
-                if (Node.class.isAssignableFrom(Class.forName(testType.getClassName()))) {
-                    nodeFailureHandler = mv.newLabel();
-                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, nodeFailureHandler, getType(CrashError.class).getInternalName());
-                }
-            } catch (ClassNotFoundException e) {
-                System.out.println(testType.getClassName());
-            }
             if (actor.getHandlesExceptions()) {
                 handledExceptionHandler = mv.newLabel();
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
@@ -281,17 +251,6 @@ public class TestThreadExecutionGenerator {
             Label skipHandlers = mv.newLabel();
             mv.goTo(skipHandlers);
 
-           if (nodeFailureHandler != null) {
-                mv.visitLabel(nodeFailureHandler);
-                if (scenarioContainsSuspendableActors) {
-                    storeNodeFailureResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
-                } else {
-                    storeNodeFailureResult(mv, resLocal, iLocal, supportRecovery, actors.size(), i, iThread);
-                    //storeExceptionResultFromThrowable(mv, resLocal, iLocal);
-                }
-            }
-            mv.goTo(skipHandlers);
-
             // Handle exceptions that are valid results
             if (actor.getHandlesExceptions()) {
                 // Handled exception handler
@@ -304,7 +263,6 @@ public class TestThreadExecutionGenerator {
             }
             // End of try-catch block for all other exceptions
             mv.goTo(skipHandlers);
-
 
             // Unexpected exception handler
             mv.visitLabel(unexpectedExceptionHandler);
@@ -337,7 +295,6 @@ public class TestThreadExecutionGenerator {
             mv.visitFieldInsn(GETSTATIC, NO_RESULT_CLASS_NAME, INSTANCE, NO_RESULT_TYPE.getDescriptor());
             mv.arrayStore(RESULT_TYPE);
             mv.iinc(iLocal, 1);
-
             mv.visitLabel(launchNextActor);
         }
         // Call runner's onFinish(iThread) method
@@ -392,56 +349,6 @@ public class TestThreadExecutionGenerator {
     }
 
     private static void storeExceptionResultFromSuspendableThrowable(GeneratorAdapter mv, int resLocal, int iLocal, int iThread, int actorId) {
-        int eLocal = mv.newLocal(THROWABLE_TYPE);
-        mv.storeLocal(eLocal);
-        mv.loadLocal(resLocal);
-        mv.loadLocal(iLocal);
-        // Load runner to call processInvocationResult method
-        mv.loadThis();
-        mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
-        mv.checkCast(PARALLEL_THREADS_RUNNER_TYPE);
-        // Load exception result
-        mv.loadLocal(eLocal);
-        mv.push(iThread);
-        mv.push(actorId);
-        // Process result
-        mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
-        mv.arrayStore(RESULT_TYPE);
-    }
-
-    private static void storeNodeFailureResult(GeneratorAdapter mv, int resLocal, int iLocal, boolean supportRecovery, int numberOfActors, int current, int iThread) {
-        mv.pop();
-        mv.loadLocal(resLocal);
-        mv.loadLocal(iLocal);
-        // Create exception result instance
-        mv.invokeStatic(RESULT_KT_TYPE, RESULT_KT_CREATE_NODE_FAILURE_RESULT_METHOD);
-        mv.checkCast(RESULT_TYPE);
-        mv.arrayStore(RESULT_TYPE);
-        mv.loadThis();
-        mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
-        mv.checkCast(DISTRIBUTED_RUNNER_TYPE);
-        mv.push(iThread);
-        mv.invokeVirtual(DISTRIBUTED_RUNNER_TYPE, DISTRIBUTED_RUNNER_ON_NODE_FAILURE_METHOD);
-       // mv.returnValue();
-        if (!supportRecovery) {
-            for (int i = current + 1; i < numberOfActors; i++) {
-                mv.iinc(iLocal, 1);
-                mv.loadLocal(resLocal);
-                mv.loadLocal(iLocal);
-                // Load no result type to create new instance of NoResult
-                mv.visitFieldInsn(GETSTATIC, NO_RESULT_CLASS_NAME, INSTANCE, NO_RESULT_TYPE.getDescriptor());
-                mv.arrayStore(RESULT_TYPE);
-            }
-            mv.loadThis();
-            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
-            mv.push(iThread);
-            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FINISH_METHOD);
-            mv.returnValue();
-        }
-    }
-
-
-    private static void storeNodeFailureResultFromSuspendableThrowable(GeneratorAdapter mv, int resLocal, int iLocal, int iThread, int actorId) {
         int eLocal = mv.newLocal(THROWABLE_TYPE);
         mv.storeLocal(eLocal);
         mv.loadLocal(resLocal);
