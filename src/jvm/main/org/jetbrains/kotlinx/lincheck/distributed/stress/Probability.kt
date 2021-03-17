@@ -21,17 +21,18 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
-import java.util.concurrent.ThreadLocalRandom
+import kotlin.random.Random
 
-class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val numberOfNodes: Int) {
+class Probability(
+    private val testCfg: DistributedCTestConfiguration<*, *>,
+    private val rand: ThreadLocal<Random>
+) {
     companion object {
         const val MESSAGE_SENT_PROBABILITY = 0.95
         const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
         const val NODE_FAIL_PROBABILITY = 0.05
         const val NODE_RECOVERY_PROBABILITY = 0.7
     }
-
-    private val rand = ThreadLocalRandom.current()
 
     fun duplicationRate(): Int {
         if (!messageIsSent()) {
@@ -40,17 +41,17 @@ class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val 
         if (!testCfg.messageDuplication) {
             return 1
         }
-        return if (rand.nextDouble(1.0) < MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
+        return if (rand.get().nextDouble(1.0) < MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
     }
 
     private fun messageIsSent(): Boolean {
         if (testCfg.isNetworkReliable) {
             return true
         }
-        return rand.nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
+        return rand.get().nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
     }
 
-    fun nodeFailed(): Boolean = rand.nextDouble(1.0) < NODE_FAIL_PROBABILITY
+    fun nodeFailed() = rand.get().nextDouble(1.0) < NODE_FAIL_PROBABILITY
 
-    fun nodeRecovered(): Boolean = rand.nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
+    fun nodeRecovered(): Boolean = rand.get().nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
 }

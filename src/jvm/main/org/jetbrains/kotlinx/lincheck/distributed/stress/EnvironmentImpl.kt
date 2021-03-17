@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.ClosedSendChannelException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.kotlinx.lincheck.distributed.*
 
@@ -58,6 +59,7 @@ internal class EnvironmentImpl<Message, Log>(
             probability.nodeFailed() &&
             context.failureInfo.trySetFailed(nodeId)
         ) {
+            println("[$nodeId]: Failed on message $message to $receiver")
             throw CrashError()
         }
         context.incClock(nodeId)
@@ -74,7 +76,6 @@ internal class EnvironmentImpl<Message, Log>(
         }
         context.events[nodeId].add(event)
         try {
-            //val channel = context.messageHandler[nodeId, event.receiver]
             repeat(probability.duplicationRate()) {
                 context.messageHandler[nodeId, event.receiver].send(event)
                 logMessage(LogLevel.MESSAGES) {

@@ -451,7 +451,9 @@ open class DistributedRunner<Message, Log>(
                 logMessage(LogLevel.ALL_EVENTS) {
                     "[$iNode]: Launch recover"
                 }
-                context.testInstances[iNode].recover()
+                handleNodeFailure(iNode) {
+                    context.testInstances[iNode].recover()
+                }
                 runNode(iNode)
             }
         } else {

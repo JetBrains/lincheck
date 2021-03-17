@@ -22,7 +22,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var isNetworkReliable: Boolean = true
     private var messageOrder: MessageOrder = MessageOrder.SYNCHRONOUS
     private var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
-    private var supportRecovery: RecoveryMode = RecoveryMode.ALL_NODES_RECOVER
+    private var supportRecovery: RecoveryMode = RecoveryMode.NO_RECOVERIES
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
     private var networkPartitions: Boolean = false

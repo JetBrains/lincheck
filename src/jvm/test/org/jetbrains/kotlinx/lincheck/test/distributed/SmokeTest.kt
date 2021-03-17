@@ -19,15 +19,17 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
+
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.RecoveryMode
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class Smoke(val env : Environment<Int, Unit>) : Node<Int> {
+class Smoke(val env: Environment<Int, Unit>) : Node<Int> {
     override suspend fun onMessage(message: Int, sender: Int) {
         if (message == 1) {
             env.send(0, sender)
@@ -49,7 +51,7 @@ class SmokeTest {
                 .java, DistributedOptions<Int, Unit>().requireStateEquivalenceImplCheck
                 (false).actorsPerThread(2).threads
                 (3).invocationsPerIteration(300).setMaxNumberOfFailedNodes { it / 2 }
-                .iterations(100).supportRecovery(true).verifier(EpsilonVerifier::class.java)
+                .iterations(100).supportRecovery(RecoveryMode.ALL_NODES_RECOVER).verifier(EpsilonVerifier::class.java)
         )
     }
 }

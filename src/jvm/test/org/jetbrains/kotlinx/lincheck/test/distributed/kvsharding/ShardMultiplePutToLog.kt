@@ -31,7 +31,7 @@ sealed class LogEntry
 data class KVLogEntry(val key: String, val value: String) : LogEntry()
 data class OpIdEntry(val id: Int) : LogEntry()
 
-class KVSharding(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
+class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
     private var opId = 0
     private val semaphore = Semaphore(1, 1)
     private var response: KVMessage? = null
@@ -133,6 +133,9 @@ class KVSharding(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
             }
             return
         }
+        // If the node has failed, applied operations are lost, and we can
+        // put the same entry to log multiple times. This leads to incorrect results,
+        // as 'put' returns previous value.
         val msg = appliedOperations[sender][message.id] ?: when (message) {
             is GetRequest -> GetResponse(getFromLog(message.key), message.id)
             is PutRequest -> PutResponse(saveToLog(message.key, message.value), message.id)

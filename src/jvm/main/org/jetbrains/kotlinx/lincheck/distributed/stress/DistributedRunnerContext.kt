@@ -27,12 +27,17 @@ import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
 import java.lang.Integer.max
+import kotlin.random.Random
 
 
 class DistributedRunnerContext<Message, Log>(
     val tesCfg: DistributedCTestConfiguration<Message, Log>,
     val scenario: ExecutionScenario
 ) {
+    companion object {
+        val threadLocalRand: ThreadLocal<Random> = ThreadLocal.withInitial { Random }
+    }
+
     val addressResolver = NodeAddressResolver(
         tesCfg.testClass as Class<out Node<Message>>,
         scenario.threads, tesCfg.nodeTypes
@@ -82,6 +87,6 @@ class DistributedRunnerContext<Message, Log>(
     }
 
     val probabilities = Array(addressResolver.totalNumberOfNodes) {
-        Probability(tesCfg, addressResolver.totalNumberOfNodes)
+        Probability(tesCfg, threadLocalRand)
     }
 }
