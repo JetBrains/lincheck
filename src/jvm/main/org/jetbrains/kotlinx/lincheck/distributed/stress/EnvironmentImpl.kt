@@ -37,7 +37,7 @@ internal class EnvironmentImpl<Message, Log>(
 
     override val numberOfNodes = context.addressResolver.totalNumberOfNodes
 
-    private val probability = Probability(context.tesCfg, numberOfNodes)
+    private val probability = context.probabilities[nodeId]
 
     override fun getAddressesForClass(cls: Class<out Node<Message>>) = context.addressResolver[cls]
 

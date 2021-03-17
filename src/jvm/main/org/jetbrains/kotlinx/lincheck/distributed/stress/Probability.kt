@@ -28,6 +28,7 @@ class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val 
         const val MESSAGE_SENT_PROBABILITY = 0.95
         const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
         const val NODE_FAIL_PROBABILITY = 0.05
+        const val NODE_RECOVERY_PROBABILITY = 0.7
     }
 
     private val rand = ThreadLocalRandom.current()
@@ -50,4 +51,6 @@ class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val 
     }
 
     fun nodeFailed(): Boolean = rand.nextDouble(1.0) < NODE_FAIL_PROBABILITY
+
+    fun nodeRecovered(): Boolean = rand.nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
 }

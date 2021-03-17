@@ -63,16 +63,6 @@ class NodeFailureInfo(
             return
         }
         failedNodes[iNode].lazySet(false)
-        //semaphore?.release()
-    }
-
-    /**
-     * Resets to initial state.
-     */
-    fun reset() {
-        repeat(numberOfNodes) {
-            failedNodes[it].lazySet(false)
-        }
-        semaphore = if (maxNumberOfFailedNodes != 0) Semaphore(maxNumberOfFailedNodes, 0) else null
+        semaphore?.release()
     }
 }

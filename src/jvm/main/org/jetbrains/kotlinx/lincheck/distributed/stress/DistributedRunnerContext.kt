@@ -80,4 +80,8 @@ class DistributedRunnerContext<Message, Log>(
     val logs = Array(addressResolver.totalNumberOfNodes) {
         emptyList<Log>()
     }
+
+    val probabilities = Array(addressResolver.totalNumberOfNodes) {
+        Probability(tesCfg, addressResolver.totalNumberOfNodes)
+    }
 }

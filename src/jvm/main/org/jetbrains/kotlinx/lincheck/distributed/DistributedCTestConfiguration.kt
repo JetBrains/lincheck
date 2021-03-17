@@ -40,7 +40,7 @@ class DistributedCTestConfiguration<Message, Log>(testClass: Class<*>, iteration
                                                   val isNetworkReliable: Boolean,
                                                   val messageOrder: MessageOrder,
                                                   val maxNumberOfFailedNodes: (Int) -> Int,
-                                                  val supportRecovery: Boolean,
+                                                  val supportRecovery: RecoveryMode,
                                                   val messageDuplication: Boolean,
                                                   val networkPartitions : Boolean,
                                                   val asyncRun : Boolean,

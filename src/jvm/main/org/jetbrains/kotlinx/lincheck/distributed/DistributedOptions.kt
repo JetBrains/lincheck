@@ -10,12 +10,19 @@ enum class MessageOrder {
     ASYNCHRONOUS
 }
 
+
+enum class RecoveryMode {
+    NO_RECOVERIES,
+    ALL_NODES_RECOVER,
+    MIXED
+}
+
 class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log>,
         DistributedCTestConfiguration<Message, Log>>() {
     private var isNetworkReliable: Boolean = true
     private var messageOrder: MessageOrder = MessageOrder.SYNCHRONOUS
     private var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
-    private var supportRecovery: Boolean = true
+    private var supportRecovery: RecoveryMode = RecoveryMode.ALL_NODES_RECOVER
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
     private var networkPartitions: Boolean = false
@@ -43,7 +50,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun supportRecovery(supportRecovery: Boolean): DistributedOptions<Message, Log> {
+    fun supportRecovery(supportRecovery: RecoveryMode): DistributedOptions<Message, Log> {
         this.supportRecovery = supportRecovery
         return this
     }

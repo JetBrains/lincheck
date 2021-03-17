@@ -421,7 +421,10 @@ open class DistributedRunner<Message, Log>(
         if (iNode < context.addressResolver.nodesWithScenario && context.actorIds[iNode] < scenarioSize) {
             context.testNodeExecutions[iNode].results[context.actorIds[iNode]++] = CrashResult
         }
-        if (testCfg.supportRecovery) {
+        if (testCfg.supportRecovery == RecoveryMode.ALL_NODES_RECOVER ||
+            testCfg.supportRecovery == RecoveryMode.MIXED
+            && context.probabilities[iNode].nodeRecovered()
+        ) {
             val delta = initTasksForNode(iNode)
             taskCounter.add(delta)
             logMessage(LogLevel.ALL_EVENTS) {
