@@ -24,18 +24,18 @@ package org.jetbrains.kotlinx.lincheck.distributed
 class NodeAddressResolver<Message>(
     testClass: Class<out Node<Message>>,
     val nodesWithScenario: Int,
-    additionalClasses: Map<Class<out Node<Message>>, Int>
+    val additionalClasses: Map<Class<out Node<Message>>, Pair<Int, Boolean>>
 ) {
     private val nodeTypeToRange: Map<Class<out Node<Message>>, List<Int>>
-    val totalNumberOfNodes = nodesWithScenario + additionalClasses.values.sum()
+    val totalNumberOfNodes = nodesWithScenario + additionalClasses.values.map { it.first }.sum()
     private val nodes = mutableListOf<Class<out Node<Message>>>()
 
     init {
         repeat(nodesWithScenario) {
             nodes.add(testClass)
         }
-        for ((cls, num) in additionalClasses) {
-            repeat(num) {
+        for ((cls, p) in additionalClasses) {
+            repeat(p.first) {
                 nodes.add(cls)
             }
         }
@@ -44,4 +44,6 @@ class NodeAddressResolver<Message>(
 
     operator fun get(cls: Class<out Node<Message>>) = nodeTypeToRange[cls]
     operator fun get(iNode: Int) = nodes[iNode]
+
+    fun canFail(iNode: Int) = additionalClasses[nodes[iNode]]?.second ?: true
 }

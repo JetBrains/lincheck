@@ -44,7 +44,7 @@ class DistributedCTestConfiguration<Message, Log>(testClass: Class<*>, iteration
                                                   val messageDuplication: Boolean,
                                                   val networkPartitions : Boolean,
                                                   val asyncRun : Boolean,
-                                                  val nodeTypes: HashMap<Class<out Node<Message>>, Int>,
+                                                  val nodeTypes: HashMap<Class<out Node<Message>>, Pair<Int, Boolean>>,
                                                   requireStateEquivalenceCheck: Boolean,
                                                   minimizeFailedScenario: Boolean,
                                                   sequentialSpecification: Class<*>, timeoutMs: Long) :

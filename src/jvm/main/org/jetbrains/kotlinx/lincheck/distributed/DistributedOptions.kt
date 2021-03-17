@@ -19,7 +19,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
     private var networkPartitions: Boolean = false
-    private var testClasses = HashMap<Class<out Node<Message>>, Int>()
+    private var testClasses = HashMap<Class<out Node<Message>>, Pair<Int, Boolean>>()
     private var useVectorClock = false
     private var asyncRun = false
 
@@ -28,8 +28,8 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun nodeType(cls: Class<out Node<Message>>, numberOfInstances: Int): DistributedOptions<Message, Log> {
-        this.testClasses[cls] = numberOfInstances
+    fun nodeType(cls: Class<out Node<Message>>, numberOfInstances: Int, canFail : Boolean = true): DistributedOptions<Message, Log> {
+        this.testClasses[cls] = numberOfInstances to canFail
         return this
     }
 

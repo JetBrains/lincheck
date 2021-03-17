@@ -23,10 +23,7 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Event
-import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
 
 internal class EnvironmentImpl<Message, Log>(
     val context: DistributedRunnerContext<Message, Log>,
@@ -57,7 +54,8 @@ internal class EnvironmentImpl<Message, Log>(
             }
             return
         }
-        if (probability.nodeFailed() &&
+        if (context.addressResolver.canFail(nodeId) &&
+            probability.nodeFailed() &&
             context.failureInfo.trySetFailed(nodeId)
         ) {
             throw CrashError()
