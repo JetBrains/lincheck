@@ -64,7 +64,7 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
             env.log.forEach { m ->
                 env.correctProcesses().forEach { check(logs[it].contains(m)) { m } }
             }
-        } catch (e : IllegalStateException) {
+        } catch (e: IllegalStateException) {
             throw e
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
@@ -127,7 +127,7 @@ class BroadcastTest {
             Peer::class
                 .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
                 (false).threads
-                (3).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(false)
+                (3).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(RecoveryMode.NO_RECOVERIES)
                 .invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
                 .messageOrder(MessageOrder.SYNCHRONOUS)
         )
@@ -149,7 +149,7 @@ class BroadcastTest {
             PeerIncorrect::class
                 .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
                 (false).threads
-                (5).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(false)
+                (5).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(RecoveryMode.NO_RECOVERIES)
                 .invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
                 .messageOrder(MessageOrder.SYNCHRONOUS)
         )
