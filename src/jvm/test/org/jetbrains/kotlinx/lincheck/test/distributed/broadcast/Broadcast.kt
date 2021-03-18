@@ -34,7 +34,7 @@ data class Message(val body: String, val id: Int, val from: Int)
 
 
 fun <Message, Log> Environment<Message, Log>.correctProcesses() =
-    events().mapIndexed { index, list -> index to list }.filter { !it.second.any { p -> p is ProcessFailureEvent } }
+    events().mapIndexed { index, list -> index to list }.filter { !it.second.any { p -> p is NodeCrashEvent } }
         .map { it.first }
 
 fun <Message, Log> Environment<Message, Log>.sentMessages(processId: Int = nodeId) =

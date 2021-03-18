@@ -176,6 +176,7 @@ open class DistributedRunner<Message, Log>(
                 val node = channel.receive()
                 if (context.failureInfo[i]) return
                 context.incClock(i)
+                context.events[i].add(CrashNotificationEvent(i, node, context.vectorClock[i].copyOf()))
                 context.executorContext.increment()
                 GlobalScope.launch(this + createNewContext()) {
                     handleNodeFailure(i) {
@@ -236,22 +237,18 @@ open class DistributedRunner<Message, Log>(
     }
 
     override fun constructStateRepresentation(): String {
-        var res = "NODE STATES\n"
-        //TODO check for not null
-        for (testInstance in context.testInstances) {
-            res += stateRepresentationFunction?.let { getMethod(testInstance, it) }
-                ?.invoke(testInstance) as String? + '\n'
+        val states = context.testInstances.mapIndexed { index, node ->
+            index to stateRepresentationFunction?.let { getMethod(node, it) }
+                ?.invoke(node) as String?
+        }.filterNot { it.second.isNullOrBlank() }.joinToString(separator = "\n") { "STATE [${it.first}]: ${it.second}" }
+        val events = context.events.joinToString(separator = "\n", prefix = "EVENTS\n") { it ->
+            it.joinToString(separator = "\n")
         }
-
-        res += "MESSAGE HISTORY\n"
-        context.events.forEachIndexed { index, mutableList ->
-            mutableList.map { "[$index]: $it\n" }.forEach { res += it }
-        }
-        res += "LOGS\n"
-        environments.forEachIndexed { index, environment ->
-            environment.log.map { "[$index]: $it\n" }.forEach { res += it }
-        }
-        return res
+        val logs = environments.mapIndexed { index, env -> index to env.log }.filterNot { it.second.isNullOrEmpty() }
+            .joinToString(separator = "\n") {
+                "LOG [${it.first}]: ${it.second}"
+            }
+        return "\n" + listOf(states, events, logs).filterNot { it.isBlank() }.joinToString(separator = "\n")
     }
 
     private fun CoroutineContext.launchReceiveMessage(i: Int) {
@@ -287,15 +284,10 @@ open class DistributedRunner<Message, Log>(
                 logMessage(LogLevel.ALL_EVENTS) {
                     "Semaphore aqcuired"
                 }
-                //delay(100)
-                //if (logLevel != LogLevel.NO_OUTPUT) delay(1000)
             }
 
             dispatchers.forEach { it.shutdown() }
             environments.forEach { (it as EnvironmentImpl).isFinished = true }
-
-            //context.incomeMessages.forEach { it.close() }
-            //context.failureNotifications.forEach { it.close() }
 
             if (exception != null) {
                 dispatchers.forEach { it.shutdown() }
@@ -434,7 +426,7 @@ open class DistributedRunner<Message, Log>(
         }
         context.messageHandler.close(iNode)
         context.failureNotifications[iNode].close()
-        context.events[iNode].add(ProcessFailureEvent(iNode, context.vectorClock[iNode].copyOf()))
+        context.events[iNode].add(NodeCrashEvent(iNode, context.vectorClock[iNode].copyOf()))
         dispatchers[iNode].crash()
         (environments[iNode] as EnvironmentImpl).isFinished = true
         val scenarioSize = scenario.parallelExecution[iNode].size

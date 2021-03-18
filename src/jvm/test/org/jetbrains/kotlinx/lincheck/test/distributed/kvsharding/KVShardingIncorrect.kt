@@ -47,12 +47,13 @@ class PutResponse(val previousValue: String?, id: Int) : KVMessage(id, false) {
     override fun toString() = "PutResponse(previousValue=$previousValue, id=$id)"
 }
 
-object Recover : KVMessage(0, true)
+object Recover : KVMessage(0, true) {
+    override fun toString() = "Recover"
+}
 
 sealed class Log
-data class KVLog(val request : PutRequest, val prev : String?) : Log()
+data class KVLog(val request: PutRequest, val prev: String?) : Log()
 data class OpId(val id: Int) : Log()
-
 
 
 class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
@@ -64,13 +65,13 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
     private fun getNodeForKey(key: String) =
         ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
 
-    private fun saveToLog(request : PutRequest): String? {
+    private fun saveToLog(request: PutRequest): String? {
         val log = env.log
         val present = log.lastOrNull { it is KVLog && it.request === request }
         if (present != null) {
             return (present as KVLog).prev
         }
-        val index = log.indexOfLast { it is KVLog && it.request.key == request.key}
+        val index = log.indexOfLast { it is KVLog && it.request.key == request.key }
         val prev = if (index == -1) {
             null
         } else {

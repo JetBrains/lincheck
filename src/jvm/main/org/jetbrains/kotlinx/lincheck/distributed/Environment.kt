@@ -51,7 +51,7 @@ interface Environment<Message, Log> {
      */
     fun events(): Array<List<Event>>
 
-    fun getLogs() : Array<List<Log>>
+    fun getLogs(): Array<List<Log>>
 
     suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit)
 }
@@ -63,7 +63,9 @@ data class MessageSentEvent<Message>(
     val receiver: Int,
     val id: Int,
     val clock: IntArray
-) : Event()
+) : Event() {
+    override fun toString() = "[$sender]: Send message $message to $receiver, id=$id, clock=${clock.toList()}"
+}
 
 data class MessageReceivedEvent<Message>(
     val message: Message,
@@ -71,10 +73,24 @@ data class MessageReceivedEvent<Message>(
     val receiver: Int,
     val id: Int,
     val clock: IntArray
-) :
-    Event()
+) : Event() {
+    override fun toString() = "[$receiver]: Received message $message from $sender, id=$id, clock=${clock.toList()}"
+}
 
 data class LogEvent<Log>(val message: Log, val sender: Int, val clock: IntArray) : Event()
-data class ProcessFailureEvent(val processId: Int, val clock: IntArray) : Event()
-data class ProcessRecoveryEvent(val processId: Int, val clock: IntArray) : Event()
-data class OperationStartEvent(val processId: Int, val opId: Int, val clock: IntArray) : Event()
+
+data class NodeCrashEvent(val iNode: Int, val clock: IntArray) : Event() {
+    override fun toString() = "[$iNode]: Node crashed, clock=${clock.toList()}"
+}
+
+data class ProcessRecoveryEvent(val iNode: Int, val clock: IntArray) : Event() {
+    override fun toString() = "[$iNode]: Node recovered, clock=${clock.toList()}"
+}
+
+data class OperationStartEvent(val iNode: Int, val opId: Int, val clock: IntArray) : Event() {
+    override fun toString() = "[$iNode]: Operation $opId started, clock=${clock.toList()}"
+}
+
+data class CrashNotificationEvent(val iNode: Int, val crashedNode: Int, val clock: IntArray) : Event() {
+    override fun toString() = "[$iNode]: Receive crash notification from $crashedNode, clock=${clock.toList()}"
+}
