@@ -20,12 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
-import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
 import java.util.concurrent.ThreadLocalRandom
+
 
 interface MessageChannel<E> {
     suspend fun send(item: E)
@@ -33,15 +33,40 @@ interface MessageChannel<E> {
     suspend fun receive(): E
 
     suspend fun close(): Boolean
+
+    fun clear()
 }
 
 class FifoChannel<E> : MessageChannel<E> {
     private val channel = Channel<E>(UNLIMITED)
-    override suspend fun send(item: E) = channel.send(item)
 
-    override suspend fun receive() = channel.receive()
+    override suspend fun send(item: E) {
+        channel.send(item)
+        logMessage(LogLevel.ALL_EVENTS) {
+            "Push message $item to channel ${channel.hashCode()}"
+        }
+    }
+
+    override suspend fun receive() : E {
+        val res = channel.receive()
+        logMessage(LogLevel.ALL_EVENTS) {
+            "Poll message $res from channel ${channel.hashCode()}"
+        }
+        return res
+    }
 
     override suspend fun close() = channel.close()
+
+    override fun hashCode(): Int {
+        return channel.hashCode()
+    }
+
+    override fun clear() {
+        do {
+            val r = channel.poll()
+            if (r != null) println("AAAAAA $r")
+        } while (r != null)
+    }
 }
 
 class AsynchronousChannel<E> : MessageChannel<E> {
@@ -67,6 +92,13 @@ class AsynchronousChannel<E> : MessageChannel<E> {
     }
 
     override suspend fun close(): Boolean = channel.close()
+
+    override fun clear() {
+        do {
+            val r = channel.poll()
+            if (r != null) println("AAAAAA $r")
+        } while (r != null)
+    }
 }
 
 
@@ -97,5 +129,11 @@ class ChannelHandler<E>(
 
     fun reset(i: Int) {
         channels[i].value = createChannels()
+    }
+
+    fun clear() {
+        repeat(numberOfNodes) {
+            channels[it].value!!.forEach { it.clear() }
+        }
     }
 }

@@ -19,6 +19,10 @@ enum class RecoveryMode {
 
 class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log>,
         DistributedCTestConfiguration<Message, Log>>() {
+    companion object {
+        const val DEFAULT_TIMEOUT_MS: Long = 10000
+    }
+
     private var isNetworkReliable: Boolean = true
     private var messageOrder: MessageOrder = MessageOrder.SYNCHRONOUS
     private var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
@@ -30,12 +34,20 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var useVectorClock = false
     private var asyncRun = false
 
+    init {
+        timeoutMs = DEFAULT_TIMEOUT_MS
+    }
+
     fun networkReliable(isReliable: Boolean): DistributedOptions<Message, Log> {
         this.isNetworkReliable = isReliable
         return this
     }
 
-    fun nodeType(cls: Class<out Node<Message>>, numberOfInstances: Int, canFail : Boolean = true): DistributedOptions<Message, Log> {
+    fun nodeType(
+        cls: Class<out Node<Message>>,
+        numberOfInstances: Int,
+        canFail: Boolean = true
+    ): DistributedOptions<Message, Log> {
         this.testClasses[cls] = numberOfInstances to canFail
         return this
     }

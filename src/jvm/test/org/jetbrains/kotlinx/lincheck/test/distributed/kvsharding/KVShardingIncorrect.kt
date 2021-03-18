@@ -21,20 +21,14 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.RecoveryMode
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.junit.Test
-import java.util.concurrent.ThreadLocalRandom
 
 sealed class KVMessage(val id: Int, val isRequest: Boolean)
 class GetRequest(val key: String, id: Int) : KVMessage(id, true) {
@@ -55,41 +49,45 @@ class PutResponse(val previousValue: String?, id: Int) : KVMessage(id, false) {
 
 object Recover : KVMessage(0, true)
 
-data class KVEntry(val key: String, val value: String)
+sealed class Log
+data class KVLog(val request : PutRequest, val prev : String?) : Log()
+data class OpId(val id: Int) : Log()
 
 
-class Shard(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
+
+class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
     private var opId = 0
-    private val semaphore = Semaphore(1, 1)
+    private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null
-    private var appliedOperations = Array(env.numberOfNodes) {
-        mutableMapOf<Int, KVMessage>()
-    }
 
     private fun getNodeForKey(key: String) =
         ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
 
-    private fun saveToLog(key: String, value: String): String? {
+    private fun saveToLog(request : PutRequest): String? {
         val log = env.log
-        val index = log.indexOfFirst { it is KVLogEntry && it.key == key }
-        return if (index == -1) {
-            log.add(KVLogEntry(key, value))
+        val present = log.lastOrNull { it is KVLog && it.request === request }
+        if (present != null) {
+            return (present as KVLog).prev
+        }
+        val index = log.indexOfLast { it is KVLog && it.request.key == request.key}
+        val prev = if (index == -1) {
             null
         } else {
-            val res = (log[index] as KVLogEntry).value
-            log[index] = KVLogEntry(key, value)
+            val res = (log[index] as KVLog).request.value
             res
         }
+        log.add(KVLog(request, prev))
+        return prev
     }
 
     private fun getFromLog(key: String): String? {
         val log = env.log
-        val index = log.indexOfFirst { it is KVLogEntry && it.key == key }
+        val index = log.indexOfLast { it is KVLog && it.request.key == key }
         return if (index == -1) {
             null
         } else {
-            (log[index] as KVLogEntry).value
+            (log[index] as KVLog).request.value
         }
     }
 
@@ -98,12 +96,12 @@ class Shard(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
         logMessage(LogLevel.ALL_EVENTS) {
             "[${env.nodeId}]: Put $key $value"
         }
-        env.log.add(OpIdEntry(++opId))
+        env.log.add(OpId(++opId))
         val node = getNodeForKey(key)
-        if (node == env.nodeId) {
-            return saveToLog(key, value)
-        }
         val request = PutRequest(key, value, opId)
+        if (node == env.nodeId) {
+            return saveToLog(request)
+        }
         return (send(request, node) as PutResponse).previousValue
     }
 
@@ -112,7 +110,7 @@ class Shard(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
         delegate = receiver
         while (true) {
             env.send(request, receiver)
-            semaphore.acquire()
+            semaphore.await()
             logMessage(LogLevel.ALL_EVENTS) {
                 "[${env.nodeId}]: After semaphore acquire"
             }
@@ -123,7 +121,7 @@ class Shard(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
     }
 
     override suspend fun recover() {
-        val id = env.log.filterIsInstance(OpIdEntry::class.java).lastOrNull()?.id ?: -1
+        val id = env.log.filterIsInstance(OpId::class.java).lastOrNull()?.id ?: -1
         opId = id + 1
         logMessage(LogLevel.ALL_EVENTS) {
             "[${env.nodeId}]: Recover, should send messages"
@@ -136,7 +134,7 @@ class Shard(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
         logMessage(LogLevel.ALL_EVENTS) {
             "[${env.nodeId}]: Get $key"
         }
-        env.log.add(OpIdEntry(++opId))
+        env.log.add(OpId(++opId))
         val node = getNodeForKey(key)
         if (node == env.nodeId) {
             return getFromLog(key)
@@ -148,7 +146,7 @@ class Shard(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
     override suspend fun onMessage(message: KVMessage, sender: Int) {
         if (message is Recover) {
             if (sender == delegate) {
-                semaphore.release()
+                semaphore.signal()
             }
             return
         }
@@ -156,19 +154,15 @@ class Shard(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
             if (message.id != opId) return
             if (response == null) {
                 response = message
-                semaphore.release()
+                semaphore.signal()
             }
             return
         }
-        // If the node has failed, applied operations are lost, and we can
-        // put the same entry to log multiple times. This leads to incorrect results,
-        // as 'put' returns previous value.
-        val msg = appliedOperations[sender][message.id] ?: when (message) {
+        val msg = when (message) {
             is GetRequest -> GetResponse(getFromLog(message.key), message.id)
-            is PutRequest -> PutResponse(saveToLog(message.key, message.value), message.id)
+            is PutRequest -> PutResponse(saveToLog(message), message.id)
             else -> throw IllegalStateException()
         }
-        appliedOperations[sender][message.id] = msg
         env.send(msg, sender)
     }
 }
@@ -199,13 +193,24 @@ class KVShardingTest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() {
+    fun testMultipleStoresToLog() {
         LinChecker.check(
             ShardMultiplePutToLog::class
                 .java, DistributedOptions<KVMessage, KVLogEntry>().requireStateEquivalenceImplCheck
                 (false).sequentialSpecification(SingleNode::class.java).actorsPerThread(3).threads
                 (3).invocationsPerIteration(300).setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(1000).supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+        )
+    }
+
+    @Test
+    fun test() {
+        LinChecker.check(
+            Shard::class
+                .java, DistributedOptions<KVMessage, KVLogEntry>().requireStateEquivalenceImplCheck
+                (false).sequentialSpecification(SingleNode::class.java).actorsPerThread(3).threads
+                (3).invocationsPerIteration(1000).setMaxNumberOfFailedNodes { it / 2 }
+                .iterations(50).supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
         )
     }
 }

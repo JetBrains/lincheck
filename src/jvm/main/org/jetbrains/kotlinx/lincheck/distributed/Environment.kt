@@ -77,3 +77,4 @@ data class MessageReceivedEvent<Message>(
 data class LogEvent<Log>(val message: Log, val sender: Int, val clock: IntArray) : Event()
 data class ProcessFailureEvent(val processId: Int, val clock: IntArray) : Event()
 data class ProcessRecoveryEvent(val processId: Int, val clock: IntArray) : Event()
+data class OperationStartEvent(val processId: Int, val opId: Int, val clock: IntArray) : Event()

@@ -59,7 +59,6 @@ internal class EnvironmentImpl<Message, Log>(
             probability.nodeFailed() &&
             context.failureInfo.trySetFailed(nodeId)
         ) {
-            println("[$nodeId]: Failed on message $message to $receiver")
             throw CrashError()
         }
         context.incClock(nodeId)
