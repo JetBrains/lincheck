@@ -1,6 +1,7 @@
-package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
+package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
@@ -13,7 +14,6 @@ class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Comman
     private val commandResults = Array<HashMap<Int, Command>>(env.numberOfNodes) {
         HashMap()
     }
-    private val lock = ReentrantLock()
 
     override suspend fun onMessage(message: Command, sender: Int) {
         val id = message.id
@@ -21,18 +21,16 @@ class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Comman
             env.send(commandResults[sender][id]!!, sender)
             return
         }
-        val result: Command = lock.withLock {
-            try {
-                when (message) {
-                    is ContainsCommand -> ContainsResult(storage.containsKey(message.key), id)
-                    is GetCommand -> GetResult(storage[message.key], id)
-                    is PutCommand -> PutResult(storage.put(message.key, message.value), id)
-                    is RemoveCommand -> RemoveResult(storage.remove(message.key), id)
-                    else -> throw RuntimeException("Unexpected command")
-                }
-            } catch (e: Throwable) {
-                ErrorResult(e, id)
+        val result: Command = try {
+            when (message) {
+                is ContainsCommand -> ContainsResult(storage.containsKey(message.key), id)
+                is GetCommand -> GetResult(storage[message.key], id)
+                is PutCommand -> PutResult(storage.put(message.key, message.value), id)
+                is RemoveCommand -> RemoveResult(storage.remove(message.key), id)
+                else -> throw RuntimeException("Unexpected command")
             }
+        } catch (e: Throwable) {
+            ErrorResult(e, id)
         }
         commandResults[sender][id] = result
         env.send(result, receiver = sender)
@@ -122,6 +120,63 @@ class KVStorageServerTestClass {
                 .messageDuplications(true)
                 .networkReliable(false)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(300)
+                .iterations(100)
+        )
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testIncorrect() {
+        LinChecker.check(
+            KVStorageClientIncorrect::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .nodeType(KVStorageServerIncorrect::class.java, 1)
+                .messageDuplications(true)
+                .networkReliable(false)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(300)
+                .iterations(100)
+        )
+    }
+
+    @Test
+    fun testIncorrectShouldPass() {
+        LinChecker.check(
+            KVStorageClientIncorrect::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .nodeType(KVStorageServerIncorrect::class.java, 1)
+                .invocationsPerIteration(300)
+                .iterations(100)
+        )
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testIncorrectAsync() {
+        LinChecker.check(
+            KVStorageClientIncorrect::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .nodeType(KVStorageServerIncorrect::class.java, 1)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(300)
+                .iterations(100)
+        )
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testIncorrectNetworkUnreliable() {
+        LinChecker.check(
+            KVStorageClientIncorrect::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .nodeType(KVStorageServerIncorrect::class.java, 1)
+                .networkReliable(false)
                 .invocationsPerIteration(300)
                 .iterations(100)
         )

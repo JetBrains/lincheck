@@ -20,15 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.lang.Integer.max
 
@@ -62,7 +58,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     private var inCS = false // are we in critical section?
     private val req = IntArray(env.numberOfNodes) { inf } // time of last REQ message
     private val ok = IntArray(env.numberOfNodes) // time of last OK message
-    private val signal = Semaphore(1, 1)
+    private val signal = Signal()
 
     override suspend fun onMessage(message: MutexMessage, sender: Int) {
         val time = message.msgTime
@@ -94,18 +90,12 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
             return
         }
         for (i in 0 until env.numberOfNodes) {
-            if (i == env.nodeId) {
-                continue
-            }
-            if (req[i] < myReqTime || req[i] == myReqTime && i < env.nodeId) {
-                return
-            }
-            if (ok[i] <= myReqTime) {
-                return
-            }
+            if (i == env.nodeId) continue
+            if (req[i] < myReqTime || req[i] == myReqTime && i < env.nodeId) return
+            if (ok[i] <= myReqTime) return
         }
         inCS = true
-        signal.release()
+        signal.signal()
     }
 
     @Operation
@@ -119,7 +109,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         if (env.numberOfNodes == 1) {
             inCS = true
         }
-        signal.acquire()
+        signal.await()
         val res = ++counter
         unlock()
         return res
@@ -144,22 +134,29 @@ class LamportMutexTest {
     @Test
     fun testSimple() {
         LinChecker.check(
-            LamportMutex::class
-                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(Counter::class.java).threads
-                (3).messageOrder(MessageOrder.FIFO).actorsPerThread(2)
-                .invocationsPerIteration(1000).iterations(30)
+            LamportMutex::class.java,
+            DistributedOptions<MutexMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Counter::class.java)
+                .threads(3)
+                .messageOrder(MessageOrder.FIFO)
+                .actorsPerThread(2)
+                .invocationsPerIteration(1000)
+                .iterations(30)
         )
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(
-            LamportMutex::class
-                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(Counter::class.java).threads
-                (3).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(30).iterations(1000)
+            LamportMutex::class.java,
+            DistributedOptions<MutexMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Counter::class.java)
+                .threads(3)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(30)
+                .iterations(1000)
         )
     }
 }

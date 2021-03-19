@@ -17,7 +17,7 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-/*
+
 package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
 import kotlinx.atomicfu.atomic
@@ -28,13 +28,14 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import java.util.concurrent.locks.ReentrantLock
 
 
 @OpGroupConfig(name = "observer", nonParallel = true)
 class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
     private val currentSum = atomic(100)
-    private val semaphore = Semaphore(1, 1)
+    private val semaphore = Signal()
     private var token = 0
     private val replies = Array<Reply?>(env.numberOfNodes) { null }
 
@@ -52,6 +53,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
             is Reply -> {
                 replies[sender] = message
             }
+            else -> throw IllegalArgumentException("Unexpected message")
         }
         checkAllRepliesReceived()
     }
@@ -60,8 +62,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     private fun checkAllRepliesReceived() {
         if (replies.filterNotNull().size == env.numberOfNodes - 1) {
             gotSnapshot = true
-            semaphore.release()
-            //println("[${env.nodeId}]: Here $gotSnapshot")
+            semaphore.signal()
         }
     }
 
@@ -81,37 +82,18 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     }
 
     @Operation(group = "observer")
-    fun snapshot(): Int {
-        //println("[${env.nodeId}]: Start snapshot")
-
-        lock.withLock {
-            val state = currentSum.value
-            //env.sendLocal(CurState(state))
-            val marker = Marker(env.nodeId, token++)
-            broadcast(marker)
-            while (!gotSnapshot) {
-                // println("[${env.nodeId}]: Sleep")
-                condition.await()
-                // println("[${env.nodeId}]: Woke up")
-            }
-            val res = replies.filterNotNull().map { it as Reply }.map { it.state }.sum() + state
-            //println("[${env.nodeId}]: Made snapshot $res")
-            gotSnapshot = false
-            println("Res is $res")
-
-            replies.fill(null)
-            return res / env.numberOfNodes + res % env.numberOfNodes
+    suspend fun snapshot(): Int {
+        val state = currentSum.value
+        val marker = Marker(env.nodeId, token++)
+        env.broadcast(marker)
+        while (!gotSnapshot) {
+            semaphore.await()
         }
-    }
+        val res = replies.filterNotNull().map { it as Reply }.map { it.state }.sum() + state
+        gotSnapshot = false
+        println("Res is $res")
 
-    private fun broadcast(msg: Message) {
-        for (i in 0 until env.numberOfNodes) {
-            if (i == env.nodeId) {
-                continue
-            }
-            env.send(msg, i)
-        }
+        replies.fill(null)
+        return res / env.numberOfNodes + res % env.numberOfNodes
     }
 }
-
-*/

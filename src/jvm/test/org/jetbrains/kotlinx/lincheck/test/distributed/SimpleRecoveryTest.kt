@@ -47,11 +47,16 @@ class SmokeTest {
     @Test
     fun test() {
         LinChecker.check(
-            Smoke::class
-                .java, DistributedOptions<Int, Unit>().requireStateEquivalenceImplCheck
-                (false).actorsPerThread(2).threads
-                (3).invocationsPerIteration(300).setMaxNumberOfFailedNodes { it / 2 }
-                .iterations(100).supportRecovery(RecoveryMode.ALL_NODES_RECOVER).verifier(EpsilonVerifier::class.java)
+            Smoke::class.java,
+            DistributedOptions<Int, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .actorsPerThread(2)
+                .threads(3)
+                .invocationsPerIteration(300)
+                .setMaxNumberOfFailedNodes { it / 2 }
+                .iterations(100)
+                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .verifier(EpsilonVerifier::class.java)
         )
     }
 }

@@ -32,17 +32,18 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.junit.Test
 
 
-class OptimisticMutexIncorrect(private val env : Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
     companion object {
         @Volatile
         private var optimisticIncorrect = 0
     }
+
     private val requested = BooleanArray(env.numberOfNodes)
     private var inCS = false
     private val semaphore = Semaphore(1, 1)
 
-    override suspend fun onMessage(message: MutexMessage, sender : Int) {
-        when(message) {
+    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+        when (message) {
             is Req -> {
                 requested[sender] = true
             }
@@ -67,7 +68,7 @@ class OptimisticMutexIncorrect(private val env : Environment<MutexMessage, Unit>
     }
 
     @Operation
-    suspend fun lock() : Int {
+    suspend fun lock(): Int {
         check(!requested[env.nodeId])
         requested[env.nodeId] = true
         env.broadcast(Req(0, 0))
@@ -95,10 +96,15 @@ class OptimisticMutexIncorrect(private val env : Environment<MutexMessage, Unit>
 class OptimisticMutexIncorrectTest {
     @Test(expected = LincheckAssertionError::class)
     fun testSimple() {
-        LinChecker.check(OptimisticMutexIncorrect::class
-                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-        (false).sequentialSpecification(Counter::class.java).threads
-        (5).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(100).iterations(1000))
+        LinChecker.check(
+            OptimisticMutexIncorrect::class.java,
+            DistributedOptions<MutexMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Counter::class.java)
+                .threads(3)
+                .messageOrder(MessageOrder.FIFO)
+                .invocationsPerIteration(100)
+                .iterations(1000)
+        )
     }
 }

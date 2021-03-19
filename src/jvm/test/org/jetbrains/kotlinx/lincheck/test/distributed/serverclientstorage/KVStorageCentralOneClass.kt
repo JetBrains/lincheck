@@ -1,13 +1,10 @@
-package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
+package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
 
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
-import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.junit.Test
 import java.util.*
 
@@ -138,82 +135,62 @@ class SingleNode {
 
 class KVStorageCentralTestClass {
     @Test
-    fun testSimple() {
+    fun testNoFifo() {
         LinChecker.check(
-            KVStorageCentralSimple::class
-                .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(SingleNode::class.java).threads
-                (2).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(100).iterations(500)
+            KVStorageCentralSimple::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .threads(2)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(100)
+                .iterations(500)
         )
     }
 
     @Test
     fun testFull() {
         LinChecker.check(
-            KVStorageCentralSimple::class
-                .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(SingleNode::class.java).threads
-                (2).messageDuplications(true).messageOrder(MessageOrder.ASYNCHRONOUS).networkReliable(false)
-                .invocationsPerIteration(300).iterations(100)
+            KVStorageCentralSimple::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .threads(2)
+                .messageDuplications(true)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .networkReliable(false)
+                .invocationsPerIteration(300)
+                .iterations(100)
         )
     }
 
     @Test
     fun testNetworkReliability() {
         LinChecker.check(
-            KVStorageCentralSimple::class
-                .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(SingleNode::class.java).threads
-                (2).messageOrder(MessageOrder.FIFO).networkReliable(false)
-                .invocationsPerIteration(300).iterations(100)
+            KVStorageCentralSimple::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .threads(2)
+                .messageOrder(MessageOrder.FIFO)
+                .networkReliable(false)
+                .invocationsPerIteration(300)
+                .iterations(100)
         )
     }
 
     @Test
     fun testNetworkReliabilitySync() {
         LinChecker.check(
-            KVStorageCentralSimple::class
-                .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(SingleNode::class.java).threads
-                (2).messageOrder(MessageOrder.SYNCHRONOUS).networkReliable(false)
-                .invocationsPerIteration(300).iterations(100)
+            KVStorageCentralSimple::class.java,
+            DistributedOptions<Command, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .threads(2)
+                .messageOrder(MessageOrder.SYNCHRONOUS)
+                .networkReliable(false)
+                .invocationsPerIteration(300)
+                .iterations(100)
         )
     }
-
-    /* @Test
-     fun testIncorrectShouldPass() {
-         LinChecker.check(KVStorageIncorrect::class
-             .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-             (false).sequentialSpecification(SingleNode::class.java).messageOrder(MessageOrder.SYNCHRONOUS).threads
-             (2).invocationsPerIteration(100).iterations(1000))
-         println("Get $cntGet, null $cntNullGet")
-     }
-
-     @Test(expected = LincheckAssertionError::class)
-     fun testIncorrect() {
-         LinChecker.check(KVStorageIncorrect::class
-                 .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-         (false).sequentialSpecification(SingleNode::class.java).threads
-         (2).messageDuplications(true).networkReliable(false)
-                 .invocationsPerIteration(100).iterations(1000))
-     }
-
-     @Test(expected = LincheckAssertionError::class)
-     fun testIncorrectAsynchronous() {
-         LinChecker.check(KVStorageIncorrect::class
-                 .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-         (false).sequentialSpecification(SingleNode::class.java).threads
-         (2).messageOrder(MessageOrder.ASYNCHRONOUS)
-                 .invocationsPerIteration(100).iterations(1000))
-     }
-
-     @Test(expected = LincheckAssertionError::class)
-     fun testIncorrectOnlyDropMessages() {
-         LinChecker.check(KVStorageIncorrect::class
-                 .java, DistributedOptions<Command, Unit>().requireStateEquivalenceImplCheck
-         (false).sequentialSpecification(SingleNode::class.java).threads
-         (2).networkReliable(false)
-                 .invocationsPerIteration(100).iterations(1000))
-     }*/
 }

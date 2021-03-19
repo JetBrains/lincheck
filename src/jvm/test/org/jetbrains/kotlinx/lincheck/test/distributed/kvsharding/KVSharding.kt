@@ -186,32 +186,62 @@ class KVShardingTest {
     @Test
     fun testNoFailures() {
         LinChecker.check(
-            ShardMultiplePutToLog::class
-                .java, DistributedOptions<KVMessage, KVLogEntry>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(SingleNode::class.java).threads
-                (3).invocationsPerIteration(30).iterations(1000)
+            ShardMultiplePutToLog::class.java,
+            DistributedOptions<KVMessage, KVLogEntry>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .threads(3)
+                .invocationsPerIteration(1000)
+                .iterations(30)
         )
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testMultipleStoresToLog() {
         LinChecker.check(
-            ShardMultiplePutToLog::class
-                .java, DistributedOptions<KVMessage, KVLogEntry>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(SingleNode::class.java).actorsPerThread(3).threads
-                (3).invocationsPerIteration(300).setMaxNumberOfFailedNodes { it / 2 }
-                .iterations(1000).supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+            ShardMultiplePutToLog::class.java,
+            DistributedOptions<KVMessage, KVLogEntry>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .actorsPerThread(3)
+                .threads(3)
+                .invocationsPerIteration(1000)
+                .setMaxNumberOfFailedNodes { it / 2 }
+                .iterations(30)
+                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
         )
     }
 
     @Test
     fun test() {
         LinChecker.check(
-            Shard::class
-                .java, DistributedOptions<KVMessage, KVLogEntry>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(SingleNode::class.java).actorsPerThread(3).threads
-                (3).invocationsPerIteration(1000).setMaxNumberOfFailedNodes { it / 2 }
-                .iterations(50).supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+            Shard::class.java,
+            DistributedOptions<KVMessage, KVLogEntry>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .actorsPerThread(3)
+                .threads(3)
+                .invocationsPerIteration(1000)
+                .setMaxNumberOfFailedNodes { it / 2 }
+                .iterations(30)
+                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+        )
+    }
+
+    @Test
+    fun testFifo() {
+        LinChecker.check(
+            Shard::class.java,
+            DistributedOptions<KVMessage, KVLogEntry>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(SingleNode::class.java)
+                .actorsPerThread(3)
+                .threads(3)
+                .invocationsPerIteration(1000)
+                .setMaxNumberOfFailedNodes { it / 2 }
+                .iterations(30)
+                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .messageOrder(MessageOrder.FIFO)
         )
     }
 }

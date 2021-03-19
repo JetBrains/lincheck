@@ -58,14 +58,9 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
             env.log.forEach { m -> check(env.sentMessages().map { it.message }.contains(m)) }
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
-        //println(env.correctProcesses())
         val logs = env.getLogs()
-        try {
-            env.log.forEach { m ->
-                env.correctProcesses().forEach { check(logs[it].contains(m)) { m } }
-            }
-        } catch (e: IllegalStateException) {
-            throw e
+        env.log.forEach { m ->
+            env.correctProcesses().forEach { check(logs[it].contains(m)) { m } }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
@@ -124,11 +119,15 @@ class BroadcastTest {
     @Test
     fun test() {
         LinChecker.check(
-            Peer::class
-                .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
-                (false).threads
-                (3).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(RecoveryMode.NO_RECOVERIES)
-                .invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
+            Peer::class.java,
+            DistributedOptions<Message, Message>()
+                .requireStateEquivalenceImplCheck(false)
+                .threads(3)
+                .setMaxNumberOfFailedNodes { it / 2 }
+                .supportRecovery(RecoveryMode.NO_RECOVERIES)
+                .invocationsPerIteration(300)
+                .iterations(100)
+                .verifier(EpsilonVerifier::class.java)
                 .messageOrder(MessageOrder.SYNCHRONOUS)
         )
     }
@@ -136,22 +135,29 @@ class BroadcastTest {
     @Test
     fun testNoFailures() {
         LinChecker.check(
-            Peer::class
-                .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
-                (false).actorsPerThread(2).threads
-                (3).invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
+            PeerIncorrect::class.java,
+            DistributedOptions<Message, Message>()
+                .requireStateEquivalenceImplCheck(false)
+                .actorsPerThread(2)
+                .threads(5)
+                .invocationsPerIteration(300)
+                .iterations(100)
+                .verifier(EpsilonVerifier::class.java)
         )
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() {
         LinChecker.check(
-            PeerIncorrect::class
-                .java, DistributedOptions<Message, Message>().requireStateEquivalenceImplCheck
-                (false).threads
-                (5).setMaxNumberOfFailedNodes { it / 2 }.supportRecovery(RecoveryMode.NO_RECOVERIES)
-                .invocationsPerIteration(300).iterations(100).verifier(EpsilonVerifier::class.java)
-                .messageOrder(MessageOrder.SYNCHRONOUS)
+            PeerIncorrect::class.java,
+            DistributedOptions<Message, Message>()
+                .requireStateEquivalenceImplCheck(false)
+                .threads(3)
+                .setMaxNumberOfFailedNodes { it / 2 }
+                .supportRecovery(RecoveryMode.NO_RECOVERIES)
+                .invocationsPerIteration(300)
+                .iterations(100)
+                .verifier(EpsilonVerifier::class.java)
         )
     }
 }

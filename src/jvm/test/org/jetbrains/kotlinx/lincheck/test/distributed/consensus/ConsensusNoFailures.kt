@@ -92,11 +92,15 @@ class ConsensusNaiveTest {
     @Test
     fun test() {
         LinChecker.check(
-            ConsensusNoFailures::class
-                .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(Checker::class.java).threads
-                (3).actorsPerThread(3).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(30).iterations(1000)
+            ConsensusNoFailures::class.java,
+            DistributedOptions<Message, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Checker::class.java)
+                .threads(3)
+                .actorsPerThread(3)
+                .messageOrder(MessageOrder.FIFO)
+                .invocationsPerIteration(30)
+                .iterations(1000)
         )
     }
 }

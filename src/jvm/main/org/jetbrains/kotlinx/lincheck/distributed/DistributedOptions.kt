@@ -20,7 +20,7 @@ enum class RecoveryMode {
 class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log>,
         DistributedCTestConfiguration<Message, Log>>() {
     companion object {
-        const val DEFAULT_TIMEOUT_MS: Long = 10000
+        const val DEFAULT_TIMEOUT_MS: Long = 5000
     }
 
     private var isNetworkReliable: Boolean = true

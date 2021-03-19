@@ -169,23 +169,29 @@ class SnapshotTest {
     @Test
     fun testSimple() {
         LinChecker.check(
-            ChandyLamport::class
-                .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(MockSnapshot::class.java).threads
-                (3).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(30).iterations(1000)
+            ChandyLamport::class.java,
+            DistributedOptions<Message, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(MockSnapshot::class.java)
+                .threads(3)
+                .messageOrder(MessageOrder.FIFO)
+                .invocationsPerIteration(30)
+                .iterations(1000)
         )
     }
-/*
+
     @Test(expected = LincheckAssertionError::class)
     fun testNaiveIncorrect() {
         LinChecker.check(
-            NaiveSnapshotIncorrect::class
-                .java, DistributedOptions<Message, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(MockSnapshot::class.java).threads
-                (3).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(50).iterations(1000)
+            NaiveSnapshotIncorrect::class.java,
+            DistributedOptions<Message, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(MockSnapshot::class.java)
+                .threads(3)
+                .actorsPerThread(3)
+                .messageOrder(MessageOrder.FIFO)
+                .invocationsPerIteration(30)
+                .iterations(1000)
         )
-    }*/
-
+    }
 }

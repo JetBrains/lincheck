@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage.*
+import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.*
 import org.junit.Test
 import java.lang.IllegalArgumentException
 
@@ -62,11 +62,15 @@ class MultipleNodeTypesTest {
     @Test
     fun test() {
         LinChecker.check(
-            Pinger::class
-                .java, DistributedOptions<PingPongMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).threads(2).nodeType(Ponger::class.java, 1)
-                .invocationsPerIteration(100).iterations(100)
-                .sequentialSpecification(PingPongMock::class.java).actorsPerThread(2)
+            Pinger::class.java,
+            DistributedOptions<PingPongMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .threads(2)
+                .nodeType(Ponger::class.java, 1)
+                .invocationsPerIteration(100)
+                .iterations(100)
+                .sequentialSpecification(PingPongMock::class.java)
+                .actorsPerThread(2)
         )
     }
 }

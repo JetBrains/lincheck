@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
+package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
 sealed class Command(val id : Int)
 

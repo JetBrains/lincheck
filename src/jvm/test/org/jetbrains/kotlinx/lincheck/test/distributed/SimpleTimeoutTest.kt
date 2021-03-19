@@ -18,14 +18,13 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed.kvstorage
+package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.junit.Test
 
@@ -70,11 +69,15 @@ class SimpleTimeoutTest {
     @Test
     fun test() {
         LinChecker.check(
-            PingPongNode::class
-                .java, DistributedOptions<PingPongMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).threads(2).networkReliable(false)
-                .invocationsPerIteration(100).iterations(100)
-                .sequentialSpecification(PingPongMock::class.java).actorsPerThread(2)
+            PingPongNode::class.java,
+            DistributedOptions<PingPongMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .threads(2)
+                .networkReliable(false)
+                .invocationsPerIteration(100)
+                .iterations(100)
+                .sequentialSpecification(PingPongMock::class.java)
+                .actorsPerThread(2)
         )
     }
 }

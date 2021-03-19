@@ -123,21 +123,28 @@ class SyncCoordinateMutexTest {
     @Test
     fun testSimple() {
         LinChecker.check(
-            SyncCoordinateMutex::class
-                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(Counter::class.java).threads
-                (3).messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(300).iterations(100)
+            SyncCoordinateMutex::class.java,
+            DistributedOptions<MutexMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Counter::class.java)
+                .threads(3)
+                .messageOrder(MessageOrder.FIFO)
+                .invocationsPerIteration(300)
+                .iterations(100)
         )
     }
 
     @Test
     fun testNoFifo() {
         LinChecker.check(
-            SyncCoordinateMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(Counter::class.java).threads
-                (5).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(300).iterations(100)
+            SyncCoordinateMutex::class.java,
+            DistributedOptions<MutexMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Counter::class.java)
+                .threads(5)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(300)
+                .iterations(100)
         )
     }
 }

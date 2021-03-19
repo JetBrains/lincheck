@@ -30,12 +30,12 @@ import org.junit.Test
 import java.util.concurrent.locks.ReentrantLock
 
 
-
 class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
     companion object {
         @Volatile
         private var cnt = 0
     }
+
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
@@ -124,21 +124,29 @@ class RickartAgrawalaMutexTest {
     @Test
     fun testSimple() {
         LinChecker.check(
-            RickartAgrawalaMutex::class
-                .java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(Counter::class.java).threads
-                (3).messageOrder(MessageOrder.FIFO).actorsPerThread(2)
-                .invocationsPerIteration(30).iterations(1000)
+            RickartAgrawalaMutex::class.java,
+            DistributedOptions<MutexMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Counter::class.java)
+                .threads(3)
+                .messageOrder(MessageOrder.FIFO)
+                .actorsPerThread(2)
+                .invocationsPerIteration(30)
+                .iterations(1000)
         )
     }
 
     @Test
     fun testNoFifo() {
         LinChecker.check(
-            RickartAgrawalaMutex::class.java, DistributedOptions<MutexMessage, Unit>().requireStateEquivalenceImplCheck
-                (false).sequentialSpecification(Counter::class.java).threads
-                (5).messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(30).iterations(1000)
+            RickartAgrawalaMutex::class.java,
+            DistributedOptions<MutexMessage, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(Counter::class.java)
+                .threads(5)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(30)
+                .iterations(1000)
         )
     }
 }
