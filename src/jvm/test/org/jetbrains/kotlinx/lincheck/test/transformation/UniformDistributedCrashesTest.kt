@@ -39,6 +39,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 
@@ -114,28 +117,29 @@ class UniformDistributedCrashesTest {
         val random = Random(42)
         repeat(100) {
             val scenario = List(random.nextInt(1, 10)) { random.nextInt(1, 20) }
-            val expected = random.nextInt(1, 1 + scenario.sum() / scenario.maxOrNull()!!)
+            val expected = random.nextDouble(0.99, scenario.sum().toDouble() / scenario.maxOrNull()!!)
             testScenarioUniformDistribution(expected, scenario, random)
         }
     }
 
-    private fun testScenarioUniformDistribution(expectedCrashes: Int, actorLengths: List<Int>, random: Random) {
+    private fun testScenarioUniformDistribution(expectedCrashes: Double, actorLengths: List<Int>, random: Random) {
         val n = actorLengths.size
         val iterations = 1_000_000
         val total = actorLengths.sum()
         val results = IntArray(total)
-        var sumCrashes = 0
+        val crashes = mutableListOf<Int>()
         repeat(iterations) {
             var i = 0
             var j = 0
             var passed = 0
+            var c = 0
             while (i < n) {
-                if (random.nextDouble() < expectedCrashes.toDouble() / (total - j * expectedCrashes)) {
+                if (random.nextDouble() < expectedCrashes / (total - j * expectedCrashes)) {
                     results[passed]++
                     passed += actorLengths[i] - j
                     i++
                     j = 0
-                    sumCrashes++
+                    c++
                 } else {
                     j++
                     passed++
@@ -145,13 +149,16 @@ class UniformDistributedCrashesTest {
                     }
                 }
             }
+            crashes.add(c)
         }
+        val averageCrashesPerScenario = crashes.average()
+        val d = crashes.sumByDouble { x -> (x - averageCrashesPerScenario).pow(2) } / (iterations - 1)
+        println("sqrt(D(#crashes)) = $d")
+        assertTrue(abs(averageCrashesPerScenario - expectedCrashes) / expectedCrashes < 0.05)
         val expected = results.sum() / total.toDouble()
         results.forEach { c ->
             val deviation = (c - expected) / expected
             assertTrue(abs(deviation) < 0.05)
         }
-        val averageCrashes = sumCrashes.toDouble() / iterations
-        assertTrue(abs(averageCrashes - expectedCrashes) / expectedCrashes < 0.05)
     }
 }
