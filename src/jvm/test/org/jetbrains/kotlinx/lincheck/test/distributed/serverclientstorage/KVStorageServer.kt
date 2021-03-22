@@ -110,7 +110,7 @@ class KVStorageServerTestClass {
     }
 
     @Test
-    fun testFull() {
+    fun test() {
         LinChecker.check(
             KVStorageClient::class.java,
             DistributedOptions<Command, Unit>()
