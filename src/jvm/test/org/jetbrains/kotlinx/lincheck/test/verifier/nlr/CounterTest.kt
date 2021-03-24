@@ -72,7 +72,7 @@ internal class SequentialCounter : VerifierState(), Counter {
     override fun extractState() = value
 }
 
-private class NRLCounter @Recoverable constructor(threadsCount: Int) : VerifierState(), Counter {
+private class NRLCounter(threadsCount: Int) : VerifierState(), Counter {
     private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
@@ -139,7 +139,7 @@ internal class CounterFailingTest4 : CounterFailingTest() {
     override fun createFailingCounter() = NRLFailingCounter4(THREADS_NUMBER + 2)
 }
 
-internal class NRLFailingCounter1 @Recoverable constructor(threadsCount: Int) : VerifierState(), Counter {
+internal class NRLFailingCounter1(threadsCount: Int) : VerifierState(), Counter {
     private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
@@ -169,7 +169,7 @@ internal class NRLFailingCounter1 @Recoverable constructor(threadsCount: Int) : 
     }
 }
 
-internal class NRLFailingCounter2 @Recoverable constructor(threadsCount: Int) : VerifierState(), Counter {
+internal class NRLFailingCounter2(threadsCount: Int) : VerifierState(), Counter {
     private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
@@ -199,7 +199,7 @@ internal class NRLFailingCounter2 @Recoverable constructor(threadsCount: Int) : 
     }
 }
 
-internal class NRLFailingCounter3 @Recoverable constructor(threadsCount: Int) : VerifierState(), Counter {
+internal class NRLFailingCounter3(threadsCount: Int) : VerifierState(), Counter {
     private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
@@ -230,7 +230,7 @@ internal class NRLFailingCounter3 @Recoverable constructor(threadsCount: Int) : 
     }
 }
 
-internal class NRLFailingCounter4 @Recoverable constructor(threadsCount: Int) : VerifierState(), Counter {
+internal class NRLFailingCounter4(threadsCount: Int) : VerifierState(), Counter {
     private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }

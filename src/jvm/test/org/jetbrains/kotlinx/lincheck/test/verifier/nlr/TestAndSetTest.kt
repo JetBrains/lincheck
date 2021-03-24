@@ -36,12 +36,17 @@ import java.util.concurrent.atomic.AtomicInteger
 
 private const val THREADS_NUMBER = 5
 
+interface TAS {
+    fun testAndSet(threadId: Int): Int
+}
+
 @StressCTest(
     sequentialSpecification = SequentialTestAndSet::class,
     threads = THREADS_NUMBER,
     recover = Recover.NRL,
     actorsBefore = 0,
-    actorsPerThread = 1
+    actorsPerThread = 1,
+    minimizeFailedScenario = false
 )
 internal class TestAndSetTest {
     private val tas = NRLTestAndSet(THREADS_NUMBER + 2)
@@ -70,60 +75,53 @@ internal class LinearizableTestAndSet : VerifierState() {
 /**
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
-class NRLTestAndSet(private val threadsCount: Int) : VerifierState() {
-    private val R = MutableList(threadsCount) { nonVolatile(0) }
-    private val Response = MutableList(threadsCount) { nonVolatile(0) }
+internal class NRLTestAndSet(private val threadsCount: Int) : VerifierState(), TAS {
+    private val r = MutableList(threadsCount) { nonVolatile(0) }
+    private val response = MutableList(threadsCount) { nonVolatile(0) }
+    private val winner = nonVolatile(-1)
+    private val doorway = nonVolatile(true)
+    private val tas = nonVolatile(0)
 
-    @Volatile
-    private var Winner = -1
-
-    @Volatile
-    private var Doorway = true
-
-    // Volatile memory
-    private val tas = LinearizableTestAndSet()
-
-    override fun extractState() = tas.extractState()
+    override fun extractState() = tas.value
 
     @Recoverable(recoverMethod = "testAndSetRecover")
-    fun testAndSet(p: Int): Int {
-        R[p].setAndFlush(value = 1)
+    override fun testAndSet(p: Int): Int {
+        r[p].setAndFlush(1)
         val returnValue: Int
-        if (!Doorway) {
+        if (!doorway.value) {
             returnValue = 1
         } else {
-            R[p].setAndFlush(value = 2)
-            Doorway = false
-            returnValue = tas.testAndSet()
+            r[p].setAndFlush(2)
+            doorway.setAndFlush(false)
+            returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
             if (returnValue == 0) {
-                Winner = p
+                winner.setAndFlush(p)
             }
         }
-        Response[p].setAndFlush(value = returnValue)
-        R[p].setAndFlush(value = 3)
+        response[p].setAndFlush(returnValue)
+        r[p].setAndFlush(3)
         return returnValue
     }
 
     private fun testAndSetRecover(p: Int): Int {
-        if (R[p].value < 2) return testAndSet(p)
-        if (R[p].value == 3) return Response[p].value
-        if (Winner == -1) {
-            Doorway = false
-            R[p].setAndFlush(value = 4)
-            tas.testAndSet()
+        if (r[p].value < 2) return testAndSet(p)
+        if (r[p].value == 3) return response[p].value
+        if (winner.value == -1) {
+            doorway.setAndFlush(false)
+            r[p].setAndFlush(4)
             for (i in 0 until p) {
-                wailUntil { R[i].value.let { it == 0 || it == 3 } }
+                wailUntil { r[i].value.let { it == 0 || it == 3 } }
             }
             for (i in p + 1 until threadsCount) {
-                wailUntil { R[i].value.let { it == 0 || it > 2 } }
+                wailUntil { r[i].value.let { it == 0 || it > 2 } }
             }
-            if (Winner == -1) {
-                Winner = p
+            if (winner.value == -1) {
+                winner.setAndFlush(p)
             }
         }
-        val returnValue = if (Winner == p) 0 else 1
-        Response[p].setAndFlush(value = returnValue)
-        R[p].setAndFlush(value = 3)
+        val returnValue = if (winner.value == p) 0 else 1
+        response[p].setAndFlush(returnValue)
+        r[p].setAndFlush(3)
         return returnValue
     }
 
