@@ -39,9 +39,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.pow
-import kotlin.math.roundToInt
-import kotlin.math.sqrt
 import kotlin.random.Random
 
 
@@ -116,48 +115,72 @@ class UniformDistributedCrashesTest {
     fun testUniformDistribution() {
         val random = Random(42)
         repeat(100) {
-            val scenario = List(random.nextInt(1, 10)) { random.nextInt(1, 20) }
-            val expected = random.nextDouble(0.99, scenario.sum().toDouble() / scenario.maxOrNull()!!)
-            testScenarioUniformDistribution(expected, scenario, random)
+            val n = random.nextInt(1, 10)
+            val actors = List(n) { random.nextInt(1, 20) }
+            val recovery = List(n) { random.nextInt(0, 20) }
+            val maxE = (actors.sum() + recovery.sum()) / actors.maxOrNull()!!.toDouble()
+            val expected = random.nextDouble(0.99, maxE)
+            testScenarioUniformDistribution(expected, actors, recovery, random)
         }
     }
 
-    private fun testScenarioUniformDistribution(expectedCrashes: Double, actorLengths: List<Int>, random: Random) {
-        val n = actorLengths.size
+    private fun testScenarioUniformDistribution(
+        expectedCrashes: Double, actorLengths: List<Int>,
+        recoveryLengths: List<Int>, random: Random
+    ) {
+        val c = expectedCrashes / (actorLengths.sum() + recoveryLengths.sum())
+        val n = actorLengths.size + recoveryLengths.size
         val iterations = 1_000_000
-        val total = actorLengths.sum()
+        val total = actorLengths.sum() + recoveryLengths.sum()
         val results = IntArray(total)
         val crashes = mutableListOf<Int>()
         repeat(iterations) {
             var i = 0
             var j = 0
             var passed = 0
-            var c = 0
+            var ic = 0
             while (i < n) {
-                if (random.nextDouble() < expectedCrashes / (total - j * expectedCrashes)) {
+                val inActor = i and 1 == 0
+                if (inActor) {
+                    if (j == actorLengths[i / 2]) {
+                        passed += recoveryLengths[i / 2]
+                        i += 2
+                        j = 0
+                        continue
+                    }
+                } else {
+                    if (j == recoveryLengths[i / 2]) {
+                        i++
+                        j = 0
+                        continue
+                    }
+                }
+                val f = if (inActor) c else 1.0 / (actorLengths[i / 2] + recoveryLengths[i / 2])
+                val crash = random.nextDouble() < f / (1 - j * f)
+                if (crash) {
                     results[passed]++
-                    passed += actorLengths[i] - j
-                    i++
+                    if (inActor) {
+                        passed += actorLengths[i / 2] - j
+                        i++
+                    } else {
+                        passed -= j
+                    }
                     j = 0
-                    c++
+                    ic++
                 } else {
                     j++
                     passed++
-                    if (j == actorLengths[i]) {
-                        i++
-                        j = 0
-                    }
                 }
             }
-            crashes.add(c)
+            crashes.add(ic)
         }
         val averageCrashesPerScenario = crashes.average()
         val d = crashes.sumByDouble { x -> (x - averageCrashesPerScenario).pow(2) } / (iterations - 1)
-        println("sqrt(D(#crashes)) = $d")
+        println("sqrt(D) / E = ${d / expectedCrashes}")
         assertTrue(abs(averageCrashesPerScenario - expectedCrashes) / expectedCrashes < 0.05)
         val expected = results.sum() / total.toDouble()
-        results.forEach { c ->
-            val deviation = (c - expected) / expected
+        results.forEach { cr ->
+            val deviation = (cr - expected) / expected
             assertTrue(abs(deviation) < 0.05)
         }
     }
