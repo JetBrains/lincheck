@@ -25,20 +25,20 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-@OpGroupConfig(name = "write", nonParallel = true)
-@StressCTest(sequentialSpecification = Sequential::class, threads = 3)
+@StressCTest(sequentialSpecification = Sequential::class, threads = 3, recover = Recover.NRL_NO_CRASHES)
 internal class PersistentTest {
     private val x = nonVolatile(0)
 
     @Operation
     fun read() = x.value
 
-    @Operation(group = "write")
+    @Operation
     fun write(value: Int) {
         x.value = value
         x.flush()
