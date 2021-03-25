@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Ignore
 import org.junit.Test
 
 private const val THREADS_NUMBER = 3
@@ -47,7 +46,8 @@ internal interface Counter {
 @StressCTest(
     sequentialSpecification = SequentialCounter::class,
     threads = THREADS_NUMBER,
-    recover = Recover.NRL
+    recover = Recover.NRL,
+    minimizeFailedScenario = false
 )
 internal class CounterTest : Counter {
     private val counter = NRLCounter(THREADS_NUMBER + 2)
@@ -126,7 +126,7 @@ internal class CounterFailingTest1 : CounterFailingTest() {
     override fun createFailingCounter() = NRLFailingCounter1(THREADS_NUMBER + 2)
 }
 
-@Ignore("Can't find an error. To be fixed")
+// not reliably reproduced
 internal class CounterFailingTest2 : CounterFailingTest() {
     override fun createFailingCounter() = NRLFailingCounter2(THREADS_NUMBER + 2)
 }
