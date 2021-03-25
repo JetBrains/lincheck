@@ -27,13 +27,14 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
+import org.jetbrains.kotlinx.lincheck.nvm.CrashErrorImpl
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Ignore
 import org.junit.Test
+import kotlin.random.Random
 
 private const val THREADS_NUMBER = 5
 
@@ -114,8 +115,10 @@ internal class NRLTestAndSet(private val threadsCount: Int) : VerifierState(), T
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].value = returnValue
+        response[p].flush()
+        r[p].value = 3
+        r[p].flush()
         return returnValue
     }
 }
@@ -156,7 +159,6 @@ internal class TestAndSetFailingTest3 : TestAndSetFailingTest() {
     override fun createTAS() = NRLFailingTestAndSet3(THREADS_NUMBER + 2)
 }
 
-@Ignore("Can't find an error. To be fixed")
 internal class TestAndSetFailingTest4 : TestAndSetFailingTest() {
     override fun createTAS() = NRLFailingTestAndSet4(THREADS_NUMBER + 2)
 }
@@ -206,8 +208,10 @@ internal class NRLFailingTestAndSet1(private val threadsCount: Int) : VerifierSt
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].value = returnValue
+        response[p].flush()
+        r[p].value = 3
+        r[p].flush()
         return returnValue
     }
 }
@@ -257,8 +261,10 @@ internal class NRLFailingTestAndSet2(private val threadsCount: Int) : VerifierSt
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].value = returnValue
+        response[p].flush()
+        r[p].value = 3
+        r[p].flush()
         return returnValue
     }
 }
@@ -308,8 +314,10 @@ internal class NRLFailingTestAndSet3(private val threadsCount: Int) : VerifierSt
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].value = returnValue
+        response[p].flush()
+        r[p].value = 3
+        r[p].flush()
         return returnValue
     }
 }
@@ -359,8 +367,15 @@ internal class NRLFailingTestAndSet4(private val threadsCount: Int) : VerifierSt
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
-        // here should be response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].value = returnValue
+        // here should be response[p].flush()
+        r[p].value = 3
+        r[p].flush()
+        // TODO this workaround should be fixed by uniform distribution of crashes
+        if (Random.nextBoolean()) {
+            throw CrashErrorImpl()
+        }
+        // TODO add a possible crash in the and of method
         return returnValue
     }
 }
