@@ -99,6 +99,10 @@ internal class RecoverableParallelThreadsRunner(
     useClocks,
     recoverModel
 ) {
+    init {
+        Probability.reset()
+    }
+
     override fun needsTransformation() = true
     override fun createTransformer(cv: ClassVisitor) =
         recoverModel.createTransformer(super.createTransformer(cv), _testClass)

@@ -38,7 +38,7 @@ object Probability {
     private var randomSystemCrashProbability = 0.0f
 
     @Volatile
-    private var singleCrashProbability = 0.001f
+    private var singleCrashProbability = 0.0f
 
     @Volatile
     private var expectedCrashes = 0
@@ -76,6 +76,14 @@ object Probability {
         }
         updateSingleCrashProbability(actors)
         totalActors += actors.toLong()
+    }
+
+    fun reset() {
+        defaultCrashes = 0
+        minimizeCrashes = false
+        totalActors = 0L
+        totalPossibleCrashes.value = 0
+        singleCrashProbability = 0.0f
     }
 
     private fun updateSingleCrashProbability(actors: Int) {

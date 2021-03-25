@@ -155,12 +155,10 @@ internal class ReadWriteObjectFailingTest1 : ReadWriteObjectFailingTest() {
     override fun createRWO() = NRLFailingReadWriteObject1<Pair<Int, Int>>(THREADS_NUMBER + 2)
 }
 
-@Ignore("Can't find an error. To be fixed")
 internal class ReadWriteObjectFailingTest2 : ReadWriteObjectFailingTest() {
     override fun createRWO() = NRLFailingReadWriteObject2<Pair<Int, Int>>(THREADS_NUMBER + 2)
 }
 
-@Ignore("Can't find an error. To be fixed")
 internal class ReadWriteObjectFailingTest3 : ReadWriteObjectFailingTest() {
     override fun createRWO() = NRLFailingReadWriteObject3<Pair<Int, Int>>(THREADS_NUMBER + 2)
 }

@@ -142,7 +142,6 @@ internal class DurableMSQueue<T> : RecoverableQueue<T> {
             val h = head.value
             val next = h.next.value ?: break
             if (next.deleter.value == DEFAULT_DELETER) break
-            next.deleter.flush()
             head.compareAndSet(h, next)
         }
         while (true) {
@@ -267,18 +266,8 @@ internal class DurableMSQueueFailingTest5 : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue5<Int>()
 }
 
-@Ignore("Can't find an error. To be fixed")
 internal class DurableMSQueueFailingTest6 : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue6<Int>()
-}
-
-@Ignore("Can't find an error. To be fixed")
-internal class DurableMSQueueFailingTest7 : DurableMSQueueFailingTest() {
-    override val q = DurableMSFailingQueue7<Int>()
-}
-
-internal class DurableMSQueueFailingTest8 : DurableMSQueueFailingTest() {
-    override val q = DurableMSFailingQueue8<Int>()
 }
 
 internal class DurableMSFailingQueue1<T> : RecoverableQueue<T> {
@@ -473,6 +462,7 @@ internal class DurableMSFailingQueue3<T> : RecoverableQueue<T> {
                     return null
                 }
                 // here should be last.next.flush()
+                // could be reproduced if push sleeps after successful CAS before flush
                 tail.compareAndSet(last, nextNode)
             } else {
                 checkNotNull(nextNode)
@@ -660,160 +650,7 @@ internal class DurableMSFailingQueue5<T> : RecoverableQueue<T> {
     }
 }
 
-
 internal class DurableMSFailingQueue6<T> : RecoverableQueue<T> {
-    private val head: NonVolatileRef<QueueNode<T?>>
-    private val tail: NonVolatileRef<QueueNode<T?>>
-
-    init {
-        val dummy = QueueNode<T?>(v = null)
-        head = nonVolatile(dummy)
-        tail = nonVolatile(dummy)
-    }
-
-    override fun push(value: T) {
-        val newNode = QueueNode<T?>(v = value)
-        while (true) {
-            val last: QueueNode<T?> = tail.value
-            val nextNode: QueueNode<T?>? = last.next.value
-            if (last !== tail.value) continue
-            if (nextNode === null) {
-                if (last.next.compareAndSet(null, newNode)) {
-                    last.next.flush()
-                    tail.compareAndSet(last, newNode)
-                    return
-                }
-            } else {
-                last.next.flush()
-                tail.compareAndSet(last, nextNode)
-            }
-        }
-    }
-
-    override fun pop(p: Int): T? {
-        while (true) {
-            val first: QueueNode<T?> = head.value
-            val last: QueueNode<T?> = tail.value
-            val nextNode: QueueNode<T?>? = first.next.value
-            if (first !== head.value) continue
-            if (first === last) {
-                if (nextNode === null) {
-                    return null
-                }
-                last.next.flush()
-                tail.compareAndSet(last, nextNode)
-            } else {
-                checkNotNull(nextNode)
-                val currentValue: T = nextNode.v!!
-                if (nextNode.deleter.compareAndSet(DEFAULT_DELETER, p)) {
-                    nextNode.deleter.flush()
-                    head.compareAndSet(first, nextNode)
-                    return currentValue
-                } else {
-                    if (head.value === first) {
-                        nextNode.deleter.flush()
-                        head.compareAndSet(first, nextNode)
-                    }
-                }
-            }
-        }
-    }
-
-    override fun recover() {
-        while (true) {
-            val h = head.value
-            val next = h.next.value ?: break
-            if (next.deleter.value == DEFAULT_DELETER) break
-            // here should be next.deleter.flush()
-            head.compareAndSet(h, next)
-        }
-        while (true) {
-            val t = tail.value
-            val next = t.next.value ?: break
-            t.next.flush()
-            tail.compareAndSet(t, next)
-        }
-    }
-}
-
-
-internal class DurableMSFailingQueue7<T> : RecoverableQueue<T> {
-    private val head: NonVolatileRef<QueueNode<T?>>
-    private val tail: NonVolatileRef<QueueNode<T?>>
-
-    init {
-        val dummy = QueueNode<T?>(v = null)
-        head = nonVolatile(dummy)
-        tail = nonVolatile(dummy)
-    }
-
-    override fun push(value: T) {
-        val newNode = QueueNode<T?>(v = value)
-        while (true) {
-            val last: QueueNode<T?> = tail.value
-            val nextNode: QueueNode<T?>? = last.next.value
-            if (last !== tail.value) continue
-            if (nextNode === null) {
-                if (last.next.compareAndSet(null, newNode)) {
-                    last.next.flush()
-                    tail.compareAndSet(last, newNode)
-                    return
-                }
-            } else {
-                last.next.flush()
-                tail.compareAndSet(last, nextNode)
-            }
-        }
-    }
-
-    override fun pop(p: Int): T? {
-        while (true) {
-            val first: QueueNode<T?> = head.value
-            val last: QueueNode<T?> = tail.value
-            val nextNode: QueueNode<T?>? = first.next.value
-            if (first !== head.value) continue
-            if (first === last) {
-                if (nextNode === null) {
-                    return null
-                }
-                last.next.flush()
-                tail.compareAndSet(last, nextNode)
-            } else {
-                checkNotNull(nextNode)
-                val currentValue: T = nextNode.v!!
-                if (nextNode.deleter.compareAndSet(DEFAULT_DELETER, p)) {
-                    nextNode.deleter.flush()
-                    head.compareAndSet(first, nextNode)
-                    return currentValue
-                } else {
-                    if (head.value === first) {
-                        nextNode.deleter.flush()
-                        head.compareAndSet(first, nextNode)
-                    }
-                }
-            }
-        }
-    }
-
-    override fun recover() {
-        while (true) {
-            val h = head.value
-            val next = h.next.value ?: break
-            if (next.deleter.value == DEFAULT_DELETER) break
-            next.deleter.flush()
-            head.compareAndSet(h, next)
-        }
-        while (true) {
-            val t = tail.value
-            val next = t.next.value ?: break
-            // here should be t.next.flush()
-            tail.compareAndSet(t, next)
-        }
-    }
-}
-
-
-internal class DurableMSFailingQueue8<T> : RecoverableQueue<T> {
     private val head: NonVolatileRef<QueueNode<T?>>
     private val tail: NonVolatileRef<QueueNode<T?>>
 
