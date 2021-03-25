@@ -22,7 +22,6 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
-import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -53,6 +52,10 @@ private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: 
 
 object Crash {
     private val systemCrashOccurred = AtomicBoolean(false)
+    private val context = atomic(SystemContext(null, 0))
+    private var awaitSystemCrashBeforeThrow = true
+    internal val threads get() = context.value.threads
+    var useProxyCrash = true
 
     @JvmStatic
     fun isCrashed() = systemCrashOccurred.get()
@@ -80,11 +83,6 @@ object Crash {
         }
     }
 
-    private val context = atomic(SystemContext(null, 0))
-    internal val threads get() = context.value.threads
-    private var awaitSystemCrashBeforeThrow = true
-    var useProxyCrash = true
-
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
      * On a system crash a thread waits for other threads to reach this method call.
@@ -94,11 +92,13 @@ object Crash {
         if (context.value.barrier !== null) {
             val threadId = RecoverableStateContainer.threadId()
             if (awaitSystemCrashBeforeThrow) awaitSystemCrash()
+            else NVMCache.crash(threadId)
             crash(threadId, className, fileName, methodName, lineNumber)
         }
         if (Probability.shouldCrash()) {
             val threadId = RecoverableStateContainer.threadId()
             if (awaitSystemCrashBeforeThrow && Probability.shouldSystemCrash()) awaitSystemCrash()
+            else NVMCache.crash(threadId)
             crash(threadId, className, fileName, methodName, lineNumber)
         }
     }
@@ -151,11 +151,11 @@ object Crash {
     }
 }
 
-class BusyWaitingBarrier {
-    internal val free = atomic(false)
-    internal val waitingCount = atomic(0)
+private class BusyWaitingBarrier {
+    private val free = atomic(false)
+    private val waitingCount = atomic(0)
 
-    internal inline fun await(action: (Boolean) -> Unit) {
+    inline fun await(action: (Boolean) -> Unit) {
         waitingCount.incrementAndGet()
         // wait for all to access the barrier
         while (waitingCount.value < Crash.threads && !free.value);

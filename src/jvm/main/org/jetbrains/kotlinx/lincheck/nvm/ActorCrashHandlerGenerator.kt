@@ -18,12 +18,12 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.runner
+package org.jetbrains.kotlinx.lincheck.nvm
 
 import org.jetbrains.kotlinx.lincheck.CrashResult
-import org.jetbrains.kotlinx.lincheck.nvm.Crash
-import org.jetbrains.kotlinx.lincheck.nvm.CrashError
-import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator.TEST_THREAD_EXECUTION_TYPE
+import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
+import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -31,10 +31,12 @@ import org.objectweb.asm.commons.Method
 
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
-private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("creteCrashResult", CRASH_RESULT_TYPE, emptyArray())
+private val CRASH_RESULT_CREATE_CRASH_RESULT_METHOD = Method("creteCrashResult", CRASH_RESULT_TYPE, emptyArray())
 private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", Type.VOID_TYPE, emptyArray())
 private val SET_USE_CLOCKS = Method("useClocksOnce", Type.VOID_TYPE, emptyArray())
+private val TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution::class.java)
+private val RESULT_TYPE = Type.getType(Result::class.java)
 
 open class ActorCrashHandlerGenerator {
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
@@ -63,9 +65,9 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.loadLocal(iLocal)
 
         // Create crash result instance
-        mv.invokeStatic(TestThreadExecutionGenerator.RESULT_KT_TYPE, RESULT_KT_CREATE_CRASH_RESULT_METHOD)
-        mv.checkCast(TestThreadExecutionGenerator.RESULT_TYPE)
-        mv.arrayStore(TestThreadExecutionGenerator.RESULT_TYPE)
+        mv.invokeStatic(CRASH_RESULT_TYPE, CRASH_RESULT_CREATE_CRASH_RESULT_METHOD)
+        mv.checkCast(RESULT_TYPE)
+        mv.arrayStore(RESULT_TYPE)
 
         // clock increment must go before barrier
         TestThreadExecutionGenerator.incrementClock(mv, iLocal)

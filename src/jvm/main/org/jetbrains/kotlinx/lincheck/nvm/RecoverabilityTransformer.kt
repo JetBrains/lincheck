@@ -44,7 +44,6 @@ class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
         this.name = name!!
     }
 
-
     override fun visitMethod(
         access: Int,
         name: String?,

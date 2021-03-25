@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.nvm.api
 import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
 import org.jetbrains.kotlinx.lincheck.nvm.Probability
-import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverableStateContainer
 
 abstract class AbstractNonVolatilePrimitive {
     internal abstract fun flushInternal()

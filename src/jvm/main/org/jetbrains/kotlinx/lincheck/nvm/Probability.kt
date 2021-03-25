@@ -22,7 +22,6 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
-import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
 import kotlin.random.Random
 
 object Probability {

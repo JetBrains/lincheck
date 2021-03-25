@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.kotlinx.lincheck.nvm.ActorCrashHandlerGenerator;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
@@ -44,7 +45,7 @@ public class TestThreadExecutionGenerator {
     private static final Type[] NO_ARGS = new Type[] {};
 
     private static final Type CLASS_TYPE = getType(Class.class);
-    static final Type OBJECT_TYPE = getType(Object.class);
+    private static final Type OBJECT_TYPE = getType(Object.class);
     private static final Method OBJECT_GET_CLASS = new Method("getClass", CLASS_TYPE, NO_ARGS);
     private static final Type OBJECT_ARRAY_TYPE = getType(Object[].class);
     private static final Type THROWABLE_TYPE = getType(Throwable.class);
@@ -56,13 +57,13 @@ public class TestThreadExecutionGenerator {
     private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
-    static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
+    private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
     private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
     private static final Method TEST_THREAD_EXECUTION_READ_CLOCKS = new Method("readClocks", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method TEST_THREAD_EXECUTION_RESET_USE_CLOCKS = new Method("resetUseClocksOnce", VOID_TYPE, NO_ARGS);
 
-    static final Type RESULT_TYPE = getType(Result.class);
+    private static final Type RESULT_TYPE = getType(Result.class);
 
     private static final Type NO_RESULT_TYPE = getType(NoResult.class);
     private static final String NO_RESULT_CLASS_NAME = NoResult.class.getCanonicalName().replace('.', '/');
@@ -79,7 +80,7 @@ public class TestThreadExecutionGenerator {
     private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
 
     private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
-    static final Type RESULT_KT_TYPE = getType(ResultKt.class);
+    private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
     private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
@@ -323,7 +324,7 @@ public class TestThreadExecutionGenerator {
         mv.visitEnd();
     }
 
-    static void incrementClock(GeneratorAdapter mv, int iLocal) {
+    public static void incrementClock(GeneratorAdapter mv, int iLocal) {
         mv.loadThis();
         mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);
         // Increment number of current operation

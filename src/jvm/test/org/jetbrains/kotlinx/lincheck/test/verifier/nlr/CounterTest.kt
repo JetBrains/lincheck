@@ -72,12 +72,10 @@ internal class SequentialCounter : VerifierState(), Counter {
     override fun extractState() = value
 }
 
-private class NRLCounter(threadsCount: Int) : VerifierState(), Counter {
+private class NRLCounter(threadsCount: Int) : Counter {
     private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
-
-    override fun extractState() = r.sumBy { it.read()!! }
 
     @Recoverable
     override fun get(threadId: Int) = r.sumBy { it.read()!! }

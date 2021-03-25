@@ -22,7 +22,6 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import org.jetbrains.kotlinx.lincheck.nvm.api.AbstractNonVolatilePrimitive
-import org.jetbrains.kotlinx.lincheck.runner.RecoverableStateContainer
 
 /** Volatile cache of non-volatile memory emulation. */
 object NVMCache {
