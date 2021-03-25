@@ -40,16 +40,16 @@ private val OPERATION_TYPE = Type.getType(Operation::class.java)
 
 class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: Class<*>) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = false
-    internal var recoverAllMethod: String? = null
-    internal var recoverPerThreadMethod: String? = null
+    internal var recoverAllMethod: java.lang.reflect.Method? = null
+    internal var recoverPerThreadMethod: java.lang.reflect.Method? = null
     internal lateinit var name: String
 
     init {
         val recover = listOf(DurableRecoverAll::class, DurableRecoverPerThread::class)
             .map { a -> _class.methods.singleOrNull { m -> m.annotations.any { it.annotationClass == a } } }
             .onEach { check(it == null || Type.getMethodDescriptor(it) == RECOVER_DESCRIPTOR) }
-        recoverAllMethod = recover[0]?.name
-        recoverPerThreadMethod = recover[1]?.name
+        recoverAllMethod = recover[0]
+        recoverPerThreadMethod = recover[1]
     }
 
     override fun visit(
@@ -62,7 +62,9 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
         this.name = name!!
-        shouldTransform = name == Type.getInternalName(_class)
+        shouldTransform = name == Type.getInternalName(_class) ||
+                recoverAllMethod !== null && name == Type.getInternalName(recoverAllMethod!!.declaringClass) ||
+                recoverPerThreadMethod !== null && name == Type.getInternalName(recoverPerThreadMethod!!.declaringClass)
 
         if (!shouldTransform || recoverAllMethod === null) return
         generateSynchronizedRecoverAll()
@@ -79,7 +81,7 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
         RECOVER_ALL_GENERATED_ACCESS, RECOVER_ALL_GENERATED_NAME, RECOVER_ALL_GENERATED_DESCRIPTOR
     ).run {
         visitCode()
-        generateRecoverCode(this@DurableOperationRecoverTransformer.name, recoverAllMethod!!)
+        generateRecoverCode(this@DurableOperationRecoverTransformer.name, recoverAllMethod!!.name)
         visitInsn(Opcodes.RETURN)
         visitMaxs(1, 0)
         visitEnd()
@@ -162,7 +164,7 @@ private class DurableRecoverOperationTransformer(
             )
             mark(endLabel)
         } else if (recoverPerThread !== null) {
-            generateRecoverCode(cv.name, recoverPerThread)
+            generateRecoverCode(cv.name, recoverPerThread.name)
         }
     }
 }
