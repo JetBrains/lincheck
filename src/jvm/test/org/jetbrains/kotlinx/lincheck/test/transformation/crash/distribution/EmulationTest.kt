@@ -23,9 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 import org.junit.Assert
 import org.junit.Test
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.random.Random
 
 private const val ITERATIONS = 1_000_000
@@ -56,10 +54,10 @@ internal class EmulationTest {
             val actors = List(n) { random.nextInt(1, 20) }
             val recovery = List(n) { 0 }
             val statistics = StatisticsModel(actors, recovery)
-            val maxCrashes = { e: Double -> ceil(e).roundToInt() }
-            val desired = Random.nextDouble(1.0, 10.0)
-            val expected = BoundedNoRecoverCrashProbabilityModel.expectedCrashes(statistics, desired, maxCrashes)
-            val model = BoundedNoRecoverCrashProbabilityModel(statistics, expected, maxCrashes(expected))
+            val maxCrashes = random.nextInt(1, n + 1)
+            val maxE = BoundedNoRecoverCrashProbabilityModel.expectedCrashes(statistics, maxCrashes)
+            val expected = random.nextDouble(0.5, maxE)
+            val model = BoundedNoRecoverCrashProbabilityModel(statistics, expected, maxCrashes)
             val emulator = ExecutionEmulator(statistics, model, random)
             testScenarioUniformDistribution(statistics, model, emulator)
         }
@@ -86,9 +84,6 @@ private fun verifyResults(results: IntArray, crashes: List<Int>, model: CrashPro
     val expected = results.sum() / results.size.toDouble()
     results.forEach { cr ->
         val deviation = (cr - expected) / expected
-        if (abs(deviation) > 0.05) {
-            println()
-        }
         Assert.assertTrue(abs(deviation) < 0.05)
     }
 }
