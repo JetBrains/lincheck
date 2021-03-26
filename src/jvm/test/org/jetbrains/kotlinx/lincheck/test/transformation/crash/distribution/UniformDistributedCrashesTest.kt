@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.transformation
+package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -39,9 +39,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.pow
-import kotlin.random.Random
 
 
 @StressCTest.StressCTests(
@@ -73,7 +70,6 @@ class SequentialCodeClass {
         x.flush()
     }
 }
-
 
 class UniformDistributedCrashesTest {
     @Ignore("To be fixed")
@@ -108,80 +104,6 @@ class UniformDistributedCrashesTest {
                 val deviation = (c - expected) / expected
                 assertTrue("Deviation is $deviation: expected $expected crashes but $c found", abs(deviation) < 0.05)
             }
-        }
-    }
-
-    @Test
-    fun testUniformDistribution() {
-        val random = Random(42)
-        repeat(100) {
-            val n = random.nextInt(1, 10)
-            val actors = List(n) { random.nextInt(1, 20) }
-            val recovery = List(n) { random.nextInt(0, 20) }
-            val maxE = (actors.sum() + recovery.sum()) / actors.maxOrNull()!!.toDouble()
-            val expected = random.nextDouble(0.99, maxE)
-            testScenarioUniformDistribution(expected, actors, recovery, random)
-        }
-    }
-
-    private fun testScenarioUniformDistribution(
-        expectedCrashes: Double, actorLengths: List<Int>,
-        recoveryLengths: List<Int>, random: Random
-    ) {
-        val c = expectedCrashes / (actorLengths.sum() + recoveryLengths.sum())
-        val n = actorLengths.size + recoveryLengths.size
-        val iterations = 1_000_000
-        val total = actorLengths.sum() + recoveryLengths.sum()
-        val results = IntArray(total)
-        val crashes = mutableListOf<Int>()
-        repeat(iterations) {
-            var i = 0
-            var j = 0
-            var passed = 0
-            var ic = 0
-            while (i < n) {
-                val inActor = i and 1 == 0
-                if (inActor) {
-                    if (j == actorLengths[i / 2]) {
-                        passed += recoveryLengths[i / 2]
-                        i += 2
-                        j = 0
-                        continue
-                    }
-                } else {
-                    if (j == recoveryLengths[i / 2]) {
-                        i++
-                        j = 0
-                        continue
-                    }
-                }
-                val f = if (inActor) c else 1.0 / (actorLengths[i / 2] + recoveryLengths[i / 2])
-                val crash = random.nextDouble() < f / (1 - j * f)
-                if (crash) {
-                    results[passed]++
-                    if (inActor) {
-                        passed += actorLengths[i / 2] - j
-                        i++
-                    } else {
-                        passed -= j
-                    }
-                    j = 0
-                    ic++
-                } else {
-                    j++
-                    passed++
-                }
-            }
-            crashes.add(ic)
-        }
-        val averageCrashesPerScenario = crashes.average()
-        val d = crashes.sumByDouble { x -> (x - averageCrashesPerScenario).pow(2) } / (iterations - 1)
-        println("sqrt(D) / E = ${d / expectedCrashes}")
-        assertTrue(abs(averageCrashesPerScenario - expectedCrashes) / expectedCrashes < 0.05)
-        val expected = results.sum() / total.toDouble()
-        results.forEach { cr ->
-            val deviation = (cr - expected) / expected
-            assertTrue(abs(deviation) < 0.05)
         }
     }
 }
