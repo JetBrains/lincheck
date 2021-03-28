@@ -83,6 +83,10 @@ private val storeInstructions = hashSetOf(
     Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.LASTORE, Opcodes.DASTORE
 )
 
+private val returnInstructions = hashSetOf(
+    Opcodes.RETURN, Opcodes.ARETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.IRETURN, Opcodes.LRETURN
+)
+
 private val STRING_TYPE = Type.getType(String::class.java)
 private val POSSIBLY_CRASH_METHOD =
     Method("possiblyCrash", Type.VOID_TYPE, arrayOf(STRING_TYPE, STRING_TYPE, STRING_TYPE, Type.INT_TYPE))
@@ -144,6 +148,9 @@ private open class CrashBaseMethodTransformer(
     }
 
     override fun visitInsn(opcode: Int) {
+        if (opcode in returnInstructions) {
+            callCrash()
+        }
         if (opcode in storeInstructions) {
             callCrash()
         }

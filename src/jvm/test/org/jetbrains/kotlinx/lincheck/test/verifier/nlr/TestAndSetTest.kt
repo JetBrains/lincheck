@@ -371,11 +371,6 @@ internal class NRLFailingTestAndSet4(private val threadsCount: Int) : VerifierSt
         // here should be response[p].flush()
         r[p].value = 3
         r[p].flush()
-        // TODO this workaround should be fixed by uniform distribution of crashes
-        if (Random.nextBoolean()) {
-            throw CrashErrorImpl()
-        }
-        // TODO add a possible crash in the and of method
         return returnValue
     }
 }
