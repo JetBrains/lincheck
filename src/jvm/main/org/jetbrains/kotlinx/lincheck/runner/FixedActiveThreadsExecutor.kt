@@ -28,6 +28,12 @@ internal actual class TestThread actual constructor(val iThread: Int, val runner
     actual companion object {
         actual fun currentThread(): Any? = Thread.currentThread() // For storing identifier and then call unpark()
     }
+
+    actual fun execute() = start()
+    actual fun terminate(): Runnable? {
+        stop()
+        return null
+    }
 }
 
 internal actual class LockSupport {

@@ -85,15 +85,15 @@ def getHostName() {
 
 kotlin {
     targets {
-        //def manager = project.ext.hostManager
-        //def linuxEnabled = manager.isEnabled(presets.linuxX64.konanTarget)
-        //def macosEnabled = manager.isEnabled(presets.macosX64.konanTarget)
-        //def winEnabled = manager.isEnabled(presets.mingwX64.konanTarget)
+        def manager = project.ext.hostManager
+        def linuxEnabled = manager.isEnabled(presets.linuxX64.konanTarget)
+        def macosEnabled = manager.isEnabled(presets.macosX64.konanTarget)
+        def winEnabled = manager.isEnabled(presets.mingwX64.konanTarget)
 
-        //def ideaPreset = presets.linuxX64
-        //if (macosEnabled) ideaPreset = presets.macosX64
-        //if (winEnabled) ideaPreset = presets.mingwX64
-        //project.ext.ideaPreset = ideaPreset
+        def ideaPreset = presets.linuxX64
+        if (macosEnabled) ideaPreset = presets.macosX64
+        if (winEnabled) ideaPreset = presets.mingwX64
+        project.ext.ideaPreset = ideaPreset
         project.ext.ideaPreset = presets.linuxX64
     }
 

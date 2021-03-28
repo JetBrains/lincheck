@@ -30,8 +30,8 @@ import kotlin.math.*
 
 internal expect class TestThread(iThread: Int, runnerHash: Int, r: Runnable) {
 
-    fun start()
-    fun stop()
+    fun execute()
+    fun terminate(): Runnable?
 
     companion object {
         fun currentThread(): Any?
@@ -89,7 +89,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     init {
         threads = (0 until nThreads).map { iThread ->
-            TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
+            TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.execute() }
         }
     }
 
@@ -223,7 +223,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     fun close() {
         // submit the shutdown task.
         submitTasks(Array(nThreads) { SHUTDOWN })
-        for (t in threads) t.stop()
+        for (t in threads) t.terminate()
     }
 
     inline fun <R> use(block: (FixedActiveThreadsExecutor) -> R): R {

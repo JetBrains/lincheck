@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import platform.posix.*
 import kotlin.native.ThreadLocal
 import kotlin.native.concurrent.*
 import kotlin.system.*
@@ -30,34 +31,41 @@ import kotlin.system.*
 val currentThreadId = Any()
 
 internal actual class TestThread actual constructor(val iThread: Int, val runnerHash: Int, val r: Runnable) {
-    val worker: Worker = Worker.start()
+    val worker: Worker = Worker.start(true, "Worker $iThread $runnerHash")
+    var runnableFuture: Future<Runnable>? = null
 
-    actual fun start() {
+    actual fun execute() {
         //printErr("start() $iThread called")
-        worker.execute(TransferMode.UNSAFE, { r }, { r -> r.run() })
+        worker.execute(TransferMode.UNSAFE, { r }, { r ->
+            r.run()
+            r
+        })
     }
 
-    actual fun stop() {
+    actual fun terminate(): Runnable? {
         //printErr("stop() $iThread called")
-        worker.requestTermination(false)
+        val res = runnableFuture?.result
+        //worker.requestTermination(true)
+        return res
         //printErr("stop() $iThread finished")
     }
 
     actual companion object {
         actual fun currentThread(): Any? = currentThreadId
     }
-
 }
 
 internal actual class LockSupport {
     actual companion object {
         actual fun park() {
+            //usleep(1000.toUInt()) // 1ms
         }
 
         actual fun unpark(thread: Any?) {
         }
 
         actual fun parkNanos(nanos: Long) {
+            //usleep(1000.toUInt()) // 1ms
             //platform.posix.sleep((nanos / 1_000_000_000).toUInt())
         }
     }

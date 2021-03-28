@@ -1,5 +1,11 @@
 import org.gradle.jvm.tasks.Jar
 
+allprojects {
+    ext {
+        set("hostManager", org.jetbrains.kotlin.konan.target.HostManager())
+    }
+}
+
 apply(from = rootProject.file("gradle/native-targets.gradle"))
 
 // atomicfu
