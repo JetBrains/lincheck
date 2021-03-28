@@ -81,3 +81,25 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.goTo(skip)
     }
 }
+
+class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
+    private lateinit var startLabel: Label
+    private lateinit var handlerLabel: Label
+
+    override fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {
+        super.addCrashTryBlock(start, end, mv)
+        startLabel = start
+        handlerLabel = mv.newLabel()
+        mv.visitTryCatchBlock(start, end, handlerLabel, CRASH_ERROR_TYPE.internalName)
+    }
+
+    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
+        super.addCrashCatchBlock(mv, resLocal, iLocal, skip)
+        val afterActor = mv.newLabel()
+        mv.goTo(afterActor)
+        mv.visitLabel(handlerLabel)
+        mv.pop()
+        mv.goTo(startLabel)
+        mv.visitLabel(afterActor)
+    }
+}

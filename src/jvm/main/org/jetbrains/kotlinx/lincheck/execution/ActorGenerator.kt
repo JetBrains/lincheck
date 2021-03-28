@@ -44,10 +44,10 @@ class ActorGenerator(
     private val cancellableOnSuspension = cancellableOnSuspension && isSuspendable
     private val promptCancellation = cancellableOnSuspension && promptCancellation
 
-    fun generate(threadId: Int): Actor {
+    fun generate(threadId: Int, operationId: Int): Actor {
         val threadIdIndices = mutableListOf<Int>()
         val parameters = parameterGenerators
-            .map { it.generate() }
+            .map { if (it is OperationIdGen) operationId else it.generate() }
             .mapIndexed { index, value ->
                 if (value === THREAD_ID_TOKEN) {
                     threadIdIndices.add(index)

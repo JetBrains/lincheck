@@ -20,7 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.nvm
 
-import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
+import org.jetbrains.kotlinx.lincheck.runner.Runner
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.objectweb.asm.ClassVisitor
@@ -31,6 +33,7 @@ enum class Recover {
     NRL,
     NRL_NO_CRASHES,
     DURABLE,
+    DETECTABLE_EXECUTION,
     DURABLE_NO_CRASHES;
 
     fun createModel() = when (this) {
@@ -38,6 +41,7 @@ enum class Recover {
         NRL -> NRLModel()
         NRL_NO_CRASHES -> NRLModel(crashes = false)
         DURABLE -> DurableModel()
+        DETECTABLE_EXECUTION -> DetectableExecutionModel()
         DURABLE_NO_CRASHES -> DurableModel(crashes = false)
     }
 }
@@ -106,7 +110,7 @@ class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
     override val awaitSystemCrashBeforeThrow get() = true
 }
 
-class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
+open class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz)
         if (crashes) {
@@ -126,8 +130,14 @@ class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
         testCfg.timeoutMs, UseClocks.RANDOM, this
     )
 
-    override fun createActorCrashHandlerGenerator() = DurableActorCrashHandlerGenerator()
+    override fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator = DurableActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 1.0f
     override fun defaultExpectedCrashes() = 1
     override val awaitSystemCrashBeforeThrow get() = false
+}
+
+class DetectableExecutionModel : DurableModel(true) {
+    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) = CrashTransformer(cv, clazz)
+    override fun createActorCrashHandlerGenerator() = DetectableExecutionActorCrashHandlerGenerator()
+    override fun defaultExpectedCrashes() = 5
 }
