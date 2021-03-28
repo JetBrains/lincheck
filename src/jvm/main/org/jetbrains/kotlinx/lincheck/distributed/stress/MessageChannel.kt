@@ -57,10 +57,6 @@ class FifoChannel<E> : MessageChannel<E> {
 
     override suspend fun close() = channel.close()
 
-    override fun hashCode(): Int {
-        return channel.hashCode()
-    }
-
     override fun clear() {
         do {
             val r = channel.poll()

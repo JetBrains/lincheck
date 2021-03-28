@@ -20,14 +20,60 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import java.util.HashMap
+
 sealed class Command(val id : Int)
 
-class GetCommand(val key : Int, id : Int) : Command(id)
-class PutCommand(val key : Int, val value : Int, id : Int) : Command(id)
-class ContainsCommand(val key : Int, id : Int) : Command(id)
-class RemoveCommand(val key : Int, id : Int) : Command(id)
-class GetResult(val res : Int?, id : Int) : Command(id)
-class PutResult(val res : Int?, id : Int) : Command(id)
-class ContainsResult(val res : Boolean, id : Int) : Command(id)
-class RemoveResult(val res : Int?, id : Int) : Command(id)
-class ErrorResult(val error : Throwable, id : Int) : Command(id)
+class GetCommand(val key : Int, id : Int) : Command(id) {
+    override fun toString() = "GetCommand(key=$key, id=$id)"
+}
+class PutCommand(val key : Int, val value : Int, id : Int) : Command(id) {
+    override fun toString() = "PutCommand(key=$key, value=$value, id=$id)"
+}
+class AddCommand(val key : Int, val value : Int, id : Int) : Command(id) {
+    override fun toString() = "AddCommand(key=$key, value=$value, id=$id)"
+}
+class ContainsCommand(val key : Int, id : Int) : Command(id) {
+    override fun toString() = "ContainsCommand(key=$key, id=$id)"
+}
+class RemoveCommand(val key : Int, id : Int) : Command(id) {
+    override fun toString() = "RemoveCommand(key=$key, id=$id)"
+}
+class GetResult(val res : Int?, id : Int) : Command(id) {
+    override fun toString() = "GetResult(res=$res, id=$id)"
+}
+class PutResult(val res : Int?, id : Int) : Command(id){
+    override fun toString() = "PutResult(res=$res, id=$id)"
+}
+class AddResult(val res : Int?, id : Int) : Command(id){
+    override fun toString() = "AddResult(res=$res, id=$id)"
+}
+class ContainsResult(val res : Boolean, id : Int) : Command(id) {
+    override fun toString() = "ContainsResult(res=$res, id=$id)"
+}
+class RemoveResult(val res : Int?, id : Int) : Command(id) {
+    override fun toString() = "RemoveResult(res=$res, id=$id)"
+}
+class ErrorResult(val error : Throwable, id : Int) : Command(id) {
+    override fun toString() = "ErrorResult(error=$error, id=$id)"
+}
+
+
+class SingleNode {
+    private val storage = HashMap<Int, Int>()
+
+    @Operation
+    suspend fun contains(key: Int) = storage.contains(key)
+
+    @Operation
+    suspend fun put(key: Int, value: Int) = storage.put(key, value)
+
+    @Operation
+    suspend fun get(key: Int) = storage[key]
+
+    @Operation
+    suspend fun remove(key: Int) = storage.remove(key)
+
+    suspend fun add(key: Int, value: Int) = storage.put(key, storage.getOrDefault(key, 0) + value)
+}

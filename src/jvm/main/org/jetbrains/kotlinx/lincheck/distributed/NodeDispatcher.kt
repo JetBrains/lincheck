@@ -89,6 +89,7 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
             }
             throw RejectedExecutionException()
         }
+        val shouldInc = context[AlreadyIncrementedCounter.Key]?.isUsed != false
         val r = if (context[AlreadyIncrementedCounter.Key]?.isUsed != false) {
             taskCounter.increment()
         } else {
@@ -96,7 +97,7 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
             taskCounter.get()
         }
         logMessage(LogLevel.ALL_EVENTS) {
-            "[$id]: Submit task ${block.hashCode()} counter is $r"
+            "[$id]: Submit task $shouldInc ${block.hashCode()} counter is $r"
         }
         executor.submit {
             logMessage(LogLevel.ALL_EVENTS) {

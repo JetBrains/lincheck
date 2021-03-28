@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -31,20 +32,21 @@ import kotlin.random.Random
 
 
 class DistributedRunnerContext<Message, Log>(
-    val tesCfg: DistributedCTestConfiguration<Message, Log>,
-    val scenario: ExecutionScenario
+    val testCfg: DistributedCTestConfiguration<Message, Log>,
+    val scenario: ExecutionScenario,
+    runnerHash : Int
 ) {
     companion object {
         val threadLocalRand: ThreadLocal<Random> = ThreadLocal.withInitial { Random }
     }
 
     val addressResolver = NodeAddressResolver(
-        tesCfg.testClass as Class<out Node<Message>>,
-        scenario.threads, tesCfg.nodeTypes
+        testCfg.testClass as Class<out Node<Message>>,
+        scenario.threads, testCfg.nodeTypes
     )
 
     val messageHandler =
-        ChannelHandler<MessageSentEvent<Message>>(tesCfg.messageOrder, addressResolver.totalNumberOfNodes)
+        ChannelHandler<MessageSentEvent<Message>>(testCfg.messageOrder, addressResolver.totalNumberOfNodes)
 
     var failureNotifications = Array<Channel<Int>>(addressResolver.totalNumberOfNodes) {
         Channel(UNLIMITED)
@@ -52,7 +54,7 @@ class DistributedRunnerContext<Message, Log>(
 
     val failureInfo = NodeFailureInfo(
         addressResolver.totalNumberOfNodes,
-        tesCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
+        testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
     )
 
     val events = Array(addressResolver.totalNumberOfNodes) {
@@ -80,13 +82,31 @@ class DistributedRunnerContext<Message, Log>(
         return vectorClock[iNode].copyOf()
     }
 
-    lateinit var executorContext: DispatcherTaskCounter
+    val taskCounter = DispatcherTaskCounter(
+        initialNumberOfTasks()
+    )
+
+    val dispatchers: Array<NodeDispatcher> = Array(addressResolver.totalNumberOfNodes) {
+        NodeDispatcher(it, taskCounter, runnerHash)
+    }
 
     val logs = Array(addressResolver.totalNumberOfNodes) {
         emptyList<Log>()
     }
 
     val probabilities = Array(addressResolver.totalNumberOfNodes) {
-        Probability(tesCfg, threadLocalRand)
+        Probability(testCfg, threadLocalRand)
+    }
+
+    fun initialNumberOfTasks() = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
+        3 * addressResolver.totalNumberOfNodes
+    } else {
+        2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
+    }
+
+    fun initTasksForNode(iNode: Int) = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
+        3
+    } else {
+        addressResolver.totalNumberOfNodes + 2
     }
 }

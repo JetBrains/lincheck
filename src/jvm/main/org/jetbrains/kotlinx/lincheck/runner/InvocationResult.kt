@@ -60,9 +60,9 @@ class ValidationFailureInvocationResult(
     val exception: Throwable
 ) : InvocationResult()
 
-class InvariantsViolatedInvocationResult(
-        val scenario: ExecutionScenario,
-        val message : String) : InvocationResult()
+class LivelockInvocationResult(
+    val threadDump: Map<Thread, Array<StackTraceElement>>
+) : InvocationResult()
 
 /**
  * Obstruction freedom check is requested,

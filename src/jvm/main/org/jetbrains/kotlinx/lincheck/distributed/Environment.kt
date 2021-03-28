@@ -53,7 +53,13 @@ interface Environment<Message, Log> {
 
     fun getLogs(): Array<List<Log>>
 
-    suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit)
+    suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) : Boolean
+
+    suspend fun delay(ticks: Int)
+
+    fun setTimer(name: String, ticks: Int, f: suspend () -> Unit)
+
+    fun cancelTimer(name: String)
 }
 
 sealed class Event

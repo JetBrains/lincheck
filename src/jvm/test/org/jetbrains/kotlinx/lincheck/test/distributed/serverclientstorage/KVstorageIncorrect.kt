@@ -45,6 +45,12 @@ class KVStorageServerIncorrect(private val env: Environment<Command, Unit>) : No
                 is GetCommand -> GetResult(storage[message.key], id)
                 is PutCommand -> PutResult(storage.put(message.key, message.value), id)
                 is RemoveCommand -> RemoveResult(storage.remove(message.key), id)
+                is AddCommand -> AddResult(
+                    storage.put(
+                        message.key,
+                        storage.getOrDefault(message.key, 0) + message.value
+                    ), id
+                )
                 else -> throw RuntimeException("Unexpected command")
             }
         } catch (e: Throwable) {
@@ -69,17 +75,13 @@ class KVStorageClientIncorrect(private val environment: Environment<Command, Uni
             environment.withTimeout(1) {
                 signal.await()
             }
-            val response = queue.poll()
-            if (response != null) {
-                commandResults[response.id] = response
+            val response = queue.poll() ?: continue
+            commandResults[response.id] = response
+            val res = commandResults[command.id] ?: continue
+            if (res is ErrorResult) {
+                throw res.error
             }
-            if (commandResults.containsKey(command.id)) {
-                val res = commandResults[command.id]!!
-                if (res is ErrorResult) {
-                    throw res.error
-                }
-                return res
-            }
+            return res
         }
     }
 
@@ -105,6 +107,12 @@ class KVStorageClientIncorrect(private val environment: Environment<Command, Uni
     @Operation
     suspend fun get(key: Int): Int? {
         val response = sendOnce(GetCommand(key, commandId++)) as GetResult
+        return response.res
+    }
+
+    @Operation
+    suspend fun add(key: Int, value: Int): Int? {
+        val response = sendOnce(AddCommand(key, value, commandId++)) as AddResult
         return response.res
     }
 

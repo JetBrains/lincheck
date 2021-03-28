@@ -20,11 +20,14 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
+import kotlinx.atomicfu.AtomicArray
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.ClosedSendChannelException
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.kotlinx.lincheck.distributed.*
+
 
 internal class EnvironmentImpl<Message, Log>(
     val context: DistributedRunnerContext<Message, Log>,
@@ -39,6 +42,8 @@ internal class EnvironmentImpl<Message, Log>(
     override val numberOfNodes = context.addressResolver.totalNumberOfNodes
 
     private val probability = context.probabilities[nodeId]
+
+    private val timers = mutableSetOf<String>()
 
     override fun getAddressesForClass(cls: Class<out Node<Message>>) = context.addressResolver[cls]
 
@@ -75,7 +80,8 @@ internal class EnvironmentImpl<Message, Log>(
         }
         context.events[nodeId].add(event)
         try {
-            repeat(probability.duplicationRate()) {
+            val rate = probability.duplicationRate()
+            repeat(rate) {
                 context.messageHandler[nodeId, event.receiver].send(event)
                 logMessage(LogLevel.MESSAGES) {
                     "[$nodeId]: Send $event to $receiver ${context.messageHandler[nodeId, event.receiver].hashCode()}, by channel {channel.hashCode()}"
@@ -97,22 +103,60 @@ internal class EnvironmentImpl<Message, Log>(
     @Volatile
     internal var isFinished = false
 
-    override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) = try {
-        val r = context.executorContext.increment()
+    override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) = runSafely {
         logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: With timeout, waiting, counter is $r"
+            "[$nodeId]: With timeout ${context.taskCounter.get()}"
         }
         val res = withTimeoutOrNull((ticks * TICK_TIME).toLong(), block)
-    } catch (e: Throwable) {
         logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: Exception in timeout $e"
+            if (res == null) {
+                "[$nodeId]: Timeout cancelled"
+            } else {
+                "[$nodeId]: Timeout executed successfully"
+            }
         }
-    } finally {
-        val r = context.executorContext.decrement()
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: With timeout, finished, counter is $r"
-        }
+        res != null
     }
 
     override fun getLogs() = context.logs
+
+    private suspend fun <T> runSafely(f: suspend () -> T): T {
+        val r = context.taskCounter.increment()
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[$nodeId]: Before running safely ${f.hashCode()} counter is $r"
+        }
+        try {
+            return f()
+        } finally {
+            val t = context.taskCounter.decrement()
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$nodeId]: After running safely ${f.hashCode()} counter is $t"
+            }
+        }
+    }
+
+    override suspend fun delay(ticks: Int) {
+        runSafely { delay(ticks * TICK_TIME) }
+    }
+
+    override fun setTimer(name: String, ticks: Int, f: suspend () -> Unit) {
+        if (timers.contains(name)) {
+            throw IllegalArgumentException("Timer with name \"$name\" already exists")
+        }
+        timers.add(name)
+        GlobalScope.launch(context.dispatchers[nodeId]) {
+            while (true) {
+                if (!timers.contains(name)) return@launch
+                f()
+                delay(ticks)
+            }
+        }
+    }
+
+    override fun cancelTimer(name: String) {
+        if (!timers.contains(name)) {
+            throw IllegalArgumentException("Timer with name \"$name\" does not exist")
+        }
+        timers.remove(name)
+    }
 }

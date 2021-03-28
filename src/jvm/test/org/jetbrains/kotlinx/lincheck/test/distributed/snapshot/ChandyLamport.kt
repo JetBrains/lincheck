@@ -138,15 +138,12 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
 
     @Operation(group = "observer")
     suspend fun snapshot(): Int {
-        //println("[${env.nodeId}]: Start snapshot")
         state = currentSum.value
         env.log.add(CurState(state))
         marker = Marker(env.nodeId, token++)
         env.broadcast(marker!!)
         while (!gotSnapshot) {
-            // println("[${env.nodeId}]: Sleep")
             semaphore.acquire()
-            // println("[${env.nodeId}]: Woke up")
         }
         val res = replies.map { it as Reply }.map { it.state }.sum()
         marker = null

@@ -20,64 +20,128 @@
 /*
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
 
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.RecoverableNode
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import java.lang.Exception
 
 enum class NodeStatus { LEADER, CANDIDATE, FOLLOWER }
 
-sealed class Message(val term : Int)
-class RequestVote(term: Int, val candidate : Int): Message(term)
-class AppendEntries(term : Int, val leader : Int, val entries : List<Command>) : Message(term)
-class VoteResponse(term : Int, val res : Boolean): Message(term)
-class RedirectRequest(term : Int, val command: Command, val sender : Int) : Message(term)
-class AppendEntriesResponse(term : Int, val res : Boolean) : Message(term)
+sealed class VoteReason
+object Ok : VoteReason()
+class Refuse(val leader: Int)
+
+class LeaderNotChosenException : Exception()
+data class LogEntryNumber(val term: Int, val index: Int)
+sealed class Message(val term: Int)
+class RequestVote(term: Int, val count: Int, val candidate: Int) : Message(term)
+class Heartbeat(term: Int, val lastCommitedEntry: Int) : Message(term)
+class VoteResponse(term: Int, val res: Boolean) : Message(term)
+class VoteAck(term: Int) : Message(term)
+class AppendEntries(term: Int, val leader: Int, val entries: List<Command>) : Message(term)
+
+class RedirectRequest(term: Int, val command: Command, val sender: Int) : Message(term)
+class AppendEntriesResponse(term: Int, val res: Boolean) : Message(term)
 
 sealed class Command
-data class Log(val command : Int, val term : Int, val index : Int)
+data class Log(val command: Int, val term: Int, val index: Int, var commited: Boolean = false)
 
-class RaftServer(val env : Environment<Message, Log>) : RecoverableNode<Message, Log> {
+class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
     private var currentTerm = 0
-    private var currentLeader : Int? = null
-    private var votedFor : Int? = null
-    private var status : NodeStatus = NodeStatus.FOLLOWER
+    private var currentLeader: Int? = 0
+    private var votedFor: Int? = null
+    private var status: NodeStatus = NodeStatus.FOLLOWER
     private var commitIndex = 0
     private var lastApplied = 0
+    private val electionSemaphore = Signal()
+    private var receivedOks = 0
+    private val quorum = env.numberOfNodes / 2 + 1
 
-    override fun onMessage(message: Message, sender: Int) {
+    override suspend fun onMessage(message: Message, sender: Int) {
+        if (currentTerm > message.term) return
 
         when (message) {
             is RequestVote -> {
-                if (votedFor == null && message.term >= currentTerm) {
+                if (votedFor == null
+                    && message.term >= currentTerm
+                    && message.count >= env.log.size
+                ) {
                     env.send(VoteResponse(currentTerm, true), sender)
                     votedFor = sender
                 }
             }
             is AppendEntries -> TODO()
-            is VoteResponse -> TODO()
+            is VoteResponse -> {
+                if (message.res) receivedOks++
+                if (receivedOks >= quorum) {
+                    currentLeader = env.nodeId
+                    status = NodeStatus.LEADER
+                    electionSemaphore.signal()
+                }
+            }
             is RedirectRequest -> TODO()
             is AppendEntriesResponse -> TODO()
+            is VoteAck -> {
+                status = NodeStatus.FOLLOWER
+                currentLeader = sender
+                electionSemaphore.signal()
+            }
         }
     }
 
-    private fun updateTerm(term : Int) {
-        if (term > currentTerm) {
-            currentTerm = term
+    private fun updateTerm(message: Message, sender: Int) {
+        if (message.term > currentTerm) {
+            currentTerm = message.term
             status = NodeStatus.FOLLOWER
+            if (message is Heartbeat) {
+                currentLeader = sender
+                repeat(message.lastCommitedEntry + 1) { i ->
+                    env.log.find { it.index == i }?.commited = true
+                }
+            } else {
+                if (message !is AppendEntries) {
+                    currentLeader = null
+                }
+            }
+            electionSemaphore.signal()
         }
     }
 
-    override fun recover(logs: List<Log>) {
+    override suspend fun recover() {
         TODO("Not yet implemented")
     }
 
-    override fun onNodeUnavailable(nodeId: Int) {
-        startElection()
+    override suspend fun onNodeUnavailable(nodeId: Int) {
+        while (true) {
+            if (currentLeader != nodeId) return
+            currentLeader = null
+            env.delay(env.nodeId)
+            if (currentLeader == null) {
+                startElection()
+            }
+            if (status != NodeStatus.CANDIDATE) return
+        }
     }
 
-    private fun startElection() {
+    private suspend fun startElection() {
         currentTerm++
         status = NodeStatus.CANDIDATE
         votedFor = env.nodeId
-        env.broadcast(RequestVote(currentTerm, env.nodeId), true)
+        receivedOks = 1
+        env.broadcast(RequestVote(currentTerm, env.nodeId))
+        env.withTimeout(3) {
+            electionSemaphore.await()
+        }
+        if (status == NodeStatus.LEADER) {
+            env.broadcast(VoteAck(currentTerm))
+        }
     }
-}*/
+
+    suspend fun get(): String? {
+        if (currentLeader == null) {
+            throw LeaderNotChosenException()
+        }
+    }
+}
+ */
