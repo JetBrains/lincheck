@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.util.concurrent.ConcurrentLinkedDeque
 
-private const val THREADS_NUMBER = 2
+private const val THREADS_NUMBER = 3
 
 internal interface DurableSet {
     fun add(key: Int): Boolean
