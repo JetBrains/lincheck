@@ -74,7 +74,7 @@ internal class SequentialCounter : VerifierState(), Counter {
 }
 
 private class NRLCounter(threadsCount: Int) : Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
+    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
 
@@ -140,7 +140,7 @@ internal class CounterFailingTest4 : CounterFailingTest() {
 }
 
 internal class NRLFailingCounter1(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
+    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
 
@@ -170,7 +170,7 @@ internal class NRLFailingCounter1(threadsCount: Int) : VerifierState(), Counter 
 }
 
 internal class NRLFailingCounter2(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
+    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
 
@@ -200,7 +200,7 @@ internal class NRLFailingCounter2(threadsCount: Int) : VerifierState(), Counter 
 }
 
 internal class NRLFailingCounter3(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
+    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
 
@@ -231,7 +231,7 @@ internal class NRLFailingCounter3(threadsCount: Int) : VerifierState(), Counter 
 }
 
 internal class NRLFailingCounter4(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject<Int>(threadsCount).also { it.write(0, 0) } }
+    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
     private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
 

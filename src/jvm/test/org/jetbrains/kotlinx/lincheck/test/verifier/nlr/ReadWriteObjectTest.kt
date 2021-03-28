@@ -95,8 +95,8 @@ internal open class SequentialReadWriteObject : VerifierState() {
  * Use (value, op) with unique op to emulate this.
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
-class NRLReadWriteObject<T>(threadsCount: Int) : RWO<T> {
-    private val register = nonVolatile<T?>(null)
+class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null) : RWO<T> {
+    private val register = nonVolatile(initial)
 
     // (state, value) for every thread
     private val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
