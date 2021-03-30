@@ -56,7 +56,7 @@ fun logMessage(givenLogLevel: LogLevel, f: () -> String) {
     if (logLevel >= givenLogLevel) {
         val s = Thread.currentThread().name + " " + f()
         debugLogs.put(s)
-        println(s)
+        //println(s)
         System.out.flush()
     }
 }

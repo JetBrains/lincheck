@@ -34,7 +34,6 @@ abstract class TestNodeExecution {
     fun crash() {
         if (actorId - 1 >= 0 && results[actorId - 1] == null) {
             results[actorId - 1] = CrashResult
-            actorId++
         }
     }
 
