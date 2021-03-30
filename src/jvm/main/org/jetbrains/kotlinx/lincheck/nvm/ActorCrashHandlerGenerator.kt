@@ -99,6 +99,7 @@ class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandlerGenerator
         mv.goTo(afterActor)
         mv.visitLabel(handlerLabel)
         mv.pop()
+        mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
         mv.goTo(startLabel)
         mv.visitLabel(afterActor)
     }

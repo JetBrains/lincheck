@@ -137,7 +137,8 @@ open class DurableModel(override val crashes: Boolean = true) : RecoverabilityMo
 }
 
 class DetectableExecutionModel : DurableModel(true) {
-    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) = CrashTransformer(cv, clazz)
     override fun createActorCrashHandlerGenerator() = DetectableExecutionActorCrashHandlerGenerator()
     override fun defaultExpectedCrashes() = 5
+    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) =
+        DurableOperationRecoverTransformer(CrashTransformer(cv, clazz), clazz)
 }
