@@ -55,7 +55,7 @@ interface Environment<Message, Log> {
 
     suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) : Boolean
 
-    suspend fun delay(ticks: Int)
+    suspend fun sleep(ticks: Int)
 
     fun setTimer(name: String, ticks: Int, f: suspend () -> Unit)
 

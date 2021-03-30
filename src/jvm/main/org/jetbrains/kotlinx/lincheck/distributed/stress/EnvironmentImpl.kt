@@ -21,11 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.atomicfu.AtomicArray
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedSendChannelException
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.kotlinx.lincheck.distributed.*
 
 
@@ -103,7 +100,7 @@ internal class EnvironmentImpl<Message, Log>(
     @Volatile
     internal var isFinished = false
 
-    override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) = runSafely {
+    override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) = context.taskCounter.runSafely {
         logMessage(LogLevel.ALL_EVENTS) {
             "[$nodeId]: With timeout ${context.taskCounter.get()}"
         }
@@ -120,23 +117,9 @@ internal class EnvironmentImpl<Message, Log>(
 
     override fun getLogs() = context.logs
 
-    private suspend fun <T> runSafely(f: suspend () -> T): T {
-        val r = context.taskCounter.increment()
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: Before running safely ${f.hashCode()} counter is $r"
-        }
-        try {
-            return f()
-        } finally {
-            val t = context.taskCounter.decrement()
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: After running safely ${f.hashCode()} counter is $t"
-            }
-        }
-    }
 
-    override suspend fun delay(ticks: Int) {
-        runSafely { delay(ticks * TICK_TIME) }
+    override suspend fun sleep(ticks: Int) {
+        context.taskCounter.runSafely { delay((ticks * TICK_TIME).toLong()) }
     }
 
     override fun setTimer(name: String, ticks: Int, f: suspend () -> Unit) {
@@ -148,7 +131,7 @@ internal class EnvironmentImpl<Message, Log>(
             while (true) {
                 if (!timers.contains(name)) return@launch
                 f()
-                delay(ticks)
+                delay(ticks.toLong())
             }
         }
     }

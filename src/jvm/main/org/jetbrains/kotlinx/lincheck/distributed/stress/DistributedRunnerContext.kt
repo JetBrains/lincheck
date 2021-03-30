@@ -34,7 +34,7 @@ import kotlin.random.Random
 class DistributedRunnerContext<Message, Log>(
     val testCfg: DistributedCTestConfiguration<Message, Log>,
     val scenario: ExecutionScenario,
-    runnerHash : Int
+    runnerHash: Int
 ) {
     companion object {
         val threadLocalRand: ThreadLocal<Random> = ThreadLocal.withInitial { Random }
@@ -82,9 +82,7 @@ class DistributedRunnerContext<Message, Log>(
         return vectorClock[iNode].copyOf()
     }
 
-    val taskCounter = DispatcherTaskCounter(
-        initialNumberOfTasks()
-    )
+    val taskCounter = DispatcherTaskCounter(initialNumberOfTasks(), addressResolver.totalNumberOfNodes)
 
     val dispatchers: Array<NodeDispatcher> = Array(addressResolver.totalNumberOfNodes) {
         NodeDispatcher(it, taskCounter, runnerHash)

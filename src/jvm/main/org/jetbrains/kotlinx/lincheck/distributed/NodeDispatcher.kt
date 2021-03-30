@@ -22,19 +22,24 @@ package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Runnable
 import org.jetbrains.kotlinx.lincheck.distributed.NodeDispatcher.Companion.NodeDispatcherStatus.*
 import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.RejectedExecutionException
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 
+private val handler = CoroutineExceptionHandler { _, _ -> }
 
-class DispatcherTaskCounter(private val initialTaskCounter: Int) {
-    private val taskCounter = atomic(initialTaskCounter)
+class DispatcherTaskCounter(
+    private val initialCounter: Int,
+    private val numberOfNodes: Int
+) {
+    private val taskCounter = atomic(initialCounter)
+    private val nodeOperationCounter = ThreadLocal.withInitial { 0 }
     val signal = Signal()
 
     fun checkIsFinished(f: () -> Unit) {
@@ -51,10 +56,31 @@ class DispatcherTaskCounter(private val initialTaskCounter: Int) {
     fun decrement() = taskCounter.decrementAndGet()
 
     fun add(delta: Int) = taskCounter.addAndGet(delta)
+
+    suspend fun <T> runSafely(f: suspend () -> T): T {
+        increment()
+        val incVal = nodeOperationCounter.get() + 1
+        nodeOperationCounter.set(incVal)
+        try {
+            return f()
+        } finally {
+            if (nodeOperationCounter.get() != 0) {
+                decrement()
+                val decValue = nodeOperationCounter.get() - 1
+                nodeOperationCounter.set(decValue)
+            }
+        }
+    }
+
+    fun clear() {
+        val delta = -nodeOperationCounter.get()
+        add(delta)
+        nodeOperationCounter.set(0)
+    }
 }
 
-
 class AlreadyIncrementedCounter : AbstractCoroutineContextElement(Key) {
+
     @Volatile
     var isUsed = false
 
@@ -87,7 +113,8 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
             logMessage(LogLevel.ALL_EVENTS) {
                 "[$id]: Try ${hashCode()} to submit task ${block.hashCode()}"
             }
-            throw RejectedExecutionException()
+            return
+            //throw RejectedExecutionException()
         }
         val shouldInc = context[AlreadyIncrementedCounter.Key]?.isUsed != false
         val r = if (context[AlreadyIncrementedCounter.Key]?.isUsed != false) {
@@ -130,6 +157,7 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
 
     internal fun crash() {
         status.lazySet(CRASHED)
+        taskCounter.clear()
         logMessage(LogLevel.ALL_EVENTS) {
             "[$id]: Crashed executor ${hashCode()}"
         }
