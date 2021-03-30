@@ -30,9 +30,9 @@ interface Environment<Message, Log> {
      * Sends the specified [message] to all processes (from 0 to
      * [numberOfNodes]).
      */
-    suspend fun broadcast(message: Message) {
+    suspend fun broadcast(message: Message, skipItself : Boolean = true) {
         for (i in 0 until numberOfNodes) {
-            if (i == nodeId) {
+            if (i == nodeId && skipItself) {
                 continue
             }
             send(message, i)
