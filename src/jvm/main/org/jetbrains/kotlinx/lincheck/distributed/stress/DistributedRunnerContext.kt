@@ -71,8 +71,6 @@ class DistributedRunnerContext<Message, Log>(
         IntArray(addressResolver.totalNumberOfNodes)
     }
 
-    val actorIds = IntArray(addressResolver.nodesWithScenario)
-
     fun incClock(i: Int) = vectorClock[i][i]++
 
     fun maxClock(iNode: Int, clock: IntArray): IntArray {

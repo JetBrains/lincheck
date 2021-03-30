@@ -56,7 +56,7 @@ fun logMessage(givenLogLevel: LogLevel, f: () -> String) {
     if (logLevel >= givenLogLevel) {
         val s = Thread.currentThread().name + " " + f()
         debugLogs.put(s)
-        //println(s)
+        println(s)
         System.out.flush()
     }
 }
@@ -119,6 +119,7 @@ open class DistributedRunner<Message, Log>(
             ex.testInstance = context.testInstances[t]
             val actors = scenario.parallelExecution[t].size
             ex.results = arrayOfNulls(actors)
+            ex.actorId = 0
         }
     }
 
@@ -144,7 +145,7 @@ open class DistributedRunner<Message, Log>(
                     }
                 }
             } catch (e: TimeoutCancellationException) {
-                return LivelockInvocationResult(collectThreadDump())
+                return DeadlockInvocationResult(collectThreadDump())
             }
             context.dispatchers.forEach { it.shutdown() }
             environments.forEach { it.isFinished = true }
@@ -167,11 +168,6 @@ open class DistributedRunner<Message, Log>(
                     return ValidationFailureInvocationResult(s, functionName, exception)
                 }
             }
-
-            /* if (context.testNodeExecutions.any { it.results.any { r -> r == null } }) {
-                 println(constructStateRepresentation())
-                 return DeadlockInvocationResult(collectThreadDump())
-             }*/
 
             //TODO: handle null results
             //println("Total get operations=${getCnt.value}, null results=${getNull.value}, not null results=${getCnt.value - getNull.value}")
@@ -250,7 +246,6 @@ open class DistributedRunner<Message, Log>(
                             clock = clock
                         )
                     )
-
                     val r = context.taskCounter.increment()
                     logMessage(LogLevel.ALL_EVENTS) {
                         "[$i]: Launching onMessage counter is $r"
@@ -260,7 +255,6 @@ open class DistributedRunner<Message, Log>(
                             testInstance.onMessage(m.message, m.sender)
                         }
                     }
-                    // withProbability(CONTEXT_SWITCH_PROBABILITY) { yield() }
                 } catch (_: CancellationException) {
                     logMessage(LogLevel.ALL_EVENTS) {
                         "[$i]: Caught cancellation exception"
@@ -296,7 +290,6 @@ open class DistributedRunner<Message, Log>(
                         testInstance.onNodeUnavailable(node)
                     }
                 }
-                // withProbability(CONTEXT_SWITCH_PROBABILITY) { yield() }
             }
         } catch (_: ClosedReceiveChannelException) {
         }
@@ -322,9 +315,13 @@ open class DistributedRunner<Message, Log>(
             if (iNode >= context.addressResolver.nodesWithScenario) {
                 return@handleException
             }
+            val testNodeExecution = context.testNodeExecutions[iNode]
             val scenarioSize = scenario.parallelExecution[iNode].size
-            while (context.actorIds[iNode] < scenarioSize) {
-                val i = context.actorIds[iNode]
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$iNode]: Start scenario, actorid is ${testNodeExecution.actorId}"
+            }
+            while (testNodeExecution.actorId < scenarioSize) {
+                val i = testNodeExecution.actorId
                 val actor = scenario.parallelExecution[iNode][i]
                 context.incClock(iNode)
                 context.events[iNode].add(
@@ -334,32 +331,30 @@ open class DistributedRunner<Message, Log>(
                     )
                 )
                 try {
-                    val res = context.taskCounter.runSafely {
-                        context.testNodeExecutions[iNode].runOperation(i)
+                    testNodeExecution.actorId++
+                    logMessage(LogLevel.ALL_EVENTS) {
+                        "[$iNode]: Operation $i started"
                     }
-                    context.testNodeExecutions[iNode].results[i] = if (actor.method.returnType == Void.TYPE) {
-                        if (actor.isSuspendable) {
-                            SuspendedVoidResult
-                        } else {
-                            VoidResult
-                        }
+                    val res = context.taskCounter.runSafely {
+                        testNodeExecution.runOperation(i)
+                    }
+                    testNodeExecution.results[i] = if (actor.method.returnType == Void.TYPE) {
+                       VoidResult
                     } else {
                         createLincheckResult(res)
                     }
                     logMessage(LogLevel.ALL_EVENTS) {
                         "[$iNode]: Wrote result $i ${context.testNodeExecutions[iNode].hashCode()} ${context.testNodeExecutions[iNode].results[i]}"
                     }
-                    context.actorIds[iNode]++
                 } catch (e: Throwable) {
                     if (e is CrashError) {
                         throw e
                     }
                     if (e.javaClass in actor.handledExceptions) {
                         context.testNodeExecutions[iNode].results[i] = createExceptionResult(e.javaClass)
-                        context.actorIds[iNode]++
                     } else {
                         onFailure(iNode, e)
-                        context.actorIds[iNode] = scenarioSize
+                        testNodeExecution.actorId = scenarioSize
                     }
                 }
             }
@@ -399,9 +394,7 @@ open class DistributedRunner<Message, Log>(
         context.events[iNode].add(NodeCrashEvent(iNode, context.vectorClock[iNode].copyOf()))
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
-        if (iNode < context.addressResolver.nodesWithScenario && context.actorIds[iNode] < scenario.parallelExecution[iNode].size) {
-            context.testNodeExecutions[iNode].results[context.actorIds[iNode]++] = CrashResult
-        }
+        context.testNodeExecutions.getOrNull(iNode)?.crash()
         if (testCfg.supportRecovery == RecoveryMode.ALL_NODES_RECOVER ||
             testCfg.supportRecovery == RecoveryMode.MIXED
             && context.probabilities[iNode].nodeRecovered()
@@ -415,9 +408,7 @@ open class DistributedRunner<Message, Log>(
             context.testInstances[iNode] =
                 context.addressResolver[iNode].getConstructor(Environment::class.java)
                     .newInstance(environments[iNode]) as Node<Message>
-            if (iNode < context.addressResolver.nodesWithScenario) {
-                context.testNodeExecutions[iNode].testInstance = context.testInstances[iNode]
-            }
+            context.testNodeExecutions.getOrNull(iNode)?.testInstance = context.testInstances[iNode]
             val dispatcher = NodeDispatcher(iNode, context.taskCounter, runnerHash)
             context.dispatchers[iNode] = dispatcher
             context.events[iNode].add(ProcessRecoveryEvent(iNode, context.vectorClock[iNode].copyOf()))
@@ -439,12 +430,7 @@ open class DistributedRunner<Message, Log>(
                 dispatcher.receiveUnavailableNodes(iNode)
             }
         } else {
-            if (iNode >= context.addressResolver.nodesWithScenario) return
-            val scenarioSize = scenario.parallelExecution[iNode].size
-            (context.actorIds[iNode] until scenarioSize).forEach {
-                context.testNodeExecutions[iNode].results[it] = CrashResult
-            }
-            context.actorIds[iNode] = scenarioSize
+            context.testNodeExecutions.getOrNull(iNode)?.crashRemained()
         }
     }
 

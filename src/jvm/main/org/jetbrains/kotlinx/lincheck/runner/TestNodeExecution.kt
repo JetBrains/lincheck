@@ -19,13 +19,31 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import org.jetbrains.kotlinx.lincheck.CrashResult
 import org.jetbrains.kotlinx.lincheck.Result
 
 abstract class TestNodeExecution {
+    var actorId = 0
     var runner: Runner? = null
     var testInstance: Any? = null
     lateinit var objArgs: Array<Any>
     lateinit var results: Array<Result?>
 
     abstract suspend fun runOperation(i: Int): Any?
+
+    fun crash() {
+        if (actorId - 1 >= 0 && results[actorId - 1] == null) {
+            results[actorId - 1] = CrashResult
+            actorId++
+        }
+    }
+
+    fun crashRemained() {
+        for(i in results.indices) {
+            if (results[i] == null) {
+                results[i] = CrashResult
+            }
+        }
+        actorId = results.size
+    }
 }
