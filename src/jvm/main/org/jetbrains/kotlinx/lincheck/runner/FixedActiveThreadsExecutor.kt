@@ -30,9 +30,8 @@ internal actual class TestThread actual constructor(val iThread: Int, val runner
     }
 
     actual fun execute() = start()
-    actual fun terminate(): Runnable? {
+    actual fun terminate() {
         stop()
-        return null
     }
 }
 

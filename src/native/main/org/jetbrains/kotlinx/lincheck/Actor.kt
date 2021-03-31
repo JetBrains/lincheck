@@ -29,6 +29,7 @@ package org.jetbrains.kotlinx.lincheck
 actual class Actor(
     val function: (Any, List<Any?>) -> Any?, // (instance, arguments) -> result
     val arguments: List<Any?>,
+    val functionName: String = function.toString(),
     actual val isSuspendable: Boolean = false,
     actual val allowExtraSuspension: Boolean = false,
     actual val promptCancellation: Boolean = false,
@@ -36,7 +37,7 @@ actual class Actor(
 ) {
 
     actual override fun toString(): String =
-        function.toString() +
+        functionName +
         arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() } +
         (if (cancelOnSuspension) " + " else "") +
         (if (promptCancellation) "prompt_" else "") +

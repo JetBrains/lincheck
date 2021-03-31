@@ -22,13 +22,15 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 
-actual class ValidationFunction
+actual class ValidationFunction(
+    val function: (Any) -> Unit
+)
 
 actual val ValidationFunction.name: String
     get() = TODO("Not yet implemented")
 
 actual class StateRepresentationFunction(
-    val function: (Any) -> Any?
+    val function: (Any) -> String
 )
 
 /**

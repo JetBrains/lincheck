@@ -28,15 +28,15 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 class StressStrategy(
-    testCfg: StressCTestConfiguration,
-    testClass: TestClass,
+    private val testCfg: StressCTestConfiguration,
+    private val testClass: TestClass,
     scenario: ExecutionScenario,
-    validationFunctions: List<ValidationFunction>,
-    stateRepresentationFunction: StateRepresentationFunction?,
+    private val validationFunctions: List<ValidationFunction>,
+    private val stateRepresentationFunction: StateRepresentationFunction?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: Runner
+    private var runner: Runner
 
     init {
         runner = ParallelThreadsRunner(
@@ -55,12 +55,29 @@ class StressStrategy(
         }
     }
 
-    override fun run(): LincheckFailure? {
+    fun reset() {
+        runner = ParallelThreadsRunner(
+            strategy = this,
+            testClass = testClass,
+            validationFunctions = validationFunctions,
+            stateRepresentationFunction = stateRepresentationFunction,
+            timeoutMs = testCfg.timeoutMs,
+            useClocks = UseClocks.RANDOM
+        )
         try {
-            runner.also {
-                // Run invocations
-                for (invocation in 0 until invocations) {
-                    //println("run invocaton $invocation")
+            runner.initialize()
+        } catch (t: Throwable) {
+            runner.close()
+            throw t
+        }
+    }
+
+    override fun run(): LincheckFailure? {
+        // Run invocations
+        for (invocation in 0 until invocations) {
+            reset()
+            try {
+                runner.also {
                     when (val ir = runner.run()) {
                         is CompletedInvocationResult -> {
                             if (!verifier.verifyResults(scenario, ir.results))
@@ -69,10 +86,10 @@ class StressStrategy(
                         else -> return ir.toLincheckFailure(scenario)
                     }
                 }
-                return null
+            } finally {
+                runner.close()
             }
-        } finally {
-            runner.close()
         }
+        return null
     }
 }

@@ -29,28 +29,93 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.native.concurrent.*
 import kotlin.test.*
 
-class FirstTest: VerifierState() {
-    val state = A()
+class TestClass : VerifierState() {
+    val atomicState: AtomicInt = AtomicInt(0)
+    var regularState: Int = 0
 
     override fun extractState(): Any {
-        return state
+        return Pair(atomicState.value, regularState)
     }
 
+    override fun toString(): String {
+        return "$atomicState $regularState"
+    }
+
+    fun increment(): Int {
+        regularState++
+        return regularState
+    }
+
+    fun decrement(): Int {
+        regularState--
+        return regularState
+    }
+
+    fun atomicIncrement() = atomicState.addAndGet(1)
+
+    fun atomicDecrement() = atomicState.addAndGet(-1)
+}
+
+class FirstTest {
+    @Test
+    fun test_failing() {
+        LincheckStressConfiguration<TestClass>().apply {
+            iterations(300)
+            invocationsPerIteration(50)
+            actorsBefore(2)
+            threads(3)
+            actorsPerThread(2)
+            actorsAfter(2)
+            minimizeFailedScenario(false)
+
+            initialState({
+                TestClass()
+            })
+            stateRepresentation { this.toString() }
+
+            operation(TestClass::increment, "add")
+            operation({ this.decrement() }, "decrement")
+            operation(IntGen(""), BooleanGen(""), { i, b ->
+                //println("Operation with arguments $i and $b has called")
+            }, "do_nothing")
+        }.runTest()
+    }
+
+    @Test
+    fun test_working() {
+        LincheckStressConfiguration<TestClass>().apply {
+            iterations(20)
+            invocationsPerIteration(50)
+            actorsBefore(2)
+            threads(3)
+            actorsPerThread(2)
+            actorsAfter(2)
+            minimizeFailedScenario(false)
+
+            initialState({
+                TestClass()
+            })
+            stateRepresentation { this.toString() }
+
+            operation(TestClass::atomicIncrement, "atomicIncrement")
+            operation(TestClass::atomicDecrement, "atomicDecrement")
+        }.runTest()
+    }
+
+/*
     @Test
     fun test() {
         val testClass = TestClass("FirstTest") { FirstTest() }
 
         val actorGenerator1 = ActorGenerator(
-            function = {
-                instance, arguments ->
-                (instance as FirstTest).state.a()
+            function = { instance, arguments ->
+                (instance as TestClass).state.a()
             },
             parameterGenerators = listOf()
         )
         val actorGenerator2 = ActorGenerator(
-            function = {
-                instance, arguments ->
-                (instance as FirstTest).state.b()
+            function = { instance, arguments ->
+                (instance as TestClass).state.b()
             },
             parameterGenerators = listOf()
         )
@@ -66,8 +131,8 @@ class FirstTest: VerifierState() {
         )
 
         val options = StressOptions().run {
-            iterations(300)
-            invocationsPerIteration(100)
+            iterations(1)
+            invocationsPerIteration(50000)
             actorsBefore(2)
             threads(3)
             actorsPerThread(2)
@@ -77,26 +142,5 @@ class FirstTest: VerifierState() {
 
         LinChecker.check(testClass = testClass, testStructure = testStructure, options = options)
     }
-
-    class A : SynchronizedObject() {
-        private val sharedState: AtomicInt = AtomicInt(0)
-
-        fun a() = synchronized(this) {
-            sharedState.increment()
-            //printErr("a(), sharedState = ${sharedState.toString()}")
-        }
-
-        fun b() = synchronized(this) {
-            sharedState.decrement()
-            //printErr("b(), sharedState = ${sharedState.toString()}")
-        }
-
-        override fun equals(other: Any?): Boolean {
-            return this.sharedState.value == (other as A).sharedState.value
-        }
-
-        override fun hashCode(): Int {
-            return this.sharedState.value
-        }
-    }
+*/
 }

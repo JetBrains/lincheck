@@ -31,7 +31,7 @@ import kotlin.math.*
 internal expect class TestThread(iThread: Int, runnerHash: Int, r: Runnable) {
 
     fun execute()
-    fun terminate(): Runnable?
+    fun terminate()
 
     companion object {
         fun currentThread(): Any?

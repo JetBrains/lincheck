@@ -21,8 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.*
-import platform.posix.*
 import kotlin.native.ThreadLocal
 import kotlin.native.concurrent.*
 import kotlin.system.*
@@ -30,23 +28,28 @@ import kotlin.system.*
 @ThreadLocal
 val currentThreadId = Any()
 
+val results = mutableSetOf<Any?>()
+
 internal actual class TestThread actual constructor(val iThread: Int, val runnerHash: Int, val r: Runnable) {
     val worker: Worker = Worker.start(true, "Worker $iThread $runnerHash")
     var runnableFuture: Future<Runnable>? = null
 
     actual fun execute() {
         //printErr("start() $iThread called")
-        worker.execute(TransferMode.UNSAFE, { r }, { r ->
+        runnableFuture = worker.execute(TransferMode.UNSAFE, { r }, { r ->
             r.run()
             r
         })
     }
 
-    actual fun terminate(): Runnable? {
+    actual fun terminate() {
+        runnableFuture!!.state.value
         //printErr("stop() $iThread called")
-        val res = runnableFuture?.result
-        //worker.requestTermination(true)
-        return res
+        //val res = runnableFuture?.result
+        val result = runnableFuture?.result
+        results.add(result) // to prevent from garbage collecting
+        //worker.requestTermination(true).result
+        //return res
         //printErr("stop() $iThread finished")
     }
 

@@ -29,12 +29,12 @@ import kotlin.coroutines.*
 
 actual class TestClass(
     actual val name: String,
-    val function: () -> Any
+    val function: () -> Any?
 ) {
-    actual fun createInstance(): Any = function()
+    actual fun createInstance(): Any = function() ?: throw IllegalArgumentException("Constructor should not return null")
 }
 
-actual class SequentialSpecification<T> (val function: () -> Any)
+actual class SequentialSpecification<T> (val function: () -> Any?)
 
 actual fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any> = sequentialSpecification as SequentialSpecification<out Any>
 

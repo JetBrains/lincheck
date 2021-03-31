@@ -27,4 +27,6 @@ actual class ValueResult(actual val value: Any?, override val wasSuspended: Bool
     actual override fun equals(other: Any?): Boolean = if (other !is ValueResult) false else other.wasSuspended == wasSuspended && other.value == value
 
     actual override fun hashCode(): Int = if (wasSuspended) 0 else 1 // We can't use value here
+
+    override fun toString() = wasSuspendedPrefix + "$value"
 }

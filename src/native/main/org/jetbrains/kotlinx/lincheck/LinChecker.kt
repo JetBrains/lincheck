@@ -1,6 +1,8 @@
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.jvm.*
 import kotlin.reflect.*
@@ -25,11 +27,143 @@ import kotlin.reflect.*
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
+class LincheckStressConfiguration<Instance> : StressOptions() {
+    /*
+    invocationsPerIteration
+    iterations
+    threads
+    actorsPerThread
+    actorsBefore
+    actorsAfter
+    executionGenerator(executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator)
+    verifier(verifier: (sequentialSpecification: SequentialSpecification<*>) -> Verifier)
+    requireStateEquivalenceImplCheck
+    minimizeFailedScenario
+    createTestConfigurations
+    logLevel(logLevel: LoggingLevel)
+    sequentialSpecification(clazz: SequentialSpecification<*>?)
+    */
+    private var testClass: TestClass? = null
+    private var actorGenerators = mutableListOf<ActorGenerator>()
+    private var operationGroups = mutableListOf<OperationGroup>()
+    private var validationFunctions = mutableListOf<ValidationFunction>()
+    private var stateRepresentationFunction: StateRepresentationFunction? = null
+
+    internal fun getTestClass(): TestClass {
+        return testClass ?: throw IllegalArgumentException("initialState should be specified")
+    }
+
+    internal fun getTestStructure(): CTestStructure {
+        return CTestStructure(
+            actorGenerators,
+            operationGroups,
+            validationFunctions,
+            stateRepresentationFunction
+        )
+    }
+
+    fun runTest() {
+        LinChecker.check(getTestClass(), getTestStructure(), this as StressOptions)
+    }
+
+    // =========================== Constructor
+
+    fun initialState(
+        state: () -> Instance,
+        className: String = "default className"
+    ) {
+        testClass = TestClass(className, state)
+    }
+
+    // =========================== Operation
+
+    fun <R> operation(
+        op: Instance.() -> R,
+        name: String = op.toString(),
+        useOnce: Boolean = false,
+        isSuspendable: Boolean = false
+    ) {
+        val actorGenerator = ActorGenerator(
+            function = { instance, arguments ->
+                instance as Instance // check that operation can be applied to instance
+                instance.op()
+            },
+            parameterGenerators = listOf(),
+            functionName = name,
+            useOnce = useOnce,
+            isSuspendable = isSuspendable
+        )
+        actorGenerators.add(actorGenerator)
+    }
+
+    fun <P1, R> operation(
+        p1Gen: ParameterGenerator<P1>,
+        op: Instance.(p1: P1) -> R,
+        name: String = op.toString(),
+        useOnce: Boolean = false,
+        isSuspendable: Boolean = false
+    ) {
+        val actorGenerator = ActorGenerator(
+            function = { instance, arguments ->
+                instance as Instance // check that operation can be applied to instance
+                instance.op(arguments[0] as P1) // extract arguments and cast to type
+            },
+            parameterGenerators = listOf(p1Gen),
+            functionName = name,
+            useOnce = useOnce,
+            isSuspendable = isSuspendable
+        )
+        actorGenerators.add(actorGenerator)
+    }
+
+    fun <P1, P2, R> operation(
+        p1Gen: ParameterGenerator<P1>,
+        p2Gen: ParameterGenerator<P2>,
+        op: Instance.(p1: P1, p2: P2) -> R,
+        name: String = op.toString(),
+        useOnce: Boolean = false,
+        isSuspendable: Boolean = false
+    ) {
+        val actorGenerator = ActorGenerator(
+            function = { instance, arguments ->
+                instance as Instance // check that operation can be applied to instance
+                instance.op(arguments[0] as P1, arguments[1] as P2) // extract arguments and cast to type
+            },
+            parameterGenerators = listOf(p1Gen, p2Gen),
+            functionName = name,
+            useOnce = useOnce,
+            isSuspendable = isSuspendable
+        )
+        actorGenerators.add(actorGenerator)
+    }
+
+    // ============================= Validation Function
+
+    fun validationFunction(
+        validate: Instance.() -> Unit
+    ) {
+        validationFunctions.add(ValidationFunction { instance ->
+            instance as Instance // check that operation can be applied to instance
+            instance.validate()
+        })
+    }
+
+    // ============================= State Representation Function
+
+    fun stateRepresentation(
+        state: Instance.() -> String
+    ) {
+        stateRepresentationFunction = StateRepresentationFunction { instance ->
+            instance as Instance // check that operation can be applied to instance
+            instance.state()
+        }
+    }
+}
 
 /**
  * This class runs concurrent tests.
  */
-class LinChecker (private val testClass: TestClass, private val testStructure: CTestStructure, options: Options<*, *>) {
+class LinChecker(private val testClass: TestClass, private val testStructure: CTestStructure, options: Options<*, *>) {
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
 
@@ -63,6 +197,7 @@ class LinChecker (private val testClass: TestClass, private val testStructure: C
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
+            println("Iteration $i")
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1, iterations, scenario)
@@ -163,12 +298,15 @@ class LinChecker (private val testClass: TestClass, private val testStructure: C
         }
     }
 
-    private val ExecutionScenario.hasSuspendableActorsInInitPart get() =
-        initExecution.any(Actor::isSuspendable)
-    private val ExecutionScenario.hasPostPartAndSuspendableActors get() =
-        (parallelExecution.any { actors -> actors.any { it.isSuspendable } } && postExecution.size > 0)
-    private val ExecutionScenario.isParallelPartEmpty get() =
-        parallelExecution.map { it.size }.sum() == 0
+    private val ExecutionScenario.hasSuspendableActorsInInitPart
+        get() =
+            initExecution.any(Actor::isSuspendable)
+    private val ExecutionScenario.hasPostPartAndSuspendableActors
+        get() =
+            (parallelExecution.any { actors -> actors.any { it.isSuspendable } } && postExecution.size > 0)
+    private val ExecutionScenario.isParallelPartEmpty
+        get() =
+            parallelExecution.map { it.size }.sum() == 0
 
 
     private fun CTestConfiguration.createVerifier() =

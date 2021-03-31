@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.paramgen.*
 actual class ActorGenerator(
     val function: (Any, List<Any?>) -> Any?, // (instance, arguments) -> result
     val parameterGenerators: List<ParameterGenerator<*>>,
+    val functionName: String = function.toString(),
     actual val useOnce: Boolean = false,
     actual val isSuspendable: Boolean = false
 ) {
@@ -38,6 +39,7 @@ actual class ActorGenerator(
         return Actor(
             function = function,
             arguments = arguments,
+            functionName = functionName,
             isSuspendable = isSuspendable
         )
     }
