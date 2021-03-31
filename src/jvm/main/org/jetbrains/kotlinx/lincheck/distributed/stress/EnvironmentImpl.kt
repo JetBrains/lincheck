@@ -100,20 +100,21 @@ internal class EnvironmentImpl<Message, Log>(
     @Volatile
     internal var isFinished = false
 
-    override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) = context.taskCounter.runSafely {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: With timeout ${context.taskCounter.get()}"
-        }
-        val res = withTimeoutOrNull((ticks * TICK_TIME).toLong(), block)
-        logMessage(LogLevel.ALL_EVENTS) {
-            if (res == null) {
-                "[$nodeId]: Timeout cancelled"
-            } else {
-                "[$nodeId]: Timeout executed successfully"
+    override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) =
+        context.taskCounter.runSafely {
+            logMessage(LogLevel.ALL_EVENTS) {
+                "[$nodeId]: With timeout ${context.taskCounter.get()}"
             }
+            val res = withTimeoutOrNull((ticks * TICK_TIME).toLong(), block)
+            logMessage(LogLevel.ALL_EVENTS) {
+                if (res == null) {
+                    "[$nodeId]: Timeout cancelled"
+                } else {
+                    "[$nodeId]: Timeout executed successfully"
+                }
+            }
+            res != null
         }
-        res != null
-    }
 
     override fun getLogs() = context.logs
 
@@ -127,9 +128,9 @@ internal class EnvironmentImpl<Message, Log>(
             throw IllegalArgumentException("Timer with name \"$name\" already exists")
         }
         timers.add(name)
-        GlobalScope.launch(context.dispatchers[nodeId]) {
+        GlobalScope.launch(context.dispatchers[nodeId] + CoroutineExceptionHandler { _, _ -> }) {
             while (true) {
-                if (!timers.contains(name)) return@launch
+                if (!timers.contains(name) || isFinished) return@launch
                 f()
                 delay(ticks.toLong())
             }

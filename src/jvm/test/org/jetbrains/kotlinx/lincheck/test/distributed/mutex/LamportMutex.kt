@@ -49,16 +49,13 @@ class Rel(msgTime: Int) : MutexMessage(msgTime) {
 }
 
 class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
-    companion object {
-        private var counter = 0
-    }
-
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
     private val req = IntArray(env.numberOfNodes) { inf } // time of last REQ message
     private val ok = IntArray(env.numberOfNodes) // time of last OK message
     private val signal = Signal()
+    private val relLock = Signal()
 
     override suspend fun onMessage(message: MutexMessage, sender: Int) {
         val time = message.msgTime
@@ -74,14 +71,8 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
             is Rel -> {
                 req[sender] = inf
             }
-            else -> throw RuntimeException("Unexpected message type")
         }
         checkInCS()
-    }
-
-    @Validate
-    fun validate() {
-        counter = 0
     }
 
     private fun checkInCS() {
@@ -98,10 +89,10 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         signal.signal()
     }
 
-    @Operation
-    suspend fun lock(): Int {
-        check(req[env.nodeId] == inf) {
-            Thread.currentThread()
+    @Operation(blocking = true, cancellableOnSuspension = false)
+    suspend fun lock() {
+        if (req[env.nodeId] != inf) {
+            relLock.await()
         }
         val myReqTime = ++clock
         req[env.nodeId] = myReqTime
@@ -110,15 +101,16 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
             inCS = true
         }
         signal.await()
-        val res = ++counter
-        unlock()
-        return res
     }
 
-    private suspend fun unlock() {
-        if (!inCS) return
+    @Operation(cancellableOnSuspension = false)
+    suspend fun unlock() {
+        if (!inCS) {
+            return
+        }
         inCS = false
         req[env.nodeId] = inf
+        relLock.signal()
         env.broadcast(Rel(++clock))
     }
 }
@@ -131,18 +123,19 @@ class Counter {
 }
 
 class LamportMutexTest {
+    private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
+        .requireStateEquivalenceImplCheck(false)
+        .sequentialSpecification(MutexSpecification::class.java)
+        .threads(3)
+        .actorsPerThread(4)
+        .invocationsPerIteration(1000)
+        .iterations(30)
+
     @Test
     fun testSimple() {
         LinChecker.check(
             LamportMutex::class.java,
-            DistributedOptions<MutexMessage, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Counter::class.java)
-                .threads(3)
-                .messageOrder(MessageOrder.FIFO)
-                .actorsPerThread(2)
-                .invocationsPerIteration(1000)
-                .iterations(30)
+            createOptions()
         )
     }
 
@@ -150,13 +143,7 @@ class LamportMutexTest {
     fun testNoFifo() {
         LinChecker.check(
             LamportMutex::class.java,
-            DistributedOptions<MutexMessage, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Counter::class.java)
-                .threads(3)
-                .messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(30)
-                .iterations(1000)
+            createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
         )
     }
 }

@@ -120,6 +120,7 @@ open class DistributedRunner<Message, Log>(
             val actors = scenario.parallelExecution[t].size
             ex.results = arrayOfNulls(actors)
             ex.actorId = 0
+            ex.clocks = arrayOfNulls(actors)
         }
     }
 
@@ -169,8 +170,7 @@ open class DistributedRunner<Message, Log>(
                 }
             }
 
-            //TODO: handle null results
-            //println("Total get operations=${getCnt.value}, null results=${getNull.value}, not null results=${getCnt.value - getNull.value}")
+            context.testNodeExecutions.zip(scenario.parallelExecution).forEach { it.first.setSuspended(it.second) }
             val parallelResultsWithClock = context.testNodeExecutions.mapIndexed { i, ex ->
                 //TODO add real vector clock
                 // ex.results
@@ -217,7 +217,7 @@ open class DistributedRunner<Message, Log>(
 
     //TODO: Maybe a better way?
     private val handler = CoroutineExceptionHandler { _, _ -> }
-    private fun createNewContext() : CoroutineContext {
+    private fun createNewContext(): CoroutineContext {
         return AlreadyIncrementedCounter() + handler
     }
 
@@ -335,11 +335,12 @@ open class DistributedRunner<Message, Log>(
                     logMessage(LogLevel.ALL_EVENTS) {
                         "[$iNode]: Operation $i started"
                     }
-                    val res = context.taskCounter.runSafely {
+                    val res = if (!actor.blocking) context.taskCounter.runSafely {
                         testNodeExecution.runOperation(i)
-                    }
+                    } else testNodeExecution.runOperation(i)
+                    testNodeExecution.clocks[i] = context.vectorClock[iNode].copyOf()
                     testNodeExecution.results[i] = if (actor.method.returnType == Void.TYPE) {
-                       VoidResult
+                        VoidResult
                     } else {
                         createLincheckResult(res)
                     }
@@ -394,7 +395,7 @@ open class DistributedRunner<Message, Log>(
         context.events[iNode].add(NodeCrashEvent(iNode, context.vectorClock[iNode].copyOf()))
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
-        context.testNodeExecutions.getOrNull(iNode)?.crash()
+        context.testNodeExecutions.getOrNull(iNode)?.crash(context.vectorClock[iNode].copyOf())
         if (testCfg.supportRecovery == RecoveryMode.ALL_NODES_RECOVER ||
             testCfg.supportRecovery == RecoveryMode.MIXED
             && context.probabilities[iNode].nodeRecovered()

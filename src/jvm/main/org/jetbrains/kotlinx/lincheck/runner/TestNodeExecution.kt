@@ -19,8 +19,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import org.jetbrains.kotlinx.lincheck.CrashResult
-import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.*
 
 abstract class TestNodeExecution {
     var actorId = 0
@@ -28,21 +27,39 @@ abstract class TestNodeExecution {
     var testInstance: Any? = null
     lateinit var objArgs: Array<Any>
     lateinit var results: Array<Result?>
+    lateinit var clocks: Array<IntArray?>
 
     abstract suspend fun runOperation(i: Int): Any?
 
-    fun crash() {
+    fun crash(clock: IntArray) {
         if (actorId - 1 >= 0 && results[actorId - 1] == null) {
             results[actorId - 1] = CrashResult
+            clocks[actorId - 1] = clock
         }
     }
 
     fun crashRemained() {
-        for(i in results.indices) {
+        for (i in results.indices) {
             if (results[i] == null) {
                 results[i] = CrashResult
             }
         }
         actorId = results.size
+    }
+
+    fun setSuspended(actors: List<Actor>) {
+        val lastOp = actorId - 1
+        if (lastOp >= 0 && results[lastOp] == null && actors[lastOp].isSuspendable) {
+            results[actorId - 1] = if (actors[lastOp].method.returnType == Void.TYPE) {
+                SuspendedVoidResult
+            } else {
+                Suspended
+            }
+        }
+        for (i in results.indices) {
+            if (results[i] == null) {
+                results[i] = NoResult
+            }
+        }
     }
 }

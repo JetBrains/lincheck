@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 
@@ -126,32 +127,36 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
         logMessage(LogLevel.ALL_EVENTS) {
             "[$id]: Submit task $shouldInc ${block.hashCode()} counter is $r"
         }
-        executor.submit {
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$id]: Run task ${block.hashCode()} counter is ${taskCounter.get()}"
-            }
-            if (status.value == RUNNING) {
-                try {
-                    block.run()
-                } catch (e: Throwable) {
-                    println("Exception here $e")
-                    logMessage(LogLevel.ALL_EVENTS) {
-                        "[$id]: Exception $e while running block"
-                    }
-                }
-            }
-            if (status.value != STOPPED) {
-                val t = taskCounter.decrement()
+        try {
+            executor.submit {
                 logMessage(LogLevel.ALL_EVENTS) {
-                    "[$id]: Finish task ${block.hashCode()} counter is ${t}"
+                    "[$id]: Run task ${block.hashCode()} counter is ${taskCounter.get()}"
                 }
-                taskCounter.checkIsFinished {
-                    logMessage(LogLevel.ALL_EVENTS) {
-                        "[$id]: Release semaphore"
+                if (status.value == RUNNING) {
+                    try {
+                        block.run()
+                    } catch (e: Throwable) {
+                        println("Exception here $e")
+                        logMessage(LogLevel.ALL_EVENTS) {
+                            "[$id]: Exception $e while running block"
+                        }
                     }
-                    status.lazySet(STOPPED)
+                }
+                if (status.value != STOPPED) {
+                    val t = taskCounter.decrement()
+                    logMessage(LogLevel.ALL_EVENTS) {
+                        "[$id]: Finish task ${block.hashCode()} counter is ${t}"
+                    }
+                    taskCounter.checkIsFinished {
+                        logMessage(LogLevel.ALL_EVENTS) {
+                            "[$id]: Release semaphore"
+                        }
+                        status.lazySet(STOPPED)
+                    }
                 }
             }
+        } catch (_: RejectedExecutionException) {
+            return
         }
     }
 
