@@ -128,8 +128,8 @@ class LamportMutexTest {
         .sequentialSpecification(MutexSpecification::class.java)
         .threads(3)
         .actorsPerThread(4)
-        .invocationsPerIteration(1000)
-        .iterations(30)
+        .invocationsPerIteration(30)
+        .iterations(1000)
 
     @Test
     fun testSimple() {
