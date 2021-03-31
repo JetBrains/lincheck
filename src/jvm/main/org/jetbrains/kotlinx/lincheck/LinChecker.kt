@@ -167,9 +167,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private val ExecutionScenario.hasSuspendableActorsInInitPart get() =
-        initExecution.stream().anyMatch(Actor::isSuspendable)
+        initExecution.any(Actor::isSuspendable)
     private val ExecutionScenario.hasPostPartAndSuspendableActors get() =
-        (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
+        (parallelExecution.any { actors -> actors.any { it.isSuspendable } } && postExecution.size > 0)
     private val ExecutionScenario.isParallelPartEmpty get() =
         parallelExecution.map { it.size }.sum() == 0
 

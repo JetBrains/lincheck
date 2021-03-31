@@ -27,69 +27,13 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
-class StressStrategy(
-    private val testCfg: StressCTestConfiguration,
-    private val testClass: TestClass,
+expect class StressStrategy(
+    testCfg: StressCTestConfiguration,
+    testClass: TestClass,
     scenario: ExecutionScenario,
-    private val validationFunctions: List<ValidationFunction>,
-    private val stateRepresentationFunction: StateRepresentationFunction?,
-    private val verifier: Verifier
-) : Strategy(scenario) {
-    private val invocations = testCfg.invocationsPerIteration
-    private var runner: Runner
-
-    init {
-        runner = ParallelThreadsRunner(
-            strategy = this,
-            testClass = testClass,
-            validationFunctions = validationFunctions,
-            stateRepresentationFunction = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
-        )
-        try {
-            runner.initialize()
-        } catch (t: Throwable) {
-            runner.close()
-            throw t
-        }
-    }
-
-    fun reset() {
-        runner = ParallelThreadsRunner(
-            strategy = this,
-            testClass = testClass,
-            validationFunctions = validationFunctions,
-            stateRepresentationFunction = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
-        )
-        try {
-            runner.initialize()
-        } catch (t: Throwable) {
-            runner.close()
-            throw t
-        }
-    }
-
-    override fun run(): LincheckFailure? {
-        // Run invocations
-        for (invocation in 0 until invocations) {
-            reset()
-            try {
-                runner.also {
-                    when (val ir = runner.run()) {
-                        is CompletedInvocationResult -> {
-                            if (!verifier.verifyResults(scenario, ir.results))
-                                return IncorrectResultsFailure(scenario, ir.results)
-                        }
-                        else -> return ir.toLincheckFailure(scenario)
-                    }
-                }
-            } finally {
-                runner.close()
-            }
-        }
-        return null
-    }
+    validationFunctions: List<ValidationFunction>,
+    stateRepresentationFunction: StateRepresentationFunction?,
+    verifier: Verifier
+) : Strategy {
+    override fun run(): LincheckFailure?
 }
