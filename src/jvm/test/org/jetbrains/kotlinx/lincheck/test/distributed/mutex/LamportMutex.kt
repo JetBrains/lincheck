@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
@@ -84,6 +85,9 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         counter = 0
     }
 
+    @StateRepresentation
+    override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
+
     private fun checkInCS() {
         val myReqTime = req[env.nodeId]
         if (myReqTime == inf || inCS) {
@@ -98,7 +102,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         signal.signal()
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun lock(): Int {
         check(req[env.nodeId] == inf) {
             Thread.currentThread()
@@ -110,7 +114,9 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
             inCS = true
         }
         signal.await()
+        env.recordInternalEvent("Before acquire lock $counter")
         val res = ++counter
+        env.recordInternalEvent("Acquire lock $res")
         unlock()
         return res
     }
@@ -119,6 +125,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         if (!inCS) return
         inCS = false
         req[env.nodeId] = inf
+        env.recordInternalEvent("Release lock")
         env.broadcast(Rel(++clock))
     }
 }
@@ -146,7 +153,7 @@ class LamportMutexTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+    @Test//(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(
             LamportMutex::class.java,
@@ -154,6 +161,7 @@ class LamportMutexTest {
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(Counter::class.java)
                 .threads(3)
+                .actorsPerThread(3)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
                 .invocationsPerIteration(30)
                 .iterations(1000)

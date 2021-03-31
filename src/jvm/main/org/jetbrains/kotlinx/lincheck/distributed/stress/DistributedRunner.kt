@@ -88,7 +88,7 @@ open class DistributedRunner<Message, Log>(
 
     private val runnerHash = this.hashCode()
     private var context: DistributedRunnerContext<Message, Log> =
-        DistributedRunnerContext(testCfg, scenario, runnerHash)
+        DistributedRunnerContext(testCfg, scenario, runnerHash, stateRepresentationFunction)
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var environments: Array<EnvironmentImpl<Message, Log>>
     private val exception = atomic<Throwable?>(null)
@@ -106,7 +106,7 @@ open class DistributedRunner<Message, Log>(
         exception.lazySet(null)
         isRunning.lazySet(false)
         debugLogs = FastQueue()
-        context = DistributedRunnerContext(testCfg, scenario, runnerHash)
+        context = DistributedRunnerContext(testCfg, scenario, runnerHash, stateRepresentationFunction)
         environments = Array(numberOfNodes) {
             EnvironmentImpl(context, it)
         }
@@ -235,21 +235,23 @@ open class DistributedRunner<Message, Log>(
                     logMessage(LogLevel.MESSAGES) {
                         "[$i]: Received $m ${channel.hashCode()}"
                     }
-                    context.incClock(i)
-                    val clock = context.maxClock(i, m.clock)
-                    context.events[i].add(
-                        MessageReceivedEvent(
-                            m.message,
-                            sender = m.sender,
-                            receiver = m.receiver,
-                            id = m.id,
-                            clock = clock
-                        )
-                    )
+
                     val r = context.taskCounter.increment()
                     logMessage(LogLevel.ALL_EVENTS) {
                         "[$i]: Launching onMessage counter is $r"
                     }
+                    context.incClock(i)
+                    val clock = context.maxClock(i, m.clock)
+                    context.events.put(i to
+                            MessageReceivedEvent(
+                                m.message,
+                                sender = m.sender,
+                                receiver = m.receiver,
+                                id = m.id,
+                                clock = clock,
+                                state = context.getStateRepresentation(i)
+                            )
+                    )
                     GlobalScope.launch(this + createNewContext()) {
                         handleException(i) {
                             testInstance.onMessage(m.message, m.sender)
@@ -280,7 +282,7 @@ open class DistributedRunner<Message, Log>(
                 val node = channel.receive()
                 if (context.failureInfo[i]) return
                 context.incClock(i)
-                context.events[i].add(CrashNotificationEvent(i, node, context.vectorClock[i].copyOf()))
+                context.events.put(i to CrashNotificationEvent(i, node, context.vectorClock[i].copyOf()))
                 val r = context.taskCounter.increment()
                 logMessage(LogLevel.ALL_EVENTS) {
                     "[$i]: Launching on node $node unavailable, counter is $r"
@@ -324,10 +326,11 @@ open class DistributedRunner<Message, Log>(
                 val i = testNodeExecution.actorId
                 val actor = scenario.parallelExecution[iNode][i]
                 context.incClock(iNode)
-                context.events[iNode].add(
+                context.events.put(iNode to
                     OperationStartEvent(
                         iNode, i,
-                        context.vectorClock[iNode].copyOf()
+                        context.vectorClock[iNode].copyOf(),
+                        context.getStateRepresentation(iNode)
                     )
                 )
                 try {
@@ -391,7 +394,7 @@ open class DistributedRunner<Message, Log>(
         }
         context.messageHandler.close(iNode)
         context.failureNotifications[iNode].close()
-        context.events[iNode].add(NodeCrashEvent(iNode, context.vectorClock[iNode].copyOf()))
+        context.events.put(iNode to NodeCrashEvent(iNode, context.vectorClock[iNode].copyOf()))
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
         context.testNodeExecutions.getOrNull(iNode)?.crash()
@@ -411,7 +414,7 @@ open class DistributedRunner<Message, Log>(
             context.testNodeExecutions.getOrNull(iNode)?.testInstance = context.testInstances[iNode]
             val dispatcher = NodeDispatcher(iNode, context.taskCounter, runnerHash)
             context.dispatchers[iNode] = dispatcher
-            context.events[iNode].add(ProcessRecoveryEvent(iNode, context.vectorClock[iNode].copyOf()))
+            context.events.put(iNode to ProcessRecoveryEvent(iNode, context.vectorClock[iNode].copyOf()))
             context.failureInfo.setRecovered(iNode)
             GlobalScope.launch(dispatcher + createNewContext()) {
                 logMessage(LogLevel.ALL_EVENTS) {
@@ -439,8 +442,8 @@ open class DistributedRunner<Message, Log>(
             index to stateRepresentationFunction?.let { getMethod(node, it) }
                 ?.invoke(node) as String?
         }.filterNot { it.second.isNullOrBlank() }.joinToString(separator = "\n") { "STATE [${it.first}]: ${it.second}" }
-        val events = context.events.joinToString(separator = "\n", prefix = "EVENTS\n") { it ->
-            it.joinToString(separator = "\n")
+        val events = context.events.toList().joinToString(separator = "\n", prefix = "EVENTS\n") { it ->
+           "${it.second}"
         }
         val logs = environments.mapIndexed { index, env -> index to env.log }.filterNot { it.second.isNullOrEmpty() }
             .joinToString(separator = "\n") {

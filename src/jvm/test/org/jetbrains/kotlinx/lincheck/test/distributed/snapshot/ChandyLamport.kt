@@ -127,7 +127,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
     }
 
     @StateRepresentation
-    fun stateRepresentation(): String {
+    override fun stateRepresentation(): String {
         val res = StringBuilder()
         res.append("[${env.nodeId}]: Cursum ${currentSum.value}\n")
         res.append("[${env.nodeId}]: State $state\n")

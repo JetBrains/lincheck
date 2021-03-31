@@ -74,7 +74,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     }
 
     @StateRepresentation
-    fun stateRepresentation(): String {
+    override fun stateRepresentation(): String {
         val res = StringBuilder()
         res.append("[${env.nodeId}]: Cursum ${currentSum.value}\n")
         replies.forEachIndexed { i, c -> res.append("[${env.nodeId}]: reply[$i] $c\n") }
