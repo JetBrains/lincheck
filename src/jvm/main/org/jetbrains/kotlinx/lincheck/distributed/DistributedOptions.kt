@@ -99,7 +99,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             verifier, invocationsPerIteration, isNetworkReliable,
             messageOrder, maxNumberOfFailedNodes, supportRecovery,
             messageDuplication, networkPartitions, asyncRun, testClasses,
-            requireStateEquivalenceImplementationCheck, false,
+            requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs
         )
     }
