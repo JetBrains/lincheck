@@ -70,12 +70,13 @@ internal class EnvironmentImpl<Message, Log>(
             sender = nodeId,
             receiver = receiver,
             id = context.messageId.getAndIncrement(),
-            clock = context.vectorClock[nodeId].copyOf()
+            clock = context.vectorClock[nodeId].copyOf(),
+            state = context.getStateRepresentation(nodeId)
         )
         logMessage(LogLevel.ALL_EVENTS) {
             "[$nodeId]: Before sending $event"
         }
-        context.events[nodeId].add(event)
+        context.events.put(nodeId to event)
         try {
             val rate = probability.duplicationRate()
             repeat(rate) {
@@ -92,7 +93,10 @@ internal class EnvironmentImpl<Message, Log>(
     }
 
     override fun events(): Array<List<Event>> = if (isFinished) {
-        context.events.map { it.toList() }.toTypedArray()
+        val events = context.events.toList().groupBy { it.first }.mapValues { it.value.map { it.second } }
+        Array(numberOfNodes) {
+            events[it]!!
+        }
     } else {
         throw IllegalAccessException("Cannot access events until the execution is over ")
     }
@@ -142,5 +146,17 @@ internal class EnvironmentImpl<Message, Log>(
             throw IllegalArgumentException("Timer with name \"$name\" does not exist")
         }
         timers.remove(name)
+    }
+
+    override fun recordInternalEvent(msg: String) {
+        context.incClock(nodeId)
+        context.events.put(
+            nodeId to RecordEvent(
+                nodeId,
+                msg,
+                context.vectorClock[nodeId].copyOf(),
+                context.getStateRepresentation(nodeId)
+            )
+        )
     }
 }

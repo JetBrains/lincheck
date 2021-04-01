@@ -21,6 +21,8 @@ interface Node<Message> {
     suspend fun onStart() {}
 
     suspend fun onScenarioFinish() {}
+
+    fun stateRepresentation() : String? = null
 }
 
 class CrashError : Exception()

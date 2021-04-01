@@ -23,10 +23,12 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.lang.Integer.max
+import kotlin.coroutines.suspendCoroutine
 
 sealed class MutexMessage(val msgTime: Int)
 
@@ -55,7 +57,6 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     private val req = IntArray(env.numberOfNodes) { inf } // time of last REQ message
     private val ok = IntArray(env.numberOfNodes) // time of last OK message
     private val signal = Signal()
-    private val relLock = Signal()
 
     override suspend fun onMessage(message: MutexMessage, sender: Int) {
         val time = message.msgTime
@@ -75,6 +76,9 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         checkInCS()
     }
 
+    @StateRepresentation
+    override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
+
     private fun checkInCS() {
         val myReqTime = req[env.nodeId]
         if (myReqTime == inf || inCS) {
@@ -92,15 +96,19 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     @Operation(blocking = true, cancellableOnSuspension = false)
     suspend fun lock() {
         if (req[env.nodeId] != inf) {
-            relLock.await()
+            suspendCoroutine<Unit> {  }
         }
         val myReqTime = ++clock
         req[env.nodeId] = myReqTime
         env.broadcast(Req(++clock, myReqTime))
         if (env.numberOfNodes == 1) {
             inCS = true
+            return
         }
-        signal.await()
+        while (!inCS) {
+            signal.await()
+        }
+        env.recordInternalEvent("Lock acquired")
     }
 
     @Operation(cancellableOnSuspension = false)
@@ -110,7 +118,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         }
         inCS = false
         req[env.nodeId] = inf
-        relLock.signal()
+        env.recordInternalEvent("Lock released")
         env.broadcast(Rel(++clock))
     }
 }
@@ -139,7 +147,7 @@ class LamportMutexTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+    @Test//(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(
             LamportMutex::class.java,

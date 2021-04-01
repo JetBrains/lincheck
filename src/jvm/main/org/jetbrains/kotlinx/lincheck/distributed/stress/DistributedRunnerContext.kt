@@ -24,17 +24,22 @@ import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.getMethod
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
 import java.lang.Integer.max
+import java.lang.reflect.Method
 import kotlin.random.Random
 
 
 class DistributedRunnerContext<Message, Log>(
     val testCfg: DistributedCTestConfiguration<Message, Log>,
     val scenario: ExecutionScenario,
-    runnerHash: Int
+    runnerHash: Int,
+    val stateRepresentation: Method?
 ) {
     companion object {
         val threadLocalRand: ThreadLocal<Random> = ThreadLocal.withInitial { Random }
@@ -57,9 +62,7 @@ class DistributedRunnerContext<Message, Log>(
         testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
     )
 
-    val events = Array(addressResolver.totalNumberOfNodes) {
-        mutableListOf<Event>()
-    }
+    val events = FastQueue<Pair<Int, Event>>()
 
     val messageId = atomic(0)
 
@@ -105,4 +108,6 @@ class DistributedRunnerContext<Message, Log>(
     } else {
         addressResolver.totalNumberOfNodes + 2
     }
+
+    fun getStateRepresentation(iNode : Int) = testInstances[iNode].stateRepresentation()
 }

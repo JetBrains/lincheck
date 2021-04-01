@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.distributed.queue
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
-import org.jetbrains.kotlinx.lincheck.distributed.stress.withProbability
 
 
 class FastQueue<E> {
@@ -75,6 +74,20 @@ class FastQueue<E> {
             if (item != null) {
                 return (item as ValueItem<E>).value ?: continue
             }
+        }
+    }
+
+    fun toList() : List<E> {
+        val res = mutableListOf<E>()
+        var cur = head.value
+        while(true) {
+            for (i in 0 until BUFFER_SIZE) {
+                val item = cur.items[i].value
+                if (item is ValueItem<*> && item.value != null) {
+                    res.add((item as ValueItem<E>).value!!)
+                }
+            }
+            cur = cur.next.value ?: return res
         }
     }
 }

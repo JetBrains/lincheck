@@ -60,6 +60,8 @@ interface Environment<Message, Log> {
     fun setTimer(name: String, ticks: Int, f: suspend () -> Unit)
 
     fun cancelTimer(name: String)
+
+    fun recordInternalEvent(msg : String)
 }
 
 sealed class Event
@@ -68,9 +70,10 @@ data class MessageSentEvent<Message>(
     val sender: Int,
     val receiver: Int,
     val id: Int,
-    val clock: IntArray
+    val clock: IntArray,
+    val state: String? = null
 ) : Event() {
-    override fun toString() = "[$sender]: Send message $message to $receiver, id=$id, clock=${clock.toList()}"
+    override fun toString() = "[$sender]: Send message $message to $receiver, id=$id, clock=${clock.toList()}, state={$state}"
 }
 
 data class MessageReceivedEvent<Message>(
@@ -78,25 +81,28 @@ data class MessageReceivedEvent<Message>(
     val sender: Int,
     val receiver: Int,
     val id: Int,
-    val clock: IntArray
+    val clock: IntArray,
+    val state: String? = null
 ) : Event() {
-    override fun toString() = "[$receiver]: Received message $message from $sender, id=$id, clock=${clock.toList()}"
+    override fun toString() = "[$receiver]: Received message $message from $sender, id=$id, clock=${clock.toList()}, state={$state}"
 }
 
-data class LogEvent<Log>(val message: Log, val sender: Int, val clock: IntArray) : Event()
-
-data class NodeCrashEvent(val iNode: Int, val clock: IntArray) : Event() {
-    override fun toString() = "[$iNode]: Node crashed, clock=${clock.toList()}"
+data class RecordEvent(val iNode: Int, val record: String, val clock: IntArray, val state: String? = null) : Event() {
+    override fun toString() = "[$iNode]: $record, clock=${clock.toList()}, state={$state}"
 }
 
-data class ProcessRecoveryEvent(val iNode: Int, val clock: IntArray) : Event() {
-    override fun toString() = "[$iNode]: Node recovered, clock=${clock.toList()}"
+data class NodeCrashEvent(val iNode: Int, val clock: IntArray, val state: String? = null) : Event() {
+    override fun toString() = "[$iNode]: Node crashed, clock=${clock.toList()}, state={$state}"
 }
 
-data class OperationStartEvent(val iNode: Int, val opId: Int, val clock: IntArray) : Event() {
-    override fun toString() = "[$iNode]: Operation $opId started, clock=${clock.toList()}"
+data class ProcessRecoveryEvent(val iNode: Int, val clock: IntArray, val state: String? = null) : Event() {
+    override fun toString() = "[$iNode]: Node recovered, clock=${clock.toList()}, state={$state}"
 }
 
-data class CrashNotificationEvent(val iNode: Int, val crashedNode: Int, val clock: IntArray) : Event() {
-    override fun toString() = "[$iNode]: Receive crash notification from $crashedNode, clock=${clock.toList()}"
+data class OperationStartEvent(val iNode: Int, val opId: Int, val clock: IntArray, val state: String? = null) : Event() {
+    override fun toString() = "[$iNode]: Operation $opId started, clock=${clock.toList()}, state={$state}"
+}
+
+data class CrashNotificationEvent(val iNode: Int, val crashedNode: Int, val clock: IntArray, val state: String? = null) : Event() {
+    override fun toString() = "[$iNode]: Receive crash notification from $crashedNode, clock=${clock.toList()}, state={$state}"
 }
