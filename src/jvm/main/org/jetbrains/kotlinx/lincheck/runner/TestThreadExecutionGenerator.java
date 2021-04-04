@@ -208,8 +208,8 @@ public class TestThreadExecutionGenerator {
                 for (Class<? extends Throwable> ec : actor.getHandledExceptions())
                     mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExceptionHandler, getType(ec).getInternalName());
             }
-
-            actorCrashHandlerGenerator.addCrashTryBlock(actorCatchBlockStart, actorCatchBlockEnd, mv);
+            Label executionStart = mv.newLabel();
+            actorCrashHandlerGenerator.addCrashTryBlock(executionStart, actorCatchBlockEnd, mv);
 
             // Catch those exceptions that has not been caught yet
             Label unexpectedExceptionHandler = mv.newLabel();
@@ -220,6 +220,8 @@ public class TestThreadExecutionGenerator {
             mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
             mv.push(iThread);
             mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_START);
+
+            mv.mark(executionStart);
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
             mv.push(i);
