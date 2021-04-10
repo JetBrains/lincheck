@@ -22,7 +22,7 @@ interface Node<Message> {
 
     suspend fun onScenarioFinish() {}
 
-    fun stateRepresentation() : String? = null
+    fun stateRepresentation() : String = ""
 }
 
 class CrashError : Exception()

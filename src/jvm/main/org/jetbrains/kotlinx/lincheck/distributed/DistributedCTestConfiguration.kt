@@ -32,32 +32,73 @@ import java.lang.reflect.Method
 import java.util.*
 
 
-class DistributedCTestConfiguration<Message, Log>(testClass: Class<*>, iterations: Int,
-                                                  threads: Int, actorsPerThread: Int,
-                                                  generatorClass: Class<out ExecutionGenerator>,
-                                                  verifierClass: Class<out Verifier>,
-                                                  val invocationsPerIteration: Int,
-                                                  val isNetworkReliable: Boolean,
-                                                  val messageOrder: MessageOrder,
-                                                  val maxNumberOfFailedNodes: (Int) -> Int,
-                                                  val supportRecovery: RecoveryMode,
-                                                  val messageDuplication: Boolean,
-                                                  val networkPartitions : Boolean,
-                                                  val asyncRun : Boolean,
-                                                  val nodeTypes: HashMap<Class<out Node<Message>>, Pair<Int, Boolean>>,
-                                                  requireStateEquivalenceCheck: Boolean,
-                                                  minimizeFailedScenario: Boolean,
-                                                  sequentialSpecification: Class<*>, timeoutMs: Long) :
-        CTestConfiguration(testClass, iterations, threads, actorsPerThread,
-                0, 0, generatorClass, verifierClass,
-                requireStateEquivalenceCheck,
-                minimizeFailedScenario, sequentialSpecification, timeoutMs) {
+class DistributedCTestConfiguration<Message, Log>(
+    testClass: Class<*>, iterations: Int,
+    threads: Int, actorsPerThread: Int,
+    generatorClass: Class<out ExecutionGenerator>,
+    verifierClass: Class<out Verifier>,
+    val invocationsPerIteration: Int,
+    val isNetworkReliable: Boolean,
+    val messageOrder: MessageOrder,
+    val maxNumberOfFailedNodes: (Int) -> Int,
+    val supportRecovery: RecoveryMode,
+    val messageDuplication: Boolean,
+    val networkPartitions: Boolean,
+    val asyncRun: Boolean,
+    val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
+    requireStateEquivalenceCheck: Boolean,
+    minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>?, timeoutMs: Long
+) :
+    CTestConfiguration(
+        testClass, iterations, threads, actorsPerThread,
+        0, 0, generatorClass, verifierClass,
+        requireStateEquivalenceCheck,
+        minimizeFailedScenario, sequentialSpecification, timeoutMs
+    ) {
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
     }
 
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>, stateRepresentationMethod: Method?, verifier: Verifier): Strategy {
+    override fun createStrategy(
+        testClass: Class<*>,
+        scenario: ExecutionScenario,
+        validationFunctions: List<Method>,
+        stateRepresentationMethod: Method?,
+        verifier: Verifier
+    ): Strategy {
         return DistributedStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+    }
+
+    fun nextConfigurations(): List<DistributedCTestConfiguration<Message, Log>> {
+        val res = mutableListOf<DistributedCTestConfiguration<Message, Log>>()
+        for ((cls, nodeInfo) in nodeTypes) {
+            if (nodeInfo.maxNumberOfInstances == nodeInfo.minNumberOfInstances) {
+                continue
+            }
+            val newNodeTypes = nodeTypes.toMutableMap()
+            newNodeTypes[cls] = nodeInfo.minimize()
+            res.add(
+                DistributedCTestConfiguration(
+                    testClass, iterations,
+                    threads, actorsPerThread,
+                    generatorClass,
+                    verifierClass,
+                    invocationsPerIteration,
+                    isNetworkReliable,
+                    messageOrder,
+                    maxNumberOfFailedNodes,
+                    supportRecovery,
+                    messageDuplication,
+                    networkPartitions,
+                    asyncRun,
+                    newNodeTypes, requireStateEquivalenceImplCheck,
+                    minimizeFailedScenario,
+                    sequentialSpecification, timeoutMs
+                )
+            )
+        }
+        return res
     }
 }

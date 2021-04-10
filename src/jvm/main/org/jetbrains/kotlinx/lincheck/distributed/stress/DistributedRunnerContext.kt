@@ -41,13 +41,9 @@ class DistributedRunnerContext<Message, Log>(
     runnerHash: Int,
     val stateRepresentation: Method?
 ) {
-    companion object {
-        val threadLocalRand: ThreadLocal<Random> = ThreadLocal.withInitial { Random }
-    }
-
     val addressResolver = NodeAddressResolver(
         testCfg.testClass as Class<out Node<Message>>,
-        scenario.threads, testCfg.nodeTypes
+        scenario.threads, testCfg.nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail }
     )
 
     val messageHandler =
@@ -94,7 +90,7 @@ class DistributedRunnerContext<Message, Log>(
     }
 
     val probabilities = Array(addressResolver.totalNumberOfNodes) {
-        Probability(testCfg, threadLocalRand)
+        Probability(testCfg)
     }
 
     fun initialNumberOfTasks() = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
@@ -109,5 +105,5 @@ class DistributedRunnerContext<Message, Log>(
         addressResolver.totalNumberOfNodes + 2
     }
 
-    fun getStateRepresentation(iNode : Int) = testInstances[iNode].stateRepresentation()
+    fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 }

@@ -24,10 +24,10 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.random.Random
 
 class Probability(
-    private val testCfg: DistributedCTestConfiguration<*, *>,
-    private val rand: ThreadLocal<Random>
+    private val testCfg: DistributedCTestConfiguration<*, *>
 ) {
     companion object {
+        val rand: ThreadLocal<Random> = ThreadLocal.withInitial { Random }
         const val MESSAGE_SENT_PROBABILITY = 0.95
         const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
         const val NODE_FAIL_PROBABILITY = 0.05
@@ -54,4 +54,6 @@ class Probability(
     fun nodeFailed() = rand.get().nextDouble(1.0) < NODE_FAIL_PROBABILITY
 
     fun nodeRecovered(): Boolean = rand.get().nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
+
+    var prevMsgCount = 0
 }

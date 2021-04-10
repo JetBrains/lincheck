@@ -17,6 +17,10 @@ enum class RecoveryMode {
     MIXED
 }
 
+class NodeTypeInfo(val minNumberOfInstances: Int, val maxNumberOfInstances: Int, val canFail: Boolean) {
+    fun minimize() = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances - 1, canFail)
+}
+
 class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log>,
         DistributedCTestConfiguration<Message, Log>>() {
     companion object {
@@ -30,7 +34,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
     private var networkPartitions: Boolean = false
-    private var testClasses = HashMap<Class<out Node<Message>>, Pair<Int, Boolean>>()
+    private var testClasses = HashMap<Class<out Node<Message>>, NodeTypeInfo>()
     private var useVectorClock = false
     private var asyncRun = false
 
@@ -48,7 +52,15 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         numberOfInstances: Int,
         canFail: Boolean = true
     ): DistributedOptions<Message, Log> {
-        this.testClasses[cls] = numberOfInstances to canFail
+        this.testClasses[cls] = NodeTypeInfo(numberOfInstances, numberOfInstances, canFail)
+        return this
+    }
+
+    fun nodeType(cls: Class<out Node<Message>>,
+                   minNumberOfInstances: Int,
+                   maxNumberOfInstances: Int,
+                   canFail: Boolean = true): DistributedOptions<Message, Log> {
+        this.testClasses[cls] = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances, canFail)
         return this
     }
 

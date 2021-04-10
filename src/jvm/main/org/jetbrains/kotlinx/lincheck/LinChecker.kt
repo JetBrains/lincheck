@@ -23,9 +23,12 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.reflect.*
 
 /**
@@ -94,6 +97,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             for (j in scenario.parallelExecution[i].indices) {
                 val newScenario = scenario.copy()
                 newScenario.parallelExecution[i].removeAt(j)
+                println(newScenario)
                 if (newScenario.parallelExecution[i].isEmpty()) newScenario.parallelExecution.removeAt(i) // remove empty thread
                 val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
                 if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
@@ -111,7 +115,24 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
             if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
         }
+        if (testCfg is DistributedCTestConfiguration<*, *>) {
+            return minimizeDSFailure(testCfg, verifier)
+        }
         return this
+    }
+
+    private fun LincheckFailure.minimizeDSFailure(testCfg: DistributedCTestConfiguration<*, *>, verifier: Verifier): LincheckFailure  {
+        val queue = LinkedList(testCfg.nextConfigurations())
+        var res = this
+        while(queue.size != 0) {
+            val nextTestCfg = queue.poll()
+            val newFailedIteration = res.scenario.tryMinimize(nextTestCfg, verifier)
+            if (newFailedIteration != null) {
+                res = newFailedIteration
+                queue.addAll(nextTestCfg.nextConfigurations())
+            }
+        }
+        return res
     }
 
     private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, verifier: Verifier) =
