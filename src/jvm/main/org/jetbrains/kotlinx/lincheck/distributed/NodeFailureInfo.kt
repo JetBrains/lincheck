@@ -28,8 +28,8 @@ import kotlinx.coroutines.sync.Semaphore
  * the number of failed nodes does not exceed the specified maximum
  **/
 class NodeFailureInfo(
-    private val numberOfNodes: Int,
-    private val maxNumberOfFailedNodes: Int
+    numberOfNodes: Int,
+    maxNumberOfFailedNodes: Int
 ) {
     private val failedNodes = AtomicBooleanArray(numberOfNodes)
     private var semaphore = if (maxNumberOfFailedNodes != 0) Semaphore(maxNumberOfFailedNodes, 0) else null

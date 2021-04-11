@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.atomicArrayOfNulls
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -31,13 +30,15 @@ import kotlinx.coroutines.channels.ClosedSendChannelException
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.SYNCHRONOUS
-import org.jetbrains.kotlinx.lincheck.distributed.queue.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.HBClock
+import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
 import org.jetbrains.kotlinx.lincheck.runner.*
 import java.lang.reflect.Method
 import java.util.concurrent.CancellationException
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.random.Random
 
 inline fun withProbability(probability: Double, func: () -> Unit) {
@@ -56,7 +57,7 @@ fun logMessage(givenLogLevel: LogLevel, f: () -> String) {
     if (logLevel >= givenLogLevel) {
         val s = Thread.currentThread().name + " " + f()
         debugLogs.put(s)
-       // println(s)
+        // println(s)
         System.out.flush()
     }
 }
@@ -94,6 +95,7 @@ open class DistributedRunner<Message, Log>(
     private val exception = atomic<Throwable?>(null)
     private val numberOfNodes = context.addressResolver.totalNumberOfNodes
     private val isRunning = atomic(false)
+    private var invocation: Int = 0
 
     override fun initialize() {
         super.initialize()
@@ -107,6 +109,8 @@ open class DistributedRunner<Message, Log>(
         isRunning.lazySet(false)
         debugLogs = FastQueue()
         context.reset()
+        invocation++
+        NodeDispatcher.invocation = invocation
         environments = Array(numberOfNodes) {
             EnvironmentImpl(context, it)
         }
@@ -222,7 +226,7 @@ open class DistributedRunner<Message, Log>(
     //TODO: Maybe a better way?
     private val handler = CoroutineExceptionHandler { _, _ -> }
     private fun createNewContext(): CoroutineContext {
-        return AlreadyIncrementedCounter() + handler
+        return AlreadyIncrementedCounter() + handler + InvocationContext(invocation)
     }
 
     private suspend fun NodeDispatcher.receiveMessages(i: Int, sender: Int) {
@@ -246,15 +250,16 @@ open class DistributedRunner<Message, Log>(
                     }
                     context.incClock(i)
                     val clock = context.maxClock(i, m.clock)
-                    context.events.put(i to
-                            MessageReceivedEvent(
-                                m.message,
-                                sender = m.sender,
-                                receiver = m.receiver,
-                                id = m.id,
-                                clock = clock,
-                                state = context.getStateRepresentation(i)
-                            )
+                    context.events.put(
+                        i to
+                                MessageReceivedEvent(
+                                    m.message,
+                                    sender = m.sender,
+                                    receiver = m.receiver,
+                                    id = m.id,
+                                    clock = clock,
+                                    state = context.getStateRepresentation(i)
+                                )
                     )
                     GlobalScope.launch(this + createNewContext()) {
                         handleException(i) {
@@ -330,12 +335,13 @@ open class DistributedRunner<Message, Log>(
                 val i = testNodeExecution.actorId
                 val actor = scenario.parallelExecution[iNode][i]
                 context.incClock(iNode)
-                context.events.put(iNode to
-                    OperationStartEvent(
-                        iNode, i,
-                        context.vectorClock[iNode].copyOf(),
-                        context.getStateRepresentation(iNode)
-                    )
+                context.events.put(
+                    iNode to
+                            OperationStartEvent(
+                                iNode, i,
+                                context.vectorClock[iNode].copyOf(),
+                                context.getStateRepresentation(iNode)
+                            )
                 )
                 try {
                     testNodeExecution.actorId++
@@ -449,7 +455,7 @@ open class DistributedRunner<Message, Log>(
                 ?.invoke(node) as String?
         }.filterNot { it.second.isNullOrBlank() }.joinToString(separator = "\n") { "STATE [${it.first}]: ${it.second}" }
         val events = context.events.toList().joinToString(separator = "\n", prefix = "EVENTS\n") { it ->
-           "${it.second}"
+            "${it.second}"
         }
         val logs = environments.mapIndexed { index, env -> index to env.log }.filterNot { it.second.isNullOrEmpty() }
             .joinToString(separator = "\n") {

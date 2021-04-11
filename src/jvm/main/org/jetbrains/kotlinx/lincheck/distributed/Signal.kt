@@ -33,7 +33,6 @@ class Signal {
      * Suspends the coroutine until the signal is received.
      */
     suspend fun await() {
-        semaphore.tryAcquire()
         semaphore.acquire()
     }
 
@@ -45,4 +44,9 @@ class Signal {
             semaphore.release()
         }
     }
+
+    /**
+     * Resets the semaphore to the initial state.
+     */
+    fun reset() = semaphore.tryAcquire()
 }
