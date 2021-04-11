@@ -135,9 +135,9 @@ class LamportMutexTest {
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(MutexSpecification::class.java)
         .threads(3)
-        .actorsPerThread(4)
-        .invocationsPerIteration(30)
-        .iterations(1000)
+        .actorsPerThread(3)
+        .invocationsPerIteration(5000)
+        .iterations(100)
 
     @Test
     fun testSimple() {

@@ -89,11 +89,6 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun runOperationsAsynchronously(asyncRun: Boolean): DistributedOptions<Message, Log> {
-        this.asyncRun = asyncRun
-        return this
-    }
-
     fun networkPartitions(partitions: Boolean): DistributedOptions<Message, Log> {
         this.networkPartitions = partitions
         return this

@@ -66,7 +66,7 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         }
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
         logMessage(LogLevel.ALL_EVENTS) {
             "[${env.nodeId}]: Put $key $value"
@@ -104,7 +104,7 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         env.broadcast(Recover)
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? {
         logMessage(LogLevel.ALL_EVENTS) {
             "[${env.nodeId}]: Get $key"

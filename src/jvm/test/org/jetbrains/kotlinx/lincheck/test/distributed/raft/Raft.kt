@@ -20,10 +20,18 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
 
+import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.test.distributed.replicas.ReplicaIncorrect
+import org.jetbrains.kotlinx.lincheck.test.distributed.replicas.ReplicaSpecification
+import org.junit.Test
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlin.random.Random
 
 enum class NodeStatus { LEADER, CANDIDATE, FOLLOWER }
@@ -56,7 +64,7 @@ data class Log(
     var committed: Boolean = false
 )
 
-data class OperationPromise(val signal : Signal, var result: Message? = null)
+data class OperationPromise(val signal: Signal, var result: Message? = null)
 
 class Storage(val log: MutableList<Log>) {
     fun add(entry: Log): Boolean {
@@ -120,8 +128,9 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
         const val HEARTBEAT_RATE = 2
         const val MISSED_HEARTBEATS_LIMIT = 3
     }
+
     private var currentTerm = 0
-    private var currentLeader: Int? = 0
+    private var currentLeader: Int? = null
     private var votedFor: Int? = null
     private var status: NodeStatus = NodeStatus.FOLLOWER
     private val electionSemaphore = Signal()
@@ -133,13 +142,14 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
     private val recoveredEntries = mutableListOf<Log>()
     private var opId = 0
     private val operations = mutableMapOf<String, OperationPromise>()
+    private var op: Continuation<Unit>? = null
 
     override suspend fun onStart() {
         super.onStart()
         env.setTimer("CHECK", HEARTBEAT_RATE) {
             if (status != NodeStatus.LEADER) {
                 if (missedHeartbeatCnt < MISSED_HEARTBEATS_LIMIT) missedHeartbeatCnt++
-                if (missedHeartbeatCnt == MISSED_HEARTBEATS_LIMIT && currentLeader != null) {
+                if (missedHeartbeatCnt == MISSED_HEARTBEATS_LIMIT && currentLeader == null) {
                     startElection()
                 }
             }
@@ -270,6 +280,7 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
         env.setTimer("Heartbeat", HEARTBEAT_RATE) {
             env.broadcast(Heartbeat(currentTerm, storage.getLastCommittedEntry()))
         }
+        op?.resume(Unit)
     }
 
     private fun updateTerm(message: Message, sender: Int) {
@@ -280,6 +291,7 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
             currentTerm = message.term
             status = NodeStatus.FOLLOWER
             electionSemaphore.signal()
+            op?.resume(Unit)
         }
     }
 
@@ -291,7 +303,7 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
         currentLeader = null
         recoveredEntries.clear()
         while (true) {
-            val timeToSleep = Random.nextInt(env.numberOfNodes)
+            val timeToSleep = Random.nextInt(env.numberOfNodes * 10)
             env.sleep(timeToSleep)
             currentTerm++
             status = NodeStatus.CANDIDATE
@@ -299,22 +311,27 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
             receivedOks = 1
             val index = storage.size()
             env.broadcast(RequestVote(currentTerm, index, env.nodeId))
-            env.withTimeout(3) {
-                electionSemaphore.await()
+            if (env.numberOfNodes > 1) {
+                env.withTimeout(3) {
+                    electionSemaphore.await()
+                }
             }
             if (status == NodeStatus.LEADER) {
                 onElectionSuccess()
             }
             if (status != NodeStatus.CANDIDATE) {
+                op?.resume(Unit)
                 return
             }
         }
     }
 
-    private fun constructHash() : String = "${hashCode()}#${env.nodeId}#$opId"
+    private fun constructHash(): String = "${hashCode()}#${env.nodeId}#$opId"
 
-    @Operation
-    suspend fun get(key : Int): Int? {
+    @Operation(cancellableOnSuspension = false)
+    suspend fun get(key: Int): Int? {
+        if (currentLeader == null) suspendCoroutine<Unit> { continuation -> op = continuation }
+        op = null
         opId++
         val hash = constructHash()
         val promise = OperationPromise(Signal())
@@ -330,8 +347,11 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
         }
     }
 
-    @Operation
-    suspend fun put(key : Int, value: Int) {
+    @Operation(cancellableOnSuspension = false)
+    suspend fun put(key: Int, value: Int) {
+        if (currentLeader == null) suspendCoroutine<Unit> { continuation -> op = continuation }
+        println("here")
+        op = null
         opId++
         val hash = constructHash()
         val promise = OperationPromise(Signal())
@@ -345,5 +365,22 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
                 return
             }
         }
+    }
+}
+
+
+class RaftTest {
+    private fun createOptions() = DistributedOptions<Message, Log>()
+        .requireStateEquivalenceImplCheck(false)
+        .sequentialSpecification(ReplicaSpecification::class.java)
+        .threads(1)
+        .actorsPerThread(1)
+        .invocationTimeout(5_000)
+        .invocationsPerIteration(1)
+        .iterations(1)
+
+    @Test
+    fun testNoFailures() {
+        LinChecker.check(RaftServer::class.java, createOptions())
     }
 }

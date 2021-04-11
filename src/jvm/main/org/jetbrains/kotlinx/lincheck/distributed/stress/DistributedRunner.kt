@@ -49,14 +49,14 @@ inline fun withProbability(probability: Double, func: () -> Unit) {
 
 enum class LogLevel { NO_OUTPUT, ITERATION_NUMBER, MESSAGES, ALL_EVENTS, KICKED }
 
-val logLevel = LogLevel.ALL_EVENTS
+val logLevel = LogLevel.MESSAGES
 var debugLogs = FastQueue<String>()
 
 fun logMessage(givenLogLevel: LogLevel, f: () -> String) {
     if (logLevel >= givenLogLevel) {
         val s = Thread.currentThread().name + " " + f()
         debugLogs.put(s)
-        //println(s)
+       // println(s)
         System.out.flush()
     }
 }
@@ -106,7 +106,7 @@ open class DistributedRunner<Message, Log>(
         exception.lazySet(null)
         isRunning.lazySet(false)
         debugLogs = FastQueue()
-        context = DistributedRunnerContext(testCfg, scenario, runnerHash, stateRepresentationFunction)
+        context.reset()
         environments = Array(numberOfNodes) {
             EnvironmentImpl(context, it)
         }
@@ -156,6 +156,10 @@ open class DistributedRunner<Message, Log>(
             }
             repeat(numberOfNodes) {
                 context.logs[it] = environments[it].log
+            }
+            //context.probabilities.forEachIndexed{ i, p -> println("[$i]: ${p.curMsgCount}")}
+            if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
+                context.probabilities.forEach { it.setInitial() }
             }
 
             context.testInstances.forEach {
@@ -393,6 +397,7 @@ open class DistributedRunner<Message, Log>(
         logMessage(LogLevel.ALL_EVENTS) {
             "[$iNode]: Failure notifications sent"
         }
+        println("[$iNode]: failure on ${context.probabilities[iNode].curMsgCount}")
         context.messageHandler.close(iNode)
         context.failureNotifications[iNode].close()
         context.events.put(iNode to NodeCrashEvent(iNode, context.vectorClock[iNode].copyOf()))
@@ -403,7 +408,7 @@ open class DistributedRunner<Message, Log>(
             testCfg.supportRecovery == RecoveryMode.MIXED
             && context.probabilities[iNode].nodeRecovered()
         ) {
-            val delta = context.initTasksForNode(iNode)
+            val delta = context.initTasksForNode()
             context.taskCounter.add(delta)
             val logs = environments[iNode].log.toMutableList()
             context.messageHandler.reset(iNode)

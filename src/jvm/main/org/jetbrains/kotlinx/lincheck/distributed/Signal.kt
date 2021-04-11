@@ -22,16 +22,27 @@ package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.sync.Semaphore
 
+/**
+ * A wrapper over coroutine [kotlinx.coroutines.sync.Semaphore]
+ * to simplify wait() / notify() mechanism.
+ */
 class Signal {
     private val semaphore = Semaphore(1, 1)
 
-    suspend fun await() = semaphore.acquire()
+    /**
+     * Suspends the coroutine until the signal is received.
+     */
+    suspend fun await() {
+        semaphore.tryAcquire()
+        semaphore.acquire()
+    }
 
+    /**
+     * Signals to the awaiting coroutine.
+     */
     fun signal() {
         if (semaphore.availablePermits == 0) {
             semaphore.release()
         }
     }
-
-    private val onCancellationRelease = { _: Throwable -> signal() }
 }

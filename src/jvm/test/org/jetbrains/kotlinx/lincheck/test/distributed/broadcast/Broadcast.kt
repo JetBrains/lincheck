@@ -125,10 +125,11 @@ class BroadcastTest {
                 .threads(3)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .supportRecovery(RecoveryMode.NO_RECOVERIES)
-                .invocationsPerIteration(300)
-                .iterations(100)
+                .invocationsPerIteration(30_000)
+                .iterations(1)
                 .verifier(EpsilonVerifier::class.java)
                 .messageOrder(MessageOrder.SYNCHRONOUS)
+                .minimizeFailedScenario(false)
         )
     }
 

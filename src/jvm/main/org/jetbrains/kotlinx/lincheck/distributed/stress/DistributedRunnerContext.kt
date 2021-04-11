@@ -38,7 +38,7 @@ import kotlin.random.Random
 class DistributedRunnerContext<Message, Log>(
     val testCfg: DistributedCTestConfiguration<Message, Log>,
     val scenario: ExecutionScenario,
-    runnerHash: Int,
+    val runnerHash: Int,
     val stateRepresentation: Method?
 ) {
     val addressResolver = NodeAddressResolver(
@@ -46,17 +46,11 @@ class DistributedRunnerContext<Message, Log>(
         scenario.threads, testCfg.nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail }
     )
 
-    val messageHandler =
-        ChannelHandler<MessageSentEvent<Message>>(testCfg.messageOrder, addressResolver.totalNumberOfNodes)
+    lateinit var messageHandler : ChannelHandler<MessageSentEvent<Message>>
 
-    var failureNotifications = Array<Channel<Int>>(addressResolver.totalNumberOfNodes) {
-        Channel(UNLIMITED)
-    }
+    lateinit var failureNotifications : Array<Channel<Int>>
 
-    val failureInfo = NodeFailureInfo(
-        addressResolver.totalNumberOfNodes,
-        testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
-    )
+    lateinit var failureInfo : NodeFailureInfo
 
     val events = FastQueue<Pair<Int, Event>>()
 
@@ -79,18 +73,14 @@ class DistributedRunnerContext<Message, Log>(
         return vectorClock[iNode].copyOf()
     }
 
-    val taskCounter = DispatcherTaskCounter(initialNumberOfTasks(), addressResolver.totalNumberOfNodes)
+    lateinit var taskCounter : DispatcherTaskCounter
 
-    val dispatchers: Array<NodeDispatcher> = Array(addressResolver.totalNumberOfNodes) {
-        NodeDispatcher(it, taskCounter, runnerHash)
-    }
+    lateinit var dispatchers: Array<NodeDispatcher>
 
-    val logs = Array(addressResolver.totalNumberOfNodes) {
-        emptyList<Log>()
-    }
+    lateinit var logs : Array<List<Log>>
 
     val probabilities = Array(addressResolver.totalNumberOfNodes) {
-        Probability(testCfg)
+        Probability(testCfg, addressResolver.totalNumberOfNodes)
     }
 
     fun initialNumberOfTasks() = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
@@ -99,11 +89,32 @@ class DistributedRunnerContext<Message, Log>(
         2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
     }
 
-    fun initTasksForNode(iNode: Int) = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
+    fun initTasksForNode() = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
         3
     } else {
         addressResolver.totalNumberOfNodes + 2
     }
 
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
+
+    fun reset() {
+        taskCounter = DispatcherTaskCounter(initialNumberOfTasks(), addressResolver.totalNumberOfNodes)
+        dispatchers = Array(addressResolver.totalNumberOfNodes) {
+            NodeDispatcher(it, taskCounter, runnerHash)
+        }
+        logs = Array(addressResolver.totalNumberOfNodes) {
+            emptyList()
+        }
+        failureInfo = NodeFailureInfo(
+            addressResolver.totalNumberOfNodes,
+            testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
+        )
+        failureNotifications = Array(addressResolver.totalNumberOfNodes) {
+            Channel(UNLIMITED)
+        }
+        messageHandler = ChannelHandler(testCfg.messageOrder, addressResolver.totalNumberOfNodes)
+        if (Probability.failedNodesExpectation == 0) {
+            Probability.failedNodesExpectation = testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
+        }
+    }
 }

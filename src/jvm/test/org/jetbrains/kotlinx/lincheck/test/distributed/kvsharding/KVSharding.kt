@@ -92,7 +92,7 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
         }
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
         logMessage(LogLevel.ALL_EVENTS) {
             "[${env.nodeId}]: Put $key $value"
@@ -130,7 +130,7 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
         env.broadcast(Recover)
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? {
         logMessage(LogLevel.ALL_EVENTS) {
             "[${env.nodeId}]: Get $key"
@@ -196,7 +196,7 @@ class KVShardingTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+    @Test//(expected = LincheckAssertionError::class)
     fun testMultipleStoresToLog() {
         LinChecker.check(
             ShardMultiplePutToLog::class.java,

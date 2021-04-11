@@ -98,14 +98,14 @@ class ReplicaSpecification {
 }
 
 class ReplicaIncorrectTest {
-    @Test(expected = LincheckAssertionError::class)
+    @Test
     fun test() {
         LinChecker.check(
             ClientIncorrect::class.java,
             DistributedOptions<KVMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(ReplicaSpecification::class.java)
-                .nodeType(ReplicaIncorrect::class.java, 3)
+                .nodeType(ReplicaIncorrect::class.java, 1, 3)
                 .threads(2)
                 .invocationsPerIteration(100)
                 .iterations(300)

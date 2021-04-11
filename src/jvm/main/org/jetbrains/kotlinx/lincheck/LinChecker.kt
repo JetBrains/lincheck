@@ -97,7 +97,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             for (j in scenario.parallelExecution[i].indices) {
                 val newScenario = scenario.copy()
                 newScenario.parallelExecution[i].removeAt(j)
-                println(newScenario)
                 if (newScenario.parallelExecution[i].isEmpty()) newScenario.parallelExecution.removeAt(i) // remove empty thread
                 val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
                 if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
