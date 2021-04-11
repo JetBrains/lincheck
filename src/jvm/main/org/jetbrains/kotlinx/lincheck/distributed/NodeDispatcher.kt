@@ -181,7 +181,7 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
             return
         }
         val shouldInc = context[AlreadyIncrementedCounter.Key]?.isUsed != false
-        val r = if (context[AlreadyIncrementedCounter.Key]?.isUsed != false) {
+        val r = if (shouldInc) {
             taskCounter.increment()
         } else {
             context[AlreadyIncrementedCounter.Key]?.isUsed = true

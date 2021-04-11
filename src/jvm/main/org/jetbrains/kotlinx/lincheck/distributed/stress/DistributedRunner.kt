@@ -162,9 +162,9 @@ open class DistributedRunner<Message, Log>(
                 context.logs[it] = environments[it].log
             }
             //context.probabilities.forEachIndexed{ i, p -> println("[$i]: ${p.curMsgCount}")}
-            if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
+            /*if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
                 context.probabilities.forEach { it.setInitial() }
-            }
+            }*/
 
             context.testInstances.forEach {
                 executeValidationFunctions(it, validationFunctions) { functionName, exception ->
@@ -188,7 +188,7 @@ open class DistributedRunner<Message, Log>(
                 ex.results.zip(fakeClock).map { ResultWithClock(it.first!!, HBClock(it.second)) }
             }
             val results = ExecutionResult(
-                emptyList(), null, parallelResultsWithClock, constructStateRepresentation(),
+                emptyList(), null, parallelResultsWithClock, super.constructStateRepresentation(),
                 emptyList(), null
             )
             //println(constructStateRepresentation())
@@ -243,11 +243,6 @@ open class DistributedRunner<Message, Log>(
                     logMessage(LogLevel.MESSAGES) {
                         "[$i]: Received $m ${channel.hashCode()}"
                     }
-
-                    val r = context.taskCounter.increment()
-                    logMessage(LogLevel.ALL_EVENTS) {
-                        "[$i]: Launching onMessage counter is $r"
-                    }
                     context.incClock(i)
                     val clock = context.maxClock(i, m.clock)
                     context.events.put(
@@ -261,7 +256,7 @@ open class DistributedRunner<Message, Log>(
                                     state = context.getStateRepresentation(i)
                                 )
                     )
-                    GlobalScope.launch(this + createNewContext()) {
+                    GlobalScope.launch(this) {
                         handleException(i) {
                             testInstance.onMessage(m.message, m.sender)
                         }
@@ -292,11 +287,7 @@ open class DistributedRunner<Message, Log>(
                 if (context.failureInfo[i]) return
                 context.incClock(i)
                 context.events.put(i to CrashNotificationEvent(i, node, context.vectorClock[i].copyOf()))
-                val r = context.taskCounter.increment()
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "[$i]: Launching on node $node unavailable, counter is $r"
-                }
-                GlobalScope.launch(this + createNewContext()) {
+                GlobalScope.launch(this) {
                     handleException(i) {
                         testInstance.onNodeUnavailable(node)
                     }
@@ -403,7 +394,7 @@ open class DistributedRunner<Message, Log>(
         logMessage(LogLevel.ALL_EVENTS) {
             "[$iNode]: Failure notifications sent"
         }
-        println("[$iNode]: failure on ${context.probabilities[iNode].curMsgCount}")
+        //println("[$iNode]: failure on ${context.probabilities[iNode].curMsgCount}")
         context.messageHandler.close(iNode)
         context.failureNotifications[iNode].close()
         context.events.put(iNode to NodeCrashEvent(iNode, context.vectorClock[iNode].copyOf()))

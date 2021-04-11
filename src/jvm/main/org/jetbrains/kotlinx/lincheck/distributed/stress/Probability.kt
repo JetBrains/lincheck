@@ -63,26 +63,29 @@ class Probability(
 
     fun nodeRecovered(): Boolean = rand.get().nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
 
+    /*
     var prevMsgCount = 0
 
     var curMsgCount = 0
 
     var iterations = 0
+     */
 
     private fun nodeFailProbability() : Double {
         return NODE_FAIL_PROBABILITY
-        return if (prevMsgCount == 0) {
+        /*return if (prevMsgCount == 0) {
             0.0
         } else {
             val q = failedNodesExpectation.toDouble() / numberOfNodes
             //println("q is $q")
             q / (prevMsgCount - (curMsgCount - 1) * q)
-        }
+        }*/
     }
 
+    /*
     fun setInitial() {
         if (prevMsgCount == 0)  prevMsgCount = (prevMsgCount * iterations + curMsgCount) / (iterations + 1)
         iterations++
         curMsgCount = 0
-    }
+    }*/
 }

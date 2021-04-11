@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
 import org.jetbrains.kotlinx.lincheck.runner.Runner
@@ -31,12 +32,22 @@ import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
-class DistributedStrategy<Message, Log>(val testCfg: DistributedCTestConfiguration<Message, Log>,
-                                   testClass: Class<*>,
-                                   scenario: ExecutionScenario,
-                                   validationFunctions: List<Method>,
-                                   stateRepresentationFunction: Method?,
-                                   private val verifier: Verifier
+fun ExecutionResult.newResult(stateRepresentation: String?): ExecutionResult = ExecutionResult(
+    initResults,
+    afterInitStateRepresentation,
+    parallelResultsWithClock,
+    stateRepresentation,
+    postResults,
+    afterPostStateRepresentation
+)
+
+class DistributedStrategy<Message, Log>(
+    val testCfg: DistributedCTestConfiguration<Message, Log>,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunctions: List<Method>,
+    stateRepresentationFunction: Method?,
+    private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
@@ -56,12 +67,13 @@ class DistributedStrategy<Message, Log>(val testCfg: DistributedCTestConfigurati
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until invocations) {
-                println("-----------")
+                println("INVOCATION $invocation")
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results)) {
-                            return IncorrectResultsFailure(scenario, ir.results)
+                            val stateRepresentation = runner.constructStateRepresentation()
+                            return IncorrectResultsFailure(scenario, ir.results.newResult(stateRepresentation))
                         }
                     }
                     else -> {
