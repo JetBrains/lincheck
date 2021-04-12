@@ -52,7 +52,7 @@ class DistributedRunnerContext<Message, Log>(
 
     lateinit var failureInfo : NodeFailureInfo
 
-    val events = FastQueue<Pair<Int, Event>>()
+    lateinit var events: FastQueue<Pair<Int, Event>>
 
     val messageId = atomic(0)
 
@@ -72,6 +72,9 @@ class DistributedRunnerContext<Message, Log>(
         }
         return vectorClock[iNode].copyOf()
     }
+
+    @Volatile
+    var invocation: Int = 0
 
     lateinit var taskCounter : DispatcherTaskCounter
 
@@ -112,6 +115,8 @@ class DistributedRunnerContext<Message, Log>(
         failureNotifications = Array(addressResolver.totalNumberOfNodes) {
             Channel(UNLIMITED)
         }
+        events = FastQueue()
+        vectorClock.forEach { it.fill(0) }
         messageHandler = ChannelHandler(testCfg.messageOrder, addressResolver.totalNumberOfNodes)
         if (Probability.failedNodesExpectation == 0) {
             Probability.failedNodesExpectation = testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)

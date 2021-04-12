@@ -160,17 +160,24 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
         Thread(r, "NodeExecutor@$runnerHash-$iThread-${this@NodeDispatcher.hashCode()}")
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {
+        logMessage(LogLevel.ALL_EVENTS) {
+            "[$id]: Before submit task ${block.hashCode()} context[InvocationContext.Key]?.invocation != invocation"
+        }
         if (context[InvocationContext.Key]?.invocation != invocation) {
             return
         }
+        val shouldInc = context[AlreadyIncrementedCounter.Key]?.isUsed != false
         if (status.value == CRASHED) {
             // If the node has crashed the counter should be decreased for the initial tasks.
-            if (context[AlreadyIncrementedCounter.Key]?.isUsed == false) {
+            if (!shouldInc) {
                 taskCounter.decrement()
                 context[AlreadyIncrementedCounter.Key]!!.isUsed = true
+                taskCounter.checkIsFinished {
+                    status.lazySet(STOPPED)
+                }
             }
             logMessage(LogLevel.ALL_EVENTS) {
-                "[$id]: Shutdown, ${hashCode()} try to submit task ${block.hashCode()}, dangerous"
+                "[$id]: Shutdown, ${hashCode()} try to submit task ${block.hashCode()}, $shouldInc, ${taskCounter.get()}"
             }
             return
         }
@@ -180,7 +187,6 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
             }
             return
         }
-        val shouldInc = context[AlreadyIncrementedCounter.Key]?.isUsed != false
         val r = if (shouldInc) {
             taskCounter.increment()
         } else {

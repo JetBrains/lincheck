@@ -60,7 +60,7 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
         // If the message was delivered to one process, it was delivered to all correct processes.
         val logs = env.getLogs()
         env.log.forEach { m ->
-            env.correctProcesses().forEach { check(logs[it].contains(m)) { m } }
+            env.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it"} }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
@@ -104,7 +104,7 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
         deliver(from)
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         receivedMessages[env.nodeId][message.id] = 1
@@ -125,8 +125,8 @@ class BroadcastTest {
                 .threads(3)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .supportRecovery(RecoveryMode.NO_RECOVERIES)
-                .invocationsPerIteration(30_000)
-                .iterations(1)
+                .invocationsPerIteration(3_000)
+                .iterations(10)
                 .verifier(EpsilonVerifier::class.java)
                 .messageOrder(MessageOrder.SYNCHRONOUS)
                 .minimizeFailedScenario(false)
@@ -139,11 +139,11 @@ class BroadcastTest {
             PeerIncorrect::class.java,
             DistributedOptions<Message, Message>()
                 .requireStateEquivalenceImplCheck(false)
-                .actorsPerThread(2)
-                .threads(5)
-                .invocationsPerIteration(300)
-                .iterations(100)
+                .threads(3)
+                .invocationsPerIteration(3_000)
+                .iterations(10)
                 .verifier(EpsilonVerifier::class.java)
+                .minimizeFailedScenario(false)
         )
     }
 

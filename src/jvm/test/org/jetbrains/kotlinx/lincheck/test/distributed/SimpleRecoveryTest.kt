@@ -22,10 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.RecoveryMode
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
@@ -55,6 +52,7 @@ class SmokeTest {
                 .invocationsPerIteration(300)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(100)
+                .messageOrder(MessageOrder.SYNCHRONOUS)
                 .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
                 .verifier(EpsilonVerifier::class.java)
         )

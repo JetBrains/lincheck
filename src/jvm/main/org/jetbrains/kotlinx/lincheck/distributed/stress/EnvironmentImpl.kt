@@ -133,7 +133,9 @@ internal class EnvironmentImpl<Message, Log>(
             throw IllegalArgumentException("Timer with name \"$name\" already exists")
         }
         timers.add(name)
-        GlobalScope.launch(context.dispatchers[nodeId] + CoroutineExceptionHandler { _, _ -> }) {
+        GlobalScope.launch(context.dispatchers[nodeId] + CoroutineExceptionHandler { _, _ -> } + InvocationContext(
+            context.invocation
+        )) {
             while (true) {
                 if (!timers.contains(name) || isFinished) return@launch
                 f()
