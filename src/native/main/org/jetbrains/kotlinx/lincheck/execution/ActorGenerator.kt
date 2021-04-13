@@ -30,12 +30,10 @@ actual class ActorGenerator(
     actual val useOnce: Boolean = false,
     actual val isSuspendable: Boolean = false
 ) {
-    actual override fun toString(): String {
-        TODO("Not yet implemented")
-    }
+    actual override fun toString(): String = functionName
 
     actual fun generate(threadId: Int): Actor {
-        val arguments = parameterGenerators.map { it.generate() }
+        val arguments = parameterGenerators.map { it.generate() }.map { if (it === THREAD_ID_TOKEN) threadId else it }
         return Actor(
             function = function,
             arguments = arguments,

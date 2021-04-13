@@ -18,13 +18,8 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-import kotlinx.atomicfu.locks.SynchronizedObject
-import kotlinx.atomicfu.locks.synchronized
-import kotlinx.cinterop.*
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.native.concurrent.*
 import kotlin.test.*
@@ -59,7 +54,7 @@ class TestClass : VerifierState() {
 class FirstTest {
     @Test
     fun test_failing() {
-        LincheckStressConfiguration<TestClass>().apply {
+        val f = LincheckStressConfiguration<TestClass>().apply {
             iterations(300)
             invocationsPerIteration(50)
             actorsBefore(2)
@@ -68,23 +63,25 @@ class FirstTest {
             actorsAfter(2)
             minimizeFailedScenario(false)
 
-            initialState({
-                TestClass()
-            })
+            initialState { TestClass() }
             stateRepresentation { this.toString() }
 
             operation(TestClass::increment, "add")
             operation({ this.decrement() }, "decrement")
-            operation(IntGen(""), BooleanGen(""), { i, b ->
+            operation(IntGen(""), BooleanGen(""), { _, _ ->
                 //println("Operation with arguments $i and $b has called")
             }, "do_nothing")
-        }.runTest()
+        }.checkImpl()
+
+        assert(f != null && f is IncorrectResultsFailure) {
+            "This test should fail with a incorrect results error"
+        }
     }
 
     @Test
     fun test_working() {
         LincheckStressConfiguration<TestClass>().apply {
-            iterations(20)
+            iterations(5)
             invocationsPerIteration(50)
             actorsBefore(2)
             threads(3)
@@ -92,9 +89,7 @@ class FirstTest {
             actorsAfter(2)
             minimizeFailedScenario(false)
 
-            initialState({
-                TestClass()
-            })
+            initialState { TestClass() }
             stateRepresentation { this.toString() }
 
             operation(TestClass::atomicIncrement, "atomicIncrement")

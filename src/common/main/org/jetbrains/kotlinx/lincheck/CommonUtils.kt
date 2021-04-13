@@ -29,8 +29,6 @@ import kotlin.jvm.*
 import kotlin.reflect.*
 
 expect class TestClass {
-    val name: String
-
     fun createInstance(): Any
 }
 

@@ -39,7 +39,7 @@ import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
 actual class TestClass(val clazz: Class<*>) {
-    actual val name = clazz.name
+    val name = clazz.name
 
     actual fun createInstance(): Any = clazz.getDeclaredConstructor().newInstance()
 }

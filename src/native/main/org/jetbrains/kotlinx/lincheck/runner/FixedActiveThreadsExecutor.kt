@@ -20,6 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlin.native.concurrent.*
+import kotlinx.cinterop.*
+import platform.posix.*
 import kotlinx.coroutines.*
 import kotlin.native.ThreadLocal
 import kotlin.native.concurrent.*

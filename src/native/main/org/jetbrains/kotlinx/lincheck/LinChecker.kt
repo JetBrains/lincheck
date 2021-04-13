@@ -66,16 +66,37 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         LinChecker.check(getTestClass(), getTestStructure(), this as StressOptions)
     }
 
+    fun checkImpl() = LinChecker(getTestClass(), getTestStructure(), this as StressOptions).checkImpl()
+
     // =========================== Constructor
 
     fun initialState(
-        state: () -> Instance,
-        className: String = "default className"
+        state: () -> Instance
     ) {
-        testClass = TestClass(className, state)
+        testClass = TestClass(state)
     }
 
     // =========================== Operation
+
+    fun <R> operation(
+        pGens: List<ParameterGenerator<*>>,
+        op: Instance.(List<Any?>) -> R,
+        name: String = op.toString(),
+        useOnce: Boolean = false,
+        isSuspendable: Boolean = false
+    ) {
+        val actorGenerator = ActorGenerator(
+            function = { instance, arguments ->
+                instance as Instance // check that operation can be applied to instance
+                instance.op(arguments)
+            },
+            parameterGenerators = pGens,
+            functionName = name,
+            useOnce = useOnce,
+            isSuspendable = isSuspendable
+        )
+        actorGenerators.add(actorGenerator)
+    }
 
     fun <R> operation(
         op: Instance.() -> R,
@@ -140,12 +161,13 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
     // ============================= Validation Function
 
     fun validationFunction(
-        validate: Instance.() -> Unit
+        validate: Instance.() -> Unit,
+        name: String = validate.toString()
     ) {
-        validationFunctions.add(ValidationFunction { instance ->
+        validationFunctions.add(ValidationFunction({ instance ->
             instance as Instance // check that operation can be applied to instance
             instance.validate()
-        })
+        }, name))
     }
 
     // ============================= State Representation Function
@@ -197,7 +219,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
-            println("Iteration $i")
+            println("Iteration $i") // TODO debug output
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1, iterations, scenario)

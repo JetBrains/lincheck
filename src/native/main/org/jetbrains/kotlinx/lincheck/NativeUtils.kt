@@ -28,7 +28,6 @@ import platform.posix.*
 import kotlin.coroutines.*
 
 actual class TestClass(
-    actual val name: String,
     val function: () -> Any?
 ) {
     actual fun createInstance(): Any = function() ?: throw IllegalArgumentException("Constructor should not return null")
@@ -45,7 +44,12 @@ internal actual fun createLincheckResult(res: Any?, wasSuspended: Boolean): Resu
 }
 
 internal actual fun executeValidationFunction(instance: Any, validationFunction: ValidationFunction): Throwable? {
-    TODO("Not yet implemented")
+    try {
+        validationFunction.function(instance)
+    } catch (e: Throwable) {
+        return e
+    }
+    return null
 }
 
 /**
