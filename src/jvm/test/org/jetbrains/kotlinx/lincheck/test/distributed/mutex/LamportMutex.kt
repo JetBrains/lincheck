@@ -143,7 +143,7 @@ class LamportMutexTest {
     fun testSimple() {
         LinChecker.check(
             LamportMutex::class.java,
-            createOptions()
+            createOptions().messageOrder(MessageOrder.SYNCHRONOUS)
         )
     }
 

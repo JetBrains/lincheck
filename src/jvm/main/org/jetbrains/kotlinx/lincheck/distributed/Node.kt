@@ -9,8 +9,7 @@ import java.util.concurrent.TimeUnit
  */
 interface Node<Message> {
     /**
-     * Called when a new message arrives.
-     * @param message is a message from another node
+     * Called when a new message [message] arrives.
      */
     suspend fun onMessage(message: Message, sender: Int)
 

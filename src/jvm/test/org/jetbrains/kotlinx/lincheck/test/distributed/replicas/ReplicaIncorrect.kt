@@ -90,9 +90,6 @@ class ReplicaSpecification {
 
     @Operation
     suspend fun put(key: String, value: String) {
-        /*withProbability(0.3) {
-            throw AbortOperationException()
-        }*/
         storage[key] = value
     }
 }

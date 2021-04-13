@@ -95,7 +95,7 @@ open class DistributedRunner<Message, Log>(
     }
 
     private fun NodeDispatcher.createScope(): CoroutineScope {
-        return CoroutineScope(this + AlreadyIncrementedCounter() + handler + InvocationContext(context.invocation))
+        return CoroutineScope(this + AlreadyIncrementedCounter() + handler)
     }
 
     private fun reset() {
@@ -103,8 +103,6 @@ open class DistributedRunner<Message, Log>(
         isRunning.lazySet(false)
         debugLogs = FastQueue()
         context.reset()
-        context.invocation++
-        NodeDispatcher.invocation = context.invocation
         environments = Array(numberOfNodes) {
             EnvironmentImpl(context, it)
         }

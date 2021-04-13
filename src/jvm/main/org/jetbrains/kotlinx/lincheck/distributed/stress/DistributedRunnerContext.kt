@@ -101,7 +101,7 @@ class DistributedRunnerContext<Message, Log>(
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 
     fun reset() {
-        taskCounter = DispatcherTaskCounter(initialNumberOfTasks(), addressResolver.totalNumberOfNodes)
+        taskCounter = DispatcherTaskCounter(initialNumberOfTasks())
         dispatchers = Array(addressResolver.totalNumberOfNodes) {
             NodeDispatcher(it, taskCounter, runnerHash)
         }

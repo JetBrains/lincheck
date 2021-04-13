@@ -21,7 +21,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -196,7 +195,7 @@ class KVShardingTest {
         )
     }
 
-    @Test//(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testMultipleStoresToLog() {
         LinChecker.check(
             ShardMultiplePutToLog::class.java,

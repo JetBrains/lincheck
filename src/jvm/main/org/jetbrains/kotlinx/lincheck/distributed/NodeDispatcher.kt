@@ -37,8 +37,7 @@ import kotlin.coroutines.CoroutineContext
  * Signals to the main thread when the execution is other.
  */
 class DispatcherTaskCounter(
-    private val initialCounter: Int,
-    private val numberOfNodes: Int
+    initialCounter: Int
 ) {
     private val counter = atomic(initialCounter)
     private val nodeOperationCounter = ThreadLocal.withInitial { 0 }
@@ -47,10 +46,9 @@ class DispatcherTaskCounter(
     /**
      * Signals to the waiting thread if there are no tasks left.
      */
-    fun checkIsFinished(f: () -> Unit) {
+    fun checkIsFinished() {
         if (counter.value == 0) {
             signal.signal()
-            f()
         }
     }
 
@@ -110,17 +108,14 @@ class DispatcherTaskCounter(
     }
 
     /**
-     * Awaits until no tasks left.
+     * Awaits until the execution is over.
      */
     suspend fun await() = signal.await()
 
     /**
-     * Resets the counter for a new invocation.
+     * Signals to the waiting thread.
      */
-    fun reset() {
-        counter.lazySet(initialCounter)
-        signal.reset()
-    }
+    fun signal() = signal.signal()
 }
 
 /**
@@ -135,19 +130,13 @@ class AlreadyIncrementedCounter : AbstractCoroutineContextElement(Key) {
     companion object Key : CoroutineContext.Key<AlreadyIncrementedCounter>
 }
 
-class InvocationContext(val invocation: Int) : AbstractCoroutineContextElement(Key) {
-    companion object Key : CoroutineContext.Key<InvocationContext>
-}
-
 /**
  * The dispatcher for executing task related to a single [Node] inside [org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner].
  */
-class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val runnerHash: Int) : CoroutineDispatcher() {
+class NodeDispatcher(val id: Int, private val taskCounter: DispatcherTaskCounter, private val runnerHash: Int) :
+    CoroutineDispatcher() {
     companion object {
         enum class NodeDispatcherStatus { RUNNING, STOPPED, CRASHED }
-
-        @Volatile
-        var invocation = 0
     }
 
     private val status = atomic(RUNNING)
@@ -159,62 +148,37 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
     inner class NodeTestThread(val iThread: Int, val runnerHash: Int, r: Runnable) :
         Thread(r, "NodeExecutor@$runnerHash-$iThread-${this@NodeDispatcher.hashCode()}")
 
+    /**
+     * Executed a given [block]. The task counter is incremented if necessary when the task is submitted and
+     * decremented when the execution of task is finished.
+     */
     override fun dispatch(context: CoroutineContext, block: Runnable) {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$id]: Before submit task ${block.hashCode()} context[InvocationContext.Key]?.invocation != invocation"
-        }
-        if (context[InvocationContext.Key]?.invocation != invocation) {
-            return
-        }
         val shouldInc = context[AlreadyIncrementedCounter.Key]?.isUsed != false
         if (status.value == CRASHED) {
             // If the node has crashed the counter should be decreased for the initial tasks.
             if (!shouldInc) {
                 taskCounter.decrement()
                 context[AlreadyIncrementedCounter.Key]!!.isUsed = true
-                taskCounter.checkIsFinished {
-                    status.lazySet(STOPPED)
-                }
-            }
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$id]: Shutdown, ${hashCode()} try to submit task ${block.hashCode()}, $shouldInc, ${taskCounter.get()}"
+                taskCounter.checkIsFinished()
             }
             return
         }
         if (status.value == STOPPED) {
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$id]: Try ${hashCode()} to submit task ${block.hashCode()}"
-            }
             return
         }
-        val r = if (shouldInc) {
+        if (shouldInc) {
             taskCounter.increment()
         } else {
             context[AlreadyIncrementedCounter.Key]?.isUsed = true
-            taskCounter.get()
-        }
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$id]: Submit task $shouldInc ${block.hashCode()} counter is $r"
         }
         try {
             executor.submit {
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "[$id]: Run task ${block.hashCode()} counter is ${taskCounter.get()}"
-                }
                 if (status.value == RUNNING) {
                     block.run()
                 }
                 if (status.value != STOPPED) {
-                    val t = taskCounter.decrement()
-                    logMessage(LogLevel.ALL_EVENTS) {
-                        "[$id]: Finish task ${block.hashCode()} counter is ${t}"
-                    }
-                    taskCounter.checkIsFinished {
-                        logMessage(LogLevel.ALL_EVENTS) {
-                            "[$id]: Release semaphore"
-                        }
-                        status.lazySet(STOPPED)
-                    }
+                    taskCounter.decrement()
+                    taskCounter.checkIsFinished()
                 }
             }
         } catch (_: RejectedExecutionException) {
@@ -228,9 +192,6 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
     fun crash() {
         status.lazySet(CRASHED)
         taskCounter.clear()
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$id]: Crashed executor ${hashCode()}"
-        }
     }
 
     /**
@@ -238,14 +199,6 @@ class NodeDispatcher(val id: Int, val taskCounter: DispatcherTaskCounter, val ru
      */
     fun shutdown() {
         status.lazySet(STOPPED)
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$id]: Shutdown executor ${hashCode()}"
-        }
         executor.shutdown()
     }
-
-    /**
-     * Sets the node status to STOPPED.
-     */
-    fun stop() = status.lazySet(STOPPED)
 }

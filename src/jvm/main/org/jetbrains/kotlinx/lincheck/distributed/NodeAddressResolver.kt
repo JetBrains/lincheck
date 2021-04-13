@@ -20,30 +20,40 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-
+/**
+ * Stores information about classes included in the scenario execution.
+ * Maps a node id to the corresponding class and the class to a range of corresponding ids.
+ */
 class NodeAddressResolver<Message>(
     testClass: Class<out Node<Message>>,
     val nodesWithScenario: Int,
-    val additionalClasses: Map<Class<out Node<Message>>, Pair<Int, Boolean>>
+    private val additionalClasses: Map<Class<out Node<Message>>, Pair<Int, Boolean>>
 ) {
     private val nodeTypeToRange: Map<Class<out Node<Message>>, List<Int>>
     val totalNumberOfNodes = nodesWithScenario + additionalClasses.values.map { it.first }.sum()
     private val nodes = mutableListOf<Class<out Node<Message>>>()
 
     init {
-        repeat(nodesWithScenario) {
-            nodes.add(testClass)
-        }
+        repeat(nodesWithScenario) { nodes.add(testClass) }
         for ((cls, p) in additionalClasses) {
-            repeat(p.first) {
-                nodes.add(cls)
-            }
+            repeat(p.first) { nodes.add(cls) }
         }
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
     }
 
+    /**
+     * Returns a list of ids for a specified class [cls].
+     */
     operator fun get(cls: Class<out Node<Message>>) = nodeTypeToRange[cls]
+
+    /**
+     * Returns a class for a specified id [iNode].
+     */
     operator fun get(iNode: Int) = nodes[iNode]
 
+    /**
+     * Returns if the node with a specified id [iNode] support failures. Some node class do not support
+     * failures according to user configuration.
+     */
     fun canFail(iNode: Int) = additionalClasses[nodes[iNode]]?.second ?: true
 }
