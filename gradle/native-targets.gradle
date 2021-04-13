@@ -94,7 +94,6 @@ kotlin {
         if (macosEnabled) ideaPreset = presets.macosX64
         if (winEnabled) ideaPreset = presets.mingwX64
         project.ext.ideaPreset = ideaPreset
-        project.ext.ideaPreset = presets.linuxX64
     }
 
     targets.metaClass.addTarget = { preset ->
