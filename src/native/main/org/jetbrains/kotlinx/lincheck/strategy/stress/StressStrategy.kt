@@ -74,9 +74,9 @@ actual class StressStrategy actual constructor(
 
     actual override fun run(): LincheckFailure? {
         // Run invocations
-        // reset()
-        try {
-            for (invocation in 0 until invocations) {
+        for (invocation in 0 until invocations) {
+            try {
+                reset()
                 runner.also {
                     when (val ir = runner.run()) {
                         is CompletedInvocationResult -> {
@@ -86,9 +86,9 @@ actual class StressStrategy actual constructor(
                         else -> return ir.toLincheckFailure(scenario)
                     }
                 }
+            } finally {
+                runner.close()
             }
-        } finally {
-            runner.close()
         }
         return null
     }

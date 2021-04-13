@@ -50,7 +50,7 @@ internal actual class TestThread actual constructor(val iThread: Int, val runner
         //val res = runnableFuture?.result
         //println("terminate $iThread start")
         val result = runnableFuture!!.result
-        //worker.execute(TransferMode.UNSAFE, { }, { sleep(1000000000) })
+        worker.execute(TransferMode.UNSAFE, { }, { sleep(1000000000) })
         //println("terminate $iThread end")
         //worker.requestTermination(true).result
         //return res
