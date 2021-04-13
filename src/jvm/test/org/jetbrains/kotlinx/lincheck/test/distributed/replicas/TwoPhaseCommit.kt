@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
-import kotlin.collections.LinkedHashMap
 
 
 data class KVLogEntry(val index: Int, val key: String, val value: String, var commited: Boolean = true)
@@ -61,8 +60,8 @@ class Client(val env: Environment<Message, Unit>) : Node<Message> {
         signal.signal()
     }
 
-    override suspend fun onNodeUnavailable(nodeId: Int) {
-        if (nodeId == receiver) signal.signal()
+    override suspend fun onNodeUnavailable(iNode: Int) {
+        if (iNode == receiver) signal.signal()
     }
 
     @Operation(handleExceptionsAsResult = [AbortOperationException::class])
