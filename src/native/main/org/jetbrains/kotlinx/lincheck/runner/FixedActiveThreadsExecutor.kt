@@ -46,14 +46,12 @@ internal actual class TestThread actual constructor(val iThread: Int, val runner
     }
 
     actual fun terminate() {
-        runnableFuture!!.state.value
         //printErr("stop() $iThread called")
         //val res = runnableFuture?.result
-        val result = runnableFuture?.result
-        results.add(result) // to prevent from garbage collecting
-        /*worker.execute(TransferMode.UNSAFE, { }, {
-            sleep(1000000)
-        })*/
+        //println("terminate $iThread start")
+        val result = runnableFuture!!.result
+        //worker.execute(TransferMode.UNSAFE, { }, { sleep(1000000000) })
+        //println("terminate $iThread end")
         //worker.requestTermination(true).result
         //return res
         //printErr("stop() $iThread finished")
