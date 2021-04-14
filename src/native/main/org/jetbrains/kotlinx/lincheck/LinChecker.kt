@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.jvm.*
 import kotlin.reflect.*
 
+// TODO StressOptions methods cast this class to StressOptions
 class LincheckStressConfiguration<Instance> : StressOptions() {
     /*
     invocationsPerIteration
@@ -74,7 +75,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
 
     fun initialState(
         state: () -> Instance
-    ) {
+    ) = apply {
         testClass = TestClass(state)
     }
 
@@ -87,7 +88,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
-    ) {
+    ) = apply {
         val actorGenerator = ActorGenerator(
             function = { instance, arguments ->
                 instance as Instance // check that operation can be applied to instance
@@ -108,7 +109,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
-    ) {
+    ) = apply {
         val actorGenerator = ActorGenerator(
             function = { instance, arguments ->
                 instance as Instance // check that operation can be applied to instance
@@ -130,7 +131,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
-    ) {
+    ) = apply {
         val actorGenerator = ActorGenerator(
             function = { instance, arguments ->
                 instance as Instance // check that operation can be applied to instance
@@ -153,7 +154,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
-    ) {
+    ) = apply {
         val actorGenerator = ActorGenerator(
             function = { instance, arguments ->
                 instance as Instance // check that operation can be applied to instance
@@ -173,7 +174,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
     fun validationFunction(
         validate: Instance.() -> Unit,
         name: String = validate.toString()
-    ) {
+    ) = apply {
         validationFunctions.add(ValidationFunction({ instance ->
             instance as Instance // check that operation can be applied to instance
             instance.validate()
@@ -184,7 +185,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
 
     fun stateRepresentation(
         state: Instance.() -> String
-    ) {
+    ) = apply {
         stateRepresentationFunction = StateRepresentationFunction { instance ->
             instance as Instance // check that operation can be applied to instance
             instance.state()
