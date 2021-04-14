@@ -1,12 +1,3 @@
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlin.jvm.*
-import kotlin.reflect.*
-
 /*
  * Lincheck
  *
@@ -26,6 +17,17 @@ import kotlin.reflect.*
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
+
+package org.jetbrains.kotlinx.lincheck
+
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import kotlin.jvm.*
+import kotlin.reflect.*
 
 class LincheckStressConfiguration<Instance> : StressOptions() {
     /*
@@ -82,6 +84,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         pGens: List<ParameterGenerator<*>>,
         op: Instance.(List<Any?>) -> R,
         name: String = op.toString(),
+        handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) {
@@ -93,7 +96,8 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
             parameterGenerators = pGens,
             functionName = name,
             useOnce = useOnce,
-            isSuspendable = isSuspendable
+            isSuspendable = isSuspendable,
+            handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
     }
@@ -101,6 +105,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
     fun <R> operation(
         op: Instance.() -> R,
         name: String = op.toString(),
+        handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) {
@@ -112,7 +117,8 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
             parameterGenerators = listOf(),
             functionName = name,
             useOnce = useOnce,
-            isSuspendable = isSuspendable
+            isSuspendable = isSuspendable,
+            handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
     }
@@ -121,6 +127,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         p1Gen: ParameterGenerator<P1>,
         op: Instance.(p1: P1) -> R,
         name: String = op.toString(),
+        handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) {
@@ -132,7 +139,8 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
             parameterGenerators = listOf(p1Gen),
             functionName = name,
             useOnce = useOnce,
-            isSuspendable = isSuspendable
+            isSuspendable = isSuspendable,
+            handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
     }
@@ -142,6 +150,7 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
         p2Gen: ParameterGenerator<P2>,
         op: Instance.(p1: P1, p2: P2) -> R,
         name: String = op.toString(),
+        handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) {
@@ -153,7 +162,8 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
             parameterGenerators = listOf(p1Gen, p2Gen),
             functionName = name,
             useOnce = useOnce,
-            isSuspendable = isSuspendable
+            isSuspendable = isSuspendable,
+            handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
     }
@@ -200,7 +210,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
      */
     fun check() {
         val failure = checkImpl() ?: return
-        throw RuntimeException("testing data structure is incorrect $failure") // TODO rewrite throw LincheckAssertionError(failure)
+        throw LincheckAssertionError(failure)
     }
 
     /**

@@ -74,7 +74,7 @@ fun actor(function: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean
     return Actor(
         method = method,
         arguments = args.toList(),
-        handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList(),
+        handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList().map { it.kotlin },
         cancelOnSuspension = cancelOnSuspension
     )
 }

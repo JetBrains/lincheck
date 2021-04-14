@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.coroutines.*
 import kotlin.jvm.*
 import kotlin.reflect.*
@@ -87,6 +88,10 @@ internal class StoreExceptionHandler : AbstractCoroutineContextElement(Coroutine
         this.exception = exception
     }
 }
+
+class LincheckAssertionError(
+    failure: LincheckFailure
+) : AssertionError("\n" + failure)
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {

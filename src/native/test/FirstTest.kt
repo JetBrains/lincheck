@@ -18,6 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
+import org.jetbrains.kotlinx.lincheck.LincheckStressConfiguration
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -81,7 +82,7 @@ class FirstTest {
     @Test
     fun test_working() {
         LincheckStressConfiguration<TestClass>().apply {
-            iterations(20)
+            iterations(10)
             invocationsPerIteration(1000)
             actorsBefore(2)
             threads(3)

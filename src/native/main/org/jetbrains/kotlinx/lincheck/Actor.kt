@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import kotlin.reflect.KClass
+
 /**
  * The actor entity describe the operation with its parameters
  * which is executed during the testing.
@@ -33,7 +35,8 @@ actual class Actor(
     actual val isSuspendable: Boolean = false,
     actual val allowExtraSuspension: Boolean = false,
     actual val promptCancellation: Boolean = false,
-    actual val cancelOnSuspension: Boolean = false
+    actual val cancelOnSuspension: Boolean = false,
+    actual val handledExceptions: List<KClass<out Throwable>>
 ) {
 
     actual override fun toString(): String =

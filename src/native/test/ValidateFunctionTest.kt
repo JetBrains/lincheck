@@ -20,6 +20,7 @@
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.LincheckStressConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.native.concurrent.*

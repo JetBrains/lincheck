@@ -54,6 +54,7 @@ public class ExceptionAsResultTest {
             fail("Should fail with AssertionError");
         } catch (AssertionError e) {
             String m = e.getMessage();
+            assertTrue(m.contains("Invalid execution results"));
             assertTrue(m.contains("IllegalStateException") || m.contains("IOException"));
             assertFalse(m.contains(MESSAGE));
         }

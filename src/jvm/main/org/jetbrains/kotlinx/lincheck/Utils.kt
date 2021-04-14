@@ -35,6 +35,7 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.reflect.KClass
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
@@ -68,7 +69,7 @@ internal actual fun executeActor(
     } catch (invE: Throwable) {
         val eClass = (invE.cause ?: invE).javaClass.normalize()
         for (ec in actor.handledExceptions) {
-            if (ec.isAssignableFrom(eClass))
+            if (ec.java.isAssignableFrom(eClass))
                 return createExceptionResult(eClass)
         }
         throw IllegalStateException("Invalid exception as a result of $actor", invE)
@@ -219,6 +220,9 @@ internal fun Any?.serialize(): ByteArray = ByteArrayOutputStream().use {
 internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(this).use {
     CustomObjectInputStream(loader, it).run { readObject() }
 }
+
+internal fun getClassFromKClass(clazz: KClass<out Throwable>) = clazz.java
+internal fun getKClassFromClass(clazz: Class<out Throwable>) = clazz.kotlin
 
 /**
  * ObjectInputStream that uses custom class loader.

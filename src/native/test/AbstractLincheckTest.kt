@@ -20,6 +20,7 @@
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.LincheckStressConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.native.*
@@ -61,7 +62,7 @@ abstract class AbstractLincheckStressTest<TestClass>(
     }
 */
     private fun <T: LincheckStressConfiguration<TestClass>> T.commonConfiguration(): Unit = run {
-        iterations(200)
+        iterations(10)
         invocationsPerIteration(1000)
         actorsBefore(2)
         threads(3)

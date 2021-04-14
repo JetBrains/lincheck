@@ -30,6 +30,7 @@ import java.lang.reflect.Parameter
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.collections.HashMap
+import kotlin.reflect.KClass
 
 actual typealias ValidationFunction = Method
 
@@ -110,7 +111,7 @@ actual class CTestStructure private constructor(
                         gens.add(getOrCreateGenerator(m, m.parameters[i], nameInOperation, namedGens, defaultGens))
                     }
                     // Get list of handled exceptions if they are presented
-                    val handledExceptions: List<Class<out Throwable?>> = opAnn.handleExceptionsAsResult.map { it.java }
+                    val handledExceptions: List<KClass<out Throwable>> = opAnn.handleExceptionsAsResult.toList()
                     val actorGenerator = ActorGenerator(m, gens, handledExceptions, opAnn.runOnce,
                             opAnn.cancellableOnSuspension, opAnn.allowExtraSuspension, opAnn.blocking, opAnn.causesBlocking,
                             opAnn.promptCancellation)

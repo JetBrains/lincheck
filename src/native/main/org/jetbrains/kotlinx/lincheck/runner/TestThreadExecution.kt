@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import kotlin.reflect.*
 
 class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List<Actor>) : Runnable {
     lateinit var testInstance: Any
@@ -54,8 +55,21 @@ class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List
             // TODO add try-catch
             runner.onActorStart(iThread)
             // Load arguments for operation
-            val result = actor.function(testInstance, actor.arguments)
-            results[index] = ValueResult(result)
+            val result: Result = try {
+                val r = actor.function(testInstance, actor.arguments)
+                //printErr("ValueResult")
+                ValueResult(r)
+            } catch (e: Throwable) {
+                if (actor.handledExceptions.any { it.safeCast(e) != null }) { // Do a cast. If == null, cast failed and e is not an instance of it
+                    //printErr("ExceptionResult")
+                    ExceptionResult(e::class, false)
+                } else {
+                    //printErr("FailureResult with $e")
+                    runner.onFailure(iThread, e)
+                    throw e
+                }
+            }
+            results[index] = result
             incClock()
         }
         //printErr("RUN $iThread #finish ")

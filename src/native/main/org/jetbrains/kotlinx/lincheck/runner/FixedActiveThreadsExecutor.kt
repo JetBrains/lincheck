@@ -46,13 +46,15 @@ internal actual class TestThread actual constructor(val iThread: Int, val runner
     }
 
     actual fun terminate() {
+        // Don't want to terminate threads because of GC. Don't want to wait for result because of hanging
+
         //printErr("stop() $iThread called")
         //val res = runnableFuture?.result
         //println("terminate $iThread start")
-        val result = runnableFuture!!.result
-        worker.execute(TransferMode.UNSAFE, { }, { sleep(1000000000) })
+        //val result = runnableFuture!!.result
+        //worker.execute(TransferMode.UNSAFE, { }, { sleep(1000000000) })
         //println("terminate $iThread end")
-        //worker.requestTermination(true).result
+        //worker.requestTermination(false).result
         //return res
         //printErr("stop() $iThread finished")
     }

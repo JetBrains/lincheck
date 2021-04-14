@@ -21,6 +21,7 @@
  */
 
 import kotlinx.atomicfu.*
+import org.jetbrains.kotlinx.lincheck.LincheckStressConfiguration
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 
 class ThreadIdTest : AbstractLincheckStressTest<ThreadIdTest>() {

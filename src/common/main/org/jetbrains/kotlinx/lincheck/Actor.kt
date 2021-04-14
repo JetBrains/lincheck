@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
+import kotlin.reflect.KClass
 
 /**
  * The actor entity describe the operation with its parameters
@@ -33,6 +34,7 @@ expect class Actor {
     val allowExtraSuspension: Boolean
     val promptCancellation: Boolean
     val cancelOnSuspension: Boolean
+    val handledExceptions: List<KClass<out Throwable>>
 
     override fun toString(): String
 }

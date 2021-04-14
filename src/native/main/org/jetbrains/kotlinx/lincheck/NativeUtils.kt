@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import platform.posix.*
 import kotlin.coroutines.*
+import kotlin.reflect.*
 
 actual class TestClass(
     val function: () -> Any?
@@ -71,7 +72,16 @@ internal actual fun executeActor(
     actor: Actor,
     completion: Continuation<Any?>?
 ): Result {
-    return ValueResult(actor.function(instance, actor.arguments))
+    return try {
+        val r = actor.function(instance, actor.arguments)
+        ValueResult(r)
+    } catch (e: Throwable) {
+        if (actor.handledExceptions.any { it.safeCast(e) != null }) { // Do a cast. If == null, cast failed and e is not an instance of it
+            ExceptionResult(e::class, false)
+        } else {
+            throw e
+        }
+    }
 }
 
 /**

@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
 import java.lang.reflect.*
+import kotlin.reflect.KClass
 import kotlin.reflect.jvm.kotlinFunction
 
 /**
@@ -35,7 +36,7 @@ import kotlin.reflect.jvm.kotlinFunction
 actual data class Actor @JvmOverloads constructor(
     val method: Method,
     val arguments: List<Any?>,
-    val handledExceptions: List<Class<out Throwable>> = emptyList(),
+    actual val handledExceptions: List<KClass<out Throwable>> = emptyList(),
     actual val cancelOnSuspension: Boolean = false,
     actual val allowExtraSuspension: Boolean = false,
     val blocking: Boolean = false,

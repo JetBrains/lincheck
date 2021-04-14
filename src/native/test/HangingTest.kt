@@ -2,7 +2,7 @@
  * #%L
  * Lincheck
  * %%
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * Copyright (C) 2019 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,11 +19,25 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
-package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import java.lang.AssertionError
 
-class LincheckAssertionError(
-    failure: LincheckFailure
-) : AssertionError("\n" + failure)
+class HangingTest : AbstractLincheckStressTest<HangingTest>(DeadlockWithDumpFailure::class) {
+    fun badOperation() {
+        while (true) {}
+    }
+
+    override fun <T : LincheckStressConfiguration<HangingTest>> T.customize() {
+        iterations(1)
+        actorsBefore(0)
+        actorsAfter(0)
+        requireStateEquivalenceImplCheck(false)
+        minimizeFailedScenario(false)
+        invocationTimeout(100)
+
+        initialState { HangingTest() }
+
+        operation(HangingTest::badOperation)
+    }
+}

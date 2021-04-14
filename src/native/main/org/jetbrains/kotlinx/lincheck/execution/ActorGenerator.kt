@@ -22,13 +22,15 @@ package org.jetbrains.kotlinx.lincheck.execution
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
+import kotlin.reflect.KClass
 
 actual class ActorGenerator(
     val function: (Any, List<Any?>) -> Any?, // (instance, arguments) -> result
     val parameterGenerators: List<ParameterGenerator<*>>,
     val functionName: String = function.toString(),
     actual val useOnce: Boolean = false,
-    actual val isSuspendable: Boolean = false
+    actual val isSuspendable: Boolean = false,
+    actual val handledExceptions: List<KClass<out Throwable>>
 ) {
     actual override fun toString(): String = functionName
 
@@ -38,7 +40,8 @@ actual class ActorGenerator(
             function = function,
             arguments = arguments,
             functionName = functionName,
-            isSuspendable = isSuspendable
+            isSuspendable = isSuspendable,
+            handledExceptions = handledExceptions
         )
     }
 }
