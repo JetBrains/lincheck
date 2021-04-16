@@ -35,10 +35,14 @@ actual class StressStrategy actual constructor(
     private val stateRepresentationFunction: StateRepresentationFunction?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
-    private val invocations = testCfg.invocationsPerIteration
+    private var invocations = testCfg.invocationsPerIteration
     private var runner: Runner
 
     init {
+        if(invocations > 500) {
+            printErr("invocations count has been reduced from $invocations to 500") // TODO remove when bug with GC will be fixed
+            invocations = 500
+        }
         runner = ParallelThreadsRunner(
             strategy = this,
             testClass = testClass,

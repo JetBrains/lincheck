@@ -2,7 +2,7 @@
  * #%L
  * Lincheck
  * %%
- * Copyright (C) 2019 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -19,28 +19,29 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+package verifier.linearizability
 
+import AbstractLincheckStressTest
 import org.jetbrains.kotlinx.lincheck.*
-import kotlin.native.concurrent.*
-import kotlin.test.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
 
-class StateEquivalenceImplCheckTest {
-    private var i = AtomicInt(0)
+class HashMapTest : AbstractLincheckStressTest<HashMapTest>(IncorrectResultsFailure::class) {
+    private val m = HashMap<Int, Int>()
 
-    fun incAndGet() = i.addAndGet(1)
+    fun put(key: Int, value: Int): Int? = m.put(key, value)
 
-    @Test
-    fun test() {
-        try {
-            LincheckStressConfiguration<StateEquivalenceImplCheckTest>().apply {
-                initialState { StateEquivalenceImplCheckTest() }
-                invocationsPerIteration(500)
+    operator fun get(key: Int?): Int? = m[key]
 
-                operation(StateEquivalenceImplCheckTest::incAndGet)
-            }.runTest()
-        } catch(e: IllegalStateException) {
-            // Check that IllegalStateException is thrown if `requireStateEquivalenceImplCheck` option is true by default
-            // and hashCode/equals methods are not implemented
-        }
+    override fun <T : LincheckStressConfiguration<HashMapTest>> T.customize() {
+        initialState { HashMapTest() }
+
+        val keyGen = IntGen("")
+
+        operation(IntGen(""), keyGen, HashMapTest::put)
+        operation(keyGen, HashMapTest::get)
     }
+
+    override fun extractState(): Any = m
 }
+

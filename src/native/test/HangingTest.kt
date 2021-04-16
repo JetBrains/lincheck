@@ -30,6 +30,7 @@ class HangingTest : AbstractLincheckStressTest<HangingTest>(DeadlockWithDumpFail
 
     override fun <T : LincheckStressConfiguration<HangingTest>> T.customize() {
         iterations(1)
+        invocationsPerIteration(500)
         actorsBefore(0)
         actorsAfter(0)
         requireStateEquivalenceImplCheck(false)

@@ -83,7 +83,7 @@ class FirstTest {
     fun test_working() {
         LincheckStressConfiguration<TestClass>().apply {
             iterations(10)
-            invocationsPerIteration(1000)
+            invocationsPerIteration(500)
             actorsBefore(2)
             threads(3)
             actorsPerThread(5)

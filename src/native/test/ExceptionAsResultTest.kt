@@ -37,6 +37,7 @@ class ExceptionAsResultTest {
         try {
             LincheckStressConfiguration<ExceptionAsResultTest>().apply {
                 iterations(1)
+                invocationsPerIteration(500)
                 requireStateEquivalenceImplCheck(false)
 
                 initialState { ExceptionAsResultTest() }

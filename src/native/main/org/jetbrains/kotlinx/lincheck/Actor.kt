@@ -36,7 +36,7 @@ actual class Actor(
     actual val allowExtraSuspension: Boolean = false,
     actual val promptCancellation: Boolean = false,
     actual val cancelOnSuspension: Boolean = false,
-    actual val handledExceptions: List<KClass<out Throwable>>
+    actual val handledExceptions: List<KClass<out Throwable>> = emptyList()
 ) {
 
     actual override fun toString(): String =
