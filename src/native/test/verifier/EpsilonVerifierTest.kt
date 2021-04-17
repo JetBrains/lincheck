@@ -32,8 +32,9 @@ class EpsilonVerifierTest : VerifierState() {
 
     @Test
     fun test() {
-        LincheckStressConfiguration<EpsilonVerifierTest>().apply {
+        LincheckStressConfiguration<EpsilonVerifierTest>("EpsilonVerifierTest").apply {
             iterations(5)
+            invocationsPerIteration(500)
             threads(2)
             actorsPerThread(2)
             verifier { s -> EpsilonVerifier(s) }

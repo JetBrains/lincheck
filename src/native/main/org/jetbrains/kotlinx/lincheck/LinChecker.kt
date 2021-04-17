@@ -30,7 +30,7 @@ import kotlin.jvm.*
 import kotlin.reflect.*
 
 // TODO StressOptions methods cast this class to StressOptions
-class LincheckStressConfiguration<Instance> : StressOptions() {
+class LincheckStressConfiguration<Instance>(private val testName: String = "") : StressOptions() {
     /*
     invocationsPerIteration
     iterations
@@ -52,11 +52,11 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
     private var validationFunctions = mutableListOf<ValidationFunction>()
     private var stateRepresentationFunction: StateRepresentationFunction? = null
 
-    internal fun getTestClass(): TestClass {
+    private fun getTestClass(): TestClass {
         return testClass ?: throw IllegalArgumentException("initialState should be specified")
     }
 
-    internal fun getTestStructure(): CTestStructure {
+    private fun getTestStructure(): CTestStructure {
         return CTestStructure(
             actorGenerators,
             operationGroups,
@@ -67,9 +67,18 @@ class LincheckStressConfiguration<Instance> : StressOptions() {
 
     fun runTest() {
         LinChecker.check(getTestClass(), getTestStructure(), this as StressOptions)
+        if(testName.isNotEmpty()) {
+            println("Finished test $testName")
+        }
     }
 
-    fun checkImpl() = LinChecker(getTestClass(), getTestStructure(), this as StressOptions).checkImpl()
+    fun checkImpl(): LincheckFailure? {
+        val result = LinChecker(getTestClass(), getTestStructure(), this as StressOptions).checkImpl()
+        if(testName.isNotEmpty()) {
+            println("Finished test $testName")
+        }
+        return result
+    }
 
     // =========================== Constructor
 
@@ -230,7 +239,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
-            printErr("Iteration $i") // TODO debug output
+            //printErr("Iteration $i") // TODO debug output
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1, iterations, scenario)

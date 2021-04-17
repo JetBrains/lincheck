@@ -55,7 +55,7 @@ class TestClass : VerifierState() {
 class FirstTest {
     @Test
     fun test_failing() {
-        val f = LincheckStressConfiguration<TestClass>().apply {
+        val f = LincheckStressConfiguration<TestClass>("FirstTest_1").apply {
             iterations(300)
             invocationsPerIteration(50)
             actorsBefore(2)
@@ -81,7 +81,7 @@ class FirstTest {
 
     @Test
     fun test_working() {
-        LincheckStressConfiguration<TestClass>().apply {
+        LincheckStressConfiguration<TestClass>("FirstTest_2").apply {
             iterations(10)
             invocationsPerIteration(500)
             actorsBefore(2)

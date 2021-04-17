@@ -32,7 +32,7 @@ class StateEquivalenceImplCheckTest {
     @Test
     fun test() {
         try {
-            LincheckStressConfiguration<StateEquivalenceImplCheckTest>().apply {
+            LincheckStressConfiguration<StateEquivalenceImplCheckTest>("StateEquivalenceImplCheckTest").apply {
                 initialState { StateEquivalenceImplCheckTest() }
                 invocationsPerIteration(500)
 

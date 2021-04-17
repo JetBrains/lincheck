@@ -45,7 +45,7 @@ class ValidateFunctionTest : VerifierState() {
 
     @Test
     fun test() {
-        val f = LincheckStressConfiguration<ValidateFunctionTest>().apply {
+        val f = LincheckStressConfiguration<ValidateFunctionTest>("ValidateFunctionTest").apply {
             iterations(1)
             invocationsPerIteration(1)
             actorsBefore(3)

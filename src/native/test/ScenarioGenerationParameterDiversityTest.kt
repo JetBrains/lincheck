@@ -42,7 +42,7 @@ class ScenarioGenerationParameterDiversityTest : VerifierState() {
         // TODO maybe create API like DefaultGens.getDefaultIntGen or something
         val defaultGen = IntGen("")
         val paramGen = IntGen("")
-        LincheckStressConfiguration<ScenarioGenerationParameterDiversityTest>().apply {
+        LincheckStressConfiguration<ScenarioGenerationParameterDiversityTest>("ScenarioGenerationParameterDiversityTest").apply {
             invocationsPerIteration(1)
             iterations(100)
             threads(1)

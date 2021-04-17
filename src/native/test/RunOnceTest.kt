@@ -37,7 +37,7 @@ class RunOnceTest {
 
     @Test
     fun test() {
-        LincheckStressConfiguration<RunOnceTest>().apply {
+        LincheckStressConfiguration<RunOnceTest>("RunOnceTest").apply {
             threads(3)
             iterations(10)
             invocationsPerIteration(10)
