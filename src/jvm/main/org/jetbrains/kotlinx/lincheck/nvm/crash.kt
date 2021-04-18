@@ -55,6 +55,9 @@ object Crash {
     @Volatile
     var useProxyCrash = true
 
+    @Volatile
+    internal var yieldCallback = {}
+
     @JvmStatic
     fun isCrashed() = systemCrashOccurred.get()
 
@@ -100,7 +103,7 @@ object Crash {
         while (true) {
             val c = context.value
             if (c.barrier !== null) break
-            if (newBarrier === null) newBarrier = BusyWaitingBarrier()
+            if (newBarrier === null) newBarrier = BusyWaitingBarrier(yieldCallback)
             if (context.compareAndSet(c, c.copy(barrier = newBarrier))) break
         }
         context.value.barrier!!.await { first ->
@@ -139,18 +142,22 @@ object Crash {
     }
 }
 
-private class BusyWaitingBarrier {
+private class BusyWaitingBarrier(private val yieldCallback: () -> Unit) {
     private val free = atomic(false)
     private val waitingCount = atomic(0)
 
     inline fun await(action: (Boolean) -> Unit) {
         waitingCount.incrementAndGet()
         // wait for all to access the barrier
-        while (waitingCount.value < Crash.threads && !free.value);
+        while (waitingCount.value < Crash.threads && !free.value) {
+            yieldCallback()
+        }
         val firstExit = free.compareAndSet(expect = false, update = true)
         action(firstExit)
         waitingCount.decrementAndGet()
         // wait for action completed in all threads
-        while (waitingCount.value > 0 && free.value);
+        while (waitingCount.value > 0 && free.value) {
+            yieldCallback()
+        }
     }
 }

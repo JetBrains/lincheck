@@ -116,6 +116,9 @@ abstract class ManagedStrategy(
             runner.close()
             throw t
         }
+        Crash.yieldCallback = {
+            switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true)
+        }
     }
 
     private fun createRunner(): Runner =
