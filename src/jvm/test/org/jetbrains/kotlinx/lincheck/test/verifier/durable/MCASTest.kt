@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -30,13 +28,13 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
 import kotlin.random.Random
 
 private const val THREADS_NUMBER = 3
-private const val N = 2
+private const val N = 3
 
 internal interface MCAS {
     operator fun get(index: Int): Int
@@ -52,13 +50,7 @@ internal class ListGen(config: String) : ParameterGenerator<List<Int>> {
 }
 
 @Param(name = "list", gen = ListGen::class)
-@StressCTest(
-    sequentialSpecification = SequentialMCAS::class,
-    recover = Recover.DURABLE,
-    threads = THREADS_NUMBER,
-    minimizeFailedScenario = false
-)
-internal class MCASTest {
+internal class MCASTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class) {
     private val cas = DurableMCAS()
 
     @Operation
@@ -70,9 +62,6 @@ internal class MCASTest {
 
     @DurableRecoverAll
     fun recover() = cas.recover()
-
-    @Test
-    fun test() = LinChecker.check(this::class.java)
 }
 
 internal class SequentialMCAS : MCAS, VerifierState() {
@@ -175,13 +164,8 @@ internal class DurableMCAS : MCAS {
 }
 
 @Param(name = "list", gen = ListGen::class)
-@StressCTest(
-    sequentialSpecification = SequentialMCAS::class,
-    recover = Recover.DURABLE,
-    threads = THREADS_NUMBER,
-    minimizeFailedScenario = false
-)
-internal class MCASNoRecoverFailingTest {
+internal class MCASNoRecoverFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class) {
     private val cas = DurableMCAS()
 
     @Operation
@@ -191,19 +175,13 @@ internal class MCASNoRecoverFailingTest {
     fun compareAndSet(@Param(name = "list") old: List<Int>, @Param(name = "list") new: List<Int>) =
         cas.compareAndSet(old, new)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
+    override val expectedExceptions = listOf(IllegalStateException::class, StackOverflowError::class)
 }
 
 
 @Param(name = "list", gen = ListGen::class)
-@StressCTest(
-    sequentialSpecification = SequentialMCAS::class,
-    recover = Recover.DURABLE,
-    threads = THREADS_NUMBER,
-    minimizeFailedScenario = false
-)
-internal abstract class MCASFailingTest {
+internal abstract class MCASFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class) {
     internal abstract val cas: MCAS
 
     @Operation
@@ -215,9 +193,6 @@ internal abstract class MCASFailingTest {
 
     @DurableRecoverAll
     fun recover() = cas.recover()
-
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
 }
 
 internal class MCASFailingTest1 : MCASFailingTest() {

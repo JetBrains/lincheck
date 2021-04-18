@@ -23,7 +23,6 @@
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile

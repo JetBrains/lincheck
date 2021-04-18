@@ -21,17 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
 
 private const val THREADS_NUMBER = 3
 
@@ -43,13 +39,7 @@ internal interface Counter {
 /**
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
-@StressCTest(
-    sequentialSpecification = SequentialCounter::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.NRL,
-    minimizeFailedScenario = false
-)
-internal class CounterTest : Counter {
+internal class CounterTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialCounter::class), Counter {
     private val counter = NRLCounter(THREADS_NUMBER + 2)
 
     @Operation
@@ -57,9 +47,6 @@ internal class CounterTest : Counter {
 
     @Operation
     override fun get(@Param(gen = ThreadIdGen::class) threadId: Int) = counter.get(threadId)
-
-    @Test
-    fun test() = LinChecker.check(this::class.java)
 }
 
 internal class SequentialCounter : VerifierState(), Counter {
@@ -101,42 +88,32 @@ private class NRLCounter(threadsCount: Int) : Counter {
     }
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialCounter::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.NRL,
-    minimizeFailedScenario = false
-)
-internal abstract class CounterFailingTest {
-    private val counter = createFailingCounter()
-
-    abstract fun createFailingCounter(): Counter
+internal abstract class CounterFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.NRL, THREADS_NUMBER, SequentialCounter::class) {
+    protected abstract val counter: Counter
 
     @Operation
     fun increment(@Param(gen = ThreadIdGen::class) threadId: Int) = counter.increment(threadId)
 
     @Operation
     fun get(@Param(gen = ThreadIdGen::class) threadId: Int) = counter.get(threadId)
-
-    @Test(expected = LincheckAssertionError::class)
-    fun testFails() = LinChecker.check(this::class.java)
 }
 
 internal class CounterFailingTest1 : CounterFailingTest() {
-    override fun createFailingCounter() = NRLFailingCounter1(THREADS_NUMBER + 2)
+    override val counter = NRLFailingCounter1(THREADS_NUMBER + 2)
 }
 
 // not reliably reproduced
 internal class CounterFailingTest2 : CounterFailingTest() {
-    override fun createFailingCounter() = NRLFailingCounter2(THREADS_NUMBER + 2)
+    override val counter = NRLFailingCounter2(THREADS_NUMBER + 2)
 }
 
 internal class CounterFailingTest3 : CounterFailingTest() {
-    override fun createFailingCounter() = NRLFailingCounter3(THREADS_NUMBER + 2)
+    override val counter = NRLFailingCounter3(THREADS_NUMBER + 2)
 }
 
 internal class CounterFailingTest4 : CounterFailingTest() {
-    override fun createFailingCounter() = NRLFailingCounter4(THREADS_NUMBER + 2)
+    override val counter = NRLFailingCounter4(THREADS_NUMBER + 2)
 }
 
 internal class NRLFailingCounter1(threadsCount: Int) : VerifierState(), Counter {

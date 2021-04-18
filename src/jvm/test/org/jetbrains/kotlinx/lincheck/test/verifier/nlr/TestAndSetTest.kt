@@ -22,19 +22,14 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
-import org.jetbrains.kotlinx.lincheck.nvm.CrashErrorImpl
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
-import kotlin.random.Random
 
 private const val THREADS_NUMBER = 5
 
@@ -42,22 +37,16 @@ interface TAS {
     fun testAndSet(threadId: Int): Int
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialTestAndSet::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.NRL,
-    actorsBefore = 0,
-    actorsPerThread = 1,
-    minimizeFailedScenario = false
-)
-internal class TestAndSetTest {
+internal class TestAndSetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialTestAndSet::class) {
     private val tas = NRLTestAndSet(THREADS_NUMBER + 2)
 
     @Operation
     fun testAndSet(@Param(gen = ThreadIdGen::class) threadId: Int) = tas.testAndSet(threadId)
-
-    @Test
-    fun test() = LinChecker.check(this::class.java)
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+        actorsPerThread(1)
+        actorsAfter(1)
+    }
 }
 
 internal class SequentialTestAndSet : VerifierState() {
@@ -70,14 +59,12 @@ internal class SequentialTestAndSet : VerifierState() {
 /**
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
-internal class NRLTestAndSet(private val threadsCount: Int) : VerifierState(), TAS {
+internal class NRLTestAndSet(private val threadsCount: Int) : TAS {
     private val r = MutableList(threadsCount) { nonVolatile(0) }
     private val response = MutableList(threadsCount) { nonVolatile(0) }
     private val winner = nonVolatile(-1)
     private val doorway = nonVolatile(true)
     private val tas = nonVolatile(0)
-
-    override fun extractState() = tas.value
 
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
@@ -128,39 +115,33 @@ private inline fun wailUntil(condition: () -> Boolean) {
     }
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialTestAndSet::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.NRL,
-    actorsBefore = 0,
-    actorsPerThread = 1,
-    minimizeFailedScenario = false
-)
-internal abstract class TestAndSetFailingTest {
-    private val tas = createTAS()
-    abstract fun createTAS(): TAS
+internal abstract class TestAndSetFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.NRL, THREADS_NUMBER, SequentialTestAndSet::class) {
+    protected abstract val tas: TAS
 
     @Operation
     fun testAndSet(@Param(gen = ThreadIdGen::class) threadId: Int) = tas.testAndSet(threadId)
-
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+        actorsPerThread(1)
+        actorsAfter(1)
+    }
 }
 
 internal class TestAndSetFailingTest1 : TestAndSetFailingTest() {
-    override fun createTAS() = NRLFailingTestAndSet1(THREADS_NUMBER + 2)
+    override val tas = NRLFailingTestAndSet1(THREADS_NUMBER + 2)
 }
 
 internal class TestAndSetFailingTest2 : TestAndSetFailingTest() {
-    override fun createTAS() = NRLFailingTestAndSet2(THREADS_NUMBER + 2)
+    override val tas = NRLFailingTestAndSet2(THREADS_NUMBER + 2)
 }
 
 internal class TestAndSetFailingTest3 : TestAndSetFailingTest() {
-    override fun createTAS() = NRLFailingTestAndSet3(THREADS_NUMBER + 2)
+    override val tas = NRLFailingTestAndSet3(THREADS_NUMBER + 2)
 }
 
 internal class TestAndSetFailingTest4 : TestAndSetFailingTest() {
-    override fun createTAS() = NRLFailingTestAndSet4(THREADS_NUMBER + 2)
+    override val tas = NRLFailingTestAndSet4(THREADS_NUMBER + 2)
 }
 
 internal class NRLFailingTestAndSet1(private val threadsCount: Int) : VerifierState(), TAS {

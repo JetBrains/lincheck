@@ -20,16 +20,14 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
 import java.util.concurrent.ConcurrentLinkedDeque
 
 private const val THREADS_NUMBER = 3
@@ -44,13 +42,8 @@ internal interface DurableSet {
 /**
  * @see  <a https://arxiv.org/pdf/1909.02852.pdf">Efficient Lock-Free Durable Sets</a>
  */
-@StressCTest(
-    sequentialSpecification = SequentialSet::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DURABLE,
-    minimizeFailedScenario = false
-)
-internal class DurableLinkFreeListTest {
+internal class DurableLinkFreeListTest :
+    AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
     val s = DurableLinkFreeList<Any>()
 
     @Operation
@@ -64,9 +57,6 @@ internal class DurableLinkFreeListTest {
 
     @DurableRecoverAll
     fun recover() = s.recover()
-
-    @Test
-    fun test() = LinChecker.check(this::class.java)
 }
 
 class SequentialSet : VerifierState() {
@@ -260,13 +250,9 @@ internal class DurableLinkFreeList<T> : DurableSet {
     }
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialSet::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DURABLE,
-    minimizeFailedScenario = false
-)
-internal class DurableLinkFreeListNoRecoverFailingTest {
+
+internal class DurableLinkFreeListNoRecoverFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
     val s = DurableLinkFreeList<Any>()
 
     @Operation
@@ -277,18 +263,10 @@ internal class DurableLinkFreeListNoRecoverFailingTest {
 
     @Operation
     fun contains(key: Int) = s.contains(key)
-
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialSet::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DURABLE,
-    minimizeFailedScenario = false
-)
-internal abstract class DurableLinkFreeListFailingTest {
+internal abstract class DurableLinkFreeListFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
     internal abstract val s: DurableSet
 
     @Operation
@@ -302,9 +280,6 @@ internal abstract class DurableLinkFreeListFailingTest {
 
     @DurableRecoverAll
     fun recover() = s.recover()
-
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
 }
 
 internal class DurableLinkFreeListFailingTest1 : DurableLinkFreeListFailingTest() {

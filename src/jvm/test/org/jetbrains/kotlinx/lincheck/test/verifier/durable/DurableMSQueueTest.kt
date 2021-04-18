@@ -19,7 +19,10 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.CrashResult
+import org.jetbrains.kotlinx.lincheck.ValueResult
+import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverPerThread
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -31,16 +34,17 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.Assert
-import org.junit.Assert.fail
 import org.junit.Ignore
 import org.junit.Test
 import java.lang.reflect.Method
 
-private const val THREADS_NUMBER = 2
+private const val THREADS_NUMBER = 3
 
 internal interface RecoverableQueue<T> {
     fun push(value: T)
@@ -51,13 +55,7 @@ internal interface RecoverableQueue<T> {
 /**
  * @see  <a href="http://www.cs.technion.ac.il/~erez/Papers/nvm-queue-full.pdf">A Persistent Lock-Free Queue for Non-Volatile Memory</a>
  */
-@StressCTest(
-    sequentialSpecification = SequentialQueue::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DURABLE,
-    minimizeFailedScenario = false
-)
-class DurableMSQueueTest {
+internal class DurableMSQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class) {
     private val q = DurableMSQueue<Int>()
 
     @Operation
@@ -68,9 +66,6 @@ class DurableMSQueueTest {
 
     @DurableRecoverPerThread
     fun recover() = q.recover()
-
-    @Test
-    fun test() = LinChecker.check(this::class.java)
 }
 
 private const val DEFAULT_DELETER = -1
@@ -195,14 +190,13 @@ class ManualDurableMSQueueTest {
     }
 }
 
-
-@StressCTest(
-    sequentialSpecification = SequentialQueue::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DURABLE,
-    minimizeFailedScenario = false
-)
-class DurableMSQueueNoRecoveryFailingTest {
+class DurableMSQueueNoRecoveryFailingTest : AbstractNVMLincheckTest(
+    Recover.DURABLE,
+    THREADS_NUMBER,
+    SequentialQueue::class,
+    false,
+    IncorrectResultsFailure::class
+) {
     private val q = DurableMSQueue<Int>()
 
     @Operation
@@ -210,19 +204,11 @@ class DurableMSQueueNoRecoveryFailingTest {
 
     @Operation
     fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId)
-
-    /** This test fails as no recovery is provided. */
-    @Test(expected = Throwable::class)
-    fun testFails() = LinChecker.check(this::class.java)
+    override val expectedExceptions = listOf(IllegalStateException::class)
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialQueue::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DURABLE,
-    minimizeFailedScenario = false
-)
-internal abstract class DurableMSQueueFailingTest {
+internal abstract class DurableMSQueueFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class) {
     internal abstract val q: RecoverableQueue<Int>
 
     @Operation
@@ -233,16 +219,7 @@ internal abstract class DurableMSQueueFailingTest {
 
     @DurableRecoverPerThread
     fun recover() = q.recover()
-
-    @Test
-    fun test() {
-        try {
-            LinChecker.check(this::class.java)
-            fail("Expected exception has not occurred.")
-        } catch (e: LincheckAssertionError) {
-        } catch (e: IllegalStateException) {
-        }
-    }
+    override val expectedExceptions = listOf(IllegalStateException::class)
 }
 
 internal class DurableMSQueueFailingTest1 : DurableMSQueueFailingTest() {

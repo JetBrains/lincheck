@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.transformation
+package org.jetbrains.kotlinx.lincheck.test.transformation.crash
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -27,38 +27,45 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.junit.Assert
 import org.junit.Test
 
-@StressCTest(recover = Recover.DURABLE)
-class CrashTransformerDealsWithCatchThrowableTest : VerifierState() {
-    private val c = NVMClassWithCatchThrowable()
-
-    @Test
-    fun testDealsWithCatchThrowable() {
-        LinChecker.check(CrashTransformerDealsWithCatchThrowableTest::class.java)
-    }
-
-    override fun extractState() = c.x.value
+@StressCTest(
+    recover = Recover.NRL,
+    minimizeFailedScenario = false,
+    iterations = 1,
+    threads = 1,
+    invocationsPerIteration = 2
+)
+internal class CrashInsertTest : VerifierState() {
+    private val c = NVMClass()
 
     @Operation
     fun foo() = c.foo()
+    override fun extractState() = 4
+
+    @Test
+    fun testCrashesAreInserted() {
+        Assert.assertNull(System.getProperty(recover))
+        LinChecker.check(CrashInsertTest::class.java)
+        Assert.assertNotNull(System.clearProperty(recover))
+    }
 }
 
+private const val recover = "recover56768"
 
-class NVMClassWithCatchThrowable {
+private class NVMClass {
     val x = nonVolatile(0)
     var y = 4
 
-    @Recoverable
-    fun foo(): Int {
-        try {
-            x.value = 42
-            x.compareAndSet(1, 2)
-            y = hashCode()
-            return 5
-        } catch (e: Throwable) {
-            assert(false) // should not ever happen as CrashError is rethrown by LinCheck
-        }
-        return 42
+    @Recoverable(recoverMethod = "recover")
+    fun foo() {
+        x.value = 42
+        x.compareAndSet(1, 2)
+        y = hashCode()
+    }
+
+    fun recover() {
+        System.setProperty(recover, "done")
     }
 }

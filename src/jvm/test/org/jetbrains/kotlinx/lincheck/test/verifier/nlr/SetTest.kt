@@ -21,8 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
@@ -30,9 +28,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
 import java.util.concurrent.atomic.AtomicMarkableReference
 
 
@@ -44,13 +40,7 @@ internal interface RecoverableSet<T> {
     operator fun contains(value: T): Boolean
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialSet::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.NRL,
-    minimizeFailedScenario = false
-)
-class SetTest {
+class SetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class) {
     private val set = NRLSet<Int>(2 + THREADS_NUMBER)
 
     @Operation
@@ -61,9 +51,6 @@ class SetTest {
 
     @Operation
     fun contains(key: Int) = set.contains(key)
-
-    @Test
-    fun test() = LinChecker.check(this::class.java)
 }
 
 class SequentialSet : VerifierState() {
@@ -254,14 +241,9 @@ internal class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: 
     }
 }
 
-@StressCTest(
-    sequentialSpecification = SequentialSet::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.NRL,
-    minimizeFailedScenario = false
-)
-internal abstract class SetFailingTest {
-    abstract val set: RecoverableSet<Int>
+internal abstract class SetFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class) {
+    protected abstract val set: RecoverableSet<Int>
 
     @Operation
     fun add(@Param(gen = ThreadIdGen::class) threadId: Int, key: Int) = set.add(threadId, key)
@@ -271,9 +253,7 @@ internal abstract class SetFailingTest {
 
     @Operation
     fun contains(key: Int) = set.contains(key)
-
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
+    override val expectedExceptions = listOf(NullPointerException::class)
 }
 
 internal class SetFailingTest1 : SetFailingTest() {

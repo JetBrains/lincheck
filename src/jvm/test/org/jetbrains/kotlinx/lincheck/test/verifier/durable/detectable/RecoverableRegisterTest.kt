@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.detectable
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
@@ -29,22 +27,20 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.OperationIdGen
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
 
 private const val THREADS_NUMBER = 3
 
 private data class Record(val value: Int, val threadId: Int, val operationId: Int)
 
-@StressCTest(
-    sequentialSpecification = SequentialCAS::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DETECTABLE_EXECUTION,
-    minimizeFailedScenario = false
-)
 @Param(name = "key", gen = IntGen::class, conf = "0:1")
-internal class RecoverableRegisterTest : VerifierState() {
+internal class RecoverableRegisterTest : AbstractNVMLincheckTest(
+    Recover.DETECTABLE_EXECUTION,
+    THREADS_NUMBER,
+    SequentialCAS::class
+) {
     private val register = RecoverableRegister(THREADS_NUMBER + 2)
 
     @Operation
@@ -56,11 +52,6 @@ internal class RecoverableRegisterTest : VerifierState() {
 
     @Operation
     fun get() = register.get()
-
-    @Test
-    fun test() = LinChecker.check(this::class.java)
-
-    override fun extractState() = register.get()
 }
 
 internal interface CAS {
@@ -107,15 +98,9 @@ internal class RecoverableRegister(threadsNumber: Int) : CAS {
     override fun get() = register.value.value
 }
 
-
-@StressCTest(
-    sequentialSpecification = SequentialCAS::class,
-    threads = THREADS_NUMBER,
-    recover = Recover.DETECTABLE_EXECUTION,
-    minimizeFailedScenario = false
-)
 @Param(name = "key", gen = IntGen::class, conf = "0:1")
-internal abstract class RecoverableRegisterFailingTest : VerifierState() {
+internal abstract class RecoverableRegisterFailingTest :
+    AbstractNVMLincheckFailingTest(Recover.DETECTABLE_EXECUTION, THREADS_NUMBER, SequentialCAS::class) {
     internal abstract val register: CAS
 
     @Operation
@@ -127,11 +112,6 @@ internal abstract class RecoverableRegisterFailingTest : VerifierState() {
 
     @Operation
     fun get() = register.get()
-
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = LinChecker.check(this::class.java)
-
-    override fun extractState() = register.get()
 }
 
 internal class RecoverableRegisterFailingTest1 : RecoverableRegisterFailingTest() {
