@@ -52,7 +52,7 @@ class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
         exceptions: Array<out String>?
     ): MethodVisitor {
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
-        if (name == "<init>") return RecoverableConstructorTransformer(mv, access, name, descriptor, this.name)
+        if (name == "<init>") return mv
         return RecoverableMethodTransformer(mv, access, name, descriptor, this.name)
     }
 }
@@ -190,42 +190,3 @@ private class RecoverableMethodTransformer(
         }
     }
 }
-
-private class RecoverableConstructorTransformer(
-    mv: MethodVisitor,
-    access: Int,
-    name: String?,
-    private val descriptor: String?,
-    className: String
-) : RecoverableBaseMethodTransformer(mv, access, name, descriptor, className) {
-    private var superConstructorCalled = false
-
-    override fun visitMethodInsn(
-        opcode: Int,
-        owner: String?,
-        name: String?,
-        descriptor: String?,
-        isInterface: Boolean
-    ) {
-        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-        if (shouldTransform && !superConstructorCalled && opcode == Opcodes.INVOKESPECIAL) {
-            superConstructorCalled = true
-            visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
-            visitLabel(tryLabel)
-        }
-    }
-
-    override fun visitMaxs(maxStack: Int, maxLocals: Int) {
-        if (shouldTransform) {
-            visitLabel(catchLabel)
-            pop()
-            if (recoverName.isEmpty()) {
-                goTo(tryLabel)
-            } else {
-                callUntilSuccess(recoverName, descriptor)
-            }
-        }
-        super.visitMaxs(maxStack, maxLocals)
-    }
-}
-

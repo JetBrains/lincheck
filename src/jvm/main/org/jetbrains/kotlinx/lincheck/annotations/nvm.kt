@@ -27,7 +27,7 @@ package org.jetbrains.kotlinx.lincheck.annotations
  * [recoverMethod] must have the same signature as this method.
  */
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR)
+@Target(AnnotationTarget.FUNCTION)
 annotation class Recoverable(
     val recoverMethod: String = "",
     val beforeMethod: String = ""

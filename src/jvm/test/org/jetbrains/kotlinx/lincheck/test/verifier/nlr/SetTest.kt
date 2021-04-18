@@ -68,7 +68,7 @@ private const val NULL_DELETER = -1
 /**
  * @see [Tracking in Order to Recover: Recoverable Lock-Free Data Structures](https://arxiv.org/pdf/1905.13600.pdf)
  */
-internal class NRLSet<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) : RecoverableSet<T> {
+internal class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSet<T> {
 
     private inner class Node(val value: T, next: Node?) {
         val next = AtomicMarkableReference(next, false) // TODO use nonVolatile here
@@ -264,7 +264,7 @@ internal class SetFailingTest2 : SetFailingTest() {
     override val set = NRLFailingSet2<Int>(THREADS_NUMBER + 2)
 }
 
-internal class NRLFailingSet1<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) : RecoverableSet<T> {
+internal class NRLFailingSet1<T : Comparable<T>>(threadsCount: Int) : RecoverableSet<T> {
 
     private inner class Node(val value: T, next: Node?) {
         val next = AtomicMarkableReference(next, false)
@@ -437,7 +437,7 @@ internal class NRLFailingSet1<T : Comparable<T>> @Recoverable constructor(thread
 }
 
 
-internal class NRLFailingSet2<T : Comparable<T>> @Recoverable constructor(threadsCount: Int) : RecoverableSet<T> {
+internal class NRLFailingSet2<T : Comparable<T>>constructor(threadsCount: Int) : RecoverableSet<T> {
 
     private inner class Node(val value: T, next: Node?) {
         val next = AtomicMarkableReference(next, false)
