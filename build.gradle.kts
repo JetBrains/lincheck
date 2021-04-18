@@ -62,6 +62,7 @@ kotlin {
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
+                implementation("org.apache.commons:commons-math3:3.5")
             }
         }
     }

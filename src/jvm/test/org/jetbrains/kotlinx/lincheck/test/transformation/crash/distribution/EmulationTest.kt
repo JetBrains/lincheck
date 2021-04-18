@@ -62,6 +62,23 @@ internal class EmulationTest {
             testScenarioUniformDistribution(statistics, model, emulator)
         }
     }
+
+    @Test
+    fun testBoundedUniformDistributionOneActor() {
+        repeat(REPEATS) {
+            val random = Random(it)
+            val n = 1
+            val maxCrashes = random.nextInt(1, 10)
+            val actors = List(n) { random.nextInt(1, 20) }
+            val recovery = List(n) { i -> if (maxCrashes == 1) 0 else random.nextInt(0, actors[i] * (maxCrashes - 1)) }
+            val statistics = StatisticsModel(actors, recovery)
+            val maxE = BoundedCrashProbabilityModelOneActor.expectedCrashes(statistics, maxCrashes)
+            val expected = random.nextDouble(maxE / 2, maxE)
+            val model = BoundedCrashProbabilityModelOneActor(statistics, expected, maxCrashes)
+            val emulator = ExecutionEmulator(statistics, model, random)
+            testScenarioUniformDistribution(statistics, model, emulator)
+        }
+    }
 }
 
 private fun testScenarioUniformDistribution(
@@ -86,4 +103,5 @@ private fun verifyResults(results: IntArray, crashes: List<Int>, model: CrashPro
         val deviation = (cr - expected) / expected
         Assert.assertTrue(abs(deviation) < 0.05)
     }
+    Assert.assertTrue(crashes.maxOrNull()!! <= model.maxCrashes)
 }

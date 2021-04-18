@@ -20,12 +20,16 @@
 
 package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 
+import org.apache.commons.math3.analysis.solvers.LaguerreSolver
+import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.pow
 
 internal class StatisticsModel(val actorLengths: List<Int>, val recoveryLengths: List<Int>)
 
 internal interface CrashProbabilityModel {
     val expectedCrashes: Double
+    val maxCrashes: Int get() = Int.MAX_VALUE
     fun inActorCrashProbability(i: Int): Double
     fun inRecoveryCrashProbability(i: Int): Double
     fun isCrashAllowed(crashesNumber: Int): Boolean
@@ -36,8 +40,7 @@ internal interface CrashProbabilityModel {
 internal class BasicCrashProbabilityModel(
     private val statistics: StatisticsModel,
     override val expectedCrashes: Double
-) :
-    CrashProbabilityModel {
+) : CrashProbabilityModel {
     private val actors get() = statistics.actorLengths
     private val recoveries get() = statistics.recoveryLengths
 
@@ -56,7 +59,7 @@ internal class BasicCrashProbabilityModel(
 internal class BoundedNoRecoverCrashProbabilityModel(
     statistics: StatisticsModel,
     override val expectedCrashes: Double,
-    private val maxCrashes: Int
+    override val maxCrashes: Int
 ) : CrashProbabilityModel {
     private val c = expectedCrashes / statistics.actorLengths.sum()
     private val s = calculatePreviousCrashesProbabilities(statistics, c, maxCrashes)
@@ -106,6 +109,64 @@ internal class BoundedNoRecoverCrashProbabilityModel(
                 }
             }
             return s
+        }
+    }
+}
+
+
+internal class BoundedCrashProbabilityModelOneActor(
+    statistics: StatisticsModel,
+    override val expectedCrashes: Double,
+    override val maxCrashes: Int
+) : CrashProbabilityModel {
+    private val c: Double
+    private val t: Double
+
+    init {
+        require(statistics.actorLengths.size == 1)
+        val a = statistics.actorLengths[0]
+        val r = statistics.recoveryLengths[0]
+        t = calculateRecoverProbability(statistics, maxCrashes)
+        c = expectedCrashes / a / expectedCrashes(r, t, maxCrashes)
+        assert(c < 1.0 / a)
+        assert(t < 1.0 / r)
+    }
+
+
+    override fun inActorCrashProbability(i: Int) = c
+    override fun inRecoveryCrashProbability(i: Int) = t
+    override fun isCrashAllowed(crashesNumber: Int) = crashesNumber < maxCrashes
+
+    companion object {
+        fun expectedCrashes(statistics: StatisticsModel, maxCrashes: Int): Double {
+            require(statistics.actorLengths.size == 1)
+            val r = statistics.recoveryLengths[0]
+            val t = calculateRecoverProbability(statistics, maxCrashes)
+            return expectedCrashes(r, t, maxCrashes)
+        }
+
+        private fun expectedCrashes(r: Int, t: Double, maxCrashes: Int): Double {
+            return 1 + (1 until maxCrashes).sumByDouble { k ->
+                (if (k != maxCrashes - 1) (1 - t * r) else 1.0) * k * (t * r).pow(k)
+            }
+        }
+
+        private fun calculateRecoverProbability(
+            statistics: StatisticsModel,
+            maxCrashes: Int
+        ): Double {
+            if (statistics.recoveryLengths[0] == 0) return 1.0
+            val koefs = DoubleArray(maxCrashes)
+            val a = statistics.actorLengths[0].toDouble()
+            val r = statistics.recoveryLengths[0].toDouble()
+            koefs[0] = -1.0
+            for (i in 1 until maxCrashes) {
+                koefs[i] = a * r.pow(i - 1)
+            }
+            return LaguerreSolver().solveAllComplex(koefs, 0.5 / r)
+                .filter { abs(it.imaginary) < 1e-9 }
+                .map { it.real }
+                .single { 0 < it && it < 1 / r }
         }
     }
 }
