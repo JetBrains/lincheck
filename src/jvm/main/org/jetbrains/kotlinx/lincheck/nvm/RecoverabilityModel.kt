@@ -28,6 +28,15 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.objectweb.asm.ClassVisitor
 import java.lang.reflect.Method
 
+enum class StrategyRecoveryOptions {
+    STRESS, MANAGED;
+
+    fun createCrashTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor = when (this) {
+        STRESS -> CrashTransformer(cv, clazz)
+        MANAGED -> cv // add this transformer in ManagedStrategyTransformer
+    }
+}
+
 enum class Recover {
     NO_RECOVER,
     NRL,
@@ -36,13 +45,13 @@ enum class Recover {
     DETECTABLE_EXECUTION,
     DURABLE_NO_CRASHES;
 
-    fun createModel() = when (this) {
+    fun createModel(strategyRecoveryOptions: StrategyRecoveryOptions) = when (this) {
         NO_RECOVER -> NoRecoverModel()
-        NRL -> NRLModel()
-        NRL_NO_CRASHES -> NRLModel(crashes = false)
-        DURABLE -> DurableModel()
-        DETECTABLE_EXECUTION -> DetectableExecutionModel()
-        DURABLE_NO_CRASHES -> DurableModel(crashes = false)
+        NRL -> NRLModel(true, strategyRecoveryOptions)
+        NRL_NO_CRASHES -> NRLModel(false, strategyRecoveryOptions)
+        DURABLE -> DurableModel(true, strategyRecoveryOptions)
+        DETECTABLE_EXECUTION -> DetectableExecutionModel(strategyRecoveryOptions)
+        DURABLE_NO_CRASHES -> DurableModel(false, strategyRecoveryOptions)
     }
 }
 
@@ -84,11 +93,14 @@ class NoRecoverModel : RecoverabilityModel {
     override val awaitSystemCrashBeforeThrow get() = true
 }
 
-class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
+private class NRLModel(
+    override val crashes: Boolean,
+    private val strategyRecoveryOptions: StrategyRecoveryOptions
+) : RecoverabilityModel {
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = RecoverabilityTransformer(cv)
         if (crashes) {
-            result = CrashTransformer(result, clazz)
+            result = strategyRecoveryOptions.createCrashTransformer(result, clazz)
         }
         return result
     }
@@ -110,11 +122,14 @@ class NRLModel(override val crashes: Boolean = true) : RecoverabilityModel {
     override val awaitSystemCrashBeforeThrow get() = true
 }
 
-open class DurableModel(override val crashes: Boolean = true) : RecoverabilityModel {
+open class DurableModel(
+    override val crashes: Boolean,
+    private val strategyRecoveryOptions: StrategyRecoveryOptions
+) : RecoverabilityModel {
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz)
         if (crashes) {
-            result = CrashTransformer(result, clazz)
+            result = strategyRecoveryOptions.createCrashTransformer(result, clazz)
         }
         return result
     }
@@ -136,9 +151,8 @@ open class DurableModel(override val crashes: Boolean = true) : RecoverabilityMo
     override val awaitSystemCrashBeforeThrow get() = false
 }
 
-class DetectableExecutionModel : DurableModel(true) {
+private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecoveryOptions) :
+    DurableModel(true, strategyRecoveryOptions) {
     override fun createActorCrashHandlerGenerator() = DetectableExecutionActorCrashHandlerGenerator()
     override fun defaultExpectedCrashes() = 5
-    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) =
-        DurableOperationRecoverTransformer(CrashTransformer(cv, clazz), clazz)
 }

@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -41,6 +42,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
+    protected var recover: Recover = Recover.NO_RECOVER
 
     /**
      * Number of different test scenarios to be executed
@@ -148,6 +150,10 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun sequentialSpecification(clazz: Class<*>?): OPT = applyAndCast {
         sequentialSpecification = clazz
+    }
+
+    fun recover(recoverModel: Recover): OPT = applyAndCast {
+        recover = recoverModel
     }
 
     /**
