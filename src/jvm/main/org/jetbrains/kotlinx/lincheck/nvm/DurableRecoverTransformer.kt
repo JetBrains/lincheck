@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
+import kotlin.reflect.jvm.javaMethod
 
 private const val RECOVER_DESCRIPTOR = "()V"
 private const val RECOVER_ALL_GENERATED_NAME = "__recoverAll__"
@@ -34,8 +35,8 @@ private const val RECOVER_ALL_GENERATED_DESCRIPTOR = RECOVER_DESCRIPTOR
 private const val RECOVER_ALL_GENERATED_ACCESS =
     Opcodes.ACC_PRIVATE or Opcodes.ACC_SYNCHRONIZED or Opcodes.ACC_SYNTHETIC
 private val CRASH_TYPE = Type.getType(Crash::class.java)
-private val CRASH_IS_CRASHED = Method("isCrashed", Type.BOOLEAN_TYPE, emptyArray())
-private val CRASH_RESET_ALL_CRASHED = Method("resetAllCrashed", Type.VOID_TYPE, emptyArray())
+private val CRASH_IS_CRASHED = Method.getMethod(Crash::isCrashed.javaMethod)
+private val CRASH_RESET_ALL_CRASHED =Method.getMethod(Crash::resetAllCrashed.javaMethod)
 private val OPERATION_TYPE = Type.getType(Operation::class.java)
 
 class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: Class<*>) : ClassVisitor(ASM_API, cv) {

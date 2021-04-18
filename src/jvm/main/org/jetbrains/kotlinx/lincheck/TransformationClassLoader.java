@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.nvm.RecoverableStateContainer;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
@@ -90,8 +89,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                ) ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                    !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                   !className.equals(ManagedStrategyStateHolder.class.getName()) &&
-                   !className.equals(RecoverableStateContainer.class.getName())
+                   !className.equals(ManagedStrategyStateHolder.class.getName())
                ) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||

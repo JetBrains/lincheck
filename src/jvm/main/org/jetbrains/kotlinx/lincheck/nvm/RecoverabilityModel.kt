@@ -20,13 +20,53 @@
 
 package org.jetbrains.kotlinx.lincheck.nvm
 
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
-import org.jetbrains.kotlinx.lincheck.runner.Runner
-import org.jetbrains.kotlinx.lincheck.runner.UseClocks
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.objectweb.asm.ClassVisitor
-import java.lang.reflect.Method
+
+interface ExecutionCallback {
+    fun onStart(iThread: Int)
+    fun beforeInit(scenario: ExecutionScenario, recoverModel: RecoverabilityModel)
+    fun beforeParallel(threads: Int)
+    fun beforePost()
+    fun afterPost()
+    fun onBeforeActorStart()
+    fun onActorStart(iThread: Int)
+    fun onAfterActorStart()
+    fun onFinish(iThread: Int)
+    fun getCrashes(): List<List<CrashError>>
+    fun reset()
+}
+
+private object NoRecoverExecutionCallBack : ExecutionCallback {
+    override fun onStart(iThread: Int) {}
+    override fun beforeInit(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) {}
+    override fun beforeParallel(threads: Int) {}
+    override fun beforePost() {}
+    override fun afterPost() {}
+    override fun onBeforeActorStart() {}
+    override fun onActorStart(iThread: Int) {}
+    override fun onAfterActorStart() {}
+    override fun onFinish(iThread: Int) {}
+    override fun getCrashes() = emptyList<List<CrashError>>()
+    override fun reset() {}
+}
+
+private object RecoverExecutionCallback : ExecutionCallback {
+    override fun onStart(iThread: Int) = NVMState.onStart(iThread)
+    override fun beforeInit(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) =
+        NVMState.beforeInit(scenario, recoverModel)
+
+    override fun beforeParallel(threads: Int) = NVMState.beforeParallel(threads)
+    override fun beforePost() = NVMState.beforePost()
+    override fun afterPost() = NVMState.afterPost()
+    override fun onBeforeActorStart() = NVMState.onBeforeActorStart()
+    override fun onActorStart(iThread: Int) = NVMState.onActorStart(iThread)
+    override fun onAfterActorStart() = NVMState.onAfterActorStart()
+    override fun onFinish(iThread: Int) = NVMState.onFinish(iThread)
+    override fun getCrashes(): List<List<CrashError>> = NVMState.clearCrashes().toList()
+    override fun reset() = NVMState.reset()
+}
+
 
 enum class StrategyRecoveryOptions {
     STRESS, MANAGED;
@@ -46,7 +86,7 @@ enum class Recover {
     DURABLE_NO_CRASHES;
 
     fun createModel(strategyRecoveryOptions: StrategyRecoveryOptions) = when (this) {
-        NO_RECOVER -> NoRecoverModel()
+        NO_RECOVER -> NoRecoverModel
         NRL -> NRLModel(true, strategyRecoveryOptions)
         NRL_NO_CRASHES -> NRLModel(false, strategyRecoveryOptions)
         DURABLE -> DurableModel(true, strategyRecoveryOptions)
@@ -58,38 +98,23 @@ enum class Recover {
 interface RecoverabilityModel {
     val crashes: Boolean
 
+    fun needsTransformation(): Boolean
     fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor
-    fun createRunner(
-        strategy: StressStrategy,
-        testClass: Class<*>,
-        validationFunctions: List<Method>,
-        stateRepresentationFunction: Method?,
-        testCfg: StressCTestConfiguration
-    ): Runner
-
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
     fun systemCrashProbability(): Float
     fun defaultExpectedCrashes(): Int
+    fun createExecutionCallback(): ExecutionCallback
     val awaitSystemCrashBeforeThrow: Boolean
 }
 
-class NoRecoverModel : RecoverabilityModel {
+internal object NoRecoverModel : RecoverabilityModel {
     override val crashes get() = false
+    override fun needsTransformation() = false
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) = cv
-    override fun createRunner(
-        strategy: StressStrategy,
-        testClass: Class<*>,
-        validationFunctions: List<Method>,
-        stateRepresentationFunction: Method?,
-        testCfg: StressCTestConfiguration
-    ): Runner = ParallelThreadsRunner(
-        strategy, testClass, validationFunctions, stateRepresentationFunction,
-        testCfg.timeoutMs, UseClocks.RANDOM, this
-    )
-
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 0.0f
     override fun defaultExpectedCrashes() = 0
+    override fun createExecutionCallback(): ExecutionCallback = NoRecoverExecutionCallBack
     override val awaitSystemCrashBeforeThrow get() = true
 }
 
@@ -97,6 +122,12 @@ private class NRLModel(
     override val crashes: Boolean,
     private val strategyRecoveryOptions: StrategyRecoveryOptions
 ) : RecoverabilityModel {
+    override fun needsTransformation() = true
+    override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
+    override fun systemCrashProbability() = 0.1f
+    override fun defaultExpectedCrashes() = 10
+    override fun createExecutionCallback(): ExecutionCallback = RecoverExecutionCallback
+    override val awaitSystemCrashBeforeThrow get() = true
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = RecoverabilityTransformer(cv)
         if (crashes) {
@@ -104,28 +135,18 @@ private class NRLModel(
         }
         return result
     }
-
-    override fun createRunner(
-        strategy: StressStrategy,
-        testClass: Class<*>,
-        validationFunctions: List<Method>,
-        stateRepresentationFunction: Method?,
-        testCfg: StressCTestConfiguration
-    ): Runner = RecoverableParallelThreadsRunner(
-        strategy, testClass, validationFunctions, stateRepresentationFunction,
-        testCfg.timeoutMs, UseClocks.RANDOM, this
-    )
-
-    override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
-    override fun systemCrashProbability() = 0.1f
-    override fun defaultExpectedCrashes() = 10
-    override val awaitSystemCrashBeforeThrow get() = true
 }
 
-open class DurableModel(
+private open class DurableModel(
     override val crashes: Boolean,
-    private val strategyRecoveryOptions: StrategyRecoveryOptions
+    val strategyRecoveryOptions: StrategyRecoveryOptions
 ) : RecoverabilityModel {
+    override fun needsTransformation() = true
+    override fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator = DurableActorCrashHandlerGenerator()
+    override fun systemCrashProbability() = 1.0f
+    override fun defaultExpectedCrashes() = 1
+    override fun createExecutionCallback(): ExecutionCallback = RecoverExecutionCallback
+    override val awaitSystemCrashBeforeThrow get() = false
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz)
         if (crashes) {
@@ -133,22 +154,6 @@ open class DurableModel(
         }
         return result
     }
-
-    override fun createRunner(
-        strategy: StressStrategy,
-        testClass: Class<*>,
-        validationFunctions: List<Method>,
-        stateRepresentationFunction: Method?,
-        testCfg: StressCTestConfiguration
-    ): Runner = RecoverableParallelThreadsRunner(
-        strategy, testClass, validationFunctions, stateRepresentationFunction,
-        testCfg.timeoutMs, UseClocks.RANDOM, this
-    )
-
-    override fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator = DurableActorCrashHandlerGenerator()
-    override fun systemCrashProbability() = 1.0f
-    override fun defaultExpectedCrashes() = 1
-    override val awaitSystemCrashBeforeThrow get() = false
 }
 
 private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecoveryOptions) :

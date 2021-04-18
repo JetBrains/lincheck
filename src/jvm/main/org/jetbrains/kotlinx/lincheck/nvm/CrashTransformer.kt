@@ -26,14 +26,43 @@ import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
+import kotlin.reflect.jvm.javaMethod
 
-private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
+internal interface CrashPointVisitor {
+    fun visitCrashPoint(
+        mv: GeneratorAdapter,
+        className: String?,
+        fileName: String?,
+        methodName: String?,
+        lineNumber: Int
+    )
+}
 
-class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM_API, cv) {
-    private var shouldTransform = true
-    private val testClassName = Type.getInternalName(testClass)
-    private var name: String? = null
-    private var fileName: String? = null
+private object StressCrashPointVisitor : CrashPointVisitor {
+    override fun visitCrashPoint(
+        mv: GeneratorAdapter,
+        className: String?,
+        fileName: String?,
+        methodName: String?,
+        lineNumber: Int
+    ) {
+        mv.push(className)
+        mv.push(fileName)
+        mv.push(methodName)
+        mv.push(lineNumber)
+        mv.invokeStatic(CRASH_TYPE, POSSIBLY_CRASH_METHOD)
+    }
+}
+
+internal open class CrashEnabledVisitor(cv: ClassVisitor, testClass: Class<*>, initial: Boolean = true) :
+    ClassVisitor(ASM_API, cv) {
+    private val superClassNames = testClass.superClassNames()
+    var shouldTransform = initial
+        private set
+    var name: String? = null
+        private set
+    var fileName: String? = null
+        private set
 
     override fun visit(
         version: Int,
@@ -45,7 +74,10 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
         this.name = name
-        if (name == testClassName) {
+        if (name in superClassNames || name !== null &&
+            name.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+            !name.startsWith("org.jetbrains.kotlinx.lincheck.test.")
+        ) {
             shouldTransform = false
         }
     }
@@ -61,8 +93,12 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
         super.visitSource(source, debug)
         fileName = source
     }
+}
 
-
+internal class CrashTransformer(
+    cv: ClassVisitor,
+    testClass: Class<*>
+) : CrashEnabledVisitor(cv, testClass) {
     override fun visitMethod(
         access: Int,
         name: String?,
@@ -72,9 +108,7 @@ class CrashTransformer(cv: ClassVisitor, testClass: Class<*>) : ClassVisitor(ASM
     ): MethodVisitor {
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (!shouldTransform) return mv
-        if (name == "<clinit>") return mv
-        if (name == "<init>") return CrashConstructorTransformer(mv, access, name, descriptor, this.name, fileName)
-        return CrashBaseMethodTransformer(mv, access, name, descriptor, this.name, fileName)
+        return CrashMethodTransformer(mv, access, name, descriptor, this.name, fileName, true, StressCrashPointVisitor)
     }
 }
 
@@ -87,32 +121,30 @@ private val returnInstructions = hashSetOf(
     Opcodes.RETURN, Opcodes.ARETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.IRETURN, Opcodes.LRETURN
 )
 
-private val STRING_TYPE = Type.getType(String::class.java)
-private val POSSIBLY_CRASH_METHOD =
-    Method("possiblyCrash", Type.VOID_TYPE, arrayOf(STRING_TYPE, STRING_TYPE, STRING_TYPE, Type.INT_TYPE))
+private val POSSIBLY_CRASH_METHOD = Method.getMethod(Crash::possiblyCrash.javaMethod)
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val THROWABLE_TYPE = Type.getType(Throwable::class.java)
+private val CRASH_TYPE = Type.getType(Crash::class.java)
+private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
 
-private open class CrashBaseMethodTransformer(
+internal class CrashMethodTransformer(
     mv: MethodVisitor,
     access: Int,
     name: String?,
     descriptor: String?,
     private val className: String?,
-    private val fileName: String?
+    private val fileName: String?,
+    /** In model checking mode we can make better evaluation using [SharedVariableAccessMethodTransformer]. */
+    private val triggerOnStore: Boolean,
+    var crashVisitor: CrashPointVisitor? = null
 ) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
-    private val crashOwnerType = Type.getType(Crash::class.java)
-    private var shouldTransform = true
+    private var shouldTransform = name != "<clinit>" && (access and Opcodes.ACC_BRIDGE) == 0
     private var lineNumber = -1
-    private val catchLabels = hashSetOf<Label>()
+    private var superConstructorCalled = name != "<init>"
 
-    protected open fun callCrash() {
-        if (!shouldTransform) return
-        push(className)
-        push(fileName)
-        push(name)
-        push(lineNumber)
-        super.invokeStatic(crashOwnerType, POSSIBLY_CRASH_METHOD)
+    private fun callCrash() {
+        if (!shouldTransform || !superConstructorCalled) return
+        crashVisitor?.visitCrashPoint(this, className, fileName, name, lineNumber)
     }
 
     override fun visitLineNumber(line: Int, start: Label?) {
@@ -134,6 +166,9 @@ private open class CrashBaseMethodTransformer(
         descriptor: String?,
         isInterface: Boolean
     ) {
+        if (!superConstructorCalled && opcode == Opcodes.INVOKESPECIAL) {
+            superConstructorCalled = true
+        }
         if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) {
             callCrash()
         }
@@ -148,14 +183,16 @@ private open class CrashBaseMethodTransformer(
     }
 
     override fun visitInsn(opcode: Int) {
-        if (opcode in returnInstructions) {
-            callCrash()
-        }
-        if (opcode in storeInstructions) {
+        if (opcode in returnInstructions || triggerOnStore && opcode in storeInstructions) {
             callCrash()
         }
         super.visitInsn(opcode)
     }
+
+    //
+    // Rethrow exception in catch block in case of crash
+    //
+    private val catchLabels = hashSetOf<Label>()
 
     override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
         super.visitTryCatchBlock(start, end, handler, type)
@@ -177,32 +214,12 @@ private open class CrashBaseMethodTransformer(
     }
 }
 
-private class CrashConstructorTransformer(
-    mv: MethodVisitor,
-    access: Int,
-    name: String?,
-    descriptor: String?,
-    className: String?,
-    fileName: String?
-) : CrashBaseMethodTransformer(mv, access, name, descriptor, className, fileName) {
-    private var superConstructorCalled = false
-
-    override fun visitMethodInsn(
-        opcode: Int,
-        owner: String?,
-        name: String?,
-        descriptor: String?,
-        isInterface: Boolean
-    ) {
-        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-        if (!superConstructorCalled && opcode == Opcodes.INVOKESPECIAL) {
-            superConstructorCalled = true
-        }
+private fun Class<*>.superClassNames(): List<String> {
+    val result = mutableListOf<String>()
+    var clazz: Class<*>? = this
+    while (clazz !== null) {
+        result.add(Type.getInternalName(clazz))
+        clazz = clazz.superclass
     }
-
-    override fun callCrash() {
-        if (superConstructorCalled) {
-            super.callCrash()
-        }
-    }
+    return result
 }

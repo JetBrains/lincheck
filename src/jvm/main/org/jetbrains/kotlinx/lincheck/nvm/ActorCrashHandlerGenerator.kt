@@ -28,12 +28,13 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
+import kotlin.reflect.jvm.javaMethod
 
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
-private val CRASH_RESULT_CREATE_CRASH_RESULT_METHOD = Method("creteCrashResult", CRASH_RESULT_TYPE, emptyArray())
+private val CRASH_RESULT_CREATE_CRASH_RESULT_METHOD = Method.getMethod(CrashResult::creteCrashResult.javaMethod)
 private val CRASH_TYPE = Type.getType(Crash::class.java)
-private val CRASH_AWAIT_SYSTEM_CRASH = Method("awaitSystemCrash", Type.VOID_TYPE, emptyArray())
+private val CRASH_AWAIT_SYSTEM_CRASH = Method.getMethod(Crash::awaitSystemCrash.javaMethod)
 private val SET_USE_CLOCKS = Method("useClocksOnce", Type.VOID_TYPE, emptyArray())
 private val TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution::class.java)
 private val RESULT_TYPE = Type.getType(Result::class.java)

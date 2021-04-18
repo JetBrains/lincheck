@@ -128,7 +128,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         verifier: Verifier
     ): LincheckFailure {
         Probability.minimizeCrashes()
-        val currentCrashesNumber = crashesNumber()
+        val currentCrashesNumber = crashesNumber() + 1 // plus 1 here to replace proxy exceptions with normal ones
         repeat(100) {
             Crash.useProxyCrash = false
             val newIteration = scenario.tryMinimize(testCfg, verifier)

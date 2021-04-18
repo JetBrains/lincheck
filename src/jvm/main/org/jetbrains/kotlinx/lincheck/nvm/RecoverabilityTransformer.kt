@@ -179,7 +179,7 @@ private class RecoverableMethodTransformer(
         if (shouldTransform) {
             visitLabel(catchLabel)
             pop()
-            val result = callUntilSuccess(if (recoverName.isEmpty()) name else recoverName, descriptor)
+            val result = callUntilSuccess(recoverName.ifEmpty { name }, descriptor)
             if (result != -1) {
                 loadLocal(result)
             }

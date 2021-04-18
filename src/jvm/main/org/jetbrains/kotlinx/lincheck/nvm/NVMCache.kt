@@ -31,7 +31,7 @@ object NVMCache {
 
     /** Flushes all local variables of thread. */
     internal fun flushAll() {
-        val threadId = RecoverableStateContainer.threadId()
+        val threadId = NVMState.threadId()
         val localCache = cache[threadId] ?: return
         localCache.forEach { it.flushInternal() }
         localCache.clear()

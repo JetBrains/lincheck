@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.nvm.api
 import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
 import org.jetbrains.kotlinx.lincheck.nvm.Probability
-import org.jetbrains.kotlinx.lincheck.nvm.RecoverableStateContainer
+import org.jetbrains.kotlinx.lincheck.nvm.NVMState
 
 abstract class AbstractNonVolatilePrimitive {
     internal abstract fun flushInternal()
@@ -30,7 +30,7 @@ abstract class AbstractNonVolatilePrimitive {
 
     fun flush() {
         flushInternal()
-        NVMCache.remove(RecoverableStateContainer.threadId(), this)
+        NVMCache.remove(NVMState.threadId(), this)
     }
 
     internal fun crash() {
@@ -39,7 +39,7 @@ abstract class AbstractNonVolatilePrimitive {
         }
     }
 
-    protected fun addToCache() = NVMCache.add(RecoverableStateContainer.threadId(), this)
+    protected fun addToCache() = NVMCache.add(NVMState.threadId(), this)
 }
 
 fun nonVolatile(value: Int) = NonVolatileInt(value)

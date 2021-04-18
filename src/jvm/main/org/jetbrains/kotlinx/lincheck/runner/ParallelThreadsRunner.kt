@@ -25,9 +25,9 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.nvm.CrashError
-import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
+import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
+import org.jetbrains.kotlinx.lincheck.nvm.StrategyRecoveryOptions
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -54,7 +54,7 @@ internal open class ParallelThreadsRunner(
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks, // specifies whether `HBClock`-s should always be used or with some probability
-    protected val recoverModel: RecoverabilityModel = NoRecoverModel()
+    private val recoverModel: RecoverabilityModel = Recover.NO_RECOVER.createModel(StrategyRecoveryOptions.STRESS)
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
@@ -82,8 +82,10 @@ internal open class ParallelThreadsRunner(
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
+    private val executionCallback = recoverModel.createExecutionCallback()
 
     override fun initialize() {
+        executionCallback.reset()
         super.initialize()
         testThreadExecutions = Array(scenario.threads) { t ->
             TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), recoverModel.createActorCrashHandlerGenerator())
@@ -320,16 +322,26 @@ internal open class ParallelThreadsRunner(
         return CompletedInvocationResult(results)
     }
 
-    protected open fun beforeInit() {}
-    protected open fun beforeParallel(threads: Int) {}
-    protected open fun beforePost() {}
-    protected open fun afterPost() {}
-    protected open fun onBeforeActorStart() {}
-    protected open fun onAfterActorStart() {}
-    protected open fun getCrashes(): List<List<CrashError>> = emptyList()
+    private fun beforeInit() = executionCallback.beforeInit(scenario, recoverModel)
+    private fun beforeParallel(threads: Int) = executionCallback.beforeParallel(threads)
+    private fun beforePost() = executionCallback.beforePost()
+    private fun afterPost() = executionCallback.afterPost()
+    private fun onBeforeActorStart() = executionCallback.onBeforeActorStart()
+    private fun onAfterActorStart() = executionCallback.onAfterActorStart()
+    private fun getCrashes() = executionCallback.getCrashes()
+    override fun onActorStart(iThread: Int) {
+        super.onActorStart(iThread)
+        executionCallback.onActorStart(iThread)
+    }
+
+    override fun onFinish(iThread: Int) {
+        super.onFinish(iThread)
+        executionCallback.onFinish(iThread)
+    }
 
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
+        executionCallback.onStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1

@@ -39,13 +39,10 @@ class CrashErrorImpl(override var actorIndex: Int = -1) : CrashError(true) {
 
 /** Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot. */
 class CrashErrorProxy(
-    private val className: String?,
-    private val fileName: String?,
-    private val methodName: String?,
-    private val lineNumber: Int,
+    private val ste: StackTraceElement?,
     override var actorIndex: Int = -1
 ) : CrashError(false) {
-    override val crashStackTrace get() = arrayOf(StackTraceElement(className, methodName, fileName, lineNumber))
+    override val crashStackTrace get() = arrayOf(ste ?: StackTraceElement(null, null, null, -1))
 }
 
 private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)
@@ -55,10 +52,13 @@ object Crash {
     private val context = atomic(SystemContext(null, 0))
     private var awaitSystemCrashBeforeThrow = true
     internal val threads get() = context.value.threads
+    @Volatile
     var useProxyCrash = true
 
     @JvmStatic
     fun isCrashed() = systemCrashOccurred.get()
+
+    fun isWaitingSystemCrash() = context.value.barrier !== null
 
     @JvmStatic
     fun resetAllCrashed() {
@@ -69,19 +69,15 @@ object Crash {
      * Crash simulation.
      * @throws CrashError
      */
-    private fun crash(threadId: Int, className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
-        val crash = createCrash(className, fileName, methodName, lineNumber)
-        RecoverableStateContainer.registerCrash(threadId, crash)
+    internal fun crash(threadId: Int, ste: StackTraceElement?) {
+        val await = awaitSystemCrashBeforeThrow && (isWaitingSystemCrash() || Probability.shouldSystemCrash())
+        if (await) awaitSystemCrash() else NVMCache.crash(threadId)
+        val crash = createCrash(ste)
+        NVMState.registerCrash(threadId, crash)
         throw crash
     }
 
-    private fun createCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int): CrashError {
-        return if (useProxyCrash) {
-            CrashErrorProxy(className, fileName, methodName, lineNumber)
-        } else {
-            CrashErrorImpl()
-        }
-    }
+    private fun createCrash(ste: StackTraceElement?) = if (useProxyCrash) CrashErrorProxy(ste) else CrashErrorImpl()
 
     /**
      * Random crash simulation. Produces a single thread crash or a system crash.
@@ -89,17 +85,9 @@ object Crash {
      */
     @JvmStatic
     fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
-        if (context.value.barrier !== null) {
-            val threadId = RecoverableStateContainer.threadId()
-            if (awaitSystemCrashBeforeThrow) awaitSystemCrash()
-            else NVMCache.crash(threadId)
-            crash(threadId, className, fileName, methodName, lineNumber)
-        }
-        if (Probability.shouldCrash()) {
-            val threadId = RecoverableStateContainer.threadId()
-            if (awaitSystemCrashBeforeThrow && Probability.shouldSystemCrash()) awaitSystemCrash()
-            else NVMCache.crash(threadId)
-            crash(threadId, className, fileName, methodName, lineNumber)
+        if (isWaitingSystemCrash() || Probability.shouldCrash()) {
+            val ste = StackTraceElement(className, fileName, methodName, lineNumber)
+            crash(NVMState.threadId(), ste)
         }
     }
 

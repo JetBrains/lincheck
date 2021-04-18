@@ -45,7 +45,7 @@ object Probability {
 
     fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
     fun shouldCrash(): Boolean {
-        if (RecoverableStateContainer.crashesEnabled && moreCrashesPermitted()) {
+        if (NVMState.crashesEnabled && moreCrashesPermitted()) {
             totalPossibleCrashes.incrementAndGet()
             return bernoulli(singleCrashProbability)
         }
@@ -72,7 +72,7 @@ object Probability {
         randomSystemCrashProbability = model.systemCrashProbability()
         defaultCrashes = model.defaultExpectedCrashes()
         if (!minimizeCrashes && expectedCrashes != defaultCrashes) {
-           resetExpectedCrashes()
+            resetExpectedCrashes()
         }
         updateSingleCrashProbability(actors)
         totalActors += actors.toLong()
@@ -95,9 +95,9 @@ object Probability {
     private fun moreCrashesPermitted() = occurredCrashes() < expectedCrashes
 
     private fun occurredCrashes() = if (randomSystemCrashProbability < 1.0) {
-        RecoverableStateContainer.crashesCount()
+        NVMState.crashesCount()
     } else {
-        RecoverableStateContainer.maxCrashesCountPerThread()
+        NVMState.maxCrashesCountPerThread()
     }
 
     private fun bernoulli(probability: Float) = random.nextFloat() < probability
