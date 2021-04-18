@@ -59,7 +59,7 @@ internal class ModelCheckingStrategy(
     private var usedInvocations = 0
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
-    private var maxNumberOfSwitches = 0
+    private var maxNumberOfEvents = 0
     // The root of the interleaving tree that chooses the starting thread.
     private var root: InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
     // This random is used for choosing the next unexplored interleaving node in the tree.
@@ -130,7 +130,7 @@ internal class ModelCheckingStrategy(
                 // Increase the maximum number of switches that can be used,
                 // because there are no more not covered interleavings
                 // with the previous maximum number of switches.
-                maxNumberOfSwitches++
+                maxNumberOfEvents++
                 resetExploration()
             }
             // Check if everything is fully explored and there are no possible interleavings with more switches.
@@ -211,7 +211,7 @@ internal class ModelCheckingStrategy(
      */
     private inner class SwitchChoosingNode : InterleavingTreeNode() {
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
-            val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfCrashes + interleavingBuilder.numberOfSwitches
+            val isLeaf = maxNumberOfEvents == interleavingBuilder.numberOfEvents
             if (isLeaf) {
                 finishExploration()
                 if (!isInitialized)
@@ -228,7 +228,7 @@ internal class ModelCheckingStrategy(
 
     private inner class CrashChoosingNode : InterleavingTreeNode() {
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
-            val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfCrashes + interleavingBuilder.numberOfSwitches
+            val isLeaf = maxNumberOfEvents == interleavingBuilder.numberOfEvents
             if (isLeaf) {
                 finishExploration()
                 if (!isInitialized)
@@ -250,7 +250,6 @@ internal class ModelCheckingStrategy(
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
             val child = chooseUnexploredNode()
-            interleavingBuilder.addCrashOrSwitchChoice(child.value)
             val interleaving = child.node.nextInterleaving(interleavingBuilder)
             updateExplorationStatistics()
             return interleaving
@@ -266,13 +265,10 @@ internal class ModelCheckingStrategy(
         private val switchPositions: List<Int>,
         private val crashPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
-        private val switchOrCrashChoices: List<Int>,
         private var lastNotInitializedNode: InterleavingTreeNode?
     ) {
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
-        private lateinit var nextCrashSwitchChoice: Iterator<Int>
-        private var currentSwitchCrashChoice: Int = -1
         private lateinit var positions: List<Int>
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var executionPosition: Int = 0
@@ -283,8 +279,6 @@ internal class ModelCheckingStrategy(
             interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
             currentThread = nextThreadToSwitch.next() // choose initial executing thread
-            nextCrashSwitchChoice = switchOrCrashChoices.iterator()
-            currentSwitchCrashChoice = nextCrashSwitchChoice()
             lastNotInitializedNodeChoices = null
             exploreCrashNode = lastNotInitializedNode is CrashChoosingNode
             positions = if (exploreCrashNode) crashPositions else switchPositions
@@ -302,7 +296,6 @@ internal class ModelCheckingStrategy(
                 // Use the predefined choice.
                 val result = nextThreadToSwitch.next()
                 check(result in switchableThreads(iThread))
-                currentSwitchCrashChoice = nextCrashSwitchChoice()
                 result
             } else {
                 // There is no predefined choice.
@@ -313,8 +306,8 @@ internal class ModelCheckingStrategy(
                 switchableThreads(iThread).random(interleavingFinishingRandom)
             }
 
-        fun isSwitchPosition() = currentSwitchCrashChoice == 0 && executionPosition in switchPositions
-        fun isCrashPosition() = currentSwitchCrashChoice == 1 && executionPosition in crashPositions
+        fun isSwitchPosition() = executionPosition in switchPositions
+        fun isCrashPosition() = executionPosition in crashPositions
 
         /**
          * Creates a new execution position that corresponds to the current switch/crash point.
@@ -322,8 +315,8 @@ internal class ModelCheckingStrategy(
          * which helps to distinguish different switch points.
          */
         private fun newExecutionPosition(iThread: Int, isSwitch: Boolean) {
-            if (exploreCrashNode == isSwitch) return
             executionPosition++
+            if (exploreCrashNode == isSwitch) return
             if (executionPosition > positions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
@@ -332,18 +325,15 @@ internal class ModelCheckingStrategy(
 
         fun newExecutionSwitchPosition(iThread: Int) = newExecutionPosition(iThread, true)
         fun newExecutionCrashPosition(iThread: Int) = newExecutionPosition(iThread, false)
-        private fun nextCrashSwitchChoice() = if (nextCrashSwitchChoice.hasNext()) nextCrashSwitchChoice.next() else 0
     }
 
     private inner class InterleavingBuilder {
         private val switchPositions = mutableListOf<Int>()
         private val crashPositions = mutableListOf<Int>()
         private val threadSwitchChoices = mutableListOf<Int>()
-        private val switchOrCrashChoices = mutableListOf<Int>()
         private var lastNoninitializedNode: InterleavingTreeNode? = null
 
-        val numberOfSwitches get() = switchPositions.size
-        val numberOfCrashes get() = crashPositions.size
+        val numberOfEvents get() = switchPositions.size + crashPositions.size
 
         fun addSwitchPosition(switchPosition: Int) {
             switchPositions.add(switchPosition)
@@ -357,14 +347,10 @@ internal class ModelCheckingStrategy(
             crashPositions.add(crashPosition)
         }
 
-        fun addCrashOrSwitchChoice(choice: Int) {
-            switchOrCrashChoices.add(choice)
-        }
-
         fun addLastNoninitializedNode(lastNoninitializedNode: InterleavingTreeNode) {
             this.lastNoninitializedNode = lastNoninitializedNode
         }
 
-        fun build() = Interleaving(switchPositions, crashPositions, threadSwitchChoices, switchOrCrashChoices, lastNoninitializedNode)
+        fun build() = Interleaving(switchPositions, crashPositions, threadSwitchChoices, lastNoninitializedNode)
     }
 }
