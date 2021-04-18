@@ -75,6 +75,13 @@ abstract class AbstractNVMLincheckTest(
         runInternalTest()
     }
 
+    @Test
+    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
+        commonConfiguration()
+        invocationsPerIteration(invocations)
+        runInternalTest()
+    }
+
     private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
         threads(threads)
         recover(model)

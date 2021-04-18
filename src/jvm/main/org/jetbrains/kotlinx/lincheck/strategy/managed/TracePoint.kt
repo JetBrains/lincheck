@@ -67,7 +67,7 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    protected val stackTraceElement: StackTraceElement
+    val stackTraceElement: StackTraceElement
 ) : TracePoint(iThread, actorId, callStackTrace)
 
 internal class StateRepresentationTracePoint(
@@ -240,6 +240,14 @@ internal class CoroutineCancellationTracePoint(
             CANCELLATION_FAILED -> "CANCELLATION ATTEMPT FAILED"
         }
     }
+}
+
+internal class CrashTracePoint(
+    iThread: Int, actorId: Int,
+    callStackTrace: CallStackTrace,
+    ste: StackTraceElement
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, ste) {
+    override fun toStringImpl(): String = "CRASH"
 }
 
 /**

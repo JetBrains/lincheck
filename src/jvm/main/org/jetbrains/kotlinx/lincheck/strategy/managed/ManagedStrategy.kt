@@ -25,6 +25,8 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.Crash
+import org.jetbrains.kotlinx.lincheck.nvm.CrashEnabledVisitor
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -123,15 +125,19 @@ abstract class ManagedStrategy(
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
     }
 
-    override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
-        cv = cv,
-        tracePointConstructors = tracePointConstructors,
-        guarantees = testCfg.guarantees,
-        eliminateLocalObjects = testCfg.eliminateLocalObjects,
-        collectStateRepresentation = collectStateRepresentation,
-        constructTraceRepresentation = collectTrace,
-        codeLocationIdProvider = codeLocationIdProvider
-    )
+    override fun createTransformer(cv: ClassVisitor): ClassVisitor {
+        val visitor = CrashEnabledVisitor(cv, testClass, recoverModel.crashes)
+        return ManagedStrategyTransformer(
+            cv = recoverModel.createTransformer(visitor, testClass),
+            tracePointConstructors = tracePointConstructors,
+            guarantees = testCfg.guarantees,
+            eliminateLocalObjects = testCfg.eliminateLocalObjects,
+            collectStateRepresentation = collectStateRepresentation,
+            constructTraceRepresentation = collectTrace,
+            codeLocationIdProvider = codeLocationIdProvider,
+            crashEnabledVisitor = visitor
+        )
+    }
 
     override fun needsTransformation(): Boolean = true
 
@@ -152,10 +158,19 @@ abstract class ManagedStrategy(
     protected open fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {}
 
     /**
+     * This method is invoked before every crash.
+     * @param iThread current thread that is about to be crashed
+     * @param mustCrash whether the crash is must do (in case of system crash)
+     */
+    protected open fun onNewCrash(iThread: Int, mustCrash: Boolean) {}
+
+    /**
      * Returns whether thread should switch at the switch point.
      * @param iThread the current thread
      */
     protected abstract fun shouldSwitch(iThread: Int): Boolean
+
+    protected abstract fun shouldCrash(iThread: Int): Boolean
 
     /**
      * Choose a thread to switch from thread [iThread].
@@ -305,6 +320,24 @@ abstract class ManagedStrategy(
         // continue the operation
     }
 
+    private fun newCrashPoint(
+        iThread: Int,
+        codeLocation: Int,
+        tracePoint: TracePoint?,
+        ste: StackTraceElement?
+    ) {
+        if (!isTestThread(iThread)) return // can crash only test threads
+        if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
+        check(iThread == currentThread)
+        val isSystemCrash = Crash.isWaitingSystemCrash()
+        val shouldCrash = shouldCrash(iThread) || isSystemCrash
+        if (shouldCrash) {
+            crashCurrentThread(iThread, tracePoint, ste, isSystemCrash)
+        }
+        traceCollector?.passCodeLocation(tracePoint)
+        // continue the operation
+    }
+
     /**
      * This method is executed as the first thread action.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
@@ -375,6 +408,12 @@ abstract class ManagedStrategy(
         awaitTurn(iThread)
     }
 
+    private fun crashCurrentThread(iThread: Int, tracePoint: TracePoint?, ste: StackTraceElement?, mustCrash: Boolean) {
+        traceCollector?.passCodeLocation(tracePoint)
+        onNewCrash(iThread, mustCrash)
+        Crash.crash(iThread + 1, ste)
+    }
+
     private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
         onNewSwitch(iThread, mustSwitch)
         val switchableThreads = switchableThreads(iThread)
@@ -429,6 +468,9 @@ abstract class ManagedStrategy(
      */
     internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, tracePoint: WriteTracePoint?) {
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        if (recoverModel.crashes) {
+            newCrashPoint(iThread, codeLocation, tracePoint, tracePoint?.stackTraceElement)
+        }
     }
 
     /**
@@ -512,6 +554,14 @@ abstract class ManagedStrategy(
         // switch to another thread and wait till a notify event happens
         switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, true)
         return false
+    }
+
+    /**
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param codeLocation the byte-code location identifier of this operation.
+    */
+    internal fun beforeCrashPoint(iThread: Int, codeLocation: Int, tracePoint: CrashTracePoint?) {
+        newCrashPoint(iThread, codeLocation, tracePoint, tracePoint?.stackTraceElement)
     }
 
     /**

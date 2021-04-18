@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.nvm.Probability
 import java.lang.reflect.*
 import java.util.*
 
@@ -69,6 +70,7 @@ internal object ManagedStrategyStateHolder {
     @JvmStatic
     fun resetStateImpl(testClass: Class<out Any>) {
         random!!.setSeed(INITIAL_SEED)
+        Probability.setRandom(random!!)
         objectManager = ObjectManager(testClass)
     }
 }

@@ -23,6 +23,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.jetbrains.kotlinx.lincheck.nvm.CrashEnabledVisitor
+import org.jetbrains.kotlinx.lincheck.nvm.CrashMethodTransformer
+import org.jetbrains.kotlinx.lincheck.nvm.CrashPointVisitor
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -44,7 +47,8 @@ internal class ManagedStrategyTransformer(
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
-    private val codeLocationIdProvider: CodeLocationIdProvider
+    private val codeLocationIdProvider: CodeLocationIdProvider,
+    private val crashEnabledVisitor: CrashEnabledVisitor
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -95,6 +99,10 @@ internal class ManagedStrategyTransformer(
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
+        if (crashEnabledVisitor.shouldTransform) {
+            val cmt = CrashMethodTransformer(mv, access, mname, desc, crashEnabledVisitor.name, crashEnabledVisitor.fileName, false)
+            mv = CrashManagedTransformer(mname, cmt)
+        }
         return mv
     }
 
@@ -1112,6 +1120,30 @@ internal class ManagedStrategyTransformer(
         }
     }
 
+    private inner class CrashManagedTransformer(
+        methodName: String,
+        cmt: CrashMethodTransformer
+    ) : ManagedStrategyMethodVisitor(methodName, cmt) {
+        init {
+            cmt.crashVisitor = object : CrashPointVisitor {
+                override fun visitCrashPoint(
+                    mv: GeneratorAdapter,
+                    className: String?,
+                    fileName: String?,
+                    methodName: String?,
+                    lineNumber: Int
+                ) {
+                    val tracePointLocal = newTracePointLocal()
+                    loadStrategy()
+                    loadCurrentThreadNumber()
+                    loadNewCodeLocationAndTracePoint(tracePointLocal, CRASH_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> CrashTracePoint(iThread, actorId, callStackTrace, ste) }
+                    adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CRASH_METHOD)
+                }
+
+            }
+        }
+    }
+
     private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         private var lineNumber = 0
 
@@ -1300,6 +1332,7 @@ private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitTracePoint::class.java)
 private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
 private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
+private val CRASH_TRACE_POINT_TYPE = Type.getType(CrashTracePoint::class.java)
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -1309,6 +1342,7 @@ private val BEFORE_LOCK_RELEASE_METHOD = Method.getMethod(ManagedStrategy::befor
 private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.javaMethod)
 private val AFTER_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::afterNotify.javaMethod)
 private val BEFORE_PARK_METHOD = Method.getMethod(ManagedStrategy::beforePark.javaMethod)
+private val BEFORE_CRASH_METHOD = Method.getMethod(ManagedStrategy::beforeCrashPoint.javaMethod)
 private val AFTER_UNPARK_METHOD = Method.getMethod(ManagedStrategy::afterUnpark.javaMethod)
 private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
 private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)

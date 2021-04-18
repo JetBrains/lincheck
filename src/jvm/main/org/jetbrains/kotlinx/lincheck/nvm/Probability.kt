@@ -22,12 +22,13 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
-import kotlin.random.Random
+import java.util.*
 
 object Probability {
     private const val RANDOM_FLUSH_PROBABILITY = 0.2f
     private val random_ = ThreadLocal.withInitial { Random(42) }
-    private val random get() = random_.get()
+    private val random get() = randomGetter()
+    private var randomGetter = { random_.get() }
 
     private var defaultCrashes = 0
     private var minimizeCrashes = false
@@ -101,4 +102,7 @@ object Probability {
     }
 
     private fun bernoulli(probability: Float) = random.nextFloat() < probability
+    fun setRandom(random: Random) {
+        randomGetter = { random }
+    }
 }
