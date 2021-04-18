@@ -139,6 +139,7 @@ object Crash {
         awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
         context.value = SystemContext(null, 0)
         resetAllCrashed()
+        yieldCallback = {}
     }
 }
 

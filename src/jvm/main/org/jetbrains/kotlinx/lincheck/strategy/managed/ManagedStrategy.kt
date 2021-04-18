@@ -116,9 +116,6 @@ abstract class ManagedStrategy(
             runner.close()
             throw t
         }
-        Crash.yieldCallback = {
-            switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true)
-        }
     }
 
     private fun createRunner(): Runner =
@@ -196,6 +193,9 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
+        Crash.yieldCallback = {
+            switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true)
+        }
     }
 
     // == BASIC STRATEGY METHODS ==
