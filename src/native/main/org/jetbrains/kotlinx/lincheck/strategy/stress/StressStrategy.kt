@@ -40,8 +40,7 @@ actual class StressStrategy actual constructor(
 
     init {
         if(invocations > 500) {
-            printErr("invocations count has been reduced from $invocations to 500") // TODO remove when bug with GC will be fixed
-            invocations = 500
+            printErr("WARNING invocations count is bigger than 500, that may lead to crash") // TODO remove when bug with GC will be fixed
         }
         runner = ParallelThreadsRunner(
             strategy = this,

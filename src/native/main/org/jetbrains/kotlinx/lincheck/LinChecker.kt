@@ -29,13 +29,18 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
 class NativeAPIStressConfiguration: LincheckStressConfiguration<Any>() {
-    fun runNativeTest() {
-        LinChecker.check(getTestClass(), getTestStructure(), this as StressOptions)
+    init {
+        // simple configuration
+        iterations(1)
+        invocationsPerIteration(100_000) // 100k
+
+        initialState {  } // empty state
+        requireStateEquivalenceImplCheck(false)
     }
 
-    fun setupInitialState(
-    ) = apply {
-        testClass = TestClass({})
+
+    fun runNativeTest() {
+        LinChecker.check(getTestClass(), getTestStructure(), this as StressOptions)
     }
 
     fun setupOperationWithoutArguments(
@@ -99,6 +104,11 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
     protected var operationGroups = mutableListOf<OperationGroup>()
     protected var validationFunctions = mutableListOf<ValidationFunction>()
     protected var stateRepresentationFunction: StateRepresentationFunction? = null
+
+    init {
+        // override invocationsPerIteration
+        invocationsPerIteration(500)
+    }
 
     protected fun getTestClass(): TestClass {
         return testClass ?: throw IllegalArgumentException("initialState should be specified")
