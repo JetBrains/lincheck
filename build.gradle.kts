@@ -6,8 +6,6 @@ allprojects {
     }
 }
 
-apply(from = rootProject.file("gradle/native-targets.gradle"))
-
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
@@ -16,6 +14,8 @@ buildscript {
     }
 }
 apply(plugin = "kotlinx-atomicfu")
+
+apply(from = rootProject.file("gradle/native-targets.gradle"))
 
 plugins {
     java
@@ -114,6 +114,11 @@ sourceSets.main {
 
 sourceSets.test {
     java.srcDirs("src/jvm/test")
+}
+
+tasks.wrapper {
+    gradleVersion = "6.7.1"
+    distributionType = Wrapper.DistributionType.ALL
 }
 
 tasks {

@@ -20,17 +20,64 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlin.jvm.*
 import kotlin.reflect.*
 
+class NativeAPIStressConfiguration: LincheckStressConfiguration<Any>() {
+    fun runNativeTest() {
+        LinChecker.check(getTestClass(), getTestStructure(), this as StressOptions)
+    }
+
+    fun setupInitialState(
+        state: () -> Any
+    ) = apply {
+        testClass = TestClass(state)
+    }
+
+    fun setupOperationWithoutArguments(
+        op: () -> Unit
+    ) = apply {
+        val actorGenerator = ActorGenerator(
+            function = { _, _ ->
+                op()
+            },
+            parameterGenerators = emptyList(),
+            functionName = "Operation",
+            useOnce = false,
+            isSuspendable = false,
+            handledExceptions = emptyList()
+        )
+        actorGenerators.add(actorGenerator)
+    }
+
+    fun setupOperation(
+        pGens: List<ParameterGenerator<*>>,
+        op: (Any, List<Any?>) -> Any,
+        name: String = op.toString(),
+        handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
+        useOnce: Boolean = false,
+        isSuspendable: Boolean = false
+    ) = apply {
+        val actorGenerator = ActorGenerator(
+            function = { instance, arguments ->
+                op(instance, arguments)
+            },
+            parameterGenerators = pGens,
+            functionName = name,
+            useOnce = useOnce,
+            isSuspendable = isSuspendable,
+            handledExceptions = handleExceptionsAsResult
+        )
+        actorGenerators.add(actorGenerator)
+    }
+}
+
 // TODO StressOptions methods cast this class to StressOptions
-class LincheckStressConfiguration<Instance>(private val testName: String = "") : StressOptions() {
+open class LincheckStressConfiguration<Instance>(protected val testName: String = "") : StressOptions() {
     /*
     invocationsPerIteration
     iterations
@@ -46,17 +93,17 @@ class LincheckStressConfiguration<Instance>(private val testName: String = "") :
     logLevel(logLevel: LoggingLevel)
     sequentialSpecification(clazz: SequentialSpecification<*>?)
     */
-    private var testClass: TestClass? = null
-    private var actorGenerators = mutableListOf<ActorGenerator>()
-    private var operationGroups = mutableListOf<OperationGroup>()
-    private var validationFunctions = mutableListOf<ValidationFunction>()
-    private var stateRepresentationFunction: StateRepresentationFunction? = null
+    protected var testClass: TestClass? = null
+    protected var actorGenerators = mutableListOf<ActorGenerator>()
+    protected var operationGroups = mutableListOf<OperationGroup>()
+    protected var validationFunctions = mutableListOf<ValidationFunction>()
+    protected var stateRepresentationFunction: StateRepresentationFunction? = null
 
-    private fun getTestClass(): TestClass {
+    protected fun getTestClass(): TestClass {
         return testClass ?: throw IllegalArgumentException("initialState should be specified")
     }
 
-    private fun getTestStructure(): CTestStructure {
+    protected fun getTestStructure(): CTestStructure {
         return CTestStructure(
             actorGenerators,
             operationGroups,
