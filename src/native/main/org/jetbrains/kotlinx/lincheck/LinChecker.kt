@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import kotlinx.cinterop.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -33,20 +34,20 @@ class NativeAPIStressConfiguration: LincheckStressConfiguration<Any>() {
     }
 
     fun setupInitialState(
-        state: () -> Any
     ) = apply {
-        testClass = TestClass(state)
+        testClass = TestClass({})
     }
 
     fun setupOperationWithoutArguments(
-        op: () -> Unit
+        op: CPointer<CFunction<() -> Unit>>,
+        functionName: String
     ) = apply {
         val actorGenerator = ActorGenerator(
             function = { _, _ ->
-                op()
+                op.invoke()
             },
             parameterGenerators = emptyList(),
-            functionName = "Operation",
+            functionName = functionName,
             useOnce = false,
             isSuspendable = false,
             handledExceptions = emptyList()
