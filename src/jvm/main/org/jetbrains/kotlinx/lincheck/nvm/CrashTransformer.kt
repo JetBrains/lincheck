@@ -28,32 +28,6 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
-internal interface CrashPointVisitor {
-    fun visitCrashPoint(
-        mv: GeneratorAdapter,
-        className: String?,
-        fileName: String?,
-        methodName: String?,
-        lineNumber: Int
-    )
-}
-
-private object StressCrashPointVisitor : CrashPointVisitor {
-    override fun visitCrashPoint(
-        mv: GeneratorAdapter,
-        className: String?,
-        fileName: String?,
-        methodName: String?,
-        lineNumber: Int
-    ) {
-        mv.push(className)
-        mv.push(fileName)
-        mv.push(methodName)
-        mv.push(lineNumber)
-        mv.invokeStatic(CRASH_TYPE, POSSIBLY_CRASH_METHOD)
-    }
-}
-
 internal open class CrashEnabledVisitor(cv: ClassVisitor, testClass: Class<*>, initial: Boolean = true) :
     ClassVisitor(ASM_API, cv) {
     private val superClassNames = testClass.superClassNames()
@@ -108,16 +82,16 @@ internal class CrashTransformer(
     ): MethodVisitor {
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (!shouldTransform) return mv
-        return CrashMethodTransformer(mv, access, name, descriptor, this.name, fileName, true, StressCrashPointVisitor)
+        return CrashMethodTransformer(mv, access, name, descriptor, this.name, fileName)
     }
 }
 
-private val storeInstructions = hashSetOf(
+private val storeInstructions = listOf(
     Opcodes.AASTORE, Opcodes.IASTORE, Opcodes.FASTORE, Opcodes.BASTORE,
     Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.LASTORE, Opcodes.DASTORE
 )
 
-private val returnInstructions = hashSetOf(
+private val returnInstructions = listOf(
     Opcodes.RETURN, Opcodes.ARETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.IRETURN, Opcodes.LRETURN
 )
 
@@ -133,10 +107,7 @@ internal class CrashMethodTransformer(
     name: String?,
     descriptor: String?,
     private val className: String?,
-    private val fileName: String?,
-    /** In model checking mode we can make better evaluation using [SharedVariableAccessMethodTransformer]. */
-    private val triggerOnStore: Boolean,
-    var crashVisitor: CrashPointVisitor? = null
+    private val fileName: String?
 ) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
     private var shouldTransform = name != "<clinit>" && (access and Opcodes.ACC_BRIDGE) == 0
     private var lineNumber = -1
@@ -144,7 +115,11 @@ internal class CrashMethodTransformer(
 
     private fun callCrash() {
         if (!shouldTransform || !superConstructorCalled) return
-        crashVisitor?.visitCrashPoint(this, className, fileName, name, lineNumber)
+        push(className)
+        push(fileName)
+        push(name)
+        push(lineNumber)
+        invokeStatic(CRASH_TYPE, POSSIBLY_CRASH_METHOD)
     }
 
     override fun visitLineNumber(line: Int, start: Label?) {
@@ -183,7 +158,7 @@ internal class CrashMethodTransformer(
     }
 
     override fun visitInsn(opcode: Int) {
-        if (opcode in returnInstructions || triggerOnStore && opcode in storeInstructions) {
+        if (opcode in returnInstructions || opcode in storeInstructions) {
             callCrash()
         }
         super.visitInsn(opcode)

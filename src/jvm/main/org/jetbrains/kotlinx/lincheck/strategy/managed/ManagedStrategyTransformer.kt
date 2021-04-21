@@ -23,9 +23,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
-import org.jetbrains.kotlinx.lincheck.nvm.CrashEnabledVisitor
-import org.jetbrains.kotlinx.lincheck.nvm.CrashMethodTransformer
-import org.jetbrains.kotlinx.lincheck.nvm.CrashPointVisitor
+import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
+import org.jetbrains.kotlinx.lincheck.nvm.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -95,14 +94,13 @@ internal class ManagedStrategyTransformer(
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        if (crashEnabledVisitor.shouldTransform) {
+            mv = CrashManagedTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        }
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
-        if (crashEnabledVisitor.shouldTransform) {
-            val cmt = CrashMethodTransformer(mv, access, mname, desc, crashEnabledVisitor.name, crashEnabledVisitor.fileName, false)
-            mv = CrashManagedTransformer(mname, cmt)
-        }
         return mv
     }
 
@@ -1120,29 +1118,78 @@ internal class ManagedStrategyTransformer(
         }
     }
 
-    private inner class CrashManagedTransformer(
-        methodName: String,
-        cmt: CrashMethodTransformer
-    ) : ManagedStrategyMethodVisitor(methodName, cmt) {
-        init {
-            cmt.crashVisitor = object : CrashPointVisitor {
-                override fun visitCrashPoint(
-                    mv: GeneratorAdapter,
-                    className: String?,
-                    fileName: String?,
-                    methodName: String?,
-                    lineNumber: Int
-                ) {
-                    val tracePointLocal = newTracePointLocal()
-                    loadStrategy()
-                    loadCurrentThreadNumber()
-                    loadNewCodeLocationAndTracePoint(tracePointLocal, CRASH_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> CrashTracePoint(iThread, actorId, callStackTrace, ste) }
-                    adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CRASH_METHOD)
-                }
+    private inner class CrashManagedTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
+        private var shouldTransform = methodName != "<clinit>" && (mv.access and ACC_BRIDGE) == 0
+        private var superConstructorCalled = methodName != "<init>"
 
+        override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
+            if (descriptor == CRASH_FREE_TYPE) {
+                shouldTransform = false
+            }
+            return adapter.visitAnnotation(descriptor, visible)
+        }
+
+        override fun visitMethodInsn(
+            opcode: Int,
+            owner: String?,
+            name: String?,
+            descriptor: String?,
+            isInterface: Boolean
+        ) {
+            if (!superConstructorCalled && opcode == INVOKESPECIAL) {
+                superConstructorCalled = true
+            }
+            if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) invokeBeforeCrashPoint()
+            adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+        }
+
+        override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
+            if (opcode == PUTFIELD || opcode == PUTSTATIC) invokeBeforeCrashPoint()
+            adapter.visitFieldInsn(opcode, owner, name, desc)
+        }
+
+        override fun visitInsn(opcode: Int) {
+            if (opcode in returnInstructions) invokeBeforeCrashPoint()
+            adapter.visitInsn(opcode)
+        }
+
+        //
+        // Rethrow exception in catch block in case of crash
+        //
+        private val catchLabels = hashSetOf<Label>()
+
+        override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
+            adapter.visitTryCatchBlock(start, end, handler, type)
+            check(type != CRASH_ERROR_TYPE.internalName) { "Catch CrashError is prohibited." }
+            if (type == THROWABLE_TYPE.internalName && handler !== null) {
+                catchLabels.add(handler)
             }
         }
+
+        override fun visitLabel(label: Label?) {
+            adapter.visitLabel(label)
+            if (label !in catchLabels) return
+            adapter.run {
+                val continueCatch = newLabel()
+                dup()
+                instanceOf(CRASH_ERROR_TYPE)
+                ifZCmp(GeneratorAdapter.EQ, continueCatch)
+                throwException()
+                mark(continueCatch)
+            }
+        }
+
+        private fun invokeBeforeCrashPoint() {
+            if (!shouldTransform || !superConstructorCalled) return
+            val tracePointLocal = newTracePointLocal()
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocationAndTracePoint(tracePointLocal, CRASH_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> CrashTracePoint(iThread, actorId, callStackTrace, ste) }
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CRASH_METHOD)
+        }
     }
+
+    private val returnInstructions = listOf(RETURN, ARETURN, DRETURN, FRETURN, IRETURN, LRETURN)
 
     private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         private var lineNumber = 0
@@ -1333,6 +1380,8 @@ private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
 private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 private val CRASH_TRACE_POINT_TYPE = Type.getType(CrashTracePoint::class.java)
+private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
+private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
