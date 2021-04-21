@@ -454,11 +454,12 @@ Here is a test for a not thread-safe `HashMap` with the failed scenario and the 
 ```java
 @StressCTest(minimizeFailedScenario = false)
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
+@Param(name = "value", gen = IntGen.class, conf = "1:5")
 public class HashMapLinearizabilityTest extends VerifierState {
     private final HashMap<Integer, Integer> map = new HashMap<>();
 
     @Operation
-    public Integer put(@Param(name = "key") int key, int value) {
+    public Integer put(@Param(name = "key") int key, @Param(name = "value") int value) {
         return map.put(key, value);
     }
 
