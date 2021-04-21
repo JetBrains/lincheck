@@ -104,14 +104,14 @@ public class SPMCQueueTest {
 }
 ```
 
-A generator for `x` parameter is omitted and the default one is used. See [Default generators](#default-generators) paragraph for details.
+A generator for `x` parameter is omitted and the default one is used. See [Parameter generators](#parameter-generators) paragraph for details.
 
 ## Parameter generators
 If an operation has parameters then generators should be specified for each of them. There are several ways to specify a parameter generator: explicitly on parameter via `@Param(gen = ..., conf = ...)` annotation, using named generator via `@Param(name = ...)` annotation, or using the default generator implicitly.
 
 For setting a generator explicitly, `@Param` annotation with the specified class generator (`@Param(gen = ...)`) and string configuration (`@Param(conf = ...)`) should be used. The provided generator class should be a `ParameterGenerator` implementation and can be implemented by user. Out of the box **lincheck** supports random parameter generators for almost all primitives and strings. Note that only one generator class is used for both primitive and its wrapper, but boxing/unboxing does not happen. See `org.jetbrains.kotlinx.lincheck.paramgen` for details.
 
-It is also possible to use once configured generators for several parameters. This requires adding this `@Param` annotation to the test class instead of the parameter specifying it's name (`@Param(name = ...)`). Then it is possible to use this generator among all operations using `@Param` annotation with the provided name only. It is also possible to bind parameter and generator names, see [Binding parameter and generator names](binding-parameter-and-generator-names) for details.
+It is also possible to use once configured generators for several parameters. This requires adding this `@Param` annotation to the test class instead of the parameter specifying it's name (`@Param(name = ...)`). Then it is possible to use this generator among all operations using `@Param` annotation with the provided name only. It is also possible to bind parameter and generator names, see [Binding parameter and generator names](#binding-parameter-and-generator-names) for details.
 
 If the parameter generator is not specified **lincheck** tries to use the default one, binding supported primitive types with the existent generators and using the default configurations for them.
 
