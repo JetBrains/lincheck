@@ -319,7 +319,8 @@ internal class ModelCheckingStrategy(
             if (exploreCrashNode == isSwitch) return
             if (executionPosition > positions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
+                val child = if (exploreCrashNode) SwitchOrCrashChoosingNode() else ThreadChoosingNode(switchableThreads(iThread))
+                lastNotInitializedNodeChoices?.add(Choice(child, executionPosition))
             }
         }
 
