@@ -18,12 +18,27 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-import org.jetbrains.kotlinx.lincheck.LincheckStressConfiguration
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.native.concurrent.*
 import kotlin.test.*
+
+class ComplexMutableClass(val i: Int, val j: String) {
+
+    override fun equals(other: Any?): Boolean {
+        return if (other is ComplexMutableClass) {
+            i == other.i && j == other.j;
+        } else {
+            false;
+        }
+    }
+
+    override fun toString(): String {
+        return "ComplexMutableClass $i $j"
+    }
+}
 
 class TestClass : VerifierState() {
     val atomicState: AtomicInt = AtomicInt(0)
@@ -45,6 +60,10 @@ class TestClass : VerifierState() {
     fun decrement(): Int {
         regularState--
         return regularState
+    }
+
+    fun complexOperation(): ComplexMutableClass {
+        return ComplexMutableClass(239, "Hello, world!")
     }
 
     fun atomicIncrement() = atomicState.addAndGet(1)
@@ -95,6 +114,23 @@ class FirstTest {
 
             operation(TestClass::atomicIncrement, "atomicIncrement")
             operation(TestClass::atomicDecrement, "atomicDecrement")
+        }.runTest()
+    }
+
+    @Test
+    fun test_complex() {
+        LincheckStressConfiguration<TestClass>("FirstTest_3").apply {
+            iterations(10)
+            invocationsPerIteration(500)
+            actorsBefore(2)
+            threads(3)
+            actorsPerThread(5)
+            actorsAfter(2)
+            minimizeFailedScenario(false)
+
+            initialState { TestClass() }
+
+            operation(TestClass::complexOperation, "complexOperation")
         }.runTest()
     }
 

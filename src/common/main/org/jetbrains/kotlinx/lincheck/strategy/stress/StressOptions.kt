@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
  * Options for [stress][StressStrategy] strategy.
  */
 open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
-    private var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
+    protected var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
 
     /**
      * Run each test scenario the specified number of times.

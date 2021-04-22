@@ -39,9 +39,6 @@ actual class StressStrategy actual constructor(
     private var runner: Runner
 
     init {
-        if(invocations > 500) {
-            printErr("WARNING invocations count is bigger than 500, that may lead to crash") // TODO remove when bug with GC will be fixed
-        }
         runner = ParallelThreadsRunner(
             strategy = this,
             testClass = testClass,

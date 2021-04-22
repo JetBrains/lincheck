@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.19)
-project(project_name)
+cmake_minimum_required(VERSION 3.16)
+project(lincheck_test)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(project_name main.cpp)
+add_executable(lincheck_test main.cpp lincheck.h)
 
-link_directories(/home/krock21/IdeaProjects/kotlinx-lincheck//build/bin/native/debugShared/)
-target_link_libraries(project_name native)
+add_library(native SHARED IMPORTED GLOBAL)
+set_target_properties(native PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../build/bin/native/debugShared/libnative.so")
+target_link_libraries(lincheck_test native)
