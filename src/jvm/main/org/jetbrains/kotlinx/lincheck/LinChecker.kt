@@ -116,7 +116,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
             if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
         }
-        if (testCfg.recoverabilityModel.crashes && this is IncorrectResultsFailure)
+        if (testCfg is StressCTestConfiguration &&
+            testCfg.recoverabilityModel.crashes &&
+            this is IncorrectResultsFailure
+        )
             return minimizeCrashes(testCfg, verifier).also { Probability.resetExpectedCrashes() }
         return this
     }
