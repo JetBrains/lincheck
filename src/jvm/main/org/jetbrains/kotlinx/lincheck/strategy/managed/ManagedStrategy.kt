@@ -106,6 +106,8 @@ abstract class ManagedStrategy(
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
+    private val yieldCallback = { switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true) }
+
     init {
         runner = createRunner()
         // The managed state should be initialized before еру test class transformation.
@@ -193,9 +195,7 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
-        Crash.yieldCallback = {
-            switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true)
-        }
+        Crash.yieldCallback = yieldCallback
     }
 
     // == BASIC STRATEGY METHODS ==
