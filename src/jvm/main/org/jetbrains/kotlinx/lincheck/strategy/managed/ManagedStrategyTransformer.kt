@@ -1153,32 +1153,6 @@ internal class ManagedStrategyTransformer(
             adapter.visitInsn(opcode)
         }
 
-        //
-        // Rethrow exception in catch block in case of crash
-        //
-        private val catchLabels = hashSetOf<Label>()
-
-        override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
-            adapter.visitTryCatchBlock(start, end, handler, type)
-            check(type != CRASH_ERROR_TYPE.internalName) { "Catch CrashError is prohibited." }
-            if (type == THROWABLE_TYPE.internalName && handler !== null) {
-                catchLabels.add(handler)
-            }
-        }
-
-        override fun visitLabel(label: Label?) {
-            adapter.visitLabel(label)
-            if (label !in catchLabels) return
-            adapter.run {
-                val continueCatch = newLabel()
-                dup()
-                instanceOf(CRASH_ERROR_TYPE)
-                ifZCmp(GeneratorAdapter.EQ, continueCatch)
-                throwException()
-                mark(continueCatch)
-            }
-        }
-
         private fun invokeBeforeCrashPoint() {
             if (!shouldTransform || !superConstructorCalled) return
             val tracePointLocal = newTracePointLocal()
@@ -1381,7 +1355,6 @@ private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 private val CRASH_TRACE_POINT_TYPE = Type.getType(CrashTracePoint::class.java)
 private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
-private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)

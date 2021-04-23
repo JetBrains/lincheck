@@ -163,29 +163,43 @@ internal class CrashMethodTransformer(
         }
         super.visitInsn(opcode)
     }
+}
 
-    //
-    // Rethrow exception in catch block in case of crash
-    //
-    private val catchLabels = hashSetOf<Label>()
 
-    override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
-        super.visitTryCatchBlock(start, end, handler, type)
-        check(type != CRASH_ERROR_TYPE.internalName) { "Catch CrashError is prohibited." }
-        if (type == THROWABLE_TYPE.internalName && handler !== null) {
-            catchLabels.add(handler)
+internal class CrashRethrowTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
+    override fun visitMethod(
+        access: Int,
+        name: String?,
+        descriptor: String?,
+        signature: String?,
+        exceptions: Array<out String>?
+    ): MethodVisitor {
+        val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
+        val adapter = GeneratorAdapter(mv, access, name, descriptor)
+        return object : MethodVisitor(ASM_API, mv) {
+            private val catchLabels = hashSetOf<Label>()
+
+            override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
+                super.visitTryCatchBlock(start, end, handler, type)
+                check(type != CRASH_ERROR_TYPE.internalName) { "Catch CrashError is prohibited." }
+                if (type == THROWABLE_TYPE.internalName && handler !== null) {
+                    catchLabels.add(handler)
+                }
+            }
+
+            override fun visitLabel(label: Label?) {
+                super.visitLabel(label)
+                if (label !in catchLabels) return
+                adapter.run {
+                    val continueCatch = newLabel()
+                    dup()
+                    instanceOf(CRASH_ERROR_TYPE)
+                    ifZCmp(GeneratorAdapter.EQ, continueCatch)
+                    throwException()
+                    mark(continueCatch)
+                }
+            }
         }
-    }
-
-    override fun visitLabel(label: Label?) {
-        super.visitLabel(label)
-        if (label !in catchLabels) return
-        val continueCatch = newLabel()
-        dup()
-        instanceOf(CRASH_ERROR_TYPE)
-        ifZCmp(EQ, continueCatch)
-        throwException()
-        mark(continueCatch)
     }
 }
 
