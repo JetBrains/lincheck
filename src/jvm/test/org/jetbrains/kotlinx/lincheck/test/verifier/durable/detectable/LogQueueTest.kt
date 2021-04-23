@@ -193,8 +193,8 @@ internal class LogQueue(threadsNumber: Int) : RecoverableQueue {
     }
 }
 
-internal abstract class LogQueueFailingTest :
-    AbstractNVMLincheckFailingTest(Recover.DETECTABLE_EXECUTION, THREADS_NUMBER, SequentialQueue::class) {
+internal abstract class LogQueueFailingTest //: AbstractNVMLincheckFailingTest(Recover.DETECTABLE_EXECUTION, THREADS_NUMBER, SequentialQueue::class)
+{
     protected abstract val q: RecoverableQueue
 
     @Operation
@@ -211,11 +211,11 @@ internal abstract class LogQueueFailingTest :
 
     @DurableRecoverAll
     fun recover() = q.recover()
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(25)
-    }
-
-    override val expectedExceptions = listOf(IllegalStateException::class, NullPointerException::class)
+//    override fun <O : Options<O, *>> O.customize() {
+//        iterations(25)
+//    }
+//
+//    override val expectedExceptions = listOf(IllegalStateException::class, NullPointerException::class)
 }
 
 internal class LogQueueFailingTest1 : LogQueueFailingTest() {
