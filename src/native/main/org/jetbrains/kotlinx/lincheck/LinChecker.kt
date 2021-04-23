@@ -26,20 +26,28 @@ import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlin.native.concurrent.*
 import kotlin.reflect.*
 
 typealias CCreator = CPointer<CFunction<() -> CPointer<*>>>
 typealias CDestructor = CPointer<CFunction<(CPointer<*>) -> Unit>>
 typealias EqualsCFunction = CPointer<CFunction<(CPointer<*>, CPointer<*>) -> Boolean>>
 typealias HashCodeCFunction = CPointer<CFunction<(CPointer<*>) -> Int>>
-typealias ToStringCFunction = CPointer<CFunction<(CPointer<*>) -> Int>>
+// write first argument represented as string to second argument preallocated memory. Third argument is second's argument size
+typealias ToStringCFunction = CPointer<CFunction<(CPointer<*>, CPointer<ByteVar>, Int) -> Unit>>
+
+internal fun applyToStringFunction(pointer: CPointer<*>, toStringFunction: ToStringCFunction, maxLen: Int = 500): String {
+    val buf = ByteArray(maxLen)
+    buf.usePinned { pinned ->
+        toStringFunction(pointer, pinned.addressOf(0), buf.size - 1)
+    }
+    return buf.toKString()
+}
 
 internal class ObjectWithDestructorAndEqualsAndHashcodeAndToString(val obj: CPointer<*>,
-                                                          val destructor: CDestructor,
-                                                          val equals: EqualsCFunction,
-                                                          val hashCode: HashCodeCFunction,
-                                                          val toString: ToStringCFunction) {
+                                                                   val destructor: CDestructor,
+                                                                   val equals: EqualsCFunction,
+                                                                   val hashCode: HashCodeCFunction,
+                                                                   val toString: ToStringCFunction) {
 
     override fun equals(other: Any?): Boolean {
         return if (other is ObjectWithDestructorAndEqualsAndHashcodeAndToString) {
@@ -54,7 +62,7 @@ internal class ObjectWithDestructorAndEqualsAndHashcodeAndToString(val obj: CPoi
     }
 
     override fun toString(): String {
-        return toString.invoke(obj).toString()
+        return applyToStringFunction(obj, toString)
     }
 
     protected fun finalize() {
@@ -66,7 +74,7 @@ internal class ObjectWithDestructorAndEqualsAndHashcodeAndToString(val obj: CPoi
 internal class ParameterGeneratorArgument(val arg: CPointer<*>,
                                           val toString: ToStringCFunction) {
     override fun toString(): String {
-        return toString.invoke(arg).toString()
+        return applyToStringFunction(arg, toString)
     }
 }
 
@@ -79,9 +87,9 @@ internal class ConcurrentInstance(val obj: CPointer<*>, val destructor: CDestruc
 }
 
 internal class SequentialSpecificationInstance(val obj: CPointer<*>,
-                                      val destructor: CDestructor,
-                                      val equalsFunction: EqualsCFunction,
-                                      val hashCodeFunction: HashCodeCFunction) {
+                                               val destructor: CDestructor,
+                                               val equalsFunction: EqualsCFunction,
+                                               val hashCodeFunction: HashCodeCFunction) {
     override fun equals(other: Any?): Boolean {
         return if (other is SequentialSpecificationInstance) {
             equalsFunction.invoke(obj, other.obj)
@@ -111,13 +119,8 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
 
     init {
         // default configuration
-        iterations(1)
-        invocationsPerIteration(10000)
-    }
-
-    private fun extractObjectWithEqualsAndHashcodeAndToString(pointer: CPointer<*>): ObjectWithDestructorAndEqualsAndHashcodeAndToString {
-        val ref = pointer.asStableRef<ObjectWithDestructorAndEqualsAndHashcodeAndToString>()
-        return ref.get().freeze()
+        iterations(5)
+        invocationsPerIteration(500)
     }
 
     fun setupIterations(count: Int) {
@@ -132,14 +135,16 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         minimizeFailedScenario(minimizeFailedScenario)
     }
 
-    fun runNativeTest() {
+    fun runNativeTest(printErrorToStderr: Boolean): String {
         if (!initialStateSet) {
-            printErr("Please provide initialState, skipping...")
-            return
+            val errorMessage = "Please provide initialState, skipping..."
+            if (printErrorToStderr) printErr(errorMessage)
+            return errorMessage
         }
         if (sequentialSpecificationCreator == null) {
-            printErr("Please provide sequentialSpecification, skipping...")
-            return
+            val errorMessage = "Please provide sequentialSpecification, skipping..."
+            if (printErrorToStderr) printErr(errorMessage)
+            return errorMessage
         }
         if (initialStateCreator != null) {
             // different initialState and sequentialSpecification
@@ -156,7 +161,14 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
                 SequentialSpecificationInstance(sequentialSpecificationCreator!!.invoke(), sequentialSpecificationDestructor!!, sequentialSpecificationEquals!!, sequentialSpecificationHashCode!!)
             }
         )
-        runTest()
+        try {
+            runTest()
+        } catch (e: LincheckAssertionError) {
+            val errorMessage = e.toString()
+            if (printErrorToStderr) printErr(errorMessage)
+            return errorMessage
+        }
+        return ""
     }
 
     fun setupInitialState(
@@ -262,6 +274,57 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
                 }
             },
             parameterGenerators = listOf(arg1_paramgen),
+            functionName = operationName,
+            useOnce = useOnce,
+            isSuspendable = false,
+            handledExceptions = emptyList()
+        )
+        actorGenerators.add(actorGenerator)
+    }
+
+    fun setupOperation3(
+        arg1_gen_initial_state: CCreator,
+        arg1_gen_generate: CPointer<CFunction<(CPointer<*>) -> CPointer<*>>>,
+        arg1_toString: ToStringCFunction,
+        arg2_gen_initial_state: CCreator,
+        arg2_gen_generate: CPointer<CFunction<(CPointer<*>) -> CPointer<*>>>,
+        arg2_toString: ToStringCFunction,
+        op: CPointer<CFunction<(CPointer<*>, CPointer<*>, CPointer<*>) -> CPointer<*>>>,
+        seq_spec: CPointer<CFunction<(CPointer<*>, CPointer<*>, CPointer<*>) -> CPointer<*>>>,
+        result_destructor: CDestructor,
+        result_equals: EqualsCFunction,
+        result_hashCode: HashCodeCFunction,
+        result_toString: ToStringCFunction,
+        operationName: String,
+        useOnce: Boolean = false,
+    ) = apply {
+        val arg1Paramgen = object : ParameterGenerator<ParameterGeneratorArgument> {
+            val state = arg1_gen_initial_state.invoke()
+            override fun generate(): ParameterGeneratorArgument {
+                return ParameterGeneratorArgument(arg1_gen_generate.invoke(state), arg1_toString)
+            }
+        }
+        val arg2Paramgen = object : ParameterGenerator<ParameterGeneratorArgument> {
+            val state = arg2_gen_initial_state.invoke()
+            override fun generate(): ParameterGeneratorArgument {
+                return ParameterGeneratorArgument(arg2_gen_generate.invoke(state), arg2_toString)
+            }
+        }
+        val actorGenerator = ActorGenerator(
+            function = { instance, arguments ->
+                when (instance) {
+                    is ConcurrentInstance -> {
+                        ObjectWithDestructorAndEqualsAndHashcodeAndToString(op.invoke(instance.obj, (arguments[0] as ParameterGeneratorArgument).arg, (arguments[1] as ParameterGeneratorArgument).arg), result_destructor, result_equals, result_hashCode, result_toString)
+                    }
+                    is SequentialSpecificationInstance -> {
+                        ObjectWithDestructorAndEqualsAndHashcodeAndToString(seq_spec.invoke(instance.obj, (arguments[0] as ParameterGeneratorArgument).arg, (arguments[1] as ParameterGeneratorArgument).arg), result_destructor, result_equals, result_hashCode, result_toString)
+                    }
+                    else -> {
+                        throw RuntimeException("Internal error. instance has not expected type")
+                    }
+                }
+            },
+            parameterGenerators = listOf(arg1Paramgen, arg2Paramgen),
             functionName = operationName,
             useOnce = useOnce,
             isSuspendable = false,

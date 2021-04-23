@@ -145,6 +145,28 @@ tasks {
     }
 }
 
+tasks.register("cppTest") {
+    dependsOn("linkNative")
+    doLast {
+        exec {
+            workingDir("cpp")
+            commandLine("mkdir", "-p", "build")
+        }
+        exec {
+            workingDir("cpp/build")
+            commandLine("cmake", "..")
+        }
+        exec {
+            workingDir("cpp/build")
+            commandLine("make")
+        }
+        exec {
+            workingDir("cpp/build")
+            commandLine("ctest")
+        }
+    }
+}
+
 publishing {
     publications.withType<MavenPublication> {
         // add empty javadoc
