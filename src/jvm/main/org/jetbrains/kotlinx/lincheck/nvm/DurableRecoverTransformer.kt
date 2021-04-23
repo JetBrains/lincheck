@@ -24,6 +24,8 @@ import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverPerThread
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.invokeAfterIgnoredSectionLeaving
+import org.jetbrains.kotlinx.lincheck.strategy.managed.invokeBeforeIgnoredSectionEntering
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
@@ -36,13 +38,17 @@ private const val RECOVER_ALL_GENERATED_ACCESS =
     Opcodes.ACC_PRIVATE or Opcodes.ACC_SYNCHRONIZED or Opcodes.ACC_SYNTHETIC
 private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val CRASH_IS_CRASHED = Method.getMethod(Crash::isCrashed.javaMethod)
-private val CRASH_RESET_ALL_CRASHED =Method.getMethod(Crash::resetAllCrashed.javaMethod)
+private val CRASH_RESET_ALL_CRASHED = Method.getMethod(Crash::resetAllCrashed.javaMethod)
 private val OPERATION_TYPE = Type.getType(Operation::class.java)
 
-class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: Class<*>) : ClassVisitor(ASM_API, cv) {
+class DurableOperationRecoverTransformer(
+    cv: ClassVisitor,
+    private val _class: Class<*>,
+    private val strategyRecoveryOptions: StrategyRecoveryOptions
+) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = false
-    internal var recoverAllMethod: java.lang.reflect.Method? = null
-    internal var recoverPerThreadMethod: java.lang.reflect.Method? = null
+    internal val recoverAllMethod: java.lang.reflect.Method?
+    internal val recoverPerThreadMethod: java.lang.reflect.Method?
     internal lateinit var name: String
 
     init {
@@ -64,8 +70,8 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
         super.visit(version, access, name, signature, superName, interfaces)
         this.name = name!!
         shouldTransform = name == Type.getInternalName(_class) ||
-                recoverAllMethod !== null && name == Type.getInternalName(recoverAllMethod!!.declaringClass) ||
-                recoverPerThreadMethod !== null && name == Type.getInternalName(recoverPerThreadMethod!!.declaringClass)
+            recoverAllMethod !== null && name == Type.getInternalName(recoverAllMethod.declaringClass) ||
+            recoverPerThreadMethod !== null && name == Type.getInternalName(recoverPerThreadMethod.declaringClass)
 
         if (!shouldTransform || recoverAllMethod === null) return
         generateSynchronizedRecoverAll()
@@ -82,7 +88,9 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
         RECOVER_ALL_GENERATED_ACCESS, RECOVER_ALL_GENERATED_NAME, RECOVER_ALL_GENERATED_DESCRIPTOR
     ).run {
         visitCode()
+        if (strategyRecoveryOptions == StrategyRecoveryOptions.MANAGED) invokeBeforeIgnoredSectionEntering(this)
         generateRecoverCode(this@DurableOperationRecoverTransformer.name, recoverAllMethod!!.name)
+        if (strategyRecoveryOptions == StrategyRecoveryOptions.MANAGED) invokeAfterIgnoredSectionLeaving(this)
         visitInsn(Opcodes.RETURN)
         visitMaxs(1, 0)
         visitEnd()

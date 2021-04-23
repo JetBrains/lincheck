@@ -148,7 +148,7 @@ private open class DurableModel(
     override fun createExecutionCallback(): ExecutionCallback = RecoverExecutionCallback
     override val awaitSystemCrashBeforeThrow get() = false
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
-        var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz)
+        var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz, strategyRecoveryOptions)
         if (crashes) {
             result = strategyRecoveryOptions.createCrashTransformer(result, clazz)
         }

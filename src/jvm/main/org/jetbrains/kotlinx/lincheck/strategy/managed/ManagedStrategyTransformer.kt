@@ -94,9 +94,7 @@ internal class ManagedStrategyTransformer(
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (crashEnabledVisitor.shouldTransform) {
-            mv = CrashManagedTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        }
+        if (crashEnabledVisitor.shouldTransform) mv = CrashManagedTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -1168,17 +1166,10 @@ internal class ManagedStrategyTransformer(
     private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         private var lineNumber = 0
 
-        protected fun invokeBeforeIgnoredSectionEntering() {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_IGNORED_SECTION_METHOD)
-        }
-
-        protected fun invokeAfterIgnoredSectionLeaving() {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
-        }
+        protected fun invokeBeforeIgnoredSectionEntering() = invokeBeforeIgnoredSectionEntering(adapter)
+        protected fun invokeAfterIgnoredSectionLeaving() = invokeAfterIgnoredSectionLeaving(adapter)
+        protected fun loadStrategy() = loadStrategy(adapter)
+        protected fun loadCurrentThreadNumber() = loadCurrentThreadNumber(adapter)
 
         protected fun invokeMakeStateRepresentation() {
             if (collectStateRepresentation) {
@@ -1188,17 +1179,8 @@ internal class ManagedStrategyTransformer(
             }
         }
 
-        protected fun loadStrategy() {
-            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
-        }
-
         protected fun loadObjectManager() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::objectManager.name, OBJECT_MANAGER_TYPE)
-        }
-
-        protected fun loadCurrentThreadNumber() {
-            loadStrategy()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD)
         }
 
         // STACK: (empty) -> code location, trace point
@@ -1282,6 +1264,27 @@ internal class ManagedStrategyTransformer(
             super.visitLineNumber(line, start)
         }
     }
+}
+
+private fun loadStrategy(mv: GeneratorAdapter) {
+    mv.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
+}
+
+private fun loadCurrentThreadNumber(mv: GeneratorAdapter) {
+    loadStrategy(mv)
+    mv.invokeVirtual(MANAGED_STRATEGY_TYPE, CURRENT_THREAD_NUMBER_METHOD)
+}
+
+internal fun invokeBeforeIgnoredSectionEntering(mv: GeneratorAdapter) {
+    loadStrategy(mv)
+    loadCurrentThreadNumber(mv)
+    mv.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_IGNORED_SECTION_METHOD)
+}
+
+internal fun invokeAfterIgnoredSectionLeaving(mv: GeneratorAdapter) {
+    loadStrategy(mv)
+    loadCurrentThreadNumber(mv)
+    mv.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
 }
 
 /**
