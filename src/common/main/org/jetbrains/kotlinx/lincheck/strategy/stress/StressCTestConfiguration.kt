@@ -28,10 +28,21 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 /**
  * Configuration for [stress][StressStrategy] strategy.
  */
-class StressCTestConfiguration(testClass: TestClass, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-                               executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator, verifierGenerator: (sequentialSpecification: SequentialSpecification<*>) -> Verifier,
-                               val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                               sequentialSpecification: SequentialSpecification<*>, timeoutMs: Long
+class StressCTestConfiguration(testClass: TestClass,
+                               iterations: Int,
+                               threads: Int,
+                               actorsPerThread: Int,
+                               actorsBefore: Int,
+                               actorsAfter: Int,
+                               executionGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator,
+                               verifierGenerator: (sequentialSpecification: SequentialSpecification<*>) -> Verifier,
+                               val invocationsPerIteration: Int,
+                               requireStateEquivalenceCheck: Boolean,
+                               minimizeFailedScenario: Boolean,
+                               sequentialSpecification: SequentialSpecification<*>,
+                               timeoutMs: Long,
+                               val initThreadFunction: (() -> Unit)? = null,
+                               val finishThreadFunction: (() -> Unit)? = null
 ) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator, verifierGenerator,
     requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
     override fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,

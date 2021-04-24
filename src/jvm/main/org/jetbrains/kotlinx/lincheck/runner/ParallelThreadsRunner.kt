@@ -47,10 +47,12 @@ internal actual open class ParallelThreadsRunner actual constructor(
     validationFunctions: List<ValidationFunction>,
     stateRepresentationFunction: StateRepresentationFunction?,
     private val timeoutMs: Long, // for deadlock or livelock detection
-    private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
+    private val useClocks: UseClocks, // specifies whether `HBClock`-s should always be used or with some probability
+    initThreadFunction: (() -> Unit)?,
+    finishThreadFunction: (() -> Unit)?
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash, initThreadFunction, finishThreadFunction) // should be closed in `close()`
 
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>

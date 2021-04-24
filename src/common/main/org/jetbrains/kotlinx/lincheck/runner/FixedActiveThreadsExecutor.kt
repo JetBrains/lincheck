@@ -54,7 +54,10 @@ internal expect fun currentTimeMillis(): Long
  * is that this executor keeps the re-using threads "hot" (active) as long as
  * possible, so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) {
+internal class FixedActiveThreadsExecutor(private val nThreads: Int,
+                                          runnerHash: Int,
+                                          private val initThreadFunction: (() -> Unit)? = null,
+                                          private val finishThreadFunction: (() -> Unit)? = null) {
     // Threads used in this runner.
     private val threads: List<TestThread>
     /**
@@ -171,9 +174,13 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
+        initThreadFunction?.invoke()
         loop@while (true) {
             val task = getTask(iThread)
-            if (task == SHUTDOWN) return@Runnable
+            if (task == SHUTDOWN) {
+                finishThreadFunction?.invoke()
+                return@Runnable
+            }
             tasks[iThread].value = null // reset task
             val runnable = task as Runnable
             try {

@@ -26,6 +26,8 @@ import org.jetbrains.kotlinx.lincheck.*
  */
 open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
     protected var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
+    protected var initThreadFunction: (() -> Unit)? = null
+    protected var finishThreadFunction: (() -> Unit)? = null
 
     /**
      * Run each test scenario the specified number of times.
@@ -34,9 +36,23 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
         invocationsPerIteration = invocations
     }
 
+    /**
+     * Setup init function that will be invoked once in every worker thread before operations.
+     */
+    fun initThreadFunction(function: () -> Unit): StressOptions = apply {
+        initThreadFunction = function
+    }
+
+    /**
+     * Setup finish function that will be invoked once in every worker thread after operations.
+     */
+    fun finishThreadFunction(function: () -> Unit): StressOptions = apply {
+        finishThreadFunction = function
+    }
+
     override fun createTestConfigurations(testClass: TestClass): StressCTestConfiguration {
         return StressCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGeneratorGenerator,
                 verifierGenerator, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs)
+                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, initThreadFunction, finishThreadFunction)
     }
 }

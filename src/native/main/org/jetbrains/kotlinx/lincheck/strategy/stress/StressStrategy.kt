@@ -36,6 +36,8 @@ actual class StressStrategy actual constructor(
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private var invocations = testCfg.invocationsPerIteration
+    private var initThreadFunction = testCfg.initThreadFunction
+    private var finishThreadFunction = testCfg.finishThreadFunction
     private var runner: Runner
 
     init {
@@ -45,24 +47,9 @@ actual class StressStrategy actual constructor(
             validationFunctions = validationFunctions,
             stateRepresentationFunction = stateRepresentationFunction,
             timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
-        )
-        try {
-            runner.initialize()
-        } catch (t: Throwable) {
-            runner.close()
-            throw t
-        }
-    }
-
-    fun reset() {
-        runner = ParallelThreadsRunner(
-            strategy = this,
-            testClass = testClass,
-            validationFunctions = validationFunctions,
-            stateRepresentationFunction = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
+            useClocks = UseClocks.RANDOM,
+            initThreadFunction = initThreadFunction,
+            finishThreadFunction = finishThreadFunction
         )
         try {
             runner.initialize()
@@ -74,7 +61,6 @@ actual class StressStrategy actual constructor(
 
     actual override fun run(): LincheckFailure? {
         // Run invocations
-        // reset()
         try {
             for (invocation in 0 until invocations) {
                 runner.also {

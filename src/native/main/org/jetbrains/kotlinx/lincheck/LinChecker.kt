@@ -135,6 +135,14 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         minimizeFailedScenario(minimizeFailedScenario)
     }
 
+    fun setupInitThreadFunction(function: CPointer<CFunction<() -> Unit>>) {
+        initThreadFunction { function.invoke() }
+    }
+
+    fun setupFinishThreadFunction(function: CPointer<CFunction<() -> Unit>>) {
+        finishThreadFunction { function.invoke() }
+    }
+
     fun runNativeTest(printErrorToStderr: Boolean): String {
         if (!initialStateSet) {
             val errorMessage = "Please provide initialState, skipping..."
@@ -520,6 +528,8 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
 class LinChecker(private val testClass: TestClass, private val testStructure: CTestStructure, options: Options<*, *>) {
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
+    var initThreadFunction: CPointer<CFunction<() -> Unit>>? = null
+    var finishThreadFunction: CPointer<CFunction<() -> Unit>>? = null
 
     init {
         val logLevel = options?.logLevel ?: DEFAULT_LOG_LEVEL
@@ -551,7 +561,6 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
-            //printErr("Iteration $i") // TODO debug output
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1, iterations, scenario)

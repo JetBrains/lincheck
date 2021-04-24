@@ -37,7 +37,9 @@ internal expect open class ParallelThreadsRunner(
     validationFunctions: List<ValidationFunction>,
     stateRepresentationFunction: StateRepresentationFunction?,
     timeoutMs: Long, // for deadlock or livelock detection
-    useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
+    useClocks: UseClocks, // specifies whether `HBClock`-s should always be used or with some probability
+    initThreadFunction: (() -> Unit)? = null,
+    finishThreadFunction: (() -> Unit)? = null
 ) : Runner
 
 internal class LincheckExecutionException(cause: Throwable?): Exception(cause)

@@ -38,7 +38,9 @@ internal actual open class ParallelThreadsRunner actual constructor(
     validationFunctions: List<ValidationFunction>,
     stateRepresentationFunction: StateRepresentationFunction?,
     private val timeoutMs: Long,
-    private val useClocks: UseClocks) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
+    private val useClocks: UseClocks,
+    private val initThreadFunction: (() -> Unit)?,
+    private val finishThreadFunction: (() -> Unit)?) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
 
     private lateinit var testInstance: Any
