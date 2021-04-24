@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.nvm.CrashError
 import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -146,7 +147,10 @@ internal class MethodCallTracePoint(
         append(")")
         if (returnedValue != NO_VALUE)
             append(": ${adornedStringRepresentation(returnedValue)}")
-        else if (thrownException != null && thrownException != ForcibleExecutionFinishException)
+        else if (thrownException != null &&
+            thrownException != ForcibleExecutionFinishException &&
+            thrownException !is CrashError
+        )
             append(": threw ${thrownException!!.javaClass.simpleName}")
         append(" at ${stackTraceElement.shorten()}")
     }.toString()

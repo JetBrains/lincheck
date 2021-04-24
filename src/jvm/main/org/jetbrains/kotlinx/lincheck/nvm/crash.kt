@@ -42,7 +42,7 @@ class CrashErrorProxy(
     private val ste: StackTraceElement?,
     override var actorIndex: Int = -1
 ) : CrashError(false) {
-    override val crashStackTrace get() = arrayOf(ste ?: StackTraceElement("", "", "", -1))
+    override val crashStackTrace get() = if (ste === null) emptyArray() else arrayOf(ste)
 }
 
 private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)

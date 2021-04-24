@@ -269,10 +269,10 @@ internal class ModelCheckingStrategy(
     ) {
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
-        private lateinit var positions: List<Int>
+        private var positions: List<Int>? = null
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var executionPosition: Int = 0
-        private var exploreCrashNode: Boolean = true
+        private lateinit var explorationType: ExplorationNodeType
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
@@ -280,8 +280,12 @@ internal class ModelCheckingStrategy(
             nextThreadToSwitch = threadSwitchChoices.iterator()
             currentThread = nextThreadToSwitch.next() // choose initial executing thread
             lastNotInitializedNodeChoices = null
-            exploreCrashNode = lastNotInitializedNode is CrashChoosingNode
-            positions = if (exploreCrashNode) crashPositions else switchPositions
+            explorationType = ExplorationNodeType.fromNode(lastNotInitializedNode)
+            positions = when (explorationType) {
+                ExplorationNodeType.SWITCH -> switchPositions
+                ExplorationNodeType.CRASH -> crashPositions
+                ExplorationNodeType.NONE -> null
+            }
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.
                 lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
@@ -314,18 +318,23 @@ internal class ModelCheckingStrategy(
          * Unlike switch points, the execution position is just a gradually increasing counter
          * which helps to distinguish different switch points.
          */
-        private fun newExecutionPosition(iThread: Int, isSwitch: Boolean) {
+        private fun newExecutionPosition(iThread: Int, type: ExplorationNodeType) {
             executionPosition++
-            if (exploreCrashNode == isSwitch) return
-            if (executionPosition > positions.lastOrNull() ?: -1) {
+            if (type != explorationType) return
+            if (executionPosition > positions?.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                val child = if (exploreCrashNode) SwitchOrCrashChoosingNode() else ThreadChoosingNode(switchableThreads(iThread))
-                lastNotInitializedNodeChoices?.add(Choice(child, executionPosition))
+                lastNotInitializedNodeChoices?.add(Choice(createChildNode(iThread), executionPosition))
             }
         }
 
-        fun newExecutionSwitchPosition(iThread: Int) = newExecutionPosition(iThread, true)
-        fun newExecutionCrashPosition(iThread: Int) = newExecutionPosition(iThread, false)
+        private fun createChildNode(iThread: Int) = when (explorationType) {
+            ExplorationNodeType.SWITCH -> ThreadChoosingNode(switchableThreads(iThread))
+            ExplorationNodeType.CRASH -> SwitchOrCrashChoosingNode()
+            ExplorationNodeType.NONE -> error("Cannot create child for no exploration node")
+        }
+
+        fun newExecutionSwitchPosition(iThread: Int) = newExecutionPosition(iThread, ExplorationNodeType.SWITCH)
+        fun newExecutionCrashPosition(iThread: Int) = newExecutionPosition(iThread, ExplorationNodeType.CRASH)
     }
 
     private inner class InterleavingBuilder {
@@ -353,5 +362,17 @@ internal class ModelCheckingStrategy(
         }
 
         fun build() = Interleaving(switchPositions, crashPositions, threadSwitchChoices, lastNoninitializedNode)
+    }
+
+    private enum class ExplorationNodeType {
+        SWITCH, CRASH, NONE;
+
+        companion object {
+            fun fromNode(node: InterleavingTreeNode?) = when (node) {
+                is SwitchChoosingNode -> SWITCH
+                is CrashChoosingNode -> CRASH
+                else -> NONE
+            }
+        }
     }
 }

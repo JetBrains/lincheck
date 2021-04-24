@@ -106,8 +106,6 @@ abstract class ManagedStrategy(
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
-    private val yieldCallback = { switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true) }
-
     init {
         runner = createRunner()
         // The managed state should be initialized before еру test class transformation.
@@ -195,7 +193,7 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
-        Crash.yieldCallback = yieldCallback
+        Crash.yieldCallback = { switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true) }
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -208,7 +206,7 @@ abstract class ManagedStrategy(
     protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
         is CompletedInvocationResult -> {
             if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
+            else IncorrectResultsFailure(scenario, result.results.withoutCrashes, collectTrace(result))
         }
         else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
@@ -325,21 +323,15 @@ abstract class ManagedStrategy(
         // continue the operation
     }
 
-    private fun newCrashPoint(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: TracePoint?,
-        ste: StackTraceElement?
-    ) {
+    private fun newCrashPoint(iThread: Int, ste: StackTraceElement?) {
         if (!isTestThread(iThread)) return // can crash only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
         val isSystemCrash = Crash.isWaitingSystemCrash()
         val shouldCrash = shouldCrash(iThread) || isSystemCrash
         if (shouldCrash) {
-            crashCurrentThread(iThread, tracePoint, ste, isSystemCrash)
+            crashCurrentThread(iThread, ste, isSystemCrash)
         }
-        traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
     }
 
@@ -413,8 +405,8 @@ abstract class ManagedStrategy(
         awaitTurn(iThread)
     }
 
-    private fun crashCurrentThread(iThread: Int, tracePoint: TracePoint?, ste: StackTraceElement?, mustCrash: Boolean) {
-        traceCollector?.passCodeLocation(tracePoint)
+    private fun crashCurrentThread(iThread: Int, ste: StackTraceElement?, mustCrash: Boolean) {
+        traceCollector?.newCrash(iThread, ste!!)
         onNewCrash(iThread, mustCrash)
         Crash.crash(iThread + 1, ste)
     }
@@ -474,7 +466,7 @@ abstract class ManagedStrategy(
     internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, tracePoint: WriteTracePoint?) {
         newSwitchPoint(iThread, codeLocation, tracePoint)
         if (recoverModel.crashes) {
-            newCrashPoint(iThread, codeLocation, tracePoint, tracePoint?.stackTraceElement)
+            newCrashPoint(iThread, tracePoint?.stackTraceElement)
         }
     }
 
@@ -566,7 +558,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
     */
     internal fun beforeCrashPoint(iThread: Int, codeLocation: Int, tracePoint: CrashTracePoint?) {
-        newCrashPoint(iThread, codeLocation, tracePoint, tracePoint?.stackTraceElement)
+        newCrashPoint(iThread, tracePoint?.stackTraceElement)
     }
 
     /**
@@ -761,6 +753,10 @@ abstract class ManagedStrategy(
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
+        }
+
+        fun newCrash(iThread: Int, ste: StackTraceElement) {
+            _trace += CrashTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread].toList(), ste)
         }
 
         fun finishThread(iThread: Int) {
