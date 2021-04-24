@@ -1141,11 +1141,6 @@ internal class ManagedStrategyTransformer(
             adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
 
-        override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-            if (opcode == PUTFIELD || opcode == PUTSTATIC) invokeBeforeCrashPoint()
-            adapter.visitFieldInsn(opcode, owner, name, desc)
-        }
-
         override fun visitInsn(opcode: Int) {
             if (opcode in returnInstructions) invokeBeforeCrashPoint()
             adapter.visitInsn(opcode)
