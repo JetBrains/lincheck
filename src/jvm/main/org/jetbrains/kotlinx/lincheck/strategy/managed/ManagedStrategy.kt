@@ -240,7 +240,9 @@ abstract class ManagedStrategy(
         runner.initialize()
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResults = loggedResults !is CompletedInvocationResult ||
+            failingResult !is CompletedInvocationResult ||
+            loggedResults.results.withoutCrashes == failingResult.results.withoutCrashes
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
