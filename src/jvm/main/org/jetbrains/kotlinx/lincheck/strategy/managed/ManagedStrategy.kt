@@ -794,8 +794,8 @@ private class ManagedStrategyRunner(
     }
 
     override fun onFinish(iThread: Int) {
-        managedStrategy.onFinish(iThread)
         super.onFinish(iThread)
+        managedStrategy.onFinish(iThread)
     }
 
     override fun onFailure(iThread: Int, e: Throwable) {
