@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
+import kotlin.math.max
 import kotlin.random.*
 
 /**
@@ -269,7 +270,6 @@ internal class ModelCheckingStrategy(
     ) {
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
-        private var positions: List<Int>? = null
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var executionPosition: Int = 0
         private lateinit var explorationType: ExplorationNodeType
@@ -281,11 +281,6 @@ internal class ModelCheckingStrategy(
             currentThread = nextThreadToSwitch.next() // choose initial executing thread
             lastNotInitializedNodeChoices = null
             explorationType = ExplorationNodeType.fromNode(lastNotInitializedNode)
-            positions = when (explorationType) {
-                ExplorationNodeType.SWITCH -> switchPositions
-                ExplorationNodeType.CRASH -> crashPositions
-                ExplorationNodeType.NONE -> null
-            }
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.
                 lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
@@ -321,11 +316,16 @@ internal class ModelCheckingStrategy(
         private fun newExecutionPosition(iThread: Int, type: ExplorationNodeType) {
             executionPosition++
             if (type != explorationType) return
-            if (executionPosition > positions?.lastOrNull() ?: -1) {
+            if (executionPosition > lastChosenExecutionPosition()) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(createChildNode(iThread), executionPosition))
             }
         }
+
+        private fun lastChosenExecutionPosition() = max(
+            switchPositions.lastOrNull() ?: -1,
+            crashPositions.lastOrNull() ?: -1
+        )
 
         private fun createChildNode(iThread: Int) = when (explorationType) {
             ExplorationNodeType.SWITCH -> ThreadChoosingNode(switchableThreads(iThread))
