@@ -39,12 +39,12 @@ internal actual open class ParallelThreadsRunner actual constructor(
     stateRepresentationFunction: StateRepresentationFunction?,
     private val timeoutMs: Long,
     private val useClocks: UseClocks,
-    private val initThreadFunction: (() -> Unit)?,
-    private val finishThreadFunction: (() -> Unit)?) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
+    initThreadFunction: (() -> Unit)?,
+    finishThreadFunction: (() -> Unit)?) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
 
     private lateinit var testInstance: Any
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash, initThreadFunction, finishThreadFunction) // should be closed in `close()`
 
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
 

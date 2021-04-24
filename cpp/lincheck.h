@@ -2,7 +2,7 @@
 
 #include <random>
 #include <experimental/type_traits>
-#include "../build/bin/native/releaseShared/libnative_api.h"
+#include "../build/bin/native/debugShared/libnative_api.h"
 
 extern libnative_ExportedSymbols *libnative_symbols(void);
 
@@ -56,22 +56,17 @@ namespace Lincheck {
     }
 
     template<typename type>
-    class ParameterGenerator;
-
-    template<>
-    class ParameterGenerator<int> {
-        std::mt19937 rnd;
-    public:
-        int generate() {
-            return rnd();
+    struct hash {
+        std::size_t operator()(const type &val) const noexcept {
+            return std::hash<type>()(val) % 200 - 100;
         }
     };
 
-    template<>
-    class ParameterGenerator<unsigned long> {
+    template<typename type>
+    class ParameterGenerator {
         std::mt19937 rnd;
     public:
-        unsigned long generate() {
+        type generate() {
             return rnd();
         }
     };
@@ -102,7 +97,7 @@ namespace Lincheck {
 
             hashCode_pointer *hashCode = new hashCode_pointer();
             *hashCode = [](void *instance) -> int {
-                return std::hash<SequentialSpecification>()(*(SequentialSpecification *) instance);
+                return Lincheck::hash<SequentialSpecification>()(*(SequentialSpecification *) instance);
             };
 
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupInitialStateAndSequentialSpecification(
@@ -129,6 +124,18 @@ namespace Lincheck {
                     configuration, minimizeFailedScenario);
         }
 
+        template<void (*f)()>
+        void initThreadFunction() {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupInitThreadFunction(
+                    configuration, (void *) (void (*)()) []() {f();});
+        }
+
+        template<void (*f)()>
+        void finishThreadFunction() {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupFinishThreadFunction(
+                    configuration, (void *) (void (*)()) []() {f();});
+        }
+
         template<typename Ret, Ret (TestClass::*op)(), Ret (TestClass::*seq_spec)()>
         void operation(const char *operationName, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation1(
@@ -153,7 +160,7 @@ namespace Lincheck {
                         return *obj_a == *obj_b;
                     },
                     (void *) (int (*)(void *)) [](void *ret) -> int { // Ret hashCode
-                        return std::hash<Ret>()(*(Ret *) ret);
+                        return Lincheck::hash<Ret>()(*(Ret *) ret);
                     },
                     (void *) (void (*)(void *, char *, int)) [](void *ret, char *dest, int destSize) { // Ret toString
                         strncpy(dest, toString(*(Ret *) ret).c_str(), destSize);
@@ -202,7 +209,7 @@ namespace Lincheck {
                         return *obj_a == *obj_b;
                     },
                     (void *) (int (*)(void *)) [](void *ret) -> int { // Ret hashCode
-                        return std::hash<Ret>()(*(Ret *) ret);
+                        return Lincheck::hash<Ret>()(*(Ret *) ret);
                     },
                     (void *) (void (*)(void *, char *, int)) [](void *ret, char *dest, int destSize) { // Ret toString
                         strncpy(dest, toString(*(Ret *) ret).c_str(), destSize);
@@ -270,7 +277,7 @@ namespace Lincheck {
                         return *obj_a == *obj_b;
                     },
                     (void *) (int (*)(void *)) [](void *ret) -> int { // Ret hashCode
-                        return std::hash<Ret>()(*(Ret *) ret);
+                        return Lincheck::hash<Ret>()(*(Ret *) ret);
                     },
                     (void *) (void (*)(void *, char *, int)) [](void *ret, char *dest, int destSize) { // Ret toString
                         strncpy(dest, toString(*(Ret *) ret).c_str(), destSize);

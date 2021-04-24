@@ -5,6 +5,7 @@
 class ComplexArg {
 public:
     int value;
+
     ComplexArg() {
         value = 29;
     }
@@ -70,10 +71,9 @@ public:
 };
 
 template<>
-struct std::hash<Counter> {
-    std::size_t operator()(Counter const& s) const noexcept
-    {
-        return std::hash<int>()(s.sharedAtomicState);
+struct Lincheck::hash<Counter> {
+    std::size_t operator()(Counter const &s) const noexcept {
+        return Lincheck::hash<int>()(s.sharedAtomicState);
     }
 };
 
