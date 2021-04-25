@@ -45,11 +45,15 @@ class CrashErrorProxy(
     override val crashStackTrace get() = if (ste === null) emptyArray() else arrayOf(ste)
 }
 
-private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)
+private data class SystemContext(
+    val waitingThreads: Int,
+    val threads: Int,
+    val free: AtomicBoolean = AtomicBoolean(true)
+)
 
 object Crash {
     private val systemCrashOccurred = AtomicBoolean(false)
-    private val context = atomic(SystemContext(null, 0))
+    private val context = atomic(SystemContext(0, 0))
     private var awaitSystemCrashBeforeThrow = true
     internal val threads get() = context.value.threads
 
@@ -61,8 +65,6 @@ object Crash {
 
     @JvmStatic
     fun isCrashed() = systemCrashOccurred.get()
-
-    fun isWaitingSystemCrash() = context.value.barrier !== null
 
     @JvmStatic
     fun resetAllCrashed() {
@@ -103,22 +105,14 @@ object Crash {
     fun awaitSystemCrash() = barrierCallback()
 
     private fun defaultAwaitSystemCrash() {
-        var newBarrier: BusyWaitingBarrier? = null
+        var free: AtomicBoolean
         while (true) {
             val c = context.value
-            if (c.barrier !== null) break
-            if (newBarrier === null) newBarrier = BusyWaitingBarrier()
-            if (context.compareAndSet(c, c.copy(barrier = newBarrier))) break
+            val newWaiting = c.waitingThreads + 1
+            free = if (c.waitingThreads == 0) AtomicBoolean(false) else c.free
+            if (changeState(c, newWaiting == c.threads, c.threads, newWaiting, free)) break
         }
-        context.value.barrier!!.await { first ->
-            if (!first) return@await
-            onSystemCrash()
-            while (true) {
-                val currentContext = context.value
-                checkNotNull(currentContext.barrier)
-                if (context.compareAndSet(currentContext, currentContext.copy(barrier = null))) break
-            }
-        }
+        while (!free.get());
     }
 
     internal fun onSystemCrash() {
@@ -129,8 +123,10 @@ object Crash {
     /** Should be called when thread finished. */
     fun exit(threadId: Int) {
         while (true) {
-            val currentContext = context.value
-            if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads - 1))) break
+            val c = context.value
+            val newThreads = c.threads - 1
+            val isLast = c.waitingThreads == newThreads && c.waitingThreads > 0
+            if (changeState(c, isLast, newThreads, c.waitingThreads, c.free)) break
         }
     }
 
@@ -138,14 +134,14 @@ object Crash {
     fun register(threadId: Int) {
         while (true) {
             val currentContext = context.value
-            if (currentContext.barrier !== null) continue
+            if (currentContext.waitingThreads != 0) continue
             if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads + 1))) break
         }
     }
 
     fun reset(recoverModel: RecoverabilityModel) {
         awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
-        context.value = SystemContext(null, 0)
+        context.value = SystemContext(0, 0)
         resetAllCrashed()
     }
 
@@ -153,20 +149,23 @@ object Crash {
         barrierCallback = { defaultAwaitSystemCrash() }
     }
 
-}
+    private fun isWaitingSystemCrash() = context.value.waitingThreads > 0
 
-private class BusyWaitingBarrier {
-    private val free = atomic(false)
-    private val waitingCount = atomic(0)
-
-    inline fun await(action: (Boolean) -> Unit) {
-        waitingCount.incrementAndGet()
-        // wait for all to access the barrier
-        while (waitingCount.value < Crash.threads && !free.value);
-        val firstExit = free.compareAndSet(expect = false, update = true)
-        action(firstExit)
-        waitingCount.decrementAndGet()
-        // wait for action completed in all threads
-        while (waitingCount.value > 0 && free.value);
+    private fun changeState(
+        c: SystemContext,
+        isLast: Boolean,
+        newThreads: Int,
+        newWaiting: Int,
+        newFree: AtomicBoolean
+    ): Boolean {
+        var newW = newWaiting
+        if (isLast) {
+            onSystemCrash()
+            newW = 0 // reset barrier
+        }
+        return context.compareAndSet(c, SystemContext(newW, newThreads, newFree)).also { success ->
+            if (success && isLast)
+                check(newFree.compareAndSet(false, true)) // open barrier
+        }
     }
 }
