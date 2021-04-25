@@ -95,8 +95,6 @@ class ChannelHandler<E>(
 
     operator fun get(sender: Int, receiver: Int) = channels[receiver].value!![sender]
 
-    suspend fun close(i: Int) = channels[i].value!!.forEach { it.close() }
-
     fun reset(i: Int) {
         channels[i].value = createChannels()
     }

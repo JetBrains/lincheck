@@ -18,14 +18,13 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.distributed
+package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Runnable
-import org.jetbrains.kotlinx.lincheck.distributed.NodeDispatcher.Companion.NodeDispatcherStatus.*
-import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
-import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeDispatcher.Companion.NodeDispatcherStatus.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException

@@ -25,8 +25,6 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
-import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 import org.junit.Test
 
 sealed class KVMessage(val id: Int, val isRequest: Boolean)
@@ -93,9 +91,6 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
 
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[${env.nodeId}]: Put $key $value"
-        }
         env.log.add(OpId(++opId))
         val node = getNodeForKey(key)
         val request = PutRequest(key, value, opId)
@@ -111,9 +106,6 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
         while (true) {
             env.send(request, receiver)
             semaphore.await()
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[${env.nodeId}]: After semaphore acquire"
-            }
             response ?: continue
             delegate = null
             return response!!
@@ -123,17 +115,11 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
     override suspend fun recover() {
         val id = env.log.filterIsInstance(OpId::class.java).lastOrNull()?.id ?: -1
         opId = id + 1
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[${env.nodeId}]: Recover, should send messages"
-        }
         env.broadcast(Recover)
     }
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[${env.nodeId}]: Get $key"
-        }
         env.log.add(OpId(++opId))
         val node = getNodeForKey(key)
         if (node == env.nodeId) {
@@ -224,6 +210,8 @@ class KVShardingTest {
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)
                 .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .storeLogsForFailedScenario("kvsharding.txt")
+                .minimizeFailedScenario(false)
         )
     }
 

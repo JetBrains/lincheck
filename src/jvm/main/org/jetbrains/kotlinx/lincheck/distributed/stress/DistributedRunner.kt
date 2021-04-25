@@ -20,25 +20,17 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
-import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.channels.ClosedSendChannelException
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.HBClock
-import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.File
 import java.lang.reflect.Method
-import java.util.concurrent.CancellationException
 import kotlin.coroutines.suspendCoroutine
 import kotlin.random.Random
 
@@ -48,22 +40,6 @@ inline fun withProbability(probability: Double, func: () -> Unit) {
         func()
     }
 }
-
-enum class LogLevel { NO_OUTPUT, ITERATION_NUMBER, MESSAGES, ALL_EVENTS, KICKED }
-
-val logLevel = LogLevel.ALL_EVENTS
-var debugLogs = FastQueue<String>()
-
-fun logMessage(givenLogLevel: LogLevel, f: () -> String) {
-    if (logLevel >= givenLogLevel) {
-        val s = Thread.currentThread().name + " " + f()
-        debugLogs.put(s)
-        // println(s)
-        System.out.flush()
-    }
-}
-
-internal fun <T> AtomicArray<T?>.at(index: Int): T = this[index].value!!
 
 open class DistributedRunner<Message, Log>(
     strategy: DistributedStrategy<Message, Log>,
@@ -87,7 +63,6 @@ open class DistributedRunner<Message, Log>(
     private lateinit var environments: Array<EnvironmentImpl<Message, Log>>
     private val exception = atomic<Throwable?>(null)
     private val numberOfNodes = context.addressResolver.totalNumberOfNodes
-    private val isRunning = atomic(false)
 
     override fun initialize() {
         super.initialize()
@@ -97,14 +72,15 @@ open class DistributedRunner<Message, Log>(
         context.runner = this
     }
 
+    //TODO: Maybe a better way?
+    private val handler = CoroutineExceptionHandler { _, _ -> }
+
     private fun NodeDispatcher.createScope(): CoroutineScope {
         return CoroutineScope(this + AlreadyIncrementedCounter() + handler)
     }
 
     private fun reset() {
         exception.lazySet(null)
-        isRunning.lazySet(false)
-        debugLogs = FastQueue()
         context.reset()
         environments = Array(numberOfNodes) {
             EnvironmentImpl(context, it)
@@ -119,7 +95,6 @@ open class DistributedRunner<Message, Log>(
             val actors = scenario.parallelExecution[t].size
             ex.results = arrayOfNulls(actors)
             ex.actorId = 0
-            ex.clocks = arrayOfNulls(actors)
         }
     }
 
@@ -133,17 +108,14 @@ open class DistributedRunner<Message, Log>(
             }
             dispatcher.launchReceiveMessage(i)
         }
-        isRunning.lazySet(true)
         try {
             runBlocking {
                 withTimeout(testCfg.timeoutMs) {
                     context.taskCounter.signal.await()
                 }
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "Semaphore aqcuired"
-                }
             }
         } catch (e: TimeoutCancellationException) {
+            context.dispatchers.forEach { it.shutdown() }
             return DeadlockInvocationResult(collectThreadDump())
         }
         context.dispatchers.forEach { it.shutdown() }
@@ -172,18 +144,12 @@ open class DistributedRunner<Message, Log>(
 
         context.testNodeExecutions.zip(scenario.parallelExecution).forEach { it.first.setSuspended(it.second) }
         val parallelResultsWithClock = context.testNodeExecutions.mapIndexed { i, ex ->
-            //TODO add real vector clock
-            // ex.results
-            val fakeClock = Array(ex.results.size) {
-                IntArray(numberOfNodes)
-            }
-            ex.results.zip(fakeClock).map { ResultWithClock(it.first!!, HBClock(it.second)) }
+            ex.results.map { it!!.withEmptyClock(numberOfNodes) }
         }
         val results = ExecutionResult(
             emptyList(), null, parallelResultsWithClock, super.constructStateRepresentation(),
             emptyList(), null
         )
-        //println(constructStateRepresentation())
         return CompletedInvocationResult(results)
     }
 
@@ -195,47 +161,31 @@ open class DistributedRunner<Message, Log>(
         }
     }
 
-    //TODO: Maybe a better way?
-    private val handler = CoroutineExceptionHandler { _, _ -> }
-
-
     private suspend fun receiveMessages(i: Int, sender: Int) {
         coroutineScope {
             val channel = context.messageHandler[sender, i]
             val testInstance = context.testInstances[i]
-            try {
-                while (true) {
-                    try {
-                        val m = channel.receive()
-                        context.incClock(i)
-                        val clock = context.maxClock(i, m.clock)
-                        context.events.put(
-                            i to
-                                    MessageReceivedEvent(
-                                        m.message,
-                                        sender = sender,
-                                        id = m.id,
-                                        clock = clock,
-                                        state = context.getStateRepresentation(i)
-                                    )
-                        )
-                        launch {
-                            handleException(i) {
-                                testInstance.onMessage(m.message, sender)
-                            }
-                        }
-                        withProbability(0.3) {
-                            yield()
-                        }
-                    } catch (_: CancellationException) {
-                        logMessage(LogLevel.ALL_EVENTS) {
-                            "[$i]: Caught cancellation exception"
-                        }
+            while (true) {
+                val m = channel.receive()
+                context.incClock(i)
+                val clock = context.maxClock(i, m.clock)
+                context.events.put(
+                    i to
+                            MessageReceivedEvent(
+                                m.message,
+                                sender = sender,
+                                id = m.id,
+                                clock = clock,
+                                state = context.getStateRepresentation(i)
+                            )
+                )
+                launch {
+                    handleException(i) {
+                        testInstance.onMessage(m.message, sender)
                     }
                 }
-            } catch (_: ClosedReceiveChannelException) {
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "[$i]: Caught close exception"
+                withProbability(CONTEXT_SWITCH_PROBABILITY) {
+                    yield()
                 }
             }
         }
@@ -245,29 +195,22 @@ open class DistributedRunner<Message, Log>(
         coroutineScope {
             val channel = context.failureNotifications[i]
             val testInstance = context.testInstances[i]
-            try {
-                check(Thread.currentThread() is NodeDispatcher.NodeTestThread)
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "Receiving failed nodes for node $i..."
-                }
-                while (true) {
-                    val p = channel.receive()
-                    context.incClock(i)
-                    val clock = context.maxClock(i, p.second)
-                    context.events.put(
-                        i to CrashNotificationEvent(
-                            p.first,
-                            clock,
-                            context.testInstances[i].stateRepresentation()
-                        )
+            while (true) {
+                val p = channel.receive()
+                context.incClock(i)
+                val clock = context.maxClock(i, p.second)
+                context.events.put(
+                    i to CrashNotificationEvent(
+                        p.first,
+                        clock,
+                        context.testInstances[i].stateRepresentation()
                     )
-                    launch {
-                        handleException(i) {
-                            testInstance.onNodeUnavailable(p.first)
-                        }
+                )
+                launch {
+                    handleException(i) {
+                        testInstance.onNodeUnavailable(p.first)
                     }
                 }
-            } catch (_: ClosedReceiveChannelException) {
             }
         }
     }
@@ -288,39 +231,28 @@ open class DistributedRunner<Message, Log>(
             }
             val testNodeExecution = context.testNodeExecutions[iNode]
             val scenarioSize = scenario.parallelExecution[iNode].size
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$iNode]: Start scenario, actorid is ${testNodeExecution.actorId}"
-            }
             while (testNodeExecution.actorId < scenarioSize) {
                 val i = testNodeExecution.actorId
                 val actor = scenario.parallelExecution[iNode][i]
-                context.incClock(iNode)
                 context.events.put(
                     iNode to
                             OperationStartEvent(
                                 i,
-                                context.vectorClock[iNode].copyOf(),
+                                context.incClockAndCopy(iNode),
                                 context.getStateRepresentation(iNode)
                             )
                 )
                 try {
                     testNodeExecution.actorId++
-                    logMessage(LogLevel.ALL_EVENTS) {
-                        "[$iNode]: Operation $i started"
-                    }
                     val res = if (!actor.blocking) context.taskCounter.runSafely {
                         testNodeExecution.runOperation(i)
                     } else testNodeExecution.runOperation(i)
-                    testNodeExecution.clocks[i] = context.vectorClock[iNode].copyOf()
                     testNodeExecution.results[i] = if (actor.method.returnType == Void.TYPE) {
                         VoidResult
                     } else {
                         createLincheckResult(res)
                     }
                 } catch (e: Throwable) {
-                    if (e is CrashError) {
-                        throw e
-                    }
                     if (e.javaClass in actor.handledExceptions) {
                         context.testNodeExecutions[iNode].results[i] = createExceptionResult(e.javaClass)
                     } else {
@@ -328,7 +260,7 @@ open class DistributedRunner<Message, Log>(
                         testNodeExecution.actorId = scenarioSize
                     }
                 }
-                withProbability(0.3) {
+                withProbability(CONTEXT_SWITCH_PROBABILITY) {
                     yield()
                 }
             }
@@ -344,8 +276,7 @@ open class DistributedRunner<Message, Log>(
     }
 
     suspend fun onNodeFailure(iNode: Int) {
-        context.incClock(iNode)
-        val clock = context.vectorClock[iNode].copyOf()
+        val clock = context.incClockAndCopy(iNode)
         context.events.put(
             iNode to NodeCrashEvent(
                 clock,
@@ -353,16 +284,11 @@ open class DistributedRunner<Message, Log>(
             )
         )
         context.failureNotifications.filterIndexed { index, _ -> index != iNode }.forEach {
-            try {
-                it.send(iNode to clock)
-            } catch (_: ClosedSendChannelException) {
-            }
+            it.send(iNode to clock)
         }
-        context.messageHandler.close(iNode)
-        context.failureNotifications[iNode].close()
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
-        context.testNodeExecutions.getOrNull(iNode)?.crash(context.vectorClock[iNode].copyOf())
+        context.testNodeExecutions.getOrNull(iNode)?.crash()
         if (testCfg.supportRecovery == RecoveryMode.ALL_NODES_RECOVER ||
             testCfg.supportRecovery == RecoveryMode.MIXED
             && context.probabilities[iNode].nodeRecovered()
@@ -381,13 +307,13 @@ open class DistributedRunner<Message, Log>(
             context.dispatchers[iNode] = dispatcher
             context.failureInfo.setRecovered(iNode)
             dispatcher.createScope().launch {
-                handleException(iNode) {
-                    context.events.put(
-                        iNode to ProcessRecoveryEvent(
-                            context.vectorClock[iNode].copyOf(),
-                            context.testInstances[iNode].stateRepresentation()
-                        )
+                context.events.put(
+                    iNode to ProcessRecoveryEvent(
+                        context.incClockAndCopy(iNode),
+                        context.testInstances[iNode].stateRepresentation()
                     )
+                )
+                handleException(iNode) {
                     context.testInstances[iNode].recover()
                     runNode(iNode)
                 }

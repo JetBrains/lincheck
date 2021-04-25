@@ -86,8 +86,14 @@ interface Environment<Message, Log> {
     fun recordInternalEvent(message: String)
 }
 
+/**
+ * Event for a node.
+ */
 sealed class Event
 
+/**
+ *
+ */
 data class MessageSentEvent<Message>(
     val message: Message,
     val receiver: Int,
@@ -120,8 +126,8 @@ data class CrashNotificationEvent(
     val state: String
 ) : Event()
 
-data class SetTimerEvent(val timerName: Int, val clock: IntArray, val state: String) : Event()
+data class SetTimerEvent(val timerName: String, val clock: IntArray, val state: String) : Event()
 
-data class TimerTickEvent(val timerName: Int, val clock: IntArray, val state: String) : Event()
+data class TimerTickEvent(val timerName: String, val clock: IntArray, val state: String) : Event()
 
-data class CancelTimerEvent(val timerName: Int, val clock: IntArray, val state: String) : Event()
+data class CancelTimerEvent(val timerName: String, val clock: IntArray, val state: String) : Event()

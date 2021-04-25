@@ -27,14 +27,12 @@ abstract class TestNodeExecution {
     var testInstance: Any? = null
     lateinit var objArgs: Array<Any>
     lateinit var results: Array<Result?>
-    lateinit var clocks: Array<IntArray?>
 
     abstract suspend fun runOperation(i: Int): Any?
 
-    fun crash(clock: IntArray) {
+    fun crash() {
         if (actorId - 1 >= 0 && results[actorId - 1] == null) {
             results[actorId - 1] = CrashResult
-            clocks[actorId - 1] = clock
         }
     }
 

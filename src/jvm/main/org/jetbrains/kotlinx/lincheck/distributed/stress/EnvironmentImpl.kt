@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ClosedSendChannelException
 import org.jetbrains.kotlinx.lincheck.distributed.*
 
 
@@ -45,15 +44,6 @@ internal class EnvironmentImpl<Message, Log>(
 
     override suspend fun send(message: Message, receiver: Int) {
         if (isFinished) {
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: Cannot send, the environment is closed"
-            }
-            return
-        }
-        if (context.failureInfo[nodeId] || context.failureInfo[receiver]) {
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: Cannot send, we are failed we=${context.failureInfo[nodeId]}, receiver=${context.failureInfo[receiver]}"
-            }
             return
         }
         //probability.curMsgCount++
@@ -64,31 +54,17 @@ internal class EnvironmentImpl<Message, Log>(
             context.runner.onNodeFailure(nodeId)
             return
         }
-        context.incClock(nodeId)
-
         val event = MessageSentEvent(
             message = message,
             receiver = receiver,
             id = context.messageId.getAndIncrement(),
-            clock = context.vectorClock[nodeId].copyOf(),
+            clock = context.incClockAndCopy(nodeId),
             state = context.getStateRepresentation(nodeId)
         )
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$nodeId]: Before sending $event"
-        }
         context.events.put(nodeId to event)
-        try {
-            val rate = probability.duplicationRate()
-            repeat(rate) {
-                context.messageHandler[nodeId, event.receiver].send(event)
-                logMessage(LogLevel.MESSAGES) {
-                    "[$nodeId]: Send $event to $receiver ${context.messageHandler[nodeId, event.receiver].hashCode()}, by channel {channel.hashCode()}"
-                }
-            }
-        } catch (e: ClosedSendChannelException) {
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: Channel $receiver is closed"
-            }
+        val rate = probability.duplicationRate()
+        repeat(rate) {
+            context.messageHandler[nodeId, event.receiver].send(event)
         }
     }
 
@@ -106,17 +82,7 @@ internal class EnvironmentImpl<Message, Log>(
 
     override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) =
         context.taskCounter.runSafely {
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$nodeId]: With timeout ${context.taskCounter.get()}"
-            }
             val res = withTimeoutOrNull((ticks * TICK_TIME).toLong(), block)
-            logMessage(LogLevel.ALL_EVENTS) {
-                if (res == null) {
-                    "[$nodeId]: Timeout cancelled"
-                } else {
-                    "[$nodeId]: Timeout executed successfully"
-                }
-            }
             res != null
         }
 
@@ -132,9 +98,23 @@ internal class EnvironmentImpl<Message, Log>(
             throw IllegalArgumentException("Timer with name \"$name\" already exists")
         }
         timers.add(name)
+        context.events.put(
+            nodeId to SetTimerEvent(
+                name,
+                context.incClockAndCopy(nodeId),
+                context.testInstances[nodeId].stateRepresentation()
+            )
+        )
         GlobalScope.launch(context.dispatchers[nodeId] + CoroutineExceptionHandler { _, _ -> }) {
             while (true) {
                 if (!timers.contains(name) || isFinished) return@launch
+                context.events.put(
+                    nodeId to TimerTickEvent(
+                        name,
+                        context.incClockAndCopy(nodeId),
+                        context.testInstances[nodeId].stateRepresentation()
+                    )
+                )
                 f()
                 delay(ticks.toLong())
             }
@@ -146,14 +126,20 @@ internal class EnvironmentImpl<Message, Log>(
             throw IllegalArgumentException("Timer with name \"$name\" does not exist")
         }
         timers.remove(name)
+        context.events.put(
+            nodeId to CancelTimerEvent(
+                name,
+                context.incClockAndCopy(nodeId),
+                context.testInstances[nodeId].stateRepresentation()
+            )
+        )
     }
 
     override fun recordInternalEvent(message: String) {
-        context.incClock(nodeId)
         context.events.put(
             nodeId to InternalEvent(
                 message,
-                context.vectorClock[nodeId].copyOf(),
+                context.incClockAndCopy(nodeId),
                 context.getStateRepresentation(nodeId)
             )
         )

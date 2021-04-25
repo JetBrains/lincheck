@@ -24,8 +24,6 @@ import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.stress.LogLevel
-import org.jetbrains.kotlinx.lincheck.distributed.stress.logMessage
 
 sealed class LogEntry
 data class KVLogEntry(val key: String, val value: String) : LogEntry()
@@ -68,9 +66,6 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
 
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[${env.nodeId}]: Put $key $value"
-        }
         env.log.add(OpIdEntry(++opId))
         val node = getNodeForKey(key)
         if (node == env.nodeId) {
@@ -86,9 +81,6 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         while (true) {
             env.send(request, receiver)
             semaphore.acquire()
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[${env.nodeId}]: After semaphore acquire"
-            }
             response ?: continue
             delegate = null
             return response!!
@@ -98,17 +90,11 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
     override suspend fun recover() {
         val id = env.log.filterIsInstance(OpIdEntry::class.java).lastOrNull()?.id ?: -1
         opId = id + 1
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[${env.nodeId}]: Recover, should send messages"
-        }
         env.broadcast(Recover)
     }
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? {
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[${env.nodeId}]: Get $key"
-        }
         env.log.add(OpIdEntry(++opId))
         val node = getNodeForKey(key)
         if (node == env.nodeId) {

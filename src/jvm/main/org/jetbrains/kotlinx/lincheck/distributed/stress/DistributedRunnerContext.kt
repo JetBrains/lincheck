@@ -42,11 +42,11 @@ class DistributedRunnerContext<Message, Log>(
         scenario.threads, testCfg.nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail }
     )
 
-    lateinit var messageHandler : ChannelHandler<MessageSentEvent<Message>>
+    lateinit var messageHandler: ChannelHandler<MessageSentEvent<Message>>
 
-    lateinit var failureNotifications : Array<Channel<Pair<Int, IntArray>>>
+    lateinit var failureNotifications: Array<Channel<Pair<Int, IntArray>>>
 
-    lateinit var failureInfo : NodeFailureInfo
+    lateinit var failureInfo: NodeFailureInfo
 
     lateinit var events: FastQueue<Pair<Int, Event>>
 
@@ -58,11 +58,16 @@ class DistributedRunnerContext<Message, Log>(
 
     lateinit var runner: DistributedRunner<Message, Log>
 
-    val vectorClock = Array(addressResolver.totalNumberOfNodes) {
+    private val vectorClock = Array(addressResolver.totalNumberOfNodes) {
         IntArray(addressResolver.totalNumberOfNodes)
     }
 
     fun incClock(i: Int) = vectorClock[i][i]++
+
+    fun incClockAndCopy(i: Int): IntArray {
+        vectorClock[i][i]++
+        return vectorClock[i].copyOf()
+    }
 
     fun maxClock(iNode: Int, clock: IntArray): IntArray {
         for (i in vectorClock[iNode].indices) {
@@ -74,17 +79,18 @@ class DistributedRunnerContext<Message, Log>(
     @Volatile
     var invocation: Int = 0
 
-    lateinit var taskCounter : DispatcherTaskCounter
+    lateinit var taskCounter: DispatcherTaskCounter
 
     lateinit var dispatchers: Array<NodeDispatcher>
 
-    lateinit var logs : Array<List<Log>>
+    lateinit var logs: Array<List<Log>>
 
     val probabilities = Array(addressResolver.totalNumberOfNodes) {
         Probability(testCfg, addressResolver.totalNumberOfNodes)
     }
 
-    val initialNumberOfTasks = 2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
+    val initialNumberOfTasks =
+        2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
 
     val initialTasksForNode = addressResolver.totalNumberOfNodes + 2
 
