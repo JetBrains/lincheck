@@ -26,9 +26,11 @@ import java.util.*
 
 object Probability {
     private const val RANDOM_FLUSH_PROBABILITY = 0.2f
-    private val random_ = ThreadLocal.withInitial { Random(42) }
-    private val random get() = randomGetter()
-    private var randomGetter = { random_.get() }
+    private const val SEED = 42L
+
+    @Volatile
+    private lateinit var random_: Random
+    private val random get() = random_
 
     private var defaultCrashes = 0
     private var minimizeCrashes = false
@@ -85,6 +87,7 @@ object Probability {
         totalActors = 0L
         totalPossibleCrashes.value = 0
         singleCrashProbability = 0.0f
+        random_ = Random(SEED)
     }
 
     private fun updateSingleCrashProbability(actors: Int) {
@@ -102,7 +105,7 @@ object Probability {
     }
 
     private fun bernoulli(probability: Float) = random.nextFloat() < probability
-    fun setRandom(random: Random) {
-        randomGetter = { random }
+    fun resetRandom() {
+        random_.setSeed(SEED)
     }
 }

@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.Crash
 import org.jetbrains.kotlinx.lincheck.nvm.CrashEnabledVisitor
+import org.jetbrains.kotlinx.lincheck.nvm.Probability
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -193,6 +194,7 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
+        Probability.resetRandom()
         Crash.yieldCallback = { switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true) }
     }
 
