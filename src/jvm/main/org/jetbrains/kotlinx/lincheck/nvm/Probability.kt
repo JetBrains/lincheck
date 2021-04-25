@@ -29,7 +29,7 @@ object Probability {
     private const val SEED = 42L
 
     @Volatile
-    private lateinit var random_: Random
+    private var random_ = Random(SEED)
     private val random get() = random_
 
     private var defaultCrashes = 0
@@ -87,7 +87,6 @@ object Probability {
         totalActors = 0L
         totalPossibleCrashes.value = 0
         singleCrashProbability = 0.0f
-        random_ = Random(SEED)
     }
 
     private fun updateSingleCrashProbability(actors: Int) {
