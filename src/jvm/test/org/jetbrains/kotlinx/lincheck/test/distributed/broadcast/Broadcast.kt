@@ -41,7 +41,7 @@ fun <Message, Log> Environment<Message, Log>.sentMessages(processId: Int = nodeI
     events()[processId].filterIsInstance<MessageSentEvent<Message>>()
 
 fun <Message, Log> Environment<Message, Log>.receivedMessages(processId: Int = nodeId) =
-    events()[processId].filterIsInstance<MessageReceivedEvent<Message>>().filter { it.receiver == processId }
+    events()[processId].filterIsInstance<MessageReceivedEvent<Message>>()
 
 fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
 fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().contains(nodeId)
@@ -128,7 +128,6 @@ class BroadcastTest {
                 .invocationsPerIteration(3_000)
                 .iterations(10)
                 .verifier(EpsilonVerifier::class.java)
-                .messageOrder(MessageOrder.SYNCHRONOUS)
                 .minimizeFailedScenario(false)
         )
     }

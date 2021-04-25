@@ -46,7 +46,7 @@ class DispatcherTaskCounter(
     /**
      * Signals to the waiting thread if there are no tasks left.
      */
-    fun checkIsFinished() {
+    private fun checkIsFinished() {
         if (counter.value == 0) {
             signal.signal()
         }
@@ -63,9 +63,10 @@ class DispatcherTaskCounter(
     fun increment() = counter.incrementAndGet()
 
     /**
-     * Decrements the number of tasks.
+     * Decrements the number of pending tasks.
+     * If no tasks left, signals to the waiting thread.
      */
-    fun decrement() = counter.decrementAndGet()
+    fun decrement() = counter.decrementAndGet().also { checkIsFinished() }
 
     /**
      * Adds [delta] to the current number of tasks.
@@ -153,33 +154,16 @@ class NodeDispatcher(val id: Int, private val taskCounter: DispatcherTaskCounter
      * decremented when the execution of task is finished.
      */
     override fun dispatch(context: CoroutineContext, block: Runnable) {
-        val shouldInc = context[AlreadyIncrementedCounter.Key]?.isUsed != false
-        if (status.value == CRASHED) {
-            // If the node has crashed the counter should be decreased for the initial tasks.
-            if (!shouldInc) {
-                taskCounter.decrement()
-                context[AlreadyIncrementedCounter.Key]!!.isUsed = true
-                taskCounter.checkIsFinished()
-            }
-            return
-        }
-        if (status.value == STOPPED) {
-            return
-        }
-        if (shouldInc) {
+        if (status.value == STOPPED) return
+        if (context[AlreadyIncrementedCounter.Key]?.isUsed != false) {
             taskCounter.increment()
         } else {
             context[AlreadyIncrementedCounter.Key]?.isUsed = true
         }
         try {
             executor.submit {
-                if (status.value == RUNNING) {
-                    block.run()
-                }
-                if (status.value != STOPPED) {
-                    taskCounter.decrement()
-                    taskCounter.checkIsFinished()
-                }
+                if (status.value == RUNNING) block.run()
+                if (status.value != STOPPED) taskCounter.decrement()
             }
         } catch (_: RejectedExecutionException) {
             return

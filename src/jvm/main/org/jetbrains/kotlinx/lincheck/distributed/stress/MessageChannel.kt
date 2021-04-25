@@ -33,8 +33,6 @@ interface MessageChannel<E> {
     suspend fun receive(): E
 
     suspend fun close(): Boolean
-
-    fun clear()
 }
 
 class FifoChannel<E> : MessageChannel<E> {
@@ -42,27 +40,14 @@ class FifoChannel<E> : MessageChannel<E> {
 
     override suspend fun send(item: E) {
         channel.send(item)
-        logMessage(LogLevel.ALL_EVENTS) {
-            "Push message $item to channel ${channel.hashCode()}"
-        }
     }
 
     override suspend fun receive() : E {
         val res = channel.receive()
-        logMessage(LogLevel.ALL_EVENTS) {
-            "Poll message $res from channel ${channel.hashCode()}"
-        }
         return res
     }
 
     override suspend fun close() = channel.close()
-
-    override fun clear() {
-        do {
-            val r = channel.poll()
-            if (r != null) println("AAAAAA $r")
-        } while (r != null)
-    }
 }
 
 class AsynchronousChannel<E> : MessageChannel<E> {
@@ -88,13 +73,6 @@ class AsynchronousChannel<E> : MessageChannel<E> {
     }
 
     override suspend fun close(): Boolean = channel.close()
-
-    override fun clear() {
-        do {
-            val r = channel.poll()
-            if (r != null) println("AAAAAA $r")
-        } while (r != null)
-    }
 }
 
 
@@ -103,10 +81,6 @@ class ChannelHandler<E>(
     private val numberOfNodes: Int
 ) {
     private fun createChannels(): Array<MessageChannel<E>> = when (messageOrder) {
-        MessageOrder.SYNCHRONOUS -> {
-            val channel = FifoChannel<E>()
-            Array(numberOfNodes) { channel }
-        }
         MessageOrder.FIFO -> Array(numberOfNodes) { FifoChannel() }
         MessageOrder.ASYNCHRONOUS -> Array(numberOfNodes) { AsynchronousChannel() }
     }
@@ -125,11 +99,5 @@ class ChannelHandler<E>(
 
     fun reset(i: Int) {
         channels[i].value = createChannels()
-    }
-
-    fun clear() {
-        repeat(numberOfNodes) {
-            channels[it].value!!.forEach { it.clear() }
-        }
     }
 }

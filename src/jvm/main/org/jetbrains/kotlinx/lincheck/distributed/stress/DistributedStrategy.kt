@@ -50,7 +50,7 @@ class DistributedStrategy<Message, Log>(
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: Runner
+    private val runner: DistributedRunner<Message, Log>
 
     init {
         // Create runner
@@ -77,7 +77,8 @@ class DistributedStrategy<Message, Log>(
                         }
                     }
                     else -> {
-                        return ir.toLincheckFailure(scenario)
+                        val failure = ir.toLincheckFailure(scenario)
+                        runner.storeEventsToFile(failure)
                     }
                 }
             }

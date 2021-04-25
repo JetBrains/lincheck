@@ -44,8 +44,8 @@ class DistributedCTestConfiguration<Message, Log>(
     val supportRecovery: RecoveryMode,
     val messageDuplication: Boolean,
     val networkPartitions: Boolean,
-    val asyncRun: Boolean,
     val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
+    val logFilename: String?,
     requireStateEquivalenceCheck: Boolean,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>?, timeoutMs: Long
@@ -92,8 +92,7 @@ class DistributedCTestConfiguration<Message, Log>(
                     supportRecovery,
                     messageDuplication,
                     networkPartitions,
-                    asyncRun,
-                    newNodeTypes, requireStateEquivalenceImplCheck,
+                    newNodeTypes, logFilename, requireStateEquivalenceImplCheck,
                     minimizeFailedScenario,
                     sequentialSpecification, timeoutMs
                 )

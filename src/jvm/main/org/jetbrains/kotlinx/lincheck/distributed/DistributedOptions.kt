@@ -5,7 +5,6 @@ import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import java.util.*
 
 enum class MessageOrder {
-    SYNCHRONOUS,
     FIFO,
     ASYNCHRONOUS
 }
@@ -28,15 +27,14 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     }
 
     private var isNetworkReliable: Boolean = true
-    private var messageOrder: MessageOrder = MessageOrder.SYNCHRONOUS
+    private var messageOrder: MessageOrder = MessageOrder.FIFO
     private var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
     private var supportRecovery: RecoveryMode = RecoveryMode.NO_RECOVERIES
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
     private var networkPartitions: Boolean = false
     private var testClasses = HashMap<Class<out Node<Message>>, NodeTypeInfo>()
-    private var useVectorClock = false
-    private var asyncRun = false
+    private var logFileName: String? = null
 
     init {
         timeoutMs = DEFAULT_TIMEOUT_MS
@@ -56,10 +54,12 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun nodeType(cls: Class<out Node<Message>>,
-                   minNumberOfInstances: Int,
-                   maxNumberOfInstances: Int,
-                   canFail: Boolean = true): DistributedOptions<Message, Log> {
+    fun nodeType(
+        cls: Class<out Node<Message>>,
+        minNumberOfInstances: Int,
+        maxNumberOfInstances: Int,
+        canFail: Boolean = true
+    ): DistributedOptions<Message, Log> {
         this.testClasses[cls] = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances, canFail)
         return this
     }
@@ -94,8 +94,8 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun useVectorClock(useClock: Boolean): DistributedOptions<Message, Log> {
-        this.useVectorClock = useClock
+    fun storeLogsForFailedScenario(fileName: String): DistributedOptions<Message, Log> {
+        logFileName = fileName
         return this
     }
 
@@ -105,7 +105,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, isNetworkReliable,
             messageOrder, maxNumberOfFailedNodes, supportRecovery,
-            messageDuplication, networkPartitions, asyncRun, testClasses,
+            messageDuplication, networkPartitions, testClasses, logFileName,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs
         )

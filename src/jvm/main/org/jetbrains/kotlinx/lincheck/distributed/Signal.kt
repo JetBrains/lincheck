@@ -44,9 +44,4 @@ class Signal {
             semaphore.release()
         }
     }
-
-    /**
-     * Resets the semaphore to the initial state.
-     */
-    fun reset() = semaphore.tryAcquire()
 }

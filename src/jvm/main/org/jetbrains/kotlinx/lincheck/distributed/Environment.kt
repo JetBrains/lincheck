@@ -30,7 +30,7 @@ interface Environment<Message, Log> {
      * Sends the specified [message] to all processes (from 0 to
      * [numberOfNodes]).
      */
-    suspend fun broadcast(message: Message, skipItself : Boolean = true) {
+    suspend fun broadcast(message: Message, skipItself: Boolean = true) {
         for (i in 0 until numberOfNodes) {
             if (i == nodeId && skipItself) {
                 continue
@@ -51,58 +51,77 @@ interface Environment<Message, Log> {
      */
     fun events(): Array<List<Event>>
 
+    /**
+     * Returns the logs for all nodes. Should be called only in validation functions after the execution.
+     */
     fun getLogs(): Array<List<Log>>
 
-    suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) : Boolean
+    /**
+     * Runs the specified [block] of code with a specified timeout and finishes if timeout was exceeded.
+     * The execution will not be finish until the block is executed ot timeout is exceeded.
+     */
+    suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit): Boolean
 
+    /**
+     * Can be used as a safe [kotlinx.coroutines.delay]. The execution will not be finished until the program is resumed.
+     */
     suspend fun sleep(ticks: Int)
 
+    /**
+     * Sets a timer with the specified [name].
+     * Timer executes function [f] periodically each [ticks] time,
+     * until the execution is over.
+     */
     fun setTimer(name: String, ticks: Int, f: suspend () -> Unit)
 
+    /**
+     * Cancels timer with the name [name].
+     */
     fun cancelTimer(name: String)
 
-    fun recordInternalEvent(msg : String)
+    /**
+     * Records an internal event [InternalEvent]. Can be used for debugging purposes.
+     * [message] is stored in [InternalEvent.message].
+     */
+    fun recordInternalEvent(message: String)
 }
 
 sealed class Event
+
 data class MessageSentEvent<Message>(
     val message: Message,
-    val sender: Int,
     val receiver: Int,
     val id: Int,
     val clock: IntArray,
-    val state: String? = null
-) : Event() {
-    override fun toString() = "[$sender]: Send message $message to $receiver, id=$id, clock=${clock.toList()}, state={$state}"
-}
+    val state: String
+) : Event()
 
 data class MessageReceivedEvent<Message>(
     val message: Message,
     val sender: Int,
-    val receiver: Int,
     val id: Int,
     val clock: IntArray,
-    val state: String? = null
-) : Event() {
-    override fun toString() = "[$receiver]: Received message $message from $sender, id=$id, clock=${clock.toList()}, state={$state}"
-}
+    val state: String
+) : Event()
 
-data class RecordEvent(val iNode: Int, val record: String, val clock: IntArray, val state: String? = null) : Event() {
-    override fun toString() = "[$iNode]: $record, clock=${clock.toList()}, state={$state}"
-}
+data class InternalEvent(val message: String, val clock: IntArray, val state: String) :
+    Event()
 
-data class NodeCrashEvent(val iNode: Int, val clock: IntArray, val state: String? = null) : Event() {
-    override fun toString() = "[$iNode]: Node crashed, clock=${clock.toList()}, state={$state}"
-}
+data class NodeCrashEvent(val clock: IntArray, val state: String) : Event()
 
-data class ProcessRecoveryEvent(val iNode: Int, val clock: IntArray, val state: String? = null) : Event() {
-    override fun toString() = "[$iNode]: Node recovered, clock=${clock.toList()}, state={$state}"
-}
+data class ProcessRecoveryEvent(val clock: IntArray, val state: String) : Event()
 
-data class OperationStartEvent(val iNode: Int, val opId: Int, val clock: IntArray, val state: String? = null) : Event() {
-    override fun toString() = "[$iNode]: Operation $opId started, clock=${clock.toList()}, state={$state}"
-}
+data class OperationStartEvent(val opId: Int, val clock: IntArray, val state: String) :
+    Event()
 
-data class CrashNotificationEvent(val iNode: Int, val crashedNode: Int, val clock: IntArray, val state: String? = null) : Event() {
-    override fun toString() = "[$iNode]: Receive crash notification from $crashedNode, clock=${clock.toList()}, state={$state}"
-}
+data class CrashNotificationEvent(
+    val crashedNode: Int,
+    val clock: IntArray,
+    val state: String
+) : Event()
+
+data class SetTimerEvent(val timerName: Int, val clock: IntArray, val state: String) : Event()
+
+data class TimerTickEvent(val timerName: Int, val clock: IntArray, val state: String) : Event()
+
+data class CancelTimerEvent(val timerName: Int, val clock: IntArray, val state: String) : Event()

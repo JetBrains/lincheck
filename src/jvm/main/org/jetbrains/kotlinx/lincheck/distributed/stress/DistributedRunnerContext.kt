@@ -20,19 +20,15 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
-import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.getMethod
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
 import java.lang.Integer.max
 import java.lang.reflect.Method
-import kotlin.random.Random
 
 
 class DistributedRunnerContext<Message, Log>(
@@ -48,7 +44,7 @@ class DistributedRunnerContext<Message, Log>(
 
     lateinit var messageHandler : ChannelHandler<MessageSentEvent<Message>>
 
-    lateinit var failureNotifications : Array<Channel<Int>>
+    lateinit var failureNotifications : Array<Channel<Pair<Int, IntArray>>>
 
     lateinit var failureInfo : NodeFailureInfo
 
@@ -59,6 +55,8 @@ class DistributedRunnerContext<Message, Log>(
     lateinit var testNodeExecutions: Array<TestNodeExecution>
 
     lateinit var testInstances: Array<Node<Message>>
+
+    lateinit var runner: DistributedRunner<Message, Log>
 
     val vectorClock = Array(addressResolver.totalNumberOfNodes) {
         IntArray(addressResolver.totalNumberOfNodes)
@@ -86,22 +84,14 @@ class DistributedRunnerContext<Message, Log>(
         Probability(testCfg, addressResolver.totalNumberOfNodes)
     }
 
-    fun initialNumberOfTasks() = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
-        3 * addressResolver.totalNumberOfNodes
-    } else {
-        2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
-    }
+    val initialNumberOfTasks = 2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
 
-    fun initTasksForNode() = if (testCfg.messageOrder == MessageOrder.SYNCHRONOUS) {
-        3
-    } else {
-        addressResolver.totalNumberOfNodes + 2
-    }
+    val initialTasksForNode = addressResolver.totalNumberOfNodes + 2
 
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 
     fun reset() {
-        taskCounter = DispatcherTaskCounter(initialNumberOfTasks())
+        taskCounter = DispatcherTaskCounter(initialNumberOfTasks)
         dispatchers = Array(addressResolver.totalNumberOfNodes) {
             NodeDispatcher(it, taskCounter, runnerHash)
         }

@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
-import kotlinx.atomicfu.AtomicArray
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import org.jetbrains.kotlinx.lincheck.distributed.*
@@ -62,13 +61,13 @@ internal class EnvironmentImpl<Message, Log>(
             probability.nodeFailed() &&
             context.failureInfo.trySetFailed(nodeId)
         ) {
-            throw CrashError()
+            context.runner.onNodeFailure(nodeId)
+            return
         }
         context.incClock(nodeId)
 
         val event = MessageSentEvent(
             message = message,
-            sender = nodeId,
             receiver = receiver,
             id = context.messageId.getAndIncrement(),
             clock = context.vectorClock[nodeId].copyOf(),
@@ -149,12 +148,11 @@ internal class EnvironmentImpl<Message, Log>(
         timers.remove(name)
     }
 
-    override fun recordInternalEvent(msg: String) {
+    override fun recordInternalEvent(message: String) {
         context.incClock(nodeId)
         context.events.put(
-            nodeId to RecordEvent(
-                nodeId,
-                msg,
+            nodeId to InternalEvent(
+                message,
                 context.vectorClock[nodeId].copyOf(),
                 context.getStateRepresentation(nodeId)
             )

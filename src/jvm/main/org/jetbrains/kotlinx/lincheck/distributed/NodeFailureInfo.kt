@@ -40,12 +40,8 @@ class NodeFailureInfo(
      * Otherwise returns false.
      */
     fun trySetFailed(iNode: Int): Boolean {
-        if (failedNodes[iNode].value) {
-            return true
-        }
-        if (semaphore?.tryAcquire() != true) {
-            return false
-        }
+        if (failedNodes[iNode].value) return true
+        if (semaphore?.tryAcquire() != true) return false
         failedNodes[iNode].lazySet(true)
         return true
     }
