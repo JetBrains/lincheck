@@ -40,7 +40,6 @@ import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFaili
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.reflect.Method
 
@@ -230,7 +229,6 @@ internal class DurableMSQueueFailingTest2 : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue2<Int>()
 }
 
-@Ignore("Can't find an error. To be fixed")
 internal class DurableMSQueueFailingTest3 : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue3<Int>()
 }
