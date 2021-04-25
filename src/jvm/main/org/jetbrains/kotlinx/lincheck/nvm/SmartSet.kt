@@ -63,7 +63,7 @@ class SmartSet<E> {
                 if (size < SIZE) {
                     list[size] = element
                 } else {
-                    val newSet = hashSetOf(element)
+                    val newSet = linkedSetOf(element)
                     newSet.addAll(list.map { it as E })
                     data = newSet
                 }
