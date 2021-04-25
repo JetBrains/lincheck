@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
-import java.lang.IllegalStateException
 import java.util.*
 
 data class Message(val body: String, val id: Int, val from: Int)
@@ -60,7 +59,7 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
         // If the message was delivered to one process, it was delivered to all correct processes.
         val logs = env.getLogs()
         env.log.forEach { m ->
-            env.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it"} }
+            env.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it" } }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
@@ -116,19 +115,20 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
 
 
 class BroadcastTest {
+    private fun createOptions() = DistributedOptions<Message, Message>()
+        .requireStateEquivalenceImplCheck(false)
+        .threads(3)
+        .invocationsPerIteration(3_000)
+        .iterations(10)
+        .verifier(EpsilonVerifier::class.java)
+
     @Test
     fun test() {
         LinChecker.check(
             Peer::class.java,
-            DistributedOptions<Message, Message>()
-                .requireStateEquivalenceImplCheck(false)
-                .threads(3)
+            createOptions()
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .supportRecovery(RecoveryMode.NO_RECOVERIES)
-                .invocationsPerIteration(3_000)
-                .iterations(10)
-                .verifier(EpsilonVerifier::class.java)
-                .minimizeFailedScenario(false)
         )
     }
 
@@ -136,13 +136,7 @@ class BroadcastTest {
     fun testNoFailures() {
         LinChecker.check(
             PeerIncorrect::class.java,
-            DistributedOptions<Message, Message>()
-                .requireStateEquivalenceImplCheck(false)
-                .threads(3)
-                .invocationsPerIteration(3_000)
-                .iterations(10)
-                .verifier(EpsilonVerifier::class.java)
-                .minimizeFailedScenario(false)
+            createOptions()
         )
     }
 
@@ -150,14 +144,12 @@ class BroadcastTest {
     fun testIncorrect() {
         LinChecker.check(
             PeerIncorrect::class.java,
-            DistributedOptions<Message, Message>()
-                .requireStateEquivalenceImplCheck(false)
-                .threads(3)
+            createOptions()
+                .storeLogsForFailedScenario("broadcast_incorrect.txt")
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .supportRecovery(RecoveryMode.NO_RECOVERIES)
-                .invocationsPerIteration(300)
-                .iterations(100)
-                .verifier(EpsilonVerifier::class.java)
+                .actorsPerThread(2)
+                .minimizeFailedScenario(false)
         )
     }
 }

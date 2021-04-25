@@ -144,15 +144,11 @@ open class DistributedRunner<Message, Log>(
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            println("-----------------------------------")
-            debugLogs.toList().forEach { println(it) }
-            //println(constructStateRepresentation())
             return DeadlockInvocationResult(collectThreadDump())
         }
         context.dispatchers.forEach { it.shutdown() }
         environments.forEach { it.isFinished = true }
         if (exception.value != null) {
-            println(constructStateRepresentation())
             return UnexpectedExceptionInvocationResult(exception.value!!)
         }
         repeat(numberOfNodes) {
@@ -170,9 +166,6 @@ open class DistributedRunner<Message, Log>(
                     scenario.parallelExecution,
                     emptyList()
                 )
-                debugLogs.toList().forEach { println(it) }
-                println("-----------------------------")
-                println(constructStateRepresentation())
                 return ValidationFailureInvocationResult(s, functionName, exception)
             }
         }

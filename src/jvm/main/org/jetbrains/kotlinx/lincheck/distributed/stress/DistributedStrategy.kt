@@ -73,12 +73,14 @@ class DistributedStrategy<Message, Log>(
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results)) {
                             val stateRepresentation = runner.constructStateRepresentation()
-                            return IncorrectResultsFailure(scenario, ir.results.newResult(stateRepresentation))
+                            return IncorrectResultsFailure(
+                                scenario,
+                                ir.results.newResult(stateRepresentation)
+                            ).also { runner.storeEventsToFile(it) }
                         }
                     }
                     else -> {
-                        val failure = ir.toLincheckFailure(scenario)
-                        runner.storeEventsToFile(failure)
+                        return ir.toLincheckFailure(scenario).also { runner.storeEventsToFile(it) }
                     }
                 }
             }
