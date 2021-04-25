@@ -378,9 +378,4 @@ class RaftTest {
         .invocationTimeout(5_000)
         .invocationsPerIteration(1)
         .iterations(1)
-
-    @Test
-    fun testNoFailures() {
-        LinChecker.check(RaftServer::class.java, createOptions())
-    }
 }

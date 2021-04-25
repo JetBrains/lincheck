@@ -317,9 +317,6 @@ open class DistributedRunner<Message, Log>(
                     } else {
                         createLincheckResult(res)
                     }
-                    logMessage(LogLevel.ALL_EVENTS) {
-                        "[$iNode]: Wrote result $i ${context.testNodeExecutions[iNode].hashCode()} ${context.testNodeExecutions[iNode].results[i]}"
-                    }
                 } catch (e: Throwable) {
                     if (e is CrashError) {
                         throw e
@@ -336,9 +333,6 @@ open class DistributedRunner<Message, Log>(
                 }
             }
             context.testInstances[iNode].onScenarioFinish()
-            logMessage(LogLevel.ALL_EVENTS) {
-                "[$iNode]: Operations over"
-            }
         }
     }
 
@@ -364,13 +358,8 @@ open class DistributedRunner<Message, Log>(
             } catch (_: ClosedSendChannelException) {
             }
         }
-        logMessage(LogLevel.ALL_EVENTS) {
-            "[$iNode]: Failure notifications sent"
-        }
-        //println("[$iNode]: failure on ${context.probabilities[iNode].curMsgCount}")
         context.messageHandler.close(iNode)
         context.failureNotifications[iNode].close()
-
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
         context.testNodeExecutions.getOrNull(iNode)?.crash(context.vectorClock[iNode].copyOf())
@@ -392,9 +381,6 @@ open class DistributedRunner<Message, Log>(
             context.dispatchers[iNode] = dispatcher
             context.failureInfo.setRecovered(iNode)
             dispatcher.createScope().launch {
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "[$iNode]: Launch recover"
-                }
                 handleException(iNode) {
                     context.events.put(
                         iNode to ProcessRecoveryEvent(
@@ -408,9 +394,6 @@ open class DistributedRunner<Message, Log>(
             }
             dispatcher.launchReceiveMessage(iNode)
             dispatcher.createScope().launch {
-                logMessage(LogLevel.ALL_EVENTS) {
-                    "[$iNode]: Launch receiving failures after recover"
-                }
                 receiveUnavailableNodes(iNode)
             }
         } else {

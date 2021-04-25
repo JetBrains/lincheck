@@ -147,7 +147,7 @@ class LamportMutexTest {
         )
     }
 
-    @Test//(expected = LincheckAssertionError::class)
+    //@Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(
             LamportMutex::class.java,

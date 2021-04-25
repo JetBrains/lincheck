@@ -50,11 +50,11 @@ class DistributedStrategy<Message, Log>(
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: DistributedRunner<Message, Log>
+    private val runner: DistributedRunner<Message, Log> =
+        DistributedRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
 
     init {
         // Create runner
-        runner = DistributedRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
         try {
             runner.initialize()
         } catch (t: Throwable) {
