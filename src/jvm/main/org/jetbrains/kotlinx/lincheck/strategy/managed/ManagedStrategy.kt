@@ -332,14 +332,14 @@ abstract class ManagedStrategy(
         if (!isTestThread(iThread)) return // can crash only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
-        check(systemCrashInitiator == -1)
-        val shouldCrash = shouldCrash(iThread)
+        val isSystemCrash = systemCrashInitiator != -1
+        val shouldCrash = shouldCrash(iThread) || isSystemCrash
         if (shouldCrash) {
-            val initializeSystemCrash = Probability.shouldSystemCrash()
+            val initializeSystemCrash = !isSystemCrash && Probability.shouldSystemCrash()
             if (initializeSystemCrash) {
                 systemCrashInitiator = iThread
             }
-            crashCurrentThread(iThread, false, initializeSystemCrash)
+            crashCurrentThread(iThread, isSystemCrash, initializeSystemCrash)
         }
         // continue the operation
     }
@@ -412,21 +412,12 @@ abstract class ManagedStrategy(
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
      */
-    private tailrec fun awaitTurn(iThread: Int) {
+    private fun awaitTurn(iThread: Int) {
         // Wait actively until the thread is allowed to continue
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
             Thread.yield()
-        }
-        if (systemCrashInitiator != -1 && systemCrashInitiator != iThread) {
-            // only already started threads could be crashed as try-catch wrap is obligatory
-            if (currentActorId[iThread] >= 0) {
-                crashCurrentThread(iThread, mustCrash = true, initializeSystemCrash = false)
-            } else {
-                currentThread = systemCrashInitiator
-                awaitTurn(iThread)
-            }
         }
     }
 
