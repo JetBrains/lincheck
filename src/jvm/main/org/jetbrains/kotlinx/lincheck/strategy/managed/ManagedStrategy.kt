@@ -495,9 +495,6 @@ abstract class ManagedStrategy(
      */
     internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, tracePoint: WriteTracePoint?) {
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        if (recoverModel.crashes) {
-            newCrashPoint(iThread)
-        }
     }
 
     /**
