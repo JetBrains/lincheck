@@ -52,11 +52,12 @@ object Crash {
     private val context = atomic(SystemContext(null, 0))
     private var awaitSystemCrashBeforeThrow = true
     internal val threads get() = context.value.threads
+
     @Volatile
     var useProxyCrash = true
 
     @Volatile
-    internal var yieldCallback = {}
+    internal lateinit var barrierCallback: () -> Unit
 
     @JvmStatic
     fun isCrashed() = systemCrashOccurred.get()
@@ -72,9 +73,9 @@ object Crash {
      * Crash simulation.
      * @throws CrashError
      */
-    internal fun crash(threadId: Int, ste: StackTraceElement?) {
-        val await = awaitSystemCrashBeforeThrow && (isWaitingSystemCrash() || Probability.shouldSystemCrash())
-        if (await) awaitSystemCrash() else NVMCache.crash(threadId)
+    internal fun crash(threadId: Int, ste: StackTraceElement?, systemCrash: Boolean) {
+        if (!systemCrash) NVMCache.crash(threadId)
+        if (awaitSystemCrashBeforeThrow && systemCrash) awaitSystemCrash()
         val crash = createCrash(ste)
         NVMState.registerCrash(threadId, crash)
         throw crash
@@ -89,8 +90,9 @@ object Crash {
     @JvmStatic
     fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
         if (isWaitingSystemCrash() || Probability.shouldCrash()) {
-            val ste = StackTraceElement(className, fileName, methodName, lineNumber)
-            crash(NVMState.threadId(), ste)
+            val ste = StackTraceElement(className, methodName, fileName, lineNumber)
+            val systemCrash = isWaitingSystemCrash() || Probability.shouldSystemCrash()
+            crash(NVMState.threadId(), ste, systemCrash)
         }
     }
 
@@ -98,24 +100,30 @@ object Crash {
      * Await for all active threads to access this point and crash the cache.
      */
     @JvmStatic
-    fun awaitSystemCrash() {
+    fun awaitSystemCrash() = barrierCallback()
+
+    private fun defaultAwaitSystemCrash() {
         var newBarrier: BusyWaitingBarrier? = null
         while (true) {
             val c = context.value
             if (c.barrier !== null) break
-            if (newBarrier === null) newBarrier = BusyWaitingBarrier(yieldCallback)
+            if (newBarrier === null) newBarrier = BusyWaitingBarrier()
             if (context.compareAndSet(c, c.copy(barrier = newBarrier))) break
         }
         context.value.barrier!!.await { first ->
             if (!first) return@await
-            systemCrashOccurred.compareAndSet(false, true)
-            NVMCache.systemCrash()
+            onSystemCrash()
             while (true) {
                 val currentContext = context.value
                 checkNotNull(currentContext.barrier)
                 if (context.compareAndSet(currentContext, currentContext.copy(barrier = null))) break
             }
         }
+    }
+
+    internal fun onSystemCrash() {
+        systemCrashOccurred.compareAndSet(false, true)
+        NVMCache.systemCrash()
     }
 
     /** Should be called when thread finished. */
@@ -140,24 +148,25 @@ object Crash {
         context.value = SystemContext(null, 0)
         resetAllCrashed()
     }
+
+    fun resetDefault() {
+        barrierCallback = { defaultAwaitSystemCrash() }
+    }
+
 }
 
-private class BusyWaitingBarrier(private val yieldCallback: () -> Unit) {
+private class BusyWaitingBarrier {
     private val free = atomic(false)
     private val waitingCount = atomic(0)
 
     inline fun await(action: (Boolean) -> Unit) {
         waitingCount.incrementAndGet()
         // wait for all to access the barrier
-        while (waitingCount.value < Crash.threads && !free.value) {
-            yieldCallback()
-        }
+        while (waitingCount.value < Crash.threads && !free.value);
         val firstExit = free.compareAndSet(expect = false, update = true)
         action(firstExit)
         waitingCount.decrementAndGet()
         // wait for action completed in all threads
-        while (waitingCount.value > 0 && free.value) {
-            yieldCallback()
-        }
+        while (waitingCount.value > 0 && free.value);
     }
 }

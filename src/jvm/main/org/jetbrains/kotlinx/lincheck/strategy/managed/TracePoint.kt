@@ -249,9 +249,15 @@ internal class CoroutineCancellationTracePoint(
 internal class CrashTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    ste: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, ste) {
-    override fun toStringImpl(): String = "CRASH"
+    private val reason: CrashReason
+) : TracePoint(iThread, actorId, callStackTrace) {
+    override fun toStringImpl(): String = reason.toString()
+}
+
+internal enum class CrashReason(private val reason: String) {
+    CRASH("crash"),
+    SYSTEM_CRASH("system crash");
+    override fun toString() = reason
 }
 
 /**
@@ -287,8 +293,7 @@ internal enum class SwitchReason(private val reason: String) {
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),
     SUSPENDED("coroutine is suspended"),
-    STRATEGY_SWITCH(""),
-    SYSTEM_CRASH("system crash");
+    STRATEGY_SWITCH("");
 
     override fun toString() = reason
 }

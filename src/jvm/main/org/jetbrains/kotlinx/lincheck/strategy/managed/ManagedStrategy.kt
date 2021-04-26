@@ -69,6 +69,8 @@ abstract class ManagedStrategy(
     // Which thread is allowed to perform operations?
     @Volatile
     protected var currentThread: Int = 0
+    @Volatile
+    private var systemCrashInitiator: Int = -1
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
     // Which threads are suspended?
@@ -195,7 +197,7 @@ abstract class ManagedStrategy(
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
         Probability.resetRandom()
-        Crash.yieldCallback = { switchCurrentThread(currentThread, SwitchReason.SYSTEM_CRASH, true) }
+        Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -325,16 +327,36 @@ abstract class ManagedStrategy(
         // continue the operation
     }
 
-    private fun newCrashPoint(iThread: Int, ste: StackTraceElement?) {
+    private fun newCrashPoint(iThread: Int) {
         if (!isTestThread(iThread)) return // can crash only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
-        val isSystemCrash = Crash.isWaitingSystemCrash()
+        val isSystemCrash = systemCrashInitiator != -1
         val shouldCrash = shouldCrash(iThread) || isSystemCrash
         if (shouldCrash) {
-            crashCurrentThread(iThread, ste, isSystemCrash)
+            val initializeSystemCrash = !isSystemCrash && Probability.shouldSystemCrash()
+            if (initializeSystemCrash) {
+                systemCrashInitiator = iThread
+            }
+            crashCurrentThread(iThread, isSystemCrash, initializeSystemCrash)
         }
         // continue the operation
+    }
+
+    private fun forceSwitchToAwaitSystemCrash() {
+        check(systemCrashInitiator != -1)
+        val iThread = currentThread
+        if (iThread != systemCrashInitiator) {
+            currentThread = systemCrashInitiator
+            awaitTurn(iThread)
+        } else {
+            for (t in switchableThreads(iThread)) {
+                currentThread = t
+                awaitTurn(iThread)
+            }
+            Crash.onSystemCrash()
+            systemCrashInitiator = -1
+        }
     }
 
     /**
@@ -407,10 +429,12 @@ abstract class ManagedStrategy(
         awaitTurn(iThread)
     }
 
-    private fun crashCurrentThread(iThread: Int, ste: StackTraceElement?, mustCrash: Boolean) {
-        traceCollector?.newCrash(iThread, ste!!)
+    private fun crashCurrentThread(iThread: Int, mustCrash: Boolean, initializeSystemCrash: Boolean) {
+        val systemCrash = mustCrash || initializeSystemCrash
+        val reason = if (systemCrash) CrashReason.SYSTEM_CRASH else CrashReason.CRASH
+        traceCollector?.newCrash(iThread, reason)
         onNewCrash(iThread, mustCrash)
-        Crash.crash(iThread + 1, ste)
+        Crash.crash(iThread + 1, null, systemCrash)
     }
 
     private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
@@ -468,7 +492,7 @@ abstract class ManagedStrategy(
     internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, tracePoint: WriteTracePoint?) {
         newSwitchPoint(iThread, codeLocation, tracePoint)
         if (recoverModel.crashes) {
-            newCrashPoint(iThread, tracePoint?.stackTraceElement)
+            newCrashPoint(iThread)
         }
     }
 
@@ -555,12 +579,8 @@ abstract class ManagedStrategy(
         return false
     }
 
-    /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param codeLocation the byte-code location identifier of this operation.
-    */
-    internal fun beforeCrashPoint(iThread: Int, codeLocation: Int, tracePoint: CrashTracePoint?) {
-        newCrashPoint(iThread, tracePoint?.stackTraceElement)
+    internal fun beforeCrashPoint(iThread: Int) {
+        newCrashPoint(iThread)
     }
 
     /**
@@ -757,8 +777,8 @@ abstract class ManagedStrategy(
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
         }
 
-        fun newCrash(iThread: Int, ste: StackTraceElement) {
-            _trace += CrashTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread].toList(), ste)
+        fun newCrash(iThread: Int, reason: CrashReason) {
+            _trace += CrashTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread].toList(), reason)
         }
 
         fun finishThread(iThread: Int) {

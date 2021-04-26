@@ -1148,10 +1148,8 @@ internal class ManagedStrategyTransformer(
 
         private fun invokeBeforeCrashPoint() {
             if (!shouldTransform || !superConstructorCalled) return
-            val tracePointLocal = newTracePointLocal()
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(tracePointLocal, CRASH_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> CrashTracePoint(iThread, actorId, callStackTrace, ste) }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CRASH_METHOD)
         }
     }
@@ -1351,7 +1349,6 @@ private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitTracePoint::class.java)
 private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
 private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
-private val CRASH_TRACE_POINT_TYPE = Type.getType(CrashTracePoint::class.java)
 private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
