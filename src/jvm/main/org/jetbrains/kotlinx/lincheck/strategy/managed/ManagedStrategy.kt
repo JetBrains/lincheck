@@ -198,6 +198,7 @@ abstract class ManagedStrategy(
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
         Probability.resetRandom()
         Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
+        systemCrashInitiator = -1
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -331,14 +332,14 @@ abstract class ManagedStrategy(
         if (!isTestThread(iThread)) return // can crash only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
-        val isSystemCrash = systemCrashInitiator != -1
-        val shouldCrash = shouldCrash(iThread) || isSystemCrash
+        check(systemCrashInitiator == -1)
+        val shouldCrash = shouldCrash(iThread)
         if (shouldCrash) {
-            val initializeSystemCrash = !isSystemCrash && Probability.shouldSystemCrash()
+            val initializeSystemCrash = Probability.shouldSystemCrash()
             if (initializeSystemCrash) {
                 systemCrashInitiator = iThread
             }
-            crashCurrentThread(iThread, isSystemCrash, initializeSystemCrash)
+            crashCurrentThread(iThread, false, initializeSystemCrash)
         }
         // continue the operation
     }
@@ -411,12 +412,21 @@ abstract class ManagedStrategy(
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
      */
-    private fun awaitTurn(iThread: Int) {
+    private tailrec fun awaitTurn(iThread: Int) {
         // Wait actively until the thread is allowed to continue
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
             Thread.yield()
+        }
+        if (systemCrashInitiator != -1 && systemCrashInitiator != iThread) {
+            // only already started threads could be crashed as try-catch wrap is obligatory
+            if (currentActorId[iThread] >= 0) {
+                crashCurrentThread(iThread, mustCrash = true, initializeSystemCrash = false)
+            } else {
+                currentThread = systemCrashInitiator
+                awaitTurn(iThread)
+            }
         }
     }
 
