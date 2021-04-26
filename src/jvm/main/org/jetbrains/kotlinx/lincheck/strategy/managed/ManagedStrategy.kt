@@ -308,6 +308,7 @@ abstract class ManagedStrategy(
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (!isTestThread(iThread)) return // can switch only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
+        if (waitingSystemCrash()) return
         check(iThread == currentThread)
         var isLoop = false
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
@@ -332,7 +333,7 @@ abstract class ManagedStrategy(
         if (!isTestThread(iThread)) return // can crash only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
-        val isSystemCrash = systemCrashInitiator != -1
+        val isSystemCrash = waitingSystemCrash()
         val shouldCrash = shouldCrash(iThread) || isSystemCrash
         if (shouldCrash) {
             val initializeSystemCrash = !isSystemCrash && Probability.shouldSystemCrash()
@@ -345,7 +346,7 @@ abstract class ManagedStrategy(
     }
 
     private fun forceSwitchToAwaitSystemCrash() {
-        check(systemCrashInitiator != -1)
+        check(waitingSystemCrash())
         val iThread = currentThread
         if (iThread != systemCrashInitiator) {
             currentThread = systemCrashInitiator
@@ -359,6 +360,8 @@ abstract class ManagedStrategy(
             systemCrashInitiator = -1
         }
     }
+
+    private fun waitingSystemCrash() = systemCrashInitiator != -1
 
     /**
      * This method is executed as the first thread action.
