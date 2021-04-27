@@ -40,10 +40,11 @@ abstract class AbstractNVMLincheckTest(
     private val threads: Int,
     private val sequentialSpecification: KClass<*>,
     private val minimizeFailedScenario: Boolean = true,
-    private vararg val expectedFailures: KClass<out LincheckFailure>,
-    private val invocations: Int = 10_000
+    private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
     open fun <O : Options<O, *>> O.customize() {}
+    open fun ModelCheckingOptions.customize() {}
+    open fun StressOptions.customize() {}
     open val expectedExceptions = emptyList<KClass<out Throwable>>()
 
     private fun <O : Options<O, *>> O.runInternalTest() {
@@ -80,14 +81,14 @@ abstract class AbstractNVMLincheckTest(
     @Test
     fun testWithStressStrategy(): Unit = StressOptions().run {
         commonConfiguration()
-        invocationsPerIteration(invocations)
+        customize()
         runInternalTest()
     }
 
     @Test
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
         commonConfiguration()
-        invocationsPerIteration(invocations)
+        customize()
         runInternalTest()
     }
 
@@ -105,13 +106,11 @@ abstract class AbstractNVMLincheckFailingTest(
     threads: Int,
     sequentialSpecification: KClass<*>,
     minimizeFailedScenario: Boolean = false,
-    vararg expectedFailures: KClass<out LincheckFailure>,
-    invocations: Int = 10_000
+    vararg expectedFailures: KClass<out LincheckFailure>
 ) : AbstractNVMLincheckTest(
     model,
     threads,
     sequentialSpecification,
     minimizeFailedScenario,
-    *(expectedFailures.toList().plus(IncorrectResultsFailure::class).toTypedArray()),
-    invocations = invocations
+    *(expectedFailures.toList().plus(IncorrectResultsFailure::class).toTypedArray())
 )
