@@ -193,6 +193,7 @@ internal abstract class MCASFailingTest :
 
     @DurableRecoverAll
     fun recover() = cas.recover()
+    override val expectedExceptions = listOf(StackOverflowError::class)
 }
 
 internal class MCASFailingTest1 : MCASFailingTest() {
