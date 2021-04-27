@@ -584,6 +584,13 @@ abstract class ManagedStrategy(
         newCrashPoint(iThread)
     }
 
+    internal fun beforeNVMOperation(iThread: Int, codeLocation: Int) {
+        if (!isTestThread(iThread)) return
+        newCrashPoint(iThread)
+        // re-use last call trace point
+        newSwitchPoint(iThread, codeLocation, callStackTrace[iThread].lastOrNull()?.call)
+    }
+
     /**
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.

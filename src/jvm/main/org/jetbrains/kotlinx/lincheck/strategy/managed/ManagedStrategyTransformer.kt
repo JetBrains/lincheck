@@ -1137,7 +1137,7 @@ internal class ManagedStrategyTransformer(
             if (!superConstructorCalled && opcode == INVOKESPECIAL) {
                 superConstructorCalled = true
             }
-            if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) invokeBeforeCrashPoint()
+            if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) invokeBeforeNVMOperation()
             adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
 
@@ -1151,6 +1151,14 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CRASH_METHOD)
+        }
+
+        private fun invokeBeforeNVMOperation() {
+            if (!shouldTransform || !superConstructorCalled) return
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_NVM_OPERATION_METHOD)
         }
     }
 
@@ -1360,6 +1368,7 @@ private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.ja
 private val AFTER_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::afterNotify.javaMethod)
 private val BEFORE_PARK_METHOD = Method.getMethod(ManagedStrategy::beforePark.javaMethod)
 private val BEFORE_CRASH_METHOD = Method.getMethod(ManagedStrategy::beforeCrashPoint.javaMethod)
+private val BEFORE_NVM_OPERATION_METHOD = Method.getMethod(ManagedStrategy::beforeNVMOperation.javaMethod)
 private val AFTER_UNPARK_METHOD = Method.getMethod(ManagedStrategy::afterUnpark.javaMethod)
 private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
 private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
