@@ -22,7 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
+import org.jetbrains.kotlinx.lincheck.nvm.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -69,6 +69,8 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     override fun runImpl(): LincheckFailure? {
+        Probability.seed = Random.nextLong()
+        println(Probability.seed)
         while (usedInvocations < maxInvocations) {
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
@@ -131,6 +133,7 @@ internal class ModelCheckingStrategy(
                 // Increase the maximum number of switches that can be used,
                 // because there are no more not covered interleavings
                 // with the previous maximum number of switches.
+                println("Completed level $maxNumberOfEvents, $usedInvocations performed")
                 maxNumberOfEvents++
                 resetExploration()
             }

@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.checkTraceHasNoLincheckEvents
@@ -44,6 +45,9 @@ abstract class AbstractNVMLincheckTest(
     private val invocations: Int = 10_000
 ) {
     open fun <O : Options<O, *>> O.customize() {}
+    open fun ModelCheckingOptions.customize() {}
+    open fun StressOptions.customize() {}
+
     open val expectedExceptions = emptyList<KClass<out Throwable>>()
 
     private fun <O : Options<O, *>> O.runInternalTest() {
@@ -81,6 +85,7 @@ abstract class AbstractNVMLincheckTest(
     fun testWithStressStrategy(): Unit = StressOptions().run {
         commonConfiguration()
         invocationsPerIteration(invocations)
+        customize()
         runInternalTest()
     }
 
@@ -88,6 +93,8 @@ abstract class AbstractNVMLincheckTest(
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
         commonConfiguration()
         invocationsPerIteration(invocations)
+        addGuarantee(forClasses { it.contains("NonVolatile") }.allMethods().treatAsAtomic())
+        customize()
         runInternalTest()
     }
 

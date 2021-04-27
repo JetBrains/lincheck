@@ -19,22 +19,17 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.CrashResult
-import org.jetbrains.kotlinx.lincheck.ValueResult
-import org.jetbrains.kotlinx.lincheck.VoidResult
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverPerThread
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.HBClock
-import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
@@ -227,6 +222,33 @@ internal class DurableMSQueueFailingTest1 : DurableMSQueueFailingTest() {
 
 internal class DurableMSQueueFailingTest2 : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue2<Int>()
+
+    override fun <O : Options<O, *>> O.customize() {
+        executionGenerator(MyGen::class.java)
+        iterations(100)
+    }
+
+    override fun ModelCheckingOptions.customize() {
+        invocationsPerIteration(100000)
+    }
+}
+
+class MyGen(testCfg: CTestConfiguration, testStructure: CTestStructure) : ExecutionGenerator(testCfg, testStructure) {
+    override fun nextExecution() = ExecutionScenario(
+        emptyList(),
+        listOf(
+            listOf(
+                actor(PUSH, 1)
+            ),
+            listOf(
+                actor(PUSH, 2)
+            )
+        ),
+        listOf(
+            actor(PUSH, 3),
+            actor(POP, 3 /*thread number*/)
+        )
+    )
 }
 
 internal class DurableMSQueueFailingTest3 : DurableMSQueueFailingTest() {
