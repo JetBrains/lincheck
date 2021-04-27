@@ -31,6 +31,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.checkTraceHasNoLincheckEvents
 import org.junit.Test
+import java.lang.IllegalStateException
+import java.lang.reflect.InvocationTargetException
 import kotlin.reflect.KClass
 
 abstract class AbstractNVMLincheckTest(
@@ -64,7 +66,14 @@ abstract class AbstractNVMLincheckTest(
             }
         } catch (e: Throwable) {
             assert(e !is CrashError) { "Crash error must not be thrown" }
-            if (e::class !in expectedExceptions) throw e
+            var exception = e
+            if (e is IllegalStateException) {
+                val c = e.cause
+                if (c !== null && c is InvocationTargetException) {
+                    exception = c.targetException
+                }
+            }
+            if (exception::class !in expectedExceptions) throw exception
         }
     }
 
