@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(lincheck_test)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 # add lincheck shared library
 add_library(lincheck_library SHARED IMPORTED GLOBAL)
@@ -31,8 +31,22 @@ if(NOT libcds_POPULATED)
     add_subdirectory(${libcds_SOURCE_DIR} ${libcds_BINARY_DIR})
 endif()
 
-add_subdirectory("junction/junction" junction)
-add_subdirectory("libcuckoo/libcuckoo" libcuckoo)
+# add folly
+FetchContent_Declare(
+        folly
+        GIT_REPOSITORY https://github.com/facebook/folly
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+)
+
+FetchContent_GetProperties(folly)
+if(NOT folly_POPULATED)
+    FetchContent_Populate(folly)
+    add_subdirectory(${folly_SOURCE_DIR} ${folly_BINARY_DIR})
+endif()
+
+#add_subdirectory("junction/junction" junction)
+#add_subdirectory("libcuckoo/libcuckoo" libcuckoo)
 
 enable_testing()
 
@@ -40,8 +54,9 @@ add_executable(
         tests
         counter_test.cpp
         libcds_msqueue_dhp_test.cpp
-        junction_test.cpp
-        libcuckoo_test.cpp
+        #junction_test.cpp
+        #libcuckoo_test.cpp
+        folly_hashmap_test.cpp
 )
 target_link_libraries(
         tests
@@ -59,13 +74,17 @@ target_link_libraries(
         tests
         cds
 )
+#target_link_libraries(
+#        tests
+#        junction
+#)
+#target_link_libraries(
+#        tests
+#        libcuckoo
+#)
 target_link_libraries(
         tests
-        junction
-)
-target_link_libraries(
-        tests
-        libcuckoo
+        folly
 )
 
 include_directories(${JUNCTION_ALL_INCLUDE_DIRS})
