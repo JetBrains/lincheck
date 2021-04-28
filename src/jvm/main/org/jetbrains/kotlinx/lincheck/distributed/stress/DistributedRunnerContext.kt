@@ -86,7 +86,7 @@ class DistributedRunnerContext<Message, Log>(
     lateinit var logs: Array<List<Log>>
 
     val probabilities = Array(addressResolver.totalNumberOfNodes) {
-        Probability(testCfg, addressResolver.totalNumberOfNodes)
+        Probability(testCfg, addressResolver.totalNumberOfNodes, it)
     }
 
     val initialNumberOfTasks =
@@ -114,8 +114,6 @@ class DistributedRunnerContext<Message, Log>(
         events = FastQueue()
         vectorClock.forEach { it.fill(0) }
         messageHandler = ChannelHandler(testCfg.messageOrder, addressResolver.totalNumberOfNodes)
-        if (Probability.failedNodesExpectation == 0) {
-            Probability.failedNodesExpectation = testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
-        }
+        probabilities.forEach { it.reset(testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)) }
     }
 }

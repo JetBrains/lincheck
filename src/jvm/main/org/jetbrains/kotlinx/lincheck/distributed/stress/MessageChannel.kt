@@ -52,7 +52,7 @@ class FifoChannel<E> : MessageChannel<E> {
 
 class AsynchronousChannel<E> : MessageChannel<E> {
     companion object {
-        const val MIX_RATE = 3
+        const val MIX_RATE = 2
     }
 
     private val random: ThreadLocalRandom = ThreadLocalRandom.current()

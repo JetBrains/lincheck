@@ -126,10 +126,6 @@ open class DistributedRunner<Message, Log>(
         repeat(numberOfNodes) {
             context.logs[it] = environments[it].log
         }
-        //context.probabilities.forEachIndexed{ i, p -> println("[$i]: ${p.curMsgCount}")}
-        /*if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
-            context.probabilities.forEach { it.setInitial() }
-        }*/
 
         context.testInstances.forEach {
             executeValidationFunctions(it, validationFunctions) { functionName, exception ->
@@ -156,6 +152,8 @@ open class DistributedRunner<Message, Log>(
     private suspend fun handleException(iNode: Int, f: suspend () -> Unit) {
         try {
             f()
+        } catch(_: CrashError) {
+            onNodeFailure(iNode)
         } catch (e: Throwable) {
             onFailure(iNode, e)
         }
@@ -253,6 +251,9 @@ open class DistributedRunner<Message, Log>(
                         createLincheckResult(res)
                     }
                 } catch (e: Throwable) {
+                    if (e is CrashError) {
+                        throw e
+                    }
                     if (e.javaClass in actor.handledExceptions) {
                         context.testNodeExecutions[iNode].results[i] = createExceptionResult(e.javaClass)
                     } else {
@@ -276,6 +277,9 @@ open class DistributedRunner<Message, Log>(
     }
 
     suspend fun onNodeFailure(iNode: Int) {
+        addToFile {
+            it.appendLine("[$iNode]: Node crashed")
+        }
         val clock = context.incClockAndCopy(iNode)
         context.events.put(
             iNode to NodeCrashEvent(
@@ -325,7 +329,7 @@ open class DistributedRunner<Message, Log>(
         } else {
             context.testNodeExecutions.getOrNull(iNode)?.crashRemained()
         }
-        suspendCoroutine<Unit> { }
+       // suspendCoroutine<Unit> { }
     }
 
     override fun constructStateRepresentation(): String {

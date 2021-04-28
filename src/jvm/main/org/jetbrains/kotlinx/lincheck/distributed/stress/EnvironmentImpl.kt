@@ -46,13 +46,12 @@ internal class EnvironmentImpl<Message, Log>(
         if (isFinished) {
             return
         }
-        //probability.curMsgCount++
+        probability.curMsgCount++
         if (context.addressResolver.canFail(nodeId) &&
             probability.nodeFailed() &&
             context.failureInfo.trySetFailed(nodeId)
         ) {
-            context.runner.onNodeFailure(nodeId)
-            return
+           throw CrashError()
         }
         val event = MessageSentEvent(
             message = message,

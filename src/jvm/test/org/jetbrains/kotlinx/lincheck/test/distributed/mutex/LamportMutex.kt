@@ -66,12 +66,8 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
                 req[sender] = message.reqTime
                 env.send(Ok(++clock), sender)
             }
-            is Ok -> {
-                ok[sender] = time
-            }
-            is Rel -> {
-                req[sender] = inf
-            }
+            is Ok -> ok[sender] = time
+            is Rel -> req[sender] = inf
         }
         checkInCS()
     }
@@ -96,7 +92,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     @Operation(blocking = true, cancellableOnSuspension = false)
     suspend fun lock() {
         if (req[env.nodeId] != inf) {
-            suspendCoroutine<Unit> {  }
+            suspendCoroutine<Unit> { }
         }
         val myReqTime = ++clock
         req[env.nodeId] = myReqTime
@@ -134,8 +130,8 @@ class LamportMutexTest {
     private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(MutexSpecification::class.java)
-        .threads(3)
-        .actorsPerThread(2)
+        .threads(2)
+        .actorsPerThread(1)
         .invocationsPerIteration(5000)
         .iterations(100)
 
@@ -147,11 +143,12 @@ class LamportMutexTest {
         )
     }
 
-    //@Test(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
+                .storeLogsForFailedScenario("lamport_mutex_nofifo.txt")
         )
     }
 }

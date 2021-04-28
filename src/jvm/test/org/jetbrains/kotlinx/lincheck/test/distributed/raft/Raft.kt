@@ -43,17 +43,20 @@ class Refuse(val leader: Int)
 data class LogEntryNumber(val term: Int, val index: Int)
 
 enum class Status { APPLY, REJECT, MISSING_ENTRIES }
-sealed class Message(val term: Int)
-class RequestVote(term: Int, val count: Int, val candidate: Int) : Message(term)
-class Heartbeat(term: Int, val lastCommittedEntry: LogEntryNumber?) : Message(term)
-class VoteResponse(term: Int, val res: Boolean) : Message(term)
-class PutRequest(term: Int, val key: Int, val value: Int, val hash: String) : Message(term)
-class PutResponse(term: Int, val hash: String) : Message(term)
-class GetRequest(term: Int, val key: Int, val hash: String) : Message(term)
-class GetResponse(term: Int, val hash: String, val value: Int?) : Message(term)
-class ApplyEntryRequest(term: Int, val logEntry: Log, val prevLogNumber: LogEntryNumber?) : Message(term)
-class MissingEntryResponse(term: Int, val prevLogNumber: LogEntryNumber?) : Message(term)
-class ApplyEntryResponse(term: Int, val logNumber: LogEntryNumber) : Message(term)
+sealed class Message {
+    abstract val term: Int
+}
+
+data class RequestVote(override val term: Int, val count: Int, val candidate: Int) : Message()
+data class Heartbeat(override val term: Int, val lastCommittedEntry: LogEntryNumber?) : Message()
+data class VoteResponse(override val term: Int, val res: Boolean) : Message()
+data class PutRequest(override val term: Int, val key: Int, val value: Int, val hash: String) : Message()
+data class PutResponse(override val term: Int, val hash: String) : Message()
+data class GetRequest(override val term: Int, val key: Int, val hash: String) : Message()
+data class GetResponse(override val term: Int, val hash: String, val value: Int?) : Message()
+data class ApplyEntryRequest(override val term: Int, val logEntry: Log, val prevLogNumber: LogEntryNumber?) : Message()
+data class MissingEntryResponse(override val term: Int, val prevLogNumber: LogEntryNumber?) : Message()
+data class ApplyEntryResponse(override val term: Int, val logNumber: LogEntryNumber) : Message()
 
 data class Log(
     val key: Int,
@@ -125,7 +128,7 @@ class Storage(val log: MutableList<Log>) {
 
 class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
     companion object {
-        const val HEARTBEAT_RATE = 2
+        const val HEARTBEAT_RATE = 6
         const val MISSED_HEARTBEATS_LIMIT = 3
     }
 
@@ -159,7 +162,7 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
     private suspend fun replicateLog(log: Log) {
         val lastEntry = storage.getLastEntry()
         storage.add(log)
-        env.broadcast(ApplyEntryRequest(currentTerm, log, lastEntry))
+        env.broadcast(ApplyEntryRequest(currentTerm, log, lastEntry), skipItself = false)
     }
 
     override suspend fun onMessage(message: Message, sender: Int) {
@@ -296,6 +299,7 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
     }
 
     override suspend fun recover() {
+        currentLeader = null
         currentTerm = storage.getLastTerm()
     }
 
@@ -311,7 +315,9 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
             receivedOks = 1
             val index = storage.size()
             env.broadcast(RequestVote(currentTerm, index, env.nodeId))
-            if (env.numberOfNodes > 1) {
+            if (env.numberOfNodes == 1) {
+                status = NodeStatus.LEADER
+            } else {
                 env.withTimeout(3) {
                     electionSemaphore.await()
                 }
@@ -368,7 +374,6 @@ class RaftServer(val env: Environment<Message, Log>) : Node<Message> {
     }
 }
 
-
 class RaftTest {
     private fun createOptions() = DistributedOptions<Message, Log>()
         .requireStateEquivalenceImplCheck(false)
@@ -378,4 +383,13 @@ class RaftTest {
         .invocationTimeout(5_000)
         .invocationsPerIteration(1)
         .iterations(1)
+        .storeLogsForFailedScenario("raft.txt")
+
+    @Test
+    fun test() {
+        LinChecker.check(
+            RaftServer::class.java,
+            createOptions()
+        )
+    }
 }
