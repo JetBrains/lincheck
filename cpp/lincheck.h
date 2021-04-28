@@ -26,7 +26,7 @@ namespace Lincheck {
         std::mt19937 rnd;
     public:
         type generate() {
-            return rnd() % 200 - 100;
+            return rnd() % 14 - 7;
         }
     };
 
@@ -45,21 +45,34 @@ namespace Lincheck {
 
     public:
         LincheckConfiguration() {
+
+            constructor_pointer *instance_constructor = new constructor_pointer();
+            *instance_constructor = []() -> void * { return new TestClass(); };
+
+            destructor_pointer *instance_destructor = new destructor_pointer();
+            *instance_destructor = [](void *p) { delete (TestClass *) p; };
+
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupInitialState(
+                    configuration,
+                    (void *) *instance_constructor, // constructor
+                    (void *) *instance_destructor // destructor
+            );
+
             constructor_pointer *constructor = new constructor_pointer();
-            *constructor = []() -> void * { return new TestClass(); };
+            *constructor = []() -> void * { return new SequentialSpecification(); };
 
             destructor_pointer *destructor = new destructor_pointer();
-            *destructor = [](void *p) { delete (TestClass *) p; };
+            *destructor = [](void *p) { delete (SequentialSpecification *) p; };
 
             equals_pointer *equals = new equals_pointer();
-            *equals = [](void *a, void *b) -> bool { return *(TestClass *) a == *(TestClass *) b; };
+            *equals = [](void *a, void *b) -> bool { return *(SequentialSpecification *) a == *(SequentialSpecification *) b; };
 
             hashCode_pointer *hashCode = new hashCode_pointer();
             *hashCode = [](void *instance) -> int {
                 return Lincheck::hash<SequentialSpecification>()(*(SequentialSpecification *) instance);
             };
 
-            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupInitialStateAndSequentialSpecification(
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupSequentialSpecification(
                     configuration,
                     (void *) *constructor, // constructor
                     (void *) *destructor, // destructor
@@ -95,7 +108,7 @@ namespace Lincheck {
                     configuration, (void *) (void (*)()) []() {f();});
         }
 
-        template<typename Ret, Ret (TestClass::*op)(), Ret (TestClass::*seq_spec)()>
+        template<typename Ret, Ret (TestClass::*op)(), Ret (SequentialSpecification::*seq_spec)()>
         void operation(const char *operationName, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation1(
                     configuration,
@@ -129,7 +142,7 @@ namespace Lincheck {
             );
         }
 
-        template<typename Ret, typename Arg1, Ret (TestClass::*op)(Arg1), Ret (TestClass::*seq_spec)(Arg1)>
+        template<typename Ret, typename Arg1, Ret (TestClass::*op)(Arg1), Ret (SequentialSpecification::*seq_spec)(Arg1)>
         void operation(const char *operationName, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation2(
                     configuration,
@@ -180,7 +193,7 @@ namespace Lincheck {
 
 
         template<typename Ret, typename Arg1, typename Arg2, Ret (TestClass::*op)(Arg1,
-                                                                                  Arg2), Ret (TestClass::*seq_spec)(
+                                                                                  Arg2), Ret (SequentialSpecification::*seq_spec)(
                 Arg1, Arg2)>
         void operation(const char *operationName, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation3(
