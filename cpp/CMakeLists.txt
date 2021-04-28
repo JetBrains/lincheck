@@ -32,6 +32,7 @@ if(NOT libcds_POPULATED)
 endif()
 
 add_subdirectory("junction/junction" junction)
+add_subdirectory("libcuckoo/libcuckoo" libcuckoo)
 
 enable_testing()
 
@@ -40,6 +41,7 @@ add_executable(
         counter_test.cpp
         libcds_msqueue_dhp_test.cpp
         junction_test.cpp
+        libcuckoo_test.cpp
 )
 target_link_libraries(
         tests
@@ -60,6 +62,10 @@ target_link_libraries(
 target_link_libraries(
         tests
         junction
+)
+target_link_libraries(
+        tests
+        libcuckoo
 )
 
 include_directories(${JUNCTION_ALL_INCLUDE_DIRS})

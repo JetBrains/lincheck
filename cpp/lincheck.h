@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include <stdlib.h>
 #include <experimental/type_traits>
 #include "../build/bin/native/debugShared/libnative_api.h"
 
@@ -23,7 +24,7 @@ namespace Lincheck {
 
     template<typename type>
     class ParameterGenerator {
-        std::mt19937 rnd;
+        std::mt19937 rnd = std::mt19937(rand());
     public:
         type generate() {
             return rnd() % 14 - 7;

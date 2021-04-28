@@ -38,6 +38,9 @@ class UnexpectedExceptionTest : AbstractLincheckStressTest<UnexpectedExceptionTe
     override fun extractState(): Any = canEnterForbiddenSection
 
     override fun <T : LincheckStressConfiguration<UnexpectedExceptionTest>> T.customize() {
+        iterations(100)
+        invocationsPerIteration(500)
+
         initialState { UnexpectedExceptionTest() }
 
         operation(UnexpectedExceptionTest::operation1)

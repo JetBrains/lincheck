@@ -52,7 +52,6 @@ class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List
         actors.forEachIndexed { index, actor ->
             //printErr("RUN $iThread #2 $index")
             readClocks(index)
-            // TODO add try-catch
             runner.onActorStart(iThread)
             // Load arguments for operation
             val result: Result = try {

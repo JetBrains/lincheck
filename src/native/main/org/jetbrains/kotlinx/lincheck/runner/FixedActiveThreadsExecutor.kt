@@ -28,10 +28,7 @@ import kotlin.native.ThreadLocal
 import kotlin.native.concurrent.*
 import kotlin.system.*
 
-@ThreadLocal
-val currentThreadId = Any()
-
-val results = mutableSetOf<Any?>()
+val currentThreadId = Worker.current.id
 
 internal actual class TestThread actual constructor(val iThread: Int, val runnerHash: Int, val r: Runnable) {
     val worker: Worker = Worker.start(true, "Worker $iThread $runnerHash")
