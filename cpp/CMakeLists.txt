@@ -31,6 +31,36 @@ if(NOT libcds_POPULATED)
     add_subdirectory(${libcds_SOURCE_DIR} ${libcds_BINARY_DIR})
 endif()
 
+# add turf for junction
+FetchContent_Declare(
+        turf
+        GIT_REPOSITORY https://github.com/preshing/turf
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+)
+
+FetchContent_GetProperties(turf)
+if(NOT turf_POPULATED)
+    FetchContent_Populate(turf)
+    add_subdirectory(${turf_SOURCE_DIR} ${turf_BINARY_DIR})
+endif()
+
+set(TURF_ROOT "${turf_SOURCE_DIR}" CACHE STRING "Path to Turf")
+
+# add junction
+FetchContent_Declare(
+        junction
+        GIT_REPOSITORY https://github.com/Krock21rus/junction
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+)
+
+FetchContent_GetProperties(junction)
+if(NOT junction_POPULATED)
+    FetchContent_Populate(junction)
+    add_subdirectory(${junction_SOURCE_DIR} ${junction_BINARY_DIR})
+endif()
+
 enable_testing()
 
 add_executable(

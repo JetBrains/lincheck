@@ -133,46 +133,4 @@ class FirstTest {
             operation(TestClass::complexOperation, "complexOperation")
         }.runTest()
     }
-
-/*
-    @Test
-    fun test() {
-        val testClass = TestClass("FirstTest") { FirstTest() }
-
-        val actorGenerator1 = ActorGenerator(
-            function = { instance, arguments ->
-                (instance as TestClass).state.a()
-            },
-            parameterGenerators = listOf()
-        )
-        val actorGenerator2 = ActorGenerator(
-            function = { instance, arguments ->
-                (instance as TestClass).state.b()
-            },
-            parameterGenerators = listOf()
-        )
-        val actorGenerators: List<ActorGenerator> = listOf(actorGenerator1, actorGenerator2)
-        val operationGroups: List<OperationGroup> = listOf()
-        val validationFunctions: List<ValidationFunction> = listOf()
-        val stateRepresentation: StateRepresentationFunction? = null
-        val testStructure = CTestStructure(
-            actorGenerators = actorGenerators,
-            operationGroups = operationGroups,
-            validationFunctions = validationFunctions,
-            stateRepresentation = stateRepresentation
-        )
-
-        val options = StressOptions().run {
-            iterations(1)
-            invocationsPerIteration(50000)
-            actorsBefore(2)
-            threads(3)
-            actorsPerThread(2)
-            actorsAfter(2)
-            minimizeFailedScenario(false)
-        }
-
-        LinChecker.check(testClass = testClass, testStructure = testStructure, options = options)
-    }
-*/
 }

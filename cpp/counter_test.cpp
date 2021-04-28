@@ -11,9 +11,12 @@ public:
     }
 };
 
-std::string to_string(const ComplexArg &arg) {
-    return std::to_string(arg.value);
-}
+template<>
+struct Lincheck::to_string<ComplexArg> {
+    std::string operator()(const ComplexArg &arg) const noexcept {
+        return std::to_string(arg.value);
+    }
+};
 
 template<>
 class Lincheck::ParameterGenerator<ComplexArg> {

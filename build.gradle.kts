@@ -162,7 +162,7 @@ tasks.register("cppTest") {
         }
         exec {
             workingDir("cpp/build")
-            commandLine("ctest")
+            commandLine("ctest", "--output-on-failure")
         }
     }
 }

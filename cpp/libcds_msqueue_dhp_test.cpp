@@ -4,11 +4,6 @@
 #include <cds/init.h>
 #include <cds/container/msqueue.h>
 #include <queue>
-
-std::string to_string(const std::pair<bool, int> &ret) {
-    return ret.first ? "false" : std::to_string(ret.second);
-}
-
 #include "lincheck.h"
 
 using namespace Lincheck;
@@ -26,7 +21,7 @@ std::vector<int> queue_to_vector(queue_type &queue) {
 }
 
 template<>
-struct std::hash<std::vector<int>> {
+struct Lincheck::hash<std::vector<int>> {
     std::size_t operator()(const std::vector<int> &v) const noexcept {
         std::string s;
         for(auto elem : v) {
@@ -36,11 +31,17 @@ struct std::hash<std::vector<int>> {
     }
 };
 
+template<>
+struct Lincheck::to_string<std::pair<bool, int>> {
+    std::string operator()(const std::pair<bool, int> &ret) const noexcept {
+        return ret.first ? "{true, " + std::to_string(ret.second) + "}" : "{false, " + std::to_string(ret.second) + "}";
+    }
+};
 
 template<>
-struct std::hash<queue_type> {
+struct Lincheck::hash<queue_type> {
     std::size_t operator()(queue_type &q) const noexcept {
-        return std::hash<std::vector<int>>()(queue_to_vector(q));
+        return Lincheck::hash<std::vector<int>>()(queue_to_vector(q));
     }
 };
 
@@ -79,13 +80,13 @@ bool operator==(LibcdsQueue &a, LibcdsQueue &b) {
 
 void myAttach() {
     //std::string val = "attached " + std::to_string(cds::OS::get_current_thread_id()) + "\n";
-    //std::cerr << val;
+    //std::cout << val;
     cds::threading::Manager::attachThread();
 }
 
 void myDetach() {
     //std::string val = "detached " + std::to_string(cds::OS::get_current_thread_id()) + "\n";
-    //std::cerr << val;
+    //std::cout << val;
     cds::threading::Manager::detachThread();
 }
 
@@ -94,7 +95,7 @@ TEST(LibcdsMSQueueTest, QueueTest) {
 
     {
         cds::gc::DHP dhpGC(
-                16 //dhp_init_guard_count
+                160 //dhp_init_guard_count
         );
 
         myAttach();
