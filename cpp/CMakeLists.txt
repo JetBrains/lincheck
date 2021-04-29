@@ -52,14 +52,14 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost REQUIRED COMPONENTS thread program_options)
 
 #add_subdirectory("junction/junction" junction)
-#add_subdirectory("libcuckoo/libcuckoo" libcuckoo)
+add_subdirectory("libcuckoo/libcuckoo" libcuckoo)
 
 add_executable(
         tests
         counter_test.cpp
         libcds_msqueue_dhp_test.cpp
         #junction_test.cpp
-        #libcuckoo_test.cpp
+        libcuckoo_test.cpp
         folly_hashmap_test.cpp
         boost_lockfree_queue_test.cpp
 )
@@ -71,7 +71,7 @@ target_link_libraries(tests gmock_main)
 target_link_libraries(tests lincheck_library)
 target_link_libraries(tests cds)
 #target_link_libraries(tests junction)
-#target_link_libraries(tests libcuckoo)
+target_link_libraries(tests libcuckoo)
 target_link_libraries(tests folly)
 include_directories(${JUNCTION_ALL_INCLUDE_DIRS})
 target_link_libraries(tests ${JUNCTION_ALL_LIBRARIES})

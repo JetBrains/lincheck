@@ -71,7 +71,8 @@ TEST(follyHashMapTest, FirstTest) {
     conf.iterations(10);
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
-    conf.threads(3);
+    conf.threads(4);
+    conf.actorsPerThread(7);
 
     conf.operation<bool, int, int, &ConcurrentMapFolly::assign, &SequentialMapFolly::assign>("assign");
     conf.operation<std::pair<bool, int>, int, &ConcurrentMapFolly::get, &SequentialMapFolly::get>("get");

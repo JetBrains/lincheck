@@ -80,7 +80,8 @@ TEST(LibcdsMSQueueTest, QueueTest) {
         conf.iterations(10);
         conf.invocationsPerIteration(500);
         conf.minimizeFailedScenario(false);
-        conf.threads(3);
+        conf.threads(4);
+        conf.actorsPerThread(7);
 
         conf.initThreadFunction<myAttach>();
         conf.finishThreadFunction<myDetach>();

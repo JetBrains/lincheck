@@ -92,9 +92,11 @@ using namespace Lincheck;
 
 TEST(libcuckooTest, FirstTest) {
     LincheckConfiguration<ConcurrentMapCuckoo, SequentialMapCuckoo> conf;
-    conf.iterations(1);
+    conf.iterations(2);
     conf.invocationsPerIteration(500);
-        conf.minimizeFailedScenario(false);
+    conf.minimizeFailedScenario(false);
+    conf.threads(2);
+    conf.actorsPerThread(3);
 
     conf.operation<bool, int, int, &ConcurrentMapCuckoo::assign, &SequentialMapCuckoo::assign>("assign");
     conf.operation<int, int, &ConcurrentMapCuckoo::get, &SequentialMapCuckoo::get>("get");
