@@ -161,7 +161,7 @@ private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunction
 
 actual fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     val t = Thread.currentThread()
-    if (t is TestThread) {
+    if (t is FixedActiveThreadsExecutor.TestThread) {
         t.cont = cont
     } else {
         storedLastCancellableCont = cont
@@ -241,7 +241,7 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * threads that are related to the specified [runner].
  */
 internal actual fun collectThreadDump(runner: Runner) = ThreadDump(Thread.getAllStackTraces().filter { (t, _) ->
-    t is TestThread && t.runnerHash == runner.hashCode()
+    t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
 })
 
 /**
@@ -253,3 +253,5 @@ internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): R
         classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
         else -> null
     }
+
+internal actual fun nativeFreeze(any: Any) {}

@@ -1,8 +1,9 @@
-/*
+/*-
+ * #%L
  * Lincheck
- *
- * Copyright (C) 2019 - 2021 JetBrains s.r.o.
- *
+ * %%
+ * Copyright (C) 2019 JetBrains s.r.o.
+ * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
@@ -15,18 +16,20 @@
  *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>.
+ * #L%
  */
-
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
+import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
@@ -52,7 +55,7 @@ internal actual open class ParallelThreadsRunner actual constructor(
     finishThreadFunction: (() -> Unit)?
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash, initThreadFunction, finishThreadFunction) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // should be closed in `close()`
 
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
@@ -149,7 +152,7 @@ internal actual open class ParallelThreadsRunner actual constructor(
             val actors = scenario.parallelExecution[t].size
             ex.useClocks = if (useClocks == ALWAYS) true else Random.nextBoolean()
             ex.curClock = 0
-            ex.clocks = Array(actors) { emptyClockArray(threads) }
+            ex.clocks = Array(actors) { emptyClockArray(threads).toArray() }
             ex.results = arrayOfNulls(actors)
         }
         suspensionPointResults.forEach { it.fill(NoResult) }
@@ -267,7 +270,7 @@ internal actual open class ParallelThreadsRunner actual constructor(
             return UnexpectedExceptionInvocationResult(e.cause!!)
         }
         val parallelResultsWithClock = testThreadExecutions.map { ex ->
-            ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second)) }
+            ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second.toLincheckAtomicIntArray())) }
         }
         executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
             val s = ExecutionScenario(

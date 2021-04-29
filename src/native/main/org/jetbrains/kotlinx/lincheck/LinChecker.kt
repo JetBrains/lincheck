@@ -119,16 +119,38 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
 
     init {
         // default configuration
-        iterations(5)
+        iterations(10)
         invocationsPerIteration(500)
+    }
+
+    fun setupInvocationsPerIteration(count: Int) {
+        invocationsPerIteration(count)
     }
 
     fun setupIterations(count: Int) {
         iterations(count)
     }
 
-    fun setupInvocationsPerIteration(count: Int) {
-        invocationsPerIteration(count)
+    fun setupThreads(count: Int) {
+        threads(count)
+    }
+
+    fun setupActorsPerThread(count: Int) {
+        actorsPerThread(count)
+    }
+
+    fun setupActorsBefore(count: Int) {
+        actorsBefore(count)
+    }
+
+    fun setupActorsAfter(count: Int) {
+        actorsAfter(count)
+    }
+
+    // executionGenerator
+    // verifier
+    fun setupRequireStateEquivalenceImplCheck(require: Boolean) {
+        requireStateEquivalenceImplCheck(require)
     }
 
     fun setupMinimizeFailedScenario(minimizeFailedScenario: Boolean) {
@@ -355,7 +377,6 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
     verifier(verifier: (sequentialSpecification: SequentialSpecification<*>) -> Verifier)
     requireStateEquivalenceImplCheck
     minimizeFailedScenario
-    createTestConfigurations
     logLevel(logLevel: LoggingLevel)
     sequentialSpecification(clazz: SequentialSpecification<*>?)
     */
@@ -561,6 +582,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
+            println(i)
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1, iterations, scenario)

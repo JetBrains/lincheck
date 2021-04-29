@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import platform.posix.*
 import kotlin.coroutines.*
+import kotlin.native.concurrent.*
 import kotlin.reflect.*
 
 actual class TestClass(
@@ -125,4 +126,16 @@ val STDERR = platform.posix.fdopen(2, "w")
 fun printErr(message: String) {
     fprintf(STDERR, message + "\n")
     fflush(STDERR)
+}
+
+internal actual fun nativeFreeze(any: Any): Unit {
+    any.freeze()
+}
+inline fun <reified T> LincheckAtomicArray<T>.toArray(): Array<T> = Array(this.array.size) { this.array[it].value!! }
+fun <T> Array<T>.toLincheckAtomicArray(): LincheckAtomicArray<T> {
+    val ans = LincheckAtomicArray<T>(this.size)
+    for (i in this.indices) {
+        ans.array[i].value = this[i]
+    }
+    return ans
 }

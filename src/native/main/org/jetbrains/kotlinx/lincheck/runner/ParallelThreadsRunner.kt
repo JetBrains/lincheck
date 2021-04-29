@@ -20,10 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlinx.cinterop.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.coroutines.*
+import kotlin.native.concurrent.*
 import kotlin.random.*
 
 /**
@@ -43,38 +45,46 @@ internal actual open class ParallelThreadsRunner actual constructor(
     finishThreadFunction: (() -> Unit)?) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
 
-    private lateinit var testInstance: Any
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash, initThreadFunction, finishThreadFunction) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash, initThreadFunction, finishThreadFunction).freeze() // should be closed in `close()`
 
-    private lateinit var testThreadExecutions: Array<TestThreadExecution>
+    private val testThreadExecutions = AtomicReference<LincheckAtomicArray<TestThreadExecution>>(LincheckAtomicArray(0))
+
+    init {
+        this.ensureNeverFrozen()
+    }
 
     override fun initialize() {
         super.initialize()
-        testThreadExecutions = Array(scenario.threads) { t ->
-            TestThreadExecution(this, t, scenario.parallelExecution[t])
+        val arr = Array(scenario.threads) { t ->
+            TestThreadExecution(t, scenario.parallelExecution[t]).freeze()
         }
-        testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
+        testThreadExecutions.value = arr.toLincheckAtomicArray()
+        testThreadExecutions.value.toArray().forEach { it.allThreadExecutions.value = testThreadExecutions.value }
     }
 
     private fun reset() {
-        testInstance = testClass.createInstance()
-        testThreadExecutions.forEachIndexed { t, ex ->
-            ex.testInstance = testInstance
+        testThreadExecutions.value.toArray().forEachIndexed { t, ex ->
             val threads = scenario.threads
             val actors = scenario.parallelExecution[t].size
-            ex.useClocks = if (useClocks == UseClocks.ALWAYS) true else Random.nextBoolean()
-            ex.curClock = 0
-            ex.clocks = Array(actors) { emptyClockArray(threads) }
-            ex.results = arrayOfNulls(actors)
+            ex.useClocks.value = if (useClocks == UseClocks.ALWAYS) 1 else (if (Random.nextBoolean()) 1 else 0)
+            ex.curClock.value = 0
+            ex.clocks.value = Array(actors) { emptyClockArray(threads) }.toLincheckAtomicArray()
+            ex.results.value = LincheckAtomicArray(actors)
         }
         completedOrSuspendedThreads.set(0)
     }
 
-    override fun constructStateRepresentation() =
+    override fun constructStateRepresentation(): String? {
+        throw RuntimeException("should not be called")
+    }
+
+    fun nativeConstructStateRepresentation(testInstance: Any) =
         stateRepresentationFunction?.function?.invoke(testInstance) as String?
 
     override fun run(): InvocationResult {
         reset()
+        val testInstance = testClass.createInstance()
+        testInstance.ensureNeverFrozen()
         val initResults = scenario.initExecution.mapIndexed { i, initActor ->
             executeActor(testInstance, initActor).also {
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
@@ -87,17 +97,17 @@ internal actual open class ParallelThreadsRunner actual constructor(
                 }
             }
         }
-        val afterInitStateRepresentation = constructStateRepresentation()
+        val afterInitStateRepresentation = nativeConstructStateRepresentation(testInstance)
         try {
-            executor.submitAndAwait(testThreadExecutions, timeoutMs)
+            executor.submitAndAwait(testThreadExecutions.value.toArray().map { NativeTestThreadExecution(testInstance, it) }.toTypedArray(), timeoutMs)
         } catch (e: LincheckTimeoutException) {
             val threadDump = collectThreadDump(this)
             return DeadlockInvocationResult(threadDump)
         } catch (e: LincheckExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
         }
-        val parallelResultsWithClock = testThreadExecutions.map { ex ->
-            ex.results.zip(ex.clocks).map { ResultWithClock(it.first!!, HBClock(it.second)) }
+        val parallelResultsWithClock = testThreadExecutions.value.toArray().map { ex ->
+            ex.results.value.toArray().zip(ex.clocks.value.toArray()).map { ResultWithClock(it.first!!, HBClock(it.second)) }
         }
         executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
             val s = ExecutionScenario(
@@ -107,7 +117,7 @@ internal actual open class ParallelThreadsRunner actual constructor(
             )
             return ValidationFailureInvocationResult(s, functionName, exception)
         }
-        val afterParallelStateRepresentation = constructStateRepresentation()
+        val afterParallelStateRepresentation = nativeConstructStateRepresentation(testInstance)
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
@@ -130,7 +140,7 @@ internal actual open class ParallelThreadsRunner actual constructor(
             }
             result
         }
-        val afterPostStateRepresentation = constructStateRepresentation()
+        val afterPostStateRepresentation = nativeConstructStateRepresentation(testInstance)
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,

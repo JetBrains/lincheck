@@ -27,7 +27,7 @@ namespace Lincheck {
         std::mt19937 rnd = std::mt19937(rand());
     public:
         type generate() {
-            return rnd() % 14 - 7;
+            return rnd() % 16 - 5;
         }
     };
 
@@ -66,7 +66,9 @@ namespace Lincheck {
             *destructor = [](void *p) { delete (SequentialSpecification *) p; };
 
             equals_pointer *equals = new equals_pointer();
-            *equals = [](void *a, void *b) -> bool { return *(SequentialSpecification *) a == *(SequentialSpecification *) b; };
+            *equals = [](void *a, void *b) -> bool {
+                return *(SequentialSpecification *) a == *(SequentialSpecification *) b;
+            };
 
             hashCode_pointer *hashCode = new hashCode_pointer();
             *hashCode = [](void *instance) -> int {
@@ -97,16 +99,36 @@ namespace Lincheck {
                     configuration, minimizeFailedScenario);
         }
 
+        void threads(int count) {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupThreads(
+                    configuration, count);
+        }
+
+        void actorsPerThread(int count) {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupActorsPerThread(
+                    configuration, count);
+        }
+
+        void actorsBefore(int count) {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupActorsBefore(
+                    configuration, count);
+        }
+
+        void actorsAfter(int count) {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupActorsAfter(
+                    configuration, count);
+        }
+
         template<void (*f)()>
         void initThreadFunction() {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupInitThreadFunction(
-                    configuration, (void *) (void (*)()) []() {f();});
+                    configuration, (void *) (void (*)()) []() { f(); });
         }
 
         template<void (*f)()>
         void finishThreadFunction() {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupFinishThreadFunction(
-                    configuration, (void *) (void (*)()) []() {f();});
+                    configuration, (void *) (void (*)()) []() { f(); });
         }
 
         template<typename Ret, Ret (TestClass::*op)(), Ret (SequentialSpecification::*seq_spec)()>
@@ -143,7 +165,8 @@ namespace Lincheck {
             );
         }
 
-        template<typename Ret, typename Arg1, Ret (TestClass::*op)(Arg1), Ret (SequentialSpecification::*seq_spec)(Arg1)>
+        template<typename Ret, typename Arg1, Ret (TestClass::*op)(Arg1), Ret (SequentialSpecification::*seq_spec)(
+                Arg1)>
         void operation(const char *operationName, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation2(
                     configuration,

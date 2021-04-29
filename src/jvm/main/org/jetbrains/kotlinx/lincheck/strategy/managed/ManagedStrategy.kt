@@ -681,7 +681,7 @@ abstract class ManagedStrategy(
      */
     fun currentThreadNumber(): Int {
         val t = Thread.currentThread()
-        return if (t is TestThread) {
+        return if (t is FixedActiveThreadsExecutor.TestThread) {
             t.iThread
         } else {
             nThreads

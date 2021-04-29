@@ -5,6 +5,7 @@
 #include <cds/container/msqueue.h>
 #include <queue>
 #include "lincheck.h"
+#include "lincheck_functions.h"
 
 using namespace Lincheck;
 using ::testing::HasSubstr;
@@ -19,24 +20,6 @@ std::vector<int> queue_to_vector(queue_type &queue) {
     }
     return ans;
 }
-
-template<>
-struct Lincheck::hash<std::vector<int>> {
-    std::size_t operator()(const std::vector<int> &v) const noexcept {
-        std::string s;
-        for(auto elem : v) {
-            s += std::to_string(elem) + ",";
-        }
-        return std::hash<std::string>()(s);
-    }
-};
-
-template<>
-struct Lincheck::to_string<std::pair<bool, int>> {
-    std::string operator()(const std::pair<bool, int> &ret) const noexcept {
-        return ret.first ? "{true, " + std::to_string(ret.second) + "}" : "{false, " + std::to_string(ret.second) + "}";
-    }
-};
 
 template<>
 struct Lincheck::hash<queue_type> {
@@ -57,13 +40,6 @@ public:
         queue_type::value_type ans = 0;
         bool success = queue.dequeue(ans);
         return {success, ans};
-    }
-};
-
-template<>
-struct Lincheck::hash<std::pair<bool, queue_type::value_type>> {
-    std::size_t operator()(std::pair<bool, queue_type::value_type> &p) const noexcept {
-        return p.first ? Lincheck::hash<queue_type::value_type>()(p.second) : -1 * Lincheck::hash<queue_type::value_type>()(p.second);
     }
 };
 
@@ -104,6 +80,7 @@ TEST(LibcdsMSQueueTest, QueueTest) {
         conf.iterations(10);
         conf.invocationsPerIteration(500);
         conf.minimizeFailedScenario(false);
+        conf.threads(3);
 
         conf.initThreadFunction<myAttach>();
         conf.finishThreadFunction<myDetach>();

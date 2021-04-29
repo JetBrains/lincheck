@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "lincheck.h"
+#include "lincheck_functions.h"
 
 #include <libcuckoo/libcuckoo/libcuckoo/cuckoohash_map.hh>
 
@@ -68,17 +69,6 @@ public:
         auto ans = map.erase(key);
         //std::cerr << "erase2 " << key << "\n";
         return ans;
-    }
-};
-
-template<>
-struct Lincheck::hash<std::vector<int>> {
-    std::size_t operator()(const std::vector<int> &v) const noexcept {
-        std::string s;
-        for (auto elem : v) {
-            s += std::to_string(elem) + ",";
-        }
-        return std::hash<std::string>()(s);
     }
 };
 

@@ -81,7 +81,7 @@ class FixedActiveThreadsExecutorTest {
         FixedActiveThreadsExecutor(2, uniqueRunnerHash).close()
         while (true) {
             // check that all test threads are finished
-            if (Thread.getAllStackTraces().keys.all { it !is TestThread || it.runnerHash != uniqueRunnerHash })
+            if (Thread.getAllStackTraces().keys.all { it !is FixedActiveThreadsExecutor.TestThread || it.runnerHash != uniqueRunnerHash })
                 return
         }
     }

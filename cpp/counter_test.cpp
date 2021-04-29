@@ -64,13 +64,6 @@ public:
         //std::cout << "atomic_add " << value << " finished" << std::endl;
         return ans;
     }
-
-    Counter() {
-    }
-
-    ~Counter() {
-        //std::cout << "SharedInstance has destructed" << std::endl; // To ensure that destructor is never called
-    }
 };
 
 template<>
@@ -90,6 +83,7 @@ using ::testing::HasSubstr;
 TEST(CounterTest, BadInc) {
     LincheckConfiguration<Counter, Counter> conf;
     conf.minimizeFailedScenario(false);
+    conf.threads(3);
     conf.operation<int, &Counter::inc, &Counter::atomic_inc>("inc");
     ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));
 }
@@ -97,6 +91,7 @@ TEST(CounterTest, BadInc) {
 TEST(CounterTest, BadDec) {
     LincheckConfiguration<Counter, Counter> conf;
     conf.minimizeFailedScenario(false);
+    conf.threads(3);
     conf.operation<int, &Counter::dec, &Counter::atomic_dec>("dec");
     ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));
 }
@@ -104,30 +99,35 @@ TEST(CounterTest, BadDec) {
 TEST(CounterTest, BadAdd) {
     LincheckConfiguration<Counter, Counter> conf;
     conf.minimizeFailedScenario(false);
+    conf.threads(3);
     conf.operation<int, int, &Counter::add, &Counter::atomic_add>("add");
     ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));
 }
 
 TEST(CounterTest, GoodDoubleOp) {
     LincheckConfiguration<Counter, Counter> conf;
+    conf.threads(3);
     conf.operation<int, int, ComplexArg, &Counter::double_op, &Counter::double_op>("double_op");
     ASSERT_EQ(conf.runTest(false), "");
 }
 
 TEST(CounterTest, GoodAtomicInc) {
     LincheckConfiguration<Counter, Counter> conf;
+    conf.threads(3);
     conf.operation<int, &Counter::atomic_inc, &Counter::atomic_inc>("inc");
     ASSERT_EQ(conf.runTest(false), "");
 }
 
 TEST(CounterTest, GoodAtomicDec) {
     LincheckConfiguration<Counter, Counter> conf;
+    conf.threads(3);
     conf.operation<int, &Counter::atomic_dec, &Counter::atomic_dec>("dec");
     ASSERT_EQ(conf.runTest(false), "");
 }
 
 TEST(CounterTest, GoodAtomicAdd) {
     LincheckConfiguration<Counter, Counter> conf;
+    conf.threads(3);
     conf.operation<int, int, &Counter::atomic_add, &Counter::atomic_add>("add");
     ASSERT_EQ(conf.runTest(false), "");
 }

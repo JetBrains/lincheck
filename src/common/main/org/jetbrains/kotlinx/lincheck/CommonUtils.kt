@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
+import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -151,3 +152,28 @@ internal val String.internalClassName get() = this.replace('.', '/')
  * threads that are related to the specified [runner].
  */
 internal expect fun collectThreadDump(runner: Runner): ThreadDump
+
+internal expect fun nativeFreeze(any: Any)
+
+class LincheckAtomicArray<T>(size: Int) {
+    val array = atomicArrayOfNulls<T>(size)
+    init {
+        nativeFreeze(this)
+    }
+}
+
+class LincheckAtomicIntArray(size: Int) {
+    val array = AtomicIntArray(size)
+    init {
+        nativeFreeze(this)
+    }
+}
+
+fun LincheckAtomicIntArray.toArray(): IntArray = IntArray(this.array.size) { this.array[it].value }
+fun IntArray.toLincheckAtomicIntArray(): LincheckAtomicIntArray {
+    val ans = LincheckAtomicIntArray(this.size)
+    for (i in this.indices) {
+        ans.array[i].value = this[i]
+    }
+    return ans
+}

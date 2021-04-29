@@ -26,10 +26,10 @@ FetchContent_Declare(
 )
 
 FetchContent_GetProperties(libcds)
-if(NOT libcds_POPULATED)
+if (NOT libcds_POPULATED)
     FetchContent_Populate(libcds)
     add_subdirectory(${libcds_SOURCE_DIR} ${libcds_BINARY_DIR})
-endif()
+endif ()
 
 # add folly
 FetchContent_Declare(
@@ -40,15 +40,19 @@ FetchContent_Declare(
 )
 
 FetchContent_GetProperties(folly)
-if(NOT folly_POPULATED)
+if (NOT folly_POPULATED)
     FetchContent_Populate(folly)
     add_subdirectory(${folly_SOURCE_DIR} ${folly_BINARY_DIR})
-endif()
+endif ()
+
+# add boost
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(Boost REQUIRED COMPONENTS thread program_options)
 
 #add_subdirectory("junction/junction" junction)
 #add_subdirectory("libcuckoo/libcuckoo" libcuckoo)
-
-enable_testing()
 
 add_executable(
         tests
@@ -57,38 +61,25 @@ add_executable(
         #junction_test.cpp
         #libcuckoo_test.cpp
         folly_hashmap_test.cpp
-)
-target_link_libraries(
-        tests
-        gtest_main
-)
-target_link_libraries(
-        tests
-        gmock_main
-)
-target_link_libraries(
-        tests
-        lincheck_library
-)
-target_link_libraries(
-        tests
-        cds
-)
-#target_link_libraries(
-#        tests
-#        junction
-#)
-#target_link_libraries(
-#        tests
-#        libcuckoo
-#)
-target_link_libraries(
-        tests
-        folly
+        boost_lockfree_queue_test.cpp
 )
 
+enable_testing()
+
+target_link_libraries(tests gtest_main)
+target_link_libraries(tests gmock_main)
+target_link_libraries(tests lincheck_library)
+target_link_libraries(tests cds)
+#target_link_libraries(tests junction)
+#target_link_libraries(tests libcuckoo)
+target_link_libraries(tests folly)
 include_directories(${JUNCTION_ALL_INCLUDE_DIRS})
 target_link_libraries(tests ${JUNCTION_ALL_LIBRARIES})
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+include_directories(${Boost_INCLUDE_DIR} ${BOOST_LOCKFREE_DIR})
+target_link_libraries(tests ${Boost_LIBRARIES})
 
 include(GoogleTest)
 gtest_discover_tests(tests)

@@ -118,14 +118,25 @@ class FirstTest {
     }
 
     @Test
+    fun test_many_threads() {
+        LincheckStressConfiguration<TestClass>("FirstTest_3").apply {
+            iterations(2)
+            invocationsPerIteration(500)
+            threads(8)
+            minimizeFailedScenario(false)
+
+            initialState { TestClass() }
+
+            operation(TestClass::atomicIncrement, "atomicIncrement")
+        }.runTest()
+    }
+
+    @Test
     fun test_complex() {
         LincheckStressConfiguration<TestClass>("FirstTest_3").apply {
             iterations(10)
             invocationsPerIteration(500)
-            actorsBefore(2)
-            threads(3)
-            actorsPerThread(5)
-            actorsAfter(2)
+            threads(4)
             minimizeFailedScenario(false)
 
             initialState { TestClass() }

@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import kotlin.collections.ArrayList
-import kotlin.reflect.*
 
 /**
  * This verifier tests for quiescent consistency.
@@ -89,7 +88,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: SequentialSpecificat
                     clockMapping[t].add(clockMapping[t][i] + 1)
                     val c = IntArray(newThreads) { 0 }
                     clocks[t].add(c)
-                    parallelResults[t].add(ResultWithClock(r.result, HBClock(c)))
+                    parallelResults[t].add(ResultWithClock(r.result, HBClock(c.toLincheckAtomicIntArray())))
                 }
             }
         }

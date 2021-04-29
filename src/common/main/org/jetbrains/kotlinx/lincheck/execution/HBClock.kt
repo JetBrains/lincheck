@@ -20,14 +20,14 @@
 
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.*
 
-data class HBClock(val clock: IntArray) {
-    val threads: Int get() = clock.size
-    val empty: Boolean get() = clock.all { it == 0 }
-    operator fun get(i: Int) = clock[i]
+data class HBClock(val clock: LincheckAtomicIntArray) {
+    val threads: Int get() = clock.array.size
+    val empty: Boolean get() = clock.toArray().all { it == 0 }
+    operator fun get(i: Int) = clock.array[i].value
 
-    override fun toString() = clock.joinToString(prefix = "[", separator = ",", postfix = "]") {
+    override fun toString() = clock.toArray().joinToString(prefix = "[", separator = ",", postfix = "]") {
         if (it == 0) "-" else "$it"
     }
 
@@ -35,14 +35,14 @@ data class HBClock(val clock: IntArray) {
         if (this === other) return true
         if (other != null && this::class != other::class) return false
         other as HBClock
-        return clock.contentEquals(other.clock)
+        return clock.toArray().contentEquals(other.clock.toArray())
     }
 
-    override fun hashCode() = clock.contentHashCode()
+    override fun hashCode() = clock.toArray().contentHashCode()
 }
 
 fun emptyClock(size: Int) = HBClock(emptyClockArray(size))
-fun emptyClockArray(size: Int) = IntArray(size) { 0 }
+fun emptyClockArray(size: Int) = LincheckAtomicIntArray(size)
 
 data class ResultWithClock(val result: Result, val clockOnStart: HBClock)
 

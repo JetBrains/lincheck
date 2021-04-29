@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "lincheck.h"
+#include "lincheck_functions.h"
 
 #include "folly/concurrency/ConcurrentHashMap.h"
 
@@ -13,12 +14,12 @@ public:
         return true; // concurrent version always returns true
     }
 
-    int get(int key) {
+    std::pair<bool, int> get(int key) {
         auto it = map.find(key);
         if (it != map.end()) {
-            return it->second;
+            return {true, it->second};
         }
-        return -239;
+        return {false, 0};
     }
 
     int erase(int key) {
@@ -34,27 +35,16 @@ public:
         return map.insert_or_assign(key, value).second;
     }
 
-    int get(int key) {
+    std::pair<bool, int> get(int key) {
         auto it = map.find(key);
         if (it != map.end()) {
-            return it->second;
+            return {true, it->second};
         }
-        return -239;
+        return {false, 0};
     }
 
     int erase(int key) {
         return map.erase(key);
-    }
-};
-
-template<>
-struct Lincheck::hash<std::vector<int>> {
-    std::size_t operator()(const std::vector<int> &v) const noexcept {
-        std::string s;
-        for (auto elem : v) {
-            s += std::to_string(elem) + ",";
-        }
-        return std::hash<std::string>()(s);
     }
 };
 
@@ -81,9 +71,10 @@ TEST(follyHashMapTest, FirstTest) {
     conf.iterations(10);
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
+    conf.threads(3);
 
     conf.operation<bool, int, int, &ConcurrentMapFolly::assign, &SequentialMapFolly::assign>("assign");
-    conf.operation<int, int, &ConcurrentMapFolly::get, &SequentialMapFolly::get>("get");
+    conf.operation<std::pair<bool, int>, int, &ConcurrentMapFolly::get, &SequentialMapFolly::get>("get");
     conf.operation<int, int, &ConcurrentMapFolly::erase, &SequentialMapFolly::erase>("erase");
     ASSERT_EQ(conf.runTest(false), "");
 }

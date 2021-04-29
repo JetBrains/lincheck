@@ -22,37 +22,43 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import kotlin.native.concurrent.*
+import kotlin.native.concurrent.AtomicInt
 import kotlin.reflect.*
 
-class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List<Actor>) : Runnable {
-    lateinit var testInstance: Any
-    lateinit var objArgs: Array<Any>
-    lateinit var allThreadExecutions: Array<TestThreadExecution>
+class NativeTestThreadExecution(val testInstance: Any, val threadExecution: TestThreadExecution) : Runnable {
+    override fun run() {
+        threadExecution.run(testInstance)
+    }
+}
 
-    lateinit var results: Array<Result?> // for ExecutionResult
-    lateinit var clocks: Array<IntArray> // for HBClock
+class TestThreadExecution(val iThread: Int, val actors: List<Actor>) {
+    val allThreadExecutions = AtomicReference<LincheckAtomicArray<TestThreadExecution>>(LincheckAtomicArray(0))
 
-    // TODO should be volatilie
-    var curClock = 0
-    var useClocks = false
+    val results = AtomicReference<LincheckAtomicArray<Result?>>(LincheckAtomicArray(0)) // for ExecutionResult
+    val clocks = AtomicReference<LincheckAtomicArray<LincheckAtomicIntArray>>(LincheckAtomicArray(0)) // for HBClock
+
+    var curClock = AtomicInt(0)
+    var useClocks = AtomicInt(0) // 0 -- false, 1 -- true
 
     fun readClocks(currentActor: Int) {
-        for (i in allThreadExecutions.indices) {
-            clocks[currentActor][i] = allThreadExecutions[i].curClock
+        val arr = allThreadExecutions.value.toArray()
+        for (i in arr.indices) {
+            clocks.value.array[currentActor].value!!.array[i].value = arr[i].curClock.value
         }
     }
 
     fun incClock() {
-        curClock++
+        curClock.increment()
     }
 
-    override fun run() {
+    fun run(testInstance: Any) {
         //printErr("RUN $iThread #1")
-        runner.onStart(iThread)
+        //runner.onStart(iThread)
         actors.forEachIndexed { index, actor ->
             //printErr("RUN $iThread #2 $index")
             readClocks(index)
-            runner.onActorStart(iThread)
+            //runner.onActorStart(iThread)
             // Load arguments for operation
             val result: Result = try {
                 val r = actor.function(testInstance, actor.arguments)
@@ -64,14 +70,14 @@ class TestThreadExecution(val runner: Runner, val iThread: Int, val actors: List
                     ExceptionResult(e::class, false)
                 } else {
                     //printErr("FailureResult with $e")
-                    runner.onFailure(iThread, e)
+                    //runner.onFailure(iThread, e)
                     throw e
                 }
             }
-            results[index] = result
+            results.value.array[index].value = result
             incClock()
         }
         //printErr("RUN $iThread #finish ")
-        runner.onFinish(iThread)
+        //runner.onFinish(iThread)
     }
 }
