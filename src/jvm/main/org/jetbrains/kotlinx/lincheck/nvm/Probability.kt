@@ -26,11 +26,9 @@ import java.util.*
 
 object Probability {
     private const val RANDOM_FLUSH_PROBABILITY = 0.2f
-    private const val SEED = 42L
 
-    @Volatile
-    private var random_ = Random(SEED)
-    private val random get() = random_
+    private val random = Random(42L)
+    private var seed = 0L
 
     private var defaultCrashes = 0
     private var minimizeCrashes = false
@@ -104,7 +102,12 @@ object Probability {
     }
 
     private fun bernoulli(probability: Float) = random.nextFloat() < probability
-    fun resetRandom() {
-        random_.setSeed(SEED)
+
+    internal fun setSeed(seed: Int) {
+        this.seed = seed.toLong()
+    }
+
+    internal fun resetRandom() {
+        random.setSeed(seed)
     }
 }

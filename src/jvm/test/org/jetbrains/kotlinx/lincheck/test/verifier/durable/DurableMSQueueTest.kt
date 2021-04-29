@@ -155,11 +155,6 @@ internal class SmallScenarioTest : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue2<Int>()
     override fun <O : Options<O, *>> O.customize() {
         executionGenerator(FailingQueueScenarioGenerator::class.java)
-        iterations(100)
-    }
-
-    override fun ModelCheckingOptions.customize() {
-        invocationsPerIteration(100_000)
     }
 }
 

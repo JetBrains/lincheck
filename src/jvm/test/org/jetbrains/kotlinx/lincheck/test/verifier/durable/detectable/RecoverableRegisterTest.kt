@@ -126,6 +126,10 @@ internal class RecoverableRegisterFailingTest3 : RecoverableRegisterFailingTest(
     override val register = RecoverableFailingRegister3(THREADS_NUMBER + 2)
 }
 
+internal class RecoverableRegisterFailingTest4 : RecoverableRegisterFailingTest() {
+    override val register = RecoverableFailingRegister4(THREADS_NUMBER + 2)
+}
+
 internal class RecoverableFailingRegister1(threadsNumber: Int) : CAS {
     private val register = nonVolatile(Record(0, -1, -1))
     private val r = Array(threadsNumber) { Array(threadsNumber) { nonVolatile(Pair(-1, -1)) } }
@@ -205,6 +209,36 @@ internal class RecoverableFailingRegister3(threadsNumber: Int) : CAS {
 //            r[record.threadId][threadId].value = record.value to record.operationId
 //            r[record.threadId][threadId].flush()
 //        }
+        val result = register.compareAndSet(record, Record(newValue, threadId, operationId))
+        register.flush()
+        return result
+    }
+
+    override fun get() = register.value.value
+}
+
+internal class RecoverableFailingRegister4(threadsNumber: Int) : CAS {
+    private val register = nonVolatile(Record(0, -1, -1))
+    private val r = Array(threadsNumber) { Array(threadsNumber) { nonVolatile(Pair(-1, -1)) } }
+
+    override fun cas(key: Int, threadId: Int, operationId: Int): Boolean {
+        val oldValue = key
+        val newValue = 1 - key
+        // recover
+        if (register.value == Record(newValue, threadId, operationId))
+            return true
+        val p = Pair(newValue, operationId)
+        for (a in r[threadId])
+            if (a.value == p)
+                return true
+        // cas logic
+        val record = register.value
+        if (record.value != oldValue)
+            return false
+        if (record.threadId != -1) {
+            r[record.threadId][threadId].value = record.value to record.operationId
+            r[record.threadId][threadId].flush()
+        }
         val result = register.compareAndSet(record, Record(newValue, threadId, operationId))
         register.flush()
         return result
