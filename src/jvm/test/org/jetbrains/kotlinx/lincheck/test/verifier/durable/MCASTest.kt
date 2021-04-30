@@ -31,7 +31,9 @@ import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import java.lang.IllegalStateException
 import kotlin.random.Random
+import kotlin.reflect.KClass
 
 private const val THREADS_NUMBER = 3
 private const val N = 3
@@ -175,7 +177,9 @@ internal class MCASNoRecoverFailingTest :
     fun compareAndSet(@Param(name = "list") old: List<Int>, @Param(name = "list") new: List<Int>) =
         cas.compareAndSet(old, new)
 
-    override val expectedExceptions = listOf(StackOverflowError::class)
+    // Without correct recovery the execution may lead to StackOverflowError, which can appear as OutOfMemoryError in MC mode.
+    // This randomness causes non-determinism check fail.
+    override val expectedExceptions = listOf(StackOverflowError::class, IllegalStateException::class)
 }
 
 
@@ -193,7 +197,7 @@ internal abstract class MCASFailingTest :
 
     @DurableRecoverAll
     fun recover() = cas.recover()
-    override val expectedExceptions = listOf(StackOverflowError::class)
+    override val expectedExceptions: List<KClass<out Throwable>> = listOf(StackOverflowError::class)
 }
 
 internal class MCASFailingTest1 : MCASFailingTest() {
@@ -222,6 +226,9 @@ internal class MCASFailingTest6 : MCASFailingTest() {
 
 internal class MCASFailingTest7 : MCASFailingTest() {
     override val cas = DurableFailingMCAS7()
+    // Without correct recovery the execution may lead to StackOverflowError, which can appear as OutOfMemoryError in MC mode.
+    // This randomness causes non-determinism check fail.
+    override val expectedExceptions = listOf(StackOverflowError::class, IllegalStateException::class)
 }
 
 internal class DurableFailingMCAS1 : MCAS {
