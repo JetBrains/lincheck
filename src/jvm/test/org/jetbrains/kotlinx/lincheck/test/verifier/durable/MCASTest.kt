@@ -175,7 +175,7 @@ internal class MCASNoRecoverFailingTest :
     fun compareAndSet(@Param(name = "list") old: List<Int>, @Param(name = "list") new: List<Int>) =
         cas.compareAndSet(old, new)
 
-    override val expectedExceptions = listOf(IllegalStateException::class, StackOverflowError::class)
+    override val expectedExceptions = listOf(StackOverflowError::class)
 }
 
 
