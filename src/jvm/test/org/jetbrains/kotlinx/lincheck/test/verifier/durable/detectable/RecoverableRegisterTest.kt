@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.detectable
 
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
@@ -69,7 +70,8 @@ internal class SequentialCAS : VerifierState(), CAS {
 }
 
 internal class RecoverableRegister(threadsNumber: Int) : CAS {
-    private val register = nonVolatile(Record(0, -1, -1))
+    // This algorithm supposes atomic write into persistent memory. This works the same as usual write.
+    private val register = atomic(Record(0, -1, -1))
     private val r = Array(threadsNumber) { Array(threadsNumber) { nonVolatile(Pair(-1, -1)) } }
 
     override fun cas(key: Int, threadId: Int, operationId: Int): Boolean {
@@ -90,9 +92,7 @@ internal class RecoverableRegister(threadsNumber: Int) : CAS {
             r[record.threadId][threadId].value = record.value to record.operationId
             r[record.threadId][threadId].flush()
         }
-        val result = register.compareAndSet(record, Record(newValue, threadId, operationId))
-        register.flush()
-        return result
+        return register.compareAndSet(record, Record(newValue, threadId, operationId))
     }
 
     override fun get() = register.value.value
@@ -131,7 +131,7 @@ internal class RecoverableRegisterFailingTest4 : RecoverableRegisterFailingTest(
 }
 
 internal class RecoverableFailingRegister1(threadsNumber: Int) : CAS {
-    private val register = nonVolatile(Record(0, -1, -1))
+    private val register = atomic(Record(0, -1, -1))
     private val r = Array(threadsNumber) { Array(threadsNumber) { nonVolatile(Pair(-1, -1)) } }
 
     override fun cas(key: Int, threadId: Int, operationId: Int): Boolean {
@@ -151,16 +151,14 @@ internal class RecoverableFailingRegister1(threadsNumber: Int) : CAS {
             r[record.threadId][threadId].value = record.value to record.operationId
             r[record.threadId][threadId].flush()
         }
-        val result = register.compareAndSet(record, Record(newValue, threadId, operationId))
-        register.flush()
-        return result
+        return register.compareAndSet(record, Record(newValue, threadId, operationId))
     }
 
     override fun get() = register.value.value
 }
 
 internal class RecoverableFailingRegister2(threadsNumber: Int) : CAS {
-    private val register = nonVolatile(Record(0, -1, -1))
+    private val register = atomic(Record(0, -1, -1))
     private val r = Array(threadsNumber) { Array(threadsNumber) { nonVolatile(Pair(-1, -1)) } }
 
     override fun cas(key: Int, threadId: Int, operationId: Int): Boolean {
@@ -180,16 +178,14 @@ internal class RecoverableFailingRegister2(threadsNumber: Int) : CAS {
             r[record.threadId][threadId].value = record.value to record.operationId
             r[record.threadId][threadId].flush()
         }
-        val result = register.compareAndSet(record, Record(newValue, threadId, operationId))
-        register.flush()
-        return result
+        return register.compareAndSet(record, Record(newValue, threadId, operationId))
     }
 
     override fun get() = register.value.value
 }
 
 internal class RecoverableFailingRegister3(threadsNumber: Int) : CAS {
-    private val register = nonVolatile(Record(0, -1, -1))
+    private val register = atomic(Record(0, -1, -1))
     private val r = Array(threadsNumber) { Array(threadsNumber) { nonVolatile(Pair(-1, -1)) } }
 
     override fun cas(key: Int, threadId: Int, operationId: Int): Boolean {
@@ -209,9 +205,7 @@ internal class RecoverableFailingRegister3(threadsNumber: Int) : CAS {
 //            r[record.threadId][threadId].value = record.value to record.operationId
 //            r[record.threadId][threadId].flush()
 //        }
-        val result = register.compareAndSet(record, Record(newValue, threadId, operationId))
-        register.flush()
-        return result
+        return register.compareAndSet(record, Record(newValue, threadId, operationId))
     }
 
     override fun get() = register.value.value
@@ -239,6 +233,7 @@ internal class RecoverableFailingRegister4(threadsNumber: Int) : CAS {
             r[record.threadId][threadId].value = record.value to record.operationId
             r[record.threadId][threadId].flush()
         }
+        // Here CAS and flush are not atomic.
         val result = register.compareAndSet(record, Record(newValue, threadId, operationId))
         register.flush()
         return result
