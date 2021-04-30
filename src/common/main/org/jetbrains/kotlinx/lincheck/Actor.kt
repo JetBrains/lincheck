@@ -37,6 +37,8 @@ expect class Actor {
     val handledExceptions: List<KClass<out Throwable>>
 
     override fun toString(): String
+
+    fun finalize()
 }
 
 expect val Actor.isQuiescentConsistent: Boolean

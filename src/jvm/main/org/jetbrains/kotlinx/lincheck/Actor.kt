@@ -59,6 +59,10 @@ actual data class Actor @JvmOverloads constructor(
         (if (promptCancellation) "prompt_" else "") +
         (if (cancelOnSuspension) "cancel" else "")
 
+    actual fun finalize() {
+        // do nothing
+    }
+
     val handlesExceptions = handledExceptions.isNotEmpty()
 }
 

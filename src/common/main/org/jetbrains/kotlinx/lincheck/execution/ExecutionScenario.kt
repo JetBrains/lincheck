@@ -18,6 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 @file:JvmName("ExecutionScenarioKtCommon")
+
 package org.jetbrains.kotlinx.lincheck.execution
 
 import org.jetbrains.kotlinx.lincheck.Actor
@@ -29,33 +30,39 @@ import kotlin.jvm.*
  * used by a [Strategy] which produces an [ExecutionResult].
  */
 class ExecutionScenario(
-        /**
-         * The initial sequential part of the execution.
-         * It helps to produce different initial states
-         * before the parallel part.
-         *
-         * The initial execution part should contain only non-suspendable actors;
-         * otherwise, the single initial execution thread will suspend with no chance to be resumed.
-         */
-        val initExecution: List<Actor>,
-        /**
-         * The parallel part of the execution, which is used
-         * to find an interleaving with incorrect behaviour.
-         */
-        val parallelExecution: List<List<Actor>>,
-        /**
-         * The last sequential part is used to test that
-         * the data structure is in some correct state.
-         *
-         * If this execution scenario contains suspendable actors, the post part should be empty;
-         * if not, an actor could resume a previously suspended one from the parallel execution part.
-         */
-        val postExecution: List<Actor>
+    /**
+     * The initial sequential part of the execution.
+     * It helps to produce different initial states
+     * before the parallel part.
+     *
+     * The initial execution part should contain only non-suspendable actors;
+     * otherwise, the single initial execution thread will suspend with no chance to be resumed.
+     */
+    val initExecution: List<Actor>,
+    /**
+     * The parallel part of the execution, which is used
+     * to find an interleaving with incorrect behaviour.
+     */
+    val parallelExecution: List<List<Actor>>,
+    /**
+     * The last sequential part is used to test that
+     * the data structure is in some correct state.
+     *
+     * If this execution scenario contains suspendable actors, the post part should be empty;
+     * if not, an actor could resume a previously suspended one from the parallel execution part.
+     */
+    val postExecution: List<Actor>
 ) {
     override fun toString(): String {
         val sb = StringBuilder()
         sb.appendExecutionScenario(this)
         return sb.toString()
+    }
+
+    fun finalize() {
+        initExecution.forEach { it.finalize() }
+        parallelExecution.forEach { l -> l.forEach { it.finalize() } }
+        postExecution.forEach { it.finalize() }
     }
 }
 

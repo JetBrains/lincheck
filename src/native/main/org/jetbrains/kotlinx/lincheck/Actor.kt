@@ -45,6 +45,10 @@ actual class Actor(
         (if (cancelOnSuspension) " + " else "") +
         (if (promptCancellation) "prompt_" else "") +
         (if (cancelOnSuspension) "cancel" else "")
+
+    actual fun finalize() {
+        arguments.forEach { if(it is Finalizable) it.finalize() }
+    }
 }
 
 actual val Actor.isQuiescentConsistent: Boolean

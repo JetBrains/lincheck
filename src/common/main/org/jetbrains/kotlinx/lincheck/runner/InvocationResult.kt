@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.runner
 
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Finalizable
 import org.jetbrains.kotlinx.lincheck.execution.*
 
 expect class ThreadDump
@@ -34,7 +36,11 @@ open class InvocationResult
  */
 class CompletedInvocationResult(
     val results: ExecutionResult
-) : InvocationResult()
+) : InvocationResult(), Finalizable {
+    override fun finalize() {
+        results.finalize()
+    }
+}
 
 /**
  * The invocation has completed with an unexpected exception.

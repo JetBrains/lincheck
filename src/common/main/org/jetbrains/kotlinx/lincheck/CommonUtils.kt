@@ -147,6 +147,10 @@ private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses
 internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
 
+internal interface Finalizable {
+    fun finalize()
+}
+
 /**
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].

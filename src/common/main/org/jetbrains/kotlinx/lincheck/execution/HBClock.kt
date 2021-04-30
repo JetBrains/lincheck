@@ -44,7 +44,11 @@ data class HBClock(val clock: LincheckAtomicIntArray) {
 fun emptyClock(size: Int) = HBClock(emptyClockArray(size))
 fun emptyClockArray(size: Int) = LincheckAtomicIntArray(size)
 
-data class ResultWithClock(val result: Result, val clockOnStart: HBClock)
+data class ResultWithClock(val result: Result, val clockOnStart: HBClock) : Finalizable {
+    override fun finalize() {
+        if(result is Finalizable) result.finalize()
+    }
+}
 
 fun Result.withEmptyClock(threads: Int) = ResultWithClock(this, emptyClock(threads))
 fun List<Result>.withEmptyClock(threads: Int): List<ResultWithClock> = map { it.withEmptyClock(threads) }

@@ -46,7 +46,7 @@ abstract class Runner protected constructor(
     private val _testClass: TestClass, // will be transformed later
     protected val validationFunctions: List<ValidationFunction>,
     protected val stateRepresentationFunction: StateRepresentationFunction?
-) {
+) : Finalizable {
     protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     protected lateinit var testClass: TestClass // not available before `initialize` call
     @Suppress("LeakingThis")
@@ -160,4 +160,8 @@ abstract class Runner protected constructor(
      */
     val isParallelExecutionCompleted: Boolean
         get() = completedOrSuspendedThreads.get() == scenario.threads
+
+    override fun finalize() {
+        scenario.finalize()
+    }
 }

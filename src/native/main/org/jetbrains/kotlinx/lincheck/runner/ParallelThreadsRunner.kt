@@ -141,6 +141,9 @@ internal actual open class ParallelThreadsRunner actual constructor(
             result
         }
         val afterPostStateRepresentation = nativeConstructStateRepresentation(testInstance)
+        if (testInstance is Finalizable) {
+            testInstance.finalize()
+        }
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,

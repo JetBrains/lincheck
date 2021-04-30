@@ -68,11 +68,11 @@ using namespace Lincheck;
 
 TEST(follyHashMapTest, FirstTest) {
     LincheckConfiguration<ConcurrentMapFolly, SequentialMapFolly> conf;
-    conf.iterations(10);
+    conf.iterations(3);
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
-    conf.threads(4);
-    conf.actorsPerThread(7);
+    conf.threads(3);
+    conf.actorsPerThread(5);
 
     conf.operation<bool, int, int, &ConcurrentMapFolly::assign, &SequentialMapFolly::assign>("assign");
     conf.operation<std::pair<bool, int>, int, &ConcurrentMapFolly::get, &SequentialMapFolly::get>("get");

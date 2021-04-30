@@ -58,9 +58,15 @@ data class ExecutionResult(
      * State representation at the end of the scenario.
      */
     val afterPostStateRepresentation: String?
-) {
+) : Finalizable {
     constructor(initResults: List<Result>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<Result>) :
         this(initResults, null, parallelResultsWithClock, null, postResults, null)
+
+    override fun finalize() {
+        initResults.forEach { if(it is Finalizable) it.finalize() }
+        parallelResultsWithClock.forEach { l -> l.forEach { if(it is Finalizable) it.finalize() } }
+        postResults.forEach { if(it is Finalizable) it.finalize() }
+    }
 }
 
 val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(

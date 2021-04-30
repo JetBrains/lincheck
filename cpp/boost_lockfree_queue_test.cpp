@@ -65,11 +65,11 @@ using namespace Lincheck;
 
 TEST(BoostLockfreeQueueTest, QueueTest) {
     LincheckConfiguration<ConcurrentQueueBoost, SequentialQueueBoost> conf;
-    conf.iterations(10000);
+    conf.iterations(100);
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
     conf.threads(4);
-    conf.actorsPerThread(7);
+    conf.actorsPerThread(5);
 
     conf.operation<bool, int, &ConcurrentQueueBoost::push, &SequentialQueueBoost::push>("push");
     conf.operation<std::pair<bool, int>, &ConcurrentQueueBoost::pop, &SequentialQueueBoost::pop>("pop");

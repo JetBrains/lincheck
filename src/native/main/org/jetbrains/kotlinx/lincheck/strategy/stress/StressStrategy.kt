@@ -66,8 +66,11 @@ actual class StressStrategy actual constructor(
                 runner.also {
                     when (val ir = runner.run()) {
                         is CompletedInvocationResult -> {
-                            if (!verifier.verifyResults(scenario, ir.results))
+                            if (!verifier.verifyResults(scenario, ir.results)) {
                                 return IncorrectResultsFailure(scenario, ir.results)
+                            } else {
+                                ir.finalize()
+                            }
                         }
                         else -> return ir.toLincheckFailure(scenario)
                     }

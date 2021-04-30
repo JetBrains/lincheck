@@ -77,11 +77,11 @@ TEST(LibcdsMSQueueTest, QueueTest) {
         myAttach();
 
         LincheckConfiguration<LibcdsQueue, LibcdsQueue> conf;
-        conf.iterations(10);
+        conf.iterations(2);
         conf.invocationsPerIteration(500);
         conf.minimizeFailedScenario(false);
-        conf.threads(4);
-        conf.actorsPerThread(7);
+        conf.threads(3);
+        conf.actorsPerThread(5);
 
         conf.initThreadFunction<myAttach>();
         conf.finishThreadFunction<myDetach>();

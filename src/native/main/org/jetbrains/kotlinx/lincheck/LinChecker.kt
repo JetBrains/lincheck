@@ -47,7 +47,7 @@ internal class ObjectWithDestructorAndEqualsAndHashcodeAndToString(val obj: CPoi
                                                                    val destructor: CDestructor,
                                                                    val equals: EqualsCFunction,
                                                                    val hashCode: HashCodeCFunction,
-                                                                   val toString: ToStringCFunction) {
+                                                                   val toString: ToStringCFunction) : Finalizable {
 
     override fun equals(other: Any?): Boolean {
         return if (other is ObjectWithDestructorAndEqualsAndHashcodeAndToString) {
@@ -65,22 +65,28 @@ internal class ObjectWithDestructorAndEqualsAndHashcodeAndToString(val obj: CPoi
         return applyToStringFunction(obj, toString)
     }
 
-    protected fun finalize() {
+    override fun finalize() {
         // there are no destructors in Kotlin/Native :( https://youtrack.jetbrains.com/issue/KT-44191
         destructor.invoke(obj)
     }
 }
 
 internal class ParameterGeneratorArgument(val arg: CPointer<*>,
-                                          val toString: ToStringCFunction) {
+                                          val destructor: CDestructor,
+                                          val toString: ToStringCFunction) : Finalizable {
     override fun toString(): String {
         return applyToStringFunction(arg, toString)
     }
+
+    override fun finalize() {
+        // there are no destructors in Kotlin/Native :( https://youtrack.jetbrains.com/issue/KT-44191
+        destructor.invoke(arg)
+    }
 }
 
-internal class ConcurrentInstance(val obj: CPointer<*>, val destructor: CDestructor) {
+internal class ConcurrentInstance(val obj: CPointer<*>, val destructor: CDestructor): Finalizable {
 
-    protected fun finalize() {
+    override fun finalize() {
         // there are no destructors in Kotlin/Native :( https://youtrack.jetbrains.com/issue/KT-44191
         destructor.invoke(obj)
     }
@@ -89,7 +95,7 @@ internal class ConcurrentInstance(val obj: CPointer<*>, val destructor: CDestruc
 internal class SequentialSpecificationInstance(val obj: CPointer<*>,
                                                val destructor: CDestructor,
                                                val equalsFunction: EqualsCFunction,
-                                               val hashCodeFunction: HashCodeCFunction) {
+                                               val hashCodeFunction: HashCodeCFunction) : Finalizable {
     override fun equals(other: Any?): Boolean {
         return if (other is SequentialSpecificationInstance) {
             equalsFunction.invoke(obj, other.obj)
@@ -102,7 +108,7 @@ internal class SequentialSpecificationInstance(val obj: CPointer<*>,
         return hashCodeFunction.invoke(obj)
     }
 
-    protected fun finalize() {
+    override fun finalize() {
         // there are no destructors in Kotlin/Native :( https://youtrack.jetbrains.com/issue/KT-44191
         destructor.invoke(obj)
     }
@@ -179,7 +185,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         if (initialStateCreator != null) {
             // different initialState and sequentialSpecification
             initialState {
-                ConcurrentInstance(initialStateCreator!!.invoke(), sequentialSpecificationDestructor!!)
+                ConcurrentInstance(initialStateCreator!!.invoke(), initialStateDestructor!!)
             }
         } else {
             initialState {
@@ -274,6 +280,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         arg1_gen_initial_state: CCreator,
         arg1_gen_generate: CPointer<CFunction<(CPointer<*>) -> CPointer<*>>>,
         arg1_toString: ToStringCFunction,
+        arg1_destructor: CDestructor,
         op: CPointer<CFunction<(CPointer<*>, CPointer<*>) -> CPointer<*>>>,
         seq_spec: CPointer<CFunction<(CPointer<*>, CPointer<*>) -> CPointer<*>>>,
         result_destructor: CDestructor,
@@ -286,7 +293,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         val arg1_paramgen = object : ParameterGenerator<ParameterGeneratorArgument> {
             val state = arg1_gen_initial_state.invoke()
             override fun generate(): ParameterGeneratorArgument {
-                return ParameterGeneratorArgument(arg1_gen_generate.invoke(state), arg1_toString)
+                return ParameterGeneratorArgument(arg1_gen_generate.invoke(state), arg1_destructor, arg1_toString)
             }
         }
         val actorGenerator = ActorGenerator(
@@ -316,9 +323,11 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         arg1_gen_initial_state: CCreator,
         arg1_gen_generate: CPointer<CFunction<(CPointer<*>) -> CPointer<*>>>,
         arg1_toString: ToStringCFunction,
+        arg1_destructor: CDestructor,
         arg2_gen_initial_state: CCreator,
         arg2_gen_generate: CPointer<CFunction<(CPointer<*>) -> CPointer<*>>>,
         arg2_toString: ToStringCFunction,
+        arg2_destructor: CDestructor,
         op: CPointer<CFunction<(CPointer<*>, CPointer<*>, CPointer<*>) -> CPointer<*>>>,
         seq_spec: CPointer<CFunction<(CPointer<*>, CPointer<*>, CPointer<*>) -> CPointer<*>>>,
         result_destructor: CDestructor,
@@ -331,13 +340,13 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         val arg1Paramgen = object : ParameterGenerator<ParameterGeneratorArgument> {
             val state = arg1_gen_initial_state.invoke()
             override fun generate(): ParameterGeneratorArgument {
-                return ParameterGeneratorArgument(arg1_gen_generate.invoke(state), arg1_toString)
+                return ParameterGeneratorArgument(arg1_gen_generate.invoke(state), arg1_destructor, arg1_toString)
             }
         }
         val arg2Paramgen = object : ParameterGenerator<ParameterGeneratorArgument> {
             val state = arg2_gen_initial_state.invoke()
             override fun generate(): ParameterGeneratorArgument {
-                return ParameterGeneratorArgument(arg2_gen_generate.invoke(state), arg2_toString)
+                return ParameterGeneratorArgument(arg2_gen_generate.invoke(state), arg2_destructor, arg2_toString)
             }
         }
         val actorGenerator = ActorGenerator(
@@ -593,6 +602,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
+            //scenario.finalize()
         }
         return null
     }

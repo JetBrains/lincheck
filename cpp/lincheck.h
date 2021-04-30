@@ -46,41 +46,22 @@ namespace Lincheck {
 
     public:
         LincheckConfiguration() {
-
-            constructor_pointer *instance_constructor = new constructor_pointer();
-            *instance_constructor = []() -> void * { return new TestClass(); };
-
-            destructor_pointer *instance_destructor = new destructor_pointer();
-            *instance_destructor = [](void *p) { delete (TestClass *) p; };
-
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupInitialState(
                     configuration,
-                    (void *) *instance_constructor, // constructor
-                    (void *) *instance_destructor // destructor
+                    (void *) (constructor_pointer) []() -> void * { return new TestClass(); }, // constructor
+                    (void *) (destructor_pointer) [](void *p) { delete (TestClass *) p; } // destructor
             );
-
-            constructor_pointer *constructor = new constructor_pointer();
-            *constructor = []() -> void * { return new SequentialSpecification(); };
-
-            destructor_pointer *destructor = new destructor_pointer();
-            *destructor = [](void *p) { delete (SequentialSpecification *) p; };
-
-            equals_pointer *equals = new equals_pointer();
-            *equals = [](void *a, void *b) -> bool {
-                return *(SequentialSpecification *) a == *(SequentialSpecification *) b;
-            };
-
-            hashCode_pointer *hashCode = new hashCode_pointer();
-            *hashCode = [](void *instance) -> int {
-                return Lincheck::hash<SequentialSpecification>()(*(SequentialSpecification *) instance);
-            };
 
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupSequentialSpecification(
                     configuration,
-                    (void *) *constructor, // constructor
-                    (void *) *destructor, // destructor
-                    (void *) *equals, // equals
-                    (void *) *hashCode // hashCode
+                    (void *) (constructor_pointer) []() -> void * { return new SequentialSpecification(); }, // constructor
+                    (void *) (destructor_pointer) [](void *p) { delete (SequentialSpecification *) p; }, // destructor
+                    (void *) (equals_pointer) [](void *a, void *b) -> bool {
+                        return *(SequentialSpecification *) a == *(SequentialSpecification *) b;
+                    }, // equals
+                    (void *) (hashCode_pointer) [](void *instance) -> int {
+                        return Lincheck::hash<SequentialSpecification>()(*(SequentialSpecification *) instance);
+                    } // hashCode
             );
         }
 
@@ -178,9 +159,12 @@ namespace Lincheck {
                         Arg1 arg = obj->generate(); // invoke generate method
                         return new Arg1(arg); // copy from stack to heap and return
                     },
-
                     (void *) (void (*)(void *, char *, int)) [](void *arg, char *dest, int destSize) { // arg1_toString
                         strncpy(dest, Lincheck::to_string<Arg1>()(*(Arg1 *) arg).c_str(), destSize);
+                    },
+                    (void *) (void (*)(void *)) [](void *arg1) { // arg1_destructor
+                        Arg1 *obj = (Arg1 *) arg1; // add type to void*
+                        delete obj; // destructor
                     },
                     (void *) (void *(*)(void *, void *)) [](void *instance, void *arg1) -> void * { // operation
                         auto *obj = (TestClass *) instance; // add type to void*
@@ -230,9 +214,12 @@ namespace Lincheck {
                         Arg1 arg = obj->generate(); // invoke generate method
                         return new Arg1(arg); // copy from stack to heap and return
                     },
-
                     (void *) (void (*)(void *, char *, int)) [](void *arg, char *dest, int destSize) { // arg1_toString
                         strncpy(dest, Lincheck::to_string<Arg1>()(*(Arg1 *) arg).c_str(), destSize);
+                    },
+                    (void *) (void (*)(void *)) [](void *arg1) { // arg1_destructor
+                        Arg1 *obj = (Arg1 *) arg1; // add type to void*
+                        delete obj; // destructor
                     },
                     (void *) (void *(*)()) []() -> void * { // arg2_gen_initial_state
                         return new ParameterGenerator<Arg2>();
@@ -242,9 +229,12 @@ namespace Lincheck {
                         Arg2 arg = obj->generate(); // invoke generate method
                         return new Arg2(arg); // copy from stack to heap and return
                     },
-
                     (void *) (void (*)(void *, char *, int)) [](void *arg, char *dest, int destSize) { // arg2_toString
                         strncpy(dest, Lincheck::to_string<Arg2>()(*(Arg2 *) arg).c_str(), destSize);
+                    },
+                    (void *) (void (*)(void *)) [](void *arg2) { // arg2_destructor
+                        Arg2 *obj = (Arg2 *) arg2; // add type to void*
+                        delete obj; // destructor
                     },
                     (void *) (void *(*)(void *, void *, void *)) [](void *instance, void *arg1,
                                                                     void *arg2) -> void * { // operation
