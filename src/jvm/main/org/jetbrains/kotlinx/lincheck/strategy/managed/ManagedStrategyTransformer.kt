@@ -1157,7 +1157,8 @@ internal class ManagedStrategyTransformer(
             if (!shouldTransform || !superConstructorCalled) return
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
+            val tracePointLocal = newTracePointLocal()
+            loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> MethodCallTracePoint(iThread, actorId, callStackTrace, methodName, ste) }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_NVM_OPERATION_METHOD)
         }
     }

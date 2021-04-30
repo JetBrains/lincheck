@@ -584,13 +584,13 @@ abstract class ManagedStrategy(
         newCrashPoint(iThread)
     }
 
-    internal fun beforeNVMOperation(iThread: Int, codeLocation: Int) {
+    internal fun beforeNVMOperation(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint?) {
         if (!isTestThread(iThread)) return
         // Here the order of points is crucial - switch point must be before crash point.
         // The use case is the following: thread switches on the switch point,
         // then another thread initiates a system crash, force switches to the first thread
         // which crashes immediately.
-        newSwitchPoint(iThread, codeLocation, callStackTrace[iThread].lastOrNull()?.call) // re-use last call trace point
+        newSwitchPoint(iThread, codeLocation, tracePoint)
         newCrashPoint(iThread)
     }
 
