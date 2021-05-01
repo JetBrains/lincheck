@@ -305,7 +305,7 @@ internal class NRLFailingTestAndSet3(private val threadsCount: Int) : VerifierSt
 
 internal class NRLFailingTestAndSet4(private val threadsCount: Int) : VerifierState(), TAS {
     private val r = MutableList(threadsCount) { nonVolatile(0) }
-    private val response = MutableList(threadsCount) { nonVolatile(0) }
+    private val response = MutableList(threadsCount) { nonVolatile(-1) }
     private val winner = nonVolatile(-1)
     private val doorway = nonVolatile(true)
     private val tas = nonVolatile(0)
