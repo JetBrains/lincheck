@@ -67,7 +67,7 @@ class DistributedStrategy<Message, Log>(
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until invocations) {
-                //println("INVOCATION $invocation")
+               // println("INVOCATION $invocation")
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {
@@ -76,11 +76,17 @@ class DistributedStrategy<Message, Log>(
                             return IncorrectResultsFailure(
                                 scenario,
                                 ir.results.newResult(stateRepresentation)
-                            ).also { runner.storeEventsToFile(it) }
+                            ).also {
+                                println("Incorrect results")
+                                runner.storeEventsToFile(it)
+                            }
                         }
                     }
                     else -> {
-                        return ir.toLincheckFailure(scenario).also { runner.storeEventsToFile(it) }
+                        return ir.toLincheckFailure(scenario).also {
+                            println("Some other exception")
+                            runner.storeEventsToFile(it)
+                        }
                     }
                 }
             }

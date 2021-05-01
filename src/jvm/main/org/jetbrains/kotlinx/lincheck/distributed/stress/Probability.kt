@@ -28,18 +28,18 @@ import java.io.PrintWriter
 import kotlin.math.max
 import kotlin.random.Random
 
-val debugProb = true
+val debugProb = false
 
 fun addToFile(f: (BufferedWriter) -> Unit) {
     if (!debugProb) return
-    FileOutputStream("probability.txt", true).bufferedWriter().use {
+    FileOutputStream("crash_stats_norm.txt", true).bufferedWriter().use {
         f(it)
     }
 }
 
 class Probability(
     private val testCfg: DistributedCTestConfiguration<*, *>,
-    private val numberOfNodes: Int,
+    private val context: DistributedRunnerContext<*, *>,
     private val iNode: Int
 ) {
     companion object {
@@ -50,6 +50,7 @@ class Probability(
         const val NODE_RECOVERY_PROBABILITY = 0.7
         var failedNodesExpectation = -1
     }
+    private val numberOfNodes: Int = context.addressResolver.totalNumberOfNodes
 
     fun duplicationRate(): Int {
         if (!messageIsSent()) {
@@ -71,9 +72,9 @@ class Probability(
     fun nodeFailed(): Boolean {
         val r = rand.get().nextDouble(1.0)
         val p = nodeFailProbability()
-        /*addToFile {
-            it.appendLine("[$iNode]: random $r, prob $p, cur $curMsgCount")
-        }*/
+        if (r < p) addToFile {
+            it.appendLine("[$iNode]: $curMsgCount")
+        }
         return r < p
     }
 
@@ -90,9 +91,10 @@ class Probability(
         return if (prevMsgCount == 0) {
             0.0
         } else {
-            val q = failedNodesExpectation.toDouble() / numberOfNodes
+            val q = failedNodesExpectation.toDouble()  / numberOfNodes
             return if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
                 q / (prevMsgCount - (curMsgCount - 1) * q)
+                //q / prevMsgCount
             } else {
                 q / prevMsgCount
             }
