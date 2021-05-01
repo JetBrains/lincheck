@@ -21,14 +21,23 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
+import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration
+import org.jetbrains.kotlinx.lincheck.CTestStructure
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.OperationIdGen
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import java.lang.reflect.Method
+import kotlin.reflect.jvm.javaMethod
 
 private const val THREADS_NUMBER = 3
 
@@ -118,8 +127,36 @@ internal abstract class ReadWriteObjectFailingTest :
     ) = rwo.write(value to operationId, threadId)
 }
 
+internal class SmallScenarioTest : ReadWriteObjectFailingTest() {
+    override val rwo = NRLFailingReadWriteObject1<Pair<Int, Int>>(THREADS_NUMBER + 2)
+    override fun <O : Options<O, *>> O.customize() {
+        executionGenerator(FailingScenarioGenerator::class.java)
+    }
+}
+
+internal class FailingScenarioGenerator(testCfg: CTestConfiguration, testStructure: CTestStructure) :
+    ExecutionGenerator(testCfg, testStructure) {
+    override fun nextExecution(): ExecutionScenario {
+        val read = SmallScenarioTest::read.javaMethod
+        val write = SmallScenarioTest::write.javaMethod
+        return ExecutionScenario(
+            emptyList(),
+            listOf(
+                listOf(actor(read), actor(write, 1, 2, 0)),
+                listOf(actor(write, 2, 1, 1))
+            ),
+            listOf(actor(read))
+        )
+    }
+}
+
+private fun actor(method: Method?, vararg a: Any?) = Actor(method!!, a.toMutableList())
+
 internal class ReadWriteObjectFailingTest1 : ReadWriteObjectFailingTest() {
     override val rwo = NRLFailingReadWriteObject1<Pair<Int, Int>>(THREADS_NUMBER + 2)
+    override fun ModelCheckingOptions.customize() {
+        actorsPerThread(2)
+    }
 }
 
 internal class ReadWriteObjectFailingTest2 : ReadWriteObjectFailingTest() {
@@ -153,6 +190,7 @@ internal class NRLFailingReadWriteObject1<T>(threadsCount: Int) : RWO<T> {
     private fun writeImpl(value: T, p: Int) {
         val tmp = register.value
         state[p].value = 1 to tmp
+        // Otherwise the error is that a thread completes write operation twice.
         // here should be state[p].flush()
         register.setAndFlush(value)
         state[p].value = 0 to value
