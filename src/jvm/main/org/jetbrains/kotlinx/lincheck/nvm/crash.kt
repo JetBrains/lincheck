@@ -29,19 +29,16 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Must be ignored by user code, namely 'catch (e: Throwable)' constructions should pass this exception.
  */
 abstract class CrashError(enableStackTrace: Boolean) : Throwable(null, null, false, enableStackTrace) {
-    abstract var actorIndex: Int
+    var actorIndex: Int = -1
     abstract val crashStackTrace: Array<StackTraceElement>
 }
 
-class CrashErrorImpl(override var actorIndex: Int = -1) : CrashError(true) {
-    override val crashStackTrace: Array<StackTraceElement> = stackTrace
+class CrashErrorImpl : CrashError(true) {
+    override val crashStackTrace: Array<StackTraceElement> get() = stackTrace
 }
 
 /** Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot. */
-class CrashErrorProxy(
-    private val ste: StackTraceElement?,
-    override var actorIndex: Int = -1
-) : CrashError(false) {
+class CrashErrorProxy(private val ste: StackTraceElement?) : CrashError(false) {
     override val crashStackTrace get() = if (ste === null) emptyArray() else arrayOf(ste)
 }
 
