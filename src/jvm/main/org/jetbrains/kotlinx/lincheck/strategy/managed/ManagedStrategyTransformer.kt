@@ -1137,7 +1137,14 @@ internal class ManagedStrategyTransformer(
             if (!superConstructorCalled && opcode == INVOKESPECIAL) {
                 superConstructorCalled = true
             }
-            if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) invokeBeforeNVMOperation()
+            if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) {
+                // Here the order of points is crucial - switch point must be before crash point.
+                // The use case is the following: thread switches on the switch point,
+                // then another thread initiates a system crash, force switches to the first thread
+                // which crashes immediately.
+                invokeBeforeNVMOperation()
+                if (name !== null && name.toLowerCase().contains("flush")) invokeBeforeCrashPoint()
+            }
             adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
 
