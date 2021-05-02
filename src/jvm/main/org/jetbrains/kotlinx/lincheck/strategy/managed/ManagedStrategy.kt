@@ -130,15 +130,17 @@ abstract class ManagedStrategy(
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor {
         val visitor = CrashEnabledVisitor(cv, testClass, recoverModel.crashes)
-        return ManagedStrategyTransformer(
-            cv = recoverModel.createTransformer(visitor, testClass),
-            tracePointConstructors = tracePointConstructors,
-            guarantees = testCfg.guarantees,
-            eliminateLocalObjects = testCfg.eliminateLocalObjects,
-            collectStateRepresentation = collectStateRepresentation,
-            constructTraceRepresentation = collectTrace,
-            codeLocationIdProvider = codeLocationIdProvider,
-            crashEnabledVisitor = visitor
+        return recoverModel.createTransformerWrapper(
+            ManagedStrategyTransformer(
+                cv = recoverModel.createTransformer(visitor, testClass),
+                tracePointConstructors = tracePointConstructors,
+                guarantees = testCfg.guarantees,
+                eliminateLocalObjects = testCfg.eliminateLocalObjects,
+                collectStateRepresentation = collectStateRepresentation,
+                constructTraceRepresentation = collectTrace,
+                codeLocationIdProvider = codeLocationIdProvider,
+                crashEnabledVisitor = visitor
+            ), testClass
         )
     }
 

@@ -25,10 +25,9 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
 import java.lang.ref.*
@@ -306,13 +305,9 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
     t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
 }
 
-/**
- * This method helps to encapsulate remapper logic from strategy interface.
- * The remapper is determined based on the used transformers.
- */
-internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
-    when {
-        classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
+internal fun getRemapperByTransformers(strategy: Strategy): Remapper? =
+    when (strategy) {
+        is ManagedStrategy -> JavaUtilRemapper()
         else -> null
     }
 
