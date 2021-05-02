@@ -336,6 +336,11 @@ internal open class ParallelThreadsRunner(
         executionCallback.onActorStart(iThread)
     }
 
+    override fun onFailure(iThread: Int, e: Throwable) {
+        super.onFailure(iThread, e)
+        executionCallback.onFinish(iThread)
+    }
+
     override fun onFinish(iThread: Int) {
         super.onFinish(iThread)
         executionCallback.onFinish(iThread)
