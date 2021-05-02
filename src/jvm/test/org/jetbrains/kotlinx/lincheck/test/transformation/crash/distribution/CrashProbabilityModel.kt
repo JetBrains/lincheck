@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 
 import org.apache.commons.math3.analysis.solvers.LaguerreSolver
+import org.jetbrains.kotlinx.lincheck.nvm.BinarySearchSolver
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow
@@ -66,7 +67,7 @@ internal class BoundedNoRecoverCrashProbabilityModel(
 
     init {
         val n = statistics.actorLengths.size
-        assert(c < (0 until n).map { i -> (if (i == 0) 1.0 else s[i - 1]) / statistics.actorLengths[i] }.minOrNull()!!)
+        assert(c < (0 until n).minOf { i -> (if (i == 0) 1.0 else s[i - 1]) / statistics.actorLengths[i] })
     }
 
     override fun inActorCrashProbability(i: Int) = if (i == 0) c else c / s[i - 1]
@@ -79,7 +80,7 @@ internal class BoundedNoRecoverCrashProbabilityModel(
             val total = statistics.actorLengths.sum()
             val solver = BinarySearchSolver { c ->
                 val p = calculatePreviousCrashesProbabilities(statistics, c, maxCrashes)
-                c - (0 until n).map { i -> (if (i == 0) 1.0 else p[i - 1]) / statistics.actorLengths[i] }.minOrNull()!!
+                c - (0 until n).minOf { i -> (if (i == 0) 1.0 else p[i - 1]) / statistics.actorLengths[i] }
             }
             val mc = min(1.0 / statistics.actorLengths.maxOrNull()!!, maxCrashes.toDouble() / total)
             val c = solver.solve(0.0, mc, 1e-9)
@@ -168,30 +169,5 @@ internal class BoundedCrashProbabilityModelOneActor(
                 .map { it.real }
                 .single { 0 < it && it < 1 / r }
         }
-    }
-}
-
-fun interface BinarySearchSolver {
-    /**
-     *  A monotonically increasing function.
-     */
-    fun f(x: Double): Double
-
-    /**
-     * Find x such that f(x) = 0. x in [[a], [b]].
-     */
-    fun solve(a: Double, b: Double, eps: Double): Double {
-        var l = a
-        var r = b
-        while (r - l > eps) {
-            val x = (r + l) / 2
-            val fValue = f(x)
-            when {
-                fValue > 0 -> r = x
-                fValue < 0 -> l = x
-                else -> return x
-            }
-        }
-        return l
     }
 }

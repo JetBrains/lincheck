@@ -33,8 +33,10 @@ interface ExecutionCallback {
     fun onActorStart(iThread: Int)
     fun onAfterActorStart()
     fun onFinish(iThread: Int)
+    fun onEnterActorBody(iThread: Int, iActor: Int)
+    fun onExitActorBody(iThread: Int, iActor: Int)
     fun getCrashes(): List<List<CrashError>>
-    fun reset()
+    fun reset(scenario: ExecutionScenario, recoverModel: RecoverabilityModel)
 }
 
 private object NoRecoverExecutionCallBack : ExecutionCallback {
@@ -47,14 +49,16 @@ private object NoRecoverExecutionCallBack : ExecutionCallback {
     override fun onActorStart(iThread: Int) {}
     override fun onAfterActorStart() {}
     override fun onFinish(iThread: Int) {}
+    override fun onEnterActorBody(iThread: Int, iActor: Int) {}
+    override fun onExitActorBody(iThread: Int, iActor: Int) {}
     override fun getCrashes() = emptyList<List<CrashError>>()
-    override fun reset() {}
+    override fun reset(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) {}
 }
 
 private object RecoverExecutionCallback : ExecutionCallback {
     override fun onStart(iThread: Int) = NVMState.onStart(iThread)
     override fun beforeInit(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) =
-        NVMState.beforeInit(scenario, recoverModel)
+        NVMState.beforeInit(recoverModel)
 
     override fun beforeParallel(threads: Int) = NVMState.beforeParallel(threads)
     override fun beforePost() = NVMState.beforePost()
@@ -63,8 +67,11 @@ private object RecoverExecutionCallback : ExecutionCallback {
     override fun onActorStart(iThread: Int) = NVMState.onActorStart(iThread)
     override fun onAfterActorStart() = NVMState.onAfterActorStart()
     override fun onFinish(iThread: Int) = NVMState.onFinish(iThread)
+    override fun onEnterActorBody(iThread: Int, iActor: Int) = NVMState.onEnterActorBody(iThread, iActor)
+    override fun onExitActorBody(iThread: Int, iActor: Int) = NVMState.onExitActorBody(iThread, iActor)
     override fun getCrashes(): List<List<CrashError>> = NVMState.clearCrashes().toList()
-    override fun reset() = NVMState.reset()
+    override fun reset(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) =
+        NVMState.reset(scenario, recoverModel)
 }
 
 
@@ -101,9 +108,10 @@ interface RecoverabilityModel {
     fun needsTransformation(): Boolean
     fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
-    fun systemCrashProbability(): Float
+    fun systemCrashProbability(): Double
     fun defaultExpectedCrashes(): Int
     fun createExecutionCallback(): ExecutionCallback
+    fun createProbabilityModel(): ProbabilityModel
     val awaitSystemCrashBeforeThrow: Boolean
 }
 
@@ -112,9 +120,10 @@ internal object NoRecoverModel : RecoverabilityModel {
     override fun needsTransformation() = false
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>) = cv
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
-    override fun systemCrashProbability() = 0.0f
+    override fun systemCrashProbability() = 0.0
     override fun defaultExpectedCrashes() = 0
     override fun createExecutionCallback(): ExecutionCallback = NoRecoverExecutionCallBack
+    override fun createProbabilityModel() = NoCrashesProbabilityModel
     override val awaitSystemCrashBeforeThrow get() = true
 }
 
@@ -124,9 +133,12 @@ private class NRLModel(
 ) : RecoverabilityModel {
     override fun needsTransformation() = true
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
-    override fun systemCrashProbability() = 0.1f
+    override fun systemCrashProbability() = 0.1
     override fun defaultExpectedCrashes() = 10
     override fun createExecutionCallback(): ExecutionCallback = RecoverExecutionCallback
+    override fun createProbabilityModel() =
+        if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DetectableExecutionProbabilityModel() else NoCrashesProbabilityModel
+
     override val awaitSystemCrashBeforeThrow get() = true
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = RecoverabilityTransformer(cv)
@@ -143,9 +155,12 @@ private open class DurableModel(
 ) : RecoverabilityModel {
     override fun needsTransformation() = true
     override fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator = DurableActorCrashHandlerGenerator()
-    override fun systemCrashProbability() = 1.0f
+    override fun systemCrashProbability() = 1.0
     override fun defaultExpectedCrashes() = 1
     override fun createExecutionCallback(): ExecutionCallback = RecoverExecutionCallback
+    override fun createProbabilityModel(): ProbabilityModel =
+        if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DurableProbabilityModel() else NoCrashesProbabilityModel
+
     override val awaitSystemCrashBeforeThrow get() = false
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz, strategyRecoveryOptions)
@@ -160,4 +175,6 @@ private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecovery
     DurableModel(true, strategyRecoveryOptions) {
     override fun createActorCrashHandlerGenerator() = DetectableExecutionActorCrashHandlerGenerator()
     override fun defaultExpectedCrashes() = 5
+    override fun createProbabilityModel() =
+        if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DetectableExecutionProbabilityModel() else NoCrashesProbabilityModel
 }

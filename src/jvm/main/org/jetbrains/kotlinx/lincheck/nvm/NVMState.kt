@@ -88,10 +88,10 @@ object NVMState {
         Crash.register(iThread + 1)
     }
 
-    fun reset() {
+    fun reset(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) {
         NVMCache.clear()
-        Probability.reset()
-        Crash.reset(NoRecoverModel)
+        Probability.reset(scenario, recoverModel)
+        Crash.reset(recoverModel)
         Crash.resetDefault()
         state = ExecutionState.INIT
         crashesEnabled = false
@@ -99,10 +99,9 @@ object NVMState {
         clearCrashes()
     }
 
-    fun beforeInit(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) {
+    fun beforeInit(recoverModel: RecoverabilityModel) {
         NVMCache.clear()
-        val actors = scenario.parallelExecution.sumBy { it.size }
-        Probability.setNewInvocation(actors, recoverModel)
+        Probability.setNewInvocation(recoverModel)
         Crash.reset(recoverModel)
         state = ExecutionState.INIT
         Crash.register(0)
@@ -137,4 +136,7 @@ object NVMState {
     fun onAfterActorStart() {
         actorStarted(threads + 1)
     }
+
+    fun onEnterActorBody(iThread: Int, iActor: Int) = Statistics.onEnterActorBody(iThread + 1, iActor)
+    fun onExitActorBody(iThread: Int, iActor: Int) = Statistics.onExitActorBody(iThread + 1, iActor)
 }

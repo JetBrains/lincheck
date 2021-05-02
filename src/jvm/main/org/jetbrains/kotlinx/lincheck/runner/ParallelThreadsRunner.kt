@@ -85,7 +85,7 @@ internal open class ParallelThreadsRunner(
     private val executionCallback = recoverModel.createExecutionCallback()
 
     override fun initialize() {
-        executionCallback.reset()
+        executionCallback.reset(scenario, recoverModel)
         super.initialize()
         testThreadExecutions = Array(scenario.threads) { t ->
             TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), recoverModel.createActorCrashHandlerGenerator())
@@ -328,6 +328,8 @@ internal open class ParallelThreadsRunner(
     private fun afterPost() = executionCallback.afterPost()
     private fun onBeforeActorStart() = executionCallback.onBeforeActorStart()
     private fun onAfterActorStart() = executionCallback.onAfterActorStart()
+    override fun onEnterActorBody(iThread: Int, iActor: Int) = executionCallback.onEnterActorBody(iThread, iActor)
+    override fun onExitActorBody(iThread: Int, iActor: Int) = executionCallback.onExitActorBody(iThread, iActor)
     private fun getCrashes() = executionCallback.getCrashes()
     override fun onActorStart(iThread: Int) {
         super.onActorStart(iThread)

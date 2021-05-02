@@ -56,6 +56,8 @@ public class TestThreadExecutionGenerator {
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
+    private static final Method RUNNER_ON_ENTER_ACTOR_BODY = new Method("onEnterActorBody", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE, Type.INT_TYPE });
+    private static final Method RUNNER_ON_EXIT_ACTOR_BODY = new Method("onExitActorBody", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, Type.INT_TYPE});
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
@@ -222,6 +224,14 @@ public class TestThreadExecutionGenerator {
             mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_START);
 
             mv.mark(executionStart);
+
+            // onEnterActorBody call
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.push(i);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ENTER_ACTOR_BODY);
+
             // Load result array and index to store the current result
             mv.loadLocal(resLocal);
             mv.push(i);
@@ -266,6 +276,14 @@ public class TestThreadExecutionGenerator {
             }
             // Store result to array
             mv.arrayStore(RESULT_TYPE);
+
+            // onExitActorBody call
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.push(i);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_EXIT_ACTOR_BODY);
+
             // End of try-catch block for handled exceptions
             mv.visitLabel(actorCatchBlockEnd);
             Label skipHandlers = mv.newLabel();

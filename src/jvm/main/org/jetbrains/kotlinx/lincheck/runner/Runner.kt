@@ -146,6 +146,20 @@ abstract class Runner protected constructor(
     }
 
     /**
+     * This method is invoked before the actor start.
+     * @param iThread number of invoking thread
+     * @param iActor the number of executing actor
+     */
+    open fun onEnterActorBody(iThread: Int, iActor: Int) {}
+
+    /**
+     * This method is invoked after the actor finish.
+     * if no exception has been thrown.
+     * @param iThread number of invoking thread
+     */
+    open fun onExitActorBody(iThread: Int, iActor: Int) {}
+
+    /**
      * Closes the resources used in this runner.
      */
     override fun close() {}
