@@ -23,12 +23,16 @@ package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
 import java.util.*
+import java.util.concurrent.ThreadLocalRandom
 
 object Probability {
     private const val RANDOM_FLUSH_PROBABILITY = 0.2f
+    private val random get() = randomGetter()
 
-    private val random = Random(42L)
+    @Volatile
+    private lateinit var randomGetter: () -> Random
     private var seed = 0L
+    private val mcRandom = Random(42)
 
     private var defaultCrashes = 0
     private var minimizeCrashes = false
@@ -80,6 +84,7 @@ object Probability {
     }
 
     fun reset() {
+        randomGetter = { ThreadLocalRandom.current() }
         defaultCrashes = 0
         minimizeCrashes = false
         totalActors = 0L
@@ -108,6 +113,7 @@ object Probability {
     }
 
     internal fun resetRandom() {
-        random.setSeed(seed)
+        mcRandom.setSeed(seed)
+        randomGetter = { mcRandom }
     }
 }
