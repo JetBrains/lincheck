@@ -3,7 +3,7 @@
 #include <random>
 #include <stdlib.h>
 #include <experimental/type_traits>
-#include "../build/bin/native/debugShared/libnative_api.h"
+#include "../build/bin/native/releaseShared/libnative_api.h"
 
 extern libnative_ExportedSymbols *libnative_symbols(void);
 

@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # add lincheck shared library
 add_library(lincheck_library SHARED IMPORTED GLOBAL)
-set_target_properties(lincheck_library PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../build/bin/native/debugShared/libnative.so")
+set_target_properties(lincheck_library PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../build/bin/native/releaseShared/libnative.so")
 
 # add gtest
 include(FetchContent)
