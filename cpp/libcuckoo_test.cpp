@@ -3,7 +3,7 @@
 #include "lincheck.h"
 #include "lincheck_functions.h"
 
-#include <libcuckoo/libcuckoo/libcuckoo/cuckoohash_map.hh>
+#include "libcuckoo/cuckoohash_map.hh"
 
 class SequentialMapCuckoo {
 public:
@@ -92,11 +92,10 @@ using namespace Lincheck;
 
 TEST(libcuckooTest, FirstTest) {
     LincheckConfiguration<ConcurrentMapCuckoo, SequentialMapCuckoo> conf;
-    conf.iterations(40);
+    conf.iterations(100);
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
-    conf.threads(4);
-    conf.actorsPerThread(5);
+    conf.threads(3);
 
     conf.operation<bool, int, int, &ConcurrentMapCuckoo::assign, &SequentialMapCuckoo::assign>("assign");
     conf.operation<int, int, &ConcurrentMapCuckoo::get, &SequentialMapCuckoo::get>("get");

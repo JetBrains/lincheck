@@ -68,7 +68,7 @@ using namespace Lincheck;
 
 TEST(follyHashMapTest, FirstTest) {
     LincheckConfiguration<ConcurrentMapFolly, SequentialMapFolly> conf;
-    conf.iterations(3);
+    conf.iterations(100);
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
     conf.threads(3);

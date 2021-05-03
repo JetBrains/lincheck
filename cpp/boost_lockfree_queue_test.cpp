@@ -68,7 +68,7 @@ TEST(BoostLockfreeQueueTest, QueueTest) {
     conf.iterations(100);
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
-    conf.threads(4);
+    conf.threads(3);
     conf.actorsPerThread(5);
 
     conf.operation<bool, int, &ConcurrentQueueBoost::push, &SequentialQueueBoost::push>("push");

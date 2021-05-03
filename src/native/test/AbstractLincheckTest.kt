@@ -64,7 +64,7 @@ abstract class AbstractLincheckStressTest<TestClass>(
         invocationsPerIteration(500)
         actorsBefore(2)
         threads(3)
-        actorsPerThread(2)
+        actorsPerThread(4)
         actorsAfter(2)
         minimizeFailedScenario(false)
         customize()

@@ -64,7 +64,12 @@ actual class StressStrategy actual constructor(
         try {
             for (invocation in 0 until invocations) {
                 runner.also {
-                    when (val ir = runner.run()) {
+                    //println("invocation $invocation has started")
+                    //val t1 = currentTimeMillis()
+                    val ir = runner.run()
+                    //val t2 = currentTimeMillis()
+                    //println("invocation $invocation has invocated, took ${t2 - t1}ms to run")
+                    when (ir) {
                         is CompletedInvocationResult -> {
                             if (!verifier.verifyResults(scenario, ir.results)) {
                                 return IncorrectResultsFailure(scenario, ir.results)
@@ -74,6 +79,8 @@ actual class StressStrategy actual constructor(
                         }
                         else -> return ir.toLincheckFailure(scenario)
                     }
+                    //val t3 = currentTimeMillis()
+                    //println("invocation $invocation has verified, took ${t3 - t2}ms to verify")
                 }
             }
         } finally {

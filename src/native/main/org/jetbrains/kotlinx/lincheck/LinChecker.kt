@@ -558,8 +558,6 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
 class LinChecker(private val testClass: TestClass, private val testStructure: CTestStructure, options: Options<*, *>) {
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
-    var initThreadFunction: CPointer<CFunction<() -> Unit>>? = null
-    var finishThreadFunction: CPointer<CFunction<() -> Unit>>? = null
 
     init {
         val logLevel = options?.logLevel ?: DEFAULT_LOG_LEVEL
@@ -591,7 +589,14 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
-            println(i)
+            val curPercent = i.toDouble() / iterations.toDouble()
+            val nextPercent = (i + 1).toDouble() / iterations.toDouble()
+            val STEP = 0.2
+            val curShare = (curPercent / STEP).toInt()
+            val nextShare = (nextPercent / STEP).toInt()
+            if(curShare != nextShare) {
+                println("${(nextShare * STEP * 100).toInt()}%")
+            }
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1, iterations, scenario)
@@ -602,7 +607,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
-            //scenario.finalize()
+            //scenario.finalize() leads to fail ??
         }
         return null
     }

@@ -77,7 +77,7 @@ TEST(LibcdsMSQueueTest, QueueTest) {
         myAttach();
 
         LincheckConfiguration<LibcdsQueue, LibcdsQueue> conf;
-        conf.iterations(2);
+        conf.iterations(100);
         conf.invocationsPerIteration(500);
         conf.minimizeFailedScenario(false);
         conf.threads(3);

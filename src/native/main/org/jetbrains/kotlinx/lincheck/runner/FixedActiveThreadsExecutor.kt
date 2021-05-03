@@ -59,7 +59,7 @@ internal class TestThread constructor(val iThread: Int, runnerHash: Int) {
         //val result = runnableFuture!!.result
         //worker.execute(TransferMode.UNSAFE, { }, { sleep(1000000000) })
         //println("terminate $iThread end")
-        //worker.requestTermination(false).result
+        //worker.value.requestTermination(false).result
         //return res
         //printErr("stop() $iThread finished")
     }
