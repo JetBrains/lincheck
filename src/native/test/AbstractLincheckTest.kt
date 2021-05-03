@@ -60,12 +60,12 @@ abstract class AbstractLincheckStressTest<TestClass>(
     }
 */
     private fun <T: LincheckStressConfiguration<TestClass>> T.commonConfiguration(): Unit = run {
-        iterations(20)
+        iterations(100)
         invocationsPerIteration(500)
-        actorsBefore(2)
+        actorsBefore(3)
         threads(3)
         actorsPerThread(4)
-        actorsAfter(2)
+        actorsAfter(3)
         minimizeFailedScenario(false)
         customize()
     }

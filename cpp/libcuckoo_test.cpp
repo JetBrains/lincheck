@@ -96,6 +96,7 @@ TEST(libcuckooTest, FirstTest) {
     conf.invocationsPerIteration(500);
     conf.minimizeFailedScenario(false);
     conf.threads(3);
+    conf.actorsPerThread(4);
 
     conf.operation<bool, int, int, &ConcurrentMapCuckoo::assign, &SequentialMapCuckoo::assign>("assign");
     conf.operation<int, int, &ConcurrentMapCuckoo::get, &SequentialMapCuckoo::get>("get");
