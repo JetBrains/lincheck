@@ -76,10 +76,10 @@ class FirstTest {
     fun test_failing() {
         val f = LincheckStressConfiguration<TestClass>("FirstTest_1").apply {
             iterations(300)
-            invocationsPerIteration(50)
+            invocationsPerIteration(500)
             actorsBefore(2)
             threads(3)
-            actorsPerThread(2)
+            actorsPerThread(4)
             actorsAfter(2)
             minimizeFailedScenario(false)
 
