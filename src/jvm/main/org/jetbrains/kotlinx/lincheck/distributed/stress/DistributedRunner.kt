@@ -323,7 +323,7 @@ open class DistributedRunner<Message, Log>(
                 )
                 handleException(iNode) {
                     context.testInstances[iNode].recover()
-                    context.failureInfo.setRecovered(iNode)
+                    context.recoverNode(iNode)
                     runNode(iNode)
                 }
             }

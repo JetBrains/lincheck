@@ -46,7 +46,7 @@ class DistributedRunnerContext<Message, Log>(
 
     lateinit var failureNotifications: Array<Channel<Pair<Int, IntArray>>>
 
-    lateinit var failureInfo: NodeFailureInfo
+    //lateinit var failureInfo: NodeFailureInfo
 
     lateinit var events: FastQueue<Pair<Int, Event>>
 
@@ -89,6 +89,8 @@ class DistributedRunnerContext<Message, Log>(
         Probability(testCfg, this, it)
     }
 
+    val crashInfo = atomic(NodeCrashInfo.initialInstance(testCfg, this))
+
     val initialNumberOfTasks =
         2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
 
@@ -97,6 +99,7 @@ class DistributedRunnerContext<Message, Log>(
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 
     fun reset() {
+        crashInfo.lazySet(NodeCrashInfo.initialInstance(testCfg, this))
         taskCounter = DispatcherTaskCounter(initialNumberOfTasks)
         dispatchers = Array(addressResolver.totalNumberOfNodes) {
             NodeDispatcher(it, taskCounter, runnerHash)
@@ -104,10 +107,10 @@ class DistributedRunnerContext<Message, Log>(
         logs = Array(addressResolver.totalNumberOfNodes) {
             emptyList()
         }
-        failureInfo = NodeFailureInfo(
+        /*failureInfo = NodeFailureInfo(
             addressResolver.totalNumberOfNodes,
             testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
-        )
+        )*/
         failureNotifications = Array(addressResolver.totalNumberOfNodes) {
             Channel(UNLIMITED)
         }
@@ -121,5 +124,21 @@ class DistributedRunnerContext<Message, Log>(
         }
         probabilities.forEach { it.reset(exp) }
         messageId.lazySet(0)
+    }
+
+    fun crashNode(iNode: Int): Boolean {
+        while (true) {
+            val prev = crashInfo.value
+            val newInfo = prev.crashNode(iNode) ?: return false
+            if (crashInfo.compareAndSet(prev, newInfo)) return true
+        }
+    }
+
+    fun recoverNode(iNode: Int) {
+        while (true) {
+            val prev = crashInfo.value
+            val newInfo = prev.recoverNode(iNode)
+            if (crashInfo.compareAndSet(prev, newInfo)) return
+        }
     }
 }

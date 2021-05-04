@@ -49,6 +49,8 @@ class Probability(
         const val NODE_FAIL_PROBABILITY = 0.05
         const val NODE_RECOVERY_PROBABILITY = 0.7
         var failedNodesExpectation = -1
+        var networkPartitionsExpectation = 1
+        val networkRecoveryTimeout = 25
     }
     private val numberOfNodes: Int = context.addressResolver.totalNumberOfNodes
 
@@ -100,6 +102,15 @@ class Probability(
             }
         }
     }
+
+    fun isNetworkPartition(): Boolean {
+        val q = networkPartitionsExpectation / numberOfNodes
+        val p = q / prevMsgCount
+        val r = rand.get().nextDouble(1.0)
+        return r < p
+    }
+
+    fun networkRecoveryDelay() = rand.get().nextInt(1, networkRecoveryTimeout)
 
     fun reset(failedNodesExp: Int = 0) {
         if (failedNodesExpectation == -1) failedNodesExpectation = failedNodesExp

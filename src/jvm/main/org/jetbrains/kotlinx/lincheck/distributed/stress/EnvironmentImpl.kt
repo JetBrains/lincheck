@@ -49,7 +49,7 @@ internal class EnvironmentImpl<Message, Log>(
         probability.curMsgCount++
         if (context.addressResolver.canFail(nodeId) &&
             probability.nodeFailed() &&
-            context.failureInfo.trySetFailed(nodeId)
+            context.crashNode(nodeId)
         ) {
            throw CrashError()
         }
