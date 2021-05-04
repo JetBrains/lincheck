@@ -21,15 +21,14 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import java.util.concurrent.PriorityBlockingQueue
 
 class NodeCrashInfo(
     private val testCfg: DistributedCTestConfiguration<*, *>,
     private val context: DistributedRunnerContext<*, *>,
-    private val numberOfFailedNodes: Int,
-    private val partitions: List<Set<Int>>,
-    private val failedNodes: List<Boolean>,
+    val numberOfFailedNodes: Int,
+    val partitions: List<Set<Int>>,
+    val failedNodes: List<Boolean>,
+    val partitionCount: Int
 ) {
     companion object {
         fun initialInstance(
@@ -39,15 +38,14 @@ class NodeCrashInfo(
             val numberOfNodes = context.addressResolver.totalNumberOfNodes
             val failedNodes = List(numberOfNodes) { false }
             val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
-            return NodeCrashInfo(testCfg, context, 0, partitions, failedNodes)
+            return NodeCrashInfo(testCfg, context, 0, partitions, failedNodes, 0)
         }
     }
 
     val maxNumberOfFailedNodes = testCfg.maxNumberOfFailedNodes(context.addressResolver.totalNumberOfNodes)
 
-    operator fun get(a: Int, b: Int): Boolean {
-        return !failedNodes[a] && !failedNodes[b] &&
-                (partitions[0].contains(a) && partitions[0].contains(b) ||
+    fun canSend(a: Int, b: Int): Boolean {
+        return (partitions[0].contains(a) && partitions[0].contains(b) ||
                         partitions[1].contains(a) && partitions[1].contains(b))
     }
 
@@ -61,7 +59,7 @@ class NodeCrashInfo(
         newFailedNodes[iNode] = true
         return NodeCrashInfo(
             testCfg,
-            context, numberOfFailedNodes + 1, partitions, newFailedNodes
+            context, numberOfFailedNodes + 1, partitions, newFailedNodes, partitionCount
         )
     }
 
@@ -71,7 +69,31 @@ class NodeCrashInfo(
         newFailedNodes[iNode] = false
         return NodeCrashInfo(
             testCfg,
-            context, numberOfFailedNodes - 1, partitions, newFailedNodes
+            context, numberOfFailedNodes - 1, partitions, newFailedNodes, partitionCount
+        )
+    }
+
+    fun setNetworkPartition(): NodeCrashInfo? {
+        if (partitions[0].isNotEmpty() || numberOfFailedNodes == maxNumberOfFailedNodes) return null
+        val possiblePartitionSize = maxNumberOfFailedNodes - numberOfFailedNodes
+        val rand = Probability.rand.get()
+        val partitionSize = rand.nextInt(1, possiblePartitionSize + 1)
+        val nodesInPartition = failedNodes.mapIndexed { index, b -> index to b }
+            .filter { it.second }.map { it.first }.shuffled(rand).take(partitionSize).toSet()
+        val anotherPartition = (failedNodes.indices).filter { it !in nodesInPartition }.toSet()
+        val newNumberOfFailedNodes = numberOfFailedNodes + partitionSize
+        return NodeCrashInfo(
+            testCfg, context, newNumberOfFailedNodes, listOf(nodesInPartition, anotherPartition),
+            failedNodes, partitionCount + 1
+        )
+    }
+
+    fun recoverNetworkPartition(): NodeCrashInfo {
+        check(partitions[0].isNotEmpty())
+        val partitionSize = partitions[0].size
+        return NodeCrashInfo(
+            testCfg, context, numberOfFailedNodes - partitionSize, listOf(emptySet(), failedNodes.indices.toSet()),
+            failedNodes, partitionCount
         )
     }
 }

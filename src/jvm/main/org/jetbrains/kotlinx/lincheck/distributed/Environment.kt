@@ -131,3 +131,7 @@ data class SetTimerEvent(val timerName: String, val clock: IntArray, val state: 
 data class TimerTickEvent(val timerName: String, val clock: IntArray, val state: String) : Event()
 
 data class CancelTimerEvent(val timerName: String, val clock: IntArray, val state: String) : Event()
+
+data class NetworkPartitionEvent(val partitions: List<Set<Int>>, val partitionCount: Int) : Event()
+
+data class NetworkRecoveryEvent(val partitionCount: Int) : Event()

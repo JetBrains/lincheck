@@ -21,8 +21,11 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -139,6 +142,32 @@ class DistributedRunnerContext<Message, Log>(
             val prev = crashInfo.value
             val newInfo = prev.recoverNode(iNode)
             if (crashInfo.compareAndSet(prev, newInfo)) return
+        }
+    }
+
+    fun setNetworkPartition(iNode: Int): Boolean {
+        while (true) {
+            val prev = crashInfo.value
+            val newInfo = prev.setNetworkPartition() ?: return false
+            if (crashInfo.compareAndSet(prev, newInfo)) {
+                events.put(iNode to NetworkPartitionEvent(newInfo.partitions, newInfo.partitionCount))
+                val delayTimeout = probabilities[iNode].networkRecoveryDelay()
+                GlobalScope.launch {
+                    delay(delayTimeout.toLong())
+                    recoverNetworkPartition(iNode)
+                }
+            }
+        }
+    }
+
+    private fun recoverNetworkPartition(iNode: Int) {
+        while (true) {
+            val prev = crashInfo.value
+            val newInfo = prev.recoverNetworkPartition()
+            if (crashInfo.compareAndSet(prev, newInfo)) {
+                events.put(iNode to NetworkRecoveryEvent(prev.partitionCount))
+                return
+            }
         }
     }
 }
