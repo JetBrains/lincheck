@@ -357,4 +357,15 @@ class RaftConsensusTest {
                 .supportRecovery(RecoveryMode.MIXED)
         )
     }
+
+    @Test
+    fun testNetworkPartitions() {
+        LinChecker.check(
+            RaftConsensus::class.java,
+            createOptions()
+                .networkPartitions(true)
+                .setMaxNumberOfFailedNodes { (it - 1) / 2 }
+                .supportRecovery(RecoveryMode.MIXED)
+        )
+    }
 }

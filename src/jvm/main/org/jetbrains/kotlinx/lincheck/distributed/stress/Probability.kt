@@ -49,9 +49,10 @@ class Probability(
         const val NODE_FAIL_PROBABILITY = 0.05
         const val NODE_RECOVERY_PROBABILITY = 0.7
         var failedNodesExpectation = -1
-        var networkPartitionsExpectation = 1
+        var networkPartitionsExpectation = 8
         val networkRecoveryTimeout = 25
     }
+
     private val numberOfNodes: Int = context.addressResolver.totalNumberOfNodes
 
     fun duplicationRate(): Int {
@@ -93,7 +94,7 @@ class Probability(
         return if (prevMsgCount == 0) {
             0.0
         } else {
-            val q = failedNodesExpectation.toDouble()  / numberOfNodes
+            val q = failedNodesExpectation.toDouble() / numberOfNodes
             return if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
                 q / (prevMsgCount - (curMsgCount - 1) * q)
                 //q / prevMsgCount
@@ -104,7 +105,8 @@ class Probability(
     }
 
     fun isNetworkPartition(): Boolean {
-        val q = networkPartitionsExpectation / numberOfNodes
+        if (prevMsgCount == 0) return false
+        val q = networkPartitionsExpectation.toDouble() / numberOfNodes
         val p = q / prevMsgCount
         val r = rand.get().nextDouble(1.0)
         return r < p

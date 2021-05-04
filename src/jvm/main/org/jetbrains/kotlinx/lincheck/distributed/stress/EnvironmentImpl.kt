@@ -61,6 +61,7 @@ internal class EnvironmentImpl<Message, Log>(
         val crashInfo = context.crashInfo.value
         if (!crashInfo.canSend(nodeId, receiver)) {
             check(context.testCfg.networkPartitions || crashInfo[receiver])
+            println("[$nodeId] Cannot send to $receiver")
             return
         }
         val event = MessageSentEvent(

@@ -79,8 +79,7 @@ class DistributedRunnerContext<Message, Log>(
         return vectorClock[iNode].copyOf()
     }
 
-    @Volatile
-    var invocation: Int = 0
+    val invocation = atomic(0)
 
     lateinit var taskCounter: DispatcherTaskCounter
 
@@ -102,6 +101,7 @@ class DistributedRunnerContext<Message, Log>(
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 
     fun reset() {
+        invocation.incrementAndGet()
         crashInfo.lazySet(NodeCrashInfo.initialInstance(testCfg, this))
         taskCounter = DispatcherTaskCounter(initialNumberOfTasks)
         dispatchers = Array(addressResolver.totalNumberOfNodes) {
@@ -150,10 +150,13 @@ class DistributedRunnerContext<Message, Log>(
             val prev = crashInfo.value
             val newInfo = prev.setNetworkPartition() ?: return false
             if (crashInfo.compareAndSet(prev, newInfo)) {
+                println("Set network partition ${newInfo.partitions}")
                 events.put(iNode to NetworkPartitionEvent(newInfo.partitions, newInfo.partitionCount))
                 val delayTimeout = probabilities[iNode].networkRecoveryDelay()
+                //val currentInvocation = invocation.value
                 GlobalScope.launch {
                     delay(delayTimeout.toLong())
+                    //if (currentInvocation != invocation.value) return@launch
                     recoverNetworkPartition(iNode)
                 }
             }

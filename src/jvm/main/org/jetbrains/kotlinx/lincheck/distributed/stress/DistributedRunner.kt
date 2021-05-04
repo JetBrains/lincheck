@@ -121,7 +121,7 @@ open class DistributedRunner<Message, Log>(
             for (i in lastPartition) {
                 testNodeExecutions.getOrNull(i)?.crashRemained()
             }
-            if (testNodeExecutions.any { it.results.any { r -> r == null } }) {
+            if (lastPartition.isEmpty() || testNodeExecutions.any { it.results.any { r -> r == null } }) {
                 context.dispatchers.forEach { it.shutdown() }
                 return DeadlockInvocationResult(emptyMap())
             }

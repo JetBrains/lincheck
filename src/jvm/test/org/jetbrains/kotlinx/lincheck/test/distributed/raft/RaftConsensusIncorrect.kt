@@ -316,6 +316,15 @@ class RaftConsensusIncorrectTest {
         )
     }
 
+    @Test(expected = LincheckAssertionError::class)
+    fun testWithPartitionsShouldFail() {
+        LinChecker.check(
+            RaftConsensusIncorrect::class.java,
+            createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
+                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER).networkPartitions(true).minimizeFailedScenario(false)
+        )
+    }
+
     @Test
     fun testMessageLost() {
         LinChecker.check(

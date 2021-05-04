@@ -46,7 +46,7 @@ class NodeCrashInfo(
 
     fun canSend(a: Int, b: Int): Boolean {
         return (partitions[0].contains(a) && partitions[0].contains(b) ||
-                        partitions[1].contains(a) && partitions[1].contains(b))
+                partitions[1].contains(a) && partitions[1].contains(b))
     }
 
     operator fun get(a: Int) = failedNodes[a]
@@ -78,8 +78,10 @@ class NodeCrashInfo(
         val possiblePartitionSize = maxNumberOfFailedNodes - numberOfFailedNodes
         val rand = Probability.rand.get()
         val partitionSize = rand.nextInt(1, possiblePartitionSize + 1)
+        check(partitionSize > 0)
         val nodesInPartition = failedNodes.mapIndexed { index, b -> index to b }
-            .filter { it.second }.map { it.first }.shuffled(rand).take(partitionSize).toSet()
+            .filter { !it.second }.map { it.first }.shuffled(rand).take(partitionSize).toSet()
+        check(nodesInPartition.isNotEmpty())
         val anotherPartition = (failedNodes.indices).filter { it !in nodesInPartition }.toSet()
         val newNumberOfFailedNodes = numberOfFailedNodes + partitionSize
         return NodeCrashInfo(
@@ -89,7 +91,7 @@ class NodeCrashInfo(
     }
 
     fun recoverNetworkPartition(): NodeCrashInfo {
-        check(partitions[0].isNotEmpty())
+        if (partitions[0].isEmpty()) return this
         val partitionSize = partitions[0].size
         return NodeCrashInfo(
             testCfg, context, numberOfFailedNodes - partitionSize, listOf(emptySet(), failedNodes.indices.toSet()),
