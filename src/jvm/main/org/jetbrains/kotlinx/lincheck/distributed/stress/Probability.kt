@@ -50,7 +50,7 @@ class Probability(
         const val NODE_RECOVERY_PROBABILITY = 0.7
         var failedNodesExpectation = -1
         var networkPartitionsExpectation = 8
-        val networkRecoveryTimeout = 25
+        val networkRecoveryTimeout = 40
     }
 
     private val numberOfNodes: Int = context.addressResolver.totalNumberOfNodes

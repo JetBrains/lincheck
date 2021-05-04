@@ -47,7 +47,8 @@ internal class EnvironmentImpl<Message, Log>(
             return
         }
         probability.curMsgCount++
-        if (context.addressResolver.canFail(nodeId) &&
+        if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
+            context.addressResolver.canFail(nodeId) &&
             probability.nodeFailed() &&
             context.crashNode(nodeId)
         ) {
@@ -61,7 +62,6 @@ internal class EnvironmentImpl<Message, Log>(
         val crashInfo = context.crashInfo.value
         if (!crashInfo.canSend(nodeId, receiver)) {
             check(context.testCfg.networkPartitions || crashInfo[receiver])
-            println("[$nodeId] Cannot send to $receiver")
             return
         }
         val event = MessageSentEvent(

@@ -11,6 +11,7 @@ enum class MessageOrder {
 
 
 enum class RecoveryMode {
+    NO_CRASHES,
     NO_RECOVERIES,
     ALL_NODES_RECOVER,
     MIXED

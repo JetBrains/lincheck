@@ -150,7 +150,6 @@ class DistributedRunnerContext<Message, Log>(
             val prev = crashInfo.value
             val newInfo = prev.setNetworkPartition() ?: return false
             if (crashInfo.compareAndSet(prev, newInfo)) {
-                println("Set network partition ${newInfo.partitions}")
                 events.put(iNode to NetworkPartitionEvent(newInfo.partitions, newInfo.partitionCount))
                 val delayTimeout = probabilities[iNode].networkRecoveryDelay()
                 //val currentInvocation = invocation.value
