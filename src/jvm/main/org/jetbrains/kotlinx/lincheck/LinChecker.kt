@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.stress.Probability
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -131,6 +132,17 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 queue.addAll(nextTestCfg.nextConfigurations())
             }
         }
+        while (Probability.failedNodesExpectation != 0) {
+            Probability.failedNodesExpectation--
+            val newFailedIteration = res.scenario.tryMinimize(testCfg, verifier)
+            if (newFailedIteration != null) {
+                res = newFailedIteration
+            } else {
+                Probability.failedNodesExpectation = -1
+                return res
+            }
+        }
+        Probability.failedNodesExpectation = -1
         return res
     }
 

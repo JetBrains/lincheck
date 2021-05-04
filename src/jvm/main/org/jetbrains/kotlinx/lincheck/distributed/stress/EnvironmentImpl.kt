@@ -38,7 +38,7 @@ internal class EnvironmentImpl<Message, Log>(
 
     private val probability = context.probabilities[nodeId]
 
-    private val timers = mutableSetOf<String>()
+    internal val timers = mutableSetOf<String>()
 
     override fun getAddressesForClass(cls: Class<out Node<Message>>) = context.addressResolver[cls]
 

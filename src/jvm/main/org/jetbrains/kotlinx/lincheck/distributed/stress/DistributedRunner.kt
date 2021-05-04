@@ -53,7 +53,7 @@ open class DistributedRunner<Message, Log>(
     stateRepresentationFunction
 ) {
     companion object {
-        const val CONTEXT_SWITCH_PROBABILITY = 0.3
+        const val CONTEXT_SWITCH_PROBABILITY = 0.6
     }
 
     private val runnerHash = this.hashCode()
@@ -115,8 +115,10 @@ open class DistributedRunner<Message, Log>(
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            context.dispatchers.forEach { it.shutdown() }
-            return DeadlockInvocationResult(collectThreadDump())
+            if (testNodeExecutions.any { it.results.any { r -> r == null } }) {
+                context.dispatchers.forEach { it.shutdown() }
+                return DeadlockInvocationResult(emptyMap())
+            }
         }
         context.dispatchers.forEach { it.shutdown() }
         environments.forEach { it.isFinished = true }
@@ -152,7 +154,7 @@ open class DistributedRunner<Message, Log>(
     private suspend fun handleException(iNode: Int, f: suspend () -> Unit) {
         try {
             f()
-        } catch(_: CrashError) {
+        } catch (_: CrashError) {
             onNodeFailure(iNode)
         } catch (e: Throwable) {
             onFailure(iNode, e)
@@ -265,7 +267,10 @@ open class DistributedRunner<Message, Log>(
                     yield()
                 }
             }
-            context.testInstances[iNode].onScenarioFinish()
+            if (testNodeExecution.actorId == scenarioSize) {
+                testNodeExecution.actorId++
+                context.testInstances[iNode].onScenarioFinish()
+            }
         }
     }
 
@@ -309,7 +314,6 @@ open class DistributedRunner<Message, Log>(
             context.testNodeExecutions.getOrNull(iNode)?.testInstance = context.testInstances[iNode]
             val dispatcher = NodeDispatcher(iNode, context.taskCounter, runnerHash)
             context.dispatchers[iNode] = dispatcher
-            context.failureInfo.setRecovered(iNode)
             dispatcher.createScope().launch {
                 context.events.put(
                     iNode to ProcessRecoveryEvent(
@@ -319,6 +323,7 @@ open class DistributedRunner<Message, Log>(
                 )
                 handleException(iNode) {
                     context.testInstances[iNode].recover()
+                    context.failureInfo.setRecovered(iNode)
                     runNode(iNode)
                 }
             }
@@ -329,7 +334,7 @@ open class DistributedRunner<Message, Log>(
         } else {
             context.testNodeExecutions.getOrNull(iNode)?.crashRemained()
         }
-       // suspendCoroutine<Unit> { }
+        // suspendCoroutine<Unit> { }
     }
 
     override fun constructStateRepresentation(): String {

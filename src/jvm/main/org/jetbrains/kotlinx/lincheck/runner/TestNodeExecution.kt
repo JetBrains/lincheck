@@ -31,7 +31,7 @@ abstract class TestNodeExecution {
     abstract suspend fun runOperation(i: Int): Any?
 
     fun crash() {
-        if (actorId - 1 >= 0 && results[actorId - 1] == null) {
+        if (actorId - 1 >= 0 && actorId <= results.size && results[actorId - 1] == null) {
             results[actorId - 1] = CrashResult
         }
     }
@@ -42,12 +42,12 @@ abstract class TestNodeExecution {
                 results[i] = CrashResult
             }
         }
-        actorId = results.size
+        actorId = results.size + 1
     }
 
     fun setSuspended(actors: List<Actor>) {
         val lastOp = actorId - 1
-        if (lastOp >= 0 && results[lastOp] == null && actors[lastOp].isSuspendable) {
+        if (lastOp >= 0 && lastOp < results.size && results[lastOp] == null && actors[lastOp].isSuspendable) {
             results[actorId - 1] = if (actors[lastOp].method.returnType == Void.TYPE) {
                 SuspendedVoidResult
             } else {

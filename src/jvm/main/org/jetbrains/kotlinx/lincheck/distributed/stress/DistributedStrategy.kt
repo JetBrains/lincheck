@@ -84,7 +84,7 @@ class DistributedStrategy<Message, Log>(
                     }
                     else -> {
                         return ir.toLincheckFailure(scenario).also {
-                            println("Some other exception")
+                            println("Some other exception $ir")
                             runner.storeEventsToFile(it)
                         }
                     }

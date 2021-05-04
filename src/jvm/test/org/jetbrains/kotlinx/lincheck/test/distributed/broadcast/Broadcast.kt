@@ -118,6 +118,7 @@ class BroadcastTest {
     private fun createOptions() = DistributedOptions<Message, Message>()
         .requireStateEquivalenceImplCheck(false)
         .threads(3)
+       // .actorsPerThread(10)
         .invocationsPerIteration(3_000)
         .iterations(10)
         .verifier(EpsilonVerifier::class.java)
