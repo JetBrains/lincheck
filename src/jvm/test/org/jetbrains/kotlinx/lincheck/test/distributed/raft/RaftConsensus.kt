@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
@@ -377,6 +378,18 @@ class RaftConsensusTest {
                 .networkPartitions(true)
                 .setMaxNumberOfFailedNodes { (it - 1) / 2 }
                 .supportRecovery(RecoveryMode.NO_CRASHES)
+        )
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testLargeNumberOfUnavailableNodes() {
+        LinChecker.check(
+            RaftConsensus::class.java,
+            createOptions()
+                .threads(4)
+                .networkPartitions(true)
+                .setMaxNumberOfFailedNodes { it / 2 }
+                .supportRecovery(RecoveryMode.MIXED)
         )
     }
 }
