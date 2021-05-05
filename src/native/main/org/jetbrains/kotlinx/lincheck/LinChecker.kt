@@ -589,13 +589,13 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
-            val curPercent = i.toDouble() / iterations.toDouble()
-            val nextPercent = (i + 1).toDouble() / iterations.toDouble()
-            val STEP = 0.2
-            val curShare = (curPercent / STEP).toInt()
-            val nextShare = (nextPercent / STEP).toInt()
+            val curPercent = (i + 1).toDouble() / iterations.toDouble()
+            val nextPercent = (i + 2).toDouble() / iterations.toDouble()
+            val STEP = 0.1
+            val curShare = (curPercent / STEP - 0.0001).toInt()
+            val nextShare = (nextPercent / STEP + 0.0001).toInt()
             if(curShare != nextShare) {
-                println("${(nextShare * STEP * 100).toInt()}%")
+                println("${i + 1}/$iterations")
             }
             val scenario = exGen.nextExecution()
             scenario.validate()

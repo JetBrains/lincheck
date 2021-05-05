@@ -69,10 +69,10 @@ find_package(Boost REQUIRED COMPONENTS thread program_options)
 add_executable(
         tests
         counter_test.cpp
-        libcds_msqueue_dhp_test.cpp
+        libcds_test.cpp
         libcuckoo_test.cpp
-        folly_hashmap_test.cpp
-        boost_lockfree_queue_test.cpp
+        folly_test.cpp
+        boost_lockfree_test.cpp
 )
 
 enable_testing()

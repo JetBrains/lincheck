@@ -9,6 +9,10 @@ class SequentialMapCuckoo {
 public:
     std::unordered_map<int, int> map;
 
+    SequentialMapCuckoo() {
+        map.reserve(100);
+    }
+
     bool assign(int key, int value) {
         //std::cerr << "seqassign " << key << ", " << value << "\n";
         auto it = map.find(key);
@@ -90,10 +94,24 @@ bool operator==(const SequentialMapCuckoo &a, const SequentialMapCuckoo &b) {
 
 using namespace Lincheck;
 
-TEST(libcuckooTest, FirstTest) {
+TEST(LibcuckooTest, BadSequentialMapTest) {
+    LincheckConfiguration<SequentialMapCuckoo, SequentialMapCuckoo> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, int, &SequentialMapCuckoo::assign, &SequentialMapCuckoo::assign>("assign");
+    conf.operation<int, int, &SequentialMapCuckoo::get, &SequentialMapCuckoo::get>("get");
+    conf.operation<bool, int, &SequentialMapCuckoo::erase, &SequentialMapCuckoo::erase>("erase");
+    ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));
+}
+
+TEST(LibcuckooTest, HashMapTest) {
     LincheckConfiguration<ConcurrentMapCuckoo, SequentialMapCuckoo> conf;
-    conf.iterations(100);
-    conf.invocationsPerIteration(500);
+    conf.iterations(10);
+
     conf.minimizeFailedScenario(false);
     conf.threads(3);
     conf.actorsPerThread(4);

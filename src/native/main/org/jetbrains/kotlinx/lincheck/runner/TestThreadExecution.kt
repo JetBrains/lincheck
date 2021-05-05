@@ -59,7 +59,7 @@ class TestThreadExecution(val iThread: Int, val actors: List<Actor>) {
             //printErr("RUN $iThread #2 $index")
             readClocks(index)
             //runner.onActorStart(iThread)
-            // Load arguments for operation
+            //Load arguments for operation
             val result: Result = try {
                 val r = actor.function(testInstance, actor.arguments)
                 //printErr("ValueResult")

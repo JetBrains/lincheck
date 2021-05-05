@@ -84,8 +84,8 @@ TEST(CounterTest, BadInc) {
     LincheckConfiguration<Counter, Counter> conf;
     conf.minimizeFailedScenario(false);
     conf.threads(3);
-    conf.iterations(100);
-    conf.invocationsPerIteration(500);
+    conf.iterations(10);
+
     conf.actorsPerThread(5);
     conf.operation<int, &Counter::inc, &Counter::atomic_inc>("inc");
     ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));

@@ -82,7 +82,10 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
 
     init {
         (0 until nThreads).forEach { iThread ->
-            threads.array[iThread].value = TestThread(iThread, runnerHash).also { it.executeTask { initThreadFunction?.invoke(); Any() } }
+            threads.array[iThread].value = TestThread(iThread, runnerHash).also {
+                it.executeTask { initThreadFunction?.invoke(); Any() }
+                it.awaitLastTask(currentTimeMillis() + 10000)
+            }
         }
     }
 
@@ -124,7 +127,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
     }
 
     private fun testThreadRunnable(iThread: Int, task: Runnable): Any {
-        initThreadFunction?.invoke()
         val runnable = task
         try {
             runnable.run()
@@ -138,6 +140,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
         // submit the shutdown task.
         for (t in threads.toArray()) {
             t.executeTask { finishThreadFunction?.invoke(); Any() }
+            t.awaitLastTask(currentTimeMillis() + 10000)
             t.terminate()
         }
     }
