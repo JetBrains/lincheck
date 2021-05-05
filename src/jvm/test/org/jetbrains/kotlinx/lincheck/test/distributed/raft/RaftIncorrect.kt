@@ -42,7 +42,6 @@ class Refuse(val leader: Int)
 
 data class LogEntryNumber(val term: Int, val index: Int)
 
-enum class Status { APPLY, REJECT, MISSING_ENTRIES }
 sealed class Message {
     abstract val term: Int
 }
@@ -454,7 +453,7 @@ class ReplicaSpecification {
     }
 }
 
-class RaftTest {
+class RaftTestIncorrect {
     private fun createOptions() = DistributedOptions<Message, Log>()
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(ReplicaSpecification::class.java)
