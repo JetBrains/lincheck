@@ -38,8 +38,8 @@ class HashMapTest : AbstractLincheckStressTest<HashMapTest>(IncorrectResultsFail
 
         val keyGen = IntGen("")
 
-        operation(IntGen(""), keyGen, HashMapTest::put)
-        operation(keyGen, HashMapTest::get)
+        operation(IntGen(""), keyGen, HashMapTest::put, handleExceptionsAsResult = listOf(IllegalStateException::class))
+        operation(keyGen, HashMapTest::get, handleExceptionsAsResult = listOf(IllegalStateException::class))
     }
 
     override fun extractState(): Any = m
