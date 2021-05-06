@@ -113,7 +113,7 @@ namespace Lincheck {
         }
 
         template<typename Ret, Ret (TestClass::*op)(), Ret (SequentialSpecification::*seq_spec)()>
-        void operation(const char *operationName, bool useOnce = false) {
+        void operation(const char *operationName, const char *nonParallelGroupName = nullptr, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation1(
                     configuration,
                     (void *) (void *(*)(void *)) [](void *instance) -> void * { // operation
@@ -142,13 +142,14 @@ namespace Lincheck {
                         strncpy(dest, Lincheck::to_string<Ret>()(*(Ret *) ret).c_str(), destSize);
                     },
                     operationName,
+                    nonParallelGroupName,
                     useOnce
             );
         }
 
         template<typename Ret, typename Arg1, Ret (TestClass::*op)(Arg1), Ret (SequentialSpecification::*seq_spec)(
                 Arg1)>
-        void operation(const char *operationName, bool useOnce = false) {
+        void operation(const char *operationName, const char *nonParallelGroupName = nullptr, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation2(
                     configuration,
                     (void *) (void *(*)()) []() -> void * { // arg1_gen_initial_state
@@ -195,6 +196,7 @@ namespace Lincheck {
                         strncpy(dest, Lincheck::to_string<Ret>()(*(Ret *) ret).c_str(), destSize);
                     },
                     operationName,
+                    nonParallelGroupName,
                     useOnce
             );
         }
@@ -203,7 +205,7 @@ namespace Lincheck {
         template<typename Ret, typename Arg1, typename Arg2, Ret (TestClass::*op)(Arg1,
                                                                                   Arg2), Ret (SequentialSpecification::*seq_spec)(
                 Arg1, Arg2)>
-        void operation(const char *operationName, bool useOnce = false) {
+        void operation(const char *operationName, const char *nonParallelGroupName = nullptr, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation3(
                     configuration,
                     (void *) (void *(*)()) []() -> void * { // arg1_gen_initial_state
@@ -269,6 +271,7 @@ namespace Lincheck {
                         strncpy(dest, Lincheck::to_string<Ret>()(*(Ret *) ret).c_str(), destSize);
                     },
                     operationName,
+                    nonParallelGroupName,
                     useOnce
             );
         }

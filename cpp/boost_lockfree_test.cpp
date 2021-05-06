@@ -6,6 +6,7 @@
 #include <stack>
 
 #include <boost/lockfree/queue.hpp>
+#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/lockfree/stack.hpp>
 
 class SequentialQueueBoost {
@@ -31,7 +32,22 @@ public:
 
 class ConcurrentQueueBoost {
 public:
-    boost::lockfree::queue<int> q = boost::lockfree::queue<int>(100);
+    boost::lockfree::queue<int> q = boost::lockfree::queue<int>(1);
+
+    bool push(int value) {
+        return q.push(value);
+    }
+
+    std::pair<bool, int> pop() {
+        int val = 0;
+        bool success = q.pop(val);
+        return {success, success ? val : 0};
+    }
+};
+
+class ConcurrentSPSCQueueBoost {
+public:
+    boost::lockfree::spsc_queue<int> q = boost::lockfree::spsc_queue<int>(100); // fixed-size ring buffer
 
     bool push(int value) {
         return q.push(value);
@@ -90,7 +106,7 @@ public:
 
 class ConcurrentStackBoost {
 public:
-    boost::lockfree::stack<int> s = boost::lockfree::stack<int>(100);
+    boost::lockfree::stack<int> s = boost::lockfree::stack<int>(1);
 
     bool push(int value) {
         return s.push(value);
@@ -180,5 +196,31 @@ TEST(BoostLockfreeTest, StackTest) {
     conf.operation<bool, int, &ConcurrentStackBoost::push, &SequentialStackBoost::push>("push");
     conf.operation<std::pair<bool, int>, &ConcurrentStackBoost::pop, &SequentialStackBoost::pop>("pop");
     conf.operation<bool, &ConcurrentStackBoost::empty, &SequentialStackBoost::empty>("empty");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(BoostLockfreeTest, BadSPSCQueueTest) {
+    LincheckConfiguration<ConcurrentSPSCQueueBoost, SequentialQueueBoost> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(3);
+
+    conf.operation<bool, int, &ConcurrentSPSCQueueBoost::push, &SequentialQueueBoost::push>("push");
+    conf.operation<std::pair<bool, int>, &ConcurrentSPSCQueueBoost::pop, &SequentialQueueBoost::pop>("pop", "popNonParallelGroup");
+    ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));
+}
+
+TEST(BoostLockfreeTest, SPSCQueueTest) {
+    LincheckConfiguration<ConcurrentSPSCQueueBoost, SequentialQueueBoost> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(15000); // will be shrinked to 2
+    conf.actorsPerThread(3);
+
+    conf.operation<bool, int, &ConcurrentSPSCQueueBoost::push, &SequentialQueueBoost::push>("push", "pushNonParallelGroup");
+    conf.operation<std::pair<bool, int>, &ConcurrentSPSCQueueBoost::pop, &SequentialQueueBoost::pop>("pop", "popNonParallelGroup");
     ASSERT_EQ(conf.runTest(false), "");
 }

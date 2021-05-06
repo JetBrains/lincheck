@@ -49,7 +49,7 @@ class RandomExecutionGenerator(testConfiguration: CTestConfiguration, testStruct
         }
         for (i in nonParallelGroups.indices) {
             threadGens[i % threadGens.size].nonParallelActorGenerators
-                    .addAll(nonParallelGroups[i]!!.actors)
+                    .addAll(nonParallelGroups[i].actors)
         }
         val tgs2: List<ThreadGen> = ArrayList(threadGens)
         while (threadGens.isNotEmpty()) {

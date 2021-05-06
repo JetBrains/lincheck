@@ -104,13 +104,11 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
     }
 
     private fun submitTasks(tasks: Array<out Any>) {
+        val testThreads = Array<TestThread?>(nThreads){null}
         for (i in 0 until nThreads) {
-            submitTask(i, tasks[i])
+            testThreads[i] = threads.array[i].value!! // Do atomic loads
         }
-    }
-
-    private fun submitTask(iThread: Int, task: Any) {
-        threads.array[iThread].value!!.executeTask { testThreadRunnable(iThread, task as Runnable) }
+        testThreads.forEachIndexed{i, t -> t!!.executeTask { testThreadRunnable(i, tasks[i] as Runnable) }} // submit tasks
     }
 
     private fun await(timeoutMs: Long) {

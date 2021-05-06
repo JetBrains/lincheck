@@ -91,9 +91,10 @@ public:
     }
 };
 
+template<typename DynamicBoundedQueue>
 class ConcurrentDynamicBoundedQueueFolly {
 public:
-    folly::DMPMCQueue<int, false> queue = folly::DMPMCQueue<int, false>(100);
+    DynamicBoundedQueue queue = DynamicBoundedQueue(100);
 
     bool push(int val) {
         return queue.try_enqueue(val);
@@ -106,9 +107,10 @@ public:
     }
 };
 
+template<typename UnboundedQueue>
 class ConcurrentUnboundedQueueFolly {
 public:
-    folly::UMPMCQueue<int, false> queue;
+    UnboundedQueue queue;
 
     bool push(int val) {
         queue.enqueue(val);
@@ -184,29 +186,142 @@ TEST(FollyTest, HashMapTest) {
     ASSERT_EQ(conf.runTest(false), "");
 }
 
-TEST(FollyTest, DynamicBoundedQueueTest) {
-    LincheckConfiguration<ConcurrentDynamicBoundedQueueFolly, SequentialQueueFolly> conf;
+TEST(FollyTest, MPMCDynamicBoundedQueueTest) {
+    using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DMPMCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
     conf.iterations(10);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
     conf.actorsPerThread(4);
 
-    conf.operation<bool, int, &ConcurrentDynamicBoundedQueueFolly::push, &SequentialQueueFolly::push>("push");
-    conf.operation<std::pair<bool, int>, &ConcurrentDynamicBoundedQueueFolly::pop, &SequentialQueueFolly::pop>("pop");
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop");
     ASSERT_EQ(conf.runTest(false), "");
 }
 
-
-TEST(FollyTest, UnboundedQueueTest) {
-    LincheckConfiguration<ConcurrentUnboundedQueueFolly, SequentialQueueFolly> conf;
+TEST(FollyTest, MPSCDynamicBoundedQueueTest) {
+    using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DMPSCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
     conf.iterations(10);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
     conf.actorsPerThread(4);
 
-    conf.operation<bool, int, &ConcurrentUnboundedQueueFolly::push, &SequentialQueueFolly::push>("push");
-    conf.operation<std::pair<bool, int>, &ConcurrentUnboundedQueueFolly::pop, &SequentialQueueFolly::pop>("pop");
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop", "nonParallelConsumer");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(FollyTest, BadMPSCDynamicBoundedQueueTest) {
+    using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DMPSCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push", "nonParallelProducer");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop");
+    ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));
+}
+
+TEST(FollyTest, SPMCDynamicBoundedQueueTest) {
+    using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DSPMCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push", "nonParallelProducer");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(FollyTest, SPSCDynamicBoundedQueueTest) {
+    using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DSPSCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push", "nonParallelProducer");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop", "nonParallelConsumer");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(FollyTest, BadSPSCDynamicBoundedQueueTest) {
+    using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DSPSCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push", "nonParallelProducer");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop");
+    ASSERT_THAT(conf.runTest(false), ::testing::HasSubstr("Invalid execution results"));
+}
+
+TEST(FollyTest, MPMCUnboundedQueueTest) {
+    using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::UMPMCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(FollyTest, MPSCUnboundedQueueTest) {
+    using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::UMPSCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop", "nonParallelConsumer");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(FollyTest, SPMCUnboundedQueueTest) {
+    using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::USPMCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push", "nonParallelProducer");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(FollyTest, SPSCUnboundedQueueTest) {
+    using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::USPSCQueue<int, false>>;
+    LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
+    conf.iterations(10);
+
+    conf.minimizeFailedScenario(false);
+    conf.threads(3);
+    conf.actorsPerThread(4);
+
+    conf.operation<bool, int, &ConcurrentQueue::push, &SequentialQueueFolly::push>("push", "nonParallelProducer");
+    conf.operation<std::pair<bool, int>, &ConcurrentQueue::pop, &SequentialQueueFolly::pop>("pop", "nonParallelConsumer");
     ASSERT_EQ(conf.runTest(false), "");
 }

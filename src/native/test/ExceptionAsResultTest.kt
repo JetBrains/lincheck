@@ -1,6 +1,3 @@
-import org.jetbrains.kotlinx.lincheck.*
-import kotlin.test.*
-
 /*
 * #%L
 * Lincheck
@@ -22,6 +19,9 @@ import kotlin.test.*
 * <http://www.gnu.org/licenses/lgpl-3.0.html>.
 * #L%
 */
+
+import org.jetbrains.kotlinx.lincheck.*
+import kotlin.test.*
 
 class ExceptionAsResultTest {
     fun npeIsOk() {

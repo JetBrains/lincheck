@@ -84,7 +84,7 @@ internal class ParameterGeneratorArgument(val arg: CPointer<*>,
     }
 }
 
-internal class ConcurrentInstance(val obj: CPointer<*>, val destructor: CDestructor): Finalizable {
+internal class ConcurrentInstance(val obj: CPointer<*>, val destructor: CDestructor) : Finalizable {
 
     override fun finalize() {
         // there are no destructors in Kotlin/Native :( https://youtrack.jetbrains.com/issue/KT-44191
@@ -251,6 +251,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         result_hashCode: HashCodeCFunction,
         result_toString: ToStringCFunction,
         operationName: String,
+        nonParallelGroupName: String? = null,
         useOnce: Boolean = false,
     ) = apply {
         val actorGenerator = ActorGenerator(
@@ -274,6 +275,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
             handledExceptions = emptyList()
         )
         actorGenerators.add(actorGenerator)
+        addToOperationGroups(nonParallelGroupName, actorGenerator)
     }
 
     fun setupOperation2(
@@ -288,6 +290,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         result_hashCode: HashCodeCFunction,
         result_toString: ToStringCFunction,
         operationName: String,
+        nonParallelGroupName: String? = null,
         useOnce: Boolean = false,
     ) = apply {
         val arg1_paramgen = object : ParameterGenerator<ParameterGeneratorArgument> {
@@ -317,6 +320,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
             handledExceptions = emptyList()
         )
         actorGenerators.add(actorGenerator)
+        addToOperationGroups(nonParallelGroupName, actorGenerator)
     }
 
     fun setupOperation3(
@@ -335,6 +339,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         result_hashCode: HashCodeCFunction,
         result_toString: ToStringCFunction,
         operationName: String,
+        nonParallelGroupName: String? = null,
         useOnce: Boolean = false,
     ) = apply {
         val arg1Paramgen = object : ParameterGenerator<ParameterGeneratorArgument> {
@@ -370,6 +375,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
             handledExceptions = emptyList()
         )
         actorGenerators.add(actorGenerator)
+        addToOperationGroups(nonParallelGroupName, actorGenerator)
     }
 }
 
@@ -391,7 +397,7 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
     */
     protected var testClass: TestClass? = null
     protected var actorGenerators = mutableListOf<ActorGenerator>()
-    protected var operationGroups = mutableListOf<OperationGroup>()
+    protected var operationGroups = mutableMapOf<String, OperationGroup>()
     protected var validationFunctions = mutableListOf<ValidationFunction>()
     protected var stateRepresentationFunction: StateRepresentationFunction? = null
 
@@ -407,7 +413,7 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
     protected fun getTestStructure(): CTestStructure {
         return CTestStructure(
             actorGenerators,
-            operationGroups,
+            operationGroups.values.toList(),
             validationFunctions,
             stateRepresentationFunction
         )
@@ -440,11 +446,21 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
 
     // =========================== Operation
 
+    protected fun addToOperationGroups(nonParallelGroupName: String?, actorGenerator: ActorGenerator) {
+        nonParallelGroupName?.let {
+            if (!operationGroups.containsKey(nonParallelGroupName)) {
+                operationGroups[nonParallelGroupName] = OperationGroup(nonParallelGroupName, true)
+            }
+            operationGroups[nonParallelGroupName]!!.actors.add(actorGenerator)
+        }
+    }
+
     fun <R> operation(
         pGens: List<ParameterGenerator<*>>,
         op: Instance.(List<Any?>) -> R,
         name: String = op.toString(),
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
+        nonParallelGroupName: String? = null,
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) = apply {
@@ -460,12 +476,14 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
             handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
+        addToOperationGroups(nonParallelGroupName, actorGenerator)
     }
 
     fun <R> operation(
         op: Instance.() -> R,
         name: String = op.toString(),
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
+        nonParallelGroupName: String? = null,
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) = apply {
@@ -481,6 +499,7 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
             handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
+        addToOperationGroups(nonParallelGroupName, actorGenerator)
     }
 
     fun <P1, R> operation(
@@ -488,6 +507,7 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
         op: Instance.(p1: P1) -> R,
         name: String = op.toString(),
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
+        nonParallelGroupName: String? = null,
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) = apply {
@@ -503,6 +523,7 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
             handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
+        addToOperationGroups(nonParallelGroupName, actorGenerator)
     }
 
     fun <P1, P2, R> operation(
@@ -511,6 +532,7 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
         op: Instance.(p1: P1, p2: P2) -> R,
         name: String = op.toString(),
         handleExceptionsAsResult: List<KClass<out Throwable>> = emptyList(),
+        nonParallelGroupName: String? = null,
         useOnce: Boolean = false,
         isSuspendable: Boolean = false
     ) = apply {
@@ -526,6 +548,7 @@ open class LincheckStressConfiguration<Instance>(protected val testName: String 
             handledExceptions = handleExceptionsAsResult
         )
         actorGenerators.add(actorGenerator)
+        addToOperationGroups(nonParallelGroupName, actorGenerator)
     }
 
     // ============================= Validation Function
@@ -589,6 +612,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
+            // some magic computations for beautiful values
             val curPercent = (i + 1).toDouble() / iterations.toDouble()
             val nextPercent = (i + 2).toDouble() / iterations.toDouble()
             val STEP = 0.1
