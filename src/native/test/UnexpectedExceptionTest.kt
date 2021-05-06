@@ -29,8 +29,8 @@ class UnexpectedExceptionTest : AbstractLincheckStressTest<UnexpectedExceptionTe
 
     fun operation1() {
         // atomic because of possible compile-time optimization
-        canEnterForbiddenSection.value = 1
-        canEnterForbiddenSection.value = 0
+        canEnterForbiddenSection.increment()
+        canEnterForbiddenSection.decrement()
     }
 
     fun operation2() {
@@ -40,8 +40,8 @@ class UnexpectedExceptionTest : AbstractLincheckStressTest<UnexpectedExceptionTe
     override fun extractState(): Any = canEnterForbiddenSection.value
 
     override fun <T : LincheckStressConfiguration<UnexpectedExceptionTest>> T.customize() {
-        iterations(100)
-        invocationsPerIteration(100)
+        iterations(500)
+        invocationsPerIteration(200)
 
         initialState { UnexpectedExceptionTest() }
 
