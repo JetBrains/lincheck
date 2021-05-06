@@ -55,8 +55,8 @@ class NonParallelOpGroupTest : VerifierState() {
     @Test
     fun test_failing() {
         val f = LincheckStressConfiguration<NonParallelOpGroupTest>("NonParallelOpGroupTest").apply {
-            iterations(50)
-            invocationsPerIteration(500)
+            iterations(500)
+            invocationsPerIteration(100)
             actorsBefore(2)
             threads(2)
             actorsPerThread(5)
