@@ -34,7 +34,6 @@ class StateEquivalenceImplCheckTest {
         try {
             LincheckStressConfiguration<StateEquivalenceImplCheckTest>("StateEquivalenceImplCheckTest").apply {
                 initialState { StateEquivalenceImplCheckTest() }
-                invocationsPerIteration(500)
 
                 operation(StateEquivalenceImplCheckTest::incAndGet)
             }.runTest()
