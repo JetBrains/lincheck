@@ -22,24 +22,26 @@
 
 import org.jetbrains.kotlinx.lincheck.LincheckStressConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import kotlin.native.concurrent.*
 
 class UnexpectedExceptionTest : AbstractLincheckStressTest<UnexpectedExceptionTest>(UnexpectedExceptionFailure::class) {
-    private var canEnterForbiddenSection = false
+    private var canEnterForbiddenSection: AtomicInt = AtomicInt(0)
 
     fun operation1() {
-        canEnterForbiddenSection = true
-        canEnterForbiddenSection = false
+        // atomic because of possible compile-time optimization
+        canEnterForbiddenSection.value = 1
+        canEnterForbiddenSection.value = 0
     }
 
     fun operation2() {
-        check(!canEnterForbiddenSection)
+        check(canEnterForbiddenSection.value == 0)
     }
 
-    override fun extractState(): Any = canEnterForbiddenSection
+    override fun extractState(): Any = canEnterForbiddenSection.value
 
     override fun <T : LincheckStressConfiguration<UnexpectedExceptionTest>> T.customize() {
-        iterations(500)
-        invocationsPerIteration(250)
+        iterations(100)
+        invocationsPerIteration(100)
 
         initialState { UnexpectedExceptionTest() }
 
