@@ -57,6 +57,22 @@ internal class BasicCrashProbabilityModel(
     }
 }
 
+internal class BasicDetectableExecutionCrashProbabilityModel(
+    private val statistics: StatisticsModel,
+    override val expectedCrashes: Double
+) : CrashProbabilityModel {
+    private val actors get() = statistics.actorLengths
+
+    private val c = expectedCrashes / actors.sum()
+    override fun inActorCrashProbability(i: Int) = c / (1 + c * actors[i])
+    override fun inRecoveryCrashProbability(i: Int) = error("No recovery in this model")
+    override fun isCrashAllowed(crashesNumber: Int) = true
+
+    companion object {
+        fun maxExpectedCrashes(statistics: StatisticsModel) = Int.MAX_VALUE
+    }
+}
+
 internal class BoundedNoRecoverCrashProbabilityModel(
     statistics: StatisticsModel,
     override val expectedCrashes: Double,
