@@ -22,7 +22,7 @@ interface Node<Message> {
     /**
      * Called at the beginning of a node execution.
      */
-    suspend fun onStart() {}
+    fun onStart() {}
 
     /**
      * Called after all operations for the node are finished.

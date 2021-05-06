@@ -147,7 +147,7 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
     private var op: Continuation<Unit>? = null
     private val random = Random(env.nodeId)
 
-    override suspend fun onStart() {
+    override fun onStart() {
         super.onStart()
         env.setTimer("CHECK", HEARTBEAT_RATE) {
             if (status != NodeStatus.LEADER) {

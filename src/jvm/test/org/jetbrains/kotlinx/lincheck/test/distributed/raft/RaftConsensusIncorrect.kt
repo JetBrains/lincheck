@@ -164,7 +164,7 @@ class RaftConsensusIncorrect(val env: Environment<RMessage, Int>) : Node<RMessag
         }
     }
 
-    override suspend fun onStart() {
+    override fun onStart() {
         env.setTimer("CHECK", HEARTBEAT_RATE) {
             checkTimer()
         }
