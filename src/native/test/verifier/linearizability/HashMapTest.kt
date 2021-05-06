@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 
-class HashMapTest : AbstractLincheckStressTest<HashMapTest>(IncorrectResultsFailure::class) {
+class HashMapTest : AbstractLincheckStressTest<HashMapTest>(IncorrectResultsFailure::class, UnexpectedExceptionFailure::class) {
     private val m = HashMap<Int, Int>()
 
     fun put(key: Int, value: Int): Int? = m.put(key, value)
@@ -38,8 +38,8 @@ class HashMapTest : AbstractLincheckStressTest<HashMapTest>(IncorrectResultsFail
 
         val keyGen = IntGen("")
 
-        operation(IntGen(""), keyGen, HashMapTest::put, handleExceptionsAsResult = listOf(IllegalStateException::class))
-        operation(keyGen, HashMapTest::get, handleExceptionsAsResult = listOf(IllegalStateException::class))
+        operation(IntGen(""), keyGen, HashMapTest::put)
+        operation(keyGen, HashMapTest::get)
     }
 
     override fun extractState(): Any = m
