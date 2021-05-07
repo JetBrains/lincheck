@@ -20,6 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.nlr
 
+import org.apache.commons.math3.distribution.TDistribution
+import org.apache.commons.math3.stat.descriptive.StatisticalSummary
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
@@ -31,8 +34,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.checkTraceHasNoLincheckEvents
 import org.junit.Test
-import java.lang.IllegalStateException
+import java.io.File
 import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.TimeUnit
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 import kotlin.reflect.KClass
 
 abstract class AbstractNVMLincheckTest(
@@ -79,14 +87,44 @@ abstract class AbstractNVMLincheckTest(
     }
 
     @Test
-    fun testWithStressStrategy(): Unit = StressOptions().run {
+    fun testWithStressStrategy() = doTest("stress") { doStressTest() }
+
+    @Test
+    fun testWithModelCheckingStrategy()  = doTest(" model") { doManagedTest() }
+
+    private inline fun doTest(name: String, action: () -> Unit) {
+        val n = 10
+        val className = this::class.simpleName
+        val summary = SummaryStatistics()
+        Runtime.getRuntime().gc()
+        repeat(2 * n) { i ->
+            val start = System.nanoTime()
+            action()
+            val end = System.nanoTime()
+            val timeMs = TimeUnit.NANOSECONDS.toMillis(end - start)
+            println("$name $className $timeMs")
+            if (i >= n) {
+                summary.addValue(timeMs.toDouble())
+            }
+        }
+        val log = File("log.txt").also {it.createNewFile()}
+        log.appendText("$name $className ${floor(summary.min).toInt()} ${ceil(summary.max).toInt()} ${summary.mean.roundToInt()} ${summary.confidenceIntervalWidth(0.95).roundToInt()}\n")
+    }
+
+    private fun StatisticalSummary.confidenceIntervalWidth(significance: Double): Double {
+        val n = n.toDouble()
+        val tDist = TDistribution(n - 1)
+        val a = tDist.inverseCumulativeProbability(1 - (1 - significance) / 2)
+        return a * standardDeviation / sqrt(n)
+    }
+
+    private fun doStressTest(): Unit = StressOptions().run {
         commonConfiguration()
         customize()
         runInternalTest()
     }
 
-    @Test
-    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
+    private fun doManagedTest(): Unit = ModelCheckingOptions().run {
         commonConfiguration()
         customize()
         runInternalTest()
