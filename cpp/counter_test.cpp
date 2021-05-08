@@ -155,3 +155,30 @@ TEST(CounterTest, TEST_SHOULD_FAIL_ValidateFunctionsTest) {
     conf.operation<int, int, &Counter::atomic_add, &Counter::atomic_add>("add");
     ASSERT_EQ(conf.runTest(false), "");
 }
+
+TEST(ConterTest, EnabledVerifierTest) {
+    // This test is needed to compare speed with DisabledVerifierTest
+    LincheckConfiguration<Counter, Counter> conf;
+
+    conf.iterations(25);
+    conf.invocationsPerIteration(10);
+    conf.threads(10);
+    conf.actorsPerThread(10);
+    conf.operation<int, int, &Counter::atomic_add, &Counter::atomic_add>("add");
+
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(CounterTest, DisabledVerifierTest) {
+    // Compare speed with EnabledVerifierTest
+    LincheckConfiguration<Counter, Counter> conf;
+    conf.iterations(25);
+    conf.invocationsPerIteration(10);
+    // a lot of threads and parallel actors
+    conf.threads(10);
+    conf.actorsPerThread(10);
+    conf.operation<int, int, &Counter::atomic_add, &Counter::atomic_add>("add");
+
+    conf.disableVerifier();
+    ASSERT_EQ(conf.runTest(false), ""); // This should be incredibly fast because of disabled verifier
+}

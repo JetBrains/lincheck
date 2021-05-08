@@ -167,6 +167,10 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
         minimizeFailedScenario(minimizeFailedScenario)
     }
 
+    fun disableVerifier() {
+        verifier { sequentialSpecification -> EpsilonVerifier(sequentialSpecification) }
+    }
+
     fun setupValidationFunction(function: CPointer<CFunction<(CPointer<*>) -> CPointer<*>>>) {
         validationFunction({
             when (this) {

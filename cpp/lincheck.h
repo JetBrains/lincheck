@@ -112,6 +112,13 @@ namespace Lincheck {
                     configuration, (void *) (void (*)()) []() { f(); });
         }
 
+        /*
+         * Change verifier to EpsilonVerifier
+         */
+        void disableVerifier() {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.disableVerifier(configuration);
+        }
+
         template<void (TestClass::*validate)()>
         void validationFunction() {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupValidationFunction(
