@@ -114,6 +114,10 @@ internal class SequentialSpecificationInstance(val obj: CPointer<*>,
     }
 }
 
+fun throwKotlinValidationException(message: String) {
+    throw RuntimeException("Validation failure: $message")
+}
+
 class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
     private var initialStateCreator: CCreator? = null
     private var initialStateDestructor: CDestructor? = null
@@ -161,6 +165,23 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
 
     fun setupMinimizeFailedScenario(minimizeFailedScenario: Boolean) {
         minimizeFailedScenario(minimizeFailedScenario)
+    }
+
+    fun setupValidationFunction(function: CPointer<CFunction<(CPointer<*>) -> CPointer<*>>>) {
+        validationFunction({
+            when (this) {
+                is ConcurrentInstance -> {
+                    try {
+                        function.invoke(this.obj)
+                    } catch(e: RuntimeException) {
+                        throw IllegalStateException(e)
+                    }
+                }
+                else -> {
+                    throw RuntimeException("Internal error. ValidationFunction has invoked not on ConcurrentInstance")
+                }
+            }
+        })
     }
 
     fun setupInitThreadFunction(function: CPointer<CFunction<() -> Unit>>) {
@@ -264,7 +285,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
                         ObjectWithDestructorAndEqualsAndHashcodeAndToString(seq_spec.invoke(instance.obj), result_destructor, result_equals, result_hashCode, result_toString)
                     }
                     else -> {
-                        throw RuntimeException("Internal error. instance has not expected type")
+                        throw RuntimeException("Internal error. Instance has not expected type")
                     }
                 }
             },
@@ -309,7 +330,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
                         ObjectWithDestructorAndEqualsAndHashcodeAndToString(seq_spec.invoke(instance.obj, (arguments[0] as ParameterGeneratorArgument).arg), result_destructor, result_equals, result_hashCode, result_toString)
                     }
                     else -> {
-                        throw RuntimeException("Internal error. instance has not expected type")
+                        throw RuntimeException("Internal error. Instance has not expected type")
                     }
                 }
             },
@@ -364,7 +385,7 @@ class NativeAPIStressConfiguration : LincheckStressConfiguration<Any>() {
                         ObjectWithDestructorAndEqualsAndHashcodeAndToString(seq_spec.invoke(instance.obj, (arguments[0] as ParameterGeneratorArgument).arg, (arguments[1] as ParameterGeneratorArgument).arg), result_destructor, result_equals, result_hashCode, result_toString)
                     }
                     else -> {
-                        throw RuntimeException("Internal error. instance has not expected type")
+                        throw RuntimeException("Internal error. Instance has not expected type")
                     }
                 }
             },
@@ -618,7 +639,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
             val STEP = 0.1
             val curShare = (curPercent / STEP - 0.0001).toInt()
             val nextShare = (nextPercent / STEP + 0.0001).toInt()
-            if(curShare != nextShare) {
+            if (curShare != nextShare) {
                 println("${i + 1}/$iterations")
             }
             val scenario = exGen.nextExecution()

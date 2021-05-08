@@ -5,7 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 # add lincheck shared library
 add_library(lincheck_library SHARED IMPORTED GLOBAL)
-set_target_properties(lincheck_library PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../build/bin/native/releaseShared/libnative.so")
+if(EXISTS "${PROJECT_SOURCE_DIR}/../build/bin/native/releaseShared/libnative.so") #linux .so
+    set_target_properties(lincheck_library PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../build/bin/native/releaseShared/libnative.so")
+else() # mac .dylib
+    set_target_properties(lincheck_library PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../build/bin/native/releaseShared/libnative.dylib")
+endif()
 
 # add gtest
 include(FetchContent)

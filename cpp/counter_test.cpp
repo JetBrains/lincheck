@@ -30,6 +30,7 @@ class Counter {
 public:
     int sharedState = 0;
     std::atomic_int sharedAtomicState = 0;
+    int counter_validate_invocations = 0;
 
     int inc() {
         auto ans = ++sharedState;
@@ -63,6 +64,15 @@ public:
         auto ans = sharedAtomicState += value;
         //std::cout << "atomic_add " << value << " finished" << std::endl;
         return ans;
+    }
+
+    void validate_no_error() {}
+
+    void validate_with_error() {
+        counter_validate_invocations++;
+        if (counter_validate_invocations == 5) {
+            throw std::runtime_error("ValidationRuntimeError");
+        }
     }
 };
 
@@ -131,6 +141,17 @@ TEST(CounterTest, GoodAtomicDec) {
 TEST(CounterTest, GoodAtomicAdd) {
     LincheckConfiguration<Counter, Counter> conf;
     conf.threads(3);
+    conf.operation<int, int, &Counter::atomic_add, &Counter::atomic_add>("add");
+    ASSERT_EQ(conf.runTest(false), "");
+}
+
+TEST(CounterTest, TEST_SHOULD_FAIL_ValidateFunctionsTest) {
+    LincheckConfiguration<Counter, Counter> conf;
+    conf.iterations(1);
+    conf.invocationsPerIteration(1);
+    conf.threads(2);
+    conf.validationFunction<&Counter::validate_no_error>();
+    conf.validationFunction<&Counter::validate_with_error>();
     conf.operation<int, int, &Counter::atomic_add, &Counter::atomic_add>("add");
     ASSERT_EQ(conf.runTest(false), "");
 }

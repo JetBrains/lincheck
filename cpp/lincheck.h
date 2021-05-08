@@ -112,6 +112,24 @@ namespace Lincheck {
                     configuration, (void *) (void (*)()) []() { f(); });
         }
 
+        template<void (TestClass::*validate)()>
+        void validationFunction() {
+            lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupValidationFunction(
+                    configuration,
+                    (void *) (void (*)(void *)) [](void *instance) -> void { // validate
+                        auto *obj = (TestClass *) instance; // add type to void*
+                        try {
+                            (obj->*validate)(); // invoke op method
+                        } catch(const std::exception& e) {
+                            std::string message = "Validation error: \"" + std::string(e.what()) + "\"";
+                            libnative_symbols()->kotlin.root.org.jetbrains.kotlinx.lincheck.throwKotlinValidationException(message.c_str());
+                        } catch(...) {
+                            std::cerr << "Validate function should throw std::exception, but something different was thrown\n";
+                        }
+                    }
+            );
+        }
+
         template<typename Ret, Ret (TestClass::*op)(), Ret (SequentialSpecification::*seq_spec)()>
         void operation(const char *operationName, const char *nonParallelGroupName = nullptr, bool useOnce = false) {
             lib->kotlin.root.org.jetbrains.kotlinx.lincheck.NativeAPIStressConfiguration.setupOperation1(
