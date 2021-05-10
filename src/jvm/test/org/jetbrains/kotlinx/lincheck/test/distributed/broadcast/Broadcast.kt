@@ -87,10 +87,12 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
             lastDeliveredId[sender]++
             env.log.add(lastMessage)
         }
+        //println("Finish deliver")
     }
 
 
     override suspend fun onMessage(message: Message, sender: Int) {
+        //println("In on message")
         val msgId = message.id
         val from = message.from
         if (!receivedMessages[from].contains(msgId)) {
@@ -100,6 +102,7 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
         } else {
             receivedMessages[from][msgId] = receivedMessages[from][msgId]!! + 1
         }
+        //println("Before deliver")
         deliver(from)
     }
 
@@ -118,7 +121,7 @@ class BroadcastTest {
     private fun createOptions() = DistributedOptions<Message, Message>()
         .requireStateEquivalenceImplCheck(false)
         .threads(3)
-       // .actorsPerThread(10)
+        .actorsPerThread(2)
         .invocationsPerIteration(3_000)
         .iterations(10)
         .verifier(EpsilonVerifier::class.java)

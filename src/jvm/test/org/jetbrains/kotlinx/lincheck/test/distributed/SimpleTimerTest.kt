@@ -60,7 +60,7 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
         }
     }
 
-    override suspend fun onStart() {
+    override fun onStart() {
         env.setTimer("HEARTBEAT", 1) {
             env.broadcast(Heartbeat)
         }

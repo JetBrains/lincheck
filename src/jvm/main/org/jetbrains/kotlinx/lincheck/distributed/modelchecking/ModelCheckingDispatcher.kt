@@ -41,12 +41,17 @@ class ModelCheckingDispatcher(val runner : DistributedModelCheckingRunner<*, *>)
     val executor = Executors.newSingleThreadExecutor()
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {
+       // println("Submit $block taskCounter=$taskCounter")
         taskCounter++
+        //println("Inc counter $block taskCounter=$taskCounter")
         val shouldSignal = (context[TaskContext.Key]?.shouldSignal == true)
         context[TaskContext.Key]?.shouldSignal = false
         executor.submit {
             block.run()
+            //println("Finish ${block.hashCode()}")
+            //println("task Counter is $taskCounter")
             taskCounter--
+            //println("Finish taskCounter=$taskCounter")
             if (taskCounter == 0) {
                 runner.signal.signal()
             }

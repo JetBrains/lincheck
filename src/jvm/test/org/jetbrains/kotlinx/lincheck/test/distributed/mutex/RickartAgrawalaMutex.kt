@@ -28,6 +28,15 @@ import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.coroutines.suspendCoroutine
+
+fun IntArray.happensBefore(other: IntArray): Boolean {
+    check(size == other.size)
+    for (i in indices) {
+        if (other[i] < this[i]) return false
+    }
+    return true
+}
 
 
 class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
@@ -71,6 +80,13 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
     @Validate
     fun validate() {
         cnt = 0
+        val events = env.events().map { it.filterIsInstance<InternalEvent>() }
+        val locks = events.flatMap { it.filter { it.message == "Lock" } }
+        for (i in locks.indices) {
+            for (j in 0..i) {
+                check(locks[i].clock.happensBefore(locks[j].clock) || locks[j].clock.happensBefore(locks[i].clock))
+            }
+        }
     }
 
     private fun checkInCS() {
@@ -87,11 +103,11 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
         semaphore.release()
     }
 
-    @Operation
-    suspend fun lock(): Int {
+    @Operation(cancellableOnSuspension = false)
+    suspend fun lock() {
         //println("[${env.nodeId}]: Request lock")
-        check(req[env.nodeId] == inf) {
-            Thread.currentThread()
+        if (inCS) {
+            suspendCoroutine<Unit> { }
         }
         val myReqTime = ++clock
         req[env.nodeId] = myReqTime
@@ -102,15 +118,15 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
             semaphore.acquire()
             check(inCS)
         }
-        val res = ++cnt
-        unlock()
-        return res
+        env.recordInternalEvent("Lock")
     }
 
-    private suspend fun unlock() {
+    @Operation(cancellableOnSuspension = false)
+    suspend fun unlock() {
         if (!inCS) return
         inCS = false
         req[env.nodeId] = inf
+        env.recordInternalEvent("Unlock")
         for (i in 0 until env.numberOfNodes) {
             if (pendingOk[i]) {
                 pendingOk[i] = false
@@ -127,12 +143,12 @@ class RickartAgrawalaMutexTest {
             RickartAgrawalaMutex::class.java,
             DistributedOptions<MutexMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Counter::class.java)
+                .sequentialSpecification(MutexSpecification::class.java)
                 .threads(3)
                 .messageOrder(MessageOrder.FIFO)
-                .actorsPerThread(2)
-                .invocationsPerIteration(30)
-                .iterations(1000)
+                .actorsPerThread(3)
+                .invocationsPerIteration(5000)
+                .iterations(20)
         )
     }
 

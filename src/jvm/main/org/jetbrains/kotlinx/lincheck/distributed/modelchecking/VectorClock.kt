@@ -38,7 +38,9 @@ data class VectorClock(val clock: IntArray) {
 
     fun happensBefore(other: VectorClock) : Boolean {
         for (i in clock.indices) {
-            if (other[i] > this[i]) return false
+            if (other[i] < this[i]) {
+                return false
+            }
         }
         return true
     }

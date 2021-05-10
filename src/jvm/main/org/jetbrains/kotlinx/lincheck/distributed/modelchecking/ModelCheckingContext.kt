@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
 import java.util.*
+import kotlin.random.Random
 
 class ModelCheckingContext<Message, Log>(
     val testCfg: DistributedCTestConfiguration<Message, Log>,
@@ -75,6 +76,8 @@ class ModelCheckingContext<Message, Log>(
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 
     fun reset() {
+        tasksId = 0
+        messageId = 0
         logs = Array(addressResolver.totalNumberOfNodes) {
             emptyList()
         }

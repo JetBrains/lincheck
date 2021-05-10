@@ -35,6 +35,7 @@ class MCEnvironmentImpl<Message, Log>(
     val lastPriorities = Array(numberOfNodes) { 0 }
 
     override suspend fun send(message: Message, receiver: Int) {
+
         val clock = context.incClockAndCopy(nodeId)
         val event = MessageSentEvent(
             message = message,
@@ -43,8 +44,13 @@ class MCEnvironmentImpl<Message, Log>(
             clock = clock,
             state = context.getStateRepresentation(nodeId)
         )
+        debugLogs.add("[$nodeId]: Send $message ${event.id}")
+        //println(debugLogs.last())
         context.events.add(nodeId to event)
+
         context.runner.addTask(receiver, VectorClock(clock)) {
+            debugLogs.add("[$receiver]: Receive $message ${event.id}")
+            //println(debugLogs.last())
             context.incClock(receiver)
             val newclock = context.maxClock(receiver, clock)
             context.events.add(
@@ -87,6 +93,6 @@ class MCEnvironmentImpl<Message, Log>(
     }
 
     override fun recordInternalEvent(message: String) {
-        TODO("Not yet implemented")
+        context.events.add(nodeId to InternalEvent(message, context.copyClock(nodeId), context.getStateRepresentation(nodeId)))
     }
 }

@@ -72,6 +72,17 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         checkInCS()
     }
 
+    @Validate
+    fun validate() {
+        val events = env.events().map { it.filterIsInstance<InternalEvent>() }
+        val locks = events.flatMap { it.filter { it.message == "Lock" } }
+        for (i in locks.indices) {
+            for (j in 0..i) {
+                check(locks[i].clock.happensBefore(locks[j].clock) || locks[j].clock.happensBefore(locks[i].clock))
+            }
+        }
+    }
+
     @StateRepresentation
     override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
 
@@ -104,7 +115,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         while (!inCS) {
             signal.await()
         }
-        env.recordInternalEvent("Lock acquired")
+        env.recordInternalEvent("Lock")
     }
 
     @Operation(cancellableOnSuspension = false)
@@ -114,7 +125,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         }
         inCS = false
         req[env.nodeId] = inf
-        env.recordInternalEvent("Lock released")
+        env.recordInternalEvent("Unlock")
         env.broadcast(Rel(++clock))
     }
 }
@@ -130,10 +141,11 @@ class LamportMutexTest {
     private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(MutexSpecification::class.java)
-        .threads(2)
-        .actorsPerThread(1)
-        .invocationsPerIteration(5000)
-        .iterations(100)
+        .threads(3)
+        .actorsPerThread(3)
+        .invocationsPerIteration(3000)
+        .iterations(10)
+        .storeLogsForFailedScenario("lamport.txt")
 
     @Test
     fun testSimple() {
@@ -148,7 +160,7 @@ class LamportMutexTest {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
-                .storeLogsForFailedScenario("lamport_mutex_nofifo.txt")
+                .storeLogsForFailedScenario("lamport_nofifo.txt")
         )
     }
 }

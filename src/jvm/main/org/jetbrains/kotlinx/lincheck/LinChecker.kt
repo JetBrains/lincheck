@@ -132,7 +132,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 queue.addAll(nextTestCfg.nextConfigurations())
             }
         }
-        while (Probability.failedNodesExpectation != 0) {
+        while (Probability.failedNodesExpectation > 0) {
             Probability.failedNodesExpectation--
             val newFailedIteration = res.scenario.tryMinimize(testCfg, verifier)
             if (newFailedIteration != null) {
