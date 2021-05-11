@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
+
 /**
  * An abstract node with an execution choice in the interleaving tree.
  */
@@ -198,17 +200,31 @@ class InterleavingBuilder {
     fun build() = Interleaving(path)*/
 }
 
-class InterleavingTreeNode(val id: Int, val context: ModelCheckingContext<*, *>, val parent: InterleavingTreeNode? = null) {
+data class InterleavingTreeNode(
+    val id: Int, val context: ModelCheckingContext<*, *>,
+    val task: Task,
+    val parent: InterleavingTreeNode? = null,
+    val numberOfFailures: Int = 0
+) {
     val taskToMessageIds = mutableMapOf<Int, Int>()
     val nextPossibleTasksIds = mutableListOf<Int>()
-    val nonFifoTaskIds = mutableListOf<Int>()
     val children = mutableMapOf<Int, InterleavingTreeNode>()
     var isFullyExplored = false
     var isVisited = false
     var fractionUnexplored = 1.0
+    var allInversionsUsed = false
+    val notCheckedTasks = mutableListOf<Int>()
+    val allNotChecked = mutableListOf<Int>()
+    val operations = mutableMapOf<Int, Int>()
 
-    operator fun get(i: Int): InterleavingTreeNode {
-        return children.getOrPut(i) { InterleavingTreeNode(i, context, this) }
+    fun isExploredNow(): Boolean = allInversionsUsed
+            || nextPossibleTasksIds.all { it in children } && children.all { it.value.isExploredNow() }
+
+    operator fun get(i: Int): InterleavingTreeNode? {
+        if (i !in nextPossibleTasksIds || i !in taskToMessageIds) return null
+        val task = context.runner.tasks[i]!!
+        val newNumberOfFailures = if (i in taskToMessageIds) numberOfFailures + 1 else numberOfFailures
+        return children.getOrPut(i) { InterleavingTreeNode(i, context, task, this, newNumberOfFailures) }
     }
 
     fun addMessage(msgId: Int, taskId: Int) {
@@ -220,28 +236,37 @@ class InterleavingTreeNode(val id: Int, val context: ModelCheckingContext<*, *>,
         if (isVisited) return
         check(nextPossibleTasksIds.isEmpty())
         val currentTask = currentTasks[id]!!
+        currentTasks.filter { it.value is OperationTask }.forEach { operations[it.key] = it.value.iNode }
         val tasksToCheck = currentTasks.filter {
-            it.value.iNode >= currentTask.iNode ||
-                    currentTask.clock.happensBefore(it.value.clock)
+            it.key != id && currentTask.goesBefore(it.value)
         }
-        nextPossibleTasksIds.addAll(tasksToCheck.filter { t ->
-            t.key != id &&
-                    !tasksToCheck.any { it != t && it.value.iNode == t.value.iNode && it.value.clock.happensBefore(t.value.clock) }
-        }.map { it.key })
-        nonFifoTaskIds.addAll(tasksToCheck.map { it.key }.filter { it != id && it !in tasksToCheck })
+        //println("Tasks to check $tasksToCheck")
+        nextPossibleTasksIds.addAll(if (context.testCfg.messageOrder == MessageOrder.FIFO) tasksToCheck.filter { t ->
+            !currentTasks.any {
+                it.key != id && it != t && it.value.iNode == t.value.iNode && it.value.clock.happensBefore(
+                    t.value.clock
+                )
+            }
+        }.map { it.key } else tasksToCheck.map { it.key })
+        notCheckedTasks.addAll(currentTasks.filter { it.key !in tasksToCheck }.map { it.key })
+        allNotChecked.addAll(currentTasks.filter { it.key !in nextPossibleTasksIds }.map { it.key })
+        //println("Next possible tasks ${id} ${nextPossibleTasksIds}")
         isVisited = true
     }
 
-    fun next() = nextPossibleTasksIds.minOrNull()
+    fun next() = nextPossibleTasksIds.filter { it !in operations }.minOrNull() ?: nextPossibleTasksIds.minByOrNull { operations[it]!! }
 
-    fun nextNode() : InterleavingTreeNode? {
+    fun nextNode(): InterleavingTreeNode? {
         val next = next() ?: return null
         return get(next)
     }
 
     fun chooseNextInterleaving(builder: InterleavingTreeBuilder): Interleaving {
+        //println("Choose next interleaving $id ${builder.path}")
         if (builder.isFull()) {
+            allInversionsUsed = true
             val next = next() ?: return builder.build()
+            //println("Next in path $next")
             builder.addNextTransition(next)
             return if (next !in children) {
                 builder.build()
@@ -253,6 +278,7 @@ class InterleavingTreeNode(val id: Int, val context: ModelCheckingContext<*, *>,
             val notTriedInversions = nextPossibleTasksIds.filterNot { it in children }
             if (notTriedInversions.isNotEmpty()) {
                 val next = notTriedInversions.random(context.generatingRandom)
+                //println("Add inversion")
                 builder.numberOfInversions++
                 builder.addNextTransition(next)
                 return builder.build()
@@ -277,6 +303,18 @@ class InterleavingTreeNode(val id: Int, val context: ModelCheckingContext<*, *>,
         return children[next()]?.chooseNextInterleaving(builder) ?: builder.build()
         //if (!builder.areFailuresFull())
         //if (!)
+    }
+
+    fun updateStats() {
+        if (nextPossibleTasksIds.isEmpty()) {
+            isFullyExplored = true
+            fractionUnexplored = 0.0
+        }
+        val total = children.values.fold(0.0) { acc, choice ->
+            acc + choice.fractionUnexplored
+        } + nextPossibleTasksIds.filter { it !in children }.size
+        fractionUnexplored = total / nextPossibleTasksIds.size
+        isFullyExplored = nextPossibleTasksIds.none { it !in children } && children.values.all { it.isFullyExplored }
     }
 
     //fun goTo(position: Int)

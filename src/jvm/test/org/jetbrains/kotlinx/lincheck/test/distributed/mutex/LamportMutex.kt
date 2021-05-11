@@ -144,8 +144,9 @@ class LamportMutexTest {
         .threads(3)
         .actorsPerThread(3)
         .invocationsPerIteration(3000)
-        .iterations(10)
+        .iterations(20)
         .storeLogsForFailedScenario("lamport.txt")
+        //.minimizeFailedScenario(false)
 
     @Test
     fun testSimple() {

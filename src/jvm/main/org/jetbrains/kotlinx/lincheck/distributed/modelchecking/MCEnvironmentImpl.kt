@@ -44,12 +44,12 @@ class MCEnvironmentImpl<Message, Log>(
             clock = clock,
             state = context.getStateRepresentation(nodeId)
         )
-        debugLogs.add("[$nodeId]: Send $message ${event.id}")
+        debugLogs.add("[$nodeId]: Send $message ${event.id} ${context.runner.curTreeNode?.id}")
         //println(debugLogs.last())
         context.events.add(nodeId to event)
 
-        context.runner.addTask(receiver, VectorClock(clock)) {
-            debugLogs.add("[$receiver]: Receive $message ${event.id}")
+        context.runner.addTask(MessageReceiveTask(receiver, VectorClock(clock), "[$receiver]: Receive $message ${event.id}") {
+            debugLogs.add("[$receiver]: Receive $message ${event.id} ${context.runner.curTreeNode?.id}")
             //println(debugLogs.last())
             context.incClock(receiver)
             val newclock = context.maxClock(receiver, clock)
@@ -64,7 +64,7 @@ class MCEnvironmentImpl<Message, Log>(
                         )
             )
             context.testInstances[receiver].onMessage(message, nodeId)
-        }
+        })
     }
 
     override fun events(): Array<List<Event>> {

@@ -33,9 +33,9 @@ class PeerIncorrect(env: Environment<Message, Message>) : AbstractPeer(env) {
     override suspend fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
         env.recordInternalEvent("On message $message ${receivedMessages[sender]}")
-        if (!receivedMessages[sender].contains(msgId)) {
+        if (!receivedMessages[message.from].contains(msgId)) {
             env.broadcast(message)
-            receivedMessages[sender].add(msgId)
+            receivedMessages[message.from].add(msgId)
             env.log.add(message)
             env.recordInternalEvent("Add to log ${env.log}")
         }
@@ -44,7 +44,10 @@ class PeerIncorrect(env: Environment<Message, Message>) : AbstractPeer(env) {
     @Operation(cancellableOnSuspension = false)
     suspend fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
-        env.broadcast(message)
-        env.log.add(message)
+        env.broadcast(message, skipItself = false)
+    }
+
+    override fun stateRepresentation(): String {
+        return "${env.log}"
     }
 }

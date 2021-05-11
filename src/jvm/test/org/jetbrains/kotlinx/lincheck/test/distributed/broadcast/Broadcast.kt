@@ -51,10 +51,14 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
         // All messages were delivered at most once.
         check(env.log.isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
-        env.log.forEach { m -> check(env.sentMessages(m.from).map { it.message }.contains(m)) }
+        env.log.forEach { m ->
+            check(env.sentMessages(m.from).map { it.message }.contains(m)) {
+                m
+            }
+        }
         // If the correct process sent message m, it should deliver m.
         if (env.isCorrect()) {
-            env.log.forEach { m -> check(env.sentMessages().map { it.message }.contains(m)) }
+            env.sentMessages().map { it.message }.forEach { m -> check(m in env.log) }
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
         val logs = env.getLogs()
@@ -109,10 +113,10 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
     @Operation(cancellableOnSuspension = false)
     suspend fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
-        receivedMessages[env.nodeId][message.id] = 1
-        undeliveredMessages[env.nodeId].add(message)
-        env.broadcast(message)
-        deliver(env.nodeId)
+       // receivedMessages[env.nodeId][message.id] = 1
+       // undeliveredMessages[env.nodeId].add(message)
+        env.broadcast(message, false)
+        //deliver(env.nodeId)
     }
 }
 
@@ -121,7 +125,7 @@ class BroadcastTest {
     private fun createOptions() = DistributedOptions<Message, Message>()
         .requireStateEquivalenceImplCheck(false)
         .threads(3)
-        .actorsPerThread(2)
+        .actorsPerThread(3)
         .invocationsPerIteration(3_000)
         .iterations(10)
         .verifier(EpsilonVerifier::class.java)
@@ -141,6 +145,7 @@ class BroadcastTest {
         LinChecker.check(
             PeerIncorrect::class.java,
             createOptions()
+                .storeLogsForFailedScenario("broadcast_nof.txt")
         )
     }
 

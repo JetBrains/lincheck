@@ -118,9 +118,10 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
         }
     }
 
-    @Operation()
+    @Operation(cancellableOnSuspension = false)
     suspend fun transaction(sum: Int) {
-        val receiver = (0 until env.numberOfNodes).filter { it != env.nodeId }.shuffled()[0]
+        if (env.numberOfNodes == 1) return
+        val receiver = sum % env.numberOfNodes
         currentSum.getAndAdd(-sum)
         env.log.add(OpStateSend(currentSum.value, sum))
         env.send(Transaction(sum), receiver)
@@ -136,12 +137,15 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
         return res.toString()
     }
 
-    @Operation(group = "observer")
+    @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun snapshot(): Int {
         state = currentSum.value
         env.log.add(CurState(state))
         marker = Marker(env.nodeId, token++)
         env.broadcast(marker!!)
+        if (env.numberOfNodes == 1) {
+            return state
+        }
         while (!gotSnapshot) {
             semaphore.acquire()
         }
@@ -171,9 +175,11 @@ class SnapshotTest {
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(MockSnapshot::class.java)
                 .threads(3)
+                //.actorsPerThread(3)
                 .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(30)
-                .iterations(1000)
+                .invocationsPerIteration(3000)
+                .iterations(10)
+                .storeLogsForFailedScenario("chandy_lamport_stress.txt")
         )
     }
 

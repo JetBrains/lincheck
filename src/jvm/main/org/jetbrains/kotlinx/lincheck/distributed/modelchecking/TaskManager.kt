@@ -27,4 +27,15 @@ import java.util.*
 import kotlin.coroutines.Continuation
 import kotlin.random.Random
 
-class Task(val iNode: Int, val clock: VectorClock, val f: suspend () -> Unit)
+sealed class Task {
+    abstract val iNode: Int
+    abstract val clock: VectorClock
+    abstract val msg: String
+    abstract val f: suspend () -> Unit
+    fun goesBefore(other: Task) : Boolean {
+        return other.iNode >= iNode || clock.happensBefore(other.clock)
+    }
+}
+
+data class MessageReceiveTask(override val iNode: Int, override val clock: VectorClock, override val msg: String, override val f: suspend () -> Unit) : Task()
+data class OperationTask(override val iNode: Int, override val clock: VectorClock, override val msg: String, override val f: suspend () -> Unit) : Task()

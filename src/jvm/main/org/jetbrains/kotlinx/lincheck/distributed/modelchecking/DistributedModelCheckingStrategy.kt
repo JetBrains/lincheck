@@ -60,7 +60,7 @@ class DistributedModelCheckingStrategy<Message, Log>(
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until invocations) {
-                println("INVOCATION $invocation")
+                //println("INVOCATION $invocation")
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {
@@ -87,6 +87,7 @@ class DistributedModelCheckingStrategy<Message, Log>(
                     return null
                 }
             }
+            println(runner.counter)
             return null
         }
     }

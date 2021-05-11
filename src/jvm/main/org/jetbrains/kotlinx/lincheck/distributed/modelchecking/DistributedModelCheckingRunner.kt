@@ -21,8 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.VoidResult
-import org.jetbrains.kotlinx.lincheck.createExceptionResult
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.createLincheckResult
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
@@ -32,6 +31,7 @@ import org.jetbrains.kotlinx.lincheck.execution.withEmptyClock
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.File
+import java.lang.NullPointerException
 import java.lang.reflect.Method
 import java.util.*
 
@@ -53,15 +53,20 @@ class DistributedModelCheckingRunner<Message, Log>(
     val tasks = mutableMapOf<Int, Task>()
     var curTreeNode: InterleavingTreeNode? = null
     val path = mutableListOf<InterleavingTreeNode>()
-    var interleaving : Interleaving? = null
+    var interleaving: Interleaving? = null
     val dispatcher = ModelCheckingDispatcher(this)
     var signal = Signal()
     lateinit var environments: Array<MCEnvironmentImpl<Message, Log>>
     val context = ModelCheckingContext(testCfg, scenario)
     val numberOfNodes = context.addressResolver.totalNumberOfNodes
     var exception: Throwable? = null
-    val root: InterleavingTreeNode = InterleavingTreeNode(-1, context)
+    val root: InterleavingTreeNode =
+        InterleavingTreeNode(-1, context, OperationTask(-1, VectorClock(IntArray(numberOfNodes)), "start") {})
     var builder = InterleavingTreeBuilder(0, 0)
+    var isInterrupted = false
+    var maxNumberOfErrors = 0
+    var numberOfFailures = 0
+    var counter = 0
 
     override fun initialize() {
         super.initialize()
@@ -73,36 +78,38 @@ class DistributedModelCheckingRunner<Message, Log>(
 
     fun isFullyExplored() = root.isFullyExplored
 
-    fun addTask(iNode: Int, parentClock: VectorClock, f: suspend () -> Unit) {
+    fun addTask(task: Task) {
         val taskId = context.tasksId++
+        //println("New task id $taskId $iNode $parentClock")
         //println("iNode=$iNode taskId=${taskId} curNode=${curTreeNode!!.taskId}")
         check(!tasks.containsKey(taskId))
-        tasks[taskId] = Task(iNode, parentClock, f)
+        tasks[taskId] = task
     }
 
-    /*fun bfsPrint() {
+    fun bfsPrint() {
         val queue = LinkedList<Pair<Int, InterleavingTreeNode>>()
         var curId = 0
         queue.add(0 to root)
         while (queue.isNotEmpty()) {
             val e = queue.poll()
             if (e.first != curId) {
-                println()
                 curId = e.first
             }
-            print("${e.second.fractionUnexplored} ")
-            queue.addAll(e.second.choices.map { curId + 1 to it })
+            println("${e.second.id} ${e.second.task.clock} ${e.second.task.msg} next=${e.second.nextPossibleTasksIds}, filtered=${e.second.notCheckedTasks}, allFiltered=${e.second.allNotChecked}")
+            queue.addAll(e.second.children.values.map { curId + 1 to it })
         }
         println()
-    }*/
+    }
 
     fun reset() {
-       // println()
+        // println()
         //bfsPrint()
+        isInterrupted = false
         debugLogs.clear()
         curTreeNode = root
         path.clear()
         tasks.clear()
+        builder = InterleavingTreeBuilder(maxNumberOfErrors, 0)
         context.reset()
         environments = Array(numberOfNodes) {
             MCEnvironmentImpl(it, numberOfNodes, context = context)
@@ -160,49 +167,83 @@ class DistributedModelCheckingRunner<Message, Log>(
                 testNodeExecution.actorId = scenarioSize
             }
         }
-        addTask(iNode, VectorClock(context.copyClock(iNode))) {
+        addTask(OperationTask(iNode, VectorClock(context.incClockAndCopy(iNode)), "Run node $iNode ${testNodeExecution.actorId}") {
             runNode(iNode)
+        })
+    }
+
+    private suspend fun executeTask(next: Int) {
+        path.add(curTreeNode!!)
+        signal = Signal()
+        GlobalScope.launch(dispatcher + TaskContext()) {
+            tasks[next]!!.f()
         }
+        signal.await()
+        curTreeNode!!.finish(tasks)
+        tasks.remove(next)
+        //println("Task keys ${tasks.keys}")
     }
 
     override fun run(): InvocationResult {
         reset()
+        tasks[root.id] = root.task
         val coroutine = GlobalScope.launch(dispatcher) {
-            for (i in  0 until numberOfNodes) {
+            for (i in 0 until numberOfNodes) {
                 context.incClock(i)
                 context.testInstances[i].onStart()
             }
             for (i in 0 until numberOfNodes) {
-                addTask(i, VectorClock(context.copyClock(i))) {
+                addTask(OperationTask(i, VectorClock(context.copyClock(i)), "Run $i") {
                     runNode(i)
-                }
+                })
             }
             curTreeNode!!.finish(tasks)
+            tasks.remove(-1)
+            //println("Task keys ${tasks.keys}")
             interleaving = root.chooseNextInterleaving(builder)
-
             path.add(curTreeNode!!)
+            // println("path=${interleaving!!.path}")
             for (next in interleaving!!.path) {
+                //println(next)
+                // println(tasks)
                 curTreeNode = curTreeNode!![next]
-                path.add(curTreeNode!!)
-                signal = Signal()
-                GlobalScope.launch(dispatcher + TaskContext()) {
-                    tasks[next]!!.f()
-                }
-                signal.await()
-                curTreeNode!!.finish(tasks)
-                tasks.remove(next)
-                //if (c)
+                executeTask(next)
             }
-            while(tasks.isNotEmpty()) {
-                val nextTask = tasks.entries.minByOrNull { it.key }!!
-                curTreeNode = curTreeNode!![nextTask.key]
-                signal = Signal()
-                GlobalScope.launch(dispatcher + TaskContext()) {
-                    nextTask.value.f()
+            while (tasks.isNotEmpty()) {
+                val next = curTreeNode!!.next()
+                //println(next)
+                if (next == null) {
+                    var up = curTreeNode
+                    try {
+                        while (!tasks.any { it.key in up!!.parent!!.nextPossibleTasksIds }) {
+                            up = up!!.parent
+                        }
+                    } catch (e: NullPointerException) {
+                        println("Up $up")
+                        bfsPrint()
+                        println("Tasks $tasks")
+                        exception = e
+                        return@launch
+                    }
+                    counter++
+                    //println("Remove ${up!!.id} from ${up.parent!!.id}")
+                    up!!.parent!!.nextPossibleTasksIds.remove(up.id)
+                    up!!.parent!!.children.remove(up.id)
+                    while (tasks.isNotEmpty()) {
+                        val next = tasks.minOfOrNull { it.key }!!
+                        signal = Signal()
+                        GlobalScope.launch(dispatcher + TaskContext()) {
+                            tasks[next]!!.f()
+                        }
+                        signal.await()
+                        tasks.remove(next)
+                    }
+                    isInterrupted = true
+                    break
                 }
-                signal.await()
-                curTreeNode!!.finish(tasks)
-                tasks.remove(nextTask.key)
+                //println("Next is $next, curTree $curTreeNode")
+                curTreeNode = curTreeNode!![next]
+                executeTask(next)
             }
             /*while (curTreeNode != null) {
                 //println("Before next")
@@ -230,11 +271,19 @@ class DistributedModelCheckingRunner<Message, Log>(
                     coroutine.join()
                 }
             }
-        } catch(e: TimeoutCancellationException) {
+        } catch (e: TimeoutCancellationException) {
             return DeadlockInvocationResult(emptyMap())
         }
+        //println("Current tree")
+        //bfsPrint()
+        if (!isInterrupted && root.isExploredNow()) {
+            maxNumberOfErrors++
+        }
+        if (!isInterrupted) {
+            path.reversed().forEach { it.updateStats() }
+        }
         //println("Execution is over")
-        path.reversed().forEach { it.updateExplorationStatistics() }
+        //path.reversed().forEach { it.updateExplorationStatistics() }
         //root.resetExploration()
         environments.forEach { it.isFinished = true }
         if (exception != null) {

@@ -25,10 +25,8 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
 
@@ -57,7 +55,13 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
 
     @Validate
     fun validate() {
-        optimisticIncorrect = 0
+        val events = env.events().map { it.filterIsInstance<InternalEvent>() }
+        val locks = events.flatMap { it.filter { it.message == "Lock" } }
+        for (i in locks.indices) {
+            for (j in 0..i) {
+                check(locks[i].clock.happensBefore(locks[j].clock) || locks[j].clock.happensBefore(locks[i].clock))
+            }
+        }
     }
 
     private fun checkCSEnter() {
@@ -67,8 +71,8 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
         semaphore.release()
     }
 
-    @Operation
-    suspend fun lock(): Int {
+    @Operation(cancellableOnSuspension = false)
+    suspend fun lock(){
         check(!requested[env.nodeId])
         requested[env.nodeId] = true
         env.broadcast(Req(0, 0))
@@ -79,15 +83,15 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
             inCS = true
         }
         check(inCS)
-        val res = ++optimisticIncorrect
-        unlock()
-        return res
+        env.recordInternalEvent("Lock")
     }
 
-    private suspend fun unlock() {
+    @Operation(cancellableOnSuspension = false)
+    suspend fun unlock() {
         check(inCS)
         inCS = false
         requested[env.nodeId] = false
+        env.recordInternalEvent("Unlock")
         env.broadcast(Rel(0))
     }
 }
@@ -100,7 +104,7 @@ class OptimisticMutexIncorrectTest {
             OptimisticMutexIncorrect::class.java,
             DistributedOptions<MutexMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Counter::class.java)
+                .verifier(EpsilonVerifier::class.java)
                 .threads(3)
                 .messageOrder(MessageOrder.FIFO)
                 .invocationsPerIteration(100)
