@@ -44,6 +44,7 @@ class MCEnvironmentImpl<Message, Log>(
             clock = clock,
             state = context.getStateRepresentation(nodeId)
         )
+        //context.runner.curTreeNode!!.addMessage(event.id, context.tasksId++)
         debugLogs.add("[$nodeId]: Send $message ${event.id} ${context.runner.curTreeNode?.id}")
         //println(debugLogs.last())
         context.events.add(nodeId to event)

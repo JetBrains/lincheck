@@ -221,7 +221,8 @@ data class InterleavingTreeNode(
             || nextPossibleTasksIds.all { it in children } && children.all { it.value.isExploredNow() }
 
     operator fun get(i: Int): InterleavingTreeNode? {
-        if (i !in nextPossibleTasksIds || i !in taskToMessageIds) return null
+        //println("Get $i $nextPossibleTasksIds")
+        if (i !in nextPossibleTasksIds && i !in taskToMessageIds) return null
         val task = context.runner.tasks[i]!!
         val newNumberOfFailures = if (i in taskToMessageIds) numberOfFailures + 1 else numberOfFailures
         return children.getOrPut(i) { InterleavingTreeNode(i, context, task, this, newNumberOfFailures) }

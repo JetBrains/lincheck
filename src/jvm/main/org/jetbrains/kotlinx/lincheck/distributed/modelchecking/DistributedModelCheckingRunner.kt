@@ -167,9 +167,14 @@ class DistributedModelCheckingRunner<Message, Log>(
                 testNodeExecution.actorId = scenarioSize
             }
         }
-        addTask(OperationTask(iNode, VectorClock(context.incClockAndCopy(iNode)), "Run node $iNode ${testNodeExecution.actorId}") {
-            runNode(iNode)
-        })
+        addTask(
+            OperationTask(
+                iNode,
+                VectorClock(context.incClockAndCopy(iNode)),
+                "Run node $iNode ${testNodeExecution.actorId}"
+            ) {
+                runNode(iNode)
+            })
     }
 
     private suspend fun executeTask(next: Int) {
@@ -202,48 +207,54 @@ class DistributedModelCheckingRunner<Message, Log>(
             //println("Task keys ${tasks.keys}")
             interleaving = root.chooseNextInterleaving(builder)
             path.add(curTreeNode!!)
-            // println("path=${interleaving!!.path}")
-            for (next in interleaving!!.path) {
-                //println(next)
-                // println(tasks)
-                curTreeNode = curTreeNode!![next]
-                executeTask(next)
-            }
-            while (tasks.isNotEmpty()) {
-                val next = curTreeNode!!.next()
-                //println(next)
-                if (next == null) {
-                    var up = curTreeNode
-                    try {
-                        while (!tasks.any { it.key in up!!.parent!!.nextPossibleTasksIds }) {
-                            up = up!!.parent
-                        }
-                    } catch (e: NullPointerException) {
-                        println("Up $up")
-                        bfsPrint()
-                        println("Tasks $tasks")
-                        exception = e
-                        return@launch
-                    }
-                    counter++
-                    //println("Remove ${up!!.id} from ${up.parent!!.id}")
-                    up!!.parent!!.nextPossibleTasksIds.remove(up.id)
-                    up!!.parent!!.children.remove(up.id)
-                    while (tasks.isNotEmpty()) {
-                        val next = tasks.minOfOrNull { it.key }!!
-                        signal = Signal()
-                        GlobalScope.launch(dispatcher + TaskContext()) {
-                            tasks[next]!!.f()
-                        }
-                        signal.await()
-                        tasks.remove(next)
-                    }
-                    isInterrupted = true
-                    break
+            //println("path=${interleaving!!.path}")
+            try {
+                for (next in interleaving!!.path) {
+                    //println(next)
+                    // println(tasks)
+                    curTreeNode = curTreeNode!![next]
+                    executeTask(next)
                 }
-                //println("Next is $next, curTree $curTreeNode")
-                curTreeNode = curTreeNode!![next]
-                executeTask(next)
+                while (tasks.isNotEmpty()) {
+                    val next = curTreeNode!!.next()
+                    //println("Next $next")
+                    if (next == null) {
+                        var up = curTreeNode
+                        try {
+                            while (!tasks.any { it.key in up!!.parent!!.nextPossibleTasksIds }) {
+                                up = up!!.parent
+                            }
+                        } catch (e: NullPointerException) {
+                            println("Up $up")
+                            bfsPrint()
+                            println("Tasks $tasks")
+                            exception = e
+                            return@launch
+                        }
+                        counter++
+                        //println("Remove ${up!!.id} from ${up.parent!!.id}")
+                        up!!.parent!!.nextPossibleTasksIds.remove(up.id)
+                        up!!.parent!!.children.remove(up.id)
+                        while (tasks.isNotEmpty()) {
+                            val next = tasks.minOfOrNull { it.key }!!
+                            signal = Signal()
+                            GlobalScope.launch(dispatcher + TaskContext()) {
+                                tasks[next]!!.f()
+                            }
+                            signal.await()
+                            tasks.remove(next)
+                        }
+                        isInterrupted = true
+                        break
+                    }
+                    //println("Next is $next, curTree $curTreeNode")
+                    curTreeNode = curTreeNode!![next]
+                    executeTask(next)
+                }
+            } catch (e: NullPointerException) {
+                bfsPrint()
+                exception = e
+                return@launch
             }
             /*while (curTreeNode != null) {
                 //println("Before next")

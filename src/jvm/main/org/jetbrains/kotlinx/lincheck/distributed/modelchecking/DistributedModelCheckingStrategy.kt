@@ -83,7 +83,7 @@ class DistributedModelCheckingStrategy<Message, Log>(
                     }
                 }
                 if (runner.isFullyExplored()) {
-                    println(invocation)
+                    println("Finish on $invocation")
                     return null
                 }
             }
