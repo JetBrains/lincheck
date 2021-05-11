@@ -44,28 +44,46 @@ class MCEnvironmentImpl<Message, Log>(
             clock = clock,
             state = context.getStateRepresentation(nodeId)
         )
-        //context.runner.curTreeNode!!.addMessage(event.id, context.tasksId++)
+        val taskId = context.tasksId++
+        context.runner.curTreeNode!!.addMessage(event.id, taskId)
+        val nextTransition = context.runner.nextTransition()
+        if (nextTransition == taskId) {
+            val newClock = context.incClockAndCopy(nodeId)
+            context.runner.addTask(NodeCrashTask(nodeId, VectorClock(newClock), "Crash node $nodeId") {
+                context.events.add(nodeId to NodeCrashEvent(newClock, context.getStateRepresentation(nodeId)))
+                val tasksToRemove = context.runner.tasks.filter { it.value.iNode == nodeId }.map { it.key }
+                tasksToRemove.forEach { context.runner.tasks.remove(it) }
+                if (context.testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
+                    context.testNodeExecutions.getOrNull(nodeId)?.crashRemained()
+                }
+            })
+        }
         debugLogs.add("[$nodeId]: Send $message ${event.id} ${context.runner.curTreeNode?.id}")
         //println(debugLogs.last())
         context.events.add(nodeId to event)
 
-        context.runner.addTask(MessageReceiveTask(receiver, VectorClock(clock), "[$receiver]: Receive $message ${event.id}") {
-            debugLogs.add("[$receiver]: Receive $message ${event.id} ${context.runner.curTreeNode?.id}")
-            //println(debugLogs.last())
-            context.incClock(receiver)
-            val newclock = context.maxClock(receiver, clock)
-            context.events.add(
-                receiver to
-                        MessageReceivedEvent(
-                            message,
-                            sender = nodeId,
-                            id = event.id,
-                            clock = newclock,
-                            state = context.getStateRepresentation(receiver)
-                        )
-            )
-            context.testInstances[receiver].onMessage(message, nodeId)
-        })
+        context.runner.addTask(
+            MessageReceiveTask(
+                receiver,
+                VectorClock(clock),
+                "[$receiver]: Receive $message ${event.id}"
+            ) {
+                debugLogs.add("[$receiver]: Receive $message ${event.id} ${context.runner.curTreeNode?.id}")
+                //println(debugLogs.last())
+                context.incClock(receiver)
+                val newclock = context.maxClock(receiver, clock)
+                context.events.add(
+                    receiver to
+                            MessageReceivedEvent(
+                                message,
+                                sender = nodeId,
+                                id = event.id,
+                                clock = newclock,
+                                state = context.getStateRepresentation(receiver)
+                            )
+                )
+                context.testInstances[receiver].onMessage(message, nodeId)
+            })
     }
 
     override fun events(): Array<List<Event>> {
@@ -94,6 +112,12 @@ class MCEnvironmentImpl<Message, Log>(
     }
 
     override fun recordInternalEvent(message: String) {
-        context.events.add(nodeId to InternalEvent(message, context.copyClock(nodeId), context.getStateRepresentation(nodeId)))
+        context.events.add(
+            nodeId to InternalEvent(
+                message,
+                context.copyClock(nodeId),
+                context.getStateRepresentation(nodeId)
+            )
+        )
     }
 }

@@ -189,6 +189,14 @@ class DistributedModelCheckingRunner<Message, Log>(
         //println("Task keys ${tasks.keys}")
     }
 
+    fun nextTransition() : Int? {
+        if (curTreeNode == null) return null
+        val curTaskId = curTreeNode!!.id
+        val index = interleaving!!.path.indexOf(curTaskId)
+        if (index == -1 || index == interleaving!!.path.size - 1) return null
+        return interleaving!!.path[index + 1]
+    }
+
     override fun run(): InvocationResult {
         reset()
         tasks[root.id] = root.task

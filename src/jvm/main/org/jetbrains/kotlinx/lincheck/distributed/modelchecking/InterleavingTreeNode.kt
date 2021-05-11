@@ -283,25 +283,38 @@ data class InterleavingTreeNode(
                 builder.numberOfInversions++
                 builder.addNextTransition(next)
                 return builder.build()
-            } else {
-                val total = children.values.sumByDouble { it.fractionUnexplored }
-                val random = context.generatingRandom.nextDouble() * total
-                var sumWeight = 0.0
-                children.forEach { choice ->
-                    sumWeight += choice.value.fractionUnexplored
-                    if (sumWeight >= random) {
-                        builder.addNextTransition(choice.key)
-                        if (choice.key != next()) builder.numberOfInversions++
-                        return choice.value.chooseNextInterleaving(builder)
-                    }
-                }
-                val choice = children.entries.lastOrNull { !it.value.isFullyExplored } ?: return builder.build()
+            }
+        }
+        if (!builder.areFailuresFull()) {
+            val notTriedFailures = taskToMessageIds.keys.filterNot { it in children }
+            if (notTriedFailures.isNotEmpty()) {
+                val next = notTriedFailures.random(context.generatingRandom)
+                //println("Add inversion")
+                builder.numberOfInversions++
+                builder.addNextTransition(next)
+                return builder.build()
+            }
+        }
+        val total = children.values.sumByDouble { it.fractionUnexplored }
+        val random = context.generatingRandom.nextDouble() * total
+        var sumWeight = 0.0
+        children.forEach { choice ->
+            sumWeight += choice.value.fractionUnexplored
+            if (sumWeight >= random) {
                 builder.addNextTransition(choice.key)
                 if (choice.key != next()) builder.numberOfInversions++
                 return choice.value.chooseNextInterleaving(builder)
             }
         }
-        return children[next()]?.chooseNextInterleaving(builder) ?: builder.build()
+        val choice = children.entries.lastOrNull { !it.value.isFullyExplored } ?: return builder.build()
+        builder.addNextTransition(choice.key)
+        if (choice.key in taskToMessageIds) {
+            builder.numberOfFailures++
+        } else {
+            if (choice.key != next()) builder.numberOfInversions++
+        }
+        return choice.value.chooseNextInterleaving(builder)
+       // return children[next()]?.chooseNextInterleaving(builder) ?: builder.build()
         //if (!builder.areFailuresFull())
         //if (!)
     }

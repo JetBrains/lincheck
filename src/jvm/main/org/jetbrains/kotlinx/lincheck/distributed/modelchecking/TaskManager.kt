@@ -39,3 +39,4 @@ sealed class Task {
 
 data class MessageReceiveTask(override val iNode: Int, override val clock: VectorClock, override val msg: String, override val f: suspend () -> Unit) : Task()
 data class OperationTask(override val iNode: Int, override val clock: VectorClock, override val msg: String, override val f: suspend () -> Unit) : Task()
+data class NodeCrashTask(override val iNode: Int, override val clock: VectorClock, override val msg: String, override val f: suspend () -> Unit) : Task()
