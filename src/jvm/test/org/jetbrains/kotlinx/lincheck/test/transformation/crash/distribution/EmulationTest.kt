@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 
 import org.junit.Assert
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.abs
 import kotlin.math.pow
@@ -47,6 +48,7 @@ internal class EmulationTest {
     }
 
     @Test
+    @Ignore("This model works only with unbounded number of crashes. But this is uncomfortable to use & analyze.")
     fun testBasicDetectableExecutionUniformDistribution() {
         val random = Random(42)
         repeat(REPEATS) {
