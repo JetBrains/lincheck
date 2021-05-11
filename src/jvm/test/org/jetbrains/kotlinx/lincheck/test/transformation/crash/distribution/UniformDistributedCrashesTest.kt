@@ -35,6 +35,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.abs
 import kotlin.math.max
@@ -86,6 +87,7 @@ class UniformDistributedCrashesTest {
     fun testDurable() = test(/* 2 foo1 + 3 foo2 */37, Recover.DURABLE, SequentialCodeTest::class.java, 1)
 
     @Test
+    @Ignore("This model works only with unbounded number of crashes. But this is uncomfortable to use & analyze.")
     fun testDetectableExecution() =
         test(/* 2 foo1 + 3 foo2 */37, Recover.DETECTABLE_EXECUTION, SequentialCodeTest::class.java, 5)
 

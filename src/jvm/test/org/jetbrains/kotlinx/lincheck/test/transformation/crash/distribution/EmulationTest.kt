@@ -48,7 +48,6 @@ internal class EmulationTest {
     }
 
     @Test
-    @Ignore("This model works only with unbounded number of crashes. But this is uncomfortable to use & analyze.")
     fun testBasicDetectableExecutionUniformDistribution() {
         val random = Random(42)
         repeat(REPEATS) {
