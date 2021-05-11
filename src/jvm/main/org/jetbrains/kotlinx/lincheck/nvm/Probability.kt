@@ -111,7 +111,7 @@ internal class DetectableExecutionProbabilityModel : ProbabilityModel() {
     }
 
     override fun actorProbability(iThread: Int, iActor: Int) = c / (1 + c * Statistics.actorLength(iThread, iActor))
-    override fun isCrashAllowed(crashesNumber: Int) = true
+    override fun isCrashAllowed(crashesNumber: Int) = crashesNumber < 2 * Probability.expectedCrashes
 }
 
 internal object Statistics {
