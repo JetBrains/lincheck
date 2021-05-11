@@ -28,10 +28,11 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
+import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import java.lang.IllegalStateException
 import kotlin.random.Random
 import kotlin.reflect.KClass
 
@@ -166,8 +167,13 @@ internal class DurableMCAS : MCAS {
 }
 
 @Param(name = "list", gen = ListGen::class)
-internal class MCASNoRecoverFailingTest :
-    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class) {
+internal class MCASNoRecoverFailingTest : AbstractNVMLincheckFailingTest(
+    Recover.DURABLE,
+    THREADS_NUMBER,
+    SequentialMCAS::class,
+    false,
+    DeadlockWithDumpFailure::class
+) {
     private val cas = DurableMCAS()
 
     @Operation
@@ -184,8 +190,13 @@ internal class MCASNoRecoverFailingTest :
 
 
 @Param(name = "list", gen = ListGen::class)
-internal abstract class MCASFailingTest :
-    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class) {
+internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out LincheckFailure>) :
+    AbstractNVMLincheckFailingTest(
+        Recover.DURABLE,
+        THREADS_NUMBER,
+        SequentialMCAS::class,
+        expectedFailures = expectedFailures
+    ) {
     internal abstract val cas: MCAS
 
     @Operation
@@ -224,8 +235,9 @@ internal class MCASFailingTest6 : MCASFailingTest() {
     override val cas = DurableFailingMCAS6()
 }
 
-internal class MCASFailingTest7 : MCASFailingTest() {
+internal class MCASFailingTest7 : MCASFailingTest(DeadlockWithDumpFailure::class) {
     override val cas = DurableFailingMCAS7()
+
     // Without correct recovery the execution may lead to StackOverflowError, which can appear as OutOfMemoryError in MC mode.
     // This randomness causes non-determinism check fail.
     override val expectedExceptions = listOf(StackOverflowError::class, IllegalStateException::class)
