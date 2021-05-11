@@ -60,10 +60,10 @@ internal class SequentialCounter : VerifierState(), Counter {
     override fun extractState() = value
 }
 
-private class NRLCounter(threadsCount: Int) : Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
-    private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
-    private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
+internal open class NRLCounter(threadsCount: Int) : Counter {
+    protected val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
+    protected val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
+    protected val currentValue = MutableList(threadsCount) { nonVolatile(0) }
 
     @Recoverable
     override fun get(threadId: Int) = r.sumBy { it.read()!! }
@@ -71,16 +71,16 @@ private class NRLCounter(threadsCount: Int) : Counter {
     @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
     override fun increment(threadId: Int) = incrementImpl(threadId)
 
-    private fun incrementImpl(p: Int) {
+    protected open fun incrementImpl(p: Int) {
         r[p].write(1 + currentValue[p].value, p)
         checkPointer[p].value = 1
     }
 
-    private fun incrementRecover(p: Int) {
+    protected open fun incrementRecover(p: Int) {
         if (checkPointer[p].value == 0) return incrementImpl(p)
     }
 
-    private fun incrementBefore(p: Int) {
+    protected open fun incrementBefore(p: Int) {
         currentValue[p].value = r[p].read()!!
         checkPointer[p].value = 0
         currentValue[p].flush()
@@ -103,7 +103,6 @@ internal class CounterFailingTest1 : CounterFailingTest() {
     override val counter = NRLFailingCounter1(THREADS_NUMBER + 2)
 }
 
-// not reliably reproduced
 internal class CounterFailingTest2 : CounterFailingTest() {
     override val counter = NRLFailingCounter2(THREADS_NUMBER + 2)
 }
@@ -116,29 +115,16 @@ internal class CounterFailingTest4 : CounterFailingTest() {
     override val counter = NRLFailingCounter4(THREADS_NUMBER + 2)
 }
 
-internal class NRLFailingCounter1(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
-    private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
-    private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
+internal class CounterFailingTest5 : CounterFailingTest() {
+    override val counter = NRLFailingCounter5(THREADS_NUMBER + 2)
+}
 
-    override fun extractState() = r.sumBy { it.read()!! }
+internal class CounterFailingTest6 : CounterFailingTest() {
+    override val counter = NRLFailingCounter6(THREADS_NUMBER + 2)
+}
 
-    @Recoverable
-    override fun get(threadId: Int) = r.sumBy { it.read()!! }
-
-    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
-    override fun increment(threadId: Int) = incrementImpl(threadId)
-
-    private fun incrementImpl(p: Int) {
-        r[p].write(1 + currentValue[p].value, p)
-        checkPointer[p].value = 1
-    }
-
-    private fun incrementRecover(p: Int) {
-        if (checkPointer[p].value == 0) return incrementImpl(p)
-    }
-
-    private fun incrementBefore(p: Int) {
+internal class NRLFailingCounter1(threadsCount: Int) : NRLCounter(threadsCount) {
+    override fun incrementBefore(p: Int) {
         currentValue[p].value = r[p].read()!!
         checkPointer[p].value = 0
         // here should be currentValue[p].flush()
@@ -146,29 +132,8 @@ internal class NRLFailingCounter1(threadsCount: Int) : VerifierState(), Counter 
     }
 }
 
-internal class NRLFailingCounter2(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
-    private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
-    private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
-
-    override fun extractState() = r.sumBy { it.read()!! }
-
-    @Recoverable
-    override fun get(threadId: Int) = r.sumBy { it.read()!! }
-
-    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
-    override fun increment(threadId: Int) = incrementImpl(threadId)
-
-    private fun incrementImpl(p: Int) {
-        r[p].write(1 + currentValue[p].value, p)
-        checkPointer[p].value = 1
-    }
-
-    private fun incrementRecover(p: Int) {
-        if (checkPointer[p].value == 0) return incrementImpl(p)
-    }
-
-    private fun incrementBefore(p: Int) {
+internal class NRLFailingCounter2(threadsCount: Int) : NRLCounter(threadsCount) {
+    override fun incrementBefore(p: Int) {
         currentValue[p].value = r[p].read()!!
         checkPointer[p].value = 0
         currentValue[p].flush()
@@ -176,63 +141,34 @@ internal class NRLFailingCounter2(threadsCount: Int) : VerifierState(), Counter 
     }
 }
 
-internal class NRLFailingCounter3(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
-    private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
-    private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
-
-    override fun extractState() = r.sumBy { it.read()!! }
-
-    @Recoverable
-    override fun get(threadId: Int) = r.sumBy { it.read()!! }
-
-    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
-    override fun increment(threadId: Int) = incrementImpl(threadId)
-
-    private fun incrementImpl(p: Int) {
-        r[p].write(1 + currentValue[p].value, p)
-        checkPointer[p].value = 1
-    }
-
-    private fun incrementRecover(p: Int) {
+internal class NRLFailingCounter3(threadsCount: Int) : NRLCounter(threadsCount) {
+    override fun incrementRecover(p: Int) {
         // incrementImpl should be called
         if (checkPointer[p].value == 0) return increment(p)
     }
+}
 
-    private fun incrementBefore(p: Int) {
-        currentValue[p].value = r[p].read()!!
+internal class NRLFailingCounter4(threadsCount: Int) : NRLCounter(threadsCount) {
+    override fun incrementImpl(p: Int) {
+        // incorrect order of writes
+        checkPointer[p].value = 1
+        r[p].write(1 + currentValue[p].value, p)
+    }
+}
+
+internal class NRLFailingCounter5(threadsCount: Int) : NRLCounter(threadsCount) {
+    override fun incrementBefore(p: Int) {
+        // here should be currentValue[p].value = r[p].read()!!
         checkPointer[p].value = 0
         currentValue[p].flush()
         checkPointer[p].flush()
     }
 }
 
-internal class NRLFailingCounter4(threadsCount: Int) : VerifierState(), Counter {
-    private val r = List(threadsCount) { NRLReadWriteObject(threadsCount, 0) }
-    private val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
-    private val currentValue = MutableList(threadsCount) { nonVolatile(0) }
-
-    override fun extractState() = r.sumBy { it.read()!! }
-
-    @Recoverable
-    override fun get(threadId: Int) = r.sumBy { it.read()!! }
-
-    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
-    override fun increment(threadId: Int) = incrementImpl(threadId)
-
-    private fun incrementImpl(p: Int) {
-        // incorrect order of writes
-        checkPointer[p].value = 1
-        r[p].write(1 + currentValue[p].value, p)
-    }
-
-    private fun incrementRecover(p: Int) {
-        if (checkPointer[p].value == 0) return incrementImpl(p)
-    }
-
-    private fun incrementBefore(p: Int) {
+internal class NRLFailingCounter6(threadsCount: Int) : NRLCounter(threadsCount) {
+    override fun incrementBefore(p: Int) {
         currentValue[p].value = r[p].read()!!
-        checkPointer[p].value = 0
+        // here should be checkPointer[p].value = 0
         currentValue[p].flush()
         checkPointer[p].flush()
     }
