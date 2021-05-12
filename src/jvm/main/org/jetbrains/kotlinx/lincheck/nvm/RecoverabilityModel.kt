@@ -72,8 +72,8 @@ enum class StrategyRecoveryOptions {
     STRESS, MANAGED;
 
     fun createCrashTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor = when (this) {
-        STRESS -> CrashTransformer(cv, clazz)
-        MANAGED -> cv // add this transformer in ManagedStrategyTransformer
+        STRESS -> CrashRethrowTransformer(CrashTransformer(cv, clazz))
+        MANAGED -> CrashRethrowTransformer(cv) // add crashes in ManagedStrategyTransformer
     }
 }
 
@@ -100,6 +100,7 @@ interface RecoverabilityModel {
 
     fun needsTransformation(): Boolean
     fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor
+    fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = cv
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
     fun systemCrashProbability(): Float
     fun defaultExpectedCrashes(): Int
@@ -147,6 +148,7 @@ private open class DurableModel(
     override fun defaultExpectedCrashes() = 1
     override fun createExecutionCallback(): ExecutionCallback = RecoverExecutionCallback
     override val awaitSystemCrashBeforeThrow get() = false
+    override fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = DurableRecoverAllGenerator(cv, clazz)
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz)
         if (crashes) {

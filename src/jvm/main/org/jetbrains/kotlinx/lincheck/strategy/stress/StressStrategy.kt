@@ -70,5 +70,6 @@ class StressStrategy(
     }
 
     override fun needsTransformation() = recoverabilityModel.needsTransformation()
-    override fun createTransformer(cv: ClassVisitor) = recoverabilityModel.createTransformer(cv, testClass)
+    override fun createTransformer(cv: ClassVisitor) =
+        recoverabilityModel.createTransformerWrapper(recoverabilityModel.createTransformer(cv, testClass), testClass)
 }

@@ -92,6 +92,7 @@ object NVMState {
         NVMCache.clear()
         Probability.reset()
         Crash.reset(NoRecoverModel)
+        Crash.resetDefault()
         state = ExecutionState.INIT
         crashesEnabled = false
         threads = 0

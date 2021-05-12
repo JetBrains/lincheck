@@ -29,36 +29,54 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Must be ignored by user code, namely 'catch (e: Throwable)' constructions should pass this exception.
  */
 abstract class CrashError(enableStackTrace: Boolean) : Throwable(null, null, false, enableStackTrace) {
-    abstract var actorIndex: Int
+    var actorIndex: Int = -1
     abstract val crashStackTrace: Array<StackTraceElement>
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CrashError) return false
+
+        if (actorIndex != other.actorIndex) return false
+        if (!crashStackTrace.contentEquals(other.crashStackTrace)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = actorIndex
+        result = 31 * result + crashStackTrace.contentHashCode()
+        return result
+    }
 }
 
-class CrashErrorImpl(override var actorIndex: Int = -1) : CrashError(true) {
-    override val crashStackTrace: Array<StackTraceElement> = stackTrace
+class CrashErrorImpl : CrashError(true) {
+    override val crashStackTrace: Array<StackTraceElement> get() = stackTrace
 }
 
 /** Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot. */
-class CrashErrorProxy(
-    private val ste: StackTraceElement?,
-    override var actorIndex: Int = -1
-) : CrashError(false) {
-    override val crashStackTrace get() = arrayOf(ste ?: StackTraceElement(null, null, null, -1))
+class CrashErrorProxy(private val ste: StackTraceElement?) : CrashError(false) {
+    override val crashStackTrace get() = if (ste === null) emptyArray() else arrayOf(ste)
 }
 
-private data class SystemContext(val barrier: BusyWaitingBarrier?, val threads: Int)
+private data class SystemContext(
+    val waitingThreads: Int,
+    val threads: Int,
+    val free: AtomicBoolean = AtomicBoolean(true)
+)
 
 object Crash {
     private val systemCrashOccurred = AtomicBoolean(false)
-    private val context = atomic(SystemContext(null, 0))
+    private val context = atomic(SystemContext(0, 0))
     private var awaitSystemCrashBeforeThrow = true
     internal val threads get() = context.value.threads
+
     @Volatile
     var useProxyCrash = true
 
+    @Volatile
+    internal lateinit var barrierCallback: () -> Unit
+
     @JvmStatic
     fun isCrashed() = systemCrashOccurred.get()
-
-    fun isWaitingSystemCrash() = context.value.barrier !== null
 
     @JvmStatic
     fun resetAllCrashed() {
@@ -69,9 +87,9 @@ object Crash {
      * Crash simulation.
      * @throws CrashError
      */
-    internal fun crash(threadId: Int, ste: StackTraceElement?) {
-        val await = awaitSystemCrashBeforeThrow && (isWaitingSystemCrash() || Probability.shouldSystemCrash())
-        if (await) awaitSystemCrash() else NVMCache.crash(threadId)
+    internal fun crash(threadId: Int, ste: StackTraceElement?, systemCrash: Boolean) {
+        if (!systemCrash) NVMCache.crash(threadId)
+        if (awaitSystemCrashBeforeThrow && systemCrash) awaitSystemCrash()
         val crash = createCrash(ste)
         NVMState.registerCrash(threadId, crash)
         throw crash
@@ -86,8 +104,9 @@ object Crash {
     @JvmStatic
     fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
         if (isWaitingSystemCrash() || Probability.shouldCrash()) {
-            val ste = StackTraceElement(className, fileName, methodName, lineNumber)
-            crash(NVMState.threadId(), ste)
+            val ste = StackTraceElement(className, methodName, fileName, lineNumber)
+            val systemCrash = isWaitingSystemCrash() || Probability.shouldSystemCrash()
+            crash(NVMState.threadId(), ste, systemCrash)
         }
     }
 
@@ -95,31 +114,31 @@ object Crash {
      * Await for all active threads to access this point and crash the cache.
      */
     @JvmStatic
-    fun awaitSystemCrash() {
-        var newBarrier: BusyWaitingBarrier? = null
+    fun awaitSystemCrash() = barrierCallback()
+
+    private fun defaultAwaitSystemCrash() {
+        var free: AtomicBoolean
         while (true) {
             val c = context.value
-            if (c.barrier !== null) break
-            if (newBarrier === null) newBarrier = BusyWaitingBarrier()
-            if (context.compareAndSet(c, c.copy(barrier = newBarrier))) break
+            val newWaiting = c.waitingThreads + 1
+            free = if (c.waitingThreads == 0) AtomicBoolean(false) else c.free
+            if (changeState(c, newWaiting == c.threads, c.threads, newWaiting, free)) break
         }
-        context.value.barrier!!.await { first ->
-            if (!first) return@await
-            systemCrashOccurred.compareAndSet(false, true)
-            NVMCache.systemCrash()
-            while (true) {
-                val currentContext = context.value
-                checkNotNull(currentContext.barrier)
-                if (context.compareAndSet(currentContext, currentContext.copy(barrier = null))) break
-            }
-        }
+        while (!free.get());
+    }
+
+    internal fun onSystemCrash() {
+        systemCrashOccurred.compareAndSet(false, true)
+        NVMCache.systemCrash()
     }
 
     /** Should be called when thread finished. */
     fun exit(threadId: Int) {
         while (true) {
-            val currentContext = context.value
-            if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads - 1))) break
+            val c = context.value
+            val newThreads = c.threads - 1
+            val isLast = c.waitingThreads == newThreads && c.waitingThreads > 0
+            if (changeState(c, isLast, newThreads, c.waitingThreads, c.free)) break
         }
     }
 
@@ -127,30 +146,38 @@ object Crash {
     fun register(threadId: Int) {
         while (true) {
             val currentContext = context.value
-            if (currentContext.barrier !== null) continue
+            if (currentContext.waitingThreads != 0) continue
             if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads + 1))) break
         }
     }
 
     fun reset(recoverModel: RecoverabilityModel) {
         awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
-        context.value = SystemContext(null, 0)
+        context.value = SystemContext(0, 0)
         resetAllCrashed()
     }
-}
 
-private class BusyWaitingBarrier {
-    private val free = atomic(false)
-    private val waitingCount = atomic(0)
+    fun resetDefault() {
+        barrierCallback = { defaultAwaitSystemCrash() }
+    }
 
-    inline fun await(action: (Boolean) -> Unit) {
-        waitingCount.incrementAndGet()
-        // wait for all to access the barrier
-        while (waitingCount.value < Crash.threads && !free.value);
-        val firstExit = free.compareAndSet(expect = false, update = true)
-        action(firstExit)
-        waitingCount.decrementAndGet()
-        // wait for action completed in all threads
-        while (waitingCount.value > 0 && free.value);
+    private fun isWaitingSystemCrash() = context.value.waitingThreads > 0
+
+    private fun changeState(
+        c: SystemContext,
+        isLast: Boolean,
+        newThreads: Int,
+        newWaiting: Int,
+        newFree: AtomicBoolean
+    ): Boolean {
+        var newW = newWaiting
+        if (isLast) {
+            onSystemCrash()
+            newW = 0 // reset barrier
+        }
+        return context.compareAndSet(c, SystemContext(newW, newThreads, newFree)).also { success ->
+            if (success && isLast)
+                check(newFree.compareAndSet(false, true)) // open barrier
+        }
     }
 }

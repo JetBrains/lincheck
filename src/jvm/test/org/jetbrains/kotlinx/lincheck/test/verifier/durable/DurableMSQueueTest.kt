@@ -19,28 +19,22 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.CrashResult
-import org.jetbrains.kotlinx.lincheck.ValueResult
-import org.jetbrains.kotlinx.lincheck.VoidResult
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverPerThread
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.HBClock
-import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.reflect.Method
 
@@ -157,6 +151,29 @@ internal class DurableMSQueue<T> : RecoverableQueue<T> {
     }
 }
 
+internal class SmallScenarioTest : DurableMSQueueFailingTest() {
+    override val q = DurableMSFailingQueue2<Int>()
+    override fun <O : Options<O, *>> O.customize() {
+        executionGenerator(FailingQueueScenarioGenerator::class.java)
+    }
+}
+
+internal class FailingQueueScenarioGenerator(testCfg: CTestConfiguration, testStructure: CTestStructure) :
+    ExecutionGenerator(testCfg, testStructure) {
+    override fun nextExecution(): ExecutionScenario {
+        val push = SmallScenarioTest::class.java.getMethod("push", Int::class.javaPrimitiveType)
+        val pop = SmallScenarioTest::class.java.getMethod("pop", Int::class.javaPrimitiveType)
+        return ExecutionScenario(
+            emptyList(),
+            listOf(
+                listOf(actor(push, 1)),
+                listOf(actor(push, 2))
+            ),
+            listOf(actor(push, 3), actor(pop, 3))
+        )
+    }
+}
+
 private val PUSH = DurableMSQueueTest::class.java.getMethod("push", Int::class.javaPrimitiveType)
 private val POP = DurableMSQueueTest::class.java.getMethod("pop", Int::class.javaPrimitiveType)
 private fun actor(method: Method, vararg a: Any?) = Actor(method, a.toMutableList())
@@ -230,7 +247,6 @@ internal class DurableMSQueueFailingTest2 : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue2<Int>()
 }
 
-@Ignore("Can't find an error. To be fixed")
 internal class DurableMSQueueFailingTest3 : DurableMSQueueFailingTest() {
     override val q = DurableMSFailingQueue3<Int>()
 }

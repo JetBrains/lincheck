@@ -36,19 +36,17 @@ private const val RECOVER_ALL_GENERATED_ACCESS =
     Opcodes.ACC_PRIVATE or Opcodes.ACC_SYNCHRONIZED or Opcodes.ACC_SYNTHETIC
 private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val CRASH_IS_CRASHED = Method.getMethod(Crash::isCrashed.javaMethod)
-private val CRASH_RESET_ALL_CRASHED =Method.getMethod(Crash::resetAllCrashed.javaMethod)
+private val CRASH_RESET_ALL_CRASHED = Method.getMethod(Crash::resetAllCrashed.javaMethod)
 private val OPERATION_TYPE = Type.getType(Operation::class.java)
 
-class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: Class<*>) : ClassVisitor(ASM_API, cv) {
+internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: Class<*>) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = false
-    internal var recoverAllMethod: java.lang.reflect.Method? = null
-    internal var recoverPerThreadMethod: java.lang.reflect.Method? = null
+    internal val recoverAllMethod: java.lang.reflect.Method?
+    internal val recoverPerThreadMethod: java.lang.reflect.Method?
     internal lateinit var name: String
 
     init {
-        val recover = listOf(DurableRecoverAll::class, DurableRecoverPerThread::class)
-            .map { a -> _class.methods.singleOrNull { m -> m.annotations.any { it.annotationClass == a } } }
-            .onEach { check(it == null || Type.getMethodDescriptor(it) == RECOVER_DESCRIPTOR) }
+        val recover = recoverMethods(_class)
         recoverAllMethod = recover[0]
         recoverPerThreadMethod = recover[1]
     }
@@ -64,11 +62,37 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
         super.visit(version, access, name, signature, superName, interfaces)
         this.name = name!!
         shouldTransform = name == Type.getInternalName(_class) ||
-                recoverAllMethod !== null && name == Type.getInternalName(recoverAllMethod!!.declaringClass) ||
-                recoverPerThreadMethod !== null && name == Type.getInternalName(recoverPerThreadMethod!!.declaringClass)
+            recoverAllMethod !== null && name == Type.getInternalName(recoverAllMethod.declaringClass) ||
+            recoverPerThreadMethod !== null && name == Type.getInternalName(recoverPerThreadMethod.declaringClass)
+    }
 
-        if (!shouldTransform || recoverAllMethod === null) return
-        generateSynchronizedRecoverAll()
+    override fun visitMethod(
+        access: Int,
+        name: String?,
+        descriptor: String?,
+        signature: String?,
+        exceptions: Array<out String>?
+    ): MethodVisitor {
+        val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
+        if (!shouldTransform) return mv
+        return DurableRecoverOperationTransformer(this, mv, access, name, descriptor)
+    }
+}
+
+internal class DurableRecoverAllGenerator(cv: ClassVisitor, _class: Class<*>) : ClassVisitor(ASM_API, cv) {
+    private val recoverAllMethod = recoverMethods(_class)[0]
+
+    override fun visit(
+        version: Int,
+        access: Int,
+        name: String?,
+        signature: String?,
+        superName: String?,
+        interfaces: Array<out String>?
+    ) {
+        super.visit(version, access, name, signature, superName, interfaces)
+        if (recoverAllMethod !== null && name == Type.getInternalName(recoverAllMethod.declaringClass))
+            generateSynchronizedRecoverAll()
     }
 
     private fun generateSynchronizedRecoverAll(): Unit = GeneratorAdapter(
@@ -82,23 +106,10 @@ class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: C
         RECOVER_ALL_GENERATED_ACCESS, RECOVER_ALL_GENERATED_NAME, RECOVER_ALL_GENERATED_DESCRIPTOR
     ).run {
         visitCode()
-        generateRecoverCode(this@DurableOperationRecoverTransformer.name, recoverAllMethod!!.name)
+        generateRecoverCode(Type.getInternalName(recoverAllMethod!!.declaringClass), recoverAllMethod.name)
         visitInsn(Opcodes.RETURN)
         visitMaxs(1, 0)
         visitEnd()
-    }
-
-
-    override fun visitMethod(
-        access: Int,
-        name: String?,
-        descriptor: String?,
-        signature: String?,
-        exceptions: Array<out String>?
-    ): MethodVisitor {
-        val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
-        if (!shouldTransform) return mv
-        return DurableRecoverOperationTransformer(this, mv, access, name, descriptor)
     }
 }
 
@@ -169,3 +180,7 @@ private class DurableRecoverOperationTransformer(
         }
     }
 }
+
+private fun recoverMethods(clazz: Class<*>) = listOf(DurableRecoverAll::class, DurableRecoverPerThread::class)
+    .map { a -> clazz.methods.singleOrNull { m -> m.annotations.any { it.annotationClass == a } } }
+    .onEach { check(it == null || Type.getMethodDescriptor(it) == RECOVER_DESCRIPTOR) }

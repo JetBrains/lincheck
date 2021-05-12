@@ -28,32 +28,6 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
-internal interface CrashPointVisitor {
-    fun visitCrashPoint(
-        mv: GeneratorAdapter,
-        className: String?,
-        fileName: String?,
-        methodName: String?,
-        lineNumber: Int
-    )
-}
-
-private object StressCrashPointVisitor : CrashPointVisitor {
-    override fun visitCrashPoint(
-        mv: GeneratorAdapter,
-        className: String?,
-        fileName: String?,
-        methodName: String?,
-        lineNumber: Int
-    ) {
-        mv.push(className)
-        mv.push(fileName)
-        mv.push(methodName)
-        mv.push(lineNumber)
-        mv.invokeStatic(CRASH_TYPE, POSSIBLY_CRASH_METHOD)
-    }
-}
-
 internal open class CrashEnabledVisitor(cv: ClassVisitor, testClass: Class<*>, initial: Boolean = true) :
     ClassVisitor(ASM_API, cv) {
     private val superClassNames = testClass.superClassNames()
@@ -108,16 +82,16 @@ internal class CrashTransformer(
     ): MethodVisitor {
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (!shouldTransform) return mv
-        return CrashMethodTransformer(mv, access, name, descriptor, this.name, fileName, true, StressCrashPointVisitor)
+        return CrashMethodTransformer(mv, access, name, descriptor, this.name, fileName)
     }
 }
 
-private val storeInstructions = hashSetOf(
+private val storeInstructions = listOf(
     Opcodes.AASTORE, Opcodes.IASTORE, Opcodes.FASTORE, Opcodes.BASTORE,
     Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.LASTORE, Opcodes.DASTORE
 )
 
-private val returnInstructions = hashSetOf(
+private val returnInstructions = listOf(
     Opcodes.RETURN, Opcodes.ARETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.IRETURN, Opcodes.LRETURN
 )
 
@@ -133,10 +107,7 @@ internal class CrashMethodTransformer(
     name: String?,
     descriptor: String?,
     private val className: String?,
-    private val fileName: String?,
-    /** In model checking mode we can make better evaluation using [SharedVariableAccessMethodTransformer]. */
-    private val triggerOnStore: Boolean,
-    var crashVisitor: CrashPointVisitor? = null
+    private val fileName: String?
 ) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
     private var shouldTransform = name != "<clinit>" && (access and Opcodes.ACC_BRIDGE) == 0
     private var lineNumber = -1
@@ -144,7 +115,11 @@ internal class CrashMethodTransformer(
 
     private fun callCrash() {
         if (!shouldTransform || !superConstructorCalled) return
-        crashVisitor?.visitCrashPoint(this, className, fileName, name, lineNumber)
+        push(className)
+        push(fileName)
+        push(name)
+        push(lineNumber)
+        invokeStatic(CRASH_TYPE, POSSIBLY_CRASH_METHOD)
     }
 
     override fun visitLineNumber(line: Int, start: Label?) {
@@ -183,34 +158,48 @@ internal class CrashMethodTransformer(
     }
 
     override fun visitInsn(opcode: Int) {
-        if (opcode in returnInstructions || triggerOnStore && opcode in storeInstructions) {
+        if (opcode in returnInstructions || opcode in storeInstructions) {
             callCrash()
         }
         super.visitInsn(opcode)
     }
+}
 
-    //
-    // Rethrow exception in catch block in case of crash
-    //
-    private val catchLabels = hashSetOf<Label>()
 
-    override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
-        super.visitTryCatchBlock(start, end, handler, type)
-        check(type != CRASH_ERROR_TYPE.internalName) { "Catch CrashError is prohibited." }
-        if (type == THROWABLE_TYPE.internalName && handler !== null) {
-            catchLabels.add(handler)
+internal class CrashRethrowTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
+    override fun visitMethod(
+        access: Int,
+        name: String?,
+        descriptor: String?,
+        signature: String?,
+        exceptions: Array<out String>?
+    ): MethodVisitor {
+        val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
+        val adapter = GeneratorAdapter(mv, access, name, descriptor)
+        return object : MethodVisitor(ASM_API, mv) {
+            private val catchLabels = hashSetOf<Label>()
+
+            override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
+                super.visitTryCatchBlock(start, end, handler, type)
+                check(type != CRASH_ERROR_TYPE.internalName) { "Catch CrashError is prohibited." }
+                if (type == THROWABLE_TYPE.internalName && handler !== null) {
+                    catchLabels.add(handler)
+                }
+            }
+
+            override fun visitLabel(label: Label?) {
+                super.visitLabel(label)
+                if (label !in catchLabels) return
+                adapter.run {
+                    val continueCatch = newLabel()
+                    dup()
+                    instanceOf(CRASH_ERROR_TYPE)
+                    ifZCmp(GeneratorAdapter.EQ, continueCatch)
+                    throwException()
+                    mark(continueCatch)
+                }
+            }
         }
-    }
-
-    override fun visitLabel(label: Label?) {
-        super.visitLabel(label)
-        if (label !in catchLabels) return
-        val continueCatch = newLabel()
-        dup()
-        instanceOf(CRASH_ERROR_TYPE)
-        ifZCmp(EQ, continueCatch)
-        throwException()
-        mark(continueCatch)
     }
 }
 
