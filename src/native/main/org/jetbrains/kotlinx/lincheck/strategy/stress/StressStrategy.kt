@@ -71,6 +71,7 @@ actual class StressStrategy actual constructor(
                     //println("invocation $invocation has invocated, took ${t2 - t1}ms to run")
                     when (ir) {
                         is CompletedInvocationResult -> {
+                            //printErr("Try Verify")
                             if (!verifier.verifyResults(scenario, ir.results)) {
                                 return IncorrectResultsFailure(scenario, ir.results)
                             } else {

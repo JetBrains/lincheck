@@ -175,10 +175,12 @@ TEST(BoostLockfreeTest, BadSequentialStackTest) {
 TEST(BoostLockfreeTest, QueueTest) {
     LincheckConfiguration<ConcurrentQueueBoost, SequentialQueueBoost> conf;
     conf.iterations(10);
+    conf.invocationsPerIteration(500);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
     conf.actorsPerThread(3);
+    conf.actorsAfter(10);
 
     conf.operation<bool, int, &ConcurrentQueueBoost::push, &SequentialQueueBoost::push>("push");
     conf.operation<std::pair<bool, int>, &ConcurrentQueueBoost::pop, &SequentialQueueBoost::pop>("pop");

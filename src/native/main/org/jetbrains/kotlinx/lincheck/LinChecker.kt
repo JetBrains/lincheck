@@ -635,16 +635,14 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
-        val verifier = createVerifier()
+        val REPORT_PERIOD_MS = 1000
+        var prevReport = currentTimeMillis() - REPORT_PERIOD_MS
         repeat(iterations) { i ->
+            val verifier = createVerifier() // Could be created once, but created on every iteration to save memory and finalize scenario
             // some magic computations for beautiful values
-            val curPercent = (i + 1).toDouble() / iterations.toDouble()
-            val nextPercent = (i + 2).toDouble() / iterations.toDouble()
-            val STEP = 0.1
-            val curShare = (curPercent / STEP - 0.0001).toInt()
-            val nextShare = (nextPercent / STEP + 0.0001).toInt()
-            if (curShare != nextShare) {
+            if (currentTimeMillis() - prevReport >= REPORT_PERIOD_MS) {
                 println("${i + 1}/$iterations")
+                prevReport = currentTimeMillis()
             }
             val scenario = exGen.nextExecution()
             scenario.validate()
@@ -656,7 +654,7 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
-            //scenario.finalize() leads to fail ??
+            scenario.finalize()
         }
         return null
     }
@@ -722,12 +720,6 @@ class LinChecker(private val testClass: TestClass, private val testStructure: CT
             stateRepresentationFunction = testStructure.stateRepresentation,
             verifier = verifier
         ).run()
-
-    private fun ExecutionScenario.copy() = ExecutionScenario(
-        ArrayList(initExecution),
-        parallelExecution.map { ArrayList(it) },
-        ArrayList(postExecution)
-    )
 
     private val ExecutionScenario.isValid: Boolean
         get() = !isParallelPartEmpty &&

@@ -30,9 +30,6 @@ import kotlin.native.ThreadLocal
 import kotlin.native.internal.test.*
 import kotlin.system.*
 
-@ThreadLocal
-internal val currentThreadId = Any()
-
 internal class TestThread constructor(val iThread: Int, runnerHash: Int) {
     val worker = AtomicReference(Worker.start(true, "Worker $iThread $runnerHash"))
     val runnableFuture = AtomicReference<Future<Any>?>(null)
@@ -42,7 +39,7 @@ internal class TestThread constructor(val iThread: Int, runnerHash: Int) {
     }
 
     fun awaitLastTask(deadline: Long): Any {
-        while(deadline - currentTimeMillis() > 0) {
+        while(deadline > currentTimeMillis()) {
             if (runnableFuture.value!!.state.value == FutureState.COMPUTED.value) {
                 return runnableFuture.value!!.result
             }
@@ -138,7 +135,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
         // submit the shutdown task.
         for (t in threads.toArray()) {
             t.executeTask { finishThreadFunction?.invoke(); Any() }
-            t.awaitLastTask(currentTimeMillis() + 10000)
             t.terminate()
         }
     }

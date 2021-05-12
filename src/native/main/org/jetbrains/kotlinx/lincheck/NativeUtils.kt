@@ -30,9 +30,9 @@ import kotlin.native.concurrent.*
 import kotlin.reflect.*
 
 actual class TestClass(
-    val function: () -> Any?
+    val create: () -> Any?
 ) {
-    actual fun createInstance(): Any = function() ?: throw IllegalArgumentException("Constructor should not return null")
+    actual fun createInstance(): Any = create() ?: throw IllegalArgumentException("Constructor should not return null")
 }
 
 actual class SequentialSpecification<T> (val function: () -> Any?)
@@ -62,7 +62,7 @@ internal actual fun ExecutionScenario.convertForLoader(loader: Any): ExecutionSc
 }
 
 actual fun chooseSequentialSpecification(sequentialSpecificationByUser: SequentialSpecification<*>?, testClass: TestClass): SequentialSpecification<*> =
-    sequentialSpecificationByUser ?: SequentialSpecification<Any>(testClass.function)
+    sequentialSpecificationByUser ?: SequentialSpecification<Any>(testClass.create)
 
 actual fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     TODO("Not yet implemented")
