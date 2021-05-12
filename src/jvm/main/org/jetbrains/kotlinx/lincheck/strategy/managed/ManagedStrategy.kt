@@ -70,7 +70,7 @@ abstract class ManagedStrategy(
     @Volatile
     protected var currentThread: Int = 0
     @Volatile
-    private var systemCrashInitiator: Int = -1
+    private var systemCrashInitiator: Int = NO_CRASH_INITIATOR
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
     // Which threads are suspended?
@@ -200,7 +200,7 @@ abstract class ManagedStrategy(
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
         Probability.resetRandom()
         Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
-        systemCrashInitiator = -1
+        systemCrashInitiator = NO_CRASH_INITIATOR
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -359,11 +359,11 @@ abstract class ManagedStrategy(
                 awaitTurn(iThread)
             }
             Crash.onSystemCrash()
-            systemCrashInitiator = -1
+            systemCrashInitiator = NO_CRASH_INITIATOR
         }
     }
 
-    private fun waitingSystemCrash() = systemCrashInitiator != -1
+    private fun waitingSystemCrash() = systemCrashInitiator != NO_CRASH_INITIATOR
 
     /**
      * This method is executed as the first thread action.
@@ -1011,3 +1011,4 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
 }
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
+private const val NO_CRASH_INITIATOR = -1
