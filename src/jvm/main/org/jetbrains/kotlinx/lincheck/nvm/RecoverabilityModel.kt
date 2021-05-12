@@ -165,7 +165,7 @@ private open class DurableModel(
     override val awaitSystemCrashBeforeThrow get() = false
     override fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = DurableRecoverAllGenerator(cv, clazz)
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
-        var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz, strategyRecoveryOptions)
+        var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz)
         if (crashes) {
             result = strategyRecoveryOptions.createCrashTransformer(result, clazz)
         }

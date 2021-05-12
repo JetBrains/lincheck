@@ -172,7 +172,7 @@ internal object Statistics {
 }
 
 object Probability {
-    private const val RANDOM_FLUSH_PROBABILITY = 0.2f
+    private const val RANDOM_FLUSH_PROBABILITY = 0.2
     private val random get() = randomGetter()
 
     @Volatile
@@ -236,7 +236,8 @@ object Probability {
     }
 
     internal fun resetRandom() {
-        random.setSeed(seed)
+        mcRandom.setSeed(seed)
+        randomGetter = { mcRandom }
     }
 }
 

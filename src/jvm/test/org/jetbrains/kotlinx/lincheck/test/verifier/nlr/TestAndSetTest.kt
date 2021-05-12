@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import kotlin.concurrent.thread
 
 private const val THREADS_NUMBER = 5
 

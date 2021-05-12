@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.abs
 import kotlin.math.pow
