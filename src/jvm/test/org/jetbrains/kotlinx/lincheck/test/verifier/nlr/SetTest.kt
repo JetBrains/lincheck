@@ -41,19 +41,17 @@ internal interface RecoverableSet<T> {
     operator fun contains(value: T): Boolean
 }
 
-@Param(name = "key", gen = IntGen::class, conf = "0:3")
-internal class SetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class) {
+internal class SetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class, false) {
     private val set = NRLSet<Int>(2 + THREADS_NUMBER)
 
     @Operation
-    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) = set.add(threadId, key)
+    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, key: Int) = set.add(threadId, key)
 
     @Operation
-    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) =
-        set.remove(threadId, key)
+    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, key: Int) = set.remove(threadId, key)
 
     @Operation
-    fun contains(@Param(name = "key") key: Int) = set.contains(key)
+    fun contains(key: Int) = set.contains(key)
 }
 
 internal class SequentialSet : VerifierState() {
