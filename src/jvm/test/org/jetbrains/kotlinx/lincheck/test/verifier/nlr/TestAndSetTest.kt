@@ -155,6 +155,10 @@ internal class TestAndSetFailingTest7 : TestAndSetFailingTest() {
     override val tas = NRLFailingTestAndSet7(THREADS_NUMBER + 2)
 }
 
+internal class TestAndSetFailingTest8 : TestAndSetFailingTest() {
+    override val tas = NRLFailingTestAndSet8(THREADS_NUMBER + 2)
+}
+
 internal class NRLFailingTestAndSet1(threadsCount: Int) : NRLTestAndSet(threadsCount) {
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
@@ -265,9 +269,10 @@ internal class NRLFailingTestAndSet5(private val threadsCount: Int) : NRLTestAnd
             for (i in 0 until p) {
                 wailUntil { r[i].value.let { it == 0 || it == 3 } }
             }
-            for (i in p + 1 until /* here should be threadsCount */ threadsCount - 1) {
-                wailUntil { r[i].value.let { it == 0 || it > 2 } }
-            }
+            // here should be
+//            for (i in p + 1 until threadsCount) {
+//                wailUntil { r[i].value.let { it == 0 || it > 2 } }
+//            }
             if (winner.value == -1) {
                 winner.setAndFlush(p)
             }
@@ -319,6 +324,33 @@ internal class NRLFailingTestAndSet7(threadsCount: Int) : NRLTestAndSet(threadsC
         }
         // here should be response[p].setAndFlush(returnValue)
         r[p].setAndFlush(3)
+        return returnValue
+    }
+}
+
+internal class NRLFailingTestAndSet8(private val threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    override fun testAndSetRecover(p: Int): Int {
+        if (r[p].value < 2) return testAndSet(p)
+        if (r[p].value == 3) return response[p].value
+        if (winner.value == -1) {
+            doorway.setAndFlush(false)
+            r[p].setAndFlush(4)
+            // here should be
+//            for (i in 0 until p) {
+//                wailUntil { r[i].value.let { it == 0 || it == 3 } }
+//            }
+            for (i in p + 1 until threadsCount) {
+                wailUntil { r[i].value.let { it == 0 || it > 2 } }
+            }
+            if (winner.value == -1) {
+                winner.setAndFlush(p)
+            }
+        }
+        val returnValue = if (winner.value == p) 0 else 1
+        response[p].value = returnValue
+        response[p].flush()
+        r[p].value = 3
+        r[p].flush()
         return returnValue
     }
 }

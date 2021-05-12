@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.concurrent.atomic.AtomicMarkableReference
@@ -44,10 +45,10 @@ internal class SetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, Se
     private val set = NRLSet<Int>(2 + THREADS_NUMBER)
 
     @Operation
-    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, key: Int) = set.add(threadId, key)
+    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(gen = IntGen::class, conf = "0:3") key: Int) = set.add(threadId, key)
 
     @Operation
-    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, key: Int) = set.remove(threadId, key)
+    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(gen = IntGen::class, conf = "0:3") key: Int) = set.remove(threadId, key)
 
     @Operation
     fun contains(key: Int) = set.contains(key)
