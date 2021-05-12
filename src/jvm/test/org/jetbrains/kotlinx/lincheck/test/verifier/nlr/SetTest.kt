@@ -41,17 +41,19 @@ internal interface RecoverableSet<T> {
     operator fun contains(value: T): Boolean
 }
 
+@Param(name = "key", gen = IntGen::class, conf = "0:3")
 internal class SetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class) {
     private val set = NRLSet<Int>(2 + THREADS_NUMBER)
 
     @Operation
-    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(gen = IntGen::class, conf = "0:3") key: Int) = set.add(threadId, key)
+    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) = set.add(threadId, key)
 
     @Operation
-    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(gen = IntGen::class, conf = "0:3") key: Int) = set.remove(threadId, key)
+    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) =
+        set.remove(threadId, key)
 
     @Operation
-    fun contains(key: Int) = set.contains(key)
+    fun contains(@Param(name = "key") key: Int) = set.contains(key)
 }
 
 internal class SequentialSet : VerifierState() {
@@ -126,6 +128,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
             val next = prevNext.next
             if (next != null && next.value.compareTo(value) == 0) {
                 recoveryData[p].value!!.result.value = false
+                recoveryData[p].value!!.result.flush()
                 return false
             }
             newNode.next[next] = false
@@ -134,11 +137,14 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
                 if (head.compareAndSet(next, newNode)) {
                     head.flush()
                     recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
                     return true
                 }
+                head.flush()
             } else {
                 if (previous.next.compareAndSet(next, newNode, false, false)) {
                     recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
                     return true
                 }
             }
@@ -189,7 +195,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         }
         val next = current.next.reference
         previous?.next?.compareAndSet(current, next, false, false)
-            ?: head.compareAndSet(current, next)
+            ?: head.compareAndSet(current, next).also { head.flush() }
         val result = current.deleter.compareAndSet(NULL_DELETER, p)
         current.deleter.flush()
         recoveryData[p].value!!.result.value = result
@@ -238,18 +244,20 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
     }
 }
 
+@Param(name = "key", gen = IntGen::class, conf = "0:3")
 internal abstract class SetFailingTest :
     AbstractNVMLincheckFailingTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class) {
     protected abstract val set: RecoverableSet<Int>
 
     @Operation
-    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, key: Int) = set.add(threadId, key)
+    fun add(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) = set.add(threadId, key)
 
     @Operation
-    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, key: Int) = set.remove(threadId, key)
+    fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) =
+        set.remove(threadId, key)
 
     @Operation
-    fun contains(key: Int) = set.contains(key)
+    fun contains(@Param(name = "key") key: Int) = set.contains(key)
     override val expectedExceptions = listOf(NullPointerException::class)
 }
 
@@ -297,6 +305,26 @@ internal class SetFailingTest11 : SetFailingTest() {
     override val set = NRLFailingSet11<Int>(THREADS_NUMBER + 2)
 }
 
+internal class SetFailingTest12 : SetFailingTest() {
+    override val set = NRLFailingSet12<Int>(THREADS_NUMBER + 2)
+}
+
+internal class SetFailingTest13 : SetFailingTest() {
+    override val set = NRLFailingSet13<Int>(THREADS_NUMBER + 2)
+}
+
+internal class SetFailingTest14 : SetFailingTest() {
+    override val set = NRLFailingSet14<Int>(THREADS_NUMBER + 2)
+}
+
+internal class SetFailingTest15 : SetFailingTest() {
+    override val set = NRLFailingSet15<Int>(THREADS_NUMBER + 2)
+}
+
+internal class SetFailingTest16 : SetFailingTest() {
+    override val set = NRLFailingSet16<Int>(THREADS_NUMBER + 2)
+}
+
 internal class NRLFailingSet1<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(threadsCount) {
     override fun addImpl(p: Int, value: T): Boolean {
         val newNode = recoveryData[p].value!!.node.value!!
@@ -313,8 +341,10 @@ internal class NRLFailingSet1<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(
                 if (head.compareAndSet(next, newNode)) {
                     // here should be head.flush()
                     recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
                     return true
                 }
+                head.flush()
             } else {
                 if (previous.next.compareAndSet(next, newNode, false, false)) {
                     recoveryData[p].value!!.result.value = true
@@ -352,8 +382,10 @@ internal class NRLFailingSet3<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(
                 if (head.compareAndSet(next, newNode)) {
                     head.flush()
                     recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
                     return true
                 }
+                head.flush()
             } else {
                 if (previous.next.compareAndSet(next, newNode, false, false)) {
                     recoveryData[p].value!!.result.value = true
@@ -449,7 +481,7 @@ internal class NRLFailingSet8<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(
         }
         val next = current.next.reference
         return previous?.next?.compareAndSet(current, next, false, false)
-            ?: head.compareAndSet(current, next)
+            ?: head.compareAndSet(current, next).also { head.flush() }
         // here should be
 //        val result = current.deleter.compareAndSet(NULL_DELETER, p)
 //        current.deleter.flush()
@@ -513,5 +545,190 @@ internal class NRLFailingSet11<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>
         recoveryData[p].flush()
         checkPointer[p].value = 1
         // here should be checkPointer[p].flush()
+    }
+}
+
+internal class NRLFailingSet12<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(threadsCount) {
+    override fun removeImpl(p: Int, value: T): Boolean {
+        val prevNext = findPrevNext(value)
+        val previous = prevNext.previous
+        val current = prevNext.next
+        if (current == null || current.value.compareTo(value) != 0) {
+            recoveryData[p].value!!.result.value = false
+            recoveryData[p].value!!.result.flush()
+            return false
+        }
+        recoveryData[p].value!!.node.value = current
+        recoveryData[p].value!!.node.flush()
+        while (!current.next.isMarked) {
+            val next = current.next.reference
+            current.next.compareAndSet(next, next, false, true)
+        }
+        val next = current.next.reference
+        previous?.next?.compareAndSet(current, next, false, false)
+            ?: head.compareAndSet(current, next) // here should be .also { head.flush() }
+        val result = current.deleter.compareAndSet(NULL_DELETER, p)
+        current.deleter.flush()
+        recoveryData[p].value!!.result.value = result
+        recoveryData[p].value!!.result.flush()
+        return result
+    }
+}
+
+internal class NRLFailingSet13<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(threadsCount) {
+    override fun addImpl(p: Int, value: T): Boolean {
+        val newNode = recoveryData[p].value!!.node.value!!
+        while (true) {
+            val prevNext = findPrevNext(value)
+            val previous = prevNext.previous
+            val next = prevNext.next
+            if (next != null && next.value.compareTo(value) == 0) {
+                recoveryData[p].value!!.result.value = false
+                recoveryData[p].value!!.result.flush()
+                return false
+            }
+            newNode.next[next] = false
+            // flush
+            if (previous == null) {
+                if (head.compareAndSet(next, newNode)) {
+                    head.flush()
+                    recoveryData[p].value!!.result.value = true
+                    // here should be recoveryData[p].value!!.result.flush()
+                    return true
+                }
+                head.flush()
+            } else {
+                if (previous.next.compareAndSet(next, newNode, false, false)) {
+                    recoveryData[p].value!!.result.value = true
+                    return true
+                }
+            }
+        }
+    }
+}
+
+internal class NRLFailingSet14<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(threadsCount) {
+    override fun addImpl(p: Int, value: T): Boolean {
+        val newNode = recoveryData[p].value!!.node.value!!
+        while (true) {
+            val prevNext = findPrevNext(value)
+            val previous = prevNext.previous
+            val next = prevNext.next
+            if (next != null && next.value.compareTo(value) == 0) {
+                recoveryData[p].value!!.result.value = false
+                recoveryData[p].value!!.result.flush()
+                return false
+            }
+            newNode.next[next] = false
+            // flush
+            if (previous == null) {
+                if (head.compareAndSet(next, newNode)) {
+                    head.flush()
+                    recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
+                    return true
+                }
+                // here should be head.flush()
+            } else {
+                if (previous.next.compareAndSet(next, newNode, false, false)) {
+                    recoveryData[p].value!!.result.value = true
+                    return true
+                }
+            }
+        }
+    }
+
+    override fun findPrevNext(value: T): PrevNextPair {
+        start@ while (true) {
+            var previous: Node? = null
+            var current = head.value
+            // here should be head.flush()
+            while (current != null) {
+                val isDeleted = booleanArrayOf(false)
+                val next = current.next[isDeleted]
+                if (isDeleted[0]) {
+                    if (previous?.next?.compareAndSet(current, next, false, false)
+                            ?: head.compareAndSet(current, next).also { head.flush() }
+                    ) {
+                        current = next
+                        continue
+                    } else {
+                        continue@start
+                    }
+                }
+                if (current.value >= value) {
+                    break
+                }
+                previous = current
+                current = next
+            }
+            return PrevNextPair(previous, current)
+        }
+    }
+}
+
+internal class NRLFailingSet15<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(threadsCount) {
+    override fun addImpl(p: Int, value: T): Boolean {
+        val newNode = recoveryData[p].value!!.node.value!!
+        while (true) {
+            val prevNext = findPrevNext(value)
+            val previous = prevNext.previous
+            val next = prevNext.next
+            if (next != null && next.value.compareTo(value) == 0) {
+                recoveryData[p].value!!.result.value = false
+                recoveryData[p].value!!.result.flush()
+                return false
+            }
+            newNode.next[next] = false
+            // flush
+            if (previous == null) {
+                if (head.compareAndSet(next, newNode)) {
+                    head.flush()
+                    recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
+                    return true
+                }
+                head.flush()
+            } else {
+                if (previous.next.compareAndSet(next, newNode, false, false)) {
+                    recoveryData[p].value!!.result.value = true
+                    // here should be recoveryData[p].value!!.result.flush()
+                    return true
+                }
+            }
+        }
+    }
+}
+
+internal class NRLFailingSet16<T : Comparable<T>>(threadsCount: Int) : NRLSet<T>(threadsCount) {
+    override fun addImpl(p: Int, value: T): Boolean {
+        val newNode = recoveryData[p].value!!.node.value!!
+        while (true) {
+            val prevNext = findPrevNext(value)
+            val previous = prevNext.previous
+            val next = prevNext.next
+            if (next != null && next.value.compareTo(value) == 0) {
+                recoveryData[p].value!!.result.value = false
+                // here should be recoveryData[p].value!!.result.flush()
+                return false
+            }
+            newNode.next[next] = false
+            // flush
+            if (previous == null) {
+                if (head.compareAndSet(next, newNode)) {
+                    head.flush()
+                    recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
+                    return true
+                }
+                head.flush()
+            } else {
+                if (previous.next.compareAndSet(next, newNode, false, false)) {
+                    recoveryData[p].value!!.result.value = true
+                    recoveryData[p].value!!.result.flush()
+                    return true
+                }
+            }
+        }
     }
 }
