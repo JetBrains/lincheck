@@ -98,8 +98,8 @@ internal class MCASDescriptor(s: Status) {
     var words = listOf<WordDescriptor>()
 }
 
-internal class DurableMCAS : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
+internal open class DurableMCAS : MCAS {
+    protected val data: List<NonVolatileRef<WordDescriptor>>
 
     init {
         val mcas = MCASDescriptor(Status.SUCCESSFUL)
@@ -107,7 +107,7 @@ internal class DurableMCAS : MCAS {
         mcas.words = data.map { it.value }
     }
 
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
+    protected open fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
         while (true) {
             val wd = data[index].value
             val parent = wd.parent
@@ -123,7 +123,7 @@ internal class DurableMCAS : MCAS {
         }
     }
 
-    private fun MCAS(self: MCASDescriptor): Boolean {
+    protected open fun MCAS(self: MCASDescriptor): Boolean {
         var success = true
         loop@ for (index in self.words.indices) {
             val wd = self.words[index]
@@ -167,29 +167,6 @@ internal class DurableMCAS : MCAS {
 }
 
 @Param(name = "list", gen = ListGen::class)
-internal class MCASNoRecoverFailingTest : AbstractNVMLincheckFailingTest(
-    Recover.DURABLE,
-    THREADS_NUMBER,
-    SequentialMCAS::class,
-    false,
-    DeadlockWithDumpFailure::class
-) {
-    private val cas = DurableMCAS()
-
-    @Operation
-    fun get(@Param(gen = IntGen::class, conf = "0:${N - 1}") index: Int) = cas[index]
-
-    @Operation
-    fun compareAndSet(@Param(name = "list") old: List<Int>, @Param(name = "list") new: List<Int>) =
-        cas.compareAndSet(old, new)
-
-    // Without correct recovery the execution may lead to StackOverflowError, which can appear as OutOfMemoryError in MC mode.
-    // This randomness causes non-determinism check fail.
-    override val expectedExceptions = listOf(StackOverflowError::class, IllegalStateException::class)
-}
-
-
-@Param(name = "list", gen = ListGen::class)
 internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out LincheckFailure>) :
     AbstractNVMLincheckFailingTest(
         Recover.DURABLE,
@@ -209,6 +186,16 @@ internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out Linc
     @DurableRecoverAll
     fun recover() = cas.recover()
     override val expectedExceptions: List<KClass<out Throwable>> = listOf(StackOverflowError::class)
+}
+
+internal class MCASNoRecoverFailingTest : MCASFailingTest() {
+    override val cas: MCAS = object : DurableMCAS() {
+        override fun recover() {}
+    }
+
+    // Without correct recovery the execution may lead to StackOverflowError, which can appear as OutOfMemoryError in MC mode.
+    // This randomness causes non-determinism check fail.
+    override val expectedExceptions = listOf(StackOverflowError::class, IllegalStateException::class)
 }
 
 internal class MCASFailingTest1 : MCASFailingTest() {
@@ -243,16 +230,8 @@ internal class MCASFailingTest7 : MCASFailingTest(DeadlockWithDumpFailure::class
     override val expectedExceptions = listOf(StackOverflowError::class, IllegalStateException::class)
 }
 
-internal class DurableFailingMCAS1 : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
-
-    init {
-        val mcas = MCASDescriptor(Status.SUCCESSFUL)
-        data = List(N) { nonVolatile(WordDescriptor(0, 0, mcas)) }
-        mcas.words = data.map { it.value }
-    }
-
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
+internal class DurableFailingMCAS1 : DurableMCAS() {
+    override fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
         while (true) {
             val wd = data[index].value
             val parent = wd.parent
@@ -269,60 +248,10 @@ internal class DurableFailingMCAS1 : MCAS {
             return if (parent.status.value == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
         }
     }
-
-    private fun MCAS(self: MCASDescriptor): Boolean {
-        var success = true
-        loop@ for (index in self.words.indices) {
-            val wd = self.words[index]
-            retry@ while (true) {
-                val (content, value) = readInternal(self, index)
-                if (content === wd) break@retry
-                if (value != wd.old) {
-                    success = false
-                    break@loop
-                }
-                if (self.status.value != Status.ACTIVE) break@loop
-                if (data[index].compareAndSet(content, wd)) break@retry
-            }
-        }
-        for (wd in data) {
-            wd.flush()
-        }
-        self.status.compareAndSet(Status.ACTIVE, if (success) Status.SUCCESSFUL_DIRTY else Status.FAILED_DIRTY)
-        self.status.flush()
-        self.status.value = self.status.value.clean()
-        return self.status.value == Status.SUCCESSFUL
-    }
-
-    override fun get(index: Int) = readInternal(null, index).second
-    override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
-        val mcas = MCASDescriptor(Status.ACTIVE)
-        mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
-        return MCAS(mcas)
-    }
-
-    override fun recover() {
-        for (d in data) {
-            val parent = d.value.parent
-            if (parent.status.value == Status.ACTIVE) {
-                parent.status.setAndFlush(Status.FAILED)
-            } else {
-                parent.status.setAndFlush(parent.status.value.clean())
-            }
-        }
-    }
 }
 
-internal class DurableFailingMCAS2 : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
-
-    init {
-        val mcas = MCASDescriptor(Status.SUCCESSFUL)
-        data = List(N) { nonVolatile(WordDescriptor(0, 0, mcas)) }
-        mcas.words = data.map { it.value }
-    }
-
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
+internal class DurableFailingMCAS2 : DurableMCAS() {
+    override fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
         while (true) {
             val wd = data[index].value
             val parent = wd.parent
@@ -337,60 +266,10 @@ internal class DurableFailingMCAS2 : MCAS {
             return if (parent.status.value == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
         }
     }
-
-    private fun MCAS(self: MCASDescriptor): Boolean {
-        var success = true
-        loop@ for (index in self.words.indices) {
-            val wd = self.words[index]
-            retry@ while (true) {
-                val (content, value) = readInternal(self, index)
-                if (content === wd) break@retry
-                if (value != wd.old) {
-                    success = false
-                    break@loop
-                }
-                if (self.status.value != Status.ACTIVE) break@loop
-                if (data[index].compareAndSet(content, wd)) break@retry
-            }
-        }
-        for (wd in data) {
-            wd.flush()
-        }
-        self.status.compareAndSet(Status.ACTIVE, if (success) Status.SUCCESSFUL_DIRTY else Status.FAILED_DIRTY)
-        self.status.flush()
-        self.status.value = self.status.value.clean()
-        return self.status.value == Status.SUCCESSFUL
-    }
-
-    override fun get(index: Int) = readInternal(null, index).second
-    override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
-        val mcas = MCASDescriptor(Status.ACTIVE)
-        mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
-        return MCAS(mcas)
-    }
-
-    override fun recover() {
-        for (d in data) {
-            val parent = d.value.parent
-            if (parent.status.value == Status.ACTIVE) {
-                parent.status.setAndFlush(Status.FAILED)
-            } else {
-                parent.status.setAndFlush(parent.status.value.clean())
-            }
-        }
-    }
 }
 
-internal class DurableFailingMCAS3 : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
-
-    init {
-        val mcas = MCASDescriptor(Status.SUCCESSFUL)
-        data = List(N) { nonVolatile(WordDescriptor(0, 0, mcas)) }
-        mcas.words = data.map { it.value }
-    }
-
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
+internal class DurableFailingMCAS3 : DurableMCAS() {
+    override fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
         while (true) {
             val wd = data[index].value
             val parent = wd.parent
@@ -406,76 +285,10 @@ internal class DurableFailingMCAS3 : MCAS {
             return wd to wd.new
         }
     }
-
-    private fun MCAS(self: MCASDescriptor): Boolean {
-        var success = true
-        loop@ for (index in self.words.indices) {
-            val wd = self.words[index]
-            retry@ while (true) {
-                val (content, value) = readInternal(self, index)
-                if (content === wd) break@retry
-                if (value != wd.old) {
-                    success = false
-                    break@loop
-                }
-                if (self.status.value != Status.ACTIVE) break@loop
-                if (data[index].compareAndSet(content, wd)) break@retry
-            }
-        }
-        for (wd in data) {
-            wd.flush()
-        }
-        self.status.compareAndSet(Status.ACTIVE, if (success) Status.SUCCESSFUL_DIRTY else Status.FAILED_DIRTY)
-        self.status.flush()
-        self.status.value = self.status.value.clean()
-        return self.status.value == Status.SUCCESSFUL
-    }
-
-    override fun get(index: Int) = readInternal(null, index).second
-    override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
-        val mcas = MCASDescriptor(Status.ACTIVE)
-        mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
-        return MCAS(mcas)
-    }
-
-    override fun recover() {
-        for (d in data) {
-            val parent = d.value.parent
-            if (parent.status.value == Status.ACTIVE) {
-                parent.status.setAndFlush(Status.FAILED)
-            } else {
-                parent.status.setAndFlush(parent.status.value.clean())
-            }
-        }
-    }
 }
 
-internal class DurableFailingMCAS4 : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
-
-    init {
-        val mcas = MCASDescriptor(Status.SUCCESSFUL)
-        data = List(N) { nonVolatile(WordDescriptor(0, 0, mcas)) }
-        mcas.words = data.map { it.value }
-    }
-
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
-        while (true) {
-            val wd = data[index].value
-            val parent = wd.parent
-            if (parent !== self && parent.status.value == Status.ACTIVE) {
-                MCAS(parent)
-                continue
-            } else if (parent.status.value.isDirty()) {
-                // here should be parent.status.flush()
-                parent.status.value = parent.status.value.clean()
-                continue
-            }
-            return if (parent.status.value == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
-        }
-    }
-
-    private fun MCAS(self: MCASDescriptor): Boolean {
+internal class DurableFailingMCAS4 : DurableMCAS() {
+    override fun MCAS(self: MCASDescriptor): Boolean {
         var success = true
         loop@ for (index in self.words.indices) {
             val wd = self.words[index]
@@ -498,53 +311,11 @@ internal class DurableFailingMCAS4 : MCAS {
         self.status.value = self.status.value.clean()
         return self.status.value == Status.SUCCESSFUL
     }
-
-    override fun get(index: Int) = readInternal(null, index).second
-    override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
-        val mcas = MCASDescriptor(Status.ACTIVE)
-        mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
-        return MCAS(mcas)
-    }
-
-    override fun recover() {
-        for (d in data) {
-            val parent = d.value.parent
-            if (parent.status.value == Status.ACTIVE) {
-                parent.status.setAndFlush(Status.FAILED)
-            } else {
-                parent.status.setAndFlush(parent.status.value.clean())
-            }
-        }
-    }
 }
 
 
-internal class DurableFailingMCAS5 : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
-
-    init {
-        val mcas = MCASDescriptor(Status.SUCCESSFUL)
-        data = List(N) { nonVolatile(WordDescriptor(0, 0, mcas)) }
-        mcas.words = data.map { it.value }
-    }
-
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
-        while (true) {
-            val wd = data[index].value
-            val parent = wd.parent
-            if (parent !== self && parent.status.value == Status.ACTIVE) {
-                MCAS(parent)
-                continue
-            } else if (parent.status.value.isDirty()) {
-                parent.status.flush()
-                parent.status.value = parent.status.value.clean()
-                continue
-            }
-            return if (parent.status.value == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
-        }
-    }
-
-    private fun MCAS(self: MCASDescriptor): Boolean {
+internal class DurableFailingMCAS5 : DurableMCAS() {
+    override fun MCAS(self: MCASDescriptor): Boolean {
         var success = true
         loop@ for (index in self.words.indices) {
             val wd = self.words[index]
@@ -567,52 +338,10 @@ internal class DurableFailingMCAS5 : MCAS {
         self.status.value = self.status.value.clean()
         return self.status.value == Status.SUCCESSFUL
     }
-
-    override fun get(index: Int) = readInternal(null, index).second
-    override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
-        val mcas = MCASDescriptor(Status.ACTIVE)
-        mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
-        return MCAS(mcas)
-    }
-
-    override fun recover() {
-        for (d in data) {
-            val parent = d.value.parent
-            if (parent.status.value == Status.ACTIVE) {
-                parent.status.setAndFlush(Status.FAILED)
-            } else {
-                parent.status.setAndFlush(parent.status.value.clean())
-            }
-        }
-    }
 }
 
-internal class DurableFailingMCAS6 : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
-
-    init {
-        val mcas = MCASDescriptor(Status.SUCCESSFUL)
-        data = List(N) { nonVolatile(WordDescriptor(0, 0, mcas)) }
-        mcas.words = data.map { it.value }
-    }
-
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
-        while (true) {
-            val wd = data[index].value
-            val parent = wd.parent
-            if (parent !== self && parent.status.value == Status.ACTIVE) {
-                MCAS(parent)
-                continue
-            } else if (parent.status.value.isDirty()) {
-                // here should be parent.status.flush()
-                parent.status.value = parent.status.value.clean()
-                continue
-            }
-            return if (parent.status.value == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
-        }
-    }
-
-    private fun MCAS(self: MCASDescriptor): Boolean {
+internal class DurableFailingMCAS6 : DurableMCAS() {
+    override fun MCAS(self: MCASDescriptor): Boolean {
         var success = true
         loop@ for (index in self.words.indices) {
             val wd = self.words[index]
@@ -635,83 +364,10 @@ internal class DurableFailingMCAS6 : MCAS {
         self.status.value = self.status.value.clean()
         return success // here should be self.status.value == Status.SUCCESSFUL
     }
-
-    override fun get(index: Int) = readInternal(null, index).second
-    override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
-        val mcas = MCASDescriptor(Status.ACTIVE)
-        mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
-        return MCAS(mcas)
-    }
-
-    override fun recover() {
-        for (d in data) {
-            val parent = d.value.parent
-            if (parent.status.value == Status.ACTIVE) {
-                parent.status.setAndFlush(Status.FAILED)
-            } else {
-                parent.status.setAndFlush(parent.status.value.clean())
-            }
-        }
-    }
 }
 
 
-internal class DurableFailingMCAS7 : MCAS {
-    private val data: List<NonVolatileRef<WordDescriptor>>
-
-    init {
-        val mcas = MCASDescriptor(Status.SUCCESSFUL)
-        data = List(N) { nonVolatile(WordDescriptor(0, 0, mcas)) }
-        mcas.words = data.map { it.value }
-    }
-
-    private fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
-        while (true) {
-            val wd = data[index].value
-            val parent = wd.parent
-            if (parent !== self && parent.status.value == Status.ACTIVE) {
-                MCAS(parent)
-                continue
-            } else if (parent.status.value.isDirty()) {
-                parent.status.flush()
-                parent.status.value = parent.status.value.clean()
-                continue
-            }
-            return if (parent.status.value == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
-        }
-    }
-
-    private fun MCAS(self: MCASDescriptor): Boolean {
-        var success = true
-        loop@ for (index in self.words.indices) {
-            val wd = self.words[index]
-            retry@ while (true) {
-                val (content, value) = readInternal(self, index)
-                if (content === wd) break@retry
-                if (value != wd.old) {
-                    success = false
-                    break@loop
-                }
-                if (self.status.value != Status.ACTIVE) break@loop
-                if (data[index].compareAndSet(content, wd)) break@retry
-            }
-        }
-        for (wd in data) {
-            wd.flush()
-        }
-        self.status.compareAndSet(Status.ACTIVE, if (success) Status.SUCCESSFUL_DIRTY else Status.FAILED_DIRTY)
-        self.status.flush()
-        self.status.value = self.status.value.clean()
-        return self.status.value == Status.SUCCESSFUL
-    }
-
-    override fun get(index: Int) = readInternal(null, index).second
-    override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
-        val mcas = MCASDescriptor(Status.ACTIVE)
-        mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
-        return MCAS(mcas)
-    }
-
+internal class DurableFailingMCAS7 : DurableMCAS() {
     override fun recover() {
         for (d in data) {
             val parent = d.value.parent
