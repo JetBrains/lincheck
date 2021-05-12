@@ -219,7 +219,7 @@ TEST(BoostLockfreeTest, SPSCQueueTest) {
     conf.iterations(10);
 
     conf.minimizeFailedScenario(false);
-    conf.threads(15000); // will be shrinked to 2
+    conf.threads(2);
     conf.actorsPerThread(3);
 
     conf.operation<bool, int, &ConcurrentSPSCQueueBoost::push, &SequentialQueueBoost::push>("push", "pushNonParallelGroup");

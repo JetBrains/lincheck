@@ -82,7 +82,7 @@ class NonParallelOpGroupTest : VerifierState() {
             iterations(10)
             invocationsPerIteration(500)
             actorsBefore(2)
-            threads(15000) // will be shrinked to 2
+            threads(2)
             actorsPerThread(5)
             actorsAfter(2)
             minimizeFailedScenario(false)
