@@ -70,7 +70,7 @@ abstract class ManagedStrategy(
     @Volatile
     protected var currentThread: Int = 0
     @Volatile
-    private var systemCrashInitiator: Int = -1
+    private var systemCrashInitiator: Int = NO_CRASH_INITIATOR
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
     // Which threads are suspended?
@@ -130,15 +130,17 @@ abstract class ManagedStrategy(
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor {
         val visitor = CrashEnabledVisitor(cv, testClass, recoverModel.crashes)
-        return ManagedStrategyTransformer(
-            cv = recoverModel.createTransformer(visitor, testClass),
-            tracePointConstructors = tracePointConstructors,
-            guarantees = testCfg.guarantees,
-            eliminateLocalObjects = testCfg.eliminateLocalObjects,
-            collectStateRepresentation = collectStateRepresentation,
-            constructTraceRepresentation = collectTrace,
-            codeLocationIdProvider = codeLocationIdProvider,
-            crashEnabledVisitor = visitor
+        return recoverModel.createTransformerWrapper(
+            ManagedStrategyTransformer(
+                cv = recoverModel.createTransformer(visitor, testClass),
+                tracePointConstructors = tracePointConstructors,
+                guarantees = testCfg.guarantees,
+                eliminateLocalObjects = testCfg.eliminateLocalObjects,
+                collectStateRepresentation = collectStateRepresentation,
+                constructTraceRepresentation = collectTrace,
+                codeLocationIdProvider = codeLocationIdProvider,
+                crashEnabledVisitor = visitor
+            ), testClass
         )
     }
 
@@ -198,7 +200,7 @@ abstract class ManagedStrategy(
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
         Probability.resetRandom()
         Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
-        systemCrashInitiator = -1
+        systemCrashInitiator = NO_CRASH_INITIATOR
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -243,9 +245,7 @@ abstract class ManagedStrategy(
         runner.initialize()
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults = loggedResults !is CompletedInvocationResult ||
-            failingResult !is CompletedInvocationResult ||
-            loggedResults.results.withoutCrashes == failingResult.results.withoutCrashes
+        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
@@ -357,11 +357,11 @@ abstract class ManagedStrategy(
                 awaitTurn(iThread)
             }
             Crash.onSystemCrash()
-            systemCrashInitiator = -1
+            systemCrashInitiator = NO_CRASH_INITIATOR
         }
     }
 
-    private fun waitingSystemCrash() = systemCrashInitiator != -1
+    private fun waitingSystemCrash() = systemCrashInitiator != NO_CRASH_INITIATOR
 
     /**
      * This method is executed as the first thread action.
@@ -1009,3 +1009,4 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
 }
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
+private const val NO_CRASH_INITIATOR = -1

@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.nvm
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import java.util.*
+import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.max
 import kotlin.math.min
 
@@ -171,10 +172,13 @@ internal object Statistics {
 }
 
 object Probability {
-    private const val RANDOM_FLUSH_PROBABILITY = 0.2
+    private const val RANDOM_FLUSH_PROBABILITY = 0.2f
+    private val random get() = randomGetter()
 
-    private val random = Random(42L)
+    @Volatile
+    private lateinit var randomGetter: () -> Random
     private var seed = 0L
+    private val mcRandom = Random(42)
     private var minimizeCrashes = false
 
     @Volatile
@@ -210,6 +214,7 @@ object Probability {
     }
 
     fun reset(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) {
+        randomGetter = { ThreadLocalRandom.current() }
         if (!minimizeCrashes) {
             expectedCrashes = recoverModel.defaultExpectedCrashes()
         }

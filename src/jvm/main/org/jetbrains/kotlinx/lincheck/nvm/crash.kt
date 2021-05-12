@@ -31,6 +31,21 @@ import java.util.concurrent.atomic.AtomicBoolean
 abstract class CrashError(enableStackTrace: Boolean) : Throwable(null, null, false, enableStackTrace) {
     var actorIndex: Int = -1
     abstract val crashStackTrace: Array<StackTraceElement>
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CrashError) return false
+
+        if (actorIndex != other.actorIndex) return false
+        if (!crashStackTrace.contentEquals(other.crashStackTrace)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = actorIndex
+        result = 31 * result + crashStackTrace.contentHashCode()
+        return result
+    }
 }
 
 class CrashErrorImpl : CrashError(true) {

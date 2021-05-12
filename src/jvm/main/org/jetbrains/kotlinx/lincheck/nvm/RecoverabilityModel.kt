@@ -107,6 +107,7 @@ interface RecoverabilityModel {
 
     fun needsTransformation(): Boolean
     fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor
+    fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = cv
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
     fun systemCrashProbability(): Double
     fun defaultExpectedCrashes(): Int
@@ -162,6 +163,7 @@ private open class DurableModel(
         if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DurableProbabilityModel() else NoCrashesProbabilityModel
 
     override val awaitSystemCrashBeforeThrow get() = false
+    override fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = DurableRecoverAllGenerator(cv, clazz)
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz, strategyRecoveryOptions)
         if (crashes) {

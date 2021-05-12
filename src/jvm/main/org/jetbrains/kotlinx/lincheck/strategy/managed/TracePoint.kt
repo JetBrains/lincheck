@@ -255,8 +255,8 @@ internal class CrashTracePoint(
 }
 
 internal enum class CrashReason(private val reason: String) {
-    CRASH("crash"),
-    SYSTEM_CRASH("system crash");
+    CRASH("CRASH"),
+    SYSTEM_CRASH("SYSTEM CRASH");
     override fun toString() = reason
 }
 
