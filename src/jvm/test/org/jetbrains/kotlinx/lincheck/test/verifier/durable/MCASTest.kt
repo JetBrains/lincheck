@@ -188,7 +188,7 @@ internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out Linc
     override val expectedExceptions: List<KClass<out Throwable>> = listOf(StackOverflowError::class)
 }
 
-internal class MCASNoRecoverFailingTest : MCASFailingTest() {
+internal class MCASNoRecoverFailingTest : MCASFailingTest(DeadlockWithDumpFailure::class) {
     override val cas: MCAS = object : DurableMCAS() {
         override fun recover() {}
     }
