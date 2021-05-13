@@ -203,9 +203,9 @@ object Probability {
         minimizeCrashes = false
     }
 
-    fun minimizeCrashes() {
+    fun minimizeCrashes(crashes: Int) {
         minimizeCrashes = true
-        expectedCrashes--
+        expectedCrashes = crashes
     }
 
     fun setNewInvocation(recoverModel: RecoverabilityModel) {
