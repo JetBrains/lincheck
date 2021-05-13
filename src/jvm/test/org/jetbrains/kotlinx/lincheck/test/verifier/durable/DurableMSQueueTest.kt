@@ -140,7 +140,7 @@ internal open class DurableMSQueue<T> : RecoverableQueue<T> {
         check(reachableFrom(head.value, tail.value))
     }
 
-    private fun reachableFrom(start: QueueNode<T?>, node: QueueNode<T?>): Boolean {
+    protected fun reachableFrom(start: QueueNode<T?>, node: QueueNode<T?>): Boolean {
         var c = start
         while (true) {
             if (c === node) return true
@@ -420,6 +420,7 @@ internal class DurableMSFailingQueue7<T> : DurableMSQueue<T>() {
     override fun push(value: T) {
         val newNode = QueueNode<T?>(v = value)
         while (true) {
+            check(reachableFrom(head.value, tail.value))
             val last: QueueNode<T?> = tail.value
             val nextNode: QueueNode<T?>? = last.next.value
             if (last !== tail.value) continue
