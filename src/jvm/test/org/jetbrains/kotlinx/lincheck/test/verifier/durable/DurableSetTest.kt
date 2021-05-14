@@ -31,6 +31,7 @@ import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFaili
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.concurrent.ConcurrentLinkedDeque
+import kotlin.reflect.KClass
 
 private const val THREADS_NUMBER = 3
 
@@ -260,6 +261,8 @@ internal abstract class DurableLinkFreeSetFailingTest :
 
     @DurableRecoverAll
     fun recover() = s.recover()
+
+    override val expectedExceptions: List<KClass<out Throwable>> = listOf(AssertionError::class)
 }
 
 internal class DurableLinkFreeSetNoRecoverFailingTest : DurableLinkFreeSetFailingTest() {
@@ -286,7 +289,6 @@ internal class DurableLinkFreeSetFailingTest4 : DurableLinkFreeSetFailingTest() 
 
 internal class DurableLinkFreeSetFailingTest5 : DurableLinkFreeSetFailingTest() {
     override val s = DurableLinkFreeFailingSet5<Int>()
-    override val expectedExceptions = listOf(AssertionError::class)
 }
 
 internal class DurableLinkFreeSetFailingTest6 : DurableLinkFreeSetFailingTest() {
@@ -332,7 +334,6 @@ internal class DurableLinkFreeSetFailingTest15 : DurableLinkFreeSetFailingTest()
 
 internal class DurableLinkFreeSetFailingTest16 : DurableLinkFreeSetFailingTest() {
     override val s = DurableLinkFreeFailingSet16<Int>()
-    override val expectedExceptions = listOf(AssertionError::class)
 }
 
 internal class DurableLinkFreeSetFailingTest17 : DurableLinkFreeSetFailingTest() {
