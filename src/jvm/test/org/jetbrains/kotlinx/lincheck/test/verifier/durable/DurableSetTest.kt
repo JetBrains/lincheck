@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.concurrent.ConcurrentLinkedDeque
 
-private const val THREADS_NUMBER = 1
+private const val THREADS_NUMBER = 3
 
 internal interface DurableSet {
     fun add(key: Int): Boolean
@@ -129,7 +129,7 @@ internal open class DurableLinkFreeSet<T> : DurableSet {
     protected open fun trimNext(pred: SetNode<T>, curr: SetNode<T>): Boolean {
         val nextRef = pred.nextRef.value
         flushDelete(curr)
-        val res = pred.nextRef.compareAndSet(nextRef, curr.nextRef.value)
+        val res = pred.nextRef.compareAndSet(nextRef, NextRef(curr.nextRef.value.next, nextRef.deleted))
         if (res) {
             nodeStorage.remove(curr)
         }
@@ -332,6 +332,7 @@ internal class DurableLinkFreeSetFailingTest15 : DurableLinkFreeSetFailingTest()
 
 internal class DurableLinkFreeSetFailingTest16 : DurableLinkFreeSetFailingTest() {
     override val s = DurableLinkFreeFailingSet16<Int>()
+    override val expectedExceptions = listOf(AssertionError::class)
 }
 
 internal class DurableLinkFreeSetFailingTest17 : DurableLinkFreeSetFailingTest() {
@@ -340,6 +341,10 @@ internal class DurableLinkFreeSetFailingTest17 : DurableLinkFreeSetFailingTest()
 
 internal class DurableLinkFreeSetFailingTest18 : DurableLinkFreeSetFailingTest() {
     override val s = DurableLinkFreeFailingSet18<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest19 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet19<Int>()
 }
 
 internal class DurableLinkFreeFailingSet1<T> : DurableLinkFreeSet<T>() {
@@ -652,5 +657,17 @@ internal class DurableLinkFreeFailingSet18<T> : DurableLinkFreeSet<T>() {
             }
         }
         toDelete.forEach { nodeStorage.remove(it) }
+    }
+}
+
+internal class DurableLinkFreeFailingSet19<T> : DurableLinkFreeSet<T>() {
+    override fun trimNext(pred: SetNode<T>, curr: SetNode<T>): Boolean {
+        val nextRef = pred.nextRef.value
+        flushDelete(curr)
+        val res = pred.nextRef.compareAndSet(nextRef, curr.nextRef.value)
+        if (res) {
+            nodeStorage.remove(curr)
+        }
+        return res
     }
 }
