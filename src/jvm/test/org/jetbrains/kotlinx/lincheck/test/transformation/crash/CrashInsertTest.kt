@@ -33,7 +33,7 @@ import org.junit.Test
 @StressCTest(
     recover = Recover.NRL,
     minimizeFailedScenario = false,
-    iterations = 1,
+    iterations = 10,
     threads = 1,
     invocationsPerIteration = 2
 )
