@@ -47,6 +47,21 @@ internal class EmulationTest {
     }
 
     @Test
+    fun testBasicDetectableExecutionUniformDistribution() {
+        val random = Random(42)
+        repeat(REPEATS) {
+            val n = random.nextInt(1, 10)
+            val actors = List(n) { random.nextInt(1, 20) }
+            val recovery = List(n) { 0 }
+            val statistics = StatisticsModel(actors, recovery)
+            val expected = random.nextDouble(0.99, 20.0)
+            val model = BasicDetectableExecutionCrashProbabilityModel(statistics, expected)
+            val emulator = DetectableExecutionEmulator(statistics, model, random)
+            testScenarioUniformDistribution(statistics, model, emulator)
+        }
+    }
+
+    @Test
     fun testBoundedNoCrashesUniformDistribution() {
         val random = Random(42)
         repeat(REPEATS) {
@@ -84,7 +99,7 @@ internal class EmulationTest {
 private fun testScenarioUniformDistribution(
     statistics: StatisticsModel,
     model: CrashProbabilityModel,
-    emulator: ExecutionEmulator
+    emulator: IExecutionEmulator
 ) {
     val results = IntArray(statistics.actorLengths.sum() + statistics.recoveryLengths.sum())
     val crashes = mutableListOf<Int>()

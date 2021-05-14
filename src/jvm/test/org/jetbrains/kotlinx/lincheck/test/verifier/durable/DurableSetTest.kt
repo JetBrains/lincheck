@@ -22,15 +22,17 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.concurrent.ConcurrentLinkedDeque
 
-private const val THREADS_NUMBER = 3
+private const val THREADS_NUMBER = 1
 
 internal interface DurableSet {
     fun add(key: Int): Boolean
@@ -42,9 +44,8 @@ internal interface DurableSet {
 /**
  * @see  <a https://arxiv.org/pdf/1909.02852.pdf">Efficient Lock-Free Durable Sets</a>
  */
-internal class DurableLinkFreeListTest :
-    AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
-    val s = DurableLinkFreeList<Any>()
+internal class DurableLinkFreeSetTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
+    val s = DurableLinkFreeSet<Any>()
 
     @Operation
     fun add(key: Int) = s.add(key)
@@ -73,9 +74,9 @@ class SequentialSet : VerifierState() {
 private const val MASK_LOW = 1
 private const val MASK_HIGH = 2
 
-private data class NextRef<T>(val next: ListNode<T>?, val deleted: Boolean)
+internal data class NextRef<T>(val next: SetNode<T>?, val deleted: Boolean)
 
-private class ListNode<T>(val key: Int, val value: T? = null, nextNode: ListNode<T>?, valid: Int = 0) {
+internal class SetNode<T>(val key: Int, val value: T? = null, nextNode: SetNode<T>?, valid: Int = 0) {
     val validityBits = nonVolatile(valid)
     val insertFlushFlag = nonVolatile(false)
     val deleteFlushFlag = nonVolatile(false)
@@ -94,45 +95,38 @@ private class ListNode<T>(val key: Int, val value: T? = null, nextNode: ListNode
         validityBits.value = newMetadata
     }
 
-    fun flipV1() {
-        val metadata = validityBits.value
-        val newV1 = (metadata and MASK_HIGH) xor MASK_HIGH
-        val newMetadata = newV1 + (metadata and MASK_HIGH.inv())
-        validityBits.value = newMetadata
-    }
-
     fun isMarked() = nextRef.value.deleted
 }
 
-private fun <T> flushDelete(node: ListNode<T>) {
+private fun <T> flushDelete(node: SetNode<T>) {
     if (node.deleteFlushFlag.value) return
     node.nextRef.flush()
     node.deleteFlushFlag.value = true
 }
 
-private fun <T> flushInsert(node: ListNode<T>) {
+private fun <T> flushInsert(node: SetNode<T>) {
     if (node.insertFlushFlag.value) return
     node.nextRef.flush()
     node.validityBits.flush()
     node.insertFlushFlag.value = true
 }
 
-internal class DurableLinkFreeList<T> : DurableSet {
-    private val head: NonVolatileRef<ListNode<T>>
+internal open class DurableLinkFreeSet<T> : DurableSet {
+    protected val head: NonVolatileRef<SetNode<T>>
 
     // non volatile allocation storage, stores nodes in any order
-    private val nodeStorage = ConcurrentLinkedDeque<ListNode<T>>()
+    protected val nodeStorage = ConcurrentLinkedDeque<SetNode<T>>()
 
     init {
-        val mx = ListNode(Int.MAX_VALUE, null as T?, null)
-        head = nonVolatile(ListNode(Int.MAX_VALUE, null as T?, mx))
+        val mx = SetNode(Int.MAX_VALUE, null as T?, null)
+        head = nonVolatile(SetNode(Int.MAX_VALUE, null as T?, mx))
     }
 
-    private fun allocateNode(key: Int, value: T?, next: ListNode<T>?): ListNode<T> {
-        return ListNode(key, value, next, MASK_HIGH).also { nodeStorage.add(it) }
+    protected open fun allocateNode(key: Int, value: T?, next: SetNode<T>?): SetNode<T> {
+        return SetNode(key, value, next, MASK_HIGH).also { nodeStorage.add(it) }
     }
 
-    private fun trimNext(pred: ListNode<T>, curr: ListNode<T>): Boolean {
+    protected open fun trimNext(pred: SetNode<T>, curr: SetNode<T>): Boolean {
         val nextRef = pred.nextRef.value
         flushDelete(curr)
         val res = pred.nextRef.compareAndSet(nextRef, curr.nextRef.value)
@@ -142,7 +136,7 @@ internal class DurableLinkFreeList<T> : DurableSet {
         return res
     }
 
-    private fun find(key: Int): Pair<ListNode<T>, ListNode<T>> {
+    protected fun find(key: Int): Pair<SetNode<T>, SetNode<T>> {
         var prev = head.value
         var curr = prev.nextRef.value.next
         while (true) {
@@ -207,7 +201,7 @@ internal class DurableLinkFreeList<T> : DurableSet {
 
     override fun recover() = doRecover()
 
-    private fun fastAdd(newNode: ListNode<T>) {
+    private fun fastAdd(newNode: SetNode<T>) {
         val key = newNode.key
         retry@ while (true) {
             var prev = head.value
@@ -233,10 +227,10 @@ internal class DurableLinkFreeList<T> : DurableSet {
         }
     }
 
-    private fun doRecover() {
-        val mx = ListNode(Int.MAX_VALUE, null as T?, null)
-        head.value = ListNode(Int.MIN_VALUE, null as T?, mx)
-        val toDelete = mutableListOf<ListNode<T>>()
+    protected open fun doRecover() {
+        val mx = SetNode(Int.MAX_VALUE, null as T?, null)
+        head.value = SetNode(Int.MIN_VALUE, null as T?, mx)
+        val toDelete = mutableListOf<SetNode<T>>()
         for (v in nodeStorage) {
             if (v.nextRef.value.next === null && v.isValid()) continue
             if (!v.isValid() || v.isMarked()) {
@@ -250,86 +244,105 @@ internal class DurableLinkFreeList<T> : DurableSet {
     }
 }
 
-
-internal class DurableLinkFreeListNoRecoverFailingTest :
-    AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
-    val s = DurableLinkFreeList<Any>()
-
-    @Operation
-    fun add(key: Int) = s.add(key)
-
-    @Operation
-    fun remove(key: Int) = s.remove(key)
-
-    @Operation
-    fun contains(key: Int) = s.contains(key)
-}
-
-internal abstract class DurableLinkFreeListFailingTest :
+@Param(name = "key", gen = IntGen::class, conf = "0:3")
+internal abstract class DurableLinkFreeSetFailingTest :
     AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
     internal abstract val s: DurableSet
 
     @Operation
-    fun add(key: Int) = s.add(key)
+    fun add(@Param(name = "key") key: Int) = s.add(key)
 
     @Operation
-    fun remove(key: Int) = s.remove(key)
+    fun remove(@Param(name = "key") key: Int) = s.remove(key)
 
     @Operation
-    fun contains(key: Int) = s.contains(key)
+    fun contains(@Param(name = "key") key: Int) = s.contains(key)
 
     @DurableRecoverAll
     fun recover() = s.recover()
 }
 
-internal class DurableLinkFreeListFailingTest1 : DurableLinkFreeListFailingTest() {
-    override val s = DurableLinkFreeFailingList1<Int>()
+internal class DurableLinkFreeSetNoRecoverFailingTest : DurableLinkFreeSetFailingTest() {
+    override val s = object : DurableLinkFreeSet<Any>() {
+        override fun recover() {}
+    }
 }
 
-internal class DurableLinkFreeListFailingTest2 : DurableLinkFreeListFailingTest() {
-    override val s = DurableLinkFreeFailingList2<Int>()
+internal class DurableLinkFreeSetFailingTest1 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet1<Int>()
 }
 
-internal class DurableLinkFreeFailingList1<T> : DurableSet {
-    private val head: NonVolatileRef<ListNode<T>>
+internal class DurableLinkFreeSetFailingTest2 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet2<Int>()
+}
 
-    // non volatile allocation storage, stores nodes in any order
-    private val nodeStorage = ConcurrentLinkedDeque<ListNode<T>>()
+internal class DurableLinkFreeSetFailingTest3 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet3<Int>()
+}
 
-    init {
-        val mx = ListNode(Int.MAX_VALUE, null as T?, null)
-        head = nonVolatile(ListNode(Int.MAX_VALUE, null as T?, mx))
-    }
+internal class DurableLinkFreeSetFailingTest4 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet4<Int>()
+}
 
-    private fun allocateNode(key: Int, value: T?, next: ListNode<T>?): ListNode<T> {
-        return ListNode(key, value, next, MASK_HIGH).also { nodeStorage.add(it) }
-    }
+internal class DurableLinkFreeSetFailingTest5 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet5<Int>()
+    override val expectedExceptions = listOf(AssertionError::class)
+}
 
-    private fun trimNext(pred: ListNode<T>, curr: ListNode<T>): Boolean {
-        val nextRef = pred.nextRef.value
-        flushDelete(curr)
-        val res = pred.nextRef.compareAndSet(nextRef, curr.nextRef.value)
-        if (res) {
-            nodeStorage.remove(curr)
-        }
-        return res
-    }
+internal class DurableLinkFreeSetFailingTest6 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet6<Int>()
+}
 
-    private fun find(key: Int): Pair<ListNode<T>, ListNode<T>> {
-        var prev = head.value
-        var curr = prev.nextRef.value.next
-        while (true) {
-            if (!curr!!.isMarked()) {
-                if (curr.key >= key) break
-                prev = curr
-            } else {
-                trimNext(prev, curr)
-            }
-            curr = curr.nextRef.value.next
-        }
-        return prev to curr!!
-    }
+internal class DurableLinkFreeSetFailingTest7 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet7<Int>()
+}
 
+internal class DurableLinkFreeSetFailingTest8 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet8<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest9 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet9<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest10 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet10<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest11 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet11<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest12 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet12<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest13 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet13<Int>()
+    override val expectedExceptions = listOf(NullPointerException::class)
+}
+
+internal class DurableLinkFreeSetFailingTest14 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet14<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest15 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet15<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest16 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet16<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest17 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet17<Int>()
+}
+
+internal class DurableLinkFreeSetFailingTest18 : DurableLinkFreeSetFailingTest() {
+    override val s = DurableLinkFreeFailingSet18<Int>()
+}
+
+internal class DurableLinkFreeFailingSet1<T> : DurableLinkFreeSet<T>() {
     override fun add(key: Int): Boolean {
         while (true) {
             val (pred, curr) = find(key)
@@ -348,122 +361,10 @@ internal class DurableLinkFreeFailingList1<T> : DurableSet {
             }
         }
     }
-
-    override fun remove(key: Int): Boolean {
-        while (true) {
-            val (pred, curr) = find(key)
-            if (curr.key != key) return false
-            val nextRef = curr.nextRef.value
-            val deletedRef = NextRef(nextRef.next, true)
-            curr.makeValid()
-            if (curr.nextRef.compareAndSet(nextRef, deletedRef)) {
-                trimNext(pred, curr)
-                return true
-            }
-        }
-    }
-
-    override fun contains(key: Int): Boolean {
-        var curr = head.value.nextRef.value.next!!
-        while (curr.key < key) {
-            curr = curr.nextRef.value.next!!
-        }
-        if (curr.key != key) return false
-        if (curr.isMarked()) {
-            flushDelete(curr)
-            return false
-        }
-        curr.makeValid()
-        flushInsert(curr)
-        return true
-    }
-
-    override fun recover() = doRecover()
-
-    private fun fastAdd(newNode: ListNode<T>) {
-        val key = newNode.key
-        retry@ while (true) {
-            var prev = head.value
-            var curr = prev.nextRef.value.next!!
-            while (true) {
-                val succ = curr.nextRef.value.next
-                if (curr.key < key) {
-                    prev = curr
-                    curr = succ!!
-                    assert(!succ.isMarked())
-                    continue
-                }
-                assert(curr.key != key)
-                val nextRef = prev.nextRef.value
-                if (nextRef.next !== curr) continue
-                newNode.nextRef.value = NextRef(curr, false)
-                if (prev.nextRef.compareAndSet(nextRef, NextRef(newNode, false))) {
-                    return
-                } else {
-                    continue@retry
-                }
-            }
-        }
-    }
-
-    private fun doRecover() {
-        val mx = ListNode(Int.MAX_VALUE, null as T?, null)
-        head.value = ListNode(Int.MIN_VALUE, null as T?, mx)
-        val toDelete = mutableListOf<ListNode<T>>()
-        for (v in nodeStorage) {
-            if (v.nextRef.value.next === null && v.isValid()) continue
-            if (!v.isValid() || v.isMarked()) {
-                v.makeValid()
-                toDelete.add(v)
-            } else {
-                fastAdd(v)
-            }
-        }
-        toDelete.forEach { nodeStorage.remove(it) }
-    }
 }
 
 
-internal class DurableLinkFreeFailingList2<T> : DurableSet {
-    private val head: NonVolatileRef<ListNode<T>>
-
-    // non volatile allocation storage, stores nodes in any order
-    private val nodeStorage = ConcurrentLinkedDeque<ListNode<T>>()
-
-    init {
-        val mx = ListNode(Int.MAX_VALUE, null as T?, null)
-        head = nonVolatile(ListNode(Int.MAX_VALUE, null as T?, mx))
-    }
-
-    private fun allocateNode(key: Int, value: T?, next: ListNode<T>?): ListNode<T> {
-        return ListNode(key, value, next, MASK_HIGH).also { nodeStorage.add(it) }
-    }
-
-    private fun trimNext(pred: ListNode<T>, curr: ListNode<T>): Boolean {
-        val nextRef = pred.nextRef.value
-        flushDelete(curr)
-        val res = pred.nextRef.compareAndSet(nextRef, curr.nextRef.value)
-        if (res) {
-            nodeStorage.remove(curr)
-        }
-        return res
-    }
-
-    private fun find(key: Int): Pair<ListNode<T>, ListNode<T>> {
-        var prev = head.value
-        var curr = prev.nextRef.value.next
-        while (true) {
-            if (!curr!!.isMarked()) {
-                if (curr.key >= key) break
-                prev = curr
-            } else {
-                trimNext(prev, curr)
-            }
-            curr = curr.nextRef.value.next
-        }
-        return prev to curr!!
-    }
-
+internal class DurableLinkFreeFailingSet2<T> : DurableLinkFreeSet<T>() {
     override fun add(key: Int): Boolean {
         while (true) {
             val (pred, curr) = find(key)
@@ -482,11 +383,181 @@ internal class DurableLinkFreeFailingList2<T> : DurableSet {
             }
         }
     }
+}
 
+internal class DurableLinkFreeFailingSet3<T> : DurableLinkFreeSet<T>() {
+    override fun add(key: Int): Boolean {
+        while (true) {
+            val (pred, curr) = find(key)
+            if (curr.key == key) {
+                // here should be curr.makeValid()
+                flushInsert(curr)
+                return false
+            }
+            val nextRef = pred.nextRef.value
+            if (nextRef.next !== curr) continue
+            val newNode = allocateNode(key, null, curr)
+            if (pred.nextRef.compareAndSet(nextRef, NextRef(newNode, false))) {
+                newNode.makeValid()
+                flushInsert(newNode)
+                return true
+            }
+        }
+    }
+}
+
+internal class DurableLinkFreeFailingSet4<T> : DurableLinkFreeSet<T>() {
+    override fun add(key: Int): Boolean {
+        while (true) {
+            val (pred, curr) = find(key)
+            if (curr.key == key) {
+                curr.makeValid()
+                flushInsert(curr)
+                return false
+            }
+            val nextRef = pred.nextRef.value
+            if (nextRef.next !== curr) continue
+            val newNode = allocateNode(key, null, curr)
+            if (pred.nextRef.compareAndSet(nextRef, NextRef(newNode, false))) {
+                // here should be newNode.makeValid()
+                flushInsert(newNode)
+                return true
+            }
+        }
+    }
+}
+
+internal class DurableLinkFreeFailingSet5<T> : DurableLinkFreeSet<T>() {
+    override fun add(key: Int): Boolean {
+        while (true) {
+            val (pred, curr) = find(key)
+            if (curr.key == key) {
+                curr.makeValid()
+                flushInsert(curr)
+                return false
+            }
+            val nextRef = pred.nextRef.value
+            if (nextRef.next !== curr) continue
+            val newNode = allocateNode(key, null, curr)
+            // here should be if (pred.nextRef.compareAndSet(nextRef, NextRef(newNode, false))) {
+            pred.nextRef.value = NextRef(newNode, false)
+            newNode.makeValid()
+            flushInsert(newNode)
+            return true
+            //}
+        }
+    }
+}
+
+internal class DurableLinkFreeFailingSet6<T> : DurableLinkFreeSet<T>() {
+    override fun add(key: Int): Boolean {
+        while (true) {
+            val (pred, curr) = find(key)
+            // here should be
+//            if (curr.key == key) {
+//                curr.makeValid()
+//                flushInsert(curr)
+//                return false
+//            }
+            val nextRef = pred.nextRef.value
+            if (nextRef.next !== curr) continue
+            val newNode = allocateNode(key, null, curr)
+            if (pred.nextRef.compareAndSet(nextRef, NextRef(newNode, false))) {
+                newNode.makeValid()
+                flushInsert(newNode)
+                return true
+            }
+        }
+    }
+}
+
+internal class DurableLinkFreeFailingSet7<T> : DurableLinkFreeSet<T>() {
+    override fun trimNext(pred: SetNode<T>, curr: SetNode<T>): Boolean {
+        val nextRef = pred.nextRef.value
+        // here should be flushDelete(curr)
+        val res = pred.nextRef.compareAndSet(nextRef, curr.nextRef.value)
+        if (res) {
+            nodeStorage.remove(curr)
+        }
+        return res
+    }
+}
+
+internal class DurableLinkFreeFailingSet8<T> : DurableLinkFreeSet<T>() {
+    override fun trimNext(pred: SetNode<T>, curr: SetNode<T>): Boolean {
+        val nextRef = pred.nextRef.value
+        flushDelete(curr)
+        val res = pred.nextRef.compareAndSet(nextRef, curr.nextRef.value)
+        // here should be
+//        if (res) {
+//            nodeStorage.remove(curr)
+//        }
+        nodeStorage.remove(curr)
+        return res
+    }
+}
+
+internal class DurableLinkFreeFailingSet9<T> : DurableLinkFreeSet<T>() {
+    override fun allocateNode(key: Int, value: T?, next: SetNode<T>?): SetNode<T> {
+        return SetNode(key, value, next, /* here should be MASK_HIGH */ MASK_LOW).also { nodeStorage.add(it) }
+    }
+}
+
+internal class DurableLinkFreeFailingSet10<T> : DurableLinkFreeSet<T>() {
     override fun remove(key: Int): Boolean {
         while (true) {
             val (pred, curr) = find(key)
             if (curr.key != key) return false
+            val nextRef = curr.nextRef.value
+            val deletedRef = NextRef(nextRef.next, true)
+            // here should be curr.makeValid()
+            if (curr.nextRef.compareAndSet(nextRef, deletedRef)) {
+                trimNext(pred, curr)
+                return true
+            }
+        }
+    }
+}
+
+internal class DurableLinkFreeFailingSet11<T> : DurableLinkFreeSet<T>() {
+    override fun remove(key: Int): Boolean {
+        while (true) {
+            val (pred, curr) = find(key)
+            if (curr.key != key) return false
+            val nextRef = curr.nextRef.value
+            val deletedRef = NextRef(nextRef.next, true)
+            curr.makeValid()
+            if (curr.nextRef.compareAndSet(nextRef, deletedRef)) {
+                // here should be trimNext(pred, curr)
+                return true
+            }
+        }
+    }
+}
+
+internal class DurableLinkFreeFailingSet12<T> : DurableLinkFreeSet<T>() {
+    override fun remove(key: Int): Boolean {
+        while (true) {
+            val (pred, curr) = find(key)
+            if (curr.key != key) return false
+            val nextRef = curr.nextRef.value
+            val deletedRef = NextRef(nextRef.next, true)
+            curr.makeValid()
+            // here should be
+            // if (curr.nextRef.compareAndSet(nextRef, deletedRef)) {
+            curr.nextRef.value = deletedRef
+            trimNext(pred, curr)
+            return true
+            //}
+        }
+    }
+}
+
+internal class DurableLinkFreeFailingSet13<T> : DurableLinkFreeSet<T>() {
+    override fun remove(key: Int): Boolean {
+        while (true) {
+            val (pred, curr) = find(key)
+            // here should be if (curr.key != key) return false
             val nextRef = curr.nextRef.value
             val deletedRef = NextRef(nextRef.next, true)
             curr.makeValid()
@@ -496,7 +567,60 @@ internal class DurableLinkFreeFailingList2<T> : DurableSet {
             }
         }
     }
+}
 
+internal class DurableLinkFreeFailingSet14<T> : DurableLinkFreeSet<T>() {
+    override fun contains(key: Int): Boolean {
+        var curr = head.value.nextRef.value.next!!
+        while (curr.key < key) {
+            curr = curr.nextRef.value.next!!
+        }
+        // here should be if (curr.key != key) return false
+        if (curr.isMarked()) {
+            flushDelete(curr)
+            return false
+        }
+        curr.makeValid()
+        flushInsert(curr)
+        return true
+    }
+}
+
+internal class DurableLinkFreeFailingSet15<T> : DurableLinkFreeSet<T>() {
+    override fun contains(key: Int): Boolean {
+        var curr = head.value.nextRef.value.next!!
+        while (curr.key < key) {
+            curr = curr.nextRef.value.next!!
+        }
+        if (curr.key != key) return false
+        if (curr.isMarked()) {
+            // here should be flushDelete(curr)
+            return false
+        }
+        curr.makeValid()
+        flushInsert(curr)
+        return true
+    }
+}
+
+internal class DurableLinkFreeFailingSet16<T> : DurableLinkFreeSet<T>() {
+    override fun contains(key: Int): Boolean {
+        var curr = head.value.nextRef.value.next!!
+        while (curr.key < key) {
+            curr = curr.nextRef.value.next!!
+        }
+        if (curr.key != key) return false
+        if (curr.isMarked()) {
+            flushDelete(curr)
+            return false
+        }
+        // here should be curr.makeValid()
+        flushInsert(curr)
+        return true
+    }
+}
+
+internal class DurableLinkFreeFailingSet17<T> : DurableLinkFreeSet<T>() {
     override fun contains(key: Int): Boolean {
         var curr = head.value.nextRef.value.next!!
         while (curr.key < key) {
@@ -508,49 +632,23 @@ internal class DurableLinkFreeFailingList2<T> : DurableSet {
             return false
         }
         curr.makeValid()
-        flushInsert(curr)
+        // here should be flushInsert(curr)
         return true
     }
+}
 
-    override fun recover() = doRecover()
-
-    private fun fastAdd(newNode: ListNode<T>) {
-        val key = newNode.key
-        retry@ while (true) {
-            var prev = head.value
-            var curr = prev.nextRef.value.next!!
-            while (true) {
-                val succ = curr.nextRef.value.next
-                if (curr.key < key) {
-                    prev = curr
-                    curr = succ!!
-                    assert(!succ.isMarked())
-                    continue
-                }
-                assert(curr.key != key)
-                val nextRef = prev.nextRef.value
-                if (nextRef.next !== curr) continue
-                newNode.nextRef.value = NextRef(curr, false)
-                if (prev.nextRef.compareAndSet(nextRef, NextRef(newNode, false))) {
-                    return
-                } else {
-                    continue@retry
-                }
-            }
-        }
-    }
-
-    private fun doRecover() {
-        val mx = ListNode(Int.MAX_VALUE, null as T?, null)
-        head.value = ListNode(Int.MIN_VALUE, null as T?, mx)
-        val toDelete = mutableListOf<ListNode<T>>()
+internal class DurableLinkFreeFailingSet18<T> : DurableLinkFreeSet<T>() {
+    override fun doRecover() {
+        val mx = SetNode(Int.MAX_VALUE, null as T?, null)
+        head.value = SetNode(Int.MIN_VALUE, null as T?, mx)
+        val toDelete = mutableListOf<SetNode<T>>()
         for (v in nodeStorage) {
             if (v.nextRef.value.next === null && v.isValid()) continue
             if (!v.isValid() || v.isMarked()) {
                 v.makeValid()
                 toDelete.add(v)
             } else {
-                fastAdd(v)
+                // here should be fastAdd(v)
             }
         }
         toDelete.forEach { nodeStorage.remove(it) }

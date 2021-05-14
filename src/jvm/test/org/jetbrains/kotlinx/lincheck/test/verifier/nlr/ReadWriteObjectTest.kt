@@ -80,11 +80,11 @@ internal open class SequentialReadWriteObject : VerifierState() {
  * Use (value, op) with unique op to emulate this.
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
-class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null) : RWO<T> {
-    private val register = nonVolatile(initial)
+internal open class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null) : RWO<T> {
+    protected val register = nonVolatile(initial)
 
     // (state, value) for every thread
-    private val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
+    protected val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
 
     @Recoverable
     override fun read(): T? = register.value
@@ -92,7 +92,7 @@ class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null) : RWO<T> {
     @Recoverable(recoverMethod = "writeRecover")
     override fun write(value: T, p: Int) = writeImpl(value, p)
 
-    private fun writeImpl(value: T, p: Int) {
+    protected open fun writeImpl(value: T, p: Int) {
         val tmp = register.value
         state[p].value = 1 to tmp
         state[p].flush()
@@ -103,7 +103,7 @@ class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null) : RWO<T> {
         state[p].flush()
     }
 
-    fun writeRecover(value: T, p: Int) {
+    protected open fun writeRecover(value: T, p: Int) {
         val (flag, current) = state[p].value
         if (flag == 0 && current != value) return writeImpl(value, p)
         else if (flag == 1 && current === register.value) return writeImpl(value, p)
@@ -175,19 +175,8 @@ internal class ReadWriteObjectFailingTest5 : ReadWriteObjectFailingTest() {
     override val rwo = NRLFailingReadWriteObject5<Pair<Int, Int>>(THREADS_NUMBER + 2)
 }
 
-internal class NRLFailingReadWriteObject1<T>(threadsCount: Int) : RWO<T> {
-    private val register = nonVolatile<T?>(null)
-
-    // (state, value) for every thread
-    private val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
-
-    @Recoverable
-    override fun read(): T? = register.value
-
-    @Recoverable(recoverMethod = "writeRecover")
-    override fun write(value: T, p: Int) = writeImpl(value, p)
-
-    private fun writeImpl(value: T, p: Int) {
+internal class NRLFailingReadWriteObject1<T>(threadsCount: Int) : NRLReadWriteObject<T>(threadsCount) {
+    override fun writeImpl(value: T, p: Int) {
         val tmp = register.value
         state[p].value = 1 to tmp
         // Otherwise the error is that a thread completes write operation twice.
@@ -196,29 +185,10 @@ internal class NRLFailingReadWriteObject1<T>(threadsCount: Int) : RWO<T> {
         state[p].value = 0 to value
         state[p].flush()
     }
-
-    fun writeRecover(value: T, p: Int) {
-        val (flag, current) = state[p].value
-        if (flag == 0 && current != value) return writeImpl(value, p)
-        else if (flag == 1 && current === register.value) return writeImpl(value, p)
-        state[p].value = 0 to value
-        state[p].flush()
-    }
 }
 
-internal class NRLFailingReadWriteObject2<T>(threadsCount: Int) : RWO<T> {
-    private val register = nonVolatile<T?>(null)
-
-    // (state, value) for every thread
-    private val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
-
-    @Recoverable
-    override fun read(): T? = register.value
-
-    @Recoverable(recoverMethod = "writeRecover")
-    override fun write(value: T, p: Int) = writeImpl(value, p)
-
-    private fun writeImpl(value: T, p: Int) {
+internal class NRLFailingReadWriteObject2<T>(threadsCount: Int) : NRLReadWriteObject<T>(threadsCount) {
+    override fun writeImpl(value: T, p: Int) {
         val tmp = register.value
         state[p].value = 1 to tmp
         state[p].flush()
@@ -226,38 +196,10 @@ internal class NRLFailingReadWriteObject2<T>(threadsCount: Int) : RWO<T> {
         state[p].value = 0 to value
         // here should be state[p].flush()
     }
-
-    fun writeRecover(value: T, p: Int) {
-        val (flag, current) = state[p].value
-        if (flag == 0 && current != value) return writeImpl(value, p)
-        else if (flag == 1 && current === register.value) return writeImpl(value, p)
-        state[p].value = 0 to value
-        state[p].flush()
-    }
 }
 
-internal class NRLFailingReadWriteObject3<T>(threadsCount: Int) : RWO<T> {
-    private val register = nonVolatile<T?>(null)
-
-    // (state, value) for every thread
-    private val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
-
-    @Recoverable
-    override fun read(): T? = register.value
-
-    @Recoverable(recoverMethod = "writeRecover")
-    override fun write(value: T, p: Int) = writeImpl(value, p)
-
-    private fun writeImpl(value: T, p: Int) {
-        val tmp = register.value
-        state[p].value = 1 to tmp
-        state[p].flush()
-        register.setAndFlush(value)
-        state[p].value = 0 to value
-        state[p].flush()
-    }
-
-    fun writeRecover(value: T, p: Int) {
+internal class NRLFailingReadWriteObject3<T>(threadsCount: Int) : NRLReadWriteObject<T>(threadsCount) {
+    override fun writeRecover(value: T, p: Int) {
         val (flag, current) = state[p].value
         if (flag == 0 && current != value) return writeImpl(value, p)
         else if (flag == 1 && current === register.value) return writeImpl(value, p)
@@ -266,28 +208,8 @@ internal class NRLFailingReadWriteObject3<T>(threadsCount: Int) : RWO<T> {
     }
 }
 
-internal class NRLFailingReadWriteObject4<T>(threadsCount: Int) : RWO<T> {
-    private val register = nonVolatile<T?>(null)
-
-    // (state, value) for every thread
-    private val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
-
-    @Recoverable
-    override fun read(): T? = register.value
-
-    @Recoverable(recoverMethod = "writeRecover")
-    override fun write(value: T, p: Int) = writeImpl(value, p)
-
-    private fun writeImpl(value: T, p: Int) {
-        val tmp = register.value
-        state[p].value = 1 to tmp
-        state[p].flush()
-        register.setAndFlush(value)
-        state[p].value = 0 to value
-        state[p].flush()
-    }
-
-    fun writeRecover(value: T, p: Int) {
+internal class NRLFailingReadWriteObject4<T>(threadsCount: Int) : NRLReadWriteObject<T>(threadsCount) {
+    override fun writeRecover(value: T, p: Int) {
         val (flag, current) = state[p].value
         if (flag == 0/* here should be && current != value */) return writeImpl(value, p)
         else if (flag == 1 && current === register.value) return writeImpl(value, p)
@@ -296,28 +218,8 @@ internal class NRLFailingReadWriteObject4<T>(threadsCount: Int) : RWO<T> {
     }
 }
 
-internal class NRLFailingReadWriteObject5<T>(threadsCount: Int) : RWO<T> {
-    private val register = nonVolatile<T?>(null)
-
-    // (state, value) for every thread
-    private val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
-
-    @Recoverable
-    override fun read(): T? = register.value
-
-    @Recoverable(recoverMethod = "writeRecover")
-    override fun write(value: T, p: Int) = writeImpl(value, p)
-
-    private fun writeImpl(value: T, p: Int) {
-        val tmp = register.value
-        state[p].value = 1 to tmp
-        state[p].flush()
-        register.setAndFlush(value)
-        state[p].value = 0 to value
-        state[p].flush()
-    }
-
-    fun writeRecover(value: T, p: Int) {
+internal class NRLFailingReadWriteObject5<T>(threadsCount: Int) : NRLReadWriteObject<T>(threadsCount) {
+    override fun writeRecover(value: T, p: Int) {
         val (flag, current) = state[p].value
         if (flag == 0 && current != value) return writeImpl(value, p)
         else if (flag == 1 /* here should be && current === register.value */) return writeImpl(value, p)

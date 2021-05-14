@@ -129,18 +129,18 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun IncorrectResultsFailure.minimizeCrashes(
         testCfg: CTestConfiguration,
-        verifier: Verifier
+        verifier: Verifier,
+        crashes: Int = crashesNumber() + 1 // +1 here to replace proxy exceptions with normal ones
     ): LincheckFailure {
-        Probability.minimizeCrashes()
-        val currentCrashesNumber = crashesNumber() + 1 // plus 1 here to replace proxy exceptions with normal ones
+        Probability.minimizeCrashes(crashes - 1)
         repeat(100) {
             Crash.useProxyCrash = false
             val newIteration = scenario.tryMinimize(testCfg, verifier)
             Crash.useProxyCrash = true
             if (newIteration != null
                 && newIteration is IncorrectResultsFailure
-                && newIteration.crashesNumber() < currentCrashesNumber
-            ) return newIteration.minimizeCrashes(testCfg, verifier)
+                && newIteration.crashesNumber() < crashes
+            ) return newIteration.minimizeCrashes(testCfg, verifier, newIteration.crashesNumber())
         }
         return this
     }

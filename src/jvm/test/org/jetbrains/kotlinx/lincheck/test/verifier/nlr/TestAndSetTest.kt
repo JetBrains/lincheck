@@ -59,12 +59,12 @@ internal class SequentialTestAndSet : VerifierState() {
 /**
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
-internal class NRLTestAndSet(private val threadsCount: Int) : TAS {
-    private val r = MutableList(threadsCount) { nonVolatile(0) }
-    private val response = MutableList(threadsCount) { nonVolatile(0) }
-    private val winner = nonVolatile(-1)
-    private val doorway = nonVolatile(true)
-    private val tas = nonVolatile(0)
+internal open class NRLTestAndSet(private val threadsCount: Int) : TAS {
+    protected val r = MutableList(threadsCount) { nonVolatile(0) }
+    protected open val response = MutableList(threadsCount) { nonVolatile(0) }
+    protected val winner = nonVolatile(-1)
+    protected val doorway = nonVolatile(true)
+    protected val tas = nonVolatile(0)
 
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
@@ -85,7 +85,7 @@ internal class NRLTestAndSet(private val threadsCount: Int) : TAS {
         return returnValue
     }
 
-    private fun testAndSetRecover(p: Int): Int {
+    protected open fun testAndSetRecover(p: Int): Int {
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
@@ -111,8 +111,7 @@ internal class NRLTestAndSet(private val threadsCount: Int) : TAS {
 }
 
 private inline fun wailUntil(condition: () -> Boolean) {
-    while (!condition()) {
-    }
+    while (!condition());
 }
 
 internal abstract class TestAndSetFailingTest :
@@ -144,15 +143,23 @@ internal class TestAndSetFailingTest4 : TestAndSetFailingTest() {
     override val tas = NRLFailingTestAndSet4(THREADS_NUMBER + 2)
 }
 
-internal class NRLFailingTestAndSet1(private val threadsCount: Int) : VerifierState(), TAS {
-    private val r = MutableList(threadsCount) { nonVolatile(0) }
-    private val response = MutableList(threadsCount) { nonVolatile(0) }
-    private val winner = nonVolatile(-1)
-    private val doorway = nonVolatile(true)
-    private val tas = nonVolatile(0)
+internal class TestAndSetFailingTest5 : TestAndSetFailingTest() {
+    override val tas = NRLFailingTestAndSet5(THREADS_NUMBER + 2)
+}
 
-    override fun extractState() = tas.value
+internal class TestAndSetFailingTest6 : TestAndSetFailingTest() {
+    override val tas = NRLFailingTestAndSet6(THREADS_NUMBER + 2)
+}
 
+internal class TestAndSetFailingTest7 : TestAndSetFailingTest() {
+    override val tas = NRLFailingTestAndSet7(THREADS_NUMBER + 2)
+}
+
+internal class TestAndSetFailingTest8 : TestAndSetFailingTest() {
+    override val tas = NRLFailingTestAndSet8(THREADS_NUMBER + 2)
+}
+
+internal class NRLFailingTestAndSet1(threadsCount: Int) : NRLTestAndSet(threadsCount) {
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
         r[p].setAndFlush(1)
@@ -171,61 +178,10 @@ internal class NRLFailingTestAndSet1(private val threadsCount: Int) : VerifierSt
         r[p].setAndFlush(3)
         return returnValue
     }
-
-    private fun testAndSetRecover(p: Int): Int {
-        if (r[p].value < 2) return testAndSet(p)
-        if (r[p].value == 3) return response[p].value
-        if (winner.value == -1) {
-            doorway.setAndFlush(false)
-            r[p].setAndFlush(4)
-            for (i in 0 until p) {
-                wailUntil { r[i].value.let { it == 0 || it == 3 } }
-            }
-            for (i in p + 1 until threadsCount) {
-                wailUntil { r[i].value.let { it == 0 || it > 2 } }
-            }
-            if (winner.value == -1) {
-                winner.setAndFlush(p)
-            }
-        }
-        val returnValue = if (winner.value == p) 0 else 1
-        response[p].value = returnValue
-        response[p].flush()
-        r[p].value = 3
-        r[p].flush()
-        return returnValue
-    }
 }
 
-internal class NRLFailingTestAndSet2(private val threadsCount: Int) : VerifierState(), TAS {
-    private val r = MutableList(threadsCount) { nonVolatile(0) }
-    private val response = MutableList(threadsCount) { nonVolatile(0) }
-    private val winner = nonVolatile(-1)
-    private val doorway = nonVolatile(true)
-    private val tas = nonVolatile(0)
-
-    override fun extractState() = tas.value
-
-    @Recoverable(recoverMethod = "testAndSetRecover")
-    override fun testAndSet(p: Int): Int {
-        r[p].setAndFlush(1)
-        val returnValue: Int
-        if (!doorway.value) {
-            returnValue = 1
-        } else {
-            r[p].setAndFlush(2)
-            doorway.setAndFlush(false)
-            returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
-            if (returnValue == 0) {
-                winner.setAndFlush(p)
-            }
-        }
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
-        return returnValue
-    }
-
-    private fun testAndSetRecover(p: Int): Int {
+internal class NRLFailingTestAndSet2(private val threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    override fun testAndSetRecover(p: Int): Int {
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
@@ -250,35 +206,8 @@ internal class NRLFailingTestAndSet2(private val threadsCount: Int) : VerifierSt
     }
 }
 
-internal class NRLFailingTestAndSet3(private val threadsCount: Int) : VerifierState(), TAS {
-    private val r = MutableList(threadsCount) { nonVolatile(0) }
-    private val response = MutableList(threadsCount) { nonVolatile(0) }
-    private val winner = nonVolatile(-1)
-    private val doorway = nonVolatile(true)
-    private val tas = nonVolatile(0)
-
-    override fun extractState() = tas.value
-
-    @Recoverable(recoverMethod = "testAndSetRecover")
-    override fun testAndSet(p: Int): Int {
-        r[p].setAndFlush(1)
-        val returnValue: Int
-        if (!doorway.value) {
-            returnValue = 1
-        } else {
-            r[p].setAndFlush(2)
-            doorway.setAndFlush(false)
-            returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
-            if (returnValue == 0) {
-                winner.setAndFlush(p)
-            }
-        }
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
-        return returnValue
-    }
-
-    private fun testAndSetRecover(p: Int): Int {
+internal class NRLFailingTestAndSet3(private val threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    override fun testAndSetRecover(p: Int): Int {
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
@@ -303,35 +232,9 @@ internal class NRLFailingTestAndSet3(private val threadsCount: Int) : VerifierSt
     }
 }
 
-internal class NRLFailingTestAndSet4(private val threadsCount: Int) : VerifierState(), TAS {
-    private val r = MutableList(threadsCount) { nonVolatile(0) }
-    private val response = MutableList(threadsCount) { nonVolatile(-1) }
-    private val winner = nonVolatile(-1)
-    private val doorway = nonVolatile(true)
-    private val tas = nonVolatile(0)
-
-    override fun extractState() = tas.value
-
-    @Recoverable(recoverMethod = "testAndSetRecover")
-    override fun testAndSet(p: Int): Int {
-        r[p].setAndFlush(1)
-        val returnValue: Int
-        if (!doorway.value) {
-            returnValue = 1
-        } else {
-            r[p].setAndFlush(2)
-            doorway.setAndFlush(false)
-            returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
-            if (returnValue == 0) {
-                winner.setAndFlush(p)
-            }
-        }
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
-        return returnValue
-    }
-
-    private fun testAndSetRecover(p: Int): Int {
+internal class NRLFailingTestAndSet4(private val threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    override val response = MutableList(threadsCount) { nonVolatile(-1) }
+    override fun testAndSetRecover(p: Int): Int {
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
@@ -356,3 +259,98 @@ internal class NRLFailingTestAndSet4(private val threadsCount: Int) : VerifierSt
     }
 }
 
+internal class NRLFailingTestAndSet5(private val threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    override fun testAndSetRecover(p: Int): Int {
+        if (r[p].value < 2) return testAndSet(p)
+        if (r[p].value == 3) return response[p].value
+        if (winner.value == -1) {
+            doorway.setAndFlush(false)
+            r[p].setAndFlush(4)
+            for (i in 0 until p) {
+                wailUntil { r[i].value.let { it == 0 || it == 3 } }
+            }
+            // here should be
+//            for (i in p + 1 until threadsCount) {
+//                wailUntil { r[i].value.let { it == 0 || it > 2 } }
+//            }
+            if (winner.value == -1) {
+                winner.setAndFlush(p)
+            }
+        }
+        val returnValue = if (winner.value == p) 0 else 1
+        response[p].value = returnValue
+        response[p].flush()
+        r[p].value = 3
+        r[p].flush()
+        return returnValue
+    }
+}
+
+internal class NRLFailingTestAndSet6(threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    @Recoverable(recoverMethod = "testAndSetRecover")
+    override fun testAndSet(p: Int): Int {
+        r[p].setAndFlush(1)
+        val returnValue: Int
+        if (!doorway.value) {
+            returnValue = 1
+        } else {
+            r[p].setAndFlush(2)
+            doorway.setAndFlush(false)
+            returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
+            if (returnValue == 0) {
+                // here should be winner.setAndFlush(p)
+            }
+        }
+        response[p].setAndFlush(returnValue)
+        r[p].setAndFlush(3)
+        return returnValue
+    }
+}
+
+internal class NRLFailingTestAndSet7(threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    @Recoverable(recoverMethod = "testAndSetRecover")
+    override fun testAndSet(p: Int): Int {
+        r[p].setAndFlush(1)
+        val returnValue: Int
+        if (!doorway.value) {
+            returnValue = 1
+        } else {
+            r[p].setAndFlush(2)
+            doorway.setAndFlush(false)
+            returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
+            if (returnValue == 0) {
+                winner.setAndFlush(p)
+            }
+        }
+        // here should be response[p].setAndFlush(returnValue)
+        r[p].setAndFlush(3)
+        return returnValue
+    }
+}
+
+internal class NRLFailingTestAndSet8(private val threadsCount: Int) : NRLTestAndSet(threadsCount) {
+    override fun testAndSetRecover(p: Int): Int {
+        if (r[p].value < 2) return testAndSet(p)
+        if (r[p].value == 3) return response[p].value
+        if (winner.value == -1) {
+            doorway.setAndFlush(false)
+            r[p].setAndFlush(4)
+            // here should be
+//            for (i in 0 until p) {
+//                wailUntil { r[i].value.let { it == 0 || it == 3 } }
+//            }
+            for (i in p + 1 until threadsCount) {
+                wailUntil { r[i].value.let { it == 0 || it > 2 } }
+            }
+            if (winner.value == -1) {
+                winner.setAndFlush(p)
+            }
+        }
+        val returnValue = if (winner.value == p) 0 else 1
+        response[p].value = returnValue
+        response[p].flush()
+        r[p].value = 3
+        r[p].flush()
+        return returnValue
+    }
+}
