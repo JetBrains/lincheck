@@ -30,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFaili
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.*
+import kotlin.reflect.KClass
 
 private const val THREADS_NUMBER = 2
 
@@ -210,6 +211,7 @@ internal abstract class LogQueueFailingTest :
 
     @DurableRecoverAll
     fun recover() = q.recover()
+    override val expectedExceptions: List<KClass<out Throwable>> = listOf(IllegalStateException::class)
 }
 
 internal class LogQueueFailingTest1 : LogQueueFailingTest() {
@@ -258,7 +260,6 @@ internal class LogQueueFailingTest11 : LogQueueFailingTest() {
 
 internal class LogQueueFailingTest12 : LogQueueFailingTest() {
     override val q = LogFailingQueue12(THREADS_NUMBER + 2)
-    override val expectedExceptions = listOf(IllegalStateException::class)
 }
 
 internal class LogQueueFailingTest13 : LogQueueFailingTest() {
