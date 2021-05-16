@@ -109,6 +109,11 @@ internal class ModelCheckingStrategy(
         return currentInterleaving.isCrashPosition()
     }
 
+    override fun isSystemCrash(iThread: Int): Boolean {
+        check(iThread == currentThread)
+        return currentInterleaving.isSystemCrash()
+    }
+
     override fun initializeInvocation() {
         currentInterleaving.initialize()
         super.initializeInvocation()
@@ -227,7 +232,7 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    private inner class CrashChoosingNode : InterleavingTreeNode() {
+    private inner class CrashChoosingNode(private val isSystemCrash: Boolean) : InterleavingTreeNode() {
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
             val isLeaf = maxNumberOfEvents == interleavingBuilder.numberOfEvents
             if (isLeaf) {
@@ -237,7 +242,7 @@ internal class ModelCheckingStrategy(
                 return interleavingBuilder.build()
             }
             val choice = chooseUnexploredNode()
-            interleavingBuilder.addCrashPosition(choice.value)
+            interleavingBuilder.addCrashPosition(choice.value, isSystemCrash)
             val interleaving = choice.node.nextInterleaving(interleavingBuilder)
             updateExplorationStatistics()
             return interleaving
@@ -246,7 +251,10 @@ internal class ModelCheckingStrategy(
 
     private inner class SwitchOrCrashChoosingNode : InterleavingTreeNode() {
         init {
-            choices = listOf(Choice(SwitchChoosingNode(), 0), Choice(CrashChoosingNode(), 1))
+            choices = if (recoverModel.nonSystemCrashSupported())
+                listOf(Choice(SwitchChoosingNode(), 0), Choice(CrashChoosingNode(true), 1), Choice(CrashChoosingNode(false), 2))
+            else
+                listOf(Choice(SwitchChoosingNode(), 0), Choice(CrashChoosingNode(true), 1))
         }
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
@@ -266,6 +274,7 @@ internal class ModelCheckingStrategy(
         private val switchPositions: List<Int>,
         private val crashPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
+        private val nonSystemCrashes: List<Int>,
         private var lastNotInitializedNode: InterleavingTreeNode?
     ) {
         private lateinit var interleavingFinishingRandom: Random
@@ -307,6 +316,7 @@ internal class ModelCheckingStrategy(
 
         fun isSwitchPosition() = executionPosition in switchPositions
         fun isCrashPosition() = executionPosition in crashPositions
+        fun isSystemCrash() = executionPosition !in nonSystemCrashes
 
         /**
          * Creates a new execution position that corresponds to the current switch/crash point.
@@ -341,6 +351,7 @@ internal class ModelCheckingStrategy(
         private val switchPositions = mutableListOf<Int>()
         private val crashPositions = mutableListOf<Int>()
         private val threadSwitchChoices = mutableListOf<Int>()
+        private val nonSystemCrashes = mutableListOf<Int>()
         private var lastNoninitializedNode: InterleavingTreeNode? = null
 
         val numberOfEvents get() = switchPositions.size + crashPositions.size
@@ -353,15 +364,16 @@ internal class ModelCheckingStrategy(
             threadSwitchChoices.add(iThread)
         }
 
-        fun addCrashPosition(crashPosition: Int) {
+        fun addCrashPosition(crashPosition: Int, isSystemCrash: Boolean) {
             crashPositions.add(crashPosition)
+            if (!isSystemCrash) nonSystemCrashes.add(crashPosition)
         }
 
         fun addLastNoninitializedNode(lastNoninitializedNode: InterleavingTreeNode) {
             this.lastNoninitializedNode = lastNoninitializedNode
         }
 
-        fun build() = Interleaving(switchPositions, crashPositions, threadSwitchChoices, lastNoninitializedNode)
+        fun build() = Interleaving(switchPositions, crashPositions, threadSwitchChoices, nonSystemCrashes, lastNoninitializedNode)
     }
 
     private enum class ExplorationNodeType {
