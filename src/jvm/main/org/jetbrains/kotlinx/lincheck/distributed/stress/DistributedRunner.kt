@@ -83,7 +83,7 @@ open class DistributedRunner<Message, Log>(
         exception.lazySet(null)
         context.reset()
         environments = Array(numberOfNodes) {
-            EnvironmentImpl(context, it)
+            EnvironmentImpl(context, it, context.dispatchers[it])
         }
         context.testInstances = Array(numberOfNodes) {
             context.addressResolver[it].getConstructor(Environment::class.java)
@@ -168,55 +168,47 @@ open class DistributedRunner<Message, Log>(
     }
 
     private suspend fun receiveMessages(i: Int, sender: Int) {
-        coroutineScope {
-            val channel = context.messageHandler[sender, i]
-            val testInstance = context.testInstances[i]
-            while (true) {
-                val m = channel.receive()
-                launch {
-                    context.incClock(i)
-                    val clock = context.maxClock(i, m.clock)
-                    context.events.put(
-                        i to
-                                MessageReceivedEvent(
-                                    m.message,
-                                    sender = sender,
-                                    id = m.id,
-                                    clock = clock,
-                                    state = context.getStateRepresentation(i)
-                                )
-                    )
-                    handleException(i) {
-                        testInstance.onMessage(m.message, sender)
-                    }
-                }
-                withProbability(CONTEXT_SWITCH_PROBABILITY) {
-                    yield()
-                }
+        val channel = context.messageHandler[sender, i]
+        val testInstance = context.testInstances[i]
+        while (true) {
+            val m = channel.receive()
+            context.incClock(i)
+            val clock = context.maxClock(i, m.clock)
+            context.events.put(
+                i to
+                        MessageReceivedEvent(
+                            m.message,
+                            sender = sender,
+                            id = m.id,
+                            clock = clock,
+                            state = context.getStateRepresentation(i)
+                        )
+            )
+            handleException(i) {
+                testInstance.onMessage(m.message, sender)
+            }
+            withProbability(CONTEXT_SWITCH_PROBABILITY) {
+                yield()
             }
         }
     }
 
     private suspend fun receiveUnavailableNodes(i: Int) {
-        coroutineScope {
-            val channel = context.failureNotifications[i]
-            val testInstance = context.testInstances[i]
-            while (true) {
-                val p = channel.receive()
-                context.incClock(i)
-                val clock = context.maxClock(i, p.second)
-                context.events.put(
-                    i to CrashNotificationEvent(
-                        p.first,
-                        clock,
-                        context.testInstances[i].stateRepresentation()
-                    )
+        val channel = context.failureNotifications[i]
+        val testInstance = context.testInstances[i]
+        while (true) {
+            val p = channel.receive()
+            context.incClock(i)
+            val clock = context.maxClock(i, p.second)
+            context.events.put(
+                i to CrashNotificationEvent(
+                    p.first,
+                    clock,
+                    context.testInstances[i].stateRepresentation()
                 )
-                launch {
-                    handleException(i) {
-                        testInstance.onNodeUnavailable(p.first)
-                    }
-                }
+            )
+            handleException(i) {
+                testInstance.onNodeUnavailable(p.first)
             }
         }
     }
@@ -313,12 +305,12 @@ open class DistributedRunner<Message, Log>(
             val logs = environments[iNode].log.toMutableList()
             context.messageHandler.reset(iNode)
             context.failureNotifications[iNode] = Channel(UNLIMITED)
-            environments[iNode] = EnvironmentImpl(context, iNode, logs)
+            val dispatcher = NodeDispatcher(iNode, context.taskCounter, runnerHash, context.executors[iNode])
+            environments[iNode] = EnvironmentImpl(context, iNode, dispatcher, logs)
             context.testInstances[iNode] =
                 context.addressResolver[iNode].getConstructor(Environment::class.java)
                     .newInstance(environments[iNode]) as Node<Message>
             context.testNodeExecutions.getOrNull(iNode)?.testInstance = context.testInstances[iNode]
-            val dispatcher = NodeDispatcher(iNode, context.taskCounter, runnerHash, context.executors[iNode])
             context.dispatchers[iNode] = dispatcher
             dispatcher.createScope().launch {
                 context.events.put(

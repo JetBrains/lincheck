@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
 import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import kotlin.coroutines.CoroutineContext
 
 class MCEnvironmentImpl<Message, Log>(
     override val nodeId: Int,
@@ -29,12 +30,15 @@ class MCEnvironmentImpl<Message, Log>(
     override val log: MutableList<Log> = mutableListOf(),
     val context: ModelCheckingContext<Message, Log>
 ) : Environment<Message, Log> {
+    override val coroutineContext: CoroutineContext
+        get() = context.runner.dispatcher
+
     var isFinished = true
     override fun getAddressesForClass(cls: Class<out Node<Message>>): List<Int>? = context.addressResolver[cls]
 
     val lastPriorities = Array(numberOfNodes) { 0 }
 
-    override suspend fun send(message: Message, receiver: Int) {
+    override fun send(message: Message, receiver: Int) {
         if (!context.nodeCrashInfo.canSend(nodeId, receiver)) return
         val clock = context.incClockAndCopy(nodeId)
         val event = MessageSentEvent(
@@ -52,7 +56,8 @@ class MCEnvironmentImpl<Message, Log>(
             val newClock = context.incClockAndCopy(nodeId)
             context.runner.addTask(NodeCrashTask(nodeId, VectorClock(newClock), "Crash node $nodeId") {
                 context.events.add(nodeId to NodeCrashEvent(newClock, context.getStateRepresentation(nodeId)))
-                val tasksToRemove = context.runner.tasks.filter { it.value.iNode == nodeId && it.key != taskId }.map { it.key }
+                val tasksToRemove =
+                    context.runner.tasks.filter { it.value.iNode == nodeId && it.key != taskId }.map { it.key }
                 tasksToRemove.forEach { context.runner.tasks.remove(it) }
                 if (context.testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
                     context.testNodeExecutions.getOrNull(nodeId)?.crashRemained()

@@ -112,7 +112,7 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
         }
     }
 
-    override suspend fun recover() {
+    override fun recover() {
         val id = env.log.filterIsInstance(OpId::class.java).lastOrNull()?.id ?: -1
         opId = id + 1
         env.broadcast(Recover)

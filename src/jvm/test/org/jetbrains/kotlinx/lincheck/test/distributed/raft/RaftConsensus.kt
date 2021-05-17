@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.test.distributed.replicas.LeaderNode
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import kotlin.random.Random
@@ -35,14 +36,14 @@ data class RVote(val votedFor: Int?) : RLog()
 
 class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
     companion object {
-        const val HEARTBEAT_RATE = 50
+        const val HEARTBEAT_RATE = 10
         const val MISSED_HEARTBEAT_LIMIT = 5
     }
 
     private var term = 0
     private var missedHeartbeat = 0
-    private var leader: Int? = null
-    private var status = NodeStatus.FOLLOWER
+    private var leader: Int? = 0
+    private var status = if (env.nodeId != leader) NodeStatus.FOLLOWER else NodeStatus.LEADER
     private val random = Random(env.nodeId)
     private var votedFor: Int? = null
     private val electionSignal = Signal()
@@ -167,8 +168,12 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
 
     override fun onStart() {
         env.recordInternalEvent("Set check on start")
-        env.setTimer("CHECK", HEARTBEAT_RATE) {
+        if (status == NodeStatus.FOLLOWER) env.setTimer("CHECK", HEARTBEAT_RATE) {
             checkTimer()
+        } else {
+            env.setTimer("HEARTBEAT", HEARTBEAT_RATE) {
+                env.broadcast(RHeartbeat(term))
+            }
         }
     }
 
@@ -226,7 +231,7 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
         env.recordInternalEvent("Start election")
         while (true) {
             val currentTerm = term
-            val timeToSleep = random.nextInt(env.numberOfNodes * 100)
+            val timeToSleep = random.nextInt(env.numberOfNodes * 10)
             env.recordInternalEvent("Time to sleep is $timeToSleep, saved term is $currentTerm")
             sleepSignal = Signal()
             val shouldQuit = env.withTimeout(timeToSleep) {
@@ -240,7 +245,8 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
                         env.setTimer("CHECK", HEARTBEAT_RATE) {
                             checkTimer()
                         }
-                    } catch(_: IllegalArgumentException) {}
+                    } catch (_: IllegalArgumentException) {
+                    }
                 }
                 env.recordInternalEvent("Exit election")
                 return
@@ -269,7 +275,9 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
         }
     }
 
-    override suspend fun recover() {
+    override fun recover() {
+        leader = null
+        status = NodeStatus.FOLLOWER
         term = env.log.filterIsInstance<RTerm>().lastOrNull()?.term ?: 0
         votedFor = env.log.filterIsInstance<RVote>().lastOrNull()?.votedFor
     }
@@ -298,7 +306,8 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
 
     @Validate
     fun validate() {
-        val t = env.events()[env.nodeId].filterIsInstance<InternalEvent>().filter { it.message == "Operations over" }.size
+        val t =
+            env.events()[env.nodeId].filterIsInstance<InternalEvent>().filter { it.message == "Operations over" }.size
         check(t <= 1)
     }
 }
@@ -309,9 +318,8 @@ class RaftConsensusTest {
         .threads(5)
         .actorsPerThread(5)
         .invocationTimeout(10_000)
-        .invocationsPerIteration(200)
+        .invocationsPerIteration(500)
         .iterations(10)
-        .invocationTimeout(10_000)
         .verifier(EpsilonVerifier::class.java)
         .storeLogsForFailedScenario("raft_simple.txt")
 

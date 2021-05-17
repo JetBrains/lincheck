@@ -22,11 +22,13 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import kotlin.coroutines.CoroutineContext
 
 
 internal class EnvironmentImpl<Message, Log>(
     val context: DistributedRunnerContext<Message, Log>,
     override val nodeId: Int,
+    override val coroutineContext: CoroutineContext,
     override val log: MutableList<Log> = mutableListOf()
 ) :
     Environment<Message, Log> {
@@ -42,7 +44,7 @@ internal class EnvironmentImpl<Message, Log>(
 
     override fun getAddressesForClass(cls: Class<out Node<Message>>) = context.addressResolver[cls]
 
-    override suspend fun send(message: Message, receiver: Int) {
+    override fun send(message: Message, receiver: Int) {
         if (isFinished) {
             return
         }
@@ -115,7 +117,7 @@ internal class EnvironmentImpl<Message, Log>(
                 context.testInstances[nodeId].stateRepresentation()
             )
         )
-        GlobalScope.launch(context.dispatchers[nodeId] + CoroutineExceptionHandler { _, _ -> }) {
+        GlobalScope.launch(coroutineContext + CoroutineExceptionHandler { _, _ -> }) {
             while (true) {
                 if (!timers.contains(name) || isFinished) return@launch
                 context.events.put(

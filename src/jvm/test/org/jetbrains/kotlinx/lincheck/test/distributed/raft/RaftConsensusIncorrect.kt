@@ -252,7 +252,7 @@ class RaftConsensusIncorrect(val env: Environment<RMessage, Int>) : Node<RMessag
         }
     }
 
-    override suspend fun recover() {
+    override fun recover() {
         term = env.log.lastOrNull() ?: 0
     }
 

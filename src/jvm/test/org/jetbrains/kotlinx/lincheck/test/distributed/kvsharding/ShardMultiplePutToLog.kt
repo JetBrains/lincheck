@@ -87,7 +87,7 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         }
     }
 
-    override suspend fun recover() {
+    override fun recover() {
         val id = env.log.filterIsInstance(OpIdEntry::class.java).lastOrNull()?.id ?: -1
         opId = id + 1
         env.broadcast(Recover)

@@ -1,6 +1,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.CoroutineScope
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Environment interface for communication with other processes.
@@ -24,13 +25,13 @@ interface Environment<Message, Log> {
     /**
      * Sends the specified [message] to the process [receiver] (from 0 to [numberOfNodes]).
      */
-    suspend fun send(message: Message, receiver: Int)
+    fun send(message: Message, receiver: Int)
 
     /**
      * Sends the specified [message] to all processes (from 0 to
      * [numberOfNodes]).
      */
-    suspend fun broadcast(message: Message, skipItself: Boolean = true) {
+    fun broadcast(message: Message, skipItself: Boolean = true) {
         for (i in 0 until numberOfNodes) {
             if (i == nodeId && skipItself) {
                 continue
@@ -84,6 +85,8 @@ interface Environment<Message, Log> {
      * [message] is stored in [InternalEvent.message].
      */
     fun recordInternalEvent(message: String)
+
+    val coroutineContext: CoroutineContext
 }
 
 /**

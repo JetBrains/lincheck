@@ -60,7 +60,7 @@ class Client(val env: Environment<Message, Unit>) : Node<Message> {
         signal.signal()
     }
 
-    override suspend fun onNodeUnavailable(iNode: Int) {
+    override fun onNodeUnavailable(iNode: Int) {
         if (iNode == receiver) signal.signal()
     }
 

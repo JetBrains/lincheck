@@ -12,12 +12,12 @@ interface Node<Message> {
     /**
      * Called when the node restarts after failure.
      */
-    suspend fun recover() {}
+    fun recover() {}
 
     /**
      * Called when the node receives notification about failure of [iNode]
      */
-    suspend fun onNodeUnavailable(iNode: Int) {}
+    fun onNodeUnavailable(iNode: Int) {}
 
     /**
      * Called at the beginning of a node execution.

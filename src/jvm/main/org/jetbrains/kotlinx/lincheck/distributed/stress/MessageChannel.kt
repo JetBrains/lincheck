@@ -28,7 +28,7 @@ import java.util.concurrent.ThreadLocalRandom
 
 
 interface MessageChannel<E> {
-    suspend fun send(item: E)
+    fun send(item: E)
 
     suspend fun receive(): E
 
@@ -38,8 +38,8 @@ interface MessageChannel<E> {
 class FifoChannel<E> : MessageChannel<E> {
     private val channel = Channel<E>(UNLIMITED)
 
-    override suspend fun send(item: E) {
-        channel.send(item)
+    override fun send(item: E) {
+        channel.offer(item)
     }
 
     override suspend fun receive() : E {
@@ -52,14 +52,14 @@ class FifoChannel<E> : MessageChannel<E> {
 
 class AsynchronousChannel<E> : MessageChannel<E> {
     companion object {
-        const val MIX_RATE = 2
+        const val MIX_RATE = 3
     }
 
     private val random: ThreadLocalRandom = ThreadLocalRandom.current()
     private val channel = Channel<E>(UNLIMITED)
 
-    override suspend fun send(item: E) {
-        channel.send(item)
+    override fun send(item: E) {
+        channel.offer(item)
     }
 
     override suspend fun receive(): E {

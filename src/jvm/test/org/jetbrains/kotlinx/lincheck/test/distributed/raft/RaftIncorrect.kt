@@ -344,7 +344,7 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
         }
     }
 
-    override suspend fun recover() {
+    override fun recover() {
         currentLeader = null
         currentTerm = storage.getLastTerm()
         env.setTimer("CHECK", HEARTBEAT_RATE) {

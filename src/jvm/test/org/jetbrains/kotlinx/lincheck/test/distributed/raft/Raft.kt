@@ -589,7 +589,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         }
     }
 
-    override suspend fun recover() {
+    override fun recover() {
         term = storage.getTerm()
         votedFor = storage.getVotedFor()
         opId = storage.getOpId()
