@@ -78,8 +78,8 @@ class DistributedModelCheckingRunner<Message, Log>(
 
     fun isFullyExplored() = root.isFullyExplored
 
-    fun addTask(task: Task) {
-        val taskId = context.tasksId++
+    fun addTask(task: Task, id: Int? = null) {
+        val taskId = id ?: context.tasksId++
         //println("New task id $taskId $iNode $parentClock")
         //println("iNode=$iNode taskId=${taskId} curNode=${curTreeNode!!.taskId}")
         check(!tasks.containsKey(taskId))
@@ -109,7 +109,7 @@ class DistributedModelCheckingRunner<Message, Log>(
         curTreeNode = root
         path.clear()
         tasks.clear()
-        builder = InterleavingTreeBuilder(maxNumberOfErrors, 0)
+        builder = InterleavingTreeBuilder(maxNumberOfErrors - numberOfFailures, numberOfFailures)
         context.reset()
         environments = Array(numberOfNodes) {
             MCEnvironmentImpl(it, numberOfNodes, context = context)
@@ -189,7 +189,7 @@ class DistributedModelCheckingRunner<Message, Log>(
         //println("Task keys ${tasks.keys}")
     }
 
-    fun nextTransition() : Int? {
+    fun nextTransition(): Int? {
         if (curTreeNode == null) return null
         val curTaskId = curTreeNode!!.id
         val index = interleaving!!.path.indexOf(curTaskId)
@@ -215,7 +215,7 @@ class DistributedModelCheckingRunner<Message, Log>(
             //println("Task keys ${tasks.keys}")
             interleaving = root.chooseNextInterleaving(builder)
             path.add(curTreeNode!!)
-            //println("path=${interleaving!!.path}")
+            debugLogs.add("path=${interleaving!!.path}")
             try {
                 for (next in interleaving!!.path) {
                     //println(next)
@@ -228,21 +228,26 @@ class DistributedModelCheckingRunner<Message, Log>(
                     //println("Next $next")
                     if (next == null) {
                         var up = curTreeNode
+                        println("Filtered tasks ${up?.allNotChecked}")
                         try {
                             while (!tasks.any { it.key in up!!.parent!!.nextPossibleTasksIds }) {
+                                println("Up ${up?.task} ${up?.id}")
                                 up = up!!.parent
                             }
                         } catch (e: NullPointerException) {
-                            println("Up $up")
+                            //println("Up $up")
                             bfsPrint()
                             println("Tasks $tasks")
                             exception = e
                             return@launch
                         }
+                        println("Up parent ${up?.parent?.task} ${up?.parent?.id}")
+                        check(up!!.task !is NodeCrashTask)
                         counter++
-                        //println("Remove ${up!!.id} from ${up.parent!!.id}")
+                        println("Remove ${up!!.id} from ${up.parent!!.id}")
                         up!!.parent!!.nextPossibleTasksIds.remove(up.id)
                         up!!.parent!!.children.remove(up.id)
+
                         while (tasks.isNotEmpty()) {
                             val next = tasks.minOfOrNull { it.key }!!
                             signal = Signal()
@@ -295,8 +300,17 @@ class DistributedModelCheckingRunner<Message, Log>(
         }
         //println("Current tree")
         //bfsPrint()
+        if (isInterrupted) {
+           // bfsPrint()
+        }
         if (!isInterrupted && root.isExploredNow()) {
-            maxNumberOfErrors++
+            if (numberOfFailures == maxNumberOfErrors ||
+                (numberOfFailures == context.nodeCrashInfo.maxNumberOfFailedNodes && testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES)) {
+                maxNumberOfErrors++
+                numberOfFailures = 0
+            } else {
+                numberOfFailures++
+            }
         }
         if (!isInterrupted) {
             path.reversed().forEach { it.updateStats() }

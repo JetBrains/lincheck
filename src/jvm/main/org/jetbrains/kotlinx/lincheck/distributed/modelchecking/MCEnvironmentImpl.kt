@@ -35,7 +35,7 @@ class MCEnvironmentImpl<Message, Log>(
     val lastPriorities = Array(numberOfNodes) { 0 }
 
     override suspend fun send(message: Message, receiver: Int) {
-
+        if (!context.nodeCrashInfo.canSend(nodeId, receiver)) return
         val clock = context.incClockAndCopy(nodeId)
         val event = MessageSentEvent(
             message = message,
@@ -48,18 +48,19 @@ class MCEnvironmentImpl<Message, Log>(
         context.runner.curTreeNode!!.addMessage(event.id, taskId)
         val nextTransition = context.runner.nextTransition()
         if (nextTransition == taskId) {
+            println("[$nodeId]: Fail $taskId")
             val newClock = context.incClockAndCopy(nodeId)
             context.runner.addTask(NodeCrashTask(nodeId, VectorClock(newClock), "Crash node $nodeId") {
                 context.events.add(nodeId to NodeCrashEvent(newClock, context.getStateRepresentation(nodeId)))
-                val tasksToRemove = context.runner.tasks.filter { it.value.iNode == nodeId }.map { it.key }
+                val tasksToRemove = context.runner.tasks.filter { it.value.iNode == nodeId && it.key != taskId }.map { it.key }
                 tasksToRemove.forEach { context.runner.tasks.remove(it) }
                 if (context.testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
                     context.testNodeExecutions.getOrNull(nodeId)?.crashRemained()
                 }
-            })
+            }, taskId)
         }
-        debugLogs.add("[$nodeId]: Send $message ${event.id} ${context.runner.curTreeNode?.id}")
-        //println(debugLogs.last())
+        debugLogs.add("[$nodeId]: Send $message to $receiver ${event.id} ${context.runner.curTreeNode?.id}")
+        println(debugLogs.last())
         context.events.add(nodeId to event)
 
         context.runner.addTask(
@@ -69,7 +70,7 @@ class MCEnvironmentImpl<Message, Log>(
                 "[$receiver]: Receive $message ${event.id}"
             ) {
                 debugLogs.add("[$receiver]: Receive $message ${event.id} ${context.runner.curTreeNode?.id}")
-                //println(debugLogs.last())
+                println(debugLogs.last())
                 context.incClock(receiver)
                 val newclock = context.maxClock(receiver, clock)
                 context.events.add(

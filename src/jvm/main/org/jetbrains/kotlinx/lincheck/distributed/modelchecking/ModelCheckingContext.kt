@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Event
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.NodeAddressResolver
 import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner
+import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeCrashInfo
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
 import java.util.*
@@ -69,6 +70,8 @@ class ModelCheckingContext<Message, Log>(
         return vectorClock[iNode].copyOf()
     }
 
+    var nodeCrashInfo = NodeCrashInfo(testCfg, this)
+
     val invocation = 0
 
     lateinit var logs: Array<List<Log>>
@@ -76,6 +79,7 @@ class ModelCheckingContext<Message, Log>(
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 
     fun reset() {
+        nodeCrashInfo = NodeCrashInfo(testCfg, this)
         tasksId = 0
         messageId = 0
         logs = Array(addressResolver.totalNumberOfNodes) {

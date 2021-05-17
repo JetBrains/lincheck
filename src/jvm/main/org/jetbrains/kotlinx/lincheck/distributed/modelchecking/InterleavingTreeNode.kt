@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
+import org.jetbrains.kotlinx.lincheck.distributed.NodeFailureInfo
 
 /**
  * An abstract node with an execution choice in the interleaving tree.
@@ -238,8 +239,10 @@ data class InterleavingTreeNode(
         check(nextPossibleTasksIds.isEmpty())
         val currentTask = currentTasks[id]!!
         currentTasks.filter { it.value is OperationTask }.forEach { operations[it.key] = it.value.iNode }
-        val tasksToCheck = currentTasks.filter {
+        val tasksToCheck = if (task !is NodeCrashTask) currentTasks.filter {
             it.key != id && currentTask.goesBefore(it.value)
+        } else {
+            currentTasks.filter { it.key != id }
         }
         //println("Tasks to check $tasksToCheck")
         nextPossibleTasksIds.addAll(if (context.testCfg.messageOrder == MessageOrder.FIFO) tasksToCheck.filter { t ->
@@ -290,7 +293,8 @@ data class InterleavingTreeNode(
             if (notTriedFailures.isNotEmpty()) {
                 val next = notTriedFailures.random(context.generatingRandom)
                 //println("Add inversion")
-                builder.numberOfInversions++
+                println("Add failure $next $id ${children.keys}")
+                builder.numberOfFailures++
                 builder.addNextTransition(next)
                 return builder.build()
             }
