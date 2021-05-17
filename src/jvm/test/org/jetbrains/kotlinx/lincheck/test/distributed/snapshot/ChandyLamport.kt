@@ -36,6 +36,7 @@ import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.Counter
 import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.LamportMutex
 import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.MutexMessage
 import org.junit.Test
+import java.lang.Math.abs
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
@@ -119,9 +120,9 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun transaction(sum: Int) {
-        if (env.numberOfNodes == 1) return
-        val receiver = sum % env.numberOfNodes
+    suspend fun transaction(to: Int, sum: Int) {
+        val receiver = kotlin.math.abs(to) % env.numberOfNodes
+        if (receiver == env.nodeId) return
         currentSum.getAndAdd(-sum)
         env.log.add(OpStateSend(currentSum.value, sum))
         env.send(Transaction(sum), receiver)
@@ -159,7 +160,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
 
 class MockSnapshot {
     @Operation()
-    suspend fun transaction(sum: Int) {
+    suspend fun transaction(to: Int, sum: Int) {
     }
 
     @Operation

@@ -130,23 +130,29 @@ class AlreadyIncrementedCounter : AbstractCoroutineContextElement(Key) {
     companion object Key : CoroutineContext.Key<AlreadyIncrementedCounter>
 }
 
+class InvocationContext : AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<InvocationContext>
+}
+
 /**
  * The dispatcher for executing task related to a single [Node] inside [org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner].
  */
-class NodeDispatcher(val id: Int, private val taskCounter: DispatcherTaskCounter, private val runnerHash: Int) :
+class NodeDispatcher(val id: Int,
+                     private val taskCounter: DispatcherTaskCounter,
+                     private val runnerHash: Int,
+                     private val executor: ExecutorService) :
     CoroutineDispatcher() {
     companion object {
         enum class NodeDispatcherStatus { RUNNING, STOPPED, CRASHED }
     }
 
     private val status = atomic(RUNNING)
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor { r -> NodeTestThread(id, runnerHash, r) }
 
     /**
      * Thread to run tasks related to a specified node.
      */
-    inner class NodeTestThread(val iThread: Int, val runnerHash: Int, r: Runnable) :
-        Thread(r, "NodeExecutor@$runnerHash-$iThread-${this@NodeDispatcher.hashCode()}")
+    class NodeTestThread(val iThread: Int, val runnerHash: Int, r: Runnable) :
+        Thread(r, "NodeExecutor@$runnerHash-$iThread")
 
     /**
      * Executed a given [block]. The task counter is incremented if necessary when the task is submitted and
@@ -182,6 +188,6 @@ class NodeDispatcher(val id: Int, private val taskCounter: DispatcherTaskCounter
      */
     fun shutdown() {
         status.lazySet(STOPPED)
-        executor.shutdown()
+       // executor.shutdown()
     }
 }

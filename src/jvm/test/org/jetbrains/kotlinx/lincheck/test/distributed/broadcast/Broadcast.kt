@@ -137,6 +137,7 @@ class BroadcastTest {
             createOptions()
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .supportRecovery(RecoveryMode.NO_RECOVERIES)
+                .storeLogsForFailedScenario("broadcast.txt")
         )
     }
 

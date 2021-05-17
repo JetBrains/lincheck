@@ -32,6 +32,8 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
 import java.lang.Integer.max
 import java.lang.reflect.Method
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 
 class DistributedRunnerContext<Message, Log>(
@@ -91,6 +93,10 @@ class DistributedRunnerContext<Message, Log>(
         Probability(testCfg, this, it)
     }
 
+    val executors = Array<ExecutorService>(addressResolver.totalNumberOfNodes) {
+        Executors.newSingleThreadExecutor { r -> NodeDispatcher.NodeTestThread(it, runnerHash, r) }
+    }
+
     val crashInfo = atomic(NodeCrashInfo.initialInstance(testCfg, this))
 
     val initialNumberOfTasks =
@@ -105,7 +111,7 @@ class DistributedRunnerContext<Message, Log>(
         crashInfo.lazySet(NodeCrashInfo.initialInstance(testCfg, this))
         taskCounter = DispatcherTaskCounter(initialNumberOfTasks)
         dispatchers = Array(addressResolver.totalNumberOfNodes) {
-            NodeDispatcher(it, taskCounter, runnerHash)
+            NodeDispatcher(it, taskCounter, runnerHash, executors[it])
         }
         logs = Array(addressResolver.totalNumberOfNodes) {
             emptyList()

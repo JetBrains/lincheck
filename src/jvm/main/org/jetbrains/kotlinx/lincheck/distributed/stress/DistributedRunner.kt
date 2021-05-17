@@ -173,19 +173,19 @@ open class DistributedRunner<Message, Log>(
             val testInstance = context.testInstances[i]
             while (true) {
                 val m = channel.receive()
-                context.incClock(i)
-                val clock = context.maxClock(i, m.clock)
-                context.events.put(
-                    i to
-                            MessageReceivedEvent(
-                                m.message,
-                                sender = sender,
-                                id = m.id,
-                                clock = clock,
-                                state = context.getStateRepresentation(i)
-                            )
-                )
                 launch {
+                    context.incClock(i)
+                    val clock = context.maxClock(i, m.clock)
+                    context.events.put(
+                        i to
+                                MessageReceivedEvent(
+                                    m.message,
+                                    sender = sender,
+                                    id = m.id,
+                                    clock = clock,
+                                    state = context.getStateRepresentation(i)
+                                )
+                    )
                     handleException(i) {
                         testInstance.onMessage(m.message, sender)
                     }
@@ -318,7 +318,7 @@ open class DistributedRunner<Message, Log>(
                 context.addressResolver[iNode].getConstructor(Environment::class.java)
                     .newInstance(environments[iNode]) as Node<Message>
             context.testNodeExecutions.getOrNull(iNode)?.testInstance = context.testInstances[iNode]
-            val dispatcher = NodeDispatcher(iNode, context.taskCounter, runnerHash)
+            val dispatcher = NodeDispatcher(iNode, context.taskCounter, runnerHash, context.executors[iNode])
             context.dispatchers[iNode] = dispatcher
             dispatcher.createScope().launch {
                 context.events.put(
@@ -363,5 +363,10 @@ open class DistributedRunner<Message, Log>(
                 out.println("${p.first} # ${p.second}")
             }
         }
+    }
+
+    override fun close() {
+        super.close()
+        context.executors.forEach { it.shutdown() }
     }
 }
