@@ -25,6 +25,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.random.Random
 
 
 interface MessageChannel<E> {
@@ -52,10 +53,10 @@ class FifoChannel<E> : MessageChannel<E> {
 
 class AsynchronousChannel<E> : MessageChannel<E> {
     companion object {
-        const val MIX_RATE = 3
+        const val MIX_RATE = 1
     }
 
-    private val random: ThreadLocalRandom = ThreadLocalRandom.current()
+    private val random: ThreadLocal<Random> = Probability.rand
     private val channel = Channel<E>(UNLIMITED)
 
     override fun send(item: E) {
@@ -64,7 +65,7 @@ class AsynchronousChannel<E> : MessageChannel<E> {
 
     override suspend fun receive(): E {
         var item = channel.receive()
-        val mixRate = random.nextInt(0, MIX_RATE)
+        val mixRate = random.get().nextInt(0, MIX_RATE + 1)
         repeat(mixRate) {
             channel.send(item)
             item = channel.poll()!!

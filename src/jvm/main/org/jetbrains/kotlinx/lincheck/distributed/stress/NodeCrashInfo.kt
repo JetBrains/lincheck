@@ -44,6 +44,8 @@ class NodeCrashInfo(
 
     val maxNumberOfFailedNodes = testCfg.maxNumberOfFailedNodes(context.addressResolver.totalNumberOfNodes)
 
+    val remainedNodes = maxNumberOfFailedNodes - numberOfFailedNodes
+
     fun canSend(a: Int, b: Int): Boolean {
         return (partitions[0].contains(a) && partitions[0].contains(b) ||
                 partitions[1].contains(a) && partitions[1].contains(b))

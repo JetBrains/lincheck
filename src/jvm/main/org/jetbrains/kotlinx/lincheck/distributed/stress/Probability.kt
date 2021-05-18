@@ -55,6 +55,8 @@ class Probability(
 
     private val numberOfNodes: Int = context.addressResolver.totalNumberOfNodes
 
+    var nextFails = 0
+
     fun duplicationRate(): Int {
         if (!messageIsSent()) {
             return 0
@@ -72,13 +74,23 @@ class Probability(
         return rand.get().nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
     }
 
-    fun nodeFailed(): Boolean {
+    fun nodeFailed(maxNumCanFail : Int): Boolean {
+        if (maxNumCanFail == 0) {
+            nextFails = 0
+            return false
+        }
+        if (nextFails > 0) {
+            nextFails--
+            return true
+        }
         val r = rand.get().nextDouble(1.0)
         val p = nodeFailProbability()
         if (r < p) addToFile {
             it.appendLine("[$iNode]: $curMsgCount")
         }
-        return r < p
+        if (r >= p) return false
+        nextFails = rand.get().nextInt(1, maxNumCanFail + 1) - 1
+        return true
     }
 
     fun nodeRecovered(): Boolean = rand.get().nextDouble(1.0) < NODE_RECOVERY_PROBABILITY

@@ -245,11 +245,11 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         check(status == NodeStatus.LEADER)
         if (!responseCounts.contains(msg.logNumber)) return
         responseCounts[msg.logNumber] = responseCounts[msg.logNumber]!! + 1
-        println("In response ${responseCounts[msg.logNumber]}")
+        //println("In response ${responseCounts[msg.logNumber]}")
         if (responseCounts[msg.logNumber]!! < quorum) return
         val reqId = storage.commit(msg.logNumber)!!
         env.send(RKVPutResponse(term = term, opId = reqId.opId), reqId.client)
-        println("Last committed entry ${storage.getLastCommittedEntry()}")
+        //println("Last committed entry ${storage.getLastCommittedEntry()}")
         env.broadcast(RKVHeartbeat(term, storage.getLastCommittedEntry()))
     }
 
@@ -623,7 +623,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         val t =
             env.events()[env.nodeId].filterIsInstance<InternalEvent>().filter { it.message == "Operations over" }.size
         check(t <= 1)
-        println(env.log.filterIsInstance<RKVLog>())
+        //println(env.log.filterIsInstance<RKVLog>())
     }
 }
 
@@ -661,15 +661,7 @@ class RaftTest {
             Raft::class.java,
             createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
                 .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
-                .minimizeFailedScenario(false)
-        )
-    }
-
-    @Test
-    fun testMessageLost() {
-        LinChecker.check(
-            Raft::class.java,
-            createOptions().networkReliable(false)
+              //  .minimizeFailedScenario(false)
         )
     }
 

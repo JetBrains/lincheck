@@ -51,7 +51,7 @@ internal class EnvironmentImpl<Message, Log>(
         probability.curMsgCount++
         if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
             context.addressResolver.canFail(nodeId) &&
-            probability.nodeFailed() &&
+            probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
             context.crashNode(nodeId)
         ) {
             throw CrashError()
