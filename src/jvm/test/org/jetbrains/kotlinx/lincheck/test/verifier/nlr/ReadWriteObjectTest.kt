@@ -154,9 +154,6 @@ private fun actor(method: Method?, vararg a: Any?) = Actor(method!!, a.toMutable
 
 internal class ReadWriteObjectFailingTest1 : ReadWriteObjectFailingTest() {
     override val rwo = NRLFailingReadWriteObject1<Pair<Int, Int>>(THREADS_NUMBER + 2)
-    override fun ModelCheckingOptions.customize() {
-        actorsPerThread(2)
-    }
 }
 
 internal class ReadWriteObjectFailingTest2 : ReadWriteObjectFailingTest() {

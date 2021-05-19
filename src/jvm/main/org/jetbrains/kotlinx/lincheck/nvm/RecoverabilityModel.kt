@@ -114,6 +114,8 @@ interface RecoverabilityModel {
     fun createExecutionCallback(): ExecutionCallback
     fun createProbabilityModel(): ProbabilityModel
     val awaitSystemCrashBeforeThrow: Boolean
+
+    fun nonSystemCrashSupported() = systemCrashProbability() < 1.0
 }
 
 internal object NoRecoverModel : RecoverabilityModel {

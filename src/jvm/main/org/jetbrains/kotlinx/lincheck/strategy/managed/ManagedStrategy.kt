@@ -177,6 +177,8 @@ abstract class ManagedStrategy(
 
     protected abstract fun shouldCrash(iThread: Int): Boolean
 
+    protected abstract fun isSystemCrash(iThread: Int): Boolean
+
     /**
      * Choose a thread to switch from thread [iThread].
      * @return id the chosen thread
@@ -336,7 +338,7 @@ abstract class ManagedStrategy(
         val isSystemCrash = waitingSystemCrash()
         val shouldCrash = shouldCrash(iThread) || isSystemCrash
         if (shouldCrash) {
-            val initializeSystemCrash = !isSystemCrash && Probability.shouldSystemCrash()
+            val initializeSystemCrash = !isSystemCrash && isSystemCrash(iThread)
             if (initializeSystemCrash) {
                 systemCrashInitiator = iThread
             }
