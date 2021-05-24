@@ -27,17 +27,15 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import kotlin.random.Random
 import kotlin.reflect.KClass
 
 private const val THREADS_NUMBER = 3
-private const val N = 3
+private const val N = 3 // change MCASTest#compareAndSet parameter list also
 
 internal interface MCAS {
     operator fun get(index: Int): Int
@@ -45,23 +43,22 @@ internal interface MCAS {
     fun recover()
 }
 
-internal class ListGen(config: String) : ParameterGenerator<List<Int>> {
-    private val used = hashSetOf(List(N) { 0 })
-    override fun generate() =
-        if (Random.nextBoolean()) List(N) { Random.nextInt(2) }.also { used.add(it) }
-        else used.random()
-}
-
-@Param(name = "list", gen = ListGen::class)
-internal class MCASTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class) {
+@Param(name = "01", gen = IntGen::class, conf = "0:1")
+internal class MCASTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class, false) {
     private val cas = DurableMCAS()
 
     @Operation
     fun get(@Param(gen = IntGen::class, conf = "0:${N - 1}") index: Int) = cas[index]
 
     @Operation
-    fun compareAndSet(@Param(name = "list") old: List<Int>, @Param(name = "list") new: List<Int>) =
-        cas.compareAndSet(old, new)
+    fun compareAndSet(
+        @Param(name = "01") o1: Int,
+        @Param(name = "01") o2: Int,
+        @Param(name = "01") o3: Int,
+        @Param(name = "01") n1: Int,
+        @Param(name = "01") n2: Int,
+        @Param(name = "01") n3: Int
+    ) = cas.compareAndSet(listOf(o1, o2, o3), listOf(n1, n2, n3))
 
     @DurableRecoverAll
     fun recover() = cas.recover()
@@ -72,6 +69,9 @@ internal class SequentialMCAS : MCAS, VerifierState() {
     override fun extractState() = data
     override fun get(index: Int) = data[index]
     override fun recover() {}
+    fun compareAndSet(o1: Int, o2: Int, o3: Int, n1: Int, n2: Int, n3: Int) =
+        compareAndSet(listOf(o1, o2, o3), listOf(n1, n2, n3))
+
     override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
         if (!data.indices.all { i -> data[i] == old[i] }) return false
         data.indices.forEach { i -> data[i] = new[i] }
@@ -111,15 +111,16 @@ internal open class DurableMCAS : MCAS {
         while (true) {
             val wd = data[index].value
             val parent = wd.parent
-            if (parent !== self && parent.status.value == Status.ACTIVE) {
+            val status = parent.status.value
+            if (parent !== self && status == Status.ACTIVE) {
                 MCAS(parent)
                 continue
-            } else if (parent.status.value.isDirty()) {
+            } else if (status.isDirty()) {
                 parent.status.flush()
-                parent.status.value = parent.status.value.clean()
+                parent.status.value = status.clean()
                 continue
             }
-            return if (parent.status.value == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
+            return if (status == Status.SUCCESSFUL) wd to wd.new else wd to wd.old
         }
     }
 
@@ -157,7 +158,8 @@ internal open class DurableMCAS : MCAS {
     override fun recover() {
         for (d in data) {
             val parent = d.value.parent
-            if (parent.status.value == Status.ACTIVE) {
+            val status = parent.status.value
+            if (status == Status.ACTIVE) {
                 parent.status.setAndFlush(Status.FAILED)
             } else {
                 parent.status.setAndFlush(parent.status.value.clean())
@@ -166,7 +168,7 @@ internal open class DurableMCAS : MCAS {
     }
 }
 
-@Param(name = "list", gen = ListGen::class)
+@Param(name = "01", gen = IntGen::class, conf = "0:1")
 internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out LincheckFailure>) :
     AbstractNVMLincheckFailingTest(
         Recover.DURABLE,
@@ -180,8 +182,14 @@ internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out Linc
     fun get(@Param(gen = IntGen::class, conf = "0:${N - 1}") index: Int) = cas[index]
 
     @Operation
-    fun compareAndSet(@Param(name = "list") old: List<Int>, @Param(name = "list") new: List<Int>) =
-        cas.compareAndSet(old, new)
+    fun compareAndSet(
+        @Param(name = "01") o1: Int,
+        @Param(name = "01") o2: Int,
+        @Param(name = "01") o3: Int,
+        @Param(name = "01") n1: Int,
+        @Param(name = "01") n2: Int,
+        @Param(name = "01") n3: Int
+    ) = cas.compareAndSet(listOf(o1, o2, o3), listOf(n1, n2, n3))
 
     @DurableRecoverAll
     fun recover() = cas.recover()
@@ -303,16 +311,16 @@ internal class DurableFailingMCAS4 : DurableMCAS() {
                 if (data[index].compareAndSet(content, wd)) break@retry
             }
         }
-        for (wd in data) {
-            // here should be wd.flush()
-        }
+        // here should be
+//        for (wd in data) {
+//            wd.flush()
+//        }
         self.status.compareAndSet(Status.ACTIVE, if (success) Status.SUCCESSFUL_DIRTY else Status.FAILED_DIRTY)
         self.status.flush()
         self.status.value = self.status.value.clean()
         return self.status.value == Status.SUCCESSFUL
     }
 }
-
 
 internal class DurableFailingMCAS5 : DurableMCAS() {
     override fun MCAS(self: MCASDescriptor): Boolean {
