@@ -195,10 +195,10 @@ internal class ModelCheckingStrategy(
     /**
      * Represents a choice of a thread that should be next in the execution.
      */
-    private inner class ThreadChoosingNode(switchableThreads: List<Int>) : InterleavingTreeNode() {
+    private inner class ThreadChoosingNode(switchableThreads: List<Int>, moreCrashes: Boolean = true) : InterleavingTreeNode() {
         init {
             choices = switchableThreads.map {
-                val child = if (recoverModel.crashes) SwitchOrCrashChoosingNode() else SwitchChoosingNode()
+                val child = if (recoverModel.crashes && moreCrashes) SwitchOrCrashChoosingNode() else SwitchChoosingNode()
                 Choice(child, it)
             }
         }
@@ -337,10 +337,13 @@ internal class ModelCheckingStrategy(
             crashPositions.lastOrNull() ?: -1
         )
 
-        private fun createChildNode(iThread: Int) = when (explorationType) {
-            ExplorationNodeType.SWITCH -> ThreadChoosingNode(switchableThreads(iThread))
-            ExplorationNodeType.CRASH -> SwitchOrCrashChoosingNode()
-            ExplorationNodeType.NONE -> error("Cannot create child for no exploration node")
+        private fun createChildNode(iThread: Int): InterleavingTreeNode {
+            val moreCrashesPermitted = crashPositions.size < recoverModel.defaultExpectedCrashes()
+            return when (explorationType) {
+                ExplorationNodeType.SWITCH -> ThreadChoosingNode(switchableThreads(iThread), moreCrashesPermitted)
+                ExplorationNodeType.CRASH -> if (moreCrashesPermitted) SwitchOrCrashChoosingNode() else SwitchChoosingNode()
+                ExplorationNodeType.NONE -> error("Cannot create child for no exploration node")
+            }
         }
 
         fun newExecutionSwitchPosition(iThread: Int) = newExecutionPosition(iThread, ExplorationNodeType.SWITCH)
