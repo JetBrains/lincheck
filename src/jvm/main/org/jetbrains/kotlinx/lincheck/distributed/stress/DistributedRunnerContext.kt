@@ -47,7 +47,7 @@ class DistributedRunnerContext<Message, Log>(
         scenario.threads, testCfg.nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail }
     )
 
-    lateinit var messageHandler: ChannelHandler<MessageSentEvent<Message>>
+    lateinit var messageHandler: ChannelHandler<Pair<Int, MessageSentEvent<Message>>>
 
     lateinit var failureNotifications: Array<Channel<Pair<Int, IntArray>>>
 

@@ -48,6 +48,7 @@ internal class EnvironmentImpl<Message, Log>(
         if (isFinished) {
             return
         }
+        //println("[$nodeId]: Send to ${receiver} ${message}")
         probability.curMsgCount++
         if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
             context.addressResolver.canFail(nodeId) &&
@@ -76,7 +77,7 @@ internal class EnvironmentImpl<Message, Log>(
         context.events.put(nodeId to event)
         val rate = probability.duplicationRate()
         repeat(rate) {
-            context.messageHandler[nodeId, event.receiver].send(event)
+            context.messageHandler[nodeId, event.receiver].send(nodeId to event)
         }
     }
 

@@ -43,7 +43,7 @@ class FifoChannel<E> : MessageChannel<E> {
         channel.offer(item)
     }
 
-    override suspend fun receive() : E {
+    override suspend fun receive(): E {
         val res = channel.receive()
         return res
     }
@@ -83,6 +83,10 @@ class ChannelHandler<E>(
 ) {
     private fun createChannels(): Array<MessageChannel<E>> = when (messageOrder) {
         MessageOrder.FIFO -> Array(numberOfNodes) { FifoChannel() }
+        /*MessageOrder.FIFO -> {
+            val channel = FifoChannel<E>()
+            Array(numberOfNodes) { channel }
+        }*/
         MessageOrder.ASYNCHRONOUS -> Array(numberOfNodes) { AsynchronousChannel() }
     }
 

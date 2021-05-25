@@ -171,21 +171,23 @@ open class DistributedRunner<Message, Log>(
         val channel = context.messageHandler[sender, i]
         val testInstance = context.testInstances[i]
         while (true) {
-            val m = channel.receive()
+            val e = channel.receive()
+            //println("[$i]: Receive from ${e.first} ${e.second.message}")
+            val m = e.second
             context.incClock(i)
             val clock = context.maxClock(i, m.clock)
             context.events.put(
                 i to
                         MessageReceivedEvent(
                             m.message,
-                            sender = sender,
+                            sender = e.first,
                             id = m.id,
                             clock = clock,
                             state = context.getStateRepresentation(i)
                         )
             )
             handleException(i) {
-                testInstance.onMessage(m.message, sender)
+                testInstance.onMessage(m.message, e.first)
             }
             withProbability(CONTEXT_SWITCH_PROBABILITY) {
                 yield()
@@ -217,6 +219,7 @@ open class DistributedRunner<Message, Log>(
         repeat(numberOfNodes) {
             createScope().launch { receiveMessages(i, it) }
         }
+        //createScope().launch { receiveMessages(i, 0) }
     }
 
     private suspend fun runNode(iNode: Int) {
