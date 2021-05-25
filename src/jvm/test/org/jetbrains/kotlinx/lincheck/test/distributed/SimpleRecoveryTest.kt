@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
 class Smoke(val env: Environment<Int, Unit>) : Node<Int> {
-    override suspend fun onMessage(message: Int, sender: Int) {
+    override fun onMessage(message: Int, sender: Int) {
         if (message == 1) {
             env.send(0, sender)
         }

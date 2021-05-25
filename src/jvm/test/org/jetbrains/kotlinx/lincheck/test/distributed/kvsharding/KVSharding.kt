@@ -129,7 +129,7 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
         return (send(request, node) as GetResponse).value
     }
 
-    override suspend fun onMessage(message: KVMessage, sender: Int) {
+    override fun onMessage(message: KVMessage, sender: Int) {
         if (message is Recover) {
             if (sender == delegate) {
                 semaphore.signal()

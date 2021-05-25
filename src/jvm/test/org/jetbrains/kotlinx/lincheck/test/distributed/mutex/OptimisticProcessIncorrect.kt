@@ -40,7 +40,7 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
     private var inCS = false
     private val semaphore = Semaphore(1, 1)
 
-    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+    override fun onMessage(message: MutexMessage, sender: Int) {
         when (message) {
             is Req -> {
                 requested[sender] = true

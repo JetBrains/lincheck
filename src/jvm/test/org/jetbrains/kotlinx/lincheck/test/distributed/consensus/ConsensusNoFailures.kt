@@ -27,7 +27,7 @@ class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message> {
 
     private val semaphore = Semaphore(1, 1)
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Offer -> {
                 val initializer = message.initializer
@@ -46,7 +46,7 @@ class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message> {
         }
     }
 
-    private suspend fun check() {
+    private fun check() {
         // Check if all offers received and we can form the result.
         for (offs in offers) {
             if (offs.size != env.numberOfNodes) continue

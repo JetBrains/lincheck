@@ -35,7 +35,7 @@ object Pong : PingPongMessage()
 class PingPongNode(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage> {
     val semaphore = Semaphore(1, 1)
     var hasResult = false
-    override suspend fun onMessage(message: PingPongMessage, sender: Int) {
+    override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
             is Ping -> env.send(Pong, sender)
             is Pong -> if (semaphore.availablePermits == 0) {

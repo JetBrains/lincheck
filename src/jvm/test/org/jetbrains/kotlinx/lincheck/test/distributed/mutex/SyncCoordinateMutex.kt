@@ -52,7 +52,7 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : No
         }
     }
 
-    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+    override fun onMessage(message: MutexMessage, sender: Int) {
         when (message) {
             is Req -> {
                 check(isCoordinator)
@@ -73,7 +73,7 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : No
         }
     }
 
-    private suspend fun checkCSEnter() {
+    private fun checkCSEnter() {
         if (inCS != -1) return
         val id = queue.pollFirst() ?: return
         inCS = id

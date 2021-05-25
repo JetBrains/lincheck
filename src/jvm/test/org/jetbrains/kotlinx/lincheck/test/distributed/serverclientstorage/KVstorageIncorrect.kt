@@ -33,7 +33,7 @@ class KVStorageServerIncorrect(private val env: Environment<Command, Unit>) : No
         HashMap()
     }
 
-    override suspend fun onMessage(message: Command, sender: Int) {
+    override fun onMessage(message: Command, sender: Int) {
         val id = message.id
         if (commandResults[sender].containsKey(id)) {
             env.send(commandResults[sender][id]!!, sender)
@@ -116,7 +116,7 @@ class KVStorageClientIncorrect(private val environment: Environment<Command, Uni
         return response.res
     }
 
-    override suspend fun onMessage(message: Command, sender: Int) {
+    override fun onMessage(message: Command, sender: Int) {
         queue.add(message)
         signal.signal()
     }

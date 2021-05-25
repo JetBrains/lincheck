@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.test.distributed.replicas.LeaderNode
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import kotlin.random.Random
@@ -62,7 +61,7 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
         }
     }
 
-    override suspend fun onMessage(message: RMessage, sender: Int) {
+    override fun onMessage(message: RMessage, sender: Int) {
         if (term > message.term) {
             env.recordInternalEvent("Ignore message with less term $message")
             return

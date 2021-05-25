@@ -58,7 +58,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     private val ok = IntArray(env.numberOfNodes) // time of last OK message
     private val signal = Signal()
 
-    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+    override fun onMessage(message: MutexMessage, sender: Int) {
         val time = message.msgTime
         clock = max(clock, time) + 1
         when (message) {
@@ -143,8 +143,8 @@ class LamportMutexTest {
         .sequentialSpecification(MutexSpecification::class.java)
         .threads(3)
         .actorsPerThread(3)
-        .invocationsPerIteration(3000)
-        .iterations(20)
+        .invocationsPerIteration(6_000)
+        .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
         //.minimizeFailedScenario(false)
 
@@ -156,7 +156,7 @@ class LamportMutexTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+    @Test//(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(
             LamportMutex::class.java,

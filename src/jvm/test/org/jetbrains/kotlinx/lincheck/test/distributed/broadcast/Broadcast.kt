@@ -95,7 +95,7 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
     }
 
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         //println("In on message")
         val msgId = message.id
         val from = message.from

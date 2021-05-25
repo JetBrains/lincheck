@@ -30,7 +30,7 @@ class PeerIncorrect(env: Environment<Message, Message>) : AbstractPeer(env) {
     private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
     private var messageId = 0
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
         env.recordInternalEvent("On message $message ${receivedMessages[sender]}")
         if (!receivedMessages[message.from].contains(msgId)) {

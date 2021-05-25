@@ -38,7 +38,7 @@ data class GetKVResponse(val value: String?) : KVMessage()
 
 class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage> {
     private val storage = mutableMapOf<String, String>()
-    override suspend fun onMessage(message: KVMessage, sender: Int) {
+    override fun onMessage(message: KVMessage, sender: Int) {
         when (message) {
             is PutKVRequest -> {
                 storage[message.key] = message.value
@@ -67,12 +67,12 @@ class ClientIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMe
     }
 
     @Operation
-    suspend fun put(key: String, value: String) {
+    fun put(key: String, value: String) {
         val replica = getRandomReplica()
         env.send(PutKVRequest(key, value), replica)
     }
 
-    override suspend fun onMessage(message: KVMessage, sender: Int) {
+    override fun onMessage(message: KVMessage, sender: Int) {
         if (message is GetKVResponse) {
             res = message
             signal.signal()

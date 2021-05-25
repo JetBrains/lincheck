@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 
-
+/*
 data class KVLogEntry(val index: Int, val key: String, val value: String, var commited: Boolean = true)
 
 
@@ -51,7 +51,7 @@ class Client(val env: Environment<Message, Unit>) : Node<Message> {
     private val leader = env.getAddressesForClass(LeaderNode::class.java)!![0]
     private var receiver: Int? = null
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is PutResponse -> results[message.id] = message
             is ClientGetResponse -> results[message.id] = message
@@ -108,7 +108,7 @@ class LeaderNode(val env: Environment<Message, KVLogEntry>) : Node<Message> {
     }
     private val replicaCount = env.getAddressesForClass(ReplicaNode::class.java)!!.size
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is ClientPutRequest -> {
                 val index = env.log.size
@@ -207,4 +207,4 @@ class TwoPhaseCommitTest {
                 .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
         )
     }
-}
+}*/

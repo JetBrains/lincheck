@@ -42,7 +42,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     @Volatile
     private var gotSnapshot = false
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Transaction -> {
                 currentSum.getAndAdd(message.sum)

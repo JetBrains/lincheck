@@ -26,19 +26,19 @@ import org.junit.Test
 
 class NodeAddressResolverTest {
     class AClass : Node<Int> {
-        override suspend fun onMessage(message: Int, sender: Int) {
+        override fun onMessage(message: Int, sender: Int) {
             TODO("Not yet implemented")
         }
     }
 
     class BClass : Node<Int> {
-        override suspend fun onMessage(message: Int, sender: Int) {
+        override fun onMessage(message: Int, sender: Int) {
             TODO("Not yet implemented")
         }
     }
 
     class CClass : Node<Int> {
-        override suspend fun onMessage(message: Int, sender: Int) {
+        override fun onMessage(message: Int, sender: Int) {
             TODO("Not yet implemented")
         }
     }

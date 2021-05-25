@@ -43,18 +43,22 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
     private val pingSignal = Signal()
     private val pongSignal = Signal()
     private var heartbeatCnt = 0
-    override suspend fun onMessage(message: TimerMessage, sender: Int) {
+    private var shouldReply = false
+    override fun onMessage(message: TimerMessage, sender: Int) {
         when(message) {
             is Heartbeat -> {
                 heartbeatCnt++
                 if (heartbeatCnt == HEARTBEAT_PING_RATE) {
                     pingSignal.signal()
+                    if (shouldReply) {
+                        shouldReply = false
+                        env.send(TimerPong, sender)
+                    }
                 }
             }
             is TimerPing -> {
                 heartbeatCnt = 0
-                pingSignal.await()
-                env.send(TimerPong, sender)
+                shouldReply = true
             }
             is TimerPong -> pongSignal.signal()
         }

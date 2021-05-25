@@ -218,7 +218,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         }
     }
 
-    private suspend fun onPutRequest(msg: RKVPutRequest, sender: Int) {
+    private fun onPutRequest(msg: RKVPutRequest, sender: Int) {
         check(status == NodeStatus.LEADER)
         val reqId = ReqId(client = sender, opId = msg.opId)
         val res = storage.add(msg.kv, reqId, term)
@@ -241,7 +241,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         }
     }
 
-    private suspend fun onApplyEntriesResponse(msg: RKVApplyEntryResponse, sender: Int) {
+    private fun onApplyEntriesResponse(msg: RKVApplyEntryResponse, sender: Int) {
         check(status == NodeStatus.LEADER)
         if (!responseCounts.contains(msg.logNumber)) return
         responseCounts[msg.logNumber] = responseCounts[msg.logNumber]!! + 1
@@ -253,7 +253,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         env.broadcast(RKVHeartbeat(term, storage.getLastCommittedEntry()))
     }
 
-    private suspend fun onMissingEntriesRequest(msg: RKVMissingEntryResponse, sender: Int) {
+    private fun onMissingEntriesRequest(msg: RKVMissingEntryResponse, sender: Int) {
         check(status == NodeStatus.LEADER)
         val prevEntry = storage.getPrevEntry(msg.logNumber)
         val cur = storage.getKV(msg.logNumber)
@@ -269,7 +269,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         )
     }
 
-    private suspend fun replicateReq(key: String?, value: String?) {
+    private fun replicateReq(key: String?, value: String?) {
         check(status == NodeStatus.LEADER)
         val reqId = ReqId(client = env.nodeId, opId = opId)
         val kv = KVEntry(key, value)
@@ -294,7 +294,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         }
     }
 
-    private suspend fun onApplyEntryRequest(msg: RKVApplyEntryRequest) {
+    private fun onApplyEntryRequest(msg: RKVApplyEntryRequest) {
         if (msg.prevEntry == null || storage.contains(msg.prevEntry)) {
             storage.clearBefore(msg.prevEntry)
             for (e in missedEntries.reversed()) {
@@ -310,13 +310,13 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         if (msg.lastCommitted != null) storage.commit(msg.lastCommitted)
     }
 
-    private suspend fun onHeartbeat(lastCommitted: LogNumber?) {
+    private fun onHeartbeat(lastCommitted: LogNumber?) {
         if (lastCommitted != null && storage.commit(lastCommitted) == null) {
             env.send(RKVMissingEntryResponse(lastCommitted, term), leader!!)
         }
     }
 
-    override suspend fun onMessage(message: RKVMessage, sender: Int) {
+    override fun onMessage(message: RKVMessage, sender: Int) {
         if (term > message.term) {
             env.recordInternalEvent("Ignore message with less term $message")
             return
@@ -510,7 +510,7 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         }
     }
 
-    private suspend fun onElectionSuccess() {
+    private fun onElectionSuccess() {
         env.recordInternalEvent("Election success")
         env.setTimer("HEARTBEAT", HEARTBEAT_RATE) {
             env.broadcast(RKVHeartbeat(term, storage.getLastCommittedEntry()))

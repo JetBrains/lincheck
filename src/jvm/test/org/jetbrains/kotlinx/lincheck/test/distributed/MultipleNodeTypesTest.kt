@@ -34,7 +34,7 @@ class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
     private val signal = Signal()
     private val pongerAddress = env.getAddressesForClass(Ponger::class.java)!![0]
 
-    override suspend fun onMessage(message: PingPongMessage, sender: Int) {
+    override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
             is Pong -> signal.signal()
             else -> throw IllegalArgumentException("Unexpected message type")
@@ -50,7 +50,7 @@ class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
 }
 
 class Ponger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage> {
-    override suspend fun onMessage(message: PingPongMessage, sender: Int) {
+    override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
             is Ping -> env.send(Pong, sender)
             else -> throw IllegalArgumentException("Unexpected message type")

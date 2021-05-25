@@ -18,44 +18,42 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed
+package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.RecoveryMode
+import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class NodeThrowsException(val env: Environment<Int, Unit>): Node<Int> {
-    override fun onMessage(message: Int, sender: Int) {
-        if (message != 0) {
-            env.broadcast(0)
-        }
+data class SimpleMessage(val id: Int, val from: Int)
+
+class IncorrectOrder(env: Environment<SimpleMessage, SimpleMessage>) : OrderCheckNode<SimpleMessage>(env)  {
+    var opId = 0
+    override fun onMessage(message: SimpleMessage, sender: Int) {
+        env.log.add(message)
     }
 
     @Operation
-    suspend fun op() {
-        env.broadcast(1)
-        throw RuntimeException()
+    fun broadcast() {
+        opId++
+        env.broadcast(SimpleMessage(opId, env.nodeId), skipItself = false)
     }
 }
 
-class SimpleExceptionTest {
+class IncorrectOrderTest {
     @Test(expected = LincheckAssertionError::class)
     fun test() {
-        LinChecker.check(
-            NodeThrowsException::class.java,
-            DistributedOptions<Int, Unit>()
+        LinChecker.check(IncorrectOrder::class.java,
+            DistributedOptions<SimpleMessage, SimpleMessage>()
                 .requireStateEquivalenceImplCheck(false)
-                .actorsPerThread(2)
+                .actorsPerThread(3)
                 .threads(3)
-                .invocationsPerIteration(10)
+                .invocationsPerIteration(3_000)
                 .iterations(1)
-                .verifier(EpsilonVerifier::class.java)
-        )
+                .verifier(EpsilonVerifier::class.java))
     }
 }

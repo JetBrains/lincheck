@@ -177,7 +177,7 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
         return sb.toString()
     }
 
-    private suspend fun replicateLog(log: Log) {
+    private fun replicateLog(log: Log) {
         val lastEntry = storage.getLastEntry()
         storage.add(log)
         val entry = storage.getLastEntry()!!
@@ -193,7 +193,7 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
         }
     }
 
-    private suspend fun onPutRequest(message: PutRequest, sender: Int) {
+    private fun onPutRequest(message: PutRequest, sender: Int) {
         check(status == NodeStatus.LEADER)
         if (env.log.any { it.hash == message.hash }) {
             if (env.log.any { it.hash == message.hash && it.committed }) {
@@ -212,7 +212,7 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
         return
     }
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         if (message is GetRequest && status == NodeStatus.LEADER) {
             val value = storage.get(message.key)
             env.send(GetResponse(hash = message.hash, value = value, term = currentTerm), sender)
@@ -270,7 +270,7 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
         }
     }
 
-    private suspend fun processApplyEntryRequest(message: ApplyEntryRequest, sender: Int) {
+    private fun processApplyEntryRequest(message: ApplyEntryRequest, sender: Int) {
         if (currentLeader != sender) {
             return
         }
@@ -285,7 +285,7 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
         }
     }
 
-    private suspend fun processApplyEntryResponse(message: ApplyEntryResponse, sender: Int) {
+    private fun processApplyEntryResponse(message: ApplyEntryResponse, sender: Int) {
         if (status != NodeStatus.LEADER) {
             return
         }
@@ -305,12 +305,12 @@ class RaftServerIncorrect(val env: Environment<Message, Log>) : Node<Message> {
         }
     }
 
-    private suspend fun processMissingEntriesResponse(message: MissingEntryResponse, sender: Int) {
+    private fun processMissingEntriesResponse(message: MissingEntryResponse, sender: Int) {
         val prevEntry = storage.prevEntry(message.prevLogNumber!!)
         env.send(ApplyEntryRequest(currentTerm, storage[message.prevLogNumber], prevEntry), sender)
     }
 
-    private suspend fun updateCommittedEntries(lastCommittedEntry: LogEntryNumber?) {
+    private fun updateCommittedEntries(lastCommittedEntry: LogEntryNumber?) {
         if (lastCommittedEntry == null) return
         if (!storage.commit(lastCommittedEntry)) {
             env.send(

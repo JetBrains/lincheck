@@ -66,7 +66,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
     @Volatile
     private var gotSnapshot = false
 
-    override suspend fun onMessage(message: Message, sender: Int) {
+    override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Transaction -> {
                 currentSum.getAndAdd(message.sum)
@@ -120,7 +120,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun transaction(to: Int, sum: Int) {
+    fun transaction(to: Int, sum: Int) {
         val receiver = kotlin.math.abs(to) % env.numberOfNodes
         if (receiver == env.nodeId) return
         currentSum.getAndAdd(-sum)

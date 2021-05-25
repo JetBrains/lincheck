@@ -70,7 +70,7 @@ class RaftConsensusIncorrect(val env: Environment<RMessage, Int>) : Node<RMessag
         }
     }
 
-    override suspend fun onMessage(message: RMessage, sender: Int) {
+    override fun onMessage(message: RMessage, sender: Int) {
         if (term > message.term) return
         when (status) {
             NodeStatus.LEADER -> {

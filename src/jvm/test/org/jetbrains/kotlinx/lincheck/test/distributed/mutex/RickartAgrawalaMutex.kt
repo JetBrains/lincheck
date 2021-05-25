@@ -53,7 +53,7 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
     private val pendingOk = BooleanArray(env.numberOfNodes)
     private val semaphore = Semaphore(1, 1)
 
-    override suspend fun onMessage(message: MutexMessage, sender: Int) {
+    override fun onMessage(message: MutexMessage, sender: Int) {
         val time = message.msgTime
         clock = Integer.max(clock, time) + 1
         when (message) {
