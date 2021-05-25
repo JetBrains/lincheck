@@ -240,7 +240,7 @@ data class InterleavingTreeNode(
         val currentTask = currentTasks[id]!!
         currentTasks.filter { it.value is OperationTask }.forEach { operations[it.key] = it.value.iNode }
         val tasksToCheck = if (task !is NodeCrashTask) currentTasks.filter {
-            it.key != id && currentTask.goesBefore(it.value)
+            it.key != id && (it.key > id || it.value.iNode >= currentTask.iNode)
         } else {
             currentTasks.filter { it.key != id }
         }
@@ -258,7 +258,8 @@ data class InterleavingTreeNode(
         isVisited = true
     }
 
-    fun next() = nextPossibleTasksIds.filter { it !in operations }.minOrNull() ?: nextPossibleTasksIds.minByOrNull { operations[it]!! }
+    fun next() = nextPossibleTasksIds.filter { it !in operations }.minOrNull()
+        ?: nextPossibleTasksIds.minByOrNull { operations[it]!! }
 
     fun nextNode(): InterleavingTreeNode? {
         val next = next() ?: return null
@@ -318,7 +319,7 @@ data class InterleavingTreeNode(
             if (choice.key != next()) builder.numberOfInversions++
         }
         return choice.value.chooseNextInterleaving(builder)
-       // return children[next()]?.chooseNextInterleaving(builder) ?: builder.build()
+        // return children[next()]?.chooseNextInterleaving(builder) ?: builder.build()
         //if (!builder.areFailuresFull())
         //if (!)
     }

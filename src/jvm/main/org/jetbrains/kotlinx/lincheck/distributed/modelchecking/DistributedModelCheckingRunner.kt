@@ -228,23 +228,23 @@ class DistributedModelCheckingRunner<Message, Log>(
                     //println("Next $next")
                     if (next == null) {
                         var up = curTreeNode
-                        println("Filtered tasks ${up?.allNotChecked}")
+                        //println("Filtered tasks ${up?.allNotChecked}")
                         try {
                             while (!tasks.any { it.key in up!!.parent!!.nextPossibleTasksIds }) {
-                                println("Up ${up?.task} ${up?.id}")
+                                //println("Up ${up?.task} ${up?.id}")
                                 up = up!!.parent
                             }
                         } catch (e: NullPointerException) {
                             //println("Up $up")
                             bfsPrint()
-                            println("Tasks $tasks")
+                            //println("Tasks $tasks")
                             exception = e
                             return@launch
                         }
-                        println("Up parent ${up?.parent?.task} ${up?.parent?.id}")
+                        //println("Up parent ${up?.parent?.task} ${up?.parent?.id}")
                         check(up!!.task !is NodeCrashTask)
                         counter++
-                        println("Remove ${up!!.id} from ${up.parent!!.id}")
+                        //println("Remove ${up!!.id} from ${up.parent!!.id}")
                         up!!.parent!!.nextPossibleTasksIds.remove(up.id)
                         up!!.parent!!.children.remove(up.id)
 
@@ -301,7 +301,7 @@ class DistributedModelCheckingRunner<Message, Log>(
         //println("Current tree")
         //bfsPrint()
         if (isInterrupted) {
-           // bfsPrint()
+           //bfsPrint()
         }
         if (!isInterrupted && root.isExploredNow()) {
             if (numberOfFailures == maxNumberOfErrors ||

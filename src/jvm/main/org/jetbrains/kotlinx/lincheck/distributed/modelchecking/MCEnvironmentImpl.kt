@@ -65,7 +65,7 @@ class MCEnvironmentImpl<Message, Log>(
             }, taskId)
         }
         debugLogs.add("[$nodeId]: Send $message to $receiver ${event.id} ${context.runner.curTreeNode?.id}")
-        println(debugLogs.last())
+        //println(debugLogs.last())
         context.events.add(nodeId to event)
 
         context.runner.addTask(
@@ -75,7 +75,7 @@ class MCEnvironmentImpl<Message, Log>(
                 "[$receiver]: Receive $message ${event.id}"
             ) {
                 debugLogs.add("[$receiver]: Receive $message ${event.id} ${context.runner.curTreeNode?.id}")
-                println(debugLogs.last())
+                //println(debugLogs.last())
                 context.incClock(receiver)
                 val newclock = context.maxClock(receiver, clock)
                 context.events.add(

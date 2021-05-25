@@ -7,7 +7,7 @@ interface Node<Message> {
     /**
      * Called when a new message [message] arrives.
      */
-    suspend fun onMessage(message: Message, sender: Int)
+    fun onMessage(message: Message, sender: Int)
 
     /**
      * Called when the node restarts after failure.
