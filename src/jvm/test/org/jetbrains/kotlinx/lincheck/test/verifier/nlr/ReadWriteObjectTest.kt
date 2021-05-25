@@ -96,7 +96,7 @@ internal open class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null)
         val tmp = register.value
         state[p].value = 1 to tmp
         state[p].flush()
-//        register.value = value
+//        register.value = value 
 //        register.flush()
         register.setAndFlush(value) // TODO is it possible to replace with code above?
         state[p].value = 0 to value
