@@ -380,8 +380,8 @@ private class StateInfo(
 
     val maxTicket: Int
         get() = max(
-            suspendedOperations.maxBy { it.ticket }?.ticket ?: NO_TICKET,
-            resumedOperations.maxBy { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
+            suspendedOperations.maxByOrNull { it.ticket }?.ticket ?: NO_TICKET,
+            resumedOperations.maxByOrNull { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
         )
 }
 

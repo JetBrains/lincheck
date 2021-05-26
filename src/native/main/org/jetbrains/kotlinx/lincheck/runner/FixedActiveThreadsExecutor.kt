@@ -31,11 +31,11 @@ import kotlin.native.internal.test.*
 import kotlin.system.*
 
 internal class TestThread constructor(val iThread: Int, runnerHash: Int) {
-    val worker = AtomicReference(Worker.start(true, "Worker $iThread $runnerHash"))
+    val worker = AtomicReference(Worker.start(true, "Worker $iThread $runnerHash").freeze())
     val runnableFuture = AtomicReference<Future<Any>?>(null)
 
     fun executeTask(r: () -> Any) {
-        runnableFuture.value = worker.value.execute(TransferMode.UNSAFE, { r }, { it.invoke() })
+        runnableFuture.value = worker.value.execute(TransferMode.UNSAFE, { r }, { it.invoke() }).freeze()
     }
 
     fun awaitLastTask(deadline: Long): Any {
@@ -56,9 +56,9 @@ internal class TestThread constructor(val iThread: Int, runnerHash: Int) {
         //val result = runnableFuture!!.result
         //worker.execute(TransferMode.UNSAFE, { }, { sleep(1000000000) })
         //println("terminate $iThread end")
-        //worker.value.requestTermination(false).result
+        worker.value.requestTermination(false) // don't want to wait because of hanging
         //return res
-        //printErr("stop() $iThread finished")
+        //printErr("terminate() $iThread finished")
     }
 }
 

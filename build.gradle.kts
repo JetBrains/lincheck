@@ -26,6 +26,7 @@ plugins {
 }
 
 repositories {
+    maven(url = uri("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev"))
     mavenCentral()
     jcenter()
 }
@@ -99,6 +100,11 @@ kotlin {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
             }
+        }
+    }
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
+        compilations["test"].kotlinOptions {
+            freeCompilerArgs += listOf("-memory-model", "experimental", "-Xgc=noop")
         }
     }
 }

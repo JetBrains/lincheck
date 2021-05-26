@@ -84,8 +84,8 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
     val actorRepresentations = actors.map { it.toString() }
     val resultRepresentations = results.map { it.result.toString() }
-    val maxActorLength = actorRepresentations.map { it.length }.max()!!
-    val maxResultLength = resultRepresentations.map { it.length }.max()!!
+    val maxActorLength = actorRepresentations.map { it.length }.maxOrNull()!!
+    val maxResultLength = resultRepresentations.map { it.length }.maxOrNull()!!
     return actors.indices.map { i ->
         val actorRepr = actorRepresentations[i]
         val resultRepr = resultRepresentations[i]
