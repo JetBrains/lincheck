@@ -259,8 +259,13 @@ class LTS(sequentialSpecification: SequentialSpecification<*>) {
             block(old, this.computeRemappingFunction(old))
         } else {
             val newSeqToCreate = if (curOperation != null) this.state.seqToCreate + curOperation else emptyList()
-            stateInfos[this] = this.also { it.state = State(newSeqToCreate) }
-            return block(stateInfos[this]!!, null)
+            val obj = this.also { it.state = State(newSeqToCreate) }
+            stateInfos[this] = obj
+            //if(stateInfos[this] != obj) {
+                // TODO author please check this code. Sometimes it throws
+                // throw RuntimeException("stateInfos[this] != obj")
+            //}
+            return block(obj, null)
         }
     }
 
@@ -363,20 +368,11 @@ private class StateInfo(
             resumedOperations == other.resumedOperations
     }
 
-    private fun hashAll(vararg vals: Any?): Int {
-        var res = 0
-        for (v in vals) {
-            res += v.hashCode()
-            res *= 31
-        }
-        return res
-    }
-
-    override fun hashCode() = hashAll(
+    override fun hashCode() = arrayOf(
         instance,
         suspendedOperations.map { it.actor },
         resumedOperations
-    )
+    ).contentHashCode()
 
     val maxTicket: Int
         get() = max(

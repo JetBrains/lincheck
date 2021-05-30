@@ -96,7 +96,7 @@ using namespace Lincheck;
 
 TEST(LibcuckooTest, BadSequentialMapTest) {
     LincheckConfiguration<SequentialMapCuckoo, SequentialMapCuckoo> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -110,7 +110,7 @@ TEST(LibcuckooTest, BadSequentialMapTest) {
 
 TEST(LibcuckooTest, HashMapTest) {
     LincheckConfiguration<ConcurrentMapCuckoo, SequentialMapCuckoo> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);

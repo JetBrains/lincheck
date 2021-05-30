@@ -94,7 +94,7 @@ TEST(CounterTest, BadInc) {
     LincheckConfiguration<Counter, Counter> conf;
     conf.minimizeFailedScenario(false);
     conf.threads(3);
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.actorsPerThread(5);
     conf.operation<int, &Counter::inc, &Counter::atomic_inc>("inc");
@@ -156,7 +156,7 @@ TEST(CounterTest, TEST_SHOULD_FAIL_ValidateFunctionsTest) {
     ASSERT_EQ(conf.runTest(false), "");
 }
 
-TEST(ConterTest, EnabledVerifierTest) {
+TEST(CounterTest, EnabledVerifierTest) {
     // This test is needed to compare speed with DisabledVerifierTest
     LincheckConfiguration<Counter, Counter> conf;
 

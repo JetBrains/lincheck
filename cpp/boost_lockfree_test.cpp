@@ -147,7 +147,7 @@ using namespace Lincheck;
 
 TEST(BoostLockfreeTest, BadSequentialQueueTest) {
     LincheckConfiguration<SequentialQueueBoost, SequentialQueueBoost> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -160,7 +160,7 @@ TEST(BoostLockfreeTest, BadSequentialQueueTest) {
 
 TEST(BoostLockfreeTest, BadSequentialStackTest) {
     LincheckConfiguration<SequentialStackBoost, SequentialStackBoost> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -174,7 +174,7 @@ TEST(BoostLockfreeTest, BadSequentialStackTest) {
 
 TEST(BoostLockfreeTest, QueueTest) {
     LincheckConfiguration<ConcurrentQueueBoost, SequentialQueueBoost> conf;
-    conf.iterations(10);
+    conf.iterations(100);
     conf.invocationsPerIteration(500);
 
     conf.minimizeFailedScenario(false);
@@ -189,7 +189,7 @@ TEST(BoostLockfreeTest, QueueTest) {
 
 TEST(BoostLockfreeTest, StackTest) {
     LincheckConfiguration<ConcurrentStackBoost, SequentialStackBoost> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -203,7 +203,7 @@ TEST(BoostLockfreeTest, StackTest) {
 
 TEST(BoostLockfreeTest, BadSPSCQueueTest) {
     LincheckConfiguration<ConcurrentSPSCQueueBoost, SequentialQueueBoost> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -216,7 +216,7 @@ TEST(BoostLockfreeTest, BadSPSCQueueTest) {
 
 TEST(BoostLockfreeTest, SPSCQueueTest) {
     LincheckConfiguration<ConcurrentSPSCQueueBoost, SequentialQueueBoost> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(2);

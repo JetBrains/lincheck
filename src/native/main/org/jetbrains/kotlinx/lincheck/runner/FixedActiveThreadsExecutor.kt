@@ -76,12 +76,16 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
                                           private val finishThreadFunction: (() -> Unit)? = null) {
     // Threads used in this runner.
     private val threads: LincheckAtomicArray<TestThread> = LincheckAtomicArray(nThreads)
+    private var operationsFinished: AtomicInt = AtomicInt(0)
 
     init {
         (0 until nThreads).forEach { iThread ->
             threads.array[iThread].value = TestThread(iThread, runnerHash).also {
                 it.executeTask { initThreadFunction?.invoke(); Any() }
-                it.awaitLastTask(currentTimeMillis() + 10000)
+                val res = it.awaitLastTask(currentTimeMillis() + 10000)
+                if(res == FixedActiveThreadsExecutor.TIMEOUT) {
+                    throw RuntimeException("initThreadFunction has hang")
+                }
             }
         }
     }
@@ -96,8 +100,10 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
      */
     fun submitAndAwait(tasks: Array<out Runnable>, timeoutMs: Long) {
         require(tasks.size == nThreads)
+        operationsFinished.value = 0
         submitTasks(tasks)
         await(timeoutMs)
+        operationsFinished.value = 1
     }
 
     private fun submitTasks(tasks: Array<out Any>) {
@@ -135,6 +141,13 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int,
         // submit the shutdown task.
         for (t in threads.toArray()) {
             t.executeTask { finishThreadFunction?.invoke(); Any() }
+            if(operationsFinished.value == 1) {
+                // Operations executed before deadline, it is safe to wait for finish
+                val res = t.awaitLastTask(currentTimeMillis() + 10000)
+                if(res == FixedActiveThreadsExecutor.TIMEOUT) {
+                    throw RuntimeException("finishThreadFunction has hang")
+                }
+            }
             t.terminate()
         }
     }

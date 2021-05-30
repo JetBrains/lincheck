@@ -184,7 +184,7 @@ using namespace Lincheck;
 
 TEST(LibcdsTest, BadSequentialQueueTest) {
     LincheckConfiguration<SequentialQueueLibcds, SequentialQueueLibcds> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -197,7 +197,7 @@ TEST(LibcdsTest, BadSequentialQueueTest) {
 
 TEST(LibcdsTest, BadSequentialStackTest) {
     LincheckConfiguration<SequentialStackLibcds, SequentialStackLibcds> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -215,9 +215,9 @@ TEST(LibcdsTest, ConcurrentQueueHPTest) {
         cds::gc::HP dhpGC(
                 16
         );
-        myAttach();
         LincheckConfiguration<ConcurrentQueueLibcds<cds::gc::HP>, SequentialQueueLibcds> conf;
-        conf.iterations(10);
+        conf.iterations(100);
+        conf.invocationsPerIteration(500);
         conf.minimizeFailedScenario(false);
         conf.threads(3);
         conf.actorsPerThread(4);
@@ -226,7 +226,6 @@ TEST(LibcdsTest, ConcurrentQueueHPTest) {
         conf.operation<bool, int, &ConcurrentQueueLibcds<cds::gc::HP>::push, &SequentialQueueLibcds::push>("push");
         conf.operation<std::pair<bool, int>, &ConcurrentQueueLibcds<cds::gc::HP>::pop, &SequentialQueueLibcds::pop>("pop");
         ASSERT_EQ(conf.runTest(false), "");
-        myDetach();
     }
     cds::Terminate();
 }
@@ -237,9 +236,8 @@ TEST(LibcdsTest, ConcurrentQueueDHPTest) {
         cds::gc::DHP dhpGC(
                 160 //dhp_init_guard_count
         );
-        myAttach();
         LincheckConfiguration<ConcurrentQueueLibcds<cds::gc::DHP>, SequentialQueueLibcds> conf;
-        conf.iterations(10);
+        conf.iterations(100);
         conf.minimizeFailedScenario(false);
         conf.threads(3);
         conf.actorsPerThread(4);
@@ -248,7 +246,6 @@ TEST(LibcdsTest, ConcurrentQueueDHPTest) {
         conf.operation<bool, int, &ConcurrentQueueLibcds<cds::gc::DHP>::push, &SequentialQueueLibcds::push>("push");
         conf.operation<std::pair<bool, int>, &ConcurrentQueueLibcds<cds::gc::DHP>::pop, &SequentialQueueLibcds::pop>("pop");
         ASSERT_EQ(conf.runTest(false), "");
-        myDetach();
     }
     cds::Terminate();
 }
@@ -259,9 +256,8 @@ TEST(LibcdsTest, ConcurrentTreiberStackHPTest) {
         cds::gc::HP dhpGC(
                 16
         );
-        myAttach();
         LincheckConfiguration<ConcurrentTreiberStackLibcds<cds::gc::HP>, SequentialStackLibcds> conf;
-        conf.iterations(10);
+        conf.iterations(100);
         conf.minimizeFailedScenario(false);
         conf.threads(3);
         conf.actorsPerThread(4);
@@ -271,7 +267,6 @@ TEST(LibcdsTest, ConcurrentTreiberStackHPTest) {
         conf.operation<std::pair<bool, int>, &ConcurrentTreiberStackLibcds<cds::gc::HP>::pop, &SequentialStackLibcds::pop>("pop");
         conf.operation<bool, &ConcurrentTreiberStackLibcds<cds::gc::HP>::clear, &SequentialStackLibcds::clear>("clear");
         ASSERT_EQ(conf.runTest(false), "");
-        myDetach();
     }
     cds::Terminate();
 }
@@ -282,9 +277,8 @@ TEST(LibcdsTest, ConcurrentTreiberStackDHPTest) {
         cds::gc::DHP dhpGC(
                 160
         );
-        myAttach();
         LincheckConfiguration<ConcurrentTreiberStackLibcds<cds::gc::DHP>, SequentialStackLibcds> conf;
-        conf.iterations(10);
+        conf.iterations(100);
         conf.minimizeFailedScenario(false);
         conf.threads(3);
         conf.actorsPerThread(4);
@@ -294,7 +288,6 @@ TEST(LibcdsTest, ConcurrentTreiberStackDHPTest) {
         conf.operation<std::pair<bool, int>, &ConcurrentTreiberStackLibcds<cds::gc::DHP>::pop, &SequentialStackLibcds::pop>("pop");
         conf.operation<bool, &ConcurrentTreiberStackLibcds<cds::gc::DHP>::clear, &SequentialStackLibcds::clear>("clear");
         ASSERT_EQ(conf.runTest(false), "");
-        myDetach();
     }
     cds::Terminate();
 }

@@ -51,7 +51,9 @@ internal class ObjectWithDestructorAndEqualsAndHashcodeAndToString(val obj: CPoi
                                                                    val toString: ToStringCFunction) : Finalizable {
 
     override fun equals(other: Any?): Boolean {
-        return if (other is ObjectWithDestructorAndEqualsAndHashcodeAndToString) {
+        return if(other === this) {
+            true
+        } else if (other is ObjectWithDestructorAndEqualsAndHashcodeAndToString) {
             equals.invoke(obj, other.obj)
         } else {
             false
@@ -98,7 +100,9 @@ internal class SequentialSpecificationInstance(val obj: CPointer<*>,
                                                val equalsFunction: EqualsCFunction,
                                                val hashCodeFunction: HashCodeCFunction) : Finalizable {
     override fun equals(other: Any?): Boolean {
-        return if (other is SequentialSpecificationInstance) {
+        return if (other === this) {
+            true
+        } else if (other is SequentialSpecificationInstance) {
             equalsFunction.invoke(obj, other.obj)
         } else {
             false

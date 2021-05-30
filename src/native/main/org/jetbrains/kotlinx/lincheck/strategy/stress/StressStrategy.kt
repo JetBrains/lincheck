@@ -61,6 +61,7 @@ actual class StressStrategy actual constructor(
 
     actual override fun run(): LincheckFailure? {
         // Run invocations
+        initThreadFunction?.invoke()
         try {
             for (invocation in 0 until invocations) {
                 runner.also {
@@ -85,6 +86,7 @@ actual class StressStrategy actual constructor(
                 }
             }
         } finally {
+            finishThreadFunction?.invoke()
             runner.close()
         }
         return null

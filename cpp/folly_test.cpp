@@ -147,7 +147,7 @@ using namespace Lincheck;
 
 TEST(FollyTest, BadSequentialMapTest) {
     LincheckConfiguration<SequentialMapFolly, SequentialMapFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -161,7 +161,7 @@ TEST(FollyTest, BadSequentialMapTest) {
 
 TEST(FollyTest, BadSequentialQueueTest) {
     LincheckConfiguration<SequentialQueueFolly, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -174,7 +174,7 @@ TEST(FollyTest, BadSequentialQueueTest) {
 
 TEST(FollyTest, HashMapTest) {
     LincheckConfiguration<ConcurrentMapFolly, SequentialMapFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -189,7 +189,7 @@ TEST(FollyTest, HashMapTest) {
 TEST(FollyTest, MPMCDynamicBoundedQueueTest) {
     using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DMPMCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -203,7 +203,7 @@ TEST(FollyTest, MPMCDynamicBoundedQueueTest) {
 TEST(FollyTest, MPSCDynamicBoundedQueueTest) {
     using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DMPSCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -217,7 +217,7 @@ TEST(FollyTest, MPSCDynamicBoundedQueueTest) {
 TEST(FollyTest, BadMPSCDynamicBoundedQueueTest) {
     using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DMPSCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -231,7 +231,7 @@ TEST(FollyTest, BadMPSCDynamicBoundedQueueTest) {
 TEST(FollyTest, SPMCDynamicBoundedQueueTest) {
     using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DSPMCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -245,7 +245,7 @@ TEST(FollyTest, SPMCDynamicBoundedQueueTest) {
 TEST(FollyTest, SPSCDynamicBoundedQueueTest) {
     using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DSPSCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -259,7 +259,7 @@ TEST(FollyTest, SPSCDynamicBoundedQueueTest) {
 TEST(FollyTest, BadSPSCDynamicBoundedQueueTest) {
     using ConcurrentQueue = ConcurrentDynamicBoundedQueueFolly<folly::DSPSCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -273,7 +273,7 @@ TEST(FollyTest, BadSPSCDynamicBoundedQueueTest) {
 TEST(FollyTest, MPMCUnboundedQueueTest) {
     using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::UMPMCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -287,7 +287,7 @@ TEST(FollyTest, MPMCUnboundedQueueTest) {
 TEST(FollyTest, MPSCUnboundedQueueTest) {
     using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::UMPSCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -301,7 +301,7 @@ TEST(FollyTest, MPSCUnboundedQueueTest) {
 TEST(FollyTest, SPMCUnboundedQueueTest) {
     using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::USPMCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
@@ -315,7 +315,7 @@ TEST(FollyTest, SPMCUnboundedQueueTest) {
 TEST(FollyTest, SPSCUnboundedQueueTest) {
     using ConcurrentQueue = ConcurrentUnboundedQueueFolly<folly::USPSCQueue<int, false>>;
     LincheckConfiguration<ConcurrentQueue, SequentialQueueFolly> conf;
-    conf.iterations(10);
+    conf.iterations(100);
 
     conf.minimizeFailedScenario(false);
     conf.threads(3);
