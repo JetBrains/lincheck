@@ -353,7 +353,7 @@ class RaftConsensusTest {
         )
     }
 
-    //@Test
+    @Test
     fun testNetworkPartitions() {
         LinChecker.check(
             RaftConsensus::class.java,
