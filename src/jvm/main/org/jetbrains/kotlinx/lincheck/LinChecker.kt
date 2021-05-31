@@ -71,7 +71,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
         repeat(iterations) { i ->
-            println("ITERATION $i")
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1, iterations, scenario)

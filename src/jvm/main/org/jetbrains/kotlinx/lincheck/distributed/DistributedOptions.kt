@@ -1,7 +1,10 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import java.lang.IllegalArgumentException
 import java.util.*
 
 enum class MessageOrder {
@@ -113,7 +116,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun setTestMode(mode: TestingMode) : DistributedOptions<Message, Log> {
+    fun setTestMode(mode: TestingMode): DistributedOptions<Message, Log> {
         testingMode = mode
         return this
     }
@@ -128,5 +131,15 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs
         )
+    }
+
+    fun check() {
+        val testClass = testClasses.keys.find {
+            it.methods.any { m ->
+                m.isAnnotationPresent(Operation::class.java)
+            }
+        }
+            ?: throw IllegalArgumentException("No operations to check")
+        LinChecker.check(testClass, options = this)
     }
 }

@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
@@ -106,17 +105,13 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
         } else {
             receivedMessages[from][msgId] = receivedMessages[from][msgId]!! + 1
         }
-        //println("Before deliver")
         deliver(from)
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun send(msg: String) {
+    fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
-       // receivedMessages[env.nodeId][message.id] = 1
-       // undeliveredMessages[env.nodeId].add(message)
         env.broadcast(message, false)
-        //deliver(env.nodeId)
     }
 }
 
@@ -124,53 +119,40 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
 class BroadcastTest {
     private fun createOptions() = DistributedOptions<Message, Message>()
         .requireStateEquivalenceImplCheck(false)
-        .threads(3)
         .actorsPerThread(3)
         .invocationsPerIteration(30_000)
         .iterations(1)
         .verifier(EpsilonVerifier::class.java)
 
     @Test
-    fun test() {
-        LinChecker.check(
-            Peer::class.java,
-            createOptions()
-                .setMaxNumberOfFailedNodes { it / 2 }
-                .crashMode(CrashMode.NO_RECOVERIES)
-                .storeLogsForFailedScenario("broadcast.txt")
-        )
-    }
+    fun test() = createOptions()
+        .nodeType(Peer::class.java, 3)
+        .setMaxNumberOfFailedNodes { it / 2 }
+        .crashMode(CrashMode.NO_RECOVERIES)
+        .storeLogsForFailedScenario("broadcast.txt")
+        .check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testMoreFailures() {
-        LinChecker.check(
-            Peer::class.java,
-            createOptions()
-                .setMaxNumberOfFailedNodes { (it + 1) / 2 }
-                .crashMode(CrashMode.NO_RECOVERIES)
-                .minimizeFailedScenario(false)
-        )
-    }
+    fun testMoreFailures() = createOptions()
+        .nodeType(Peer::class.java, 3)
+        .setMaxNumberOfFailedNodes { (it + 1) / 2 }
+        .crashMode(CrashMode.NO_RECOVERIES)
+        .minimizeFailedScenario(false)
+        .check()
 
     @Test
-    fun testNoFailures() {
-        LinChecker.check(
-            PeerIncorrect::class.java,
-            createOptions()
-                .storeLogsForFailedScenario("broadcast_nof.txt")
-        )
-    }
+    fun testNoFailures() = createOptions()
+        .storeLogsForFailedScenario("broadcast_nof.txt")
+        .nodeType(PeerIncorrect::class.java, 3)
+        .check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testIncorrect() {
-        LinChecker.check(
-            PeerIncorrect::class.java,
-            createOptions()
-                .storeLogsForFailedScenario("broadcast_incorrect.txt")
-                .setMaxNumberOfFailedNodes { it / 2 }
-                .crashMode(CrashMode.NO_RECOVERIES)
-                .actorsPerThread(2)
-                .minimizeFailedScenario(false)
-        )
-    }
+    fun testIncorrect() = createOptions()
+        .storeLogsForFailedScenario("broadcast_incorrect.txt")
+        .setMaxNumberOfFailedNodes { it / 2 }
+        .crashMode(CrashMode.NO_RECOVERIES)
+        .actorsPerThread(2)
+        .minimizeFailedScenario(false)
+        .nodeType(PeerIncorrect::class.java, 3)
+        .check()
 }

@@ -30,13 +30,20 @@ class NodeAddressResolver<Message>(
     private val additionalClasses: Map<Class<out Node<Message>>, Pair<Int, Boolean>>
 ) {
     private val nodeTypeToRange: Map<Class<out Node<Message>>, List<Int>>
-    val totalNumberOfNodes = nodesWithScenario + additionalClasses.values.map { it.first }.sum()
+    val totalNumberOfNodes = if (testClass in additionalClasses) additionalClasses.values.map { it.first }
+        .sum() else additionalClasses.values.map { it.first }.sum() + nodesWithScenario
     private val nodes = mutableListOf<Class<out Node<Message>>>()
 
     init {
         repeat(nodesWithScenario) { nodes.add(testClass) }
+        if (additionalClasses.containsKey(testClass)) {
+            repeat(additionalClasses[testClass]!!.first - nodesWithScenario) {
+                nodes.add(testClass)
+            }
+        }
         for ((cls, p) in additionalClasses) {
-            repeat(p.first) { nodes.add(cls) }
+            if (cls == testClass) continue
+            else repeat(p.first) { nodes.add(cls) }
         }
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
     }
