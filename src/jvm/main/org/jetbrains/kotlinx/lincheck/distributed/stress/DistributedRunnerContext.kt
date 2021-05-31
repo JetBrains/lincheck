@@ -116,10 +116,6 @@ class DistributedRunnerContext<Message, Log>(
         logs = Array(addressResolver.totalNumberOfNodes) {
             emptyList()
         }
-        /*failureInfo = NodeFailureInfo(
-            addressResolver.totalNumberOfNodes,
-            testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
-        )*/
         failureNotifications = Array(addressResolver.totalNumberOfNodes) {
             Channel(UNLIMITED)
         }
@@ -151,29 +147,25 @@ class DistributedRunnerContext<Message, Log>(
         }
     }
 
-    fun setNetworkPartition(iNode: Int): Boolean {
+    fun setNetworkPartition(iNode: Int, receiver: Int): Boolean {
         while (true) {
             val prev = crashInfo.value
-            val newInfo = prev.setNetworkPartition() ?: return false
+            val newInfo = prev.setNetworkPartition(iNode, receiver) ?: return false
             if (crashInfo.compareAndSet(prev, newInfo)) {
-               // events.put(iNode to NetworkPartitionEvent(newInfo.partitions, newInfo.partitionCount))
                 val delayTimeout = probabilities[iNode].networkRecoveryDelay()
-                //val currentInvocation = invocation.value
                 GlobalScope.launch {
                     delay(delayTimeout.toLong())
-                    //if (currentInvocation != invocation.value) return@launch
-                    recoverNetworkPartition(iNode)
+                    recoverNetworkPartition(iNode, receiver)
                 }
             }
         }
     }
 
-    private fun recoverNetworkPartition(iNode: Int) {
+    private fun recoverNetworkPartition(iNode: Int, receiver: Int) {
         while (true) {
             val prev = crashInfo.value
-            val newInfo = prev.recoverNetworkPartition()
+            val newInfo = prev.recoverNetworkPartition(iNode, receiver)
             if (crashInfo.compareAndSet(prev, newInfo)) {
-               // events.put(iNode to NetworkRecoveryEvent(prev.partitionCount))
                 return
             }
         }

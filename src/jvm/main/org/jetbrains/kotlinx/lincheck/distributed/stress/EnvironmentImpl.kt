@@ -60,7 +60,7 @@ internal class EnvironmentImpl<Message, Log>(
         if (context.testCfg.networkPartitions != NetworkPartitionMode.NONE &&
             probability.isNetworkPartition()
         ) {
-            context.setNetworkPartition(nodeId)
+            context.setNetworkPartition(nodeId, receiver)
         }
         val crashInfo = context.crashInfo.value
         if (!crashInfo.canSend(nodeId, receiver)) {
