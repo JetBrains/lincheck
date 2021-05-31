@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
  */
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.modelchecking.DistributedModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedStrategy
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -45,6 +46,7 @@ class DistributedCTestConfiguration<Message, Log>(
     val networkPartitions: NetworkPartitionMode,
     val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
     val logFilename: String?,
+    val testingMode: TestingMode,
     requireStateEquivalenceCheck: Boolean,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>?, timeoutMs: Long
@@ -67,8 +69,22 @@ class DistributedCTestConfiguration<Message, Log>(
         stateRepresentationMethod: Method?,
         verifier: Verifier
     ): Strategy {
-        return DistributedStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
-        //return DistributedModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        if (testingMode == TestingMode.STRESS) return DistributedStrategy(
+            this,
+            testClass,
+            scenario,
+            validationFunctions,
+            stateRepresentationMethod,
+            verifier
+        )
+        else return DistributedModelCheckingStrategy(
+            this,
+            testClass,
+            scenario,
+            validationFunctions,
+            stateRepresentationMethod,
+            verifier
+        )
     }
 
     fun nextConfigurations(): List<DistributedCTestConfiguration<Message, Log>> {
@@ -92,7 +108,7 @@ class DistributedCTestConfiguration<Message, Log>(
                     supportRecovery,
                     messageDuplication,
                     networkPartitions,
-                    newNodeTypes, logFilename, requireStateEquivalenceImplCheck,
+                    newNodeTypes, logFilename, testingMode, requireStateEquivalenceImplCheck,
                     minimizeFailedScenario,
                     sequentialSpecification, timeoutMs
                 )

@@ -23,6 +23,11 @@ enum class NetworkPartitionMode {
     SINGLE
 }
 
+enum class TestingMode {
+    STRESS,
+    MODEL_CHECKING
+}
+
 
 class NodeTypeInfo(val minNumberOfInstances: Int, val maxNumberOfInstances: Int, val canFail: Boolean) {
     fun minimize() = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances - 1, canFail)
@@ -43,6 +48,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var networkPartitions: NetworkPartitionMode = NetworkPartitionMode.NONE
     private var testClasses = HashMap<Class<out Node<Message>>, NodeTypeInfo>()
     private var logFileName: String? = null
+    private var testingMode: TestingMode = TestingMode.STRESS
 
     init {
         timeoutMs = DEFAULT_TIMEOUT_MS
@@ -107,13 +113,18 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
+    fun setTestMode(mode: TestingMode) : DistributedOptions<Message, Log> {
+        testingMode = mode
+        return this
+    }
+
     override fun createTestConfigurations(testClass: Class<*>): DistributedCTestConfiguration<Message, Log> {
         return DistributedCTestConfiguration(
             testClass, iterations, threads,
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, isNetworkReliable,
             messageOrder, maxNumberOfFailedNodes, crashMode,
-            messageDuplication, networkPartitions, testClasses, logFileName,
+            messageDuplication, networkPartitions, testClasses, logFileName, testingMode,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs
         )
