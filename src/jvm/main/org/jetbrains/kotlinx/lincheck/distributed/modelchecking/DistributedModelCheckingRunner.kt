@@ -324,7 +324,7 @@ class DistributedModelCheckingRunner<Message, Log>(
         }
         if (!isInterrupted && root.isExploredNow()) {
             if (numberOfFailures == maxNumberOfErrors ||
-                (numberOfFailures == context.nodeCrashInfo.maxNumberOfFailedNodes && testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES)) {
+                (numberOfFailures == context.nodeCrashInfo.maxNumberOfFailedNodes && testCfg.supportRecovery == CrashMode.NO_RECOVERIES)) {
                 maxNumberOfErrors++
                 numberOfFailures = 0
             } else {

@@ -312,7 +312,7 @@ class RaftConsensusIncorrectTest {
         LinChecker.check(
             RaftConsensusIncorrect::class.java,
             createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER).minimizeFailedScenario(false)
+                .crashMode(CrashMode.ALL_NODES_RECOVER).minimizeFailedScenario(false)
         )
     }
 
@@ -321,7 +321,7 @@ class RaftConsensusIncorrectTest {
         LinChecker.check(
             RaftConsensusIncorrect::class.java,
             createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER).networkPartitions(true).minimizeFailedScenario(false)
+                .crashMode(CrashMode.ALL_NODES_RECOVER).networkPartitions(NetworkPartitionMode.HALVES).minimizeFailedScenario(false)
         )
     }
 

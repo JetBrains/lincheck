@@ -21,10 +21,9 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.RecoveryMode
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import java.io.BufferedWriter
 import java.io.FileOutputStream
-import java.io.PrintWriter
 import kotlin.math.max
 import kotlin.random.Random
 
@@ -107,7 +106,7 @@ class Probability(
             0.0
         } else {
             val q = failedNodesExpectation.toDouble() / numberOfNodes
-            return if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
+            return if (testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
                 q / (prevMsgCount - (curMsgCount - 1) * q)
                 //q / prevMsgCount
             } else {

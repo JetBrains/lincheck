@@ -660,7 +660,7 @@ class RaftTest {
         LinChecker.check(
             Raft::class.java,
             createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .crashMode(CrashMode.ALL_NODES_RECOVER)
               //  .minimizeFailedScenario(false)
         )
     }
@@ -672,7 +672,7 @@ class RaftTest {
             createOptions()
                 .networkReliable(false)
                 .setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .supportRecovery(RecoveryMode.MIXED)
+                .crashMode(CrashMode.MIXED)
         )
     }
 
@@ -681,9 +681,9 @@ class RaftTest {
         LinChecker.check(
             Raft::class.java,
             createOptions()
-                .networkPartitions(true)
+                .networkPartitions(NetworkPartitionMode.HALVES)
                 .setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .supportRecovery(RecoveryMode.MIXED)
+                .crashMode(CrashMode.MIXED)
         )
     }
 
@@ -692,9 +692,9 @@ class RaftTest {
         LinChecker.check(
             Raft::class.java,
             createOptions()
-                .networkPartitions(true)
+                .networkPartitions(NetworkPartitionMode.HALVES)
                 .setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .supportRecovery(RecoveryMode.NO_CRASHES)
+                .crashMode(CrashMode.NO_CRASHES)
         )
     }
 
@@ -704,9 +704,9 @@ class RaftTest {
             Raft::class.java,
             createOptions()
                 .threads(4)
-                .networkPartitions(true)
+                .networkPartitions(NetworkPartitionMode.HALVES)
                 .setMaxNumberOfFailedNodes { it / 2 }
-                .supportRecovery(RecoveryMode.MIXED)
+                .crashMode(CrashMode.MIXED)
         )
     }
 }

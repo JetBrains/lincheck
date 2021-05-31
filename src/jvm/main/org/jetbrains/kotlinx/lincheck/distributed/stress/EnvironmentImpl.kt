@@ -57,14 +57,13 @@ internal class EnvironmentImpl<Message, Log>(
         ) {
             throw CrashError()
         }*/
-        if (context.testCfg.networkPartitions &&
+        if (context.testCfg.networkPartitions != NetworkPartitionMode.NONE &&
             probability.isNetworkPartition()
         ) {
             context.setNetworkPartition(nodeId)
         }
         val crashInfo = context.crashInfo.value
         if (!crashInfo.canSend(nodeId, receiver)) {
-            check(context.testCfg.networkPartitions || crashInfo[receiver])
             return
         }
         val event = MessageSentEvent(
@@ -80,7 +79,7 @@ internal class EnvironmentImpl<Message, Log>(
             context.messageHandler[nodeId, event.receiver].send(nodeId to event)
         }
         probability.curMsgCount++
-        if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
+        if (context.testCfg.supportRecovery != CrashMode.NO_CRASHES &&
             context.addressResolver.canFail(nodeId) &&
             probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
             context.crashNode(nodeId)

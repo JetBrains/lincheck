@@ -10,12 +10,19 @@ enum class MessageOrder {
 }
 
 
-enum class RecoveryMode {
+enum class CrashMode {
     NO_CRASHES,
     NO_RECOVERIES,
     ALL_NODES_RECOVER,
     MIXED
 }
+
+enum class NetworkPartitionMode {
+    NONE,
+    HALVES,
+    SINGLE
+}
+
 
 class NodeTypeInfo(val minNumberOfInstances: Int, val maxNumberOfInstances: Int, val canFail: Boolean) {
     fun minimize() = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances - 1, canFail)
@@ -30,10 +37,10 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var isNetworkReliable: Boolean = true
     private var messageOrder: MessageOrder = MessageOrder.FIFO
     private var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
-    private var supportRecovery: RecoveryMode = RecoveryMode.NO_RECOVERIES
+    private var crashMode: CrashMode = CrashMode.NO_RECOVERIES
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
-    private var networkPartitions: Boolean = false
+    private var networkPartitions: NetworkPartitionMode = NetworkPartitionMode.NONE
     private var testClasses = HashMap<Class<out Node<Message>>, NodeTypeInfo>()
     private var logFileName: String? = null
 
@@ -75,8 +82,8 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun supportRecovery(supportRecovery: RecoveryMode): DistributedOptions<Message, Log> {
-        this.supportRecovery = supportRecovery
+    fun crashMode(crashMode: CrashMode): DistributedOptions<Message, Log> {
+        this.crashMode = crashMode
         return this
     }
 
@@ -90,8 +97,8 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun networkPartitions(partitions: Boolean): DistributedOptions<Message, Log> {
-        this.networkPartitions = partitions
+    fun networkPartitions(partitionMode: NetworkPartitionMode): DistributedOptions<Message, Log> {
+        this.networkPartitions = partitionMode
         return this
     }
 
@@ -105,7 +112,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             testClass, iterations, threads,
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, isNetworkReliable,
-            messageOrder, maxNumberOfFailedNodes, supportRecovery,
+            messageOrder, maxNumberOfFailedNodes, crashMode,
             messageDuplication, networkPartitions, testClasses, logFileName,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs

@@ -136,7 +136,7 @@ class BroadcastTest {
             Peer::class.java,
             createOptions()
                 .setMaxNumberOfFailedNodes { it / 2 }
-                .supportRecovery(RecoveryMode.NO_RECOVERIES)
+                .crashMode(CrashMode.NO_RECOVERIES)
                 .storeLogsForFailedScenario("broadcast.txt")
         )
     }
@@ -147,7 +147,7 @@ class BroadcastTest {
             Peer::class.java,
             createOptions()
                 .setMaxNumberOfFailedNodes { (it + 1) / 2 }
-                .supportRecovery(RecoveryMode.NO_RECOVERIES)
+                .crashMode(CrashMode.NO_RECOVERIES)
                 .minimizeFailedScenario(false)
         )
     }
@@ -168,7 +168,7 @@ class BroadcastTest {
             createOptions()
                 .storeLogsForFailedScenario("broadcast_incorrect.txt")
                 .setMaxNumberOfFailedNodes { it / 2 }
-                .supportRecovery(RecoveryMode.NO_RECOVERIES)
+                .crashMode(CrashMode.NO_RECOVERIES)
                 .actorsPerThread(2)
                 .minimizeFailedScenario(false)
         )

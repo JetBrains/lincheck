@@ -23,14 +23,12 @@ package org.jetbrains.kotlinx.lincheck.distributed
  */
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.modelchecking.DistributedModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedStrategy
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
-import java.util.*
 
 
 class DistributedCTestConfiguration<Message, Log>(
@@ -42,9 +40,9 @@ class DistributedCTestConfiguration<Message, Log>(
     val isNetworkReliable: Boolean,
     val messageOrder: MessageOrder,
     val maxNumberOfFailedNodes: (Int) -> Int,
-    val supportRecovery: RecoveryMode,
+    val supportRecovery: CrashMode,
     val messageDuplication: Boolean,
-    val networkPartitions: Boolean,
+    val networkPartitions: NetworkPartitionMode,
     val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
     val logFilename: String?,
     requireStateEquivalenceCheck: Boolean,

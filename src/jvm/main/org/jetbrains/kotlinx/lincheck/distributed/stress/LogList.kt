@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.CrashError
-import org.jetbrains.kotlinx.lincheck.distributed.RecoveryMode
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 
 class LogList<E>(val context: DistributedRunnerContext<*, E>, val nodeId: Int,
                  val list: MutableList<E> = mutableListOf()) : MutableList<E> {
@@ -45,7 +45,7 @@ class LogList<E>(val context: DistributedRunnerContext<*, E>, val nodeId: Int,
     private fun tryCrash() {
         val probability = context.probabilities[nodeId]
         probability.curMsgCount++
-        if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
+        if (context.testCfg.supportRecovery != CrashMode.NO_CRASHES &&
             context.addressResolver.canFail(nodeId) &&
             probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
             context.crashNode(nodeId)

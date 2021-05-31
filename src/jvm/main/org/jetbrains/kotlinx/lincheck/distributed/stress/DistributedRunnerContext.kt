@@ -126,7 +126,7 @@ class DistributedRunnerContext<Message, Log>(
         events = FastQueue()
         vectorClock.forEach { it.fill(0) }
         messageHandler = ChannelHandler(testCfg.messageOrder, addressResolver.totalNumberOfNodes)
-        val exp = if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
+        val exp = if (testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
             testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
         } else {
             testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes) * 2

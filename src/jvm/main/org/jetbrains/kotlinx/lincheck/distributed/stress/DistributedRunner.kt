@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.File
 import java.lang.reflect.Method
-import kotlin.coroutines.suspendCoroutine
 import kotlin.random.Random
 
 inline fun withProbability(probability: Double, func: () -> Unit) {
@@ -299,8 +298,8 @@ open class DistributedRunner<Message, Log>(
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
         context.testNodeExecutions.getOrNull(iNode)?.crash()
-        if (testCfg.supportRecovery == RecoveryMode.ALL_NODES_RECOVER ||
-            testCfg.supportRecovery == RecoveryMode.MIXED
+        if (testCfg.supportRecovery == CrashMode.ALL_NODES_RECOVER ||
+            testCfg.supportRecovery == CrashMode.MIXED
             && context.probabilities[iNode].nodeRecovered()
         ) {
             val delta = context.initialTasksForNode

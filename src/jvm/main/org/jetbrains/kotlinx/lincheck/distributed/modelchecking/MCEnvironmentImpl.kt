@@ -59,7 +59,7 @@ class MCEnvironmentImpl<Message, Log>(
                 val tasksToRemove =
                     context.runner.tasks.filter { it.value.iNode == nodeId && it.key != taskId }.map { it.key }
                 tasksToRemove.forEach { context.runner.tasks.remove(it) }
-                if (context.testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
+                if (context.testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
                     context.testNodeExecutions.getOrNull(nodeId)?.crashRemained()
                 }
             }, taskId)

@@ -52,7 +52,7 @@ class SmokeTest {
                 .invocationsPerIteration(300)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(100)
-                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .crashMode(CrashMode.ALL_NODES_RECOVER)
                 .verifier(EpsilonVerifier::class.java)
         )
     }

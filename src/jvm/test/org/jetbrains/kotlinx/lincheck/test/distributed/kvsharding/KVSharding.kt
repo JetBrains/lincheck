@@ -193,7 +193,7 @@ class KVShardingTest {
                 .invocationsPerIteration(1000)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)
-                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .crashMode(CrashMode.ALL_NODES_RECOVER)
         )
     }
 
@@ -209,7 +209,7 @@ class KVShardingTest {
                 .invocationsPerIteration(1000)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)
-                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .crashMode(CrashMode.ALL_NODES_RECOVER)
                 .storeLogsForFailedScenario("kvsharding.txt")
                 .minimizeFailedScenario(false)
         )
@@ -227,7 +227,7 @@ class KVShardingTest {
                 .invocationsPerIteration(1000)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)
-                .supportRecovery(RecoveryMode.ALL_NODES_RECOVER)
+                .crashMode(CrashMode.ALL_NODES_RECOVER)
                 .messageOrder(MessageOrder.FIFO)
         )
     }
