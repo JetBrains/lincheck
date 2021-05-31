@@ -145,7 +145,7 @@ class DistributedModelCheckingRunner<Message, Log>(
         context.events.add(
             iNode to
                     OperationStartEvent(
-                        i,
+                        actor,
                         context.incClockAndCopy(iNode),
                         context.getStateRepresentation(iNode)
                     )
@@ -177,11 +177,25 @@ class DistributedModelCheckingRunner<Message, Log>(
             })
     }
 
+    private suspend fun handleException(f: suspend () -> Unit) : Boolean {
+        return try {
+            f()
+            true
+        } catch (e: Throwable) {
+            if (exception == null) {
+                exception = e
+            }
+            false
+        }
+    }
+
     private suspend fun executeTask(next: Int) {
         path.add(curTreeNode!!)
         signal = Signal()
         GlobalScope.launch(dispatcher + TaskContext()) {
-            tasks[next]!!.f()
+            handleException {
+                tasks[next]!!.f()
+            }
         }
         signal.await()
         curTreeNode!!.finish(tasks)
@@ -222,6 +236,7 @@ class DistributedModelCheckingRunner<Message, Log>(
                     // println(tasks)
                     curTreeNode = curTreeNode!![next]
                     executeTask(next)
+                    if (exception != null) return@launch
                 }
                 while (tasks.isNotEmpty()) {
                     val next = curTreeNode!!.next()
@@ -252,9 +267,12 @@ class DistributedModelCheckingRunner<Message, Log>(
                             val next = tasks.minOfOrNull { it.key }!!
                             signal = Signal()
                             GlobalScope.launch(dispatcher + TaskContext()) {
-                                tasks[next]!!.f()
+                                handleException {
+                                    tasks[next]!!.f()
+                                }
                             }
                             signal.await()
+                            if (exception != null) return@launch
                             tasks.remove(next)
                         }
                         isInterrupted = true
@@ -301,6 +319,7 @@ class DistributedModelCheckingRunner<Message, Log>(
         //println("Current tree")
         //bfsPrint()
         if (isInterrupted) {
+            //println("Interrupted")
            //bfsPrint()
         }
         if (!isInterrupted && root.isExploredNow()) {

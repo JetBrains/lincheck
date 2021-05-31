@@ -52,7 +52,7 @@ class MCEnvironmentImpl<Message, Log>(
         context.runner.curTreeNode!!.addMessage(event.id, taskId)
         val nextTransition = context.runner.nextTransition()
         if (nextTransition == taskId) {
-            println("[$nodeId]: Fail $taskId")
+            //println("[$nodeId]: Fail $taskId")
             val newClock = context.incClockAndCopy(nodeId)
             context.runner.addTask(NodeCrashTask(nodeId, VectorClock(newClock), "Crash node $nodeId") {
                 context.events.add(nodeId to NodeCrashEvent(newClock, context.getStateRepresentation(nodeId)))

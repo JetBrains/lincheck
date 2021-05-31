@@ -56,11 +56,10 @@ class DistributedModelCheckingStrategy<Message, Log>(
     }
 
     override fun run(): LincheckFailure? {
-        println(scenario)
+        //println(scenario)
         runner.use { runner ->
             // Run invocations
-            var invocation = 0
-            while (invocation < invocations) {
+            for (invocation in 0 until invocations) {
                 //println("INVOCATION $invocation")
                 val ir = runner.run()
                 when (ir) {
@@ -72,7 +71,7 @@ class DistributedModelCheckingStrategy<Message, Log>(
                                 ir.results.newResult(stateRepresentation)
                             ).also {
                                 runner.storeEventsToFile(it)
-                                println("Found error")
+                                //println("Found error")
                                // debugLogs.forEach {println(it)}
                             }
                         }
@@ -88,9 +87,6 @@ class DistributedModelCheckingStrategy<Message, Log>(
                 if (runner.isFullyExplored()) {
                     println("Finish on $invocation")
                     return null
-                }
-                if (!runner.isInterrupted) {
-                    invocation++
                 }
             }
             return null
