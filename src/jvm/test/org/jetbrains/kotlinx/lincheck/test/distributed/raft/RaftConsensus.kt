@@ -375,7 +375,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+   // @Test(expected = LincheckAssertionError::class)
     fun testLargeNumberOfUnavailableNodes() {
         LinChecker.check(
             RaftConsensus::class.java,
