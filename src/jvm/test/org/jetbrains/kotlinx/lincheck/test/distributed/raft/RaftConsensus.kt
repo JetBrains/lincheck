@@ -316,39 +316,3 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
         check(t <= 1)
     }
 }
-
-class RaftConsensusTest {
-    private fun createOptions() = DistributedOptions<RMessage, RLog>()
-        .requireStateEquivalenceImplCheck(false)
-        .threads(3)
-        .actorsPerThread(3)
-        .invocationTimeout(10_000)
-        .invocationsPerIteration(1_000)
-        .iterations(10)
-        .verifier(EpsilonVerifier::class.java)
-        //.storeLogsForFailedScenario("raft_simple.txt")
-
-    @Test
-    fun test() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions()
-                .networkPartitions(NetworkPartitionMode.HALVES)
-                .setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .crashMode(CrashMode.NO_CRASHES)
-        )
-    }
-
-   @Test(expected = LincheckAssertionError::class)
-    fun testLargeNumberOfUnavailableNodes() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions()
-                .threads(4)
-                .networkPartitions(NetworkPartitionMode.HALVES)
-                .setMaxNumberOfFailedNodes { it / 2 }
-                .crashMode(CrashMode.MIXED)
-                .minimizeFailedScenario(false)
-        )
-    }
-}

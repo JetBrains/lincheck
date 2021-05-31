@@ -453,24 +453,3 @@ class ReplicaSpecification {
         storage[key] = value
     }
 }
-
-class RaftTestIncorrect {
-    private fun createOptions() = DistributedOptions<Message, Log>()
-        .requireStateEquivalenceImplCheck(false)
-        .sequentialSpecification(ReplicaSpecification::class.java)
-        .threads(3)
-        .actorsPerThread(2)
-        .invocationTimeout(5_000)
-        .invocationsPerIteration(100)
-        .iterations(10)
-        //.storeLogsForFailedScenario("raft3.txt")
-
-
-    @Test(expected = LincheckAssertionError::class)
-    fun test() {
-        LinChecker.check(
-            RaftServerIncorrect::class.java,
-            createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
-        )
-    }
-}
