@@ -36,5 +36,7 @@ public class EpsilonVerifier implements Verifier {
     }
 
     @Override
-    public void checkStateEquivalenceImplementation() {}
+    public boolean checkStateEquivalenceImplementation() {
+        return true;
+    }
 }
