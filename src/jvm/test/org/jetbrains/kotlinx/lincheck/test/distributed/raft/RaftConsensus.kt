@@ -323,7 +323,7 @@ class RaftConsensusTest {
         .threads(3)
         .actorsPerThread(3)
         .invocationTimeout(10_000)
-        .invocationsPerIteration(1_000)
+        .invocationsPerIteration(10_000)
         .iterations(10)
         .verifier(EpsilonVerifier::class.java)
         //.storeLogsForFailedScenario("raft_simple.txt")
@@ -375,7 +375,7 @@ class RaftConsensusTest {
         )
     }
 
-   // @Test(expected = LincheckAssertionError::class)
+   @Test(expected = LincheckAssertionError::class)
     fun testLargeNumberOfUnavailableNodes() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -384,6 +384,7 @@ class RaftConsensusTest {
                 .networkPartitions(NetworkPartitionMode.HALVES)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .crashMode(CrashMode.MIXED)
+                .minimizeFailedScenario(false)
         )
     }
 }
