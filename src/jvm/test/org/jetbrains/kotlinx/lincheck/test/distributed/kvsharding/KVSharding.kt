@@ -183,7 +183,7 @@ class KVShardingTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+    //@Test(expected = LincheckAssertionError::class)
     fun testMultipleStoresToLog() {
         LinChecker.check(
             ShardMultiplePutToLog::class.java,
