@@ -22,13 +22,11 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 
-class NodeCrashInfo(
-    private val testCfg: DistributedCTestConfiguration<*, *>,
-    private val context: DistributedRunnerContext<*, *>,
+abstract class NodeCrashInfo(
+    protected val testCfg: DistributedCTestConfiguration<*, *>,
+    protected val context: DistributedRunnerContext<*, *>,
     val numberOfFailedNodes: Int,
-    val partitions: List<Set<Int>>,
-    val failedNodes: List<Boolean>,
-    val partitionCount: Int
+    val failedNodes: List<Boolean>
 ) {
     companion object {
         fun initialInstance(
@@ -38,7 +36,7 @@ class NodeCrashInfo(
             val numberOfNodes = context.addressResolver.totalNumberOfNodes
             val failedNodes = List(numberOfNodes) { false }
             val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
-            return NodeCrashInfo(testCfg, context, 0, partitions, failedNodes, 0)
+            return NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, 0)
         }
     }
 
@@ -46,36 +44,57 @@ class NodeCrashInfo(
 
     val remainedNodes = maxNumberOfFailedNodes - numberOfFailedNodes
 
-    fun canSend(a: Int, b: Int): Boolean {
+    abstract fun canSend(a: Int, b: Int): Boolean
+
+    operator fun get(a: Int) = failedNodes[a]
+
+    abstract fun crashNode(iNode: Int): NodeCrashInfo?
+
+    abstract fun recoverNode(iNode: Int): NodeCrashInfo
+
+    abstract fun setNetworkPartition(): NodeCrashInfo?
+
+    abstract fun recoverNetworkPartition(): NodeCrashInfo
+}
+
+
+class NodeCrashInfoHalves(
+    testCfg: DistributedCTestConfiguration<*, *>,
+    context: DistributedRunnerContext<*, *>,
+    numberOfFailedNodes: Int,
+    val partitions: List<Set<Int>>,
+    failedNodes: List<Boolean>,
+    val partitionCount: Int
+) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes) {
+
+    override fun canSend(a: Int, b: Int): Boolean {
         return (partitions[0].contains(a) && partitions[0].contains(b) ||
                 partitions[1].contains(a) && partitions[1].contains(b))
     }
 
-    operator fun get(a: Int) = failedNodes[a]
-
-    fun crashNode(iNode: Int): NodeCrashInfo? {
+    override fun crashNode(iNode: Int): NodeCrashInfoHalves? {
         if (numberOfFailedNodes == maxNumberOfFailedNodes ||
             failedNodes[iNode]
         ) return null
         val newFailedNodes = failedNodes.toMutableList()
         newFailedNodes[iNode] = true
-        return NodeCrashInfo(
+        return NodeCrashInfoHalves(
             testCfg,
             context, numberOfFailedNodes + 1, partitions, newFailedNodes, partitionCount
         )
     }
 
-    fun recoverNode(iNode: Int): NodeCrashInfo {
+    override fun recoverNode(iNode: Int): NodeCrashInfoHalves {
         check(failedNodes[iNode])
         val newFailedNodes = failedNodes.toMutableList()
         newFailedNodes[iNode] = false
-        return NodeCrashInfo(
+        return NodeCrashInfoHalves(
             testCfg,
             context, numberOfFailedNodes - 1, partitions, newFailedNodes, partitionCount
         )
     }
 
-    fun setNetworkPartition(): NodeCrashInfo? {
+    override fun setNetworkPartition(): NodeCrashInfoHalves? {
         if (partitions[0].isNotEmpty() || numberOfFailedNodes == maxNumberOfFailedNodes) return null
         val possiblePartitionSize = maxNumberOfFailedNodes - numberOfFailedNodes
         val rand = Probability.rand.get()
@@ -86,18 +105,67 @@ class NodeCrashInfo(
         check(nodesInPartition.isNotEmpty())
         val anotherPartition = (failedNodes.indices).filter { it !in nodesInPartition }.toSet()
         val newNumberOfFailedNodes = numberOfFailedNodes + partitionSize
-        return NodeCrashInfo(
+        return NodeCrashInfoHalves(
             testCfg, context, newNumberOfFailedNodes, listOf(nodesInPartition, anotherPartition),
             failedNodes, partitionCount + 1
         )
     }
 
-    fun recoverNetworkPartition(): NodeCrashInfo {
+    override fun recoverNetworkPartition(): NodeCrashInfoHalves {
         if (partitions[0].isEmpty()) return this
         val partitionSize = partitions[0].size
-        return NodeCrashInfo(
+        return NodeCrashInfoHalves(
             testCfg, context, numberOfFailedNodes - partitionSize, listOf(emptySet(), failedNodes.indices.toSet()),
             failedNodes, partitionCount
         )
+    }
+}
+
+class NodeCrashInfoSingle(
+    testCfg: DistributedCTestConfiguration<*, *>,
+    context: DistributedRunnerContext<*, *>,
+    numberOfFailedNodes: Int,
+    failedNodes: List<Boolean>,
+    val edges: List<List<Boolean>>
+) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes) {
+    override fun canSend(a: Int, b: Int): Boolean = edges[a][b]
+
+    private fun createNewEdges(iNode: Int, value: Boolean) : List<List<Boolean>> {
+        val newEdges = edges.map { it.toMutableList() }.toMutableList()
+        for (i in edges.indices) {
+            newEdges[i][iNode] = value
+            newEdges[iNode][i] = value
+        }
+        return newEdges
+    }
+
+    override fun crashNode(iNode: Int): NodeCrashInfoSingle? {
+        if (numberOfFailedNodes == maxNumberOfFailedNodes ||
+            failedNodes[iNode]
+        ) return null
+        val newFailedNodes = failedNodes.toMutableList()
+        newFailedNodes[iNode] = true
+        return NodeCrashInfoSingle(
+            testCfg,
+            context, numberOfFailedNodes + 1, newFailedNodes, createNewEdges(iNode, false)
+        )
+    }
+
+    override fun recoverNode(iNode: Int): NodeCrashInfoSingle {
+        check(failedNodes[iNode])
+        val newFailedNodes = failedNodes.toMutableList()
+        newFailedNodes[iNode] = false
+        return NodeCrashInfoSingle(
+            testCfg,
+            context, numberOfFailedNodes - 1, newFailedNodes, createNewEdges(iNode, true)
+        )
+    }
+
+    override fun setNetworkPartition(): NodeCrashInfo? {
+        TODO("Not yet implemented")
+    }
+
+    override fun recoverNetworkPartition(): NodeCrashInfo {
+        TODO("Not yet implemented")
     }
 }

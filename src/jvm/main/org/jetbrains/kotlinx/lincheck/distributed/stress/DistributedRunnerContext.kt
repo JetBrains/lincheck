@@ -156,7 +156,7 @@ class DistributedRunnerContext<Message, Log>(
             val prev = crashInfo.value
             val newInfo = prev.setNetworkPartition() ?: return false
             if (crashInfo.compareAndSet(prev, newInfo)) {
-                events.put(iNode to NetworkPartitionEvent(newInfo.partitions, newInfo.partitionCount))
+               // events.put(iNode to NetworkPartitionEvent(newInfo.partitions, newInfo.partitionCount))
                 val delayTimeout = probabilities[iNode].networkRecoveryDelay()
                 //val currentInvocation = invocation.value
                 GlobalScope.launch {
@@ -173,7 +173,7 @@ class DistributedRunnerContext<Message, Log>(
             val prev = crashInfo.value
             val newInfo = prev.recoverNetworkPartition()
             if (crashInfo.compareAndSet(prev, newInfo)) {
-                events.put(iNode to NetworkRecoveryEvent(prev.partitionCount))
+               // events.put(iNode to NetworkRecoveryEvent(prev.partitionCount))
                 return
             }
         }

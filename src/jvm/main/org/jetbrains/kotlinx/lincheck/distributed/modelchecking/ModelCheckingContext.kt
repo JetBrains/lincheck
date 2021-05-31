@@ -24,8 +24,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.Event
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.NodeAddressResolver
-import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner
-import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeCrashInfo
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
 import java.util.*
