@@ -323,49 +323,13 @@ class RaftConsensusTest {
         .threads(3)
         .actorsPerThread(3)
         .invocationTimeout(10_000)
-        .invocationsPerIteration(10_000)
+        .invocationsPerIteration(1_000)
         .iterations(10)
         .verifier(EpsilonVerifier::class.java)
         //.storeLogsForFailedScenario("raft_simple.txt")
 
-    //@Test
-    fun testNoFailures() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions()
-        )
-    }
-
-    //@Test
-    fun testNoRecoveries() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
-        )
-    }
-
-    //@Test
-    fun testAllRecover() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .crashMode(CrashMode.ALL_NODES_RECOVER)
-        )
-    }
-
     @Test
-    fun testNetworkPartitions() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions()
-                .networkPartitions(NetworkPartitionMode.HALVES)
-                .setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .crashMode(CrashMode.MIXED)
-        )
-    }
-
-    @Test
-    fun testNetworkPartitionsOnly() {
+    fun test() {
         LinChecker.check(
             RaftConsensus::class.java,
             createOptions()
