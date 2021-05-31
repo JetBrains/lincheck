@@ -41,9 +41,9 @@ public interface Verifier {
     boolean verifyResults(ExecutionScenario scenario, ExecutionResult results);
 
     /**
-     * Verifiers which use sequential implementation instances as states (or parts of them)
-     * should check whether {@link #equals(Object)} and {@link #hashCode()} methods are implemented
-     * correctly.
+     * Returns {@code true} when the state equivalence relation for the sequential specification
+     * is properly specified via {@link #equals(Object)} and {@link #hashCode()} methods. Returns
+     * `false` when two logically equal states do not satisfy the equals-hashCode contract.
      */
-    void checkStateEquivalenceImplementation();
+    boolean checkStateEquivalenceImplementation();
 }

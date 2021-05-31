@@ -117,7 +117,7 @@ public @interface ModelCheckingCTest {
      * Essentially, it checks whether two new instances of the test class are equal.
      * If the check fails, an {@link IllegalStateException} is thrown.
      */
-    boolean requireStateEquivalenceImplCheck() default true;
+    boolean requireStateEquivalenceImplCheck() default false;
 
     /**
      * If this feature is enabled and an invalid interleaving has been found,

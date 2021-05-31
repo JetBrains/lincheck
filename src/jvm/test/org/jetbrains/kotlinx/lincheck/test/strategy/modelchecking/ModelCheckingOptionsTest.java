@@ -53,7 +53,7 @@ public class ModelCheckingOptionsTest {
             .actorsPerThread(3)
             .checkObstructionFreedom(true)
             .hangingDetectionThreshold(30)
-            .logLevel(LoggingLevel.ERROR)
+            .logLevel(LoggingLevel.WARN)
             .addGuarantee(forClasses("java.util.WeakHashMap").allMethods().ignore())
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
