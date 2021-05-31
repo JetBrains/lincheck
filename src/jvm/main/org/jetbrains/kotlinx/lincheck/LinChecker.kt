@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -89,45 +88,42 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     // Thus, the algorithm works in the linear time of the total number of actors.
     private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
         reporter.logScenarioMinimization(scenario)
-        var failure = this
-        var scenario = scenario
-        var minimizationHappened = true
-        while (minimizationHappened) {
-            minimizationHappened = false
-            fun tryRemoveActor(actors: MutableList<Actor>, position: Int, newScenario: ExecutionScenario, onEmptyAction: () -> Unit) {
-                actors.removeAt(position)
-                if (actors.isEmpty()) onEmptyAction()
-                val newFailedIteration = newScenario.tryMinimize(testCfg)
-                if (newFailedIteration != null) {
-                    minimizationHappened = true
-                    failure = newFailedIteration
-                    scenario = newScenario
-                }
-            }
-            // Reversed indices to avoid conflicts with in-loop removals
-            for (i in scenario.parallelExecution.indices.reversed()) {
-                for (j in scenario.parallelExecution[i].indices.reversed()) {
-                    val newScenario = scenario.copy()
-                    tryRemoveActor(newScenario.parallelExecution[i], j, newScenario) {
-                        // Also remove the empty thread
-                        newScenario.parallelExecution.removeAt(i)
-                    }
-                }
-            }
-            for (i in scenario.initExecution.indices.reversed()) {
-                val newScenario = scenario.copy()
-                tryRemoveActor(newScenario.initExecution, i, newScenario) {}
-            }
-            for (i in scenario.postExecution.indices.reversed()) {
-                val newScenario = scenario.copy()
-                tryRemoveActor(newScenario.postExecution, i, newScenario) {}
-            }
+        var minimizedFailure = this
+        while (true) {
+            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
         }
-        return failure
+        return minimizedFailure
     }
 
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration) =
-        if (isValid) run(testCfg, testCfg.createVerifier()) else null
+    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+        // Reversed indices to avoid conflicts with in-loop removals
+        for (i in parallelExecution.indices.reversed()) {
+            for (j in parallelExecution[i].indices.reversed()) {
+                val failure = tryMinimize(i + 1, j, testCfg)
+                if (failure != null) return failure
+            }
+        }
+        for (j in initExecution.indices.reversed()) {
+            val failure = tryMinimize(0, j, testCfg)
+            if (failure != null) return failure
+        }
+        for (j in postExecution.indices.reversed()) {
+            val failure = tryMinimize(threads + 1, j, testCfg)
+            if (failure != null) return failure
+        }
+        return null
+    }
+
+    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
+        val newScenario = this.copy()
+        val actors = newScenario[threadId] as MutableList<Actor>
+        actors.removeAt(position)
+        if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
+            // Also remove the empty thread
+            newScenario.parallelExecution.removeAt(threadId - 1)
+        }
+        return if (newScenario.isValid) newScenario.run(testCfg, testCfg.createVerifier()) else null
+    }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
