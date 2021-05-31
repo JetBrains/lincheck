@@ -126,8 +126,8 @@ class BroadcastTest {
         .requireStateEquivalenceImplCheck(false)
         .threads(3)
         .actorsPerThread(3)
-        .invocationsPerIteration(3_000)
-        .iterations(10)
+        .invocationsPerIteration(30_000)
+        .iterations(1)
         .verifier(EpsilonVerifier::class.java)
 
     @Test
@@ -138,6 +138,17 @@ class BroadcastTest {
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .supportRecovery(RecoveryMode.NO_RECOVERIES)
                 .storeLogsForFailedScenario("broadcast.txt")
+        )
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testMoreFailures() {
+        LinChecker.check(
+            Peer::class.java,
+            createOptions()
+                .setMaxNumberOfFailedNodes { (it + 1) / 2 }
+                .supportRecovery(RecoveryMode.NO_RECOVERIES)
+                .minimizeFailedScenario(false)
         )
     }
 

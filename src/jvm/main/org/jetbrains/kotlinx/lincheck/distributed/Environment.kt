@@ -1,6 +1,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.CoroutineScope
+import org.jetbrains.kotlinx.lincheck.Actor
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -103,7 +104,10 @@ data class MessageSentEvent<Message>(
     val id: Int,
     val clock: IntArray,
     val state: String
-) : Event()
+) : Event() {
+    override fun toString(): String =
+        "Send $message to $receiver, messageId=$id, clock=${clock.toList()}" + if (state.isNotBlank()) ", state=$state" else ""
+}
 
 data class MessageReceivedEvent<Message>(
     val message: Message,
@@ -111,17 +115,26 @@ data class MessageReceivedEvent<Message>(
     val id: Int,
     val clock: IntArray,
     val state: String
-) : Event()
+) : Event() {
+    override fun toString(): String =
+        "Received $message from $sender, messageId=$id, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+}
 
 data class InternalEvent(val message: String, val clock: IntArray, val state: String) :
-    Event()
+    Event() {
+    override fun toString(): String =
+        "$message, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+    }
 
 data class NodeCrashEvent(val clock: IntArray, val state: String) : Event()
 
 data class ProcessRecoveryEvent(val clock: IntArray, val state: String) : Event()
 
-data class OperationStartEvent(val opId: Int, val clock: IntArray, val state: String) :
-    Event()
+data class OperationStartEvent(val actor: Actor, val clock: IntArray, val state: String) :
+    Event() {
+    override fun toString(): String =
+        "Start operation $actor, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+    }
 
 data class CrashNotificationEvent(
     val crashedNode: Int,

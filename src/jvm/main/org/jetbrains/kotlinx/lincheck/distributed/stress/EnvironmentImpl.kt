@@ -50,13 +50,13 @@ internal class EnvironmentImpl<Message, Log>(
         }
         //println("[$nodeId]: Send to ${receiver} ${message}")
         probability.curMsgCount++
-        if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
+        /*if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
             context.addressResolver.canFail(nodeId) &&
             probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
             context.crashNode(nodeId)
         ) {
             throw CrashError()
-        }
+        }*/
         if (context.testCfg.networkPartitions &&
             probability.isNetworkPartition()
         ) {
@@ -78,6 +78,14 @@ internal class EnvironmentImpl<Message, Log>(
         val rate = probability.duplicationRate()
         repeat(rate) {
             context.messageHandler[nodeId, event.receiver].send(nodeId to event)
+        }
+        probability.curMsgCount++
+        if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
+            context.addressResolver.canFail(nodeId) &&
+            probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
+            context.crashNode(nodeId)
+        ) {
+            throw CrashError()
         }
     }
 

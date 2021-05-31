@@ -238,7 +238,7 @@ open class DistributedRunner<Message, Log>(
                 context.events.put(
                     iNode to
                             OperationStartEvent(
-                                i,
+                                actor,
                                 context.incClockAndCopy(iNode),
                                 context.getStateRepresentation(iNode)
                             )
@@ -355,7 +355,7 @@ open class DistributedRunner<Message, Log>(
             out.println(failure)
             out.println()
             context.events.toList().forEach { p ->
-                out.println("${p.first} # ${p.second}")
+                out.println("[${p.first}]: ${p.second}")
             }
         }
     }

@@ -129,7 +129,7 @@ class DistributedRunnerContext<Message, Log>(
         val exp = if (testCfg.supportRecovery == RecoveryMode.NO_RECOVERIES) {
             testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
         } else {
-            testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes) * 10
+            testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes) * 2
         }
         probabilities.forEach { it.reset(exp) }
         messageId.lazySet(0)

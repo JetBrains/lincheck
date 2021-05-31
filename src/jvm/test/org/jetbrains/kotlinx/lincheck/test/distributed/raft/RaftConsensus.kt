@@ -314,10 +314,10 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
 class RaftConsensusTest {
     private fun createOptions() = DistributedOptions<RMessage, RLog>()
         .requireStateEquivalenceImplCheck(false)
-        .threads(5)
-        .actorsPerThread(5)
+        .threads(3)
+        .actorsPerThread(3)
         .invocationTimeout(10_000)
-        .invocationsPerIteration(500)
+        .invocationsPerIteration(1_000)
         .iterations(10)
         .verifier(EpsilonVerifier::class.java)
         .storeLogsForFailedScenario("raft_simple.txt")

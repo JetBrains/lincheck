@@ -71,6 +71,7 @@ class SkeenAlgorithmIncorrect(env: Environment<Message, Message>) : OrderCheckNo
             if (msg?.finalized != true) return
             messages.removeIf { it == msg }
             env.recordInternalEvent("Add message $msg")
+            check(messages.none { it.time == msg.time })
             env.log.add(msg)
         }
     }

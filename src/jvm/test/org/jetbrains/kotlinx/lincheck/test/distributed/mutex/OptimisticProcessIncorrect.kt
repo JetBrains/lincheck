@@ -106,9 +106,10 @@ class OptimisticMutexIncorrectTest {
                 .requireStateEquivalenceImplCheck(false)
                 .verifier(EpsilonVerifier::class.java)
                 .threads(3)
+                .actorsPerThread(3)
                 .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(100)
-                .iterations(1000)
+                .invocationsPerIteration(10)
+                .iterations(3000)
         )
     }
 }

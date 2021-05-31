@@ -102,7 +102,7 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode<Messag
         }
     }
 
-    //@Validate
+    @Validate
     fun validateAllReceived() {
         val logs = env.getLogs().toList()
         for (l in logs) {

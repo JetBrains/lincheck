@@ -103,7 +103,7 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
         semaphore.release()
     }
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation(cancellableOnSuspension = false, blocking = true)
     suspend fun lock() {
         //println("[${env.nodeId}]: Request lock")
         if (inCS) {
@@ -147,8 +147,8 @@ class RickartAgrawalaMutexTest {
                 .threads(3)
                 .messageOrder(MessageOrder.FIFO)
                 .actorsPerThread(3)
-                .invocationsPerIteration(5000)
-                .iterations(20)
+                .invocationsPerIteration(3000)
+                .iterations(10)
         )
     }
 

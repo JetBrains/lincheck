@@ -28,10 +28,7 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.Counter
 import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.LamportMutex
 import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.MutexMessage
@@ -55,7 +52,7 @@ object Empty : State()
 @OpGroupConfig(name = "observer", nonParallel = true)
 class ChandyLamport(private val env: Environment<Message, Message>) : Node<Message> {
     private val currentSum = atomic(100)
-    private val semaphore = Semaphore(1, 1)
+    private var semaphore = Signal()
     private var state = 0
     private var token = 0
     private var markerCount = 0
@@ -83,15 +80,14 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
                     env.log.add(CurState(state))
                     marker = message
                     env.broadcast(message)
-                } else {
-                    check(marker == message) {
-                        "Execution is not non parallel"
-                    }
-                    if (markerCount == env.numberOfNodes - 1) {
-                        val res = finishSnapshot()
-                        env.send(Reply(res, marker!!.token), marker!!.initializer)
-                        marker = null
-                    }
+                }
+                check(marker == message) {
+                    "Execution is not non parallel"
+                }
+                if (markerCount == env.numberOfNodes - 1) {
+                    val res = finishSnapshot()
+                    env.send(Reply(res, marker!!.token), marker!!.initializer)
+                    marker = null
                 }
             }
             is Reply -> {
@@ -115,7 +111,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
     private fun checkAllRepliesReceived() {
         if (replies.filterNotNull().size == env.numberOfNodes) {
             gotSnapshot = true
-            semaphore.release()
+            semaphore.signal()
         }
     }
 
@@ -140,6 +136,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
 
     @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun snapshot(): Int {
+        semaphore = Signal()
         state = currentSum.value
         env.log.add(CurState(state))
         marker = Marker(env.nodeId, token++)
@@ -148,7 +145,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
             return state
         }
         while (!gotSnapshot) {
-            semaphore.acquire()
+            semaphore.await()
         }
         val res = replies.map { it as Reply }.map { it.state }.sum()
         marker = null
@@ -160,7 +157,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
 
 class MockSnapshot {
     @Operation()
-    suspend fun transaction(to: Int, sum: Int) {
+    fun transaction(to: Int, sum: Int) {
     }
 
     @Operation
@@ -176,11 +173,29 @@ class SnapshotTest {
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(MockSnapshot::class.java)
                 .threads(3)
-                //.actorsPerThread(3)
+                .actorsPerThread(3)
                 .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(3000)
+                .invocationsPerIteration(3_000)
                 .iterations(10)
-                .storeLogsForFailedScenario("chandy_lamport_stress.txt")
+                .storeLogsForFailedScenario("chandy_lamport.txt")
+                .minimizeFailedScenario(false)
+        )
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testNoFifo() {
+        LinChecker.check(
+            ChandyLamport::class.java,
+            DistributedOptions<Message, Unit>()
+                .requireStateEquivalenceImplCheck(false)
+                .sequentialSpecification(MockSnapshot::class.java)
+                .threads(3)
+                .actorsPerThread(3)
+                .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .invocationsPerIteration(3_000)
+                .iterations(10)
+                .storeLogsForFailedScenario("chandy_lamport.txt")
+                .minimizeFailedScenario(false)
         )
     }
 

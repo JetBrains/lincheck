@@ -69,8 +69,8 @@ class DistributedCTestConfiguration<Message, Log>(
         stateRepresentationMethod: Method?,
         verifier: Verifier
     ): Strategy {
-        //return DistributedStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
-        return DistributedModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        return DistributedStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        //return DistributedModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
     }
 
     fun nextConfigurations(): List<DistributedCTestConfiguration<Message, Log>> {

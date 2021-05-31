@@ -83,8 +83,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         }
     }
 
-    @StateRepresentation
-    override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
+    //override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
 
     private fun checkInCS() {
         val myReqTime = req[env.nodeId]
@@ -115,7 +114,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         while (!inCS) {
             signal.await()
         }
-        env.recordInternalEvent("Lock")
+        env.recordInternalEvent("Acquire lock")
     }
 
     @Operation(cancellableOnSuspension = false)
@@ -125,7 +124,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         }
         inCS = false
         req[env.nodeId] = inf
-        env.recordInternalEvent("Unlock")
+        env.recordInternalEvent("Release lock")
         env.broadcast(Rel(++clock))
     }
 }
@@ -141,11 +140,11 @@ class LamportMutexTest {
     private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(MutexSpecification::class.java)
-        .threads(3)
-        .actorsPerThread(3)
-        .invocationsPerIteration(1000)
+        .threads(2)
+        .actorsPerThread(1)
+        .invocationsPerIteration(3_000)
         .iterations(10)
-        .storeLogsForFailedScenario("lamport.txt")
+       // .storeLogsForFailedScenario("lamport.txt")
         //.minimizeFailedScenario(false)
 
     @Test
