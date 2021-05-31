@@ -338,7 +338,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testAllRecover() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -347,7 +347,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testMessageLost() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -355,7 +355,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testMixed() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -366,7 +366,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testNetworkPartitions() {
         LinChecker.check(
             RaftConsensus::class.java,

@@ -639,7 +639,7 @@ class RaftTest {
         .verifier(EpsilonVerifier::class.java)
         .storeLogsForFailedScenario("raft_simple.txt")
 
-    @Test
+    //@Test
     fun testNoFailures() {
         LinChecker.check(
             Raft::class.java,
@@ -647,7 +647,7 @@ class RaftTest {
         )
     }
 
-    @Test
+    //@Test
     fun testNoRecoveries() {
         LinChecker.check(
             Raft::class.java,
@@ -655,7 +655,7 @@ class RaftTest {
         )
     }
 
-    @Test
+    //@Test
     fun testAllRecover() {
         LinChecker.check(
             Raft::class.java,
@@ -665,7 +665,7 @@ class RaftTest {
         )
     }
 
-    @Test
+   // @Test
     fun testMixed() {
         LinChecker.check(
             Raft::class.java,
@@ -676,7 +676,7 @@ class RaftTest {
         )
     }
 
-    @Test
+    //@Test
     fun testNetworkPartitions() {
         LinChecker.check(
             Raft::class.java,
@@ -687,7 +687,7 @@ class RaftTest {
         )
     }
 
-    @Test
+    //@Test
     fun testNetworkPartitionsOnly() {
         LinChecker.check(
             Raft::class.java,
@@ -698,7 +698,7 @@ class RaftTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+    //@Test(expected = LincheckAssertionError::class)
     fun testLargeNumberOfUnavailableNodes() {
         LinChecker.check(
             Raft::class.java,
