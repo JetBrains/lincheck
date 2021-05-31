@@ -137,6 +137,7 @@ class BroadcastTest {
         .nodeType(Peer::class.java, 5)
         .setMaxNumberOfFailedNodes { (it + 1) / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
+        .iterations(10)
         .minimizeFailedScenario(false)
         .check()
 
