@@ -182,24 +182,7 @@ class KVShardingTest {
                 .iterations(30)
         )
     }
-
-    //@Test(expected = LincheckAssertionError::class)
-    fun testMultipleStoresToLog() {
-        LinChecker.check(
-            ShardMultiplePutToLog::class.java,
-            DistributedOptions<KVMessage, KVLogEntry>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(SingleNode::class.java)
-                .actorsPerThread(3)
-                .threads(3)
-                .invocationsPerIteration(1000)
-                .setMaxNumberOfFailedNodes { it / 2 }
-                .iterations(30)
-                .crashMode(CrashMode.ALL_NODES_RECOVER)
-                .minimizeFailedScenario(false)
-        )
-    }
-
+    
     @Test
     fun test() {
         LinChecker.check(
