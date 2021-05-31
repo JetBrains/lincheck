@@ -114,13 +114,7 @@ open class DistributedRunner<Message, Log>(
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            val lastPartition =
-                context.events.toList().map { it.second }.filterIsInstance<NetworkPartitionEvent>()
-                    .lastOrNull()?.partitions?.get(0) ?: emptySet()
-            for (i in lastPartition) {
-                testNodeExecutions.getOrNull(i)?.crashRemained()
-            }
-            if (lastPartition.isEmpty() || testNodeExecutions.any { it.results.any { r -> r == null } }) {
+            if (testNodeExecutions.any { it.results.any { r -> r == null } }) {
                 context.dispatchers.forEach { it.shutdown() }
                 return DeadlockInvocationResult(emptyMap())
             }

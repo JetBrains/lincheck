@@ -89,7 +89,7 @@ class ReplicaSpecification {
     suspend fun get(key: String) = storage[key]
 
     @Operation
-    suspend fun put(key: String, value: String) {
+    fun put(key: String, value: String) {
         storage[key] = value
     }
 }

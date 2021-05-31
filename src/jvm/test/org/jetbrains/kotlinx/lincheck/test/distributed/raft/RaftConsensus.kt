@@ -35,7 +35,7 @@ data class RVote(val votedFor: Int?) : RLog()
 
 class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
     companion object {
-        const val HEARTBEAT_RATE = 10
+        const val HEARTBEAT_RATE = 30
         const val MISSED_HEARTBEAT_LIMIT = 5
     }
 
@@ -291,11 +291,17 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
                 operationSignal = Signal()
                 continue
             }
-            if (leader == env.nodeId) return
+            if (leader == env.nodeId) {
+                env.recordInternalEvent("Get result")
+                return
+            }
             env.send(RPing(term), leader!!)
             operationSignal = Signal()
             operationSignal.await()
-            if (hasResponse) return
+            if (hasResponse) {
+                env.recordInternalEvent("Get result")
+                return
+            }
         }
     }
 
@@ -338,7 +344,7 @@ class RaftConsensusTest {
         )
     }
 
-    //@Test
+    @Test
     fun testAllRecover() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -347,26 +353,7 @@ class RaftConsensusTest {
         )
     }
 
-    //@Test
-    fun testMessageLost() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions().networkReliable(false)
-        )
-    }
-
-    //@Test
-    fun testMixed() {
-        LinChecker.check(
-            RaftConsensus::class.java,
-            createOptions()
-                .networkReliable(false)
-                .setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .crashMode(CrashMode.MIXED)
-        )
-    }
-
-    //@Test
+    @Test
     fun testNetworkPartitions() {
         LinChecker.check(
             RaftConsensus::class.java,

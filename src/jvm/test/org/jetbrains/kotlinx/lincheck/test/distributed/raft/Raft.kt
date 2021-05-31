@@ -665,17 +665,6 @@ class RaftTest {
         )
     }
 
-   // @Test
-    fun testMixed() {
-        LinChecker.check(
-            Raft::class.java,
-            createOptions()
-                .networkReliable(false)
-                .setMaxNumberOfFailedNodes { (it - 1) / 2 }
-                .crashMode(CrashMode.MIXED)
-        )
-    }
-
     //@Test
     fun testNetworkPartitions() {
         LinChecker.check(
@@ -687,7 +676,7 @@ class RaftTest {
         )
     }
 
-    //@Test
+    @Test
     fun testNetworkPartitionsOnly() {
         LinChecker.check(
             Raft::class.java,
@@ -698,7 +687,7 @@ class RaftTest {
         )
     }
 
-    //@Test(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testLargeNumberOfUnavailableNodes() {
         LinChecker.check(
             Raft::class.java,

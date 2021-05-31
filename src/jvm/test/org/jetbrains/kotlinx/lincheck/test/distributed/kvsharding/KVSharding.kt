@@ -105,7 +105,9 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
         delegate = receiver
         while (true) {
             env.send(request, receiver)
-            semaphore.await()
+            env.withTimeout(10) {
+                semaphore.await()
+            }
             response ?: continue
             delegate = null
             return response!!
@@ -198,7 +200,7 @@ class KVShardingTest {
         )
     }
 
-    //@Test
+    @Test
     fun test() {
         LinChecker.check(
             Shard::class.java,
@@ -212,7 +214,7 @@ class KVShardingTest {
                 .iterations(30)
                 .crashMode(CrashMode.ALL_NODES_RECOVER)
                 .storeLogsForFailedScenario("kvsharding.txt")
-                .minimizeFailedScenario(false)
+                .minimizeFailedScenario(true)
         )
     }
 }

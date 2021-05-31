@@ -64,6 +64,7 @@ internal class EnvironmentImpl<Message, Log>(
         }
         val crashInfo = context.crashInfo.value
         if (!crashInfo.canSend(nodeId, receiver)) {
+            recordInternalEvent("Cannot send $message to $receiver $crashInfo")
             return
         }
         val event = MessageSentEvent(

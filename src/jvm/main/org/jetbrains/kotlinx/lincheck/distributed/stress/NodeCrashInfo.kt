@@ -36,7 +36,7 @@ abstract class NodeCrashInfo(
         ): NodeCrashInfo {
             val numberOfNodes = context.addressResolver.totalNumberOfNodes
             val failedNodes = List(numberOfNodes) { false }
-            if (testCfg.networkPartitions == NetworkPartitionMode.HALVES) {
+            if (testCfg.networkPartitions != NetworkPartitionMode.SINGLE) {
                 val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
                 return NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, 0)
             } else {
