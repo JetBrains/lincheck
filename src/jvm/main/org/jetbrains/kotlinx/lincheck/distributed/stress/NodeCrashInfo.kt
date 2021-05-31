@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode
 
 abstract class NodeCrashInfo(
     protected val testCfg: DistributedCTestConfiguration<*, *>,
@@ -35,8 +36,15 @@ abstract class NodeCrashInfo(
         ): NodeCrashInfo {
             val numberOfNodes = context.addressResolver.totalNumberOfNodes
             val failedNodes = List(numberOfNodes) { false }
-            val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
-            return NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, 0)
+            if (testCfg.networkPartitions == NetworkPartitionMode.HALVES) {
+                val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
+                return NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, 0)
+            } else {
+                val edges = Array(context.addressResolver.totalNumberOfNodes) {
+                    (0 until context.addressResolver.totalNumberOfNodes).toSet()
+                }.toList()
+                return NodeCrashInfoSingle(testCfg, context, 0, failedNodes, edges)
+            }
         }
     }
 
