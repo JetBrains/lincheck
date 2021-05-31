@@ -194,10 +194,11 @@ class KVShardingTest {
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)
                 .crashMode(CrashMode.ALL_NODES_RECOVER)
+                .minimizeFailedScenario(false)
         )
     }
 
-    @Test
+    //@Test
     fun test() {
         LinChecker.check(
             Shard::class.java,
@@ -212,23 +213,6 @@ class KVShardingTest {
                 .crashMode(CrashMode.ALL_NODES_RECOVER)
                 .storeLogsForFailedScenario("kvsharding.txt")
                 .minimizeFailedScenario(false)
-        )
-    }
-
-    @Test
-    fun testFifo() {
-        LinChecker.check(
-            Shard::class.java,
-            DistributedOptions<KVMessage, KVLogEntry>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(SingleNode::class.java)
-                .actorsPerThread(3)
-                .threads(3)
-                .invocationsPerIteration(1000)
-                .setMaxNumberOfFailedNodes { it / 2 }
-                .iterations(30)
-                .crashMode(CrashMode.ALL_NODES_RECOVER)
-                .messageOrder(MessageOrder.FIFO)
         )
     }
 }

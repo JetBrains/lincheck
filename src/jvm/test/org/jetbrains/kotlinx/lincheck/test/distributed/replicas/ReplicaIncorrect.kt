@@ -95,7 +95,7 @@ class ReplicaSpecification {
 }
 
 class ReplicaIncorrectTest {
-    @Test
+    @Test(expected = LincheckAssertionError::class)
     fun test() {
         LinChecker.check(
             ClientIncorrect::class.java,

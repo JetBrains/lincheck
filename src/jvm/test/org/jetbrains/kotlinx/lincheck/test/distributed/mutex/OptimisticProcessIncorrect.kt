@@ -71,7 +71,7 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
         semaphore.release()
     }
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation(cancellableOnSuspension = false, blocking = false)
     suspend fun lock(){
         check(!requested[env.nodeId])
         requested[env.nodeId] = true
@@ -87,8 +87,8 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun unlock() {
-        check(inCS)
+    fun unlock() {
+        if (!inCS) return
         inCS = false
         requested[env.nodeId] = false
         env.recordInternalEvent("Unlock")

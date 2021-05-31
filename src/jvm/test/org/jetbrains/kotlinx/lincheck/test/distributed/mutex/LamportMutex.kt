@@ -118,7 +118,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun unlock() {
+    fun unlock() {
         if (!inCS) {
             return
         }
@@ -155,7 +155,7 @@ class LamportMutexTest {
         )
     }
 
-    @Test//(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         LinChecker.check(
             LamportMutex::class.java,

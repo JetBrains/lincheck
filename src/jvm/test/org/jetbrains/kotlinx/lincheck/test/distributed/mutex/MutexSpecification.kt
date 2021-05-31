@@ -36,7 +36,7 @@ class MutexSpecification {
         suspendCoroutine<Unit> { cont -> waiters.add(cont) }
     }
 
-    suspend fun unlock() {
+    fun unlock() {
         if (waiters.isEmpty()) {
             locked = false
             return

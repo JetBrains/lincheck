@@ -32,6 +32,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.junit.Test
 import java.util.ArrayDeque
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.coroutines.suspendCoroutine
 
 
 class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
@@ -89,8 +90,11 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : No
         syncCounter = 0
     }
 
-    @Operation
-    suspend fun lock(): Int {
+    @Operation(cancellableOnSuspension = false, blocking = true)
+    suspend fun lock() {
+        if (inCS == env.nodeId) {
+            suspendCoroutine<Unit> { }
+        }
         //println("[${env.nodeId}]: Request lock")
         if (isCoordinator) {
             queue.add(coordinatorId)
@@ -101,15 +105,12 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : No
         if (inCS != env.nodeId) {
             condition.acquire()
         }
-        //println("[${env.nodeId}]: Acquire lock")
-        val res = ++syncCounter
-        unlock()
-        return res
     }
 
-    private suspend fun unlock() {
+    @Operation
+    fun unlock() {
         //println("[${env.nodeId}]: Release lock")
-        check(inCS == env.nodeId)
+        if(inCS != env.nodeId) return
         inCS = -1
         if (isCoordinator) {
             checkCSEnter()
@@ -126,11 +127,12 @@ class SyncCoordinateMutexTest {
             SyncCoordinateMutex::class.java,
             DistributedOptions<MutexMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Counter::class.java)
+                .sequentialSpecification(MutexSpecification::class.java)
                 .threads(3)
+                .actorsPerThread(3)
                 .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(300)
-                .iterations(100)
+                .invocationsPerIteration(3000)
+                .iterations(10)
         )
     }
 
@@ -140,11 +142,12 @@ class SyncCoordinateMutexTest {
             SyncCoordinateMutex::class.java,
             DistributedOptions<MutexMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Counter::class.java)
-                .threads(5)
+                .sequentialSpecification(MutexSpecification::class.java)
+                .threads(3)
+                .actorsPerThread(3)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(300)
-                .iterations(100)
+                .invocationsPerIteration(3000)
+                .iterations(10)
         )
     }
 }

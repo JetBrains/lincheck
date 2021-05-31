@@ -122,7 +122,7 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun unlock() {
+    fun unlock() {
         if (!inCS) return
         inCS = false
         req[env.nodeId] = inf
@@ -158,11 +158,12 @@ class RickartAgrawalaMutexTest {
             RickartAgrawalaMutex::class.java,
             DistributedOptions<MutexMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Counter::class.java)
-                .threads(5)
+                .sequentialSpecification(MutexSpecification::class.java)
+                .threads(3)
+                .actorsPerThread(3)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(30)
-                .iterations(1000)
+                .invocationsPerIteration(3000)
+                .iterations(10)
         )
     }
 }
