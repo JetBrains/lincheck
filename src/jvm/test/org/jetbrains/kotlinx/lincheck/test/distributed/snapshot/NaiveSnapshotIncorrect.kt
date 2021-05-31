@@ -67,8 +67,9 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     }
 
     @Operation()
-    suspend fun transaction(sum: Int) {
-        val receiver = (0 until env.numberOfNodes).filter { it != env.nodeId }.shuffled()[0]
+    fun transaction(to: Int, sum: Int) {
+        val receiver = to % env.numberOfNodes
+        if (to == env.nodeId) return
         currentSum.getAndAdd(-sum)
         env.send(Transaction(sum), receiver)
     }
@@ -91,8 +92,6 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
         }
         val res = replies.filterNotNull().map { it as Reply }.map { it.state }.sum() + state
         gotSnapshot = false
-        println("Res is $res")
-
         replies.fill(null)
         return res / env.numberOfNodes + res % env.numberOfNodes
     }

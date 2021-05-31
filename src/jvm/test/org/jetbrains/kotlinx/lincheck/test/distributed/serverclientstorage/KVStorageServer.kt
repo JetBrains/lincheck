@@ -54,7 +54,7 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
     private suspend fun sendOnce(command: Command): Command {
         while (true) {
             environment.send(command, serverAddr)
-            environment.withTimeout(1) {
+            environment.withTimeout(3) {
                 signal.await()
             }
             val response = queue.poll()
@@ -113,8 +113,10 @@ class KVStorageServerTestClass {
         DistributedOptions<Command, Unit>()
             .requireStateEquivalenceImplCheck(false)
             .sequentialSpecification(SingleNode::class.java)
-            .invocationsPerIteration(300)
-            .iterations(100)
+            .invocationsPerIteration(3000)
+            .iterations(10)
+            .threads(3)
+            .actorsPerThread(3)
             .nodeType(serverType, 1)
 
     @Test

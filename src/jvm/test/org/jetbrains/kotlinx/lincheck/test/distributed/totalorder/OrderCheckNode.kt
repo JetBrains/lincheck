@@ -26,19 +26,29 @@ import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 
 abstract class OrderCheckNode<M>(val env: Environment<M, M>) : Node<M> {
-   // @Validate
+    @Validate
     fun validate() {
-        val logs = env.getLogs().toList()
-        for (l in logs) {
-            for (i in l.indices) {
-                for (j in i + 1 until l.size) {
-                    check(logs.none {
-                        val first = it.lastIndexOf(l[i])
-                        val second = it.lastIndexOf(l[j])
-                        first != -1 && second != -1 && first >= second
-                    })
-                }
-            }
-        }
+       val logs = env.getLogs().toList()
+       for (l in logs) {
+           for (i in l.indices) {
+               for (j in i + 1 until l.size) {
+                   check(logs.none {
+                       val first = it.lastIndexOf(l[i])
+                       val second = it.lastIndexOf(l[j])
+                       first != -1 && second != -1 && first >= second
+                   }) {
+                       "logs=$logs, first=${l[i]}, second=${l[j]}"
+                   }
+               }
+           }
+       }
+       val sent = env.events().flatMap {
+           it.filterIsInstance<MessageSentEvent<Message>>().map { it.message }.filterIsInstance<RequestMessage>()
+       }
+       sent.forEach { m ->
+           check(logs.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) }) {
+               m.toString()
+           }
+       }
     }
 }
