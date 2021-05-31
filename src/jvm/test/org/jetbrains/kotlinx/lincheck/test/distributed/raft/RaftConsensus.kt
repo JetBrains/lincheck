@@ -328,7 +328,7 @@ class RaftConsensusTest {
         .verifier(EpsilonVerifier::class.java)
         //.storeLogsForFailedScenario("raft_simple.txt")
 
-    @Test
+    //@Test
     fun testNoFailures() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -336,7 +336,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testNoRecoveries() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -344,7 +344,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testAllRecover() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -353,7 +353,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testNetworkPartitions() {
         LinChecker.check(
             RaftConsensus::class.java,
@@ -364,7 +364,7 @@ class RaftConsensusTest {
         )
     }
 
-    @Test
+    //@Test
     fun testNetworkPartitionsOnly() {
         LinChecker.check(
             RaftConsensus::class.java,

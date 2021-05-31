@@ -464,7 +464,7 @@ class RaftTestIncorrect {
         .iterations(10)
         //.storeLogsForFailedScenario("raft3.txt")
 
-    @Test
+   // @Test
     fun testNoFailures() {
         LinChecker.check(
             RaftServerIncorrect::class.java,
@@ -472,7 +472,7 @@ class RaftTestIncorrect {
         )
     }
 
-    @Test
+   // @Test
     fun test() {
         LinChecker.check(
             RaftServerIncorrect::class.java,

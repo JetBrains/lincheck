@@ -291,7 +291,7 @@ class RaftConsensusIncorrectTest {
         .verifier(EpsilonVerifier::class.java)
         //.storeLogsForFailedScenario("raft_simple.txt")
 
-    @Test
+    // @Test
     fun testNoFailures() {
         LinChecker.check(
             RaftConsensusIncorrect::class.java,
@@ -299,7 +299,7 @@ class RaftConsensusIncorrectTest {
         )
     }
 
-    @Test
+   // @Test
     fun testNoRecoveries() {
         LinChecker.check(
             RaftConsensusIncorrect::class.java,
@@ -307,7 +307,7 @@ class RaftConsensusIncorrectTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+    //@Test(expected = LincheckAssertionError::class)
     fun testShouldFail() {
         LinChecker.check(
             RaftConsensusIncorrect::class.java,
@@ -316,20 +316,12 @@ class RaftConsensusIncorrectTest {
         )
     }
 
-    @Test(expected = LincheckAssertionError::class)
+   // @Test(expected = LincheckAssertionError::class)
     fun testWithPartitionsShouldFail() {
         LinChecker.check(
             RaftConsensusIncorrect::class.java,
             createOptions().setMaxNumberOfFailedNodes { (it - 1) / 2 }
                 .crashMode(CrashMode.ALL_NODES_RECOVER).networkPartitions(NetworkPartitionMode.HALVES).minimizeFailedScenario(false)
-        )
-    }
-
-    @Test
-    fun testMessageLost() {
-        LinChecker.check(
-            RaftConsensusIncorrect::class.java,
-            createOptions().networkReliable(false)
         )
     }
 }

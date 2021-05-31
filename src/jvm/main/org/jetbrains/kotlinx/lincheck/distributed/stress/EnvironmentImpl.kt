@@ -44,19 +44,23 @@ internal class EnvironmentImpl<Message, Log>(
 
     override fun getAddressesForClass(cls: Class<out Node<Message>>) = context.addressResolver[cls]
 
+    private fun crash() {
+        if (context.testCfg.supportRecovery != CrashMode.NO_CRASHES &&
+            context.addressResolver.canFail(nodeId) &&
+            probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
+            context.crashNode(nodeId)
+        ) {
+            throw CrashError()
+        }
+    }
+
     override fun send(message: Message, receiver: Int) {
         if (isFinished) {
             return
         }
         //println("[$nodeId]: Send to ${receiver} ${message}")
         probability.curMsgCount++
-        /*if (context.testCfg.supportRecovery != RecoveryMode.NO_CRASHES &&
-            context.addressResolver.canFail(nodeId) &&
-            probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
-            context.crashNode(nodeId)
-        ) {
-            throw CrashError()
-        }*/
+        crash()
         if (context.testCfg.networkPartitions != NetworkPartitionMode.NONE &&
             probability.isNetworkPartition()
         ) {
@@ -80,13 +84,7 @@ internal class EnvironmentImpl<Message, Log>(
             context.messageHandler[nodeId, event.receiver].send(nodeId to event)
         }
         probability.curMsgCount++
-        if (context.testCfg.supportRecovery != CrashMode.NO_CRASHES &&
-            context.addressResolver.canFail(nodeId) &&
-            probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
-            context.crashNode(nodeId)
-        ) {
-            throw CrashError()
-        }
+        crash()
     }
 
     override fun events(): Array<List<Event>> = if (isFinished) {
