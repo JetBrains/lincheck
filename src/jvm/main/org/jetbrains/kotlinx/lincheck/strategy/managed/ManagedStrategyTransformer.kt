@@ -1404,7 +1404,8 @@ private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
     }
     return try {
         val clazz = Class.forName(internalName.canonicalClassName)
-        findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
+        val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
+        field.modifiers and Modifier.FINAL == Modifier.FINAL
     } catch (e: ClassNotFoundException) {
         throw RuntimeException(e)
     } catch (e: NoSuchFieldException) {
@@ -1412,14 +1413,17 @@ private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
     }
 }
 
-private fun findField(clazz: Class<*>, fieldName: String): Field {
-    var clazz: Class<*>? = clazz
-    do {
-        val fields = clazz!!.declaredFields
-        for (field in fields) if (field.name == fieldName) return field
-        clazz = clazz.superclass
-    } while (clazz != null)
-    throw NoSuchFieldException()
+private fun findField(clazz: Class<*>?, fieldName: String): Field? {
+    if (clazz == null) return null
+    val fields = clazz.declaredFields
+    for (field in fields) if (field.name == fieldName) return field
+    // No field found in this class.
+    // Search in super class first, then in interfaces.
+    findField(clazz.superclass, fieldName)?.let { return it }
+    clazz.interfaces.forEach { iClass ->
+        findField(iClass, fieldName)?.let { return it }
+    }
+    return null
 }
 
 private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
