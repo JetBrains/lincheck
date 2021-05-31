@@ -67,18 +67,6 @@ fun scenarioWithResults(
     block: ExecutionBuilder.() -> Unit
 ): Pair<ExecutionScenario, ExecutionResult> = ExecutionBuilder().apply(block).buildScenarioWithResults()
 
-fun actor(function: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false): Actor {
-    val method = function.javaMethod
-        ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
-    require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
-    return Actor(
-        method = method,
-        arguments = args.toList(),
-        handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList(),
-        cancelOnSuspension = cancelOnSuspension
-    )
-}
-
 data class Operation(val actor: Actor, val result: Result)
 
 class ThreadExecution : ArrayList<Operation>() {
