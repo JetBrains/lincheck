@@ -177,7 +177,7 @@ class SnapshotTest {
                 .messageOrder(MessageOrder.FIFO)
                 .invocationsPerIteration(3_000)
                 .iterations(10)
-                .storeLogsForFailedScenario("chandy_lamport.txt")
+                //.storeLogsForFailedScenario("chandy_lamport.txt")
                 .minimizeFailedScenario(false)
         )
     }
@@ -194,7 +194,7 @@ class SnapshotTest {
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
                 .invocationsPerIteration(3_000)
                 .iterations(10)
-                .storeLogsForFailedScenario("chandy_lamport.txt")
+                //.storeLogsForFailedScenario("chandy_lamport.txt")
                 .minimizeFailedScenario(false)
         )
     }

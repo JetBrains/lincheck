@@ -326,7 +326,7 @@ class RaftConsensusTest {
         .invocationsPerIteration(1_000)
         .iterations(10)
         .verifier(EpsilonVerifier::class.java)
-        .storeLogsForFailedScenario("raft_simple.txt")
+        //.storeLogsForFailedScenario("raft_simple.txt")
 
     @Test
     fun testNoFailures() {

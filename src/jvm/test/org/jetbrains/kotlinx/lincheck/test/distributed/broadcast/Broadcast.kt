@@ -129,12 +129,12 @@ class BroadcastTest {
         .nodeType(Peer::class.java, 3)
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
-        .storeLogsForFailedScenario("broadcast.txt")
+        //.storeLogsForFailedScenario("broadcast.txt")
         .check()
 
     @Test(expected = LincheckAssertionError::class)
     fun testMoreFailures() = createOptions()
-        .nodeType(Peer::class.java, 3)
+        .nodeType(Peer::class.java, 5)
         .setMaxNumberOfFailedNodes { (it + 1) / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
         .minimizeFailedScenario(false)
@@ -142,16 +142,16 @@ class BroadcastTest {
 
     @Test
     fun testNoFailures() = createOptions()
-        .storeLogsForFailedScenario("broadcast_nof.txt")
+        //.storeLogsForFailedScenario("broadcast_nof.txt")
         .nodeType(PeerIncorrect::class.java, 3)
         .check()
 
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
-        .storeLogsForFailedScenario("broadcast_incorrect.txt")
+        //.storeLogsForFailedScenario("broadcast_incorrect.txt")
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
-        .actorsPerThread(2)
+        .actorsPerThread(3)
         .minimizeFailedScenario(false)
         .nodeType(PeerIncorrect::class.java, 3)
         .check()

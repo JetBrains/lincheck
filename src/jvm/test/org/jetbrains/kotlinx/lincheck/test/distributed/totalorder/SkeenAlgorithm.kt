@@ -152,7 +152,7 @@ class SkeenTest {
             .invocationsPerIteration(30_000)
             .iterations(1)
             .verifier(EpsilonVerifier::class.java)
-            .storeLogsForFailedScenario("skeen.txt")
+            //.storeLogsForFailedScenario("skeen.txt")
             .minimizeFailedScenario(false)
 
     @Test

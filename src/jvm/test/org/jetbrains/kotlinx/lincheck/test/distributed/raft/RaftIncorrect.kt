@@ -462,7 +462,7 @@ class RaftTestIncorrect {
         .invocationTimeout(5_000)
         .invocationsPerIteration(100)
         .iterations(10)
-        .storeLogsForFailedScenario("raft3.txt")
+        //.storeLogsForFailedScenario("raft3.txt")
 
     @Test
     fun testNoFailures() {

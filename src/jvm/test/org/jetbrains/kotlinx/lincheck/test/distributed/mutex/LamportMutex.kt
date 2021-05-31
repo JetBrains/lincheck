@@ -160,7 +160,7 @@ class LamportMutexTest {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
-                .storeLogsForFailedScenario("lamport_nofifo.txt")
+                //.storeLogsForFailedScenario("lamport_nofifo.txt")
         )
     }
 }

@@ -289,7 +289,7 @@ class RaftConsensusIncorrectTest {
         .iterations(10)
         .invocationTimeout(10_000)
         .verifier(EpsilonVerifier::class.java)
-        .storeLogsForFailedScenario("raft_simple.txt")
+        //.storeLogsForFailedScenario("raft_simple.txt")
 
     @Test
     fun testNoFailures() {
