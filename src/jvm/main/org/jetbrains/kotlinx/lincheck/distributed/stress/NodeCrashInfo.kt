@@ -52,9 +52,9 @@ abstract class NodeCrashInfo(
 
     abstract fun recoverNode(iNode: Int): NodeCrashInfo
 
-    abstract fun setNetworkPartition(): NodeCrashInfo?
+    abstract fun setNetworkPartition(a: Int, b: Int): NodeCrashInfo?
 
-    abstract fun recoverNetworkPartition(): NodeCrashInfo
+    abstract fun recoverNetworkPartition(a: Int, b: Int): NodeCrashInfo
 }
 
 
@@ -94,7 +94,7 @@ class NodeCrashInfoHalves(
         )
     }
 
-    override fun setNetworkPartition(): NodeCrashInfoHalves? {
+    override fun setNetworkPartition(a: Int, b: Int): NodeCrashInfoHalves? {
         if (partitions[0].isNotEmpty() || numberOfFailedNodes == maxNumberOfFailedNodes) return null
         val possiblePartitionSize = maxNumberOfFailedNodes - numberOfFailedNodes
         val rand = Probability.rand.get()
@@ -111,7 +111,7 @@ class NodeCrashInfoHalves(
         )
     }
 
-    override fun recoverNetworkPartition(): NodeCrashInfoHalves {
+    override fun recoverNetworkPartition(a: Int, b: Int): NodeCrashInfoHalves {
         if (partitions[0].isEmpty()) return this
         val partitionSize = partitions[0].size
         return NodeCrashInfoHalves(
@@ -126,15 +126,20 @@ class NodeCrashInfoSingle(
     context: DistributedRunnerContext<*, *>,
     numberOfFailedNodes: Int,
     failedNodes: List<Boolean>,
-    val edges: List<List<Boolean>>
+    val edges: List<Set<Int>>
 ) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes) {
-    override fun canSend(a: Int, b: Int): Boolean = edges[a][b]
+    override fun canSend(a: Int, b: Int): Boolean = edges[a].contains(b)
 
-    private fun createNewEdges(iNode: Int, value: Boolean) : List<List<Boolean>> {
-        val newEdges = edges.map { it.toMutableList() }.toMutableList()
-        for (i in edges.indices) {
-            newEdges[i][iNode] = value
-            newEdges[iNode][i] = value
+    val numberOfNodes = context.addressResolver.totalNumberOfNodes
+
+    private fun createNewEdges(iNode: Int): List<Set<Int>> {
+        val newEdges = edges.map { it.toMutableSet() }.toMutableList()
+        if (newEdges[iNode].isEmpty()) {
+            newEdges[iNode] = (0 until numberOfNodes).toMutableSet()
+            newEdges.filterIndexed { index, _ -> index != iNode }.forEach { it.add(iNode) }
+        } else {
+            newEdges[iNode] = mutableSetOf()
+            newEdges.forEach { it.remove(iNode) }
         }
         return newEdges
     }
@@ -147,7 +152,7 @@ class NodeCrashInfoSingle(
         newFailedNodes[iNode] = true
         return NodeCrashInfoSingle(
             testCfg,
-            context, numberOfFailedNodes + 1, newFailedNodes, createNewEdges(iNode, false)
+            context, numberOfFailedNodes + 1, newFailedNodes, createNewEdges(iNode)
         )
     }
 
@@ -157,15 +162,47 @@ class NodeCrashInfoSingle(
         newFailedNodes[iNode] = false
         return NodeCrashInfoSingle(
             testCfg,
-            context, numberOfFailedNodes - 1, newFailedNodes, createNewEdges(iNode, true)
+            context, numberOfFailedNodes - 1, newFailedNodes, createNewEdges(iNode)
         )
     }
 
-    override fun setNetworkPartition(): NodeCrashInfo? {
-        TODO("Not yet implemented")
+    private fun dfs(
+        v: Int, visited: BooleanArray,
+        component: MutableList<Int>, edges: List<Set<Int>>
+    ) {
+        if (visited[v]) return
+        visited[v] = true
+        component.add(v)
+        for (i in edges[v]) dfs(i, visited, component, edges)
     }
 
-    override fun recoverNetworkPartition(): NodeCrashInfo {
-        TODO("Not yet implemented")
+    fun findMaxComponent(newEdges: List<Set<Int>>): List<Int> {
+        val components = mutableListOf<MutableList<Int>>()
+        val visited = BooleanArray(numberOfNodes)
+        for (i in 0 until numberOfNodes) {
+            val component = mutableListOf<Int>()
+            dfs(i, visited, component, newEdges)
+            if (component.isNotEmpty()) components.add(component)
+        }
+        return components.maxByOrNull { it.size }!!
+    }
+
+    override fun setNetworkPartition(a: Int, b: Int): NodeCrashInfo? {
+        val newEdges = edges.map { it.toMutableSet() }
+        newEdges[a].remove(b)
+        newEdges[b].remove(a)
+        val component = findMaxComponent(newEdges)
+        val newFailedNodes = numberOfNodes - component.size
+        if (newFailedNodes > maxNumberOfFailedNodes) return null
+        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, newEdges)
+    }
+
+    override fun recoverNetworkPartition(a: Int, b: Int): NodeCrashInfo {
+        val newEdges = edges.map { it.toMutableSet() }
+        newEdges[a].add(b)
+        newEdges[b].add(a)
+        val component = findMaxComponent(newEdges)
+        val newFailedNodes = numberOfNodes - component.size
+        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, newEdges)
     }
 }
