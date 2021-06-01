@@ -30,7 +30,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 
-class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
+class Reporter constructor(val logLevel: LoggingLevel) {
+    private val out: PrintStream = System.out
+    private val outErr: PrintStream = System.err
+
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
         appendln("\n= Iteration $iteration / $maxIterations =")
         appendExecutionScenario(scenario)
@@ -45,17 +48,22 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
         appendExecutionScenario(scenario)
     }
 
+    fun logStateEquivalenceViolation(sequentialSpecification: Class<*>) = log(WARN) {
+        appendStateEquivalenceViolationMessage(sequentialSpecification)
+    }
+
     private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
         msg(sb)
-        out.println(sb)
+        val output = if (logLevel == WARN) outErr else out
+        output.println(sb)
     }
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = ERROR
+@JvmField val DEFAULT_LOG_LEVEL = WARN
 enum class LoggingLevel {
-    INFO, ERROR
+    INFO, WARN
 }
 
 internal fun <T> printInColumnsCustom(
@@ -251,6 +259,14 @@ private fun StringBuilder.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
+}
+
+internal fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: Class<*>) {
+    append("To verify outcome results faster, it is highly recommended to specify the state equivalence relation on your" +
+        "sequential specification. However, on $sequentialSpecification it is is not defined or is implemented incorrectly. " +
+        "Please, specify the equivalence relation via implementing `equals()` and `hashCode()` functions on $sequentialSpecification. " +
+        "The most convenient way is to extend a special `VerifierState` class and override the `extractState()` function, which" +
+        "extracts and returns the logical state, which is used for further `equals()` and `hashCode()` calls.")
 }
 
 private fun StringBuilder.appendCrash(crash: CrashError) {

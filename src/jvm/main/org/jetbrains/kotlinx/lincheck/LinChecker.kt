@@ -68,15 +68,22 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier()
+        for (i in customScenarios.indices) {
+            val scenario = customScenarios[i]
+            scenario.validate()
+            reporter.logIteration(i + 1, customScenarios.size, scenario)
+            val failure = scenario.run(this, verifier)
+            if (failure != null) return failure
+        }
         repeat(iterations) { i ->
             Probability.setSeed(i)
             val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(i + 1, iterations, scenario)
+            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure
-                                               else failure.minimize(this, verifier)
+                                               else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
@@ -90,59 +97,72 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
     // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
     // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun LincheckFailure.minimize(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure {
+    private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
         reporter.logScenarioMinimization(scenario)
-        for (i in scenario.parallelExecution.indices) {
-            for (j in scenario.parallelExecution[i].indices) {
-                val newScenario = scenario.copy()
-                newScenario.parallelExecution[i].removeAt(j)
-                if (newScenario.parallelExecution[i].isEmpty()) {
-                    newScenario.parallelExecution.removeAt(i) // remove empty thread
-                    newScenario.setThreadIds()
-                }
-                val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-                if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
+        var minimizedFailure = this
+        while (true) {
+            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
+        }
+        return minimizedFailure
+    }
+
+    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+        // Reversed indices to avoid conflicts with in-loop removals
+        for (i in parallelExecution.indices.reversed()) {
+            for (j in parallelExecution[i].indices.reversed()) {
+                val failure = tryMinimize(i + 1, j, testCfg)
+                if (failure != null) return failure
             }
         }
-        scenario.setThreadIds() // reset thread ids after parallel minimization
-        for (i in scenario.initExecution.indices) {
-            val newScenario = scenario.copy()
-            newScenario.initExecution.removeAt(i)
-            val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-            if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
+        for (j in initExecution.indices.reversed()) {
+            val failure = tryMinimize(0, j, testCfg)
+            if (failure != null) return failure
         }
-        for (i in scenario.postExecution.indices) {
-            val newScenario = scenario.copy()
-            newScenario.postExecution.removeAt(i)
-            val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-            if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
+        for (j in postExecution.indices.reversed()) {
+            val failure = tryMinimize(threads + 1, j, testCfg)
+            if (failure != null) return failure
         }
         if (testCfg is StressCTestConfiguration &&
             testCfg.recoverabilityModel.crashes &&
             this is IncorrectResultsFailure
-        )
-            return minimizeCrashes(testCfg, verifier).also { Probability.resetExpectedCrashes() }
-        return this
+        ) return minimizeCrashes(testCfg).also { Probability.resetExpectedCrashes() }
+
+        return null
+    }
+
+    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
+        val newScenario = this.copy()
+        val actors = newScenario[threadId] as MutableList<Actor>
+        actors.removeAt(position)
+        if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
+            // Also remove the empty thread
+            newScenario.parallelExecution.removeAt(threadId - 1)
+        }
+        return newScenario.runTryMinimize(testCfg)
+    }
+
+    private fun ExecutionScenario.runTryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+        setThreadIds()
+        return if (isValid) run(testCfg, testCfg.createVerifier()) else null
     }
 
     private fun IncorrectResultsFailure.crashesNumber() = results.crashes.sumBy { it.size }
 
     private fun IncorrectResultsFailure.minimizeCrashes(
         testCfg: CTestConfiguration,
-        verifier: Verifier,
         crashes: Int = crashesNumber() + 1 // +1 here to replace proxy exceptions with normal ones
-    ): LincheckFailure {
+    ): LincheckFailure? {
         Probability.minimizeCrashes(crashes - 1)
         repeat(100) {
             Crash.useProxyCrash = false
-            val newIteration = scenario.tryMinimize(testCfg, verifier)
+            val newIteration = scenario.runTryMinimize(testCfg)
             Crash.useProxyCrash = true
             if (newIteration != null
                 && newIteration is IncorrectResultsFailure
                 && newIteration.crashesNumber() < crashes
-            ) return newIteration.minimizeCrashes(testCfg, verifier, newIteration.crashesNumber())
+            ) return newIteration.minimizeCrashes(testCfg, newIteration.crashesNumber())
         }
-        return this
+        return null
     }
 
     private fun List<Actor>.setThreadId(threadId: Int) = forEach { actor -> actor.setThreadId(threadId) }
@@ -150,9 +170,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         parallelExecution.forEachIndexed { index, actors -> actors.setThreadId(index + 1) }
         postExecution.setThreadId(parallelExecution.size + 1)
     }
-
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, verifier: Verifier) =
-        if (isValid) run(testCfg, verifier) else null
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
@@ -197,7 +214,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
-            if (requireStateEquivalenceImplCheck) it.checkStateEquivalenceImplementation()
+            val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
+            if (!stateEquivalenceCorrect) {
+                if (requireStateEquivalenceImplCheck) {
+                    val errorMessage = StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
+                    error(errorMessage)
+                } else {
+                    reporter.logStateEquivalenceViolation(sequentialSpecification)
+                }
+            }
         }
 
     private fun CTestConfiguration.createExecutionGenerator() =

@@ -28,7 +28,7 @@ import org.junit.Test
 import java.lang.IllegalStateException
 import java.util.concurrent.atomic.AtomicInteger
 
-@StressCTest
+@StressCTest(requireStateEquivalenceImplCheck = true)
 class StateEquivalenceImplCheckTest {
     private var i = AtomicInteger(0)
 

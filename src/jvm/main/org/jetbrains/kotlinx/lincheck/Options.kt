@@ -21,8 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
@@ -38,10 +38,11 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER
     protected var executionGenerator = CTestConfiguration.DEFAULT_EXECUTION_GENERATOR
     protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
-    protected var requireStateEquivalenceImplementationCheck = true
+    protected var requireStateEquivalenceImplementationCheck = false
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
+    protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
     protected var recover: Recover = Recover.NO_RECOVER
 
     /**
@@ -150,6 +151,13 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun sequentialSpecification(clazz: Class<*>?): OPT = applyAndCast {
         sequentialSpecification = clazz
+    }
+
+    /**
+     * Examine the specified custom scenario additionally to the generated ones.
+     */
+    fun addCustomScenario(scenario: ExecutionScenario) = applyAndCast {
+        customScenarios.add(scenario)
     }
 
     fun recover(recoverModel: Recover): OPT = applyAndCast {

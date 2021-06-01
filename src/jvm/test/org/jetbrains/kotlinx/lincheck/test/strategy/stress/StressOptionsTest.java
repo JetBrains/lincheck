@@ -48,7 +48,7 @@ public class StressOptionsTest {
             .verifier(LinearizabilityVerifier.class)
             .threads(2)
             .actorsPerThread(3)
-            .logLevel(LoggingLevel.ERROR)
+            .logLevel(LoggingLevel.WARN)
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
         LinChecker.check(StressOptionsTest.class, opts);

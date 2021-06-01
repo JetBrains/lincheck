@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
 import org.junit.Test
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import org.jetbrains.kotlinx.lincheck.actor
 
 // Test for early scenario verification completion: follow-up part resumes suspended operation.
 class ResumingFollowUpTest {

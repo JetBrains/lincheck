@@ -251,8 +251,10 @@ abstract class ManagedStrategy(
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
-                appendln("Reporting scenario without execution trace.")
-                appendln(loggedResults.asLincheckFailureWithoutTrace().toString())
+                appendln("== Reporting the first execution without execution trace ==")
+                appendln(failingResult.asLincheckFailureWithoutTrace())
+                appendln("== Reporting the second execution ==")
+                appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace, testCfg.verboseTrace)).toString())
             }.toString()
         }
         return Trace(traceCollector!!.trace, testCfg.verboseTrace)
@@ -517,7 +519,7 @@ abstract class ManagedStrategy(
      * @return whether lock should be actually acquired
      */
     internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
-        if (inIgnoredSection(iThread)) return true
+        if (!isTestThread(iThread)) return true
         newSwitchPoint(iThread, codeLocation, tracePoint)
         // Try to acquire the monitor
         if (!monitorTracker.acquireMonitor(iThread, monitor)) {
@@ -525,7 +527,7 @@ abstract class ManagedStrategy(
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
             // Now it is possible to acquire the monitor, do it then.
-            monitorTracker.acquireMonitor(iThread, monitor)
+            require(monitorTracker.acquireMonitor(iThread, monitor))
         }
         // The monitor is acquired, finish.
         return false
@@ -569,7 +571,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
      * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
-     * @return whether wait should be executed
+     * @return whether `Object.wait` should be executed
      */
     internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
@@ -579,6 +581,7 @@ abstract class ManagedStrategy(
         monitorTracker.waitOnMonitor(iThread, monitor)
         // switch to another thread and wait till a notify event happens
         switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, true)
+        require(monitorTracker.acquireMonitor(iThread, monitor)) // acquire the lock again
         return false
     }
 
@@ -594,14 +597,16 @@ abstract class ManagedStrategy(
     /**
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
+     * @return whether `Object.notify` should be executed
      */
-    internal fun afterNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean) {
-        if (!isTestThread(iThread)) return
+    internal fun beforeNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean): Boolean {
+        if (!isTestThread(iThread)) return true
         if (notifyAll)
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
         traceCollector?.passCodeLocation(tracePoint)
+        return false
     }
 
     /**

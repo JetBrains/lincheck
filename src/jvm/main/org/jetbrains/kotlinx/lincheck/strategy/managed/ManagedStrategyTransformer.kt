@@ -817,44 +817,54 @@ internal class ManagedStrategyTransformer(
      */
     private inner class WaitNotifyTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            var afterWait: Label? = null
+            var skipWaitOrNotify = newLabel()
             val isWait = isWait(opcode, name, desc)
             val isNotify = isNotify(opcode, name, desc)
             if (isWait) {
-                afterWait = newLabel()
+                skipWaitOrNotify = newLabel()
                 val withTimeout = desc != "()V"
                 var lastArgument = 0
                 var firstArgument = 0
-                if (desc == "(J)V") {
-                    firstArgument = newLocal(Type.LONG_TYPE)
-                    storeLocal(firstArgument)
-                } else if (desc == "(JI)V") {
-                    lastArgument = newLocal(Type.INT_TYPE)
-                    storeLocal(lastArgument)
-                    firstArgument = newLocal(Type.LONG_TYPE)
-                    storeLocal(firstArgument)
+                when (desc) {
+                    "(J)V" -> {
+                        firstArgument = newLocal(Type.LONG_TYPE)
+                        storeLocal(firstArgument)
+                    }
+                    "(JI)V" -> {
+                        lastArgument = newLocal(Type.INT_TYPE)
+                        storeLocal(lastArgument)
+                        firstArgument = newLocal(Type.LONG_TYPE)
+                        storeLocal(firstArgument)
+                    }
                 }
-                dup()
+                dup() // copy monitor
                 invokeBeforeWait(withTimeout)
                 val beforeWait: Label = newLabel()
                 ifZCmp(GeneratorAdapter.GT, beforeWait)
-                pop()
-                goTo(afterWait)
+                pop() // pop monitor
+                goTo(skipWaitOrNotify)
                 visitLabel(beforeWait)
-                if (desc == "(J)V")
-                    loadLocal(firstArgument)
-                if (desc == "(JI)V") { // restore popped arguments
-                    loadLocal(firstArgument)
-                    loadLocal(lastArgument)
+                // restore popped arguments
+                when (desc) {
+                    "(J)V" -> loadLocal(firstArgument)
+                    "(JI)V" -> {
+                         loadLocal(firstArgument)
+                         loadLocal(lastArgument)
+                     }
                 }
             }
-            if (isNotify) dup()
-            visitMethodInsn(opcode, owner, name, desc, itf)
-            if (isWait) visitLabel(afterWait)
             if (isNotify) {
                 val notifyAll = name == "notifyAll"
-                invokeAfterNotify(notifyAll)
+                dup() // copy monitor
+                invokeBeforeNotify(notifyAll)
+                val beforeNotify = newLabel()
+                ifZCmp(GeneratorAdapter.GT, beforeNotify)
+                pop() // pop monitor
+                goTo(skipWaitOrNotify)
+                visitLabel(beforeNotify)
             }
+            visitMethodInsn(opcode, owner, name, desc, itf)
+            visitLabel(skipWaitOrNotify)
         }
 
         private fun isWait(opcode: Int, name: String, desc: String): Boolean {
@@ -878,8 +888,8 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: monitor
-        private fun invokeAfterNotify(notifyAll: Boolean) {
-            invokeOnWaitOrNotify(AFTER_NOTIFY_METHOD, notifyAll, ::NotifyTracePoint, NOTIFY_TRACE_POINT_TYPE)
+        private fun invokeBeforeNotify(notifyAll: Boolean) {
+            invokeOnWaitOrNotify(BEFORE_NOTIFY_METHOD, notifyAll, ::NotifyTracePoint, NOTIFY_TRACE_POINT_TYPE)
         }
 
         // STACK: monitor
@@ -1368,7 +1378,7 @@ private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrate
 private val BEFORE_LOCK_ACQUIRE_METHOD = Method.getMethod(ManagedStrategy::beforeLockAcquire.javaMethod)
 private val BEFORE_LOCK_RELEASE_METHOD = Method.getMethod(ManagedStrategy::beforeLockRelease.javaMethod)
 private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.javaMethod)
-private val AFTER_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::afterNotify.javaMethod)
+private val BEFORE_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::beforeNotify.javaMethod)
 private val BEFORE_PARK_METHOD = Method.getMethod(ManagedStrategy::beforePark.javaMethod)
 private val BEFORE_CRASH_METHOD = Method.getMethod(ManagedStrategy::beforeCrashPoint.javaMethod)
 private val BEFORE_NVM_OPERATION_METHOD = Method.getMethod(ManagedStrategy::beforeNVMOperation.javaMethod)
@@ -1467,7 +1477,8 @@ private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
     }
     return try {
         val clazz = Class.forName(internalName.canonicalClassName)
-        findField(clazz, fieldName).modifiers and Modifier.FINAL == Modifier.FINAL
+        val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
+        field.modifiers and Modifier.FINAL == Modifier.FINAL
     } catch (e: ClassNotFoundException) {
         throw RuntimeException(e)
     } catch (e: NoSuchFieldException) {
@@ -1475,14 +1486,17 @@ private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
     }
 }
 
-private fun findField(clazz: Class<*>, fieldName: String): Field {
-    var clazz: Class<*>? = clazz
-    do {
-        val fields = clazz!!.declaredFields
-        for (field in fields) if (field.name == fieldName) return field
-        clazz = clazz.superclass
-    } while (clazz != null)
-    throw NoSuchFieldException()
+private fun findField(clazz: Class<*>?, fieldName: String): Field? {
+    if (clazz == null) return null
+    val fields = clazz.declaredFields
+    for (field in fields) if (field.name == fieldName) return field
+    // No field found in this class.
+    // Search in super class first, then in interfaces.
+    findField(clazz.superclass, fieldName)?.let { return it }
+    clazz.interfaces.forEach { iClass ->
+        findField(iClass, fieldName)?.let { return it }
+    }
+    return null
 }
 
 private fun String.isNotPrimitiveType() = startsWith("L") || startsWith("[")
