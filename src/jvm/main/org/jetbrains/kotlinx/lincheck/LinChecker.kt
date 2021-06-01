@@ -122,11 +122,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val failure = tryMinimize(threads + 1, j, testCfg)
             if (failure != null) return failure
         }
-        if (testCfg is StressCTestConfiguration &&
-            testCfg.recoverabilityModel.crashes &&
-            this is IncorrectResultsFailure
-        ) return minimizeCrashes(testCfg).also { Probability.resetExpectedCrashes() }
-
+        if (testCfg is StressCTestConfiguration && testCfg.recoverabilityModel.crashes)
+            return minimizeCrashes(testCfg).also { Probability.resetExpectedCrashes() }
         return null
     }
 
@@ -148,19 +145,19 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun IncorrectResultsFailure.crashesNumber() = results.crashes.sumBy { it.size }
 
-    private fun IncorrectResultsFailure.minimizeCrashes(
+    private fun ExecutionScenario.minimizeCrashes(
         testCfg: CTestConfiguration,
-        crashes: Int = crashesNumber() + 1 // +1 here to replace proxy exceptions with normal ones
+        crashes: Int = testCfg.recoverabilityModel.defaultExpectedCrashes() + 1 // +1 here to replace proxy exceptions with normal ones
     ): LincheckFailure? {
         Probability.minimizeCrashes(crashes - 1)
         repeat(100) {
             Crash.useProxyCrash = false
-            val newIteration = scenario.runTryMinimize(testCfg)
+            val newIteration = runTryMinimize(testCfg)
             Crash.useProxyCrash = true
             if (newIteration != null
                 && newIteration is IncorrectResultsFailure
                 && newIteration.crashesNumber() < crashes
-            ) return newIteration.minimizeCrashes(testCfg, newIteration.crashesNumber())
+            ) return newIteration.scenario.minimizeCrashes(testCfg, newIteration.crashesNumber())
         }
         return null
     }
