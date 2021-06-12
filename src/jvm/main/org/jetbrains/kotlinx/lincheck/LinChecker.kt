@@ -64,7 +64,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
-        val verifier = createVerifier()
+        val verifier = createVerifier(checkStateEquivalence = true)
         for (i in customScenarios.indices) {
             val scenario = customScenarios[i]
             scenario.validate()
@@ -129,7 +129,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             // Also remove the empty thread
             newScenario.parallelExecution.removeAt(threadId - 1)
         }
-        return if (newScenario.isValid) newScenario.run(testCfg, testCfg.createVerifier()) else null
+        return if (newScenario.isValid) {
+            val verifier = testCfg.createVerifier(checkStateEquivalence = false)
+            newScenario.run(testCfg, verifier)
+        } else null
     }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
@@ -173,8 +176,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         parallelExecution.map { it.size }.sum() == 0
 
 
-    private fun CTestConfiguration.createVerifier() =
+    private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
+            if (!checkStateEquivalence) return@also
             val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
             if (!stateEquivalenceCorrect) {
                 if (requireStateEquivalenceImplCheck) {
