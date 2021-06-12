@@ -159,6 +159,12 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     }
 
     /**
+     * Examine the specified custom scenario additionally to the generated ones.
+     */
+    fun addCustomScenario(scenarioBuilder: DSLScenarioBuilder.() -> Unit) =
+        addCustomScenario(scenario { scenarioBuilder() })
+
+    /**
      * Internal, DO NOT USE.
      */
     internal fun invocationTimeout(timeoutMs: Long): OPT = applyAndCast {
