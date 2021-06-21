@@ -32,7 +32,7 @@ import kotlin.reflect.*
  */
 class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
-    private val testConfigurations: List<CTestConfiguration>
+    private val testConfigurations: List<CTestConfiguration<*, *>>
     private val reporter: Reporter
 
     init {
@@ -62,7 +62,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun CTestConfiguration.checkImpl(): LincheckFailure? {
+    private fun CTestConfiguration<*, *>.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier(checkStateEquivalence = true)
         for (i in customScenarios.indices) {
@@ -93,7 +93,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
     // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
     // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
+    private fun LincheckFailure.minimize(testCfg: CTestConfiguration<*, *>): LincheckFailure {
         reporter.logScenarioMinimization(scenario)
         var minimizedFailure = this
         while (true) {
@@ -102,7 +102,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return minimizedFailure
     }
 
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration<*, *>): LincheckFailure? {
         // Reversed indices to avoid conflicts with in-loop removals
         for (i in parallelExecution.indices.reversed()) {
             for (j in parallelExecution[i].indices.reversed()) {
@@ -121,7 +121,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
+    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration<*, *>): LincheckFailure? {
         val newScenario = this.copy()
         val actors = newScenario[threadId] as MutableList<Actor>
         actors.removeAt(position)
@@ -135,7 +135,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         } else null
     }
 
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
+    private fun ExecutionScenario.run(testCfg: CTestConfiguration<*, *>, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
@@ -176,25 +176,27 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         parallelExecution.map { it.size }.sum() == 0
 
 
-    private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
-        verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
+    private fun CTestConfiguration<*, *>.createVerifier(checkStateEquivalence: Boolean): Verifier {
+        this as CTestConfiguration<Any, Any>
+        return verifier(sequentialSpecification).also {
             if (!checkStateEquivalence) return@also
             val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
             if (!stateEquivalenceCorrect) {
                 if (requireStateEquivalenceImplCheck) {
-                    val errorMessage = StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
+                    val errorMessage =
+                        StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
                     error(errorMessage)
                 } else {
                     reporter.logStateEquivalenceViolation(sequentialSpecification)
                 }
             }
         }
+    }
 
-    private fun CTestConfiguration.createExecutionGenerator() =
-        generatorClass.getConstructor(
-            CTestConfiguration::class.java,
-            CTestStructure::class.java
-        ).newInstance(this, testStructure)
+    private fun CTestConfiguration<*, *>.createExecutionGenerator(): ExecutionGenerator {
+        this as CTestConfiguration<Any, Any>
+        return generator(this, testStructure)
+    }
 
     // This companion object is used for backwards compatibility.
     companion object {

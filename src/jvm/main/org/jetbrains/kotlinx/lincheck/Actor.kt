@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import java.lang.reflect.Method
+import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
 /**
@@ -32,7 +33,7 @@ import kotlin.reflect.jvm.*
  * @see Operation
  */
 data class Actor @JvmOverloads constructor(
-    val method: Method,
+    val method: KFunction<*>,
     val arguments: List<Any?>,
     val handledExceptions: List<Class<out Throwable>> = emptyList(),
     val cancelOnSuspension: Boolean = false,
@@ -42,7 +43,7 @@ data class Actor @JvmOverloads constructor(
     val promptCancellation: Boolean = false,
     // we have to specify `isSuspendable` property explicitly for transformed classes since
     // `isSuspendable` implementation produces a circular dependency and, therefore, fails.
-    val isSuspendable: Boolean = method.isSuspendable()
+    val isSuspendable: Boolean = method.isSuspend
 ) {
     init {
         if (promptCancellation) require(cancelOnSuspension) {
@@ -60,3 +61,5 @@ data class Actor @JvmOverloads constructor(
 }
 
 fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false
+
+val Actor.javaMethod get() = this.method.javaMethod

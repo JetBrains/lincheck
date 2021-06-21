@@ -22,17 +22,38 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
  * Options for [model checking][ModelCheckingStrategy] strategy.
  */
-class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
-    override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
-        return ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-                executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
-                guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects,
-                verboseTrace, customScenarios)
-    }
+class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration<*, *>>() {
+    override fun createTestConfigurations(testClass: Class<*>) = ModelCheckingCTestConfiguration(
+        { testClass.newInstance() },
+        iterations,
+        threads,
+        actorsPerThread,
+        actorsBefore,
+        actorsAfter,
+        { testCfg, testStructure ->
+            executionGenerator.declaredConstructors[0].newInstance(
+                testCfg,
+                testStructure
+            ) as ExecutionGenerator
+        },
+        { seqSpec -> verifier.declaredConstructors[0].newInstance(seqSpec) as Verifier },
+        checkObstructionFreedom,
+        hangingDetectionThreshold,
+        invocationsPerIteration,
+        guarantees,
+        requireStateEquivalenceImplementationCheck,
+        minimizeFailedScenario,
+        chooseSequentialSpecification(sequentialSpecification, testClass),
+        timeoutMs,
+        eliminateLocalObjects,
+        verboseTrace,
+        customScenarios
+    )
 }

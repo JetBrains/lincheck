@@ -61,19 +61,19 @@ class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     }
 }
 
-class ClocksTestScenarioGenerator(testCfg: CTestConfiguration, testStructure: CTestStructure)
+class ClocksTestScenarioGenerator(testCfg: CTestConfiguration<*, *>, testStructure: CTestStructure)
     : ExecutionGenerator(testCfg, testStructure)
 {
     override fun nextExecution() = ExecutionScenario(
         emptyList(),
         listOf(
             listOf(
-                Actor(method = ClocksTest::a.javaMethod!!, arguments = emptyList()),
-                Actor(method = ClocksTest::b.javaMethod!!, arguments = emptyList())
+                Actor(method = ClocksTest::a, arguments = emptyList()),
+                Actor(method = ClocksTest::b, arguments = emptyList())
             ),
             listOf(
-                Actor(method = ClocksTest::c.javaMethod!!, arguments = emptyList()),
-                Actor(method = ClocksTest::d.javaMethod!!, arguments = emptyList())
+                Actor(method = ClocksTest::c, arguments = emptyList()),
+                Actor(method = ClocksTest::d, arguments = emptyList())
             )
         ),
         emptyList()

@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
@@ -36,13 +35,13 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
 
-fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
-    if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
-    else sequentialSpecificationByUser
+fun chooseSequentialSpecification(sequentialSpecificationByUser: (() -> Any)?, testClass: Class<*>): () -> Any =
+    sequentialSpecificationByUser ?: { testClass.newInstance() }
 
 internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
 
@@ -55,7 +54,7 @@ internal fun executeActor(
     completion: Continuation<Any?>?
 ): Result {
     try {
-        val m = getMethod(instance, actor.method)
+        val m = getMethod(instance, actor.method.javaMethod!!)
         val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
             .map { it.convertForLoader(instance.javaClass.classLoader) }
         val res = m.invoke(instance, *args.toTypedArray())
@@ -239,7 +238,7 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
             val args = a.arguments.map { it.convertForLoader(loader) }
             // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
             Actor(
-                method = a.method.convertForLoader(loader),
+                method = a.method.convertForLoader(loader) as KFunction<*>,
                 arguments = args,
                 handledExceptions = a.handledExceptions,
                 cancelOnSuspension = a.cancelOnSuspension,

@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 /**
  * Abstract class for test options.
  */
-abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
+abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration<*, *>> {
     internal var logLevel = DEFAULT_LOG_LEVEL
     protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
     protected var threads = CTestConfiguration.DEFAULT_THREADS
@@ -39,7 +39,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
     protected var requireStateEquivalenceImplementationCheck = false
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
-    protected var sequentialSpecification: Class<*>? = null
+    protected var sequentialSpecification: (() -> Any)? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
 
@@ -148,7 +148,11 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * By default, the provided concurrent implementation is used in a sequential way.
      */
     fun sequentialSpecification(clazz: Class<*>?): OPT = applyAndCast {
-        sequentialSpecification = clazz
+        sequentialSpecification = if (clazz == null) null else {{ clazz.newInstance() }}
+    }
+
+    fun sequentialSpecification(sequentialSpecification: () -> Any): OPT = applyAndCast {
+        this.sequentialSpecification = sequentialSpecification
     }
 
     /**
@@ -173,7 +177,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
 
     companion object {
         @Suppress("UNCHECKED_CAST")
-        private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> Options<OPT, CTEST>.applyAndCast(
+        private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration<*, *>> Options<OPT, CTEST>.applyAndCast(
             block: Options<OPT, CTEST>.() -> Unit
         ) = this.apply {
             block()

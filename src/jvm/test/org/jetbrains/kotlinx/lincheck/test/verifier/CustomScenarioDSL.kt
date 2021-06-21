@@ -58,7 +58,7 @@ fun verify(
     correct: Boolean
 ) {
     val (scenario, results) = scenarioWithResults(block)
-    val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
+    val verifier = verifierClass.declaredConstructors[0].newInstance({ testClass.newInstance() }) as Verifier
     val res = verifier.verifyResults(scenario, results)
     assert(res == correct)
 }

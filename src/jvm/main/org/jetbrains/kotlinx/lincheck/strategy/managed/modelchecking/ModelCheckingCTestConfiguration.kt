@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -30,16 +31,50 @@ import java.lang.reflect.*
 /**
  * Configuration for [random search][ModelCheckingStrategy] strategy.
  */
-class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
-                                      actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-                                      checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
-                                      guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                                      sequentialSpecification: Class<*>, timeoutMs: Long, eliminateLocalObjects: Boolean, verboseTrace: Boolean,
-                                      customScenarios: List<ExecutionScenario>
-) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-    checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
-    minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace, customScenarios) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-                                stateRepresentationMethod: Method?, verifier: Verifier): Strategy
-        = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+class ModelCheckingCTestConfiguration<T, S>(
+    testClass: () -> T,
+    iterations: Int,
+    threads: Int,
+    actorsPerThread: Int,
+    actorsBefore: Int,
+    actorsAfter: Int,
+    generatorClass: (testCfg: CTestConfiguration<T, S>, testStructure: CTestStructure) -> ExecutionGenerator,
+    verifierClass: (S) -> Verifier,
+    checkObstructionFreedom: Boolean,
+    hangingDetectionThreshold: Int,
+    invocationsPerIteration: Int,
+    guarantees: List<ManagedStrategyGuarantee>,
+    requireStateEquivalenceCheck: Boolean,
+    minimizeFailedScenario: Boolean,
+    sequentialSpecification: () -> S,
+    timeoutMs: Long,
+    eliminateLocalObjects: Boolean,
+    verboseTrace: Boolean,
+    customScenarios: List<ExecutionScenario>
+) : ManagedCTestConfiguration<T, S>(
+    testClass,
+    iterations,
+    threads,
+    actorsPerThread,
+    actorsBefore,
+    actorsAfter,
+    generatorClass,
+    verifierClass,
+    checkObstructionFreedom,
+    hangingDetectionThreshold,
+    invocationsPerIteration,
+    guarantees,
+    requireStateEquivalenceCheck,
+    minimizeFailedScenario,
+    sequentialSpecification,
+    timeoutMs,
+    eliminateLocalObjects,
+    verboseTrace,
+    customScenarios
+) {
+    override fun createStrategy(
+        testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
+        stateRepresentationMethod: Method?, verifier: Verifier
+    ): Strategy =
+        ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
 }

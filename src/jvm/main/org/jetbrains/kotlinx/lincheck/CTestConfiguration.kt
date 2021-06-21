@@ -36,18 +36,18 @@ import java.lang.reflect.*
 /**
  * Abstract configuration for different lincheck modes.
  */
-abstract class CTestConfiguration(
-    val testClass: Class<*>,
+abstract class CTestConfiguration<T, S>(
+    val initialState: () -> T,
     val iterations: Int,
     val threads: Int,
     val actorsPerThread: Int,
     val actorsBefore: Int,
     val actorsAfter: Int,
-    val generatorClass: Class<out ExecutionGenerator>,
-    val verifierClass: Class<out Verifier>,
+    val generator: (testCfg: CTestConfiguration<T, S>, testStructure: CTestStructure) -> ExecutionGenerator,
+    val verifier: (sequentialSpecification: S) -> Verifier,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
-    val sequentialSpecification: Class<*>,
+    val sequentialSpecification: () -> S,
     val timeoutMs: Long,
     val customScenarios: List<ExecutionScenario>
 ) {
@@ -66,24 +66,27 @@ abstract class CTestConfiguration(
     }
 }
 
-internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
-    val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
+internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration<*, *>> {
+    val stressConfigurations: List<CTestConfiguration<*, *>> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->
-            StressCTestConfiguration(testClass, ann.iterations,
+            StressCTestConfiguration({ testClass.newInstance() }, ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
-                ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
-                chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
+                { testCfg, testStructure -> ann.generator.java.declaredConstructors[0].newInstance(testCfg, testStructure) as ExecutionGenerator },
+                { seqSpec -> ann.verifier.java.declaredConstructors[0].newInstance(seqSpec) as Verifier },
+                ann.invocationsPerIteration, ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
+                chooseSequentialSpecification(if (ann.sequentialSpecification == DummySequentialSpecification::class) null else {{ ann.sequentialSpecification.java.newInstance() }}, testClass),
                 DEFAULT_TIMEOUT_MS, emptyList()
             )
         }
-    val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
+    val modelCheckingConfigurations: List<CTestConfiguration<*, *>> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
         .map { ann: ModelCheckingCTest ->
-            ModelCheckingCTestConfiguration(testClass, ann.iterations,
+            ModelCheckingCTestConfiguration({ testClass.newInstance() }, ann.iterations,
                 ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
-                ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
-                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
+                { testCfg, testStructure -> ann.generator.java.declaredConstructors[0].newInstance(testCfg, testStructure) as ExecutionGenerator },
+                { seqSpec -> ann.verifier.java.declaredConstructors[0].newInstance(seqSpec) as Verifier},
+                ann.checkObstructionFreedom, ann.hangingDetectionThreshold, ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES,
+                ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
+                chooseSequentialSpecification(if (ann.sequentialSpecification == DummySequentialSpecification::class) null else {{ ann.sequentialSpecification.java.newInstance() }}, testClass),
                 DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE, emptyList()
             )
         }

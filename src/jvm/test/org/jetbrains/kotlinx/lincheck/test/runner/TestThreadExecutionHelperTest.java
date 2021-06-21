@@ -32,6 +32,7 @@ import java.util.*;
 
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static kotlin.reflect.jvm.ReflectJvmMapping.getKotlinFunction;
 
 public class TestThreadExecutionHelperTest {
     private Runner runner;
@@ -58,11 +59,11 @@ public class TestThreadExecutionHelperTest {
     public void testBase() throws Exception {
         TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
             asList(
-                new Actor(Queue.class.getMethod("add", Object.class), asList(1)),
-                new Actor(Queue.class.getMethod("add", Object.class), asList(2)),
-                new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("element"), emptyList()),
-                new Actor(Queue.class.getMethod("peek"), emptyList())
+                new Actor(getKotlinFunction(Queue.class.getMethod("add", Object.class)), asList(1)),
+                new Actor(getKotlinFunction(Queue.class.getMethod("add", Object.class)), asList(2)),
+                new Actor(getKotlinFunction(Queue.class.getMethod("remove")), emptyList()),
+                new Actor(getKotlinFunction(Queue.class.getMethod("element")), emptyList()),
+                new Actor(getKotlinFunction(Queue.class.getMethod("peek")), emptyList())
             ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[5];
@@ -80,10 +81,10 @@ public class TestThreadExecutionHelperTest {
     public void testGlobalException() throws Exception {
         TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
             asList(
-                new Actor(Queue.class.getMethod("add", Object.class), asList(1)),
-                new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("add", Object.class), asList(2))
+                new Actor(getKotlinFunction(Queue.class.getMethod("add", Object.class)), asList(1)),
+                new Actor(getKotlinFunction(Queue.class.getMethod("remove")), emptyList()),
+                new Actor(getKotlinFunction(Queue.class.getMethod("remove")), emptyList()),
+                new Actor(getKotlinFunction(Queue.class.getMethod("add", Object.class)), asList(2))
             ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
@@ -94,10 +95,10 @@ public class TestThreadExecutionHelperTest {
     public void testActorExceptionHandling() throws Exception {
         TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
             asList(
-                new Actor(ArrayDeque.class.getMethod("addLast", Object.class), asList(1)),
-                new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(NoSuchElementException.class)),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(Exception.class, NoSuchElementException.class))
+                new Actor(getKotlinFunction(ArrayDeque.class.getMethod("addLast", Object.class)), asList(1)),
+                new Actor(getKotlinFunction(Queue.class.getMethod("remove")), emptyList()),
+                new Actor(getKotlinFunction(Queue.class.getMethod("remove")), emptyList(), asList(NoSuchElementException.class)),
+                new Actor(getKotlinFunction(Queue.class.getMethod("remove")), emptyList(), asList(Exception.class, NoSuchElementException.class))
             ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];

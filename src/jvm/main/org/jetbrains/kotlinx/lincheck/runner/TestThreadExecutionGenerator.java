@@ -34,6 +34,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.jetbrains.kotlinx.lincheck.ActorKt.getJavaMethod;
 import static org.objectweb.asm.Opcodes.*;
 import static org.objectweb.asm.Type.*;
 
@@ -213,7 +214,7 @@ public class TestThreadExecutionGenerator {
             } else {
                 // Prepare to create non-processed value result of actor invocation (in case of no suspendable actors in scenario)
                 // Load type of result
-                if (actor.getMethod().getReturnType() != void.class) {
+                if (getJavaMethod(actor).getReturnType() != void.class) {
                     mv.newInstance(VALUE_RESULT_TYPE);
                     mv.visitInsn(DUP);
                 }
@@ -225,7 +226,7 @@ public class TestThreadExecutionGenerator {
             // Load arguments for operation
             loadArguments(mv, actor, objArgs, actor.isSuspendable() ? completions.get(i) : null);
             // Invoke operation
-            Method actorMethod = Method.getMethod(actor.getMethod());
+            Method actorMethod = Method.getMethod(getJavaMethod(actor));
             mv.invokeVirtual(testType, actorMethod);
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {
@@ -233,12 +234,12 @@ public class TestThreadExecutionGenerator {
                 mv.push(iThread);
                 mv.push(i);
                 mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
-                if (actor.getMethod().getReturnType() == void.class) {
+                if (getJavaMethod(actor).getReturnType() == void.class) {
                     createVoidResult(actor, mv);
                 }
             } else {
                 // Create result
-                if (actor.getMethod().getReturnType() == void.class) {
+                if (getJavaMethod(actor).getReturnType() == void.class) {
                     createVoidResult(actor, mv);
                 } else {
                     mv.invokeConstructor(VALUE_RESULT_TYPE, VALUE_RESULT_TYPE_CONSTRUCTOR);
@@ -369,7 +370,7 @@ public class TestThreadExecutionGenerator {
     private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, Completion completion) {
         int nArguments = actor.getArguments().size();
         for (int j = 0; j < nArguments; j++) {
-            pushArgumentOnStack(mv, objArgs, actor.getArguments().toArray()[j], actor.getMethod().getParameterTypes()[j]);
+            pushArgumentOnStack(mv, objArgs, actor.getArguments().toArray()[j], getJavaMethod(actor).getParameterTypes()[j]);
         }
         if (actor.isSuspendable()) {
             pushArgumentOnStack(mv, objArgs, completion, Continuation.class);

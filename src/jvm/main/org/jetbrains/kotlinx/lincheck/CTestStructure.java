@@ -31,6 +31,7 @@ import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.*;
 
+import static kotlin.reflect.jvm.ReflectJvmMapping.getKotlinFunction;
 import static org.jetbrains.kotlinx.lincheck.ActorKt.*;
 
 /**
@@ -117,7 +118,7 @@ public class CTestStructure {
                 }
                 // Get list of handled exceptions if they are presented
                 List<Class<? extends Throwable>> handledExceptions = Arrays.asList(opAnn.handleExceptionsAsResult());
-                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, opAnn.runOnce(),
+                ActorGenerator actorGenerator = new ActorGenerator(getKotlinFunction(m), gens, handledExceptions, opAnn.runOnce(),
                     opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
                     opAnn.promptCancellation());
                 actorGenerators.add(actorGenerator);

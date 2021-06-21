@@ -35,8 +35,8 @@ import kotlin.collections.ArrayList
  * However, we believe that quiescent points do not occur
  * in practice while supporting them complicates the implementation.
  */
-class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier {
-    private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
+class QuiescentConsistencyVerifier(sequentialSpecificationCreator: () -> Any) : Verifier {
+    private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecificationCreator)
     private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = WeakHashMap()
 
     override fun checkStateEquivalenceImplementation(): Boolean = linearizabilityVerifier.checkStateEquivalenceImplementation()
@@ -116,7 +116,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
     }
  }
 
-private val Actor.isQuiescentConsistent: Boolean get() = method.isAnnotationPresent(QuiescentConsistent::class.java)
+private val Actor.isQuiescentConsistent: Boolean get() = method.annotations.any { it is QuiescentConsistent }
 
 /**
  * This annotation indicates that the method it is presented on

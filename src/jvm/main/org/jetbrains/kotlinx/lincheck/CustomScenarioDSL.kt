@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.lang.IllegalStateException
 import kotlin.reflect.KFunction
-import kotlin.reflect.jvm.javaMethod
+import kotlin.reflect.jvm.*
 
 /**
  * Creates a custom scenario using the specified DSL as in the following example:
@@ -55,7 +55,7 @@ internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boole
     val method = f.javaMethod ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
     require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
     return Actor(
-        method = method,
+        method = method.kotlinFunction!!,
         arguments = args.toList(),
         handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList(),
         cancelOnSuspension = cancelOnSuspension

@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
 class StressStrategy(
-    testCfg: StressCTestConfiguration,
+    testCfg: StressCTestConfiguration<*, *>,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,

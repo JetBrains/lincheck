@@ -29,6 +29,28 @@ import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
 import java.util.*
 import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.Set
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.contains
+import kotlin.collections.contentToString
+import kotlin.collections.emptyList
+import kotlin.collections.find
+import kotlin.collections.forEach
+import kotlin.collections.indices
+import kotlin.collections.map
+import kotlin.collections.maxBy
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.plus
+import kotlin.collections.set
+import kotlin.collections.sortedBy
+import kotlin.collections.toMutableList
+import kotlin.collections.toSet
 import kotlin.coroutines.*
 import kotlin.math.*
 
@@ -55,10 +77,11 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: Class<*>) {
+class LTS(sequentialSpecification: () -> Any) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
-                                                    .loadClass(sequentialSpecification.name)!!
+    private val sequentialSpecificationCreator: () -> Any = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv) }
+                                                                .run { sequentialSpecification.serialize().deserialize(this) }
+                                                                as () -> Any
 
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
@@ -279,7 +302,7 @@ class LTS(sequentialSpecification: Class<*>) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.newInstance()
+    private fun createInitialStateInstance() = sequentialSpecificationCreator()
 
     fun checkStateEquivalenceImplementation(): Boolean {
         val i1 = createInitialStateInstance()

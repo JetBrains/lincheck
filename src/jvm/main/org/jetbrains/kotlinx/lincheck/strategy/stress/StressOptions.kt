@@ -21,13 +21,14 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
-import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
  * Options for [stress][StressStrategy] strategy.
  */
-open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
+open class StressOptions : Options<StressOptions, StressCTestConfiguration<*, *>>() {
     private var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
 
     /**
@@ -37,9 +38,23 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
         invocationsPerIteration = invocations
     }
 
-    override fun createTestConfigurations(testClass: Class<*>): StressCTestConfiguration {
-        return StressCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator,
-                verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios)
-    }
+    override fun createTestConfigurations(testClass: Class<*>) = StressCTestConfiguration(
+        { testClass.newInstance() },
+        iterations,
+        threads,
+        actorsPerThread,
+        actorsBefore,
+        actorsAfter,
+        { testCfg, testStructure ->
+            executionGenerator.declaredConstructors[0].newInstance(
+                testCfg,
+                testStructure
+            ) as ExecutionGenerator
+        },
+        { seqSpec -> verifier.declaredConstructors[0].newInstance(seqSpec) as Verifier },
+        invocationsPerIteration,
+        requireStateEquivalenceImplementationCheck,
+        minimizeFailedScenario,
+        chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
+    )
 }

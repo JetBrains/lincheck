@@ -25,13 +25,15 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import java.lang.reflect.*
 import kotlin.random.*
+import kotlin.reflect.*
+import kotlin.reflect.jvm.*
 
 /**
  * Implementations of this class generate [actors][Actor]
  * using [parameter generators][ParameterGenerator].
  */
 class ActorGenerator(
-    private val method: Method,
+    private val method: KFunction<*>,
     private val parameterGenerators: List<ParameterGenerator<*>>,
     private val handledExceptions: List<Class<out Throwable?>>,
     val useOnce: Boolean,
@@ -62,7 +64,7 @@ class ActorGenerator(
         )
     }
 
-    val isSuspendable: Boolean get() = method.isSuspendable()
+    val isSuspendable: Boolean get() = method.isSuspend
     override fun toString() = method.toString()
 }
 

@@ -48,7 +48,7 @@ abstract class ManagedStrategy(
     private val verifier: Verifier,
     private val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    private val testCfg: ManagedCTestConfiguration<*, *>
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.parallelExecution.size

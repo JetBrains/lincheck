@@ -44,7 +44,7 @@ import kotlin.random.*
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
+        testCfg: ModelCheckingCTestConfiguration<*, *>,
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunctions: List<Method>,

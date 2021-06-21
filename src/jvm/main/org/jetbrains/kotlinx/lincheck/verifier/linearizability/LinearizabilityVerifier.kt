@@ -34,8 +34,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
  * This verifier is based on [AbstractLTSVerifier] and caches the already processed results
  * for performance improvement (see [CachedVerifier]).
  */
-class LinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVerifier(sequentialSpecification) {
-    override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
+class LinearizabilityVerifier(sequentialSpecificationCreator: () -> Any) : AbstractLTSVerifier(sequentialSpecificationCreator) {
+    override val lts = LTS(sequentialSpecification = sequentialSpecificationCreator)
 
     override fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult) =
         LinearizabilityContext(scenario, results, lts.initialState)

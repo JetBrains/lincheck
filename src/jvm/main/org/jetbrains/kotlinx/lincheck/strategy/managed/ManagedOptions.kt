@@ -33,7 +33,7 @@ import java.util.*
 /**
  * Common options for all managed strategies.
  */
-abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
+abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration<*, *>> : Options<OPT, CTEST>() {
     protected var invocationsPerIteration = DEFAULT_INVOCATIONS
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
@@ -97,7 +97,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
 
     companion object {
         @Suppress("UNCHECKED_CAST")
-        private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> ManagedOptions<OPT, CTEST>.applyAndCast(
+        private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration<*, *>> ManagedOptions<OPT, CTEST>.applyAndCast(
                 block: ManagedOptions<OPT, CTEST>.() -> Unit
         ) = this.apply {
             block()

@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import java.util.ArrayList
 
 /**
  * An abstraction for verifiers which use the labeled transition system (LTS) under the hood.
@@ -34,7 +33,7 @@ import java.util.ArrayList
  * the next possible transitions using [VerifierContext.nextContext] function. This verifier
  * uses depth-first search to find a proper path.
  */
-abstract class AbstractLTSVerifier(protected val sequentialSpecification: Class<*>) : CachedVerifier() {
+abstract class AbstractLTSVerifier(protected val sequentialSpecificationCreator: () -> Any) : CachedVerifier() {
     abstract val lts: LTS
     abstract fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult): VerifierContext
 

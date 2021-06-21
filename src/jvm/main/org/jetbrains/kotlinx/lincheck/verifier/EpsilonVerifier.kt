@@ -1,9 +1,8 @@
 /*
- * #%L
  * Lincheck
- * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
- * %%
+ *
+ * Copyright (C) 2019 - 2021 JetBrains s.r.o.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
@@ -16,27 +15,17 @@
  *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-package org.jetbrains.kotlinx.lincheck.verifier;
 
-import org.jetbrains.kotlinx.lincheck.execution.*;
+package org.jetbrains.kotlinx.lincheck.verifier
+
+import org.jetbrains.kotlinx.lincheck.execution.*
 
 /**
  * This verifier does nothing and could be used for performance benchmarking.
  */
-public class EpsilonVerifier implements Verifier {
-
-    public EpsilonVerifier(Class<?> sequentialSpecification) {}
-
-    @Override
-    public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
-        return true; // Always correct results :)
-    }
-
-    @Override
-    public boolean checkStateEquivalenceImplementation() {
-        return true;
-    }
+class EpsilonVerifier(sequentialSpecificationCreator: () -> Any) : Verifier {
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult) = true
+    override fun checkStateEquivalenceImplementation() = true
 }
