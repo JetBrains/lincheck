@@ -33,7 +33,7 @@ class MSQueueBlocking {
     private val head = AtomicReference(DUMMY)
     private val tail = AtomicReference(DUMMY)
 
-    public fun enqueue(x: Int) {
+    fun enqueue(x: Int) {
         val newTail = Node(x)
         while (true) { // CAS loop
             val curTail = tail.get()
@@ -48,7 +48,7 @@ class MSQueueBlocking {
         }
     }
 
-    public fun dequeue(): Int? {
+    fun dequeue(): Int? {
         while (true) { // CAS loop
             val curHead = head.get()
             val headNext = curHead.next.get() ?: return null
@@ -71,12 +71,10 @@ class ObstructionFreedomViolationTest  {
     fun dequeue(): Int? = q.dequeue()
 
     @Test
-    fun runStressTest() = StressOptions()
-        .requireStateEquivalenceImplCheck(false)
-        .check(this::class.java)
+    fun runStressTest() = StressOptions().check(this::class)
 
     @Test
     fun runModelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
-        .check(this::class.java)
+        .check(this::class)
 }

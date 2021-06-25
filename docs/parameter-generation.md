@@ -1,10 +1,8 @@
 ## Parameter generation
-TODO: this part is more important than single producer/consumer
 
-Till this moment in the guide we took for granted that arguments for test operations are somehow generated under the hood by `Lincheck`.
-In this section you will learn how you may configure generation of arguments.
+In this section you will learn how you may configure generation of arguments for test operations.
 
-Consider the implementation of the custom `MultiMap` (bugged, of course) backed with `ConcurrentHashMap`:
+Consider the implementation of the custom `MultiMap` backed with `ConcurrentHashMap` that contains a race bug:
 
 ```kotlin
 import java.util.concurrent.ConcurrentHashMap
@@ -14,7 +12,7 @@ class MultiMap {
 
     // adds the value to the list by the given key
     // contains the race :(
-    fun addBroken(key: Int, value: Int) {
+    fun add(key: Int, value: Int) {
         val list = map[key]
         if (list == null) {
             map[key] = listOf(value)
@@ -22,14 +20,12 @@ class MultiMap {
             map[key] = list + value
         }
     }
+
+    fun get(key: Int) = map.get(key)
 }
 ```
 
-TODO: how `get(key)` is orrganized? 
-
-TODO: it would probably be better to rename `addBroken` to simple `add` (I am not sure about this) 
-
-We are going to test concurrent execution of `add(key, value)` and `get(key)` operations. Incorrect interleaving is more 
+We are going to test concurrent execution of `add(key, value)` and `get(key)` operations. The incorrect interleaving is more 
 likely to be detected if we increase the contention to access the small range of keys.
 
 For this we can configure the generator for a `key: Int` parameter:
@@ -40,7 +36,8 @@ For this we can configure the generator for a `key: Int` parameter:
 3. Define the range of values to be generated via the string configuration: `@Param(conf = "1:2")`.
 4. Specify the parameter configuration name (`@Param(name = "key")`) to share it for several operations.
 
-Below is the `MultiMap` stress test that will generate keys in the range of `[1..2]`: 
+Below is the stress test for `MultiMap` that will generate keys for `add(key, value)` and `get(key)` operations in the
+range of `[1..2]`: 
 
 ```kotlin
 import org.jetbrains.kotlinx.lincheck.annotations.*
@@ -57,15 +54,13 @@ class MultiMapTest {
     private val map = MultiMap()
 
     @Operation
-    fun add(@Param(name = "key") key: Int, value: Int) = map.addBroken(key, value)
+    fun add(@Param(name = "key") key: Int, value: Int) = map.add(key, value)
 
     @Operation
     fun get(@Param(name = "key") key: Int) = map.get(key)
 
-    @Test
-    fun stressTest() = StressOptions()
-        .requireStateEquivalenceImplCheck(false)
-        .check(this::class.java)
+   @Test
+   fun stressTest() = StressOptions().check(this::class)
 }
 ```
 
@@ -79,8 +74,8 @@ Post part:
 [get(1): [4]]
 ```
 
-Due to the small range of keys in the `MultiMap` (`[1..2]`), 
-`Lincheck` quickly revealed the race in the `add(key, value)` implementation: during 2 concurrent writes one value update was lost. 
+Due to the small range of keys, `Lincheck` quickly revealed the race bug: when two values are being added concurrently by the same key, 
+one of the values may be overwritten and lost.
 
 ## To sum up
 
@@ -88,6 +83,6 @@ In this section you have learnt how to configure arguments passed to the test op
 
 > Get the full code of the example [here](../src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
 
-`MultiMap` implementation uses `java.util.concurrent.ConcurrentHashMap` as a building block and testing in the model checking mode may take a while due to the significant number of interleavings to check. 
+`MultiMap` implementation uses `java.util.concurrent.ConcurrentHashMap` as a building block and testing via the model checking strategy may take a while due to the significant number of interleavings to check. 
 Considering implementation of the `ConcurrentHashMap` to be correct we can optimize and increase coverage of model checking. 
 Go to [the next section](modular-testing.md) for details.

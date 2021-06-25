@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
@@ -33,6 +32,7 @@ import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.NoSuchElementException
 
 class Stack<T> {
     private val top  = AtomicReference<Node<T>?>(null)
@@ -69,7 +69,7 @@ class Stack<T> {
                 if (node != null) append(",")
             }
             append("]")
-    }
+        }
 
     val size: Int get() = _size.get()
 }
@@ -80,17 +80,32 @@ class StackTest : VerifierState() {
     private val s = Stack<Int>()
 
     @Operation fun push(@Param(name = "value") value: Int) = s.push(value)
-    @Operation fun pop() = s.pop()
+    @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
+    fun pop() = s.pop()
     @Operation fun size() = s.size
 
     @StateRepresentation
     fun stackreperesentation() = s.toString()
 
-    override fun extractState(): Any = s.toString()
+    override fun extractState(): List<Int> {
+        val elements = mutableListOf<Int>()
+        while(s.size != 0) {
+            elements.add(s.pop()!!)
+        }
+        return elements
+    }
+
+    class SequentialStack {
+        val s = LinkedList<Int>()
+
+        fun push(x: Int) = s.push(x)
+        fun pop() = s.pop()
+        fun size() = s.size
+    }
 
     @Test
     fun runStressTest() = StressOptions()
-        .logLevel(LoggingLevel.INFO)
+        .sequentialSpecification(SequentialStack::class.java)
         .check(this::class)
 
     @Test
