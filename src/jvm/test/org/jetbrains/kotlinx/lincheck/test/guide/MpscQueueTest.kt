@@ -28,7 +28,7 @@ import org.junit.Test
 import java.util.*
 
 @OpGroupConfig(name = "consumer", nonParallel = true)
-public class MpscQueueTest {
+class MpscQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
 
     @Operation

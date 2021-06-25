@@ -46,10 +46,10 @@ class CounterTest : VerifierState() {
     override fun extractState(): Any = c.get()
 
     @StateRepresentation
-    fun counterReperesentation() = c.get().toString()
+    fun counterRepresentation() = c.get().toString()
 
     @Test
-    fun runStressTest() = StressOptions()
+    fun stressTest() = StressOptions()
         .actorsBefore(2) // Init part
         .threads(2).actorsPerThread(2)
         .actorsAfter(1) // Post part
@@ -57,6 +57,6 @@ class CounterTest : VerifierState() {
         .check(this::class)
 
     @Test
-    fun runModelCheckingTest() = ModelCheckingOptions().check(this::class)
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }
 
