@@ -262,11 +262,10 @@ private fun StringBuilder.appendException(t: Throwable) {
 }
 
 internal fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: Class<*>) {
-    append("To verify outcome results faster, it is highly recommended to specify the state equivalence relation on your" +
-        "sequential specification. However, on $sequentialSpecification it is is not defined or is implemented incorrectly. " +
-        "Please, specify the equivalence relation via implementing `equals()` and `hashCode()` functions on $sequentialSpecification. " +
-        "The most convenient way is to extend a special `VerifierState` class and override the `extractState()` function, which" +
-        "extracts and returns the logical state, which is used for further `equals()` and `hashCode()` calls.")
+    append("To make verification faster, you can specify the state equivalence relation on your sequential specification.\n" +
+        "At the current moment, `${sequentialSpecification.simpleName}` does not specify it, or the equivalence relation implementation is incorrect.\n" +
+        "To fix this, please implement `equals()` and `hashCode()` functions on `${sequentialSpecification.simpleName}`; the simplest way is to extend `VerifierState`\n" +
+        "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations.")
 }
 
 private fun StringBuilder.appendCrash(crash: CrashError) {

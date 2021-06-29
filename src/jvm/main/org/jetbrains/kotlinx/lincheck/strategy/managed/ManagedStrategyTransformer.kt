@@ -665,12 +665,14 @@ internal class ManagedStrategyTransformer(
             // there are also static methods in ThreadLocalRandom that are used inside java.util.concurrent.
             // they are replaced with nextInt method.
             val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
-            if (isThreadLocalRandomMethod && (name == "nextSecondarySeed" || name == "getProbe")) {
+            val isStriped64Method = owner == "java/util/concurrent/atomic/Striped64"
+            if (isThreadLocalRandomMethod && (name == "nextSecondarySeed" || name == "getProbe") ||
+                isStriped64Method && name == "getProbe") {
                 loadRandom()
                 adapter.invokeVirtual(RANDOM_TYPE, NEXT_INT_METHOD)
                 return
             }
-            if (isThreadLocalRandomMethod && name == "advanceProbe") {
+            if ((isThreadLocalRandomMethod || isStriped64Method) && name == "advanceProbe") {
                 adapter.pop() // pop parameter
                 loadRandom()
                 adapter.invokeVirtual(RANDOM_TYPE, NEXT_INT_METHOD)

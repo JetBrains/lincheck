@@ -18,12 +18,9 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-import kotlinx.atomicfu.AtomicBoolean
-import kotlinx.atomicfu.AtomicRef
-import kotlinx.atomicfu.atomic
-import org.jetbrains.kotlinx.lincheck.scenario
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.*
+import org.junit.*
+import org.junit.Assert.*
 
 class CustomScenariosDSLTest {
     @Test

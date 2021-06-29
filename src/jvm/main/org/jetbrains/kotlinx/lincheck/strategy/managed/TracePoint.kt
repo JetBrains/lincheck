@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.nvm.CrashError
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -307,17 +308,23 @@ internal enum class SwitchReason(private val reason: String) {
 internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in listOf(
-    java.lang.Integer::class.java,
-    java.lang.Long::class.java,
-    java.lang.Short::class.java,
-    java.lang.Double::class.java,
-    java.lang.Float::class.java,
-    java.lang.Character::class.java,
-    java.lang.Byte::class.java,
-    java.lang.Boolean::class.java,
-    java.lang.String::class.java,
-    BigInteger::class.java,
-    BigDecimal::class.java,
-    kotlinx.coroutines.internal.Symbol::class.java
-).map { it.canonicalName }
+private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in
+    listOf(
+        java.lang.Integer::class.java,
+        java.lang.Long::class.java,
+        java.lang.Short::class.java,
+        java.lang.Double::class.java,
+        java.lang.Float::class.java,
+        java.lang.Character::class.java,
+        java.lang.Byte::class.java,
+        java.lang.Boolean::class.java,
+        java.lang.String::class.java,
+        BigInteger::class.java,
+        BigDecimal::class.java,
+        kotlinx.coroutines.internal.Symbol::class.java,
+    ).map { it.canonicalName } +
+    listOf(
+        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonList",
+        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonMap",
+        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonSet"
+    )
