@@ -27,7 +27,7 @@ import kotlin.math.pow
 import kotlin.random.Random
 
 private const val ITERATIONS = 1_000_000
-private const val REPEATS = 100
+private const val REPEATS = 10
 
 internal class EmulationTest {
 
