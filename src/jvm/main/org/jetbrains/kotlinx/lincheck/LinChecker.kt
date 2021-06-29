@@ -140,9 +140,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun ExecutionScenario.runTryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
         setThreadIds()
-        return if (newScenario.isValid) {
+        return if (isValid) {
             val verifier = testCfg.createVerifier(checkStateEquivalence = false)
-            newScenario.run(testCfg, verifier)
+            run(testCfg, verifier)
         } else null
     }
 
