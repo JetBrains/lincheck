@@ -152,7 +152,7 @@ private class NRLModel(
     }
 }
 
-private open class DurableModel(
+internal open class DurableModel(
     override val crashes: Boolean,
     val strategyRecoveryOptions: StrategyRecoveryOptions
 ) : RecoverabilityModel {
