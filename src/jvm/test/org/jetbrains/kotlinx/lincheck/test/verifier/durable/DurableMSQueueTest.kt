@@ -31,7 +31,7 @@ import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.DurableLinearizabilityVerifier
 import org.junit.Assert
 import org.junit.Test
 import java.lang.reflect.Method
@@ -179,7 +179,7 @@ private fun actor(method: Method, vararg a: Any?) = Actor(method, a.toMutableLis
 class ManualDurableMSQueueTest {
     @Test
     fun test() {
-        val verifier = LinearizabilityVerifier(SequentialQueue::class.java)
+        val verifier = DurableLinearizabilityVerifier(SequentialQueue::class.java)
         val scenario = ExecutionScenario(
             listOf(actor(PUSH, 2), actor(PUSH, 6), actor(POP, 0), actor(PUSH, -6), actor(PUSH, -8)),
             listOf(
