@@ -29,7 +29,7 @@ internal class EnvironmentImpl<Message, Log>(
     val context: DistributedRunnerContext<Message, Log>,
     override val nodeId: Int,
     override val coroutineContext: CoroutineContext,
-    override val log: MutableList<Log> = mutableListOf()
+    override val log: MutableList<Log> = LogList(context, nodeId)
 ) :
     Environment<Message, Log> {
     companion object {

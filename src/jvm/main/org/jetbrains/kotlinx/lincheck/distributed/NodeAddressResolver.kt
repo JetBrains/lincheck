@@ -27,12 +27,14 @@ package org.jetbrains.kotlinx.lincheck.distributed
 class NodeAddressResolver<Message>(
     testClass: Class<out Node<Message>>,
     val nodesWithScenario: Int,
-    private val additionalClasses: Map<Class<out Node<Message>>, Pair<Int, Boolean>>
+    private val additionalClasses: Map<Class<out Node<Message>>, Pair<Int, Boolean>>,
+    private val maxNumberOfFailuresForType : Map<Class<out Node<Message>>, (Int) -> Int>
 ) {
     private val nodeTypeToRange: Map<Class<out Node<Message>>, List<Int>>
     val totalNumberOfNodes = if (testClass in additionalClasses) additionalClasses.values.map { it.first }
         .sum() else additionalClasses.values.map { it.first }.sum() + nodesWithScenario
     private val nodes = mutableListOf<Class<out Node<Message>>>()
+    val maxNumberOfCrashes = mutableMapOf<Class<out Node<Message>>, Int>()
 
     init {
         repeat(nodesWithScenario) { nodes.add(testClass) }
@@ -46,6 +48,7 @@ class NodeAddressResolver<Message>(
             else repeat(p.first) { nodes.add(cls) }
         }
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
+        maxNumberOfFailuresForType.forEach { (t, u) -> maxNumberOfCrashes[t] = u(nodeTypeToRange[t]!!.size) }
     }
 
     /**
@@ -63,4 +66,8 @@ class NodeAddressResolver<Message>(
      * failures according to user configuration.
      */
     fun canFail(iNode: Int) = additionalClasses[nodes[iNode]]?.second ?: true
+
+    fun maxNumberOfCrashesForNode(iNode: Int) : Int? {
+        return maxNumberOfCrashes[nodes[iNode]]
+    }
 }

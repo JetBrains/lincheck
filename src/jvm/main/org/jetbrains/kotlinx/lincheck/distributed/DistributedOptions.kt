@@ -52,6 +52,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var testClasses = HashMap<Class<out Node<Message>>, NodeTypeInfo>()
     private var logFileName: String? = null
     private var testingMode: TestingMode = TestingMode.STRESS
+    private val maxNumberOfFailedNodesForType = mutableMapOf<Class<out Node<Message>>, (Int) -> Int>()
 
     init {
         timeoutMs = DEFAULT_TIMEOUT_MS
@@ -91,6 +92,11 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
+    fun setMaxNumberOfFailedNodes(cls: Class<out Node<Message>>, maxNumOfFailedNodes: (Int) -> Int): DistributedOptions<Message, Log> {
+        this.maxNumberOfFailedNodesForType[cls] = maxNumOfFailedNodes
+        return this
+    }
+
     fun crashMode(crashMode: CrashMode): DistributedOptions<Message, Log> {
         this.crashMode = crashMode
         return this
@@ -126,7 +132,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             testClass, iterations, threads,
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, isNetworkReliable,
-            messageOrder, maxNumberOfFailedNodes, crashMode,
+            messageOrder, maxNumberOfFailedNodes, maxNumberOfFailedNodesForType, crashMode,
             messageDuplication, networkPartitions, testClasses, logFileName, testingMode,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs

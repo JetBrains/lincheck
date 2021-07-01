@@ -22,12 +22,14 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode
+import org.jetbrains.kotlinx.lincheck.distributed.Node
 
 abstract class NodeCrashInfo(
     protected val testCfg: DistributedCTestConfiguration<*, *>,
     protected val context: DistributedRunnerContext<*, *>,
     val numberOfFailedNodes: Int,
-    val failedNodes: List<Boolean>
+    val failedNodes: List<Boolean>,
+    val failedNodesForType: Map<Class<out Node<*>>, Int>
 ) {
     companion object {
         fun initialInstance(
@@ -38,12 +40,12 @@ abstract class NodeCrashInfo(
             val failedNodes = List(numberOfNodes) { false }
             if (testCfg.networkPartitions != NetworkPartitionMode.SINGLE) {
                 val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
-                return NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, 0)
+                return NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, mutableMapOf(), 0)
             } else {
                 val edges = Array(context.addressResolver.totalNumberOfNodes) {
                     (0 until context.addressResolver.totalNumberOfNodes).toSet()
                 }.toList()
-                return NodeCrashInfoSingle(testCfg, context, 0, failedNodes, edges)
+                return NodeCrashInfoSingle(testCfg, context, 0, failedNodes, mutableMapOf(), edges)
             }
         }
     }
@@ -72,8 +74,9 @@ class NodeCrashInfoHalves(
     numberOfFailedNodes: Int,
     val partitions: List<Set<Int>>,
     failedNodes: List<Boolean>,
-    val partitionCount: Int
-) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes) {
+    failedNodesForType: Map<Class<out Node<*>>, Int>,
+    val partitionCount: Int,
+) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes, failedNodesForType) {
 
     override fun canSend(a: Int, b: Int): Boolean {
         return (partitions[0].contains(a) && partitions[0].contains(b) ||
@@ -84,11 +87,16 @@ class NodeCrashInfoHalves(
         if (numberOfFailedNodes == maxNumberOfFailedNodes ||
             failedNodes[iNode]
         ) return null
+        val cls = context.addressResolver[iNode]
+        val maxNumberOfCrashes = context.addressResolver.maxNumberOfCrashesForNode(iNode)
+        if (maxNumberOfCrashes != null && failedNodesForType[cls] == maxNumberOfCrashes) return null
         val newFailedNodes = failedNodes.toMutableList()
+        val newFailedNodesForType = failedNodesForType.toMutableMap()
+        newFailedNodesForType[cls] = newFailedNodesForType.getOrElse(cls) { 0 } + 1
         newFailedNodes[iNode] = true
         return NodeCrashInfoHalves(
             testCfg,
-            context, numberOfFailedNodes + 1, partitions, newFailedNodes, partitionCount
+            context, numberOfFailedNodes + 1, partitions, newFailedNodes, newFailedNodesForType, partitionCount
         )
     }
 
@@ -96,9 +104,17 @@ class NodeCrashInfoHalves(
         check(failedNodes[iNode])
         val newFailedNodes = failedNodes.toMutableList()
         newFailedNodes[iNode] = false
+        val newFailedNodesForType = failedNodesForType.toMutableMap()
+        val cls = context.addressResolver[iNode]
+        newFailedNodesForType[cls] = newFailedNodesForType[cls]!! - 1
         return NodeCrashInfoHalves(
             testCfg,
-            context, numberOfFailedNodes - 1, partitions, newFailedNodes, partitionCount
+            context,
+            numberOfFailedNodes - 1,
+            partitions,
+            newFailedNodes,
+            newFailedNodesForType,
+            partitionCount
         )
     }
 
@@ -115,7 +131,7 @@ class NodeCrashInfoHalves(
         val newNumberOfFailedNodes = numberOfFailedNodes + partitionSize
         return NodeCrashInfoHalves(
             testCfg, context, newNumberOfFailedNodes, listOf(nodesInPartition, anotherPartition),
-            failedNodes, partitionCount + 1
+            failedNodes, failedNodesForType, partitionCount + 1
         )
     }
 
@@ -124,7 +140,7 @@ class NodeCrashInfoHalves(
         val partitionSize = partitions[0].size
         return NodeCrashInfoHalves(
             testCfg, context, numberOfFailedNodes - partitionSize, listOf(emptySet(), failedNodes.indices.toSet()),
-            failedNodes, partitionCount
+            failedNodes, failedNodesForType, partitionCount
         )
     }
 }
@@ -134,8 +150,9 @@ class NodeCrashInfoSingle(
     context: DistributedRunnerContext<*, *>,
     numberOfFailedNodes: Int,
     failedNodes: List<Boolean>,
+    failedNodesForType: Map<Class<out Node<*>>, Int>,
     val edges: List<Set<Int>>
-) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes) {
+) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes, failedNodesForType) {
     override fun canSend(a: Int, b: Int): Boolean = edges[a].contains(b)
 
     val numberOfNodes = context.addressResolver.totalNumberOfNodes
@@ -160,7 +177,7 @@ class NodeCrashInfoSingle(
         newFailedNodes[iNode] = true
         return NodeCrashInfoSingle(
             testCfg,
-            context, numberOfFailedNodes + 1, newFailedNodes, createNewEdges(iNode)
+            context, numberOfFailedNodes + 1, newFailedNodes, failedNodesForType, createNewEdges(iNode)
         )
     }
 
@@ -170,7 +187,7 @@ class NodeCrashInfoSingle(
         newFailedNodes[iNode] = false
         return NodeCrashInfoSingle(
             testCfg,
-            context, numberOfFailedNodes - 1, newFailedNodes, createNewEdges(iNode)
+            context, numberOfFailedNodes - 1, newFailedNodes, failedNodesForType, createNewEdges(iNode)
         )
     }
 
@@ -202,7 +219,7 @@ class NodeCrashInfoSingle(
         val component = findMaxComponent(newEdges)
         val newFailedNodes = numberOfNodes - component.size
         if (newFailedNodes > maxNumberOfFailedNodes) return null
-        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, newEdges)
+        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, failedNodesForType,  newEdges)
     }
 
     override fun recoverNetworkPartition(a: Int, b: Int): NodeCrashInfo {
@@ -211,6 +228,6 @@ class NodeCrashInfoSingle(
         newEdges[b].add(a)
         val component = findMaxComponent(newEdges)
         val newFailedNodes = numberOfNodes - component.size
-        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, newEdges)
+        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, failedNodesForType,  newEdges)
     }
 }

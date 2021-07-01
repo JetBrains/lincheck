@@ -45,7 +45,7 @@ class NodeAddressResolverTest {
 
     @Test
     fun test() {
-        val addressResolver = NodeAddressResolver(AClass::class.java, 3, mapOf(BClass::class.java to (4 to false), CClass::class.java to (5 to true)))
+        val addressResolver = NodeAddressResolver(AClass::class.java, 3, mapOf(BClass::class.java to (4 to false), CClass::class.java to (5 to true)), emptyMap())
         repeat(3) {
             check(addressResolver[it] == AClass::class.java)
         }

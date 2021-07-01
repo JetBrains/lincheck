@@ -44,7 +44,8 @@ class DistributedRunnerContext<Message, Log>(
 ) {
     val addressResolver = NodeAddressResolver(
         testCfg.testClass as Class<out Node<Message>>,
-        scenario.threads, testCfg.nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail }
+        scenario.threads, testCfg.nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail },
+        testCfg.maxNumberOfFailedNodesForType
     )
 
     lateinit var messageHandler: ChannelHandler<Pair<Int, MessageSentEvent<Message>>>
