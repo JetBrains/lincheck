@@ -98,6 +98,8 @@ class DistributedRunnerContext<Message, Log>(
         Executors.newSingleThreadExecutor { r -> NodeDispatcher.NodeTestThread(it, runnerHash, r) }
     }
 
+    val nextNumberOfCrashes = atomic(0)
+
     val crashInfo = atomic(NodeCrashInfo.initialInstance(testCfg, this))
 
     val initialNumberOfTasks =
@@ -109,6 +111,7 @@ class DistributedRunnerContext<Message, Log>(
 
     fun reset() {
         invocation.incrementAndGet()
+        nextNumberOfCrashes.lazySet(0)
         crashInfo.lazySet(NodeCrashInfo.initialInstance(testCfg, this))
         taskCounter = DispatcherTaskCounter(initialNumberOfTasks)
         dispatchers = Array(addressResolver.totalNumberOfNodes) {

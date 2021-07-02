@@ -54,8 +54,6 @@ class Probability(
 
     private val numberOfNodes: Int = context.addressResolver.totalNumberOfNodes
 
-    var nextFails = 0
-
     fun duplicationRate(): Int {
         if (!messageIsSent()) {
             return 0
@@ -75,12 +73,15 @@ class Probability(
 
     fun nodeFailed(maxNumCanFail : Int): Boolean {
         if (maxNumCanFail == 0) {
-            nextFails = 0
+            context.nextNumberOfCrashes.lazySet(0)
             return false
         }
-        if (nextFails > 0) {
-            nextFails--
-            return true
+        while (true) {
+            val numberOfCrashes = context.nextNumberOfCrashes.value
+            if (numberOfCrashes == 0) break
+            if (context.nextNumberOfCrashes.compareAndSet(numberOfCrashes, numberOfCrashes - 1)) {
+                return true
+            }
         }
         val r = rand.get().nextDouble(1.0)
         val p = nodeFailProbability()
@@ -88,7 +89,7 @@ class Probability(
             it.appendLine("[$iNode]: $curMsgCount")
         }
         if (r >= p) return false
-        nextFails = rand.get().nextInt(1, maxNumCanFail + 1) - 1
+        context.nextNumberOfCrashes.lazySet(rand.get().nextInt(1, maxNumCanFail + 1) - 1)
         return true
     }
 

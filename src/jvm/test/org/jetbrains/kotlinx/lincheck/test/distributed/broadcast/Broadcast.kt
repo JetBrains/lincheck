@@ -115,18 +115,17 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
     }
 }
 
-
 class BroadcastTest {
     private fun createOptions() = DistributedOptions<Message, Message>()
         .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(3)
-        .invocationsPerIteration(50_000)
+        .invocationsPerIteration(1_000)
         .iterations(1)
         .verifier(EpsilonVerifier::class.java)
 
     @Test
     fun test() = createOptions()
-        .nodeType(Peer::class.java, 3)
+        .nodeType(Peer::class.java, 2, 4)
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
         //.storeLogsForFailedScenario("broadcast.txt")
