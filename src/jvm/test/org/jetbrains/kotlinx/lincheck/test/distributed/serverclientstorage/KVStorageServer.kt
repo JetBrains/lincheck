@@ -113,7 +113,7 @@ class KVStorageServerTestClass {
         DistributedOptions<Command, Unit>()
             .requireStateEquivalenceImplCheck(false)
             .sequentialSpecification(SingleNode::class.java)
-            .invocationsPerIteration(3000)
+            .invocationsPerIteration(5000)
             .iterations(10)
             .threads(3)
             .actorsPerThread(3)

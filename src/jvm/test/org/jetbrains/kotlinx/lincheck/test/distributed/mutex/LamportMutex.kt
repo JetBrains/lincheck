@@ -129,13 +129,6 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
     }
 }
 
-class Counter {
-    var cnt = 0
-    suspend fun lock(): Int {
-        return ++cnt
-    }
-}
-
 class LamportMutexTest {
     private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
         .requireStateEquivalenceImplCheck(false)

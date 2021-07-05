@@ -217,7 +217,7 @@ open class DistributedRunner<Message, Log>(
 
     private suspend fun runNode(iNode: Int) {
         handleException(iNode) {
-            context.taskCounter.runSafely {
+            context.dispatchers[iNode].runSafely {
                 context.testInstances[iNode].onStart()
             }
             if (iNode >= context.addressResolver.nodesWithScenario) {
@@ -238,7 +238,7 @@ open class DistributedRunner<Message, Log>(
                 )
                 try {
                     testNodeExecution.actorId++
-                    val res = if (!actor.blocking) context.taskCounter.runSafely {
+                    val res = if (!actor.blocking) context.dispatchers[iNode].runSafely {
                         testNodeExecution.runOperation(i)
                     } else testNodeExecution.runOperation(i)
                     testNodeExecution.results[i] = if (actor.method.returnType == Void.TYPE) {
@@ -292,6 +292,7 @@ open class DistributedRunner<Message, Log>(
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
         context.testNodeExecutions.getOrNull(iNode)?.crash()
+        environments[iNode].recordInternalEvent("${context.testNodeExecutions.getOrNull(iNode)?.results?.toList()}")
         if (testCfg.supportRecovery == CrashMode.ALL_NODES_RECOVER ||
             testCfg.supportRecovery == CrashMode.MIXED
             && context.probabilities[iNode].nodeRecovered()

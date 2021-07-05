@@ -39,7 +39,6 @@ class DispatcherTaskCounter(
     initialCounter: Int
 ) {
     private val counter = atomic(initialCounter)
-    private val nodeOperationCounter = ThreadLocal.withInitial { 0 }
     val signal = Signal()
 
     /**
@@ -73,41 +72,6 @@ class DispatcherTaskCounter(
     fun add(delta: Int) = counter.addAndGet(delta)
 
     /**
-     * Runs the given suspended function [f] and guarantees that
-     * the execution will not finish before the function is executed or the
-     * node crash occurs.
-     *
-     * To achieve it, the task counter is incremented before calling [f] and decremented after [f] is executed.
-     * However, if [f] suspends and when crash occurs, the finally-block will never be executed and the total sum will be greater than zero.
-     * To handle it, the extra thread-local counter [nodeOperationCounter] is used (see [clear]).
-     */
-    suspend fun <T> runSafely(f: suspend () -> T): T {
-        increment()
-        val incVal = nodeOperationCounter.get() + 1
-        nodeOperationCounter.set(incVal)
-        try {
-            return f()
-        } finally {
-            if (nodeOperationCounter.get() != 0) {
-                decrement()
-                val decValue = nodeOperationCounter.get() - 1
-                nodeOperationCounter.set(decValue)
-            }
-        }
-    }
-
-    /**
-     * Clears all suspended functions which were called inside [runSafely].
-     * Called when the node crash occurs. The total counter is decreased by the value of the local counter [nodeOperationCounter],
-     * and the local counter is set to zero.
-     */
-    fun clear() {
-        val delta = -nodeOperationCounter.get()
-        add(delta)
-        nodeOperationCounter.set(0)
-    }
-
-    /**
      * Awaits until the execution is over.
      */
     suspend fun await() = signal.await()
@@ -130,10 +94,6 @@ class AlreadyIncrementedCounter : AbstractCoroutineContextElement(Key) {
     companion object Key : CoroutineContext.Key<AlreadyIncrementedCounter>
 }
 
-class InvocationContext : AbstractCoroutineContextElement(Key) {
-    companion object Key : CoroutineContext.Key<InvocationContext>
-}
-
 /**
  * The dispatcher for executing task related to a single [Node] inside [org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner].
  */
@@ -147,6 +107,7 @@ class NodeDispatcher(val id: Int,
     }
 
     private val status = atomic(RUNNING)
+    private var nodeOperationCounter = 0
 
     /**
      * Thread to run tasks related to a specified node.
@@ -180,8 +141,31 @@ class NodeDispatcher(val id: Int,
      */
     fun crash() {
         status.lazySet(CRASHED)
-        taskCounter.clear()
+        clear()
     }
+
+    /**
+     * Runs the given suspended function [f] and guarantees that
+     * the execution will not finish before the function is executed or the
+     * node crash occurs.
+     *
+     * To achieve it, the task counter is incremented before calling [f] and decremented after [f] is executed.
+     * However, if [f] suspends and when crash occurs, the finally-block will never be executed and the total sum will be greater than zero.
+     * To handle it, the extra thread-local counter [nodeOperationCounter] is used (see [clear]).
+     */
+    suspend fun <T> runSafely(f: suspend () -> T): T {
+        taskCounter.increment()
+        nodeOperationCounter++
+        try {
+            return f()
+        } finally {
+            if (nodeOperationCounter > 0) {
+                taskCounter.decrement()
+                nodeOperationCounter--
+            }
+        }
+    }
+
 
     /**
      * Shutdowns the executor.
@@ -189,5 +173,15 @@ class NodeDispatcher(val id: Int,
     fun shutdown() {
         status.lazySet(STOPPED)
        // executor.shutdown()
+    }
+
+    /**
+     * Clears all suspended functions which were called inside [runSafely].
+     * Called when the node crash occurs. The total counter is decreased by the value of the local counter [nodeOperationCounter],
+     * and the local counter is set to zero.
+     */
+    private fun clear() {
+        taskCounter.add(-nodeOperationCounter)
+        nodeOperationCounter = 0
     }
 }

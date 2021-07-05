@@ -100,7 +100,7 @@ internal class EnvironmentImpl<Message, Log>(
     internal var isFinished = false
 
     override suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit) =
-        context.taskCounter.runSafely {
+        context.dispatchers[nodeId].runSafely {
             val res = withTimeoutOrNull((ticks * TICK_TIME).toLong(), block)
             res != null
         }
@@ -109,7 +109,7 @@ internal class EnvironmentImpl<Message, Log>(
 
 
     override suspend fun sleep(ticks: Int) {
-        context.taskCounter.runSafely { delay((ticks * TICK_TIME).toLong()) }
+        context.dispatchers[nodeId].runSafely { delay((ticks * TICK_TIME).toLong()) }
     }
 
     override fun setTimer(name: String, ticks: Int, f: suspend () -> Unit) {

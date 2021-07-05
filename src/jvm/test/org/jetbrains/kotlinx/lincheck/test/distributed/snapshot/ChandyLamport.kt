@@ -29,13 +29,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.Counter
-import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.LamportMutex
-import org.jetbrains.kotlinx.lincheck.test.distributed.mutex.MutexMessage
 import org.junit.Test
-import java.lang.Math.abs
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
 
 sealed class Message
 data class Transaction(val sum: Int) : Message()

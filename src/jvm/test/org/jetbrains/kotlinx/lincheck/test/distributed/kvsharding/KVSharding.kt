@@ -196,7 +196,7 @@ class KVShardingTest {
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)
                 .crashMode(CrashMode.ALL_NODES_RECOVER)
-                //.storeLogsForFailedScenario("kvsharding.txt")
+                .storeLogsForFailedScenario("kvsharding.txt")
                 .minimizeFailedScenario(true)
         )
     }
