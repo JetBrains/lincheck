@@ -339,10 +339,6 @@ open class DistributedRunner<Message, Log>(
         }.filterNot { it.second.isNullOrBlank() }.joinToString(separator = "\n") { "STATE [${it.first}]: ${it.second}" }
     }
 
-    private fun collectThreadDump() = Thread.getAllStackTraces().filter { (t, _) ->
-        t is NodeDispatcher.NodeTestThread && t.runnerHash == runnerHash
-    }
-
     fun storeEventsToFile(failure: LincheckFailure) {
         if (testCfg.logFilename == null) return
         File(testCfg.logFilename).printWriter().use { out ->

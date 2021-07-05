@@ -149,7 +149,7 @@ class SkeenTest {
             .requireStateEquivalenceImplCheck(false)
             .actorsPerThread(3)
             .threads(3)
-            .invocationsPerIteration(30_000)
+            .invocationsPerIteration(50_000)
             .iterations(1)
             .verifier(EpsilonVerifier::class.java)
             //.storeLogsForFailedScenario("skeen.txt")
