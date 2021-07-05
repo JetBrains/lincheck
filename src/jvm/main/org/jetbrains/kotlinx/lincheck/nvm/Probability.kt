@@ -172,7 +172,7 @@ internal object Statistics {
 }
 
 object Probability {
-    private const val RANDOM_FLUSH_PROBABILITY = 0.2
+    private const val RANDOM_FLUSH_PROBABILITY = 0.05
     private val random get() = randomGetter()
 
     @Volatile
