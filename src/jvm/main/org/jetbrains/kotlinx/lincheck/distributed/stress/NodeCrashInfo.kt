@@ -38,14 +38,14 @@ abstract class NodeCrashInfo(
         ): NodeCrashInfo {
             val numberOfNodes = context.addressResolver.totalNumberOfNodes
             val failedNodes = List(numberOfNodes) { false }
-            if (testCfg.networkPartitions != NetworkPartitionMode.SINGLE) {
+            return if (testCfg.networkPartitions == NetworkPartitionMode.HALVES) {
                 val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
-                return NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, mutableMapOf(), 0)
+                NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, mutableMapOf(), 0)
             } else {
                 val edges = Array(context.addressResolver.totalNumberOfNodes) {
                     (0 until context.addressResolver.totalNumberOfNodes).toSet()
                 }.toList()
-                return NodeCrashInfoSingle(testCfg, context, 0, failedNodes, mutableMapOf(), edges)
+                NodeCrashInfoSingle(testCfg, context, 0, failedNodes, mutableMapOf(), edges)
             }
         }
     }
@@ -153,7 +153,7 @@ class NodeCrashInfoSingle(
     failedNodesForType: Map<Class<out Node<*>>, Int>,
     val edges: List<Set<Int>>
 ) : NodeCrashInfo(testCfg, context, numberOfFailedNodes, failedNodes, failedNodesForType) {
-    override fun canSend(a: Int, b: Int): Boolean = edges[a].contains(b)
+    override fun canSend(a: Int, b: Int): Boolean = failedNodes[a] || edges[a].contains(b)
 
     val numberOfNodes = context.addressResolver.totalNumberOfNodes
 
