@@ -70,6 +70,13 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
      */
     private var wasParkedBalance: Int = 0
 
+    /**
+     * This flag is set to `true` when [await] detects a hang.
+     * In this case, when this executor is closed, [Thread.stop]
+     * is called on all the internal threads.
+     */
+    private var hangDetected = false
+
     init {
         threads = (0 until nThreads).map { iThread ->
             TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
@@ -146,7 +153,10 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         if (results[iThread].compareAndSet(null, Thread.currentThread())) {
             while (results[iThread].value === currentThread) {
                 val timeLeft = deadline - System.currentTimeMillis()
-                if (timeLeft <= 0) throw LincheckTimeoutException()
+                if (timeLeft <= 0) {
+                    hangDetected = true
+                    throw LincheckTimeoutException()
+                }
                 LockSupport.parkNanos(timeLeft * 1_000_000)
             }
         }
@@ -206,7 +216,9 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     override fun close() {
         // submit the shutdown task.
         submitTasks(Array(nThreads) { SHUTDOWN })
-        for (t in threads) t.stop()
+        if (hangDetected) {
+            for (t in threads) t.stop()
+        }
     }
 
     class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {

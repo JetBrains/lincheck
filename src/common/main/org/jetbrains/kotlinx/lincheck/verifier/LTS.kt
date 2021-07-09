@@ -282,15 +282,10 @@ class LTS(sequentialSpecification: SequentialSpecification<*>) {
 
     private fun createInitialStateInstance(): Any = sequentialSpecification.getInitialState()
 
-    fun checkStateEquivalenceImplementation() {
+    fun checkStateEquivalenceImplementation(): Boolean {
         val i1 = createInitialStateInstance()
         val i2 = createInitialStateInstance()
-        check(i1.hashCode() == i2.hashCode() && i1 == i2) {
-            "equals() and hashCode() methods for this test are not defined or defined incorrectly.\n" +
-            "It is more convenient to make the sequential specification  class extend `VerifierState` class " +
-            "and override the `extractState()` function to define both equals() and hashCode() methods.\n" +
-            "This check may be suppressed by setting the `requireStateEquivalenceImplementationCheck` option to false."
-        }
+        return i1.hashCode() == i2.hashCode() && i1 == i2
     }
 
     private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction? {

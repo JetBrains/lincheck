@@ -102,7 +102,7 @@ annotation class StressCTest(
      * Essentially, it checks whether two new instances of the test class are equal.
      * If the check fails, an [IllegalStateException] is thrown.
      */
-    val requireStateEquivalenceImplCheck: Boolean = true,
+    val requireStateEquivalenceImplCheck: Boolean = false,
     /**
      * If this feature is enabled and an invalid interleaving has been found,
      * *lincheck* tries to minimize the corresponding scenario in order to

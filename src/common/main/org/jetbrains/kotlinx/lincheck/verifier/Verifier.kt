@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import kotlin.collections.HashSet
 
 /**
  * Implementation of this interface verifies that execution is correct with respect to the algorithm contract.
@@ -42,11 +41,11 @@ interface Verifier {
     fun verifyResults(scenario: ExecutionScenario, result: ExecutionResult): Boolean
 
     /**
-     * Verifiers which use sequential implementation instances as states (or parts of them)
-     * should check whether [equals] and [hashCode] methods are implemented
-     * correctly.
+     * Returns `true` when the state equivalence relation for the sequential specification
+     * is properly specified via [.equals] and [.hashCode] methods. Returns
+     * `false` when two logically equal states do not satisfy the equals-hashCode contract.
      */
-    fun checkStateEquivalenceImplementation()
+    fun checkStateEquivalenceImplementation(): Boolean
 }
 
 internal inline fun <K, V> Map<K, V>.computeIfAbsent(key: K, defaultValue: (K) -> V): V {

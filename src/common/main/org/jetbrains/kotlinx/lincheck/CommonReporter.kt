@@ -26,7 +26,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlinx.atomicfu.locks.*
 import kotlin.jvm.*
 
-class Reporter @JvmOverloads constructor(private val logLevel: LoggingLevel) : SynchronizedObject() {
+class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel) : SynchronizedObject()  {
+
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
         appendLine("\n= Iteration $iteration / $maxIterations =")
         appendExecutionScenario(scenario)
@@ -41,17 +42,31 @@ class Reporter @JvmOverloads constructor(private val logLevel: LoggingLevel) : S
         appendExecutionScenario(scenario)
     }
 
-    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit) = synchronized(this) {
+    fun logStateEquivalenceViolation(sequentialSpecification: SequentialSpecification<*>) = log(WARN) {
+        appendStateEquivalenceViolationMessage(sequentialSpecification)
+    }
+
+    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
         msg(sb)
-        println(sb)
+        if (logLevel == WARN) {
+            printErr(sb)
+        } else {
+            println(sb)
+        }
     }
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = ERROR
+fun printErr(sb: StringBuilder) {
+    printErr(sb.toString())
+}
+
+expect fun printErr(message: String)
+
+@JvmField val DEFAULT_LOG_LEVEL = WARN
 enum class LoggingLevel {
-    INFO, ERROR
+    INFO, WARN
 }
 
 private class ActorWithResult(val actorRepresentation: String, val spacesAfterActor: Int,
@@ -158,3 +173,5 @@ internal fun StringBuilder.appendObstructionFreedomViolationFailure(failure: Obs
 private fun StringBuilder.appendException(t: Throwable) {
     appendLine(t.stackTraceToString())
 }
+
+internal expect fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: SequentialSpecification<*>)

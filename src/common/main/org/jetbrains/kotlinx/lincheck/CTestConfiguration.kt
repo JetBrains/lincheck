@@ -21,7 +21,8 @@ abstract class CTestConfiguration(
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: SequentialSpecification<*>,
-    val timeoutMs: Long
+    val timeoutMs: Long,
+    val customScenarios: List<ExecutionScenario>
 ) {
     abstract fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
                                 stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier): Strategy

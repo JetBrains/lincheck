@@ -48,7 +48,7 @@ public class StressOptionsTest {
 //            .verifier(LinearizabilityVerifier.class)
             .threads(2)
             .actorsPerThread(3)
-            .logLevel(LoggingLevel.ERROR)
+            .logLevel(LoggingLevel.WARN)
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
         OptionsKt.executionGenerator(opts, RandomExecutionGenerator.class); // TODO broken java api https://stackoverflow.com/questions/28294509/accessing-kotlin-extension-functions-from-java

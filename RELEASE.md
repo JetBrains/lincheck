@@ -48,7 +48,7 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
 
 15. Commit and push the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties` <br>
-   `git commit -m "Prepare for next development iteration` <br>
+   `git commit -m "Prepare for next development iteration"` <br>
    `git push`
     
 **Congratulation! You've just released a new Lincheck version!**

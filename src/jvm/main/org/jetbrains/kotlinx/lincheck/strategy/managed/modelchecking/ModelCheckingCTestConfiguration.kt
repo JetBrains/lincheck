@@ -35,10 +35,10 @@ class ModelCheckingCTestConfiguration(testClass: TestClass, iterations: Int, thr
                                       verifierClass: (sequentialSpecification: SequentialSpecification<*>) -> Verifier, checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int,
                                       invocationsPerIteration: Int, guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean,
                                       minimizeFailedScenario: Boolean, sequentialSpecification: SequentialSpecification<*>, timeoutMs: Long,
-                                      eliminateLocalObjects: Boolean, verboseTrace: Boolean
+                                      eliminateLocalObjects: Boolean, verboseTrace: Boolean, customScenarios: List<ExecutionScenario>
 ) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator, verifierClass,
     checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
-    minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace) {
+    minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace, customScenarios) {
     override fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
                                 stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier): Strategy
         = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationFunction, verifier)

@@ -37,10 +37,11 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     var executionGeneratorGenerator: (testConfiguration: CTestConfiguration, testStructure: CTestStructure) -> ExecutionGenerator =
         { testConfiguration, testStructure -> RandomExecutionGenerator(testConfiguration, testStructure) }
     var verifierGenerator: (sequentialSpecification: SequentialSpecification<*>) -> Verifier = { sequentialSpecification -> LinearizabilityVerifier(sequentialSpecification) }
-    protected var requireStateEquivalenceImplementationCheck = true
+    protected var requireStateEquivalenceImplementationCheck = false
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
     var sequentialSpecification: SequentialSpecification<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
+    protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
 
     /**
      * Number of different test scenarios to be executed
@@ -149,6 +150,19 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     fun sequentialSpecification(clazz: SequentialSpecification<*>?): OPT = applyAndCast {
         this.sequentialSpecification = clazz
     }
+
+    /**
+     * Examine the specified custom scenario additionally to the generated ones.
+     */
+    fun addCustomScenario(scenario: ExecutionScenario) = applyAndCast {
+        customScenarios.add(scenario)
+    }
+
+    /**
+     * Examine the specified custom scenario additionally to the generated ones.
+     */
+    fun addCustomScenario(scenarioBuilder: ScenarioBuilder.() -> Unit) =
+            addCustomScenario(scenario { scenarioBuilder() })
 
     /**
      * Internal, DO NOT USE.

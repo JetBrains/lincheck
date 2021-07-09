@@ -44,7 +44,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.verifier.java.getConstructor(SequentialSpecification::class.java).newInstance(sequentialSpecification)
             }, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
-                chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)), DEFAULT_TIMEOUT_MS
+                chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)), DEFAULT_TIMEOUT_MS, emptyList()
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
@@ -59,7 +59,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
             }, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
                 ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, TestClass(testClass)),
-                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE
+                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE, emptyList()
             )
         }
     return stressConfigurations + modelCheckingConfigurations

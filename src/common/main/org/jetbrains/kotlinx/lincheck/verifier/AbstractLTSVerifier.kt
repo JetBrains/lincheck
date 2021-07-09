@@ -52,7 +52,7 @@ abstract class AbstractLTSVerifier(protected val sequentialSpecification: Sequen
         return false
     }
 
-    override fun checkStateEquivalenceImplementation() = lts.checkStateEquivalenceImplementation()
+    override fun checkStateEquivalenceImplementation(): Boolean = lts.checkStateEquivalenceImplementation()
 }
 
 /**

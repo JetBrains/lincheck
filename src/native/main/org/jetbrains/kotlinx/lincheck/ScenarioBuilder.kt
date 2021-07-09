@@ -17,19 +17,13 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-package org.jetbrains.kotlinx.lincheck.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+package org.jetbrains.kotlinx.lincheck
+
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
-/**
- * This verifier does nothing and could be used for performance benchmarking.
- */
-class EpsilonVerifier(sequentialSpecification: SequentialSpecification<*>) : Verifier {
-    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean = true // Always correct results :)
-
-    override fun checkStateEquivalenceImplementation(): Boolean {
-        return true
+actual class ScenarioBuilder actual constructor() {
+    actual fun buildScenario(): ExecutionScenario {
+        TODO("Should not be called")
     }
 }

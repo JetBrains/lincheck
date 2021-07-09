@@ -25,6 +25,10 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
+actual fun printErr(message: String) {
+    System.err.println(message)
+}
+
 internal actual fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
@@ -62,4 +66,11 @@ internal actual fun StringBuilder.appendDeadlockWithDumpFailure(failure: Deadloc
         }.forEach { appendLine("\t$it") }
     }
     return this
+}
+
+internal actual fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: SequentialSpecification<*>) {
+    append("To make verification faster, you can specify the state equivalence relation on your sequential specification.\n" +
+            "At the current moment, `${sequentialSpecification.simpleName}` does not specify it, or the equivalence relation implementation is incorrect.\n" +
+            "To fix this, please implement `equals()` and `hashCode()` functions on `${sequentialSpecification.simpleName}`; the simplest way is to extend `VerifierState`\n" +
+            "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations.")
 }

@@ -41,10 +41,11 @@ class StressCTestConfiguration(testClass: TestClass,
                                minimizeFailedScenario: Boolean,
                                sequentialSpecification: SequentialSpecification<*>,
                                timeoutMs: Long,
+                               customScenarios: List<ExecutionScenario>,
                                val initThreadFunction: (() -> Unit)? = null,
                                val finishThreadFunction: (() -> Unit)? = null
 ) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator, verifierGenerator,
-    requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs) {
+    requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs, customScenarios) {
     override fun createStrategy(testClass: TestClass, scenario: ExecutionScenario, validationFunctions: List<ValidationFunction>,
                                 stateRepresentationFunction: StateRepresentationFunction?, verifier: Verifier) =
         StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationFunction, verifier)

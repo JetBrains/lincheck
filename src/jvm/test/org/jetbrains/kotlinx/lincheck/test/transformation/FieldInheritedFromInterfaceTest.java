@@ -17,19 +17,25 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-package org.jetbrains.kotlinx.lincheck.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+package org.jetbrains.kotlinx.lincheck.test.transformation;
 
-/**
- * This verifier does nothing and could be used for performance benchmarking.
- */
-class EpsilonVerifier(sequentialSpecification: SequentialSpecification<*>) : Verifier {
-    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean = true // Always correct results :)
+import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.kotlinx.lincheck.annotations.Operation;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
+import org.junit.Test;
 
-    override fun checkStateEquivalenceImplementation(): Boolean {
-        return true
+@ModelCheckingCTest(requireStateEquivalenceImplCheck = false, iterations = 1)
+public class FieldInheritedFromInterfaceTest implements InterfaceWithField {
+    @Operation
+    public int get() { return INTERFACE_CONSTANT.getValue(); }
+
+    @Test
+    public void test() {
+        new LinChecker(FieldInheritedFromInterfaceTest.class, null).check();
     }
+}
+
+interface InterfaceWithField {
+    public static final ValueHolder INTERFACE_CONSTANT = new ValueHolder(6);
 }

@@ -29,7 +29,7 @@ import java.io.Serializable
 actual class ValueResult @JvmOverloads constructor(actual val value: Any?, override val wasSuspended: Boolean = false) : Result() {
     private val valueClassTransformed: Boolean get() = value?.javaClass?.classLoader is TransformationClassLoader
     private val serializedObject: ByteArray by lazy(LazyThreadSafetyMode.NONE) {
-        check(value is Serializable) {
+        check(value is Serializable?) {
             "The result should either be a type always loaded by the system class loader " +
                 "(e.g., Int, String, List<T>) or implement Serializable interface; " +
                 "the actual class is ${value?.javaClass}."

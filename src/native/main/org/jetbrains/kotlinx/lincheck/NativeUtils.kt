@@ -123,7 +123,7 @@ internal actual fun StringBuilder.appendDeadlockWithDumpFailure(failure: Deadloc
 }
 
 val STDERR = platform.posix.fdopen(2, "w")
-fun printErr(message: String) {
+actual fun printErr(message: String) {
     fprintf(STDERR, message + "\n")
     fflush(STDERR)
 }
@@ -138,4 +138,11 @@ fun <T> Array<T>.toLincheckAtomicArray(): LincheckAtomicArray<T> {
         ans.array[i].value = this[i]
     }
     return ans
+}
+
+internal actual fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: SequentialSpecification<*>) {
+    append("To make verification faster, you can specify the state equivalence relation on your sequential specification.\n" +
+            "At the current moment, `${sequentialSpecification.function}` does not specify it, or the equivalence relation implementation is incorrect.\n" +
+            "To fix this, please implement `equals()` and `hashCode()` functions on `${sequentialSpecification.function}`; the simplest way is to extend `VerifierState`\n" +
+            "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations.")
 }

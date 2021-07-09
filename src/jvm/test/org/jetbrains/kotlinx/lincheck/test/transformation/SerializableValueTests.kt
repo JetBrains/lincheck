@@ -21,10 +21,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
-import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
+import org.junit.Assert.assertFalse
+import org.junit.Test
 import java.io.Serializable
 import java.util.concurrent.atomic.*
 
@@ -55,6 +57,20 @@ class SerializableJavaUtilResultTest : AbstractLincheckTest() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
+    }
+}
+
+class SerializableNullResultTest {
+    @Test
+    fun test() {
+        val a = ValueResult(null)
+        val value = ValueHolder(0)
+        val loader = TransformationClassLoader { CancellabilitySupportClassTransformer(it) }
+        val transformedValue = value.convertForLoader(loader)
+        val b = ValueResult(transformedValue)
+        // check that no exception was thrown
+        assertFalse(a == b)
+        assertFalse(b == a)
     }
 }
 
@@ -99,3 +115,21 @@ class JavaUtilGen(conf: String) : ParameterGenerator<List<Int>> {
 }
 
 class ValueHolder(val value: Int) : Serializable
+
+@Param(name = "key", gen = NullGen::class)
+class SerializableNullParameterTest : AbstractLincheckTest() {
+    @Operation
+    fun operation(@Param(name = "key") key: List<Int>?): Int = key?.sum() ?: 0
+
+    override fun extractState(): Any = 0 // constant state
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(1)
+        actorsBefore(0)
+        actorsAfter(0)
+    }
+}
+
+class NullGen(conf: String) : ParameterGenerator<List<Int>?> {
+    override fun generate() = null
+}

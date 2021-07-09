@@ -39,7 +39,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: SequentialSpecificat
     private var lastScenario: ExecutionScenario? = null
     private lateinit var lastConvertedScenario: ExecutionScenario
 
-    override fun checkStateEquivalenceImplementation() = linearizabilityVerifier.checkStateEquivalenceImplementation()
+    override fun checkStateEquivalenceImplementation(): Boolean = linearizabilityVerifier.checkStateEquivalenceImplementation()
 
     override fun verifyResults(scenario: ExecutionScenario, result: ExecutionResult): Boolean {
         val convertedScenario = scenario.converted

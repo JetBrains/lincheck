@@ -84,7 +84,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      * (e.g., due to a switch to another thread), and omits all the details except for
      * the method invocation result.
      */
-    fun verboseTrace(verboseTrace: Boolean): OPT = applyAndCast {
+    fun verboseTrace(verboseTrace: Boolean = true): OPT = applyAndCast {
         this.verboseTrace = verboseTrace
     }
 

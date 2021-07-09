@@ -39,7 +39,8 @@ class SerializabilityVerifier(
     override fun verifyResultsImpl(scenario: ExecutionScenario, results: ExecutionResult) =
         linerizabilityVerifier.verifyResultsImpl(scenario.converted, results.converted)
 
-    override fun checkStateEquivalenceImplementation() = linerizabilityVerifier.checkStateEquivalenceImplementation()
+    override fun checkStateEquivalenceImplementation(): Boolean =
+        linerizabilityVerifier.checkStateEquivalenceImplementation()
 
     private val ExecutionScenario.converted get() = ExecutionScenario(
         emptyList(), mergeAndFlatten(initExecution, parallelExecution, postExecution), emptyList()

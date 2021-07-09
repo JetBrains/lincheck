@@ -17,19 +17,34 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-package org.jetbrains.kotlinx.lincheck.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+package org.jetbrains.kotlinx.lincheck
+
+import org.jetbrains.kotlinx.lincheck.execution.*
+
+expect class ScenarioBuilder() {
+    fun buildScenario(): ExecutionScenario
+}
 
 /**
- * This verifier does nothing and could be used for performance benchmarking.
+ * Creates a custom scenario using the specified DSL as in the following example:
+ *
+ * ```
+ * scenario {
+ *   initial {
+ *     actor(QueueTest::offer, 1)
+ *     actor(QueueTest::offer, 2)
+ *   }
+ *   parallel {
+ *     thread {
+ *       actor(QueueTest::poll)
+ *     }
+ *     thread {
+ *       actor(QueueTest::poll)
+ *     }
+ *   }
+ * }
+ * ```
  */
-class EpsilonVerifier(sequentialSpecification: SequentialSpecification<*>) : Verifier {
-    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean = true // Always correct results :)
-
-    override fun checkStateEquivalenceImplementation(): Boolean {
-        return true
-    }
-}
+fun scenario(block: ScenarioBuilder.() -> Unit): ExecutionScenario =
+        ScenarioBuilder().apply(block).buildScenario()

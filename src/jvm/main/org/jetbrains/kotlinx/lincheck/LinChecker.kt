@@ -64,15 +64,22 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
-        val verifier = createVerifier()
+        val verifier = createVerifier(checkStateEquivalence = true)
+        for (i in customScenarios.indices) {
+            val scenario = customScenarios[i]
+            scenario.validate()
+            reporter.logIteration(i + 1, customScenarios.size, scenario)
+            val failure = scenario.run(this, verifier)
+            if (failure != null) return failure
+        }
         repeat(iterations) { i ->
             val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(i + 1, iterations, scenario)
+            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure
-                                               else failure.minimize(this, verifier)
+                                               else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
@@ -86,52 +93,51 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
     // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
     // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun LincheckFailure.minimize(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure {
+    private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
         reporter.logScenarioMinimization(scenario)
-        val parallelExecution = scenario.parallelExecution.map { it.toMutableList() }.toMutableList()
-        val initExecution = scenario.initExecution.toMutableList()
-        val postExecution = scenario.postExecution.toMutableList()
-        for (i in scenario.parallelExecution.indices) {
-            for (j in scenario.parallelExecution[i].indices) {
-                val newParallelExecution = parallelExecution.map { it.toMutableList() }.toMutableList()
-                newParallelExecution[i].removeAt(j)
-                if (newParallelExecution[i].isEmpty()) newParallelExecution.removeAt(i) // remove empty thread
-                val newScenario = ExecutionScenario(
-                        initExecution,
-                        newParallelExecution,
-                        postExecution
-                )
-                val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-                if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
-            }
+        var minimizedFailure = this
+        while (true) {
+            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
         }
-        for (i in scenario.initExecution.indices) {
-            val newInitExecution = initExecution.toMutableList()
-            newInitExecution.removeAt(i)
-            val newScenario = ExecutionScenario(
-                    newInitExecution,
-                    parallelExecution,
-                    postExecution
-            )
-            val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-            if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
-        }
-        for (i in scenario.postExecution.indices) {
-            val newPostExecution = postExecution.toMutableList()
-            newPostExecution.removeAt(i)
-            val newScenario = ExecutionScenario(
-                    initExecution,
-                    parallelExecution,
-                    newPostExecution
-            )
-            val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-            if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
-        }
-        return this
+        return minimizedFailure
     }
 
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, verifier: Verifier) =
-        if (isValid) run(testCfg, verifier) else null
+    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+        // Reversed indices to avoid conflicts with in-loop removals
+        for (i in parallelExecution.indices.reversed()) {
+            for (j in parallelExecution[i].indices.reversed()) {
+                val failure = tryMinimize(i + 1, j, testCfg)
+                if (failure != null) return failure
+            }
+        }
+        for (j in initExecution.indices.reversed()) {
+            val failure = tryMinimize(0, j, testCfg)
+            if (failure != null) return failure
+        }
+        for (j in postExecution.indices.reversed()) {
+            val failure = tryMinimize(threads + 1, j, testCfg)
+            if (failure != null) return failure
+        }
+        return null
+    }
+
+    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
+        var newScenario = this.copy()
+        val actors = newScenario[threadId] as MutableList<Actor>
+        actors.removeAt(position)
+        if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
+            // Also remove the empty thread
+            newScenario = ExecutionScenario(
+                    newScenario.initExecution,
+                    newScenario.parallelExecution.filterIndexed{id, _ -> id != threadId - 1},
+                    newScenario.postExecution
+            )
+        }
+        return if (newScenario.isValid) {
+            val verifier = testCfg.createVerifier(checkStateEquivalence = false)
+            newScenario.run(testCfg, verifier)
+        } else null
+    }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
@@ -174,9 +180,18 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         parallelExecution.map { it.size }.sum() == 0
 
 
-    private fun CTestConfiguration.createVerifier() =
+    private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
         verifierGenerator(this.sequentialSpecification).also {
-            if (requireStateEquivalenceImplCheck) it.checkStateEquivalenceImplementation()
+            if (!checkStateEquivalence) return@also
+            val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
+            if (!stateEquivalenceCorrect) {
+                if (requireStateEquivalenceImplCheck) {
+                    val errorMessage = StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
+                    error(errorMessage)
+                } else {
+                    reporter.logStateEquivalenceViolation(sequentialSpecification)
+                }
+            }
         }
 
     private fun CTestConfiguration.createExecutionGenerator() =
