@@ -8,12 +8,12 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
@@ -88,8 +88,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
      * and waits until all of them are completed.
      * The number of tasks should be equal to [nThreads].
      *
-     * @throws TimeoutException if more than [timeoutMs] is passed.
-     * @throws ExecutionException if an unexpected exception is thrown during the execution.
+     * @throws LincheckTimeoutException if more than [timeoutMs] is passed.
+     * @throws LincheckExecutionException if an unexpected exception is thrown during the execution.
      */
     fun submitAndAwait(tasks: Array<out Runnable>, timeoutMs: Long) {
         require(tasks.size == nThreads)
@@ -140,7 +140,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private fun awaitTask(iThread: Int, deadline: Long) {
         val result = getResult(iThread, deadline)
         // Check whether there was an exception during the execution.
-        if (result != DONE) throw ExecutionException(result as Throwable)
+        if (result != DONE) throw LincheckExecutionException(result as Throwable)
     }
 
     private fun getResult(iThread: Int, deadline: Long): Any {
@@ -155,7 +155,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
                 val timeLeft = deadline - System.currentTimeMillis()
                 if (timeLeft <= 0) {
                     hangDetected = true
-                    throw TimeoutException()
+                    throw LincheckTimeoutException()
                 }
                 LockSupport.parkNanos(timeLeft * 1_000_000)
             }

@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
-import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
 
@@ -43,11 +42,11 @@ import kotlin.collections.set
  * and class loading problems.
  */
 abstract class ManagedStrategy(
-    private val testClass: Class<*>,
+    private val testClass: TestClass,
     scenario: ExecutionScenario,
     private val verifier: Verifier,
-    private val validationFunctions: List<Method>,
-    private val stateRepresentationFunction: Method?,
+    private val validationFunctions: List<ValidationFunction>,
+    private val stateRepresentationFunction: StateRepresentationFunction?,
     private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
@@ -118,7 +117,7 @@ abstract class ManagedStrategy(
         ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
     private fun initializeManagedState() {
-        ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
+        ManagedStrategyStateHolder.setState(runner.classLoader as ClassLoader, this, testClass)
     }
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
@@ -175,7 +174,7 @@ abstract class ManagedStrategy(
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
-        ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
+        ManagedStrategyStateHolder.resetState(runner.classLoader as ClassLoader, testClass)
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -223,11 +222,11 @@ abstract class ManagedStrategy(
         val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
-                appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
-                appendln("== Reporting the first execution without execution trace ==")
-                appendln(failingResult.asLincheckFailureWithoutTrace())
-                appendln("== Reporting the second execution ==")
-                appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace, testCfg.verboseTrace)).toString())
+                appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
+                appendLine("== Reporting the first execution without execution trace ==")
+                appendLine(failingResult.asLincheckFailureWithoutTrace())
+                appendLine("== Reporting the second execution ==")
+                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace, testCfg.verboseTrace)).toString())
             }.toString()
         }
         return Trace(traceCollector!!.trace, testCfg.verboseTrace)
@@ -733,9 +732,9 @@ abstract class ManagedStrategy(
  * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
-    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
-    stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
+    private val managedStrategy: ManagedStrategy, testClass: TestClass, validationFunctions: List<ValidationFunction>,
+    stateRepresentationFunction: StateRepresentationFunction?, timeoutMs: Long, useClocks: UseClocks
+) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationFunction, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         managedStrategy.onStart(iThread)

@@ -25,28 +25,7 @@ import java.lang.IllegalStateException
 import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod
 
-/**
- * Creates a custom scenario using the specified DSL as in the following example:
- *
- * ```
- * scenario {
- *   initial {
- *     actor(QueueTest::offer, 1)
- *     actor(QueueTest::offer, 2)
- *   }
- *   parallel {
- *     thread {
- *       actor(QueueTest::poll)
- *     }
- *     thread {
- *       actor(QueueTest::poll)
- *     }
- *   }
- * }
- * ```
- */
-fun scenario(block: DSLScenarioBuilder.() -> Unit): ExecutionScenario =
-    DSLScenarioBuilder().apply(block).buildScenario()
+actual typealias ScenarioBuilder = DSLScenarioBuilder
 
 /**
  * Create an actor with the specified [function][f] and [arguments][args].
@@ -55,10 +34,10 @@ internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boole
     val method = f.javaMethod ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
     require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
     return Actor(
-        method = method,
-        arguments = args.toList(),
-        handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList(),
-        cancelOnSuspension = cancelOnSuspension
+            method = method,
+            arguments = args.toList(),
+            handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList().map{it.kotlin},
+            cancelOnSuspension = cancelOnSuspension
     )
 }
 

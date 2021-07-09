@@ -44,13 +44,15 @@ public class StressOptionsTest {
         StressOptions opts = new StressOptions()
             .iterations(10)
             .invocationsPerIteration(200)
-            .executionGenerator(RandomExecutionGenerator.class)
-            .verifier(LinearizabilityVerifier.class)
+//            .executionGenerator(RandomExecutionGenerator.class)
+//            .verifier(LinearizabilityVerifier.class)
             .threads(2)
             .actorsPerThread(3)
             .logLevel(LoggingLevel.WARN)
             .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
+        OptionsKt.executionGenerator(opts, RandomExecutionGenerator.class); // TODO broken java api https://stackoverflow.com/questions/28294509/accessing-kotlin-extension-functions-from-java
+        OptionsKt.verifier(opts, LinearizabilityVerifier.class);
         LinChecker.check(StressOptionsTest.class, opts);
     }
 }

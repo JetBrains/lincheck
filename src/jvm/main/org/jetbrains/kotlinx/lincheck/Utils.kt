@@ -22,7 +22,6 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -36,20 +35,27 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.reflect.KClass
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
+actual class TestClass(val clazz: Class<*>) {
+    val name = clazz.name
 
-fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
-    if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
+    actual fun createInstance(): Any = clazz.getDeclaredConstructor().newInstance()
+}
+
+actual fun loadSequentialSpecification(sequentialSpecification: SequentialSpecification<*>): SequentialSpecification<out Any> =
+    TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv) }.loadClass(sequentialSpecification.name)!!
+
+actual fun chooseSequentialSpecification(sequentialSpecificationByUser: SequentialSpecification<*>?, testClass: TestClass): SequentialSpecification<*> =
+    if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass.clazz
     else sequentialSpecificationByUser
-
-internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.
  */
-internal fun executeActor(
+internal actual fun executeActor(
     instance: Any,
     actor: Actor,
     completion: Continuation<Any?>?
@@ -63,8 +69,8 @@ internal fun executeActor(
     } catch (invE: Throwable) {
         val eClass = (invE.cause ?: invE).javaClass.normalize()
         for (ec in actor.handledExceptions) {
-            if (ec.isAssignableFrom(eClass))
-                return ExceptionResult.create(eClass)
+            if (ec.java.isAssignableFrom(eClass))
+                return createExceptionResult(eClass)
         }
         throw IllegalStateException("Invalid exception as a result of $actor", invE)
     } catch (e: Exception) {
@@ -77,18 +83,7 @@ internal fun executeActor(
     }
 }
 
-internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
-                                               onError: (functionName: String, exception: Throwable) -> Unit) {
-    for (f in validationFunctions) {
-        val validationException = executeValidationFunction(instance, f)
-        if (validationException != null) {
-            onError(f.name, validationException)
-            return
-        }
-    }
-}
-
-private fun executeValidationFunction(instance: Any, validationFunction: Method): Throwable? {
+internal actual fun executeValidationFunction(instance: Any, validationFunction: ValidationFunction): Throwable? {
     val m = getMethod(instance, validationFunction)
     try {
         m.invoke(instance)
@@ -137,9 +132,9 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  * Success values of [kotlin.Result] instances are represented as either [VoidResult] or [ValueResult].
  * Failure values of [kotlin.Result] instances are represented as [ExceptionResult].
  */
-internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
+internal actual fun createLincheckResult(res: Any?, wasSuspended: Boolean) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
-    res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
+    res != null && res is Throwable -> createExceptionResult(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
     else -> ValueResult(res, wasSuspended)
@@ -153,7 +148,7 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Throwable -> ValueResult(value::class.java, wasSuspended)
             else -> ValueResult(value, wasSuspended)
         }
-    } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
+    } else createExceptionResult(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
@@ -161,69 +156,10 @@ inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     } else throw this
 }
 
-/**
- * Returns scenario for the specified thread. Note that initial and post parts
- * are represented as threads with ids `0` and `threads + 1` respectively.
- */
-internal operator fun ExecutionScenario.get(threadId: Int): List<Actor> = when (threadId) {
-    0 -> initExecution
-    threads + 1 -> postExecution
-    else -> parallelExecution[threadId - 1]
-}
-
-/**
- * Returns results for the specified thread. Note that initial and post parts
- * are represented as threads with ids `0` and `threads + 1` respectively.
- */
-internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (threadId) {
-    0 -> initResults
-    parallelResultsWithClock.size + 1 -> postResults
-    else -> parallelResultsWithClock[threadId - 1].map { it.result }
-}
-
-internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
-    var exception: Throwable? = null
-
-    override fun handleException(context: CoroutineContext, exception: Throwable) {
-        this.exception = exception
-    }
-}
-
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
-    val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
-    exceptionHandler.exception = null
-    val cancelled = cancel(cancellationByLincheckException)
-    exceptionHandler.exception?.let {
-        throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
-    }
-    return when {
-        cancelled -> CancellationResult.CANCELLED_BEFORE_RESUMPTION
-        promptCancellation -> {
-            context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
-            CancellationResult.CANCELLED_AFTER_RESUMPTION
-        }
-        else -> CancellationResult.CANCELLATION_FAILED
-    }
-}
-
-internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
-
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!
 
-/**
- * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
- */
-fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
-
-private val cancellationByLincheckException = Exception("Cancelled by lincheck")
-
-object CancellableContinuationHolder {
-    var storedLastCancellableCont: CancellableContinuation<*>? = null
-}
-
-fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
+actual fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     val t = Thread.currentThread()
     if (t is FixedActiveThreadsExecutor.TestThread) {
         t.cont = cont
@@ -232,14 +168,14 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     }
 }
 
-internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = ExecutionScenario(
+internal actual fun ExecutionScenario.convertForLoader(loader: Any) = ExecutionScenario(
     initExecution,
     parallelExecution.map { actors ->
         actors.map { a ->
-            val args = a.arguments.map { it.convertForLoader(loader) }
+            val args = a.arguments.map { it.convertForLoader(loader as ClassLoader) }
             // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
             Actor(
-                method = a.method.convertForLoader(loader),
+                method = a.method.convertForLoader(loader as ClassLoader),
                 arguments = args,
                 handledExceptions = a.handledExceptions,
                 cancelOnSuspension = a.cancelOnSuspension,
@@ -285,6 +221,9 @@ internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(t
     CustomObjectInputStream(loader, it).run { readObject() }
 }
 
+internal fun getClassFromKClass(clazz: KClass<out Throwable>) = clazz.java
+internal fun getKClassFromClass(clazz: Class<out Throwable>) = clazz.kotlin
+
 /**
  * ObjectInputStream that uses custom class loader.
  */
@@ -301,9 +240,9 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
  */
-internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
+internal actual fun collectThreadDump(runner: Runner) = ThreadDump(Thread.getAllStackTraces().filter { (t, _) ->
     t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
-}
+})
 
 /**
  * This method helps to encapsulate remapper logic from strategy interface.
@@ -315,17 +254,4 @@ internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): R
         else -> null
     }
 
-internal val String.canonicalClassName get() = this.replace('/', '.')
-internal val String.internalClassName get() = this.replace('.', '/')
-
-fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e: Throwable): Throwable {
-    if (e.message?.contains("to unnamed module") ?: false) {
-        return RuntimeException(ADD_OPENS_MESSAGE, e)
-    }
-    return e
-}
-
-private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
-    "Please add the following lines to your test running configuration:\n" +
-    "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
-    "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+internal actual fun nativeFreeze(any: Any) {}

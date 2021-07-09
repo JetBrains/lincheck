@@ -1,5 +1,3 @@
-package org.jetbrains.kotlinx.lincheck;
-
 /*
  * #%L
  * Lincheck
@@ -21,6 +19,8 @@ package org.jetbrains.kotlinx.lincheck;
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+
+package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution;
 

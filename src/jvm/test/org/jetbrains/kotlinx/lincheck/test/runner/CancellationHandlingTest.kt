@@ -24,9 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.runner
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
-import org.junit.*
 import java.util.concurrent.atomic.*
 
 class CancellationHandlingTest : AbstractLincheckTest() {

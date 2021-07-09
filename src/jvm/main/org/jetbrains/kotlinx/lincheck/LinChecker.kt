@@ -38,7 +38,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     init {
         val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
         reporter = Reporter(logLevel)
-        testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
+        testConfigurations = if (options != null) listOf(options.createTestConfigurations(TestClass(testClass)))
                              else createFromTestClassAnnotations(testClass)
     }
 
@@ -122,12 +122,16 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
-        val newScenario = this.copy()
+        var newScenario = this.copy()
         val actors = newScenario[threadId] as MutableList<Actor>
         actors.removeAt(position)
         if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
             // Also remove the empty thread
-            newScenario.parallelExecution.removeAt(threadId - 1)
+            newScenario = ExecutionScenario(
+                    newScenario.initExecution,
+                    newScenario.parallelExecution.filterIndexed{id, _ -> id != threadId - 1},
+                    newScenario.postExecution
+            )
         }
         return if (newScenario.isValid) {
             val verifier = testCfg.createVerifier(checkStateEquivalence = false)
@@ -137,10 +141,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
-            testClass = testClass,
+            testClass = TestClass(testClass),
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
-            stateRepresentationMethod = testStructure.stateRepresentation,
+            stateRepresentationFunction = testStructure.stateRepresentation,
             verifier = verifier
         ).run()
 
@@ -169,15 +173,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private val ExecutionScenario.hasSuspendableActorsInInitPart get() =
-        initExecution.stream().anyMatch(Actor::isSuspendable)
+        initExecution.any(Actor::isSuspendable)
     private val ExecutionScenario.hasPostPartAndSuspendableActors get() =
-        (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
+        (parallelExecution.any { actors -> actors.any { it.isSuspendable } } && postExecution.size > 0)
     private val ExecutionScenario.isParallelPartEmpty get() =
         parallelExecution.map { it.size }.sum() == 0
 
 
     private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
-        verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
+        verifierGenerator(this.sequentialSpecification).also {
             if (!checkStateEquivalence) return@also
             val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
             if (!stateEquivalenceCorrect) {
@@ -191,10 +195,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         }
 
     private fun CTestConfiguration.createExecutionGenerator() =
-        generatorClass.getConstructor(
-            CTestConfiguration::class.java,
-            CTestStructure::class.java
-        ).newInstance(this, testStructure)
+        executionGenerator(this, testStructure)
 
     // This companion object is used for backwards compatibility.
     companion object {

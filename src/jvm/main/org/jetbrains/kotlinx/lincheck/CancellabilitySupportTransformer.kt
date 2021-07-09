@@ -47,5 +47,5 @@ private class CancellabilitySupportMethodTransformer(access: Int, methodName: St
     }
 }
 
-private val storeCancellableContMethod = Method.getMethod(::storeCancellableContinuation.javaMethod)
+private val storeCancellableContMethod = org.objectweb.asm.commons.Method.getMethod(::storeCancellableContinuation.javaMethod)
 private val storeCancellableContOwnerType = Type.getType(::storeCancellableContinuation.javaMethod!!.declaringClass)

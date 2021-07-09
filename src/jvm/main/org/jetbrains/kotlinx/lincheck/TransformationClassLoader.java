@@ -37,7 +37,7 @@ import java.util.function.*;
 import java.util.stream.Collectors;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
-import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
+import static org.jetbrains.kotlinx.lincheck.CommonUtilsKt.getCanonicalClassName;
 import static org.objectweb.asm.Opcodes.*;
 
 /**
@@ -58,7 +58,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         classTransformers = new ArrayList<>();
         // Apply the strategy's transformer at first, then the runner's one.
         if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
-        if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);
+        if (runner.needsTransformation()) classTransformers.add(cv -> (ClassVisitor)runner.createTransformer(cv));
         remapper = UtilsKt.getRemapperByTransformers(
                 // create transformers just for their class information
                 classTransformers.stream()

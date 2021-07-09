@@ -68,8 +68,8 @@ class FixedActiveThreadsExecutorTest {
         }
         try {
             executor.submitAndAwait(tasks, 200)
-        } catch (e: TimeoutException) {
-            return // TimeoutException is expected
+        } catch (e: LincheckTimeoutException) {
+            return@use // LincheckTimeoutException is expected
         }
         check(false) { "TimeoutException was expected" }
     }

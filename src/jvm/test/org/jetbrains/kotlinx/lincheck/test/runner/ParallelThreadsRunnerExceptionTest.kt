@@ -101,7 +101,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susWithoutException), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
+                        actor(susWithoutException), createExceptionResult(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -110,7 +110,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
+            strategy = mockStrategy(scenario), testClass = TestClass(testClass), validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()
@@ -126,7 +126,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susResumeThrow), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
+                        actor(susResumeThrow), createExceptionResult(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -135,7 +135,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
+            strategy = mockStrategy(scenario), testClass = TestClass(testClass), validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()
@@ -149,12 +149,12 @@ class ParallelThreadsRunnerExceptionTest {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
-                    operation(actor(susThrow), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java))
+                    operation(actor(susThrow), createExceptionResult(SuspendResumeScenarios.TestException::class.java))
                 }
             }
         }
         ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
+            strategy = mockStrategy(scenario), testClass = TestClass(testClass), validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()

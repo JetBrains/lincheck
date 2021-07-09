@@ -32,6 +32,7 @@ import java.util.*;
 
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.getKClassFromClass;
 
 public class TestThreadExecutionHelperTest {
     private Runner runner;
@@ -45,7 +46,7 @@ public class TestThreadExecutionHelperTest {
                 throw new UnsupportedOperationException();
             }
         };
-        runner = new Runner(strategy, ArrayDeque.class, emptyList(), null) {
+        runner = new Runner(strategy, new TestClass(ArrayDeque.class), emptyList(), null) {
             @Override
             public InvocationResult run() {
                 throw new UnsupportedOperationException();
@@ -96,8 +97,8 @@ public class TestThreadExecutionHelperTest {
             asList(
                 new Actor(ArrayDeque.class.getMethod("addLast", Object.class), asList(1)),
                 new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(NoSuchElementException.class)),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(Exception.class, NoSuchElementException.class))
+                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(getKClassFromClass(NoSuchElementException.class))),
+                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(getKClassFromClass(Exception.class), getKClassFromClass(NoSuchElementException.class)))
             ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
@@ -108,8 +109,8 @@ public class TestThreadExecutionHelperTest {
         Assert.assertArrayEquals(new Result[]{
             VoidResult.INSTANCE,
             new ValueResult(1),
-            ExceptionResult.Companion.create(NoSuchElementException.class),
-            ExceptionResult.Companion.create(NoSuchElementException.class)
+            ResultKt.createExceptionResult(NoSuchElementException.class),
+            ResultKt.createExceptionResult(NoSuchElementException.class)
         }, ex.results);
     }
 }

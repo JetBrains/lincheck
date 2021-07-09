@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
  */
 
 import kotlin.coroutines.Continuation;
+import kotlin.reflect.KClass;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
 import org.objectweb.asm.*;
@@ -31,9 +32,11 @@ import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.getClassFromKClass;
 import static org.objectweb.asm.Opcodes.*;
 import static org.objectweb.asm.Type.*;
 
@@ -109,14 +112,14 @@ public class TestThreadExecutionGenerator {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
-        Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
-                generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
+        Class<? extends TestThreadExecution> clz = ((ExecutionClassLoader)runner.getClassLoader()).defineClass(className,
+                generateClass(internalClassName, getType(runner.getTestClass().getClazz()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
-            TestThreadExecution execution = clz.newInstance();
+            TestThreadExecution execution = clz.getDeclaredConstructor().newInstance();
             execution.runner = runner;
             execution.objArgs = objArgs.toArray();
             return execution;
-        } catch (InstantiationException | IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
             throw new IllegalStateException("Cannot initialize generated execution class", e);
         }
     }
@@ -190,8 +193,8 @@ public class TestThreadExecutionGenerator {
             Label actorCatchBlockEnd = mv.newLabel();
             if (actor.getHandlesExceptions()) {
                 handledExceptionHandler = mv.newLabel();
-                for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExceptionHandler, getType(ec).getInternalName());
+                for (KClass<? extends Throwable> ec : actor.getHandledExceptions())
+                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExceptionHandler, getType(getClassFromKClass(ec)).getInternalName());
             }
             // Catch those exceptions that has not been caught yet
             Label unexpectedExceptionHandler = mv.newLabel();
