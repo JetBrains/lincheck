@@ -38,7 +38,7 @@ abstract class NodeCrashInfo(
         ): NodeCrashInfo {
             val numberOfNodes = context.addressResolver.totalNumberOfNodes
             val failedNodes = List(numberOfNodes) { false }
-            return if (testCfg.networkPartitions == NetworkPartitionMode.HALVES) {
+            return if (testCfg.networkPartitions != NetworkPartitionMode.SINGLE) {
                 val partitions = listOf(emptySet(), (0 until numberOfNodes).toSet())
                 NodeCrashInfoHalves(testCfg, context, 0, partitions, failedNodes, mutableMapOf(), 0)
             } else {
@@ -50,7 +50,13 @@ abstract class NodeCrashInfo(
         }
     }
 
-    val maxNumberOfFailedNodes = testCfg.maxNumberOfFailedNodes(context.addressResolver.totalNumberOfNodes)
+    val maxNumberOfFailedNodes = if (testCfg.maxNumberOfFailedNodes(context.addressResolver.totalNumberOfNodes) != 0) {
+        testCfg.maxNumberOfFailedNodes(context.addressResolver.totalNumberOfNodes)
+    } else {
+        context.testCfg.maxNumberOfFailedNodesForType.entries.sumBy {
+            it.value(testCfg.nodeTypes[it.key]!!.maxNumberOfInstances)
+        }
+    }
 
     val remainedNodes = maxNumberOfFailedNodes - numberOfFailedNodes
 
@@ -66,7 +72,6 @@ abstract class NodeCrashInfo(
 
     abstract fun recoverNetworkPartition(a: Int, b: Int): NodeCrashInfo
 }
-
 
 class NodeCrashInfoHalves(
     testCfg: DistributedCTestConfiguration<*, *>,
@@ -89,7 +94,7 @@ class NodeCrashInfoHalves(
         ) return null
         val cls = context.addressResolver[iNode]
         val maxNumberOfCrashes = context.addressResolver.maxNumberOfCrashesForNode(iNode)
-        if (maxNumberOfCrashes != null && failedNodesForType[cls] == maxNumberOfCrashes) return null
+        if (maxNumberOfCrashes == null || failedNodesForType[cls] == maxNumberOfCrashes) return null
         val newFailedNodes = failedNodes.toMutableList()
         val newFailedNodesForType = failedNodesForType.toMutableMap()
         newFailedNodesForType[cls] = newFailedNodesForType.getOrElse(cls) { 0 } + 1
@@ -125,7 +130,11 @@ class NodeCrashInfoHalves(
         val partitionSize = rand.nextInt(1, possiblePartitionSize + 1)
         check(partitionSize > 0)
         val nodesInPartition = failedNodes.mapIndexed { index, b -> index to b }
-            .filter { !it.second }.map { it.first }.shuffled(rand).take(partitionSize).toSet()
+            .filter {
+                !it.second && failedNodesForType[context.addressResolver[it.first]] != context.addressResolver.maxNumberOfCrashesForNode(
+                    it.first
+                )
+            }.map { it.first }.shuffled(rand).take(partitionSize).toSet()
         check(nodesInPartition.isNotEmpty())
         val anotherPartition = (failedNodes.indices).filter { it !in nodesInPartition }.toSet()
         val newNumberOfFailedNodes = numberOfFailedNodes + partitionSize
@@ -219,7 +228,7 @@ class NodeCrashInfoSingle(
         val component = findMaxComponent(newEdges)
         val newFailedNodes = numberOfNodes - component.size
         if (newFailedNodes > maxNumberOfFailedNodes) return null
-        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, failedNodesForType,  newEdges)
+        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, failedNodesForType, newEdges)
     }
 
     override fun recoverNetworkPartition(a: Int, b: Int): NodeCrashInfo {
@@ -228,6 +237,6 @@ class NodeCrashInfoSingle(
         newEdges[b].add(a)
         val component = findMaxComponent(newEdges)
         val newFailedNodes = numberOfNodes - component.size
-        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, failedNodesForType,  newEdges)
+        return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, failedNodesForType, newEdges)
     }
 }

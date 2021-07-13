@@ -30,6 +30,7 @@ Table of contents
     + [Operation groups](#operation-groups)
   * [Parameter generators](#parameter-generators)
     + [Binding parameter and generator names](#binding-parameter-and-generator-names)
+  * [Custom scenarios](#custom-scenarios)
   * [Sequential specification](#sequential-specification)
   * [Validation functions](#validation-functions)
   * [Parameter and result types](#parameter-and-result-types)
@@ -104,14 +105,14 @@ public class SPMCQueueTest {
 }
 ```
 
-A generator for `x` parameter is omitted and the default one is used. See [Default generators](#default-generators) paragraph for details.
+A generator for `x` parameter is omitted and the default one is used. See [Parameter generators](#parameter-generators) paragraph for details.
 
 ## Parameter generators
 If an operation has parameters then generators should be specified for each of them. There are several ways to specify a parameter generator: explicitly on parameter via `@Param(gen = ..., conf = ...)` annotation, using named generator via `@Param(name = ...)` annotation, or using the default generator implicitly.
 
 For setting a generator explicitly, `@Param` annotation with the specified class generator (`@Param(gen = ...)`) and string configuration (`@Param(conf = ...)`) should be used. The provided generator class should be a `ParameterGenerator` implementation and can be implemented by user. Out of the box **lincheck** supports random parameter generators for almost all primitives and strings. Note that only one generator class is used for both primitive and its wrapper, but boxing/unboxing does not happen. See `org.jetbrains.kotlinx.lincheck.paramgen` for details.
 
-It is also possible to use once configured generators for several parameters. This requires adding this `@Param` annotation to the test class instead of the parameter specifying it's name (`@Param(name = ...)`). Then it is possible to use this generator among all operations using `@Param` annotation with the provided name only. It is also possible to bind parameter and generator names, see [Binding parameter and generator names](binding-parameter-and-generator-names) for details.
+It is also possible to use once configured generators for several parameters. This requires adding this `@Param` annotation to the test class instead of the parameter specifying it's name (`@Param(name = ...)`). Then it is possible to use this generator among all operations using `@Param` annotation with the provided name only. It is also possible to bind parameter and generator names, see [Binding parameter and generator names](#binding-parameter-and-generator-names) for details.
 
 If the parameter generator is not specified **lincheck** tries to use the default one, binding supported primitive types with the existent generators and using the default configurations for them.
 
@@ -146,6 +147,39 @@ Unfortunately, this feature is disabled in **javac** compiler by default. Use `-
 ```
 
 However, some IDEs (such as IntelliJ IDEA) do not understand build system configuration as well as possible and running a test from these IDEs will not work. In order to solve this issue you can add `-parameters` option for **javac** compiler in your IDE configuration.
+
+## Custom scenarios
+Sometimes, it is important to be confident that the testing algorithm works under some corner-case situations.
+For this purpose, **lincheck** provides a possibility to specify *custom* scenarios via a special Kotlin DSL in a way similar to the example below.
+After the scenario is defined, it can be added to the configuration via `Options.addCustomScenario(ExecutionScenario)`
+(see [Configuration via options](#configuration-via-options) for details of how to configure Lincheck via `Options`).
+In this case, **lincheck**  examines custom scenarios followed by checking the generated ones.
+
+Custom scenario generation in Kotlin can be done as follows:
+```kotlin
+val scenario = scenario {
+  initial { // initialize the queue with two elements
+    actor(SPMCQueue::offer, 1)
+    actor(SPMCQueue::offer, 2)
+  }
+  parallel {
+    thread { // one producer 
+      // add elements one-by-one
+      elements.forEach { actor(SPMCQueue::offer, it) }
+    }
+    repeat(2) { // two consumers
+      thread {
+        repeat(3) { // add three poll-s 
+          actor(SPMCQueue::poll)
+        }
+      }
+    }
+  }
+}
+
+// Add this custom scenario to the test configuration
+options.addCustomScenario(scenario)
+```
 
 ## Sequential specification
 By default, **lincheck** sequentially uses the testing data structure to define the correct specification.

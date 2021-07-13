@@ -35,10 +35,11 @@ abstract class ManagedCTestConfiguration(
     generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
     val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>?, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean
+    sequentialSpecification: Class<*>, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean,
+    customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
     testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-    requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs
+    requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs, customScenarios
 ) {
     companion object {
         const val DEFAULT_INVOCATIONS = 10000

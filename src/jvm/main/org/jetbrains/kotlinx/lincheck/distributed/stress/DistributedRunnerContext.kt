@@ -103,9 +103,9 @@ class DistributedRunnerContext<Message, Log>(
     val crashInfo = atomic(NodeCrashInfo.initialInstance(testCfg, this))
 
     val initialNumberOfTasks =
-        2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
+        3 * addressResolver.totalNumberOfNodes //+ addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
 
-    val initialTasksForNode = addressResolver.totalNumberOfNodes + 2
+    val initialTasksForNode = 3//addressResolver.totalNumberOfNodes + 2
 
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 
@@ -126,11 +126,7 @@ class DistributedRunnerContext<Message, Log>(
         events = FastQueue()
         vectorClock.forEach { it.fill(0) }
         messageHandler = ChannelHandler(testCfg.messageOrder, addressResolver.totalNumberOfNodes)
-        val exp = if (testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
-            testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
-        } else {
-            testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes) * 2
-        }
+        val exp = 3
         probabilities.forEach { it.reset(exp) }
         messageId.lazySet(0)
     }

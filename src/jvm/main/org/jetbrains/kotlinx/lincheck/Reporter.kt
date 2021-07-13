@@ -29,7 +29,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 
-class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: PrintStream = System.out) {
+class Reporter constructor(val logLevel: LoggingLevel) {
+    private val out: PrintStream = System.out
+    private val outErr: PrintStream = System.err
+
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
         appendln("\n= Iteration $iteration / $maxIterations =")
         appendExecutionScenario(scenario)
@@ -44,17 +47,22 @@ class Reporter @JvmOverloads constructor(val logLevel: LoggingLevel, val out: Pr
         appendExecutionScenario(scenario)
     }
 
+    fun logStateEquivalenceViolation(sequentialSpecification: Class<*>) = log(WARN) {
+        appendStateEquivalenceViolationMessage(sequentialSpecification)
+    }
+
     private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
         msg(sb)
-        out.println(sb)
+        val output = if (logLevel == WARN) outErr else out
+        output.println(sb)
     }
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = ERROR
+@JvmField val DEFAULT_LOG_LEVEL = WARN
 enum class LoggingLevel {
-    INFO, ERROR
+    INFO, WARN
 }
 
 internal fun <T> printInColumnsCustom(
@@ -236,4 +244,11 @@ private fun StringBuilder.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
+}
+
+internal fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: Class<*>) {
+    append("To make verification faster, you can specify the state equivalence relation on your sequential specification.\n" +
+        "At the current moment, `${sequentialSpecification.simpleName}` does not specify it, or the equivalence relation implementation is incorrect.\n" +
+        "To fix this, please implement `equals()` and `hashCode()` functions on `${sequentialSpecification.simpleName}`; the simplest way is to extend `VerifierState`\n" +
+        "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations.")
 }

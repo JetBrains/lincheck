@@ -164,7 +164,7 @@ open class DistributedRunner<Message, Log>(
         val channel = context.messageHandler[sender, i]
         val testInstance = context.testInstances[i]
         while (true) {
-            val e = channel.receive()
+            val e = channel.receive() as Pair<Int, MessageSentEvent<Message>>
             //println("[$i]: Receive from ${e.first} ${e.second.message}")
             val m = e.second
             context.incClock(i)
@@ -209,10 +209,10 @@ open class DistributedRunner<Message, Log>(
     }
 
     private fun NodeDispatcher.launchReceiveMessage(i: Int) {
-        repeat(numberOfNodes) {
+        /*repeat(numberOfNodes) {
             createScope().launch { receiveMessages(i, it) }
-        }
-        //createScope().launch { receiveMessages(i, 0) }
+        }*/
+        createScope().launch { receiveMessages(i, 0) }
     }
 
     private suspend fun runNode(iNode: Int) {
@@ -340,12 +340,18 @@ open class DistributedRunner<Message, Log>(
     }
 
     fun storeEventsToFile(failure: LincheckFailure) {
+        val printInstance = context.testCfg.nodeTypes.size > 1
         if (testCfg.logFilename == null) return
         File(testCfg.logFilename).printWriter().use { out ->
             out.println(failure)
             out.println()
             context.events.toList().forEach { p ->
-                out.println("[${p.first}]: ${p.second}")
+                val header = if (printInstance) {
+                    "${p.first}, ${context.addressResolver[p.first].simpleName}"
+                } else {
+                    p.first
+                }
+                out.println("[${header}]: ${p.second}")
             }
         }
     }

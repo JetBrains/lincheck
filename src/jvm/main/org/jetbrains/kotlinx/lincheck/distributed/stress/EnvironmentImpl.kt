@@ -81,7 +81,7 @@ internal class EnvironmentImpl<Message, Log>(
         context.events.put(nodeId to event)
         val rate = probability.duplicationRate()
         repeat(rate) {
-            context.messageHandler[nodeId, event.receiver].send(nodeId to event)
+            context.messageHandler[nodeId, event.receiver].send(nodeId to event, nodeId)
         }
         probability.curMsgCount++
         crash()

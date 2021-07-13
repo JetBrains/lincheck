@@ -133,12 +133,12 @@ class LamportMutexTest {
     private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(MutexSpecification::class.java)
-        .threads(4)
+        .threads(2)
         .actorsPerThread(1)
         .invocationsPerIteration(5000)
         .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
-        //.minimizeFailedScenario(false)
+        .minimizeFailedScenario(false)
 
     @Test
     fun testSimple() {

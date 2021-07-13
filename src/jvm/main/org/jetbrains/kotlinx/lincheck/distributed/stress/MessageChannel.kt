@@ -24,6 +24,9 @@ import kotlinx.atomicfu.atomicArrayOfNulls
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
+import org.jetbrains.kotlinx.lincheck.distributed.queue.LockFreeQueue
+import org.jetbrains.kotlinx.lincheck.distributed.queue.RandomElementQueue
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.random.Random
 
@@ -82,25 +85,32 @@ class ChannelHandler<E>(
     private val numberOfNodes: Int
 ) {
     private fun createChannels(): Array<MessageChannel<E>> = when (messageOrder) {
-        MessageOrder.FIFO -> Array(numberOfNodes) { FifoChannel() }
-        /*MessageOrder.FIFO -> {
+        //MessageOrder.FIFO -> Array(numberOfNodes) { FifoChannel() }
+        MessageOrder.FIFO -> {
             val channel = FifoChannel<E>()
             Array(numberOfNodes) { channel }
-        }*/
+        }
         MessageOrder.ASYNCHRONOUS -> Array(numberOfNodes) { AsynchronousChannel() }
     }
 
-    private val channels = atomicArrayOfNulls<Array<MessageChannel<E>>>(numberOfNodes)
+    private fun queueInit() : LockFreeQueue<E> = when (messageOrder) {
+        MessageOrder.FIFO -> FastQueue()
+        MessageOrder.ASYNCHRONOUS -> RandomElementQueue()
+    }
+
+    private val channels = atomicArrayOfNulls<ChannelImpl<E>>(numberOfNodes)
 
     init {
         repeat(numberOfNodes) {
-            channels[it].lazySet(createChannels())
+            channels[it].lazySet(ChannelImpl(numberOfNodes, this::queueInit))
         }
     }
 
-    operator fun get(sender: Int, receiver: Int) = channels[receiver].value!![sender]
+    operator fun get(sender: Int, receiver: Int) = channels[receiver].value!!
 
     fun reset(i: Int) {
-        channels[i].value = createChannels()
+        repeat(numberOfNodes) {
+            channels[it].lazySet(ChannelImpl(numberOfNodes, this::queueInit))
+        }
     }
 }

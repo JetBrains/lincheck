@@ -135,7 +135,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             messageOrder, maxNumberOfFailedNodes, maxNumberOfFailedNodesForType, crashMode,
             messageDuplication, networkPartitions, testClasses, logFileName, testingMode,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-            chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs
+            chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
         )
     }
 

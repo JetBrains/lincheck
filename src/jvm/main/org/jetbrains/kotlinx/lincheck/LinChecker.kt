@@ -21,15 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.stress.Probability
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.reflect.*
 
 /**
@@ -44,7 +39,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
         reporter = Reporter(logLevel)
         testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
-                             else createFromTestClassAnnotations(testClass)
+        else createFromTestClassAnnotations(testClass)
     }
 
     /**
@@ -69,15 +64,22 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
-        val verifier = createVerifier()
+        val verifier = createVerifier(checkStateEquivalence = true)
+        for (i in customScenarios.indices) {
+            val scenario = customScenarios[i]
+            scenario.validate()
+            reporter.logIteration(i + 1, customScenarios.size, scenario)
+            val failure = scenario.run(this, verifier)
+            if (failure != null) return failure
+        }
         repeat(iterations) { i ->
             val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(i + 1, iterations, scenario)
+            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure
-                                               else failure.minimize(this, verifier)
+                else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
@@ -91,62 +93,47 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
     // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
     // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun LincheckFailure.minimize(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure {
+    private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
         reporter.logScenarioMinimization(scenario)
-        for (i in scenario.parallelExecution.indices) {
-            for (j in scenario.parallelExecution[i].indices) {
-                val newScenario = scenario.copy()
-                newScenario.parallelExecution[i].removeAt(j)
-                if (newScenario.parallelExecution[i].isEmpty()) newScenario.parallelExecution.removeAt(i) // remove empty thread
-                val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-                if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
-            }
+        var minimizedFailure = this
+        while (true) {
+            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
         }
-        for (i in scenario.initExecution.indices) {
-            val newScenario = scenario.copy()
-            newScenario.initExecution.removeAt(i)
-            val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-            if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
-        }
-        for (i in scenario.postExecution.indices) {
-            val newScenario = scenario.copy()
-            newScenario.postExecution.removeAt(i)
-            val newFailedIteration = newScenario.tryMinimize(testCfg, verifier)
-            if (newFailedIteration != null) return newFailedIteration.minimize(testCfg, verifier)
-        }
-        if (testCfg is DistributedCTestConfiguration<*, *>) {
-            return minimizeDSFailure(testCfg, verifier)
-        }
-        return this
+        return minimizedFailure
     }
 
-    private fun LincheckFailure.minimizeDSFailure(testCfg: DistributedCTestConfiguration<*, *>, verifier: Verifier): LincheckFailure  {
-        val queue = LinkedList(testCfg.nextConfigurations())
-        var res = this
-        while(queue.size != 0) {
-            val nextTestCfg = queue.poll()
-            val newFailedIteration = res.scenario.tryMinimize(nextTestCfg, verifier)
-            if (newFailedIteration != null) {
-                res = newFailedIteration
-                queue.addAll(nextTestCfg.nextConfigurations())
+    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+        // Reversed indices to avoid conflicts with in-loop removals
+        for (i in parallelExecution.indices.reversed()) {
+            for (j in parallelExecution[i].indices.reversed()) {
+                val failure = tryMinimize(i + 1, j, testCfg)
+                if (failure != null) return failure
             }
         }
-        while (Probability.failedNodesExpectation > 0) {
-            Probability.failedNodesExpectation--
-            val newFailedIteration = res.scenario.tryMinimize(testCfg, verifier)
-            if (newFailedIteration != null) {
-                res = newFailedIteration
-            } else {
-                Probability.failedNodesExpectation = -1
-                return res
-            }
+        for (j in initExecution.indices.reversed()) {
+            val failure = tryMinimize(0, j, testCfg)
+            if (failure != null) return failure
         }
-        Probability.failedNodesExpectation = -1
-        return res
+        for (j in postExecution.indices.reversed()) {
+            val failure = tryMinimize(threads + 1, j, testCfg)
+            if (failure != null) return failure
+        }
+        return null
     }
 
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, verifier: Verifier) =
-        if (isValid) run(testCfg, verifier) else null
+    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
+        val newScenario = this.copy()
+        val actors = newScenario[threadId] as MutableList<Actor>
+        actors.removeAt(position)
+        if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
+            // Also remove the empty thread
+            newScenario.parallelExecution.removeAt(threadId - 1)
+        }
+        return if (newScenario.isValid) {
+            val verifier = testCfg.createVerifier(checkStateEquivalence = false)
+            newScenario.run(testCfg, verifier)
+        } else null
+    }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
@@ -189,9 +176,18 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         parallelExecution.map { it.size }.sum() == 0
 
 
-    private fun CTestConfiguration.createVerifier() =
+    private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
-            if (requireStateEquivalenceImplCheck) it.checkStateEquivalenceImplementation()
+            if (!checkStateEquivalence) return@also
+            val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
+            if (!stateEquivalenceCorrect) {
+                if (requireStateEquivalenceImplCheck) {
+                    val errorMessage = StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
+                    error(errorMessage)
+                } else {
+                    reporter.logStateEquivalenceViolation(sequentialSpecification)
+                }
+            }
         }
 
     private fun CTestConfiguration.createExecutionGenerator() =

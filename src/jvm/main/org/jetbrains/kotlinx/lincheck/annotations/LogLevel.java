@@ -32,7 +32,7 @@ import java.lang.annotation.Target;
 
 /**
  * This annotation should be added to a test class to specify the logging level.
- * By default, {@link LoggingLevel#ERROR} is used.
+ * By default, {@link LoggingLevel#WARN} is used.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

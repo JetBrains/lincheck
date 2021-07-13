@@ -50,13 +50,15 @@ class DistributedCTestConfiguration<Message, Log>(
     val testingMode: TestingMode,
     requireStateEquivalenceCheck: Boolean,
     minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>?, timeoutMs: Long
+    sequentialSpecification: Class<*>, timeoutMs: Long,
+    customScenarios: List<ExecutionScenario>
 ) :
     CTestConfiguration(
         testClass, iterations, threads, actorsPerThread,
         0, 0, generatorClass, verifierClass,
         requireStateEquivalenceCheck,
-        minimizeFailedScenario, sequentialSpecification, timeoutMs
+        minimizeFailedScenario, sequentialSpecification, timeoutMs,
+        customScenarios
     ) {
 
     companion object {
@@ -112,7 +114,7 @@ class DistributedCTestConfiguration<Message, Log>(
                     networkPartitions,
                     newNodeTypes, logFilename, testingMode, requireStateEquivalenceImplCheck,
                     minimizeFailedScenario,
-                    sequentialSpecification, timeoutMs
+                    sequentialSpecification, timeoutMs, customScenarios
                 )
             )
         }
