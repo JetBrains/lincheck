@@ -85,11 +85,11 @@ class ChannelHandler<E>(
     private val numberOfNodes: Int
 ) {
     private fun createChannels(): Array<MessageChannel<E>> = when (messageOrder) {
-        //MessageOrder.FIFO -> Array(numberOfNodes) { FifoChannel() }
-        MessageOrder.FIFO -> {
+        MessageOrder.FIFO -> Array(numberOfNodes) { FifoChannel() }
+        /*MessageOrder.FIFO -> {
             val channel = FifoChannel<E>()
             Array(numberOfNodes) { channel }
-        }
+        }*/
         MessageOrder.ASYNCHRONOUS -> Array(numberOfNodes) { AsynchronousChannel() }
     }
 
@@ -98,19 +98,19 @@ class ChannelHandler<E>(
         MessageOrder.ASYNCHRONOUS -> RandomElementQueue()
     }
 
-    private val channels = atomicArrayOfNulls<ChannelImpl<E>>(numberOfNodes)
+    private val channels = atomicArrayOfNulls<Array<MessageChannel<E>>>(numberOfNodes)
 
     init {
         repeat(numberOfNodes) {
-            channels[it].lazySet(ChannelImpl(numberOfNodes, this::queueInit))
+            channels[it].lazySet(createChannels())
         }
     }
 
-    operator fun get(sender: Int, receiver: Int) = channels[receiver].value!!
+    operator fun get(sender: Int, receiver: Int) = channels[receiver].value!![sender]
 
     fun reset(i: Int) {
         repeat(numberOfNodes) {
-            channels[it].lazySet(ChannelImpl(numberOfNodes, this::queueInit))
+            channels[it].lazySet(createChannels())
         }
     }
 }

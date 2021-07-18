@@ -146,6 +146,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
             }
         }
             ?: throw IllegalArgumentException("No operations to check")
+        threads = testClasses[testClass]!!.maxNumberOfInstances
         LinChecker.check(testClass, options = this)
     }
 }

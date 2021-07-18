@@ -91,7 +91,10 @@ class NodeCrashInfoHalves(
     override fun crashNode(iNode: Int): NodeCrashInfoHalves? {
         if (numberOfFailedNodes == maxNumberOfFailedNodes ||
             failedNodes[iNode]
-        ) return null
+        ) {
+            //println("Cannot crash")
+            return null
+        }
         val cls = context.addressResolver[iNode]
         val maxNumberOfCrashes = context.addressResolver.maxNumberOfCrashesForNode(iNode)
         if (maxNumberOfCrashes == null || failedNodesForType[cls] == maxNumberOfCrashes) return null

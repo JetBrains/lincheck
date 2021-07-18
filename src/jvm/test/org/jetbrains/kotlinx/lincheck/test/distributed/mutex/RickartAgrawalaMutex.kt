@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.coroutines.suspendCoroutine
@@ -79,12 +80,31 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
 
     @Validate
     fun validate() {
-        cnt = 0
+        //println("In validate")
         val events = env.events().map { it.filterIsInstance<InternalEvent>() }
-        val locks = events.flatMap { it.filter { it.message == "Lock" } }
+
+        class Lock(val acquired: IntArray, val released: IntArray?) {
+            fun validate() = check(released == null || acquired.happensBefore(released)) {
+                "$acquired $released"
+            }
+        }
+
+        val locks = events.flatMap { n ->
+            n.mapIndexed { index, l -> l to index }.filter { it.first.message == "Lock" }.map {
+                val released = n.getOrNull(it.second + 1)
+                check(released?.message != "Lock")
+                Lock(it.first.clock, released?.clock).also { it.validate() }
+            }
+        }
+
+        //println(locks)
         for (i in locks.indices) {
-            for (j in 0..i) {
-                check(locks[i].clock.happensBefore(locks[j].clock) || locks[j].clock.happensBefore(locks[i].clock))
+            for (j in 0 until i) {
+                if (locks[i].acquired.happensBefore(locks[j].acquired)) {
+                    check(locks[i].released!!.happensBefore(locks[j].acquired))
+                } else {
+                    check(locks[j].released!!.happensBefore(locks[i].acquired))
+                }
             }
         }
     }
@@ -143,11 +163,12 @@ class RickartAgrawalaMutexTest {
             RickartAgrawalaMutex::class.java,
             DistributedOptions<MutexMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(MutexSpecification::class.java)
-                .threads(3)
+                .verifier(EpsilonVerifier::class.java)
+                 //.sequentialSpecification(MutexSpecification::class.java)
+                .threads(4)
                 .messageOrder(MessageOrder.FIFO)
                 .actorsPerThread(3)
-                .invocationsPerIteration(3000)
+                .invocationsPerIteration(5_000)
                 .iterations(10)
         )
     }

@@ -68,6 +68,7 @@ class NodeAddressResolver<Message>(
     fun canFail(iNode: Int) = additionalClasses[nodes[iNode]]?.second ?: true
 
     fun maxNumberOfCrashesForNode(iNode: Int) : Int? {
+        if (maxNumberOfCrashes.isEmpty()) return totalNumberOfNodes
         return maxNumberOfCrashes[nodes[iNode]]
     }
 }

@@ -30,12 +30,22 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.withEmptyClock
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import java.io.BufferedWriter
 import java.io.File
+import java.io.FileOutputStream
 import java.lang.NullPointerException
 import java.lang.reflect.Method
 import java.util.*
 
 val debugLogs = mutableListOf<String>()
+
+val debugOutput = true
+fun addToFile(f: (BufferedWriter) -> Unit) {
+    if (!debugOutput) return
+    FileOutputStream("lamport_info.txt", true).bufferedWriter().use {
+        f(it)
+    }
+}
 
 class DistributedModelCheckingRunner<Message, Log>(
     strategy: DistributedModelCheckingStrategy<Message, Log>,
@@ -177,7 +187,7 @@ class DistributedModelCheckingRunner<Message, Log>(
             })
     }
 
-    private suspend fun handleException(f: suspend () -> Unit) : Boolean {
+    private suspend fun handleException(f: suspend () -> Unit): Boolean {
         return try {
             f()
             true
@@ -320,11 +330,12 @@ class DistributedModelCheckingRunner<Message, Log>(
         //bfsPrint()
         if (isInterrupted) {
             //println("Interrupted")
-           //bfsPrint()
+            //bfsPrint()
         }
         if (!isInterrupted && root.isExploredNow()) {
             if (numberOfFailures == maxNumberOfErrors ||
-                (numberOfFailures == context.nodeCrashInfo.maxNumberOfFailedNodes && testCfg.supportRecovery == CrashMode.NO_RECOVERIES)) {
+                (numberOfFailures == context.nodeCrashInfo.maxNumberOfFailedNodes && testCfg.supportRecovery == CrashMode.NO_RECOVERIES)
+            ) {
                 maxNumberOfErrors++
                 numberOfFailures = 0
             } else {
@@ -347,6 +358,10 @@ class DistributedModelCheckingRunner<Message, Log>(
         //interleaving.forEach { print("[${it.taskId}: ${it.iNode}] ") }
         //println()
         //println(root.fractionUnexplored)
+
+        if (!isInterrupted) {
+            addToFile { it.appendLine(context.events.toString()) }
+        }
 
         context.testInstances.forEach {
             executeValidationFunctions(it, validationFunctions) { functionName, exception ->

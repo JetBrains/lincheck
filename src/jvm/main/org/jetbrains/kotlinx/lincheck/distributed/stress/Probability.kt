@@ -31,7 +31,7 @@ val debugProb = false
 
 fun addToFile(f: (BufferedWriter) -> Unit) {
     if (!debugProb) return
-    FileOutputStream("crash_stats_norm.txt", true).bufferedWriter().use {
+    FileOutputStream("crash_stats.txt", true).bufferedWriter().use {
         f(it)
     }
 }
@@ -89,6 +89,7 @@ class Probability(
             it.appendLine("[$iNode]: $curMsgCount")
         }
         if (r >= p) return false
+        //println("True")
         context.nextNumberOfCrashes.lazySet(rand.get().nextInt(1, maxNumCanFail + 1) - 1)
         return true
     }

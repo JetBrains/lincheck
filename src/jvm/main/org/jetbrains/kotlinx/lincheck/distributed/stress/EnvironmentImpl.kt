@@ -50,6 +50,7 @@ internal class EnvironmentImpl<Message, Log>(
             probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
             context.crashNode(nodeId)
         ) {
+            //println("Node crash")
             throw CrashError()
         }
     }
@@ -81,7 +82,7 @@ internal class EnvironmentImpl<Message, Log>(
         context.events.put(nodeId to event)
         val rate = probability.duplicationRate()
         repeat(rate) {
-            context.messageHandler[nodeId, event.receiver].send(nodeId to event, nodeId)
+            context.messageHandler[nodeId, event.receiver].send(nodeId to event)
         }
         probability.curMsgCount++
         crash()

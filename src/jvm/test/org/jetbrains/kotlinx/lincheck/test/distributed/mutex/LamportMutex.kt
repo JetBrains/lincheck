@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.lang.Integer.max
 import kotlin.coroutines.suspendCoroutine
@@ -74,11 +75,31 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
 
     @Validate
     fun validate() {
+        //println("In validate")
         val events = env.events().map { it.filterIsInstance<InternalEvent>() }
-        val locks = events.flatMap { it.filter { it.message == "Lock" } }
+
+        class Lock(val acquired: IntArray, val released: IntArray?) {
+            fun validate() = check(released == null || acquired.happensBefore(released)) {
+                "$acquired $released"
+            }
+        }
+
+        val locks = events.flatMap { n ->
+            n.mapIndexed { index, l -> l to index }.filter { it.first.message == "Lock" }.map {
+                val released = n.getOrNull(it.second + 1)
+                check(released?.message != "Lock")
+                Lock(it.first.clock, released?.clock).also { it.validate() }
+            }
+        }
+
+        //println(locks)
         for (i in locks.indices) {
-            for (j in 0..i) {
-                check(locks[i].clock.happensBefore(locks[j].clock) || locks[j].clock.happensBefore(locks[i].clock))
+            for (j in 0 until i) {
+                if (locks[i].acquired.happensBefore(locks[j].acquired)) {
+                    check(locks[i].released!!.happensBefore(locks[j].acquired))
+                } else {
+                    check(locks[j].released!!.happensBefore(locks[i].acquired))
+                }
             }
         }
     }
@@ -114,7 +135,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         while (!inCS) {
             signal.await()
         }
-        env.recordInternalEvent("Acquire lock")
+        env.recordInternalEvent("Lock")
     }
 
     @Operation(cancellableOnSuspension = false)
@@ -124,7 +145,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         }
         inCS = false
         req[env.nodeId] = inf
-        env.recordInternalEvent("Release lock")
+        env.recordInternalEvent("Unlock")
         env.broadcast(Rel(++clock))
     }
 }
@@ -132,19 +153,21 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
 class LamportMutexTest {
     private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
         .requireStateEquivalenceImplCheck(false)
-        .sequentialSpecification(MutexSpecification::class.java)
-        .threads(2)
-        .actorsPerThread(1)
+        .threads(4)
+        .verifier(EpsilonVerifier::class.java)
+        .actorsPerThread(4)
         .invocationsPerIteration(5000)
         .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
         .minimizeFailedScenario(false)
+        .setTestMode(TestingMode.MODEL_CHECKING)
 
     @Test
     fun testSimple() {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions()
+                //.setTestMode(TestingMode.MODEL_CHECKING)
         )
     }
 
@@ -153,7 +176,8 @@ class LamportMutexTest {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
-                //.storeLogsForFailedScenario("lamport_nofifo.txt")
+               // .setTestMode(TestingMode.MODEL_CHECKING)
+            //.storeLogsForFailedScenario("lamport_nofifo.txt")
         )
     }
 }

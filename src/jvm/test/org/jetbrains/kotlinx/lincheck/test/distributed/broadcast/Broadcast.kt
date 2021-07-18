@@ -24,9 +24,19 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.stress.debugProb
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
+import java.io.BufferedWriter
+import java.io.FileOutputStream
 import java.util.*
+val debugOutput = true
+fun addToFile(f: (BufferedWriter) -> Unit) {
+    if (!debugOutput) return
+    FileOutputStream("broadcast_info.txt", true).bufferedWriter().use {
+        f(it)
+    }
+}
 
 data class Message(val body: String, val id: Int, val from: Int)
 
@@ -47,6 +57,7 @@ fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().co
 abstract class AbstractPeer(protected val env: Environment<Message, Message>) : Node<Message> {
     @Validate
     fun check() {
+        //addToFile { it.appendLine(env.events().flatMap { it }.toString()) }
         // All messages were delivered at most once.
         check(env.log.isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
@@ -119,7 +130,7 @@ class BroadcastTest {
     private fun createOptions() = DistributedOptions<Message, Message>()
         .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(3)
-        .invocationsPerIteration(1_000)
+        .invocationsPerIteration(30_000)
         .iterations(1)
         .verifier(EpsilonVerifier::class.java)
 
@@ -131,13 +142,15 @@ class BroadcastTest {
         //.storeLogsForFailedScenario("broadcast.txt")
         .check()
 
-    @Test(expected = LincheckAssertionError::class)
+    @Test//(expected = LincheckAssertionError::class)
     fun testMoreFailures() = createOptions()
-        .nodeType(Peer::class.java, 5)
+        .nodeType(Peer::class.java, 3)
         .setMaxNumberOfFailedNodes { (it + 1) / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
-        .iterations(10)
+        .invocationsPerIteration(50_000)
+        .storeLogsForFailedScenario("broadcast.txt")
         .minimizeFailedScenario(false)
+        .setTestMode(TestingMode.MODEL_CHECKING)
         .check()
 
     @Test
@@ -152,6 +165,8 @@ class BroadcastTest {
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
         .actorsPerThread(3)
+        .setTestMode(TestingMode.MODEL_CHECKING)
+        .invocationsPerIteration(50_000)
         .minimizeFailedScenario(false)
         .nodeType(PeerIncorrect::class.java, 3)
         .check()

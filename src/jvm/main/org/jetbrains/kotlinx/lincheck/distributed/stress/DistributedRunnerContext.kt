@@ -103,9 +103,9 @@ class DistributedRunnerContext<Message, Log>(
     val crashInfo = atomic(NodeCrashInfo.initialInstance(testCfg, this))
 
     val initialNumberOfTasks =
-        3 * addressResolver.totalNumberOfNodes //+ addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
+        2 * addressResolver.totalNumberOfNodes + addressResolver.totalNumberOfNodes * addressResolver.totalNumberOfNodes
 
-    val initialTasksForNode = 3//addressResolver.totalNumberOfNodes + 2
+    val initialTasksForNode = addressResolver.totalNumberOfNodes + 2
 
     fun getStateRepresentation(iNode: Int) = testInstances[iNode].stateRepresentation()
 

@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner
 import org.jetbrains.kotlinx.lincheck.distributed.stress.newResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
@@ -56,10 +55,11 @@ class DistributedModelCheckingStrategy<Message, Log>(
     }
 
     override fun run(): LincheckFailure? {
-        //println(scenario)
+        println(scenario)
         runner.use { runner ->
             // Run invocations
-            for (invocation in 0 until invocations) {
+            var invocation = 0
+            while (invocation < invocations) {
                 //println("INVOCATION $invocation")
                 val ir = runner.run()
                 when (ir) {
@@ -88,6 +88,7 @@ class DistributedModelCheckingStrategy<Message, Log>(
                     println("Finish on $invocation")
                     return null
                 }
+                if (!runner.isInterrupted) invocation++
             }
             return null
         }
