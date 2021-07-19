@@ -267,4 +267,4 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
  */
 fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
-internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()

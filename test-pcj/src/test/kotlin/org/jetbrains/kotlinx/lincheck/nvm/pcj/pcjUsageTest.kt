@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package test.persistent
+package org.jetbrains.kotlinx.lincheck.nvm.pcj
 
 import lib.util.persistent.ObjectDirectory
 import lib.util.persistent.PersistentInteger

@@ -33,7 +33,7 @@ sealed class LincheckFailure(
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
 
-internal class IncorrectResultsFailure(
+class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     val results: ExecutionResult,
     trace: Trace? = null
@@ -45,7 +45,7 @@ internal class DeadlockWithDumpFailure(
     trace: Trace? = null
 ) : LincheckFailure(scenario, trace)
 
-internal class UnexpectedExceptionFailure(
+class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     val exception: Throwable,
     trace: Trace? = null
