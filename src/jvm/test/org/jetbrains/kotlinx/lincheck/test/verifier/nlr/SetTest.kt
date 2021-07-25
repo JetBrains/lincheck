@@ -70,7 +70,7 @@ internal class SequentialSet : VerifierState() {
 private const val NULL_DELETER = -1
 
 /**
- * @see [Tracking in Order to Recover: Recoverable Lock-Free Data Structures](https://arxiv.org/pdf/1905.13600.pdf)
+ * @see  <a href="https://arxiv.org/pdf/1905.13600.pdf">Tracking in Order to Recover: Recoverable Lock-Free Data Structures</a>
  */
 internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSet<T> {
 

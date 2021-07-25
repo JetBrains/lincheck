@@ -98,6 +98,9 @@ internal class MCASDescriptor(s: Status) {
     var words = listOf<WordDescriptor>()
 }
 
+/**
+ * @see  <a href="https://arxiv.org/pdf/2008.02527.pdf">Efficient Multi-word Compare and Swap</a>
+ */
 internal open class DurableMCAS : MCAS {
     protected val data: List<NonVolatileRef<WordDescriptor>>
 
