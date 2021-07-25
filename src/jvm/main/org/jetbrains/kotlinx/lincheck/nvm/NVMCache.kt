@@ -49,7 +49,6 @@ object NVMCache {
 
     internal fun crash(threadId: Int) {
         val localCache = cache[threadId] ?: return
-        localCache.forEach { it.crash() }
         localCache.clear()
     }
 

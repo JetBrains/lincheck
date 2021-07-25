@@ -69,6 +69,9 @@ internal class SequentialCAS : VerifierState(), CAS {
     }
 }
 
+/**
+ * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
+ */
 internal class RecoverableRegister(threadsNumber: Int) : CAS {
     // This algorithm supposes atomic write into persistent memory. This works the same as usual write.
     private val register = atomic(Record(0, -1, -1))

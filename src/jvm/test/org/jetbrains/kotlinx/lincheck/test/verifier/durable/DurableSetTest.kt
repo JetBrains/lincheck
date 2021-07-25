@@ -43,7 +43,7 @@ internal interface DurableSet {
 }
 
 /**
- * @see  <a https://arxiv.org/pdf/1909.02852.pdf">Efficient Lock-Free Durable Sets</a>
+ * @see  <a href="https://arxiv.org/pdf/1909.02852.pdf">Efficient Lock-Free Durable Sets</a>
  */
 internal class DurableLinkFreeSetTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialSet::class) {
     val s = DurableLinkFreeSet<Any>()

@@ -21,8 +21,8 @@ package org.jetbrains.kotlinx.lincheck.nvm.api
 
 import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
-import org.jetbrains.kotlinx.lincheck.nvm.Probability
 import org.jetbrains.kotlinx.lincheck.nvm.NVMState
+import org.jetbrains.kotlinx.lincheck.nvm.Probability
 
 abstract class AbstractNonVolatilePrimitive {
     internal abstract fun flushInternal()
@@ -33,13 +33,16 @@ abstract class AbstractNonVolatilePrimitive {
         NVMCache.remove(NVMState.threadId(), this)
     }
 
-    internal fun crash() {
+    /**
+     * Random flush may occur on write to NVM, so the value is flushed or added to the cache.
+     */
+    protected fun addToCache() {
         if (Probability.shouldFlush()) {
             flushInternal()
+        } else {
+            NVMCache.add(NVMState.threadId(), this)
         }
     }
-
-    protected fun addToCache() = NVMCache.add(NVMState.threadId(), this)
 }
 
 fun nonVolatile(value: Int) = NonVolatileInt(value)
@@ -65,7 +68,6 @@ class NonVolatileRef<T> internal constructor(initialValue: T) : AbstractNonVolat
     }
 
     override fun systemCrash() {
-        crash()
         volatileValue.value = nonVolatileValue
     }
 
@@ -74,19 +76,14 @@ class NonVolatileRef<T> internal constructor(initialValue: T) : AbstractNonVolat
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: T, update: T): Boolean {
-        addToCache()
-        return volatileValue.compareAndSet(expect, update)
-    }
+    fun compareAndSet(expect: T, update: T): Boolean =
+        volatileValue.compareAndSet(expect, update).also { if (it) addToCache() }
 
-    fun getAndSet(value: T): T {
-        addToCache()
-        return volatileValue.getAndSet(value)
-    }
+    fun getAndSet(value: T): T = volatileValue.getAndSet(value).also { addToCache() }
 
     fun lazySet(value: T) {
-        addToCache()
         volatileValue.lazySet(value)
+        addToCache()
     }
 }
 
@@ -107,7 +104,6 @@ class NonVolatileInt internal constructor(initialValue: Int) : AbstractNonVolati
     }
 
     override fun systemCrash() {
-        crash()
         volatileValue.value = nonVolatileValue
     }
 
@@ -116,59 +112,31 @@ class NonVolatileInt internal constructor(initialValue: Int) : AbstractNonVolati
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: Int, update: Int): Boolean {
-        addToCache()
-        return volatileValue.compareAndSet(expect, update)
-    }
+    fun compareAndSet(expect: Int, update: Int): Boolean =
+        volatileValue.compareAndSet(expect, update).also { if (it) addToCache() }
 
-    fun getAndSet(value: Int): Int {
-        addToCache()
-        return volatileValue.getAndSet(value)
-    }
+    fun getAndSet(value: Int) = volatileValue.getAndSet(value).also { addToCache() }
 
     fun lazySet(value: Int) {
-        addToCache()
         volatileValue.lazySet(value)
+        addToCache()
     }
 
-    fun getAndIncrement(): Int {
-        addToCache()
-        return volatileValue.getAndIncrement()
-    }
-
-    fun getAndDecrement(): Int {
-        addToCache()
-        return volatileValue.getAndDecrement()
-    }
-
-    fun incrementAndGet(): Int {
-        addToCache()
-        return volatileValue.incrementAndGet()
-    }
-
-    fun decrementAndGet(): Int {
-        addToCache()
-        return volatileValue.decrementAndGet()
-    }
-
-    fun getAndAdd(delta: Int): Int {
-        addToCache()
-        return volatileValue.getAndAdd(delta)
-    }
-
-    fun addAndGet(delta: Int): Int {
-        addToCache()
-        return volatileValue.addAndGet(delta)
-    }
+    fun getAndIncrement(): Int = volatileValue.getAndIncrement().also { addToCache() }
+    fun getAndDecrement(): Int = volatileValue.getAndDecrement().also { addToCache() }
+    fun incrementAndGet(): Int = volatileValue.incrementAndGet().also { addToCache() }
+    fun decrementAndGet(): Int = volatileValue.decrementAndGet().also { addToCache() }
+    fun getAndAdd(delta: Int): Int = volatileValue.getAndAdd(delta).also { addToCache() }
+    fun addAndGet(delta: Int) = volatileValue.addAndGet(delta).also { addToCache() }
 
     operator fun plusAssign(delta: Int) {
+        volatileValue.plusAssign(delta)
         addToCache()
-        return volatileValue.plusAssign(delta)
     }
 
     operator fun minusAssign(delta: Int) {
+        volatileValue.minusAssign(delta)
         addToCache()
-        return volatileValue.minusAssign(delta)
     }
 }
 
@@ -190,7 +158,6 @@ class NonVolatileLong internal constructor(initialValue: Long) : AbstractNonVola
     }
 
     override fun systemCrash() {
-        crash()
         volatileValue.value = nonVolatileValue
     }
 
@@ -199,59 +166,31 @@ class NonVolatileLong internal constructor(initialValue: Long) : AbstractNonVola
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: Long, update: Long): Boolean {
-        addToCache()
-        return volatileValue.compareAndSet(expect, update)
-    }
+    fun compareAndSet(expect: Long, update: Long): Boolean =
+        volatileValue.compareAndSet(expect, update).also { if (it) addToCache() }
 
-    fun getAndSet(value: Long): Long {
-        addToCache()
-        return volatileValue.getAndSet(value)
-    }
+    fun getAndSet(value: Long) = volatileValue.getAndSet(value).also { addToCache() }
 
     fun lazySet(value: Long) {
         addToCache()
         volatileValue.lazySet(value)
     }
 
-    fun getAndIncrement(): Long {
-        addToCache()
-        return volatileValue.getAndIncrement()
-    }
-
-    fun getAndDecrement(): Long {
-        addToCache()
-        return volatileValue.getAndDecrement()
-    }
-
-    fun incrementAndGet(): Long {
-        addToCache()
-        return volatileValue.incrementAndGet()
-    }
-
-    fun decrementAndGet(): Long {
-        addToCache()
-        return volatileValue.decrementAndGet()
-    }
-
-    fun getAndAdd(delta: Long): Long {
-        addToCache()
-        return volatileValue.getAndAdd(delta)
-    }
-
-    fun addAndGet(delta: Long): Long {
-        addToCache()
-        return volatileValue.addAndGet(delta)
-    }
+    fun getAndIncrement(): Long = volatileValue.getAndIncrement().also { addToCache() }
+    fun getAndDecrement(): Long = volatileValue.getAndDecrement().also { addToCache() }
+    fun incrementAndGet(): Long = volatileValue.incrementAndGet().also { addToCache() }
+    fun decrementAndGet(): Long = volatileValue.decrementAndGet().also { addToCache() }
+    fun getAndAdd(delta: Long): Long = volatileValue.getAndAdd(delta).also { addToCache() }
+    fun addAndGet(delta: Long): Long = volatileValue.addAndGet(delta).also { addToCache() }
 
     operator fun plusAssign(delta: Long) {
+        volatileValue.plusAssign(delta)
         addToCache()
-        return volatileValue.plusAssign(delta)
     }
 
     operator fun minusAssign(delta: Long) {
+        volatileValue.minusAssign(delta)
         addToCache()
-        return volatileValue.minusAssign(delta)
     }
 }
 
@@ -272,7 +211,6 @@ class NonVolatileBoolean internal constructor(initialValue: Boolean) : AbstractN
     }
 
     override fun systemCrash() {
-        crash()
         volatileValue.value = nonVolatileValue
     }
 
@@ -281,18 +219,13 @@ class NonVolatileBoolean internal constructor(initialValue: Boolean) : AbstractN
         nonVolatileValue = value
     }
 
-    fun compareAndSet(expect: Boolean, update: Boolean): Boolean {
-        addToCache()
-        return volatileValue.compareAndSet(expect, update)
-    }
+    fun compareAndSet(expect: Boolean, update: Boolean): Boolean =
+        volatileValue.compareAndSet(expect, update).also { if (it) addToCache() }
 
-    fun getAndSet(value: Boolean): Boolean {
-        addToCache()
-        return volatileValue.getAndSet(value)
-    }
+    fun getAndSet(value: Boolean) = volatileValue.getAndSet(value).also { addToCache() }
 
     fun lazySet(value: Boolean) {
-        addToCache()
         volatileValue.lazySet(value)
+        addToCache()
     }
 }
