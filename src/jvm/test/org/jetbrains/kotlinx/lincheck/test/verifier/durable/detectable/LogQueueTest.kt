@@ -259,7 +259,23 @@ internal class LogQueueFailingTest11 : LogQueueFailingTest() {
     override val q = LogFailingQueue11(THREADS_NUMBER + 2)
 
     override fun StressOptions.customize() {
-        iterations(200)
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::push, 1, 5)
+                    actor(::pop, 1, 7)
+                    actor(::pop, 1, 9)
+                }
+                thread {
+                    actor(::push, 2, 8)
+                }
+            }
+            post {
+                actor(::pop, 3, 15)
+            }
+        }
+        iterations(0)
+        invocationsPerIteration(10000_000)
     }
 }
 
