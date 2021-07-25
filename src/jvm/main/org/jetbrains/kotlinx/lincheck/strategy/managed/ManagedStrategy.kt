@@ -737,10 +737,23 @@ abstract class ManagedStrategy(
 
     // == NVM related ==
 
+    /**
+     * This method is invoked by a test thread before each interesting crash point.
+     * For example, flush.
+     * @param iThread number of invoking thread
+     */
     internal fun beforeCrashPoint(iThread: Int) = newCrashPoint(iThread)
+
+    /**
+     * This method is invoked by a test thread before each read/write operation into NVM.
+     * @param iThread number of invoking thread
+     */
     internal fun beforeNVMOperation(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint?) =
         newSwitchPoint(iThread, codeLocation, tracePoint)
 
+    /**
+     * Create a new crash point, where a crash can occur.
+     */
     protected open fun newCrashPoint(iThread: Int) {}
 
     // == NVM related ==

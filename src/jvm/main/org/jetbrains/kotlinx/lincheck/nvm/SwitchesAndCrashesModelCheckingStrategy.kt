@@ -18,21 +18,17 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
+package org.jetbrains.kotlinx.lincheck.nvm
 
-import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.nvm.Crash
-import org.jetbrains.kotlinx.lincheck.nvm.CrashEnabledVisitor
-import org.jetbrains.kotlinx.lincheck.nvm.Probability
-import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.CrashReason
+import org.jetbrains.kotlinx.lincheck.strategy.managed.TracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.AbstractModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import org.objectweb.asm.*
-import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.ClassVisitor
 import java.lang.reflect.Method
 import kotlin.math.max
-import kotlin.reflect.jvm.javaMethod
 
 internal class SwitchesAndCrashesModelCheckingStrategy(
     testCfg: ModelCheckingCTestConfiguration,
@@ -268,105 +264,5 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         }
     }
 }
-
-private class CrashesManagedStrategyTransformer(
-    cv: ClassVisitor?,
-    tracePointConstructors: MutableList<TracePointConstructor>,
-    guarantees: List<ManagedStrategyGuarantee>,
-    eliminateLocalObjects: Boolean,
-    collectStateRepresentation: Boolean,
-    constructTraceRepresentation: Boolean,
-    codeLocationIdProvider: CodeLocationIdProvider,
-    val crashesEnabledVisitor: CrashEnabledVisitor,
-) : ManagedStrategyTransformer(
-    cv, tracePointConstructors, guarantees, eliminateLocalObjects,
-    collectStateRepresentation, constructTraceRepresentation, codeLocationIdProvider
-) {
-    override fun createTransformerBeforeSharedVariableVisitor(
-        mv: MethodVisitor?,
-        methodName: String,
-        access: Int,
-        desc: String
-    ): MethodVisitor? = if (crashesEnabledVisitor.shouldTransform) {
-        CrashManagedTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-    } else mv
-
-    private inner class CrashManagedTransformer(methodName: String, mv: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, mv) {
-        private var shouldTransform = methodName != "<clinit>" && (mv.access and Opcodes.ACC_BRIDGE) == 0
-        private var superConstructorCalled = methodName != "<init>"
-
-        override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
-            if (descriptor == CRASH_FREE_TYPE) {
-                shouldTransform = false
-            }
-            return adapter.visitAnnotation(descriptor, visible)
-        }
-
-        override fun visitMethodInsn(
-            opcode: Int,
-            owner: String?,
-            name: String?,
-            descriptor: String?,
-            isInterface: Boolean
-        ) {
-            if (!superConstructorCalled && opcode == Opcodes.INVOKESPECIAL) {
-                superConstructorCalled = true
-            }
-            if (owner !== null && owner.startsWith("org/jetbrains/kotlinx/lincheck/nvm/api/")) {
-                // Here the order of points is crucial - switch point must be before crash point.
-                // The use case is the following: thread switches on the switch point,
-                // then another thread initiates a system crash, force switches to the first thread
-                // which crashes immediately.
-                invokeBeforeNVMOperation()
-                if (name !== null && name.toLowerCase().contains("flush")) invokeBeforeCrashPoint()
-            }
-            adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-        }
-
-        override fun visitInsn(opcode: Int) {
-            if (opcode in returnInstructions) invokeBeforeCrashPoint()
-            adapter.visitInsn(opcode)
-        }
-
-        private fun invokeBeforeCrashPoint() {
-            if (!shouldTransform || !superConstructorCalled) return
-            loadStrategy()
-            loadCurrentThreadNumber()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_CRASH_METHOD)
-        }
-
-        private fun invokeBeforeNVMOperation() {
-            if (!shouldTransform || !superConstructorCalled) return
-            loadStrategy()
-            loadCurrentThreadNumber()
-            val tracePointLocal = newTracePointLocal()
-            loadNewCodeLocationAndTracePoint(
-                tracePointLocal,
-                METHOD_TRACE_POINT_TYPE
-            ) { iThread, actorId, callStackTrace, ste ->
-                MethodCallTracePoint(iThread, actorId, callStackTrace, methodName, ste)
-            }
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_NVM_OPERATION_METHOD)
-        }
-    }
-}
-
-private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
-private val BEFORE_CRASH_METHOD =
-    org.objectweb.asm.commons.Method.getMethod(ManagedStrategy::beforeCrashPoint.javaMethod)
-private val BEFORE_NVM_OPERATION_METHOD =
-    org.objectweb.asm.commons.Method.getMethod(ManagedStrategy::beforeNVMOperation.javaMethod)
-private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
-private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallTracePoint::class.java)
-
-private val returnInstructions = listOf(
-    Opcodes.RETURN,
-    Opcodes.ARETURN,
-    Opcodes.DRETURN,
-    Opcodes.FRETURN,
-    Opcodes.IRETURN,
-    Opcodes.LRETURN
-)
 
 private const val NO_CRASH_INITIATOR = -1
