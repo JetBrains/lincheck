@@ -33,18 +33,18 @@ internal class ModelCheckingStrategy(
     stateRepresentation: Method?,
     verifier: Verifier,
     recoverModel: RecoverabilityModel
-) : AbstractModelCheckingStrategy<ModelCheckingStrategy.SwitchesInterleaving, ModelCheckingStrategy.SwitchesInterleavingBuilder>(
+) : AbstractModelCheckingStrategy<ModelCheckingStrategy.InnerSwitchesInterleaving, ModelCheckingStrategy.InnerSwitchesInterleavingBuilder>(
     testCfg, testClass, scenario, validationFunctions, stateRepresentation, verifier, recoverModel
 ) {
-    override fun createBuilder() = SwitchesInterleavingBuilder()
+    override fun createBuilder() = InnerSwitchesInterleavingBuilder()
 
-    internal inner class SwitchesInterleavingBuilder : AbstractSwitchesInterleavingBuilder() {
-        override fun build() = SwitchesInterleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
+    internal inner class InnerSwitchesInterleavingBuilder : SwitchesInterleavingBuilder<InnerSwitchesInterleaving>() {
+        override fun build() = InnerSwitchesInterleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
     }
 
-    internal inner class SwitchesInterleaving(
+    internal inner class InnerSwitchesInterleaving(
         switchPositions: List<Int>,
         threadSwitchChoices: List<Int>,
         lastNotInitializedNode: InterleavingTreeNode?
-    ) : AbstractSwitchesInterleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
+    ) : SwitchesInterleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
 }

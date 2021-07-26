@@ -29,15 +29,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 import kotlin.random.Random
 
-internal interface Interleaving {
-    fun initialize()
-}
-
-internal interface InterleavingBuilder<out T : Interleaving> {
-    val numberOfEvents: Int
-    fun build(): T
-}
-
 /**
  * The model checking strategy studies all possible interleavings by increasing the
  * interleaving tree depth -- the number of context switches performed by the strategy.
@@ -53,7 +44,9 @@ internal interface InterleavingBuilder<out T : Interleaving> {
  * as possible when the maximal number of interleavings to be studied is lower
  * than the number of all possible interleavings on the current depth level.
  */
-internal abstract class AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>(
+internal abstract class AbstractModelCheckingStrategy<
+    INTERLEAVING : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.SwitchesInterleaving,
+    BUILDER : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.SwitchesInterleavingBuilder<INTERLEAVING>>(
     testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
@@ -61,10 +54,7 @@ internal abstract class AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>(
     stateRepresentation: Method?,
     verifier: Verifier,
     recoverModel: RecoverabilityModel
-) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg, recoverModel)
-    where INTERLEAVING : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.AbstractSwitchesInterleaving,
-          BUILDER : InterleavingBuilder<INTERLEAVING>,
-          BUILDER : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.AbstractSwitchesInterleavingBuilder {
+) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg, recoverModel) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
 
@@ -238,17 +228,17 @@ internal abstract class AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>(
     /**
      * This class specifies an interleaving that is re-producible.
      */
-    abstract inner class AbstractSwitchesInterleaving(
+    open inner class SwitchesInterleaving(
         protected val switchPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
         protected var lastNotInitializedNode: InterleavingTreeNode?
-    ) : Interleaving {
+    ) {
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
         protected var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         protected var executionPosition: Int = 0
 
-        override fun initialize() {
+        open fun initialize() {
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
@@ -300,12 +290,13 @@ internal abstract class AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>(
         private fun lastChosenExecutionPosition() = switchPositions.lastOrNull() ?: -1
     }
 
-    abstract inner class AbstractSwitchesInterleavingBuilder : InterleavingBuilder<INTERLEAVING> {
+    abstract inner class SwitchesInterleavingBuilder<out T> {
         protected val switchPositions = mutableListOf<Int>()
         protected val threadSwitchChoices = mutableListOf<Int>()
         protected var lastNoninitializedNode: InterleavingTreeNode? = null
 
-        override val numberOfEvents get() = switchPositions.size
+        open val numberOfEvents get() = switchPositions.size
+        abstract fun build(): T
 
         fun addSwitchPosition(switchPosition: Int) {
             switchPositions.add(switchPosition)
