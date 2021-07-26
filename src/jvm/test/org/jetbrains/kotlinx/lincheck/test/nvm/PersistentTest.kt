@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-@StressCTest(sequentialSpecification = Sequential::class, threads = 3, recover = Recover.NRL_NO_CRASHES)
+@StressCTest(sequentialSpecification = Sequential::class, threads = 3, recover = Recover.NRL_NO_CRASHES, iterations = 1)
 internal class PersistentTest {
     private val x = nonVolatile(0)
 

@@ -23,11 +23,10 @@ package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 import org.junit.Assert
 import org.junit.Test
 import kotlin.math.abs
-import kotlin.math.pow
 import kotlin.random.Random
 
 private const val ITERATIONS = 1_000_000
-private const val REPEATS = 10
+private const val REPEATS = 3
 
 internal class EmulationTest {
 
@@ -110,8 +109,6 @@ private fun testScenarioUniformDistribution(
 private fun verifyResults(results: IntArray, crashes: List<Int>, model: CrashProbabilityModel) {
     val expectedCrashes = model.expectedCrashes
     val averageCrashesPerScenario = crashes.average()
-    val d = crashes.sumByDouble { x -> (x - averageCrashesPerScenario).pow(2) } / (ITERATIONS - 1)
-    println("sqrt(D) / E = ${d / expectedCrashes}")
     Assert.assertTrue(abs(averageCrashesPerScenario - expectedCrashes) / expectedCrashes < 0.05)
     val expected = results.sum() / results.size.toDouble()
     results.forEach { cr ->

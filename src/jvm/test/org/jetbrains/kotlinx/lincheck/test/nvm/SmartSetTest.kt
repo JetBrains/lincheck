@@ -32,7 +32,7 @@ import org.junit.Test
     sequentialSpecification = UsualSet::class,
     actorsPerThread = 100,
     invocationsPerIteration = 1,
-    iterations = 1000
+    iterations = 100
 )
 class SmartSetTest {
     private val set = SmartSet<Int>()
