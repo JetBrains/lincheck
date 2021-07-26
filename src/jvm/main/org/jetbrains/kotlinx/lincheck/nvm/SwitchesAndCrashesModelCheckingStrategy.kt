@@ -187,7 +187,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         threadSwitchChoices: List<Int>,
         private val nonSystemCrashes: List<Int>,
         lastNotInitializedNode: InterleavingTreeNode?
-    ) : SwitchesInterleaving(
+    ) : Interleaving(
         switchPositions,
         threadSwitchChoices,
         lastNotInitializedNode
@@ -233,7 +233,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     }
 
 
-    internal inner class SwitchesAndCrashesInterleavingBuilder : SwitchesInterleavingBuilder<SwitchesAndCrashesInterleaving>() {
+    internal inner class SwitchesAndCrashesInterleavingBuilder : InterleavingBuilder<SwitchesAndCrashesInterleaving>() {
         private val crashPositions = mutableListOf<Int>()
         private val nonSystemCrashes = mutableListOf<Int>()
         override val numberOfEvents get() = switchPositions.size + crashPositions.size

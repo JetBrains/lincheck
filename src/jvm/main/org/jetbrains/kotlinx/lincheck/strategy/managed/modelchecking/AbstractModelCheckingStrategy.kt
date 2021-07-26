@@ -45,8 +45,8 @@ import kotlin.random.Random
  * than the number of all possible interleavings on the current depth level.
  */
 internal abstract class AbstractModelCheckingStrategy<
-    INTERLEAVING : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.SwitchesInterleaving,
-    BUILDER : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.SwitchesInterleavingBuilder<INTERLEAVING>>(
+    INTERLEAVING : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.Interleaving,
+    BUILDER : AbstractModelCheckingStrategy<INTERLEAVING, BUILDER>.InterleavingBuilder<INTERLEAVING>>(
     testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
@@ -228,7 +228,7 @@ internal abstract class AbstractModelCheckingStrategy<
     /**
      * This class specifies an interleaving that is re-producible.
      */
-    open inner class SwitchesInterleaving(
+    open inner class Interleaving(
         protected val switchPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
         protected var lastNotInitializedNode: InterleavingTreeNode?
@@ -290,7 +290,7 @@ internal abstract class AbstractModelCheckingStrategy<
         private fun lastChosenExecutionPosition() = switchPositions.lastOrNull() ?: -1
     }
 
-    abstract inner class SwitchesInterleavingBuilder<out T> {
+    abstract inner class InterleavingBuilder<out T: Interleaving> {
         protected val switchPositions = mutableListOf<Int>()
         protected val threadSwitchChoices = mutableListOf<Int>()
         protected var lastNoninitializedNode: InterleavingTreeNode? = null
