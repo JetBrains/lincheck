@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.OperationIdGen
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -256,6 +257,26 @@ internal class LogQueueFailingTest10 : LogQueueFailingTest() {
 
 internal class LogQueueFailingTest11 : LogQueueFailingTest() {
     override val q = LogFailingQueue11(THREADS_NUMBER + 2)
+
+    override fun StressOptions.customize() {
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::push, 1, 5)
+                    actor(::pop, 1, 7)
+                    actor(::pop, 1, 9)
+                }
+                thread {
+                    actor(::push, 2, 8)
+                }
+            }
+            post {
+                actor(::pop, 3, 15)
+            }
+        }
+        iterations(0)
+        invocationsPerIteration(10000_000)
+    }
 }
 
 internal class LogQueueFailingTest12 : LogQueueFailingTest() {
