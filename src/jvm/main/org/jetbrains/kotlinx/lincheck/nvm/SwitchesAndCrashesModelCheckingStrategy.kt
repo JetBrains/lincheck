@@ -44,6 +44,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 ) {
     @Volatile
     private var systemCrashInitiator: Int = NO_CRASH_INITIATOR
+    private val started = BooleanArray(nThreads) { false }
 
     override fun createBuilder() = SwitchesAndCrashesInterleavingBuilder()
     override fun createRoot(): InterleavingTreeNode = ThreadChoosingNodeWithCrashes((0 until nThreads).toList())
@@ -61,6 +62,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     override fun initializeInvocation() {
         systemCrashInitiator = NO_CRASH_INITIATOR
         Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
+        started.fill(false)
         super.initializeInvocation()
         Probability.resetRandom(currentInterleaving.chooseRandomSeed())
     }
@@ -107,6 +109,11 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     private fun waitingSystemCrash() = systemCrashInitiator != NO_CRASH_INITIATOR
 
+    override fun onStart(iThread: Int) {
+        super.onStart(iThread)
+        started[iThread] = true
+    }
+
     private fun forceSwitchToAwaitSystemCrash() {
         check(waitingSystemCrash())
         val iThread = currentThread
@@ -114,7 +121,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
             currentThread = systemCrashInitiator
             awaitTurn(iThread)
         } else {
-            for (t in switchableThreads(iThread)) {
+            for (t in switchableActiveThreads(iThread)) {
                 currentThread = t
                 awaitTurn(iThread)
             }
@@ -122,6 +129,8 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
             systemCrashInitiator = NO_CRASH_INITIATOR
         }
     }
+
+    private fun switchableActiveThreads(iThread: Int) = switchableThreads(iThread).filter { started[it] }
 
     private fun crashCurrentThread(iThread: Int, mustCrash: Boolean, initializeSystemCrash: Boolean) {
         val systemCrash = mustCrash || initializeSystemCrash
