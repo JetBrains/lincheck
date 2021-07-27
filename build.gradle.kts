@@ -89,7 +89,7 @@ tasks {
 
     withType<Test> {
         maxParallelForks = 1
-        maxHeapSize = "4g"
+        maxHeapSize = "256g"
         jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
                 "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
     }

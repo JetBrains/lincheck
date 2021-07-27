@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 /**
@@ -78,10 +79,18 @@ internal abstract class AbstractModelCheckingStrategy<
     protected open fun createRoot(): InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
 
     override fun runImpl(): LincheckFailure? {
+        var startTime = System.nanoTime()
         while (usedInvocations < maxInvocations) {
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
             usedInvocations++
+            val n = 100000
+            if (usedInvocations % n == 0) {
+                val currentTime = System.nanoTime()
+                val time = currentTime - startTime
+                startTime = currentTime
+                println("$usedInvocations invocations used ${TimeUnit.NANOSECONDS.toMillis(time) / 1000.0}s")
+            }
             // run invocation and check its results
             checkResult(runInvocation())?.let { return it }
         }
