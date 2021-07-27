@@ -128,6 +128,7 @@ internal abstract class AbstractModelCheckingStrategy<
                 // Increase the maximum number of switches that can be used,
                 // because there are no more not covered interleavings
                 // with the previous maximum number of switches.
+                println(maxNumberOfEvents)
                 maxNumberOfEvents++
                 resetExploration()
             }

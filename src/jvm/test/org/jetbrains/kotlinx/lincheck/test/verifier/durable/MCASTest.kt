@@ -20,6 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -29,7 +32,8 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import kotlin.reflect.KClass
@@ -44,6 +48,7 @@ internal interface MCAS {
 }
 
 @Param(name = "01", gen = IntGen::class, conf = "0:1")
+@CrashFree
 internal class MCASTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialMCAS::class, false) {
     private val cas = DurableMCAS()
 
@@ -79,7 +84,10 @@ internal class SequentialMCAS : MCAS, VerifierState() {
     }
 }
 
+@CrashFree
 internal data class WordDescriptor(val old: Int, val new: Int, val parent: MCASDescriptor)
+
+@CrashFree
 internal enum class Status {
     ACTIVE, SUCCESSFUL, FAILED, SUCCESSFUL_DIRTY, FAILED_DIRTY;
 
@@ -91,6 +99,7 @@ internal enum class Status {
     }
 }
 
+@CrashFree
 internal class MCASDescriptor(s: Status) {
     val status = nonVolatile(s)
 
@@ -110,6 +119,7 @@ internal open class DurableMCAS : MCAS {
         mcas.words = data.map { it.value }
     }
 
+    @CrashFree
     protected open fun readInternal(self: MCASDescriptor?, index: Int): Pair<WordDescriptor, Int> {
         while (true) {
             val wd = data[index].value
@@ -128,20 +138,7 @@ internal open class DurableMCAS : MCAS {
     }
 
     protected open fun MCAS(self: MCASDescriptor): Boolean {
-        var success = true
-        loop@ for (index in self.words.indices) {
-            val wd = self.words[index]
-            retry@ while (true) {
-                val (content, value) = readInternal(self, index)
-                if (content === wd) break@retry
-                if (value != wd.old) {
-                    success = false
-                    break@loop
-                }
-                if (self.status.value != Status.ACTIVE) break@loop
-                if (data[index].compareAndSet(content, wd)) break@retry
-            }
-        }
+        val success = doMCAS(self)
         for (wd in data) {
             wd.flush()
         }
@@ -151,13 +148,34 @@ internal open class DurableMCAS : MCAS {
         return self.status.value == Status.SUCCESSFUL
     }
 
+    @CrashFree
+    private fun doMCAS(self: MCASDescriptor): Boolean {
+        loop@ for (index in self.words.indices) {
+            val wd = self.words[index]
+            retry@ while (true) {
+                val (content, value) = readInternal(self, index)
+                if (content === wd) break@retry
+                if (value != wd.old) {
+                    return false
+                }
+                if (self.status.value != Status.ACTIVE) break@loop
+                if (data[index].compareAndSet(content, wd)) break@retry
+            }
+        }
+        return true
+    }
+
+    @CrashFree
     override fun get(index: Int) = readInternal(null, index).second
+
+    @CrashFree
     override fun compareAndSet(old: List<Int>, new: List<Int>): Boolean {
         val mcas = MCASDescriptor(Status.ACTIVE)
         mcas.words = old.indices.map { WordDescriptor(old[it], new[it], mcas) }
         return MCAS(mcas)
     }
 
+    @CrashFree
     override fun recover() {
         for (d in data) {
             val parent = d.value.parent
@@ -173,10 +191,11 @@ internal open class DurableMCAS : MCAS {
 
 @Param(name = "01", gen = IntGen::class, conf = "0:1")
 internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out LincheckFailure>) :
-    AbstractNVMLincheckFailingTest(
+    AbstractNVMLincheckTest(
         Recover.DURABLE,
         THREADS_NUMBER,
         SequentialMCAS::class,
+        false,
         expectedFailures = expectedFailures
     ) {
     internal abstract val cas: MCAS
@@ -196,7 +215,6 @@ internal abstract class MCASFailingTest(vararg expectedFailures: KClass<out Linc
 
     @DurableRecoverAll
     fun recover() = cas.recover()
-    override val expectedExceptions: List<KClass<out Throwable>> = listOf(StackOverflowError::class)
 }
 
 internal class MCASNoRecoverFailingTest : MCASFailingTest(DeadlockWithDumpFailure::class) {
@@ -388,5 +406,35 @@ internal class DurableFailingMCAS7 : DurableMCAS() {
                 parent.status.setAndFlush(parent.status.value.clean())
             }
         }
+    }
+}
+
+internal class SmallScenarioMCASTest : MCASFailingTest() {
+    override val cas = DurableMCAS()
+    override fun <O : Options<O, *>> O.customize() {
+        logLevel(LoggingLevel.INFO)
+        iterations(0)
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::compareAndSet, 1, 1, 1, 1, 0, 1)
+                }
+                thread {
+                    actor(::compareAndSet, 0, 0, 0, 1, 1, 0)
+                    actor(::compareAndSet, 1, 1, 1, 0, 1, 1)
+                }
+            }
+            post {
+                actor(::get, 1)
+            }
+        }
+    }
+
+    override fun StressOptions.customize() {
+        invocationsPerIteration(Int.MAX_VALUE)
+    }
+
+    override fun ModelCheckingOptions.customize() {
+        invocationsPerIteration(Int.MAX_VALUE)
     }
 }
