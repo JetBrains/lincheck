@@ -139,9 +139,7 @@ internal open class DurableMCAS : MCAS {
 
     protected open fun MCAS(self: MCASDescriptor): Boolean {
         val success = doMCAS(self)
-        for (wd in data) {
-            wd.flush()
-        }
+        data[0].flush()
         self.status.compareAndSet(Status.ACTIVE, if (success) Status.SUCCESSFUL_DIRTY else Status.FAILED_DIRTY)
         self.status.flush()
         self.status.value = self.status.value.clean()
@@ -159,7 +157,7 @@ internal open class DurableMCAS : MCAS {
                     return false
                 }
                 if (self.status.value != Status.ACTIVE) break@loop
-                if (data[index].compareAndSet(content, wd)) break@retry
+                if (data[index].compareAndSetAndFlush(content, wd)) break@retry
             }
         }
         return true
@@ -183,7 +181,7 @@ internal open class DurableMCAS : MCAS {
             if (status == Status.ACTIVE) {
                 parent.status.setAndFlush(Status.FAILED)
             } else {
-                parent.status.setAndFlush(parent.status.value.clean())
+                parent.status.setAndFlush(status.clean())
             }
         }
     }

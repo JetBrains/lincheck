@@ -79,6 +79,9 @@ class NonVolatileRef<T> internal constructor(initialValue: T) : AbstractNonVolat
     fun compareAndSet(expect: T, update: T): Boolean =
         volatileValue.compareAndSet(expect, update).also { if (it) addToCache() }
 
+    fun compareAndSetAndFlush(expect: T, update: T): Boolean =
+        volatileValue.compareAndSet(expect, update).also { flushInternal() }
+
     fun getAndSet(value: T): T = volatileValue.getAndSet(value).also { addToCache() }
 
     fun lazySet(value: T) {
