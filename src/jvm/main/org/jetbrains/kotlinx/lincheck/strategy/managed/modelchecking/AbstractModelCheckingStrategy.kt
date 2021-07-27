@@ -89,7 +89,7 @@ internal abstract class AbstractModelCheckingStrategy<
                 val currentTime = System.nanoTime()
                 val time = currentTime - startTime
                 startTime = currentTime
-                println("$usedInvocations invocations used ${TimeUnit.NANOSECONDS.toMillis(time) / 1000.0}s")
+                println("level=$maxNumberOfEvents $usedInvocations invocations used ${TimeUnit.NANOSECONDS.toMillis(time) / 1000.0}s")
             }
             // run invocation and check its results
             checkResult(runInvocation())?.let { return it }
