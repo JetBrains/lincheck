@@ -95,7 +95,6 @@ internal class CrashesManagedStrategyTransformer(
         }
 
         private fun invokeBeforeNVMOperation() {
-            if (!shouldTransform || !superConstructorCalled) return
             loadStrategy()
             loadCurrentThreadNumber()
             val tracePointLocal = newTracePointLocal()
