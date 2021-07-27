@@ -83,7 +83,7 @@ internal class CrashesManagedStrategyTransformer(
         }
 
         override fun visitInsn(opcode: Int) {
-            if (opcode in returnInstructions) invokeBeforeCrashPoint()
+//            if (opcode in returnInstructions) invokeBeforeCrashPoint()
             adapter.visitInsn(opcode)
         }
 

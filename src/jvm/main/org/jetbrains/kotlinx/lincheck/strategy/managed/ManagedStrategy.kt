@@ -422,7 +422,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      */
     internal fun beforeSharedVariableRead(iThread: Int, codeLocation: Int, tracePoint: ReadTracePoint?) {
-        newSwitchPoint(iThread, codeLocation, tracePoint)
+//        newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
     /**
@@ -431,7 +431,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      */
     internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, tracePoint: WriteTracePoint?) {
-        newSwitchPoint(iThread, codeLocation, tracePoint)
+//        newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
     /**
