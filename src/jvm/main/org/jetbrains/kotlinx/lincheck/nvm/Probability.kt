@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.max
@@ -177,6 +178,9 @@ object Probability {
 
     @Volatile
     private lateinit var randomGetter: () -> Random
+
+    @Volatile
+    private lateinit var flush: () -> Boolean
     private var seed = 0L
     private val mcRandom = Random(42)
     private var minimizeCrashes = false
@@ -191,7 +195,7 @@ object Probability {
     private lateinit var model: ProbabilityModel
 
     fun shouldSystemCrash() = bernoulli(randomSystemCrashProbability)
-    fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
+    fun shouldFlush() = flush()
     fun shouldCrash(): Boolean {
         if (!NVMState.crashesEnabled) return false
         val iThread = NVMState.threadId()
@@ -215,6 +219,7 @@ object Probability {
 
     fun reset(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) {
         randomGetter = { ThreadLocalRandom.current() }
+        flush = { bernoulli(RANDOM_FLUSH_PROBABILITY) }
         if (!minimizeCrashes) {
             expectedCrashes = recoverModel.defaultExpectedCrashes()
         }
@@ -235,9 +240,10 @@ object Probability {
         this.seed = seed.toLong()
     }
 
-    internal fun resetRandom() {
+    internal fun resetRandom(strategy: ManagedStrategy) {
         mcRandom.setSeed(seed)
         randomGetter = { mcRandom }
+        flush = { strategy.newRandomChoice() }
     }
 }
 

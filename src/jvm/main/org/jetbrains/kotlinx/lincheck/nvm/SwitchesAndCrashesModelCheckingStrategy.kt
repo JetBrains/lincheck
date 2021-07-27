@@ -60,7 +60,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     override fun initializeInvocation() {
         systemCrashInitiator = NO_CRASH_INITIATOR
-        Probability.resetRandom()
+        Probability.resetRandom(this)
         Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
         super.initializeInvocation()
     }
@@ -86,11 +86,18 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         super.newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
+    override fun newRandomChoice(): Boolean {
+        currentInterleaving.newRandomChoicePosition()
+        return currentInterleaving.randomChoice()
+    }
+
     private fun onNewCrash(iThread: Int, mustCrash: Boolean) {
         if (mustCrash) {
             currentInterleaving.newExecutionCrashPosition(iThread)
         }
     }
+
+    fun invocations() = usedInvocations
 
     private fun shouldCrash(iThread: Int): Boolean {
         check(iThread == currentThread)
@@ -181,11 +188,27 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     }
 
 
+    private inner class RandomChoiceNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode() {
+        init {
+            choices = List(2) { Choice(createChild(), it) }
+        }
+
+        override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {
+            val child = chooseUnexploredNode()
+            check(child.value in 0..1)
+            interleavingBuilder.addRandomChoice(child.value == 1)
+            val interleaving = child.node.nextInterleaving(interleavingBuilder)
+            updateExplorationStatistics()
+            return interleaving
+        }
+    }
+
     internal inner class SwitchesAndCrashesInterleaving(
         switchPositions: List<Int>,
         private val crashPositions: List<Int>,
         threadSwitchChoices: List<Int>,
         private val nonSystemCrashes: List<Int>,
+        private val randomChoices: List<Boolean>,
         lastNotInitializedNode: InterleavingTreeNode?
     ) : Interleaving(
         switchPositions,
@@ -193,14 +216,19 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         lastNotInitializedNode
     ) {
         private lateinit var explorationType: ExplorationNodeType
+        private lateinit var nextRandomChoice: Iterator<Boolean>
+        private var randomChoiceCount = 0
 
         override fun initialize() {
             explorationType = ExplorationNodeType.fromNode(lastNotInitializedNode)
+            nextRandomChoice = randomChoices.iterator()
+            randomChoiceCount = 0
             super.initialize()
         }
 
         fun isCrashPosition() = executionPosition in crashPositions
         fun isSystemCrash() = executionPosition !in nonSystemCrashes
+        fun randomChoice() = if (nextRandomChoice.hasNext()) nextRandomChoice.next() else true
 
         /**
          * Creates a new execution position that corresponds to the current switch/crash point.
@@ -212,8 +240,14 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
             if (type != explorationType) return
             if (executionPosition > lastChosenExecutionPosition()) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.add(Choice(createChildNode(iThread), executionPosition))
+                val node = wrapRandomChoice(randomChoiceCount) { createChildNode(iThread) }
+                lastNotInitializedNodeChoices?.add(Choice(node, executionPosition))
             }
+        }
+
+        private fun wrapRandomChoice(level: Int, createNode: () -> InterleavingTreeNode): InterleavingTreeNode {
+            if (level == 0) return createNode()
+            return RandomChoiceNode { wrapRandomChoice(level - 1, createNode) }
         }
 
         private fun lastChosenExecutionPosition() =
@@ -230,12 +264,17 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
         override fun newExecutionPosition(iThread: Int) = newExecutionPosition(iThread, ExplorationNodeType.SWITCH)
         fun newExecutionCrashPosition(iThread: Int) = newExecutionPosition(iThread, ExplorationNodeType.CRASH)
+        fun newRandomChoicePosition() {
+            if (nextRandomChoice.hasNext()) return
+            randomChoiceCount++
+        }
     }
 
 
     internal inner class SwitchesAndCrashesInterleavingBuilder : InterleavingBuilder<SwitchesAndCrashesInterleaving>() {
         private val crashPositions = mutableListOf<Int>()
         private val nonSystemCrashes = mutableListOf<Int>()
+        private val randomChoices = mutableListOf<Boolean>()
         override val numberOfEvents get() = switchPositions.size + crashPositions.size
 
         fun addCrashPosition(crashPosition: Int, isSystemCrash: Boolean) {
@@ -243,11 +282,16 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
             if (!isSystemCrash) nonSystemCrashes.add(crashPosition)
         }
 
+        fun addRandomChoice(choice: Boolean) {
+            randomChoices.add(choice)
+        }
+
         override fun build() = SwitchesAndCrashesInterleaving(
             switchPositions,
             crashPositions,
             threadSwitchChoices,
             nonSystemCrashes,
+            randomChoices,
             lastNoninitializedNode
         )
     }

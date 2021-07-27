@@ -756,6 +756,8 @@ abstract class ManagedStrategy(
      */
     protected open fun newCrashPoint(iThread: Int) {}
 
+    open fun newRandomChoice() = true
+
     // == NVM related ==
 }
 

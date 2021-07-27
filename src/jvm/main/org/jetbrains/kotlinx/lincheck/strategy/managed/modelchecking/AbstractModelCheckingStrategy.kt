@@ -59,7 +59,7 @@ internal abstract class AbstractModelCheckingStrategy<
     private val maxInvocations = testCfg.invocationsPerIteration
 
     // The number of already used invocations.
-    private var usedInvocations = 0
+    protected var usedInvocations = 0
 
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
