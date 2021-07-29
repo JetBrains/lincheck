@@ -40,9 +40,9 @@ import java.util.*
 val debugLogs = mutableListOf<String>()
 
 val debugOutput = true
-fun addToFile(f: (BufferedWriter) -> Unit) {
+fun addToFile(filename: String, f: (BufferedWriter) -> Unit) {
     if (!debugOutput) return
-    FileOutputStream("lamport_info.txt", true).bufferedWriter().use {
+    FileOutputStream(filename, true).bufferedWriter().use {
         f(it)
     }
 }
@@ -72,11 +72,12 @@ class DistributedModelCheckingRunner<Message, Log>(
     var exception: Throwable? = null
     val root: InterleavingTreeNode =
         InterleavingTreeNode(-1, context, OperationTask(-1, VectorClock(IntArray(numberOfNodes)), "start") {})
-    var builder = InterleavingTreeBuilder(0, 0)
+    var builder = InterleavingTreeBuilder(0)
     var isInterrupted = false
-    var maxNumberOfErrors = 0
-    var numberOfFailures = 0
+    var numberOfSwitches: Int = 0
     var counter = 0
+    val previousEvents = mutableListOf<String>()
+    val previousPaths = mutableListOf<List<Pair<Int, Task>>>()
 
     override fun initialize() {
         super.initialize()
@@ -90,8 +91,6 @@ class DistributedModelCheckingRunner<Message, Log>(
 
     fun addTask(task: Task, id: Int? = null) {
         val taskId = id ?: context.tasksId++
-        //println("New task id $taskId $iNode $parentClock")
-        //println("iNode=$iNode taskId=${taskId} curNode=${curTreeNode!!.taskId}")
         check(!tasks.containsKey(taskId))
         tasks[taskId] = task
     }
@@ -112,14 +111,12 @@ class DistributedModelCheckingRunner<Message, Log>(
     }
 
     fun reset() {
-        // println()
-        //bfsPrint()
         isInterrupted = false
         debugLogs.clear()
         curTreeNode = root
         path.clear()
         tasks.clear()
-        builder = InterleavingTreeBuilder(maxNumberOfErrors - numberOfFailures, numberOfFailures)
+        builder = InterleavingTreeBuilder(numberOfSwitches)
         context.reset()
         environments = Array(numberOfNodes) {
             MCEnvironmentImpl(it, numberOfNodes, context = context)
@@ -135,7 +132,6 @@ class DistributedModelCheckingRunner<Message, Log>(
             ex.results = arrayOfNulls(actors)
             ex.actorId = 0
         }
-        //println(scenario)
     }
 
     private suspend fun runNode(iNode: Int) {
@@ -146,7 +142,6 @@ class DistributedModelCheckingRunner<Message, Log>(
         val scenarioSize = scenario.parallelExecution[iNode].size
         if (testNodeExecution.actorId == scenarioSize + 1) return
         if (testNodeExecution.actorId == scenarioSize) {
-            //println("Run iNode=$iNode scenario finish")
             context.testInstances[iNode].onScenarioFinish()
             return
         }
@@ -162,7 +157,6 @@ class DistributedModelCheckingRunner<Message, Log>(
         )
         try {
             testNodeExecution.actorId++
-            //println("Run iNode=$iNode opId=$i")
             val res = testNodeExecution.runOperation(i)
             testNodeExecution.results[i] = if (actor.method.returnType == Void.TYPE) {
                 VoidResult
@@ -210,7 +204,6 @@ class DistributedModelCheckingRunner<Message, Log>(
         signal.await()
         curTreeNode!!.finish(tasks)
         tasks.remove(next)
-        //println("Task keys ${tasks.keys}")
     }
 
     fun nextTransition(): Int? {
@@ -236,40 +229,31 @@ class DistributedModelCheckingRunner<Message, Log>(
             }
             curTreeNode!!.finish(tasks)
             tasks.remove(-1)
-            //println("Task keys ${tasks.keys}")
             interleaving = root.chooseNextInterleaving(builder)
             path.add(curTreeNode!!)
             debugLogs.add("path=${interleaving!!.path}")
             try {
                 for (next in interleaving!!.path) {
-                    //println(next)
-                    // println(tasks)
                     curTreeNode = curTreeNode!![next]
                     executeTask(next)
                     if (exception != null) return@launch
                 }
+                //println(if (curTreeNode?.children?.isEmpty() == true) "-------" else "false")
                 while (tasks.isNotEmpty()) {
                     val next = curTreeNode!!.next()
-                    //println("Next $next")
                     if (next == null) {
                         var up = curTreeNode
-                        //println("Filtered tasks ${up?.allNotChecked}")
                         try {
                             while (!tasks.any { it.key in up!!.parent!!.nextPossibleTasksIds }) {
-                                //println("Up ${up?.task} ${up?.id}")
                                 up = up!!.parent
                             }
                         } catch (e: NullPointerException) {
-                            //println("Up $up")
                             bfsPrint()
-                            //println("Tasks $tasks")
                             exception = e
                             return@launch
                         }
-                        //println("Up parent ${up?.parent?.task} ${up?.parent?.id}")
                         check(up!!.task !is NodeCrashTask)
                         counter++
-                        //println("Remove ${up!!.id} from ${up.parent!!.id}")
                         up!!.parent!!.nextPossibleTasksIds.remove(up.id)
                         up!!.parent!!.children.remove(up.id)
 
@@ -288,7 +272,6 @@ class DistributedModelCheckingRunner<Message, Log>(
                         isInterrupted = true
                         break
                     }
-                    //println("Next is $next, curTree $curTreeNode")
                     curTreeNode = curTreeNode!![next]
                     executeTask(next)
                 }
@@ -297,25 +280,6 @@ class DistributedModelCheckingRunner<Message, Log>(
                 exception = e
                 return@launch
             }
-            /*while (curTreeNode != null) {
-                //println("Before next")
-                curTreeNode = curTreeNode!!.nextNode()
-                //println(curTreeNode?.taskId)
-                if (curTreeNode == null) break
-                path.add(curTreeNode!!)
-                val i = curTreeNode!!.taskId
-                //println("Launching task $i")
-                signal = Signal()
-                GlobalScope.launch(dispatcher + TaskContext()) {
-                    tasks[i]!!()
-                }
-                signal.await()
-                //println("Before finish")
-                curTreeNode!!.finish()
-                //println("After finish")
-                if (exception != null) return@launch
-                //println("------------")
-            }*/
         }
         try {
             runBlocking {
@@ -326,28 +290,44 @@ class DistributedModelCheckingRunner<Message, Log>(
         } catch (e: TimeoutCancellationException) {
             return DeadlockInvocationResult(emptyMap())
         }
-        //println("Current tree")
-        //bfsPrint()
-        if (isInterrupted) {
-            //println("Interrupted")
-            //bfsPrint()
-        }
-        if (!isInterrupted && root.isExploredNow()) {
-            if (numberOfFailures == maxNumberOfErrors ||
-                (numberOfFailures == context.nodeCrashInfo.maxNumberOfFailedNodes && testCfg.supportRecovery == CrashMode.NO_RECOVERIES)
-            ) {
-                maxNumberOfErrors++
-                numberOfFailures = 0
-            } else {
-                numberOfFailures++
+        /*if (!isInterrupted) {
+            /*addToFile("${hashCode()}@interleavings.txt") {
+                it.appendLine("$numberOfSwitches ${root.minDistance} ${root.fractionUnexplored}" + interleaving?.path.toString())
             }
+            addToFile("${hashCode()}@lamport_path.txt") {
+                it.appendLine(path.map { "{id=${it.id}, msg=${it.task}}" }.toString())
+            }
+            addToFile("${hashCode()}@lamport_info.txt") { it.appendLine(context.events.toString()) }
+            addToFile("${hashCode()}@lamport_ids.txt") { it.appendLine(path.map { it.id }.toString()) }*/
+            val e = context.events.toString()
+            if (e in previousEvents) {
+                val same = previousEvents.lastIndexOf(e)
+                addToFile("${hashCode()}@path.txt") {
+                    it.appendLine(same.toString())
+                    previousPaths[same].forEach { i -> it.appendLine(i.toString()) }
+                    it.appendLine(previousPaths.size.toString())
+                    path.map { it.id to it.task }.forEach { i -> it.appendLine(i.toString()) }
+                    it.appendLine()
+                }
+                addToFile("${hashCode()}@logs.txt") {
+                    it.appendLine(same.toString())
+                    it.appendLine(previousEvents[same])
+                    //previousEvents[same].forEach { i -> it.appendLine(i.toString()) }
+                    it.appendLine(previousEvents.size.toString())
+                    it.appendLine(e)
+                    //e.forEach { i -> it.appendLine(i.toString()) }
+                    it.appendLine()
+                }
+            }
+            previousEvents.add(e)
+            previousPaths.add(path.map { it.id to it.task })
+        }*/
+        //println(path[0])
+        path.reversed().forEach { it.updateStats() }
+        if (root.minDistance > numberOfSwitches) {
+            numberOfSwitches++
         }
-        if (!isInterrupted) {
-            path.reversed().forEach { it.updateStats() }
-        }
-        //println("Execution is over")
-        //path.reversed().forEach { it.updateExplorationStatistics() }
-        //root.resetExploration()
+        //println("Current number of switches $numberOfSwitches, min distance ${root.minDistance}")
         environments.forEach { it.isFinished = true }
         if (exception != null) {
             return UnexpectedExceptionInvocationResult(exception!!)
@@ -355,13 +335,7 @@ class DistributedModelCheckingRunner<Message, Log>(
         repeat(numberOfNodes) {
             context.logs[it] = environments[it].log
         }
-        //interleaving.forEach { print("[${it.taskId}: ${it.iNode}] ") }
-        //println()
-        //println(root.fractionUnexplored)
 
-        if (!isInterrupted) {
-            addToFile { it.appendLine(context.events.toString()) }
-        }
 
         context.testInstances.forEach {
             executeValidationFunctions(it, validationFunctions) { functionName, exception ->
@@ -370,7 +344,6 @@ class DistributedModelCheckingRunner<Message, Log>(
                     scenario.parallelExecution,
                     emptyList()
                 )
-                //context.events.forEach { println("[${it.first}]: ${it.second}") }
                 return ValidationFailureInvocationResult(s, functionName, exception)
             }
         }

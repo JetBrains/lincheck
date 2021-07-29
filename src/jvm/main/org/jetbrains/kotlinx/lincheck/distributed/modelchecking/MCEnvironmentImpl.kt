@@ -52,7 +52,6 @@ class MCEnvironmentImpl<Message, Log>(
         context.runner.curTreeNode!!.addMessage(event.id, taskId)
         val nextTransition = context.runner.nextTransition()
         if (nextTransition == taskId) {
-            //println("[$nodeId]: Fail $taskId")
             val newClock = context.incClockAndCopy(nodeId)
             context.runner.addTask(NodeCrashTask(nodeId, VectorClock(newClock), "Crash node $nodeId") {
                 context.events.add(nodeId to NodeCrashEvent(newClock, context.getStateRepresentation(nodeId)))
@@ -65,7 +64,6 @@ class MCEnvironmentImpl<Message, Log>(
             }, taskId)
         }
         debugLogs.add("[$nodeId]: Send $message to $receiver ${event.id} ${context.runner.curTreeNode?.id}")
-        //println(debugLogs.last())
         context.events.add(nodeId to event)
 
         context.runner.addTask(
@@ -94,8 +92,9 @@ class MCEnvironmentImpl<Message, Log>(
 
     override fun events(): Array<List<Event>> {
         val events = context.events.toList().groupBy { it.first }.mapValues { it.value.map { it.second } }
-        return Array(numberOfNodes) {
-            events[it]!!
+        //println("$events ${context.events}")
+        return Array(numberOfNodes) { i ->
+            events[i]!!
         }
     }
 

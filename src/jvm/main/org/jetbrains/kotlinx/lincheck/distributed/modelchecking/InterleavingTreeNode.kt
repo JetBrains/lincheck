@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
+import java.lang.Error
+import java.lang.Integer.min
 
 data class InterleavingTreeNode(
     val id: Int, val context: ModelCheckingContext<*, *>,
@@ -34,16 +36,13 @@ data class InterleavingTreeNode(
     var isFullyExplored = false
     var isVisited = false
     var fractionUnexplored = 1.0
-    var allInversionsUsed = false
+    var minDistance = Int.MAX_VALUE
     val notCheckedTasks = mutableListOf<Int>()
     val allNotChecked = mutableListOf<Int>()
-    val operations = mutableMapOf<Int, Int>()
 
-    fun isExploredNow(): Boolean = allInversionsUsed
-            || nextPossibleTasksIds.all { it in children } && children.all { it.value.isExploredNow() }
+    fun minDistance() = if (minDistance == Int.MAX_VALUE) minDistance - 1 else minDistance
 
     operator fun get(i: Int): InterleavingTreeNode? {
-        //println("Get $i $nextPossibleTasksIds")
         if (i !in nextPossibleTasksIds && i !in taskToMessageIds) return null
         val task = context.runner.tasks[i]!!
         val newNumberOfFailures = if (i in taskToMessageIds) numberOfFailures + 1 else numberOfFailures
@@ -59,13 +58,11 @@ data class InterleavingTreeNode(
         if (isVisited) return
         check(nextPossibleTasksIds.isEmpty())
         val currentTask = currentTasks[id]!!
-        currentTasks.filter { it.value is OperationTask }.forEach { operations[it.key] = it.value.iNode }
         val tasksToCheck = if (task !is NodeCrashTask) currentTasks.filter {
             it.key != id && (it.key > id || it.value.iNode == currentTask.iNode)
         } else {
             currentTasks.filter { it.key != id }
         }
-        //println("Tasks to check $tasksToCheck")
         nextPossibleTasksIds.addAll(if (context.testCfg.messageOrder == MessageOrder.FIFO) tasksToCheck.filter { t ->
             !currentTasks.any {
                 it.key != id && it != t && it.value.iNode == t.value.iNode && it.value.clock.happensBefore(
@@ -75,24 +72,15 @@ data class InterleavingTreeNode(
         }.map { it.key } else tasksToCheck.map { it.key })
         notCheckedTasks.addAll(currentTasks.filter { it.key !in tasksToCheck }.map { it.key })
         allNotChecked.addAll(currentTasks.filter { it.key !in nextPossibleTasksIds }.map { it.key })
-        //println("Next possible tasks ${id} ${nextPossibleTasksIds}")
         isVisited = true
     }
 
     fun next() = nextPossibleTasksIds.minOrNull()
-        //?: nextPossibleTasksIds.minByOrNull { operations[it]!! }
-
-    fun nextNode(): InterleavingTreeNode? {
-        val next = next() ?: return null
-        return get(next)
-    }
 
     fun chooseNextInterleaving(builder: InterleavingTreeBuilder): Interleaving {
-        //println("Choose next interleaving $id ${builder.path}")
-        if (builder.isFull()) {
+        /*if (builder.isFull()) {
             allInversionsUsed = true
             val next = next() ?: return builder.build()
-            //println("Next in path $next")
             builder.addNextTransition(next)
             return if (next !in children) {
                 builder.build()
@@ -104,7 +92,6 @@ data class InterleavingTreeNode(
             val notTriedInversions = nextPossibleTasksIds.filterNot { it in children }
             if (notTriedInversions.isNotEmpty()) {
                 val next = notTriedInversions.random(context.generatingRandom)
-                //println("Add inversion")
                 builder.numberOfInversions++
                 builder.addNextTransition(next)
                 return builder.build()
@@ -114,8 +101,6 @@ data class InterleavingTreeNode(
             val notTriedFailures = taskToMessageIds.keys.filterNot { it in children }
             if (notTriedFailures.isNotEmpty()) {
                 val next = notTriedFailures.random(context.generatingRandom)
-                //println("Add inversion")
-                //println("Add failure $next $id ${children.keys}")
                 builder.numberOfFailures++
                 builder.addNextTransition(next)
                 return builder.build()
@@ -139,29 +124,72 @@ data class InterleavingTreeNode(
         } else {
             if (choice.key != next()) builder.numberOfInversions++
         }
+        return choice.value.chooseNextInterleaving(builder)*/
+        val next = next() ?: return builder.build()
+        if (next !in children) {
+            builder.addNextTransition(next)
+            //println("id=$id, next=$next, limit=${builder.switchLimit}, remained=${builder.remainedSwitches()}")
+            return builder.build()
+        }
+        val unexploredTasks = nextPossibleTasksIds.filter { it !in children }
+        if (unexploredTasks.isNotEmpty()) {
+            val r = unexploredTasks.random(context.generatingRandom)
+            builder.currentSwitchCount++
+            //println("id=$id, switch=$r, limit=${builder.switchLimit}, remained=${builder.remainedSwitches()}")
+            builder.addNextTransition(r)
+            return builder.build()
+        }
+        val possibleMoves =
+            children.filter { it.value.minDistance + 1 <= builder.remainedSwitches() || it.key == next && it.value.minDistance <= builder.remainedSwitches() }
+        val total = possibleMoves.values.sumByDouble { it.fractionUnexplored }
+        //println("Moves id=$id minDist=$minDistance switches=${builder.remainedSwitches()} ${children.map { it.key to it.value.minDistance }}")
+        val random = context.generatingRandom.nextDouble() * total
+        var sumWeight = 0.0
+        possibleMoves.forEach { choice ->
+            sumWeight += choice.value.fractionUnexplored
+            if (sumWeight >= random) {
+                builder.addNextTransition(choice.key)
+                if (choice.key != next) builder.currentSwitchCount++
+                return choice.value.chooseNextInterleaving(builder)
+            }
+        }
+        val choice = possibleMoves.entries.last { !it.value.isFullyExplored }
+        builder.addNextTransition(choice.key)
+        if (choice.key != next) builder.currentSwitchCount++
         return choice.value.chooseNextInterleaving(builder)
-        // return children[next()]?.chooseNextInterleaving(builder) ?: builder.build()
-        //if (!builder.areFailuresFull())
-        //if (!)
     }
 
     fun updateStats() {
         if (nextPossibleTasksIds.isEmpty()) {
             isFullyExplored = true
             fractionUnexplored = 0.0
+            minDistance = Int.MAX_VALUE
+            return
         }
         val total = children.values.fold(0.0) { acc, choice ->
             acc + choice.fractionUnexplored
         } + nextPossibleTasksIds.filter { it !in children }.size
         fractionUnexplored = total / nextPossibleTasksIds.size
+        //println("id=$id, fractionUnexplored=$fractionUnexplored")
         isFullyExplored = nextPossibleTasksIds.none { it !in children } && children.values.all { it.isFullyExplored }
+        val next = next()!!
+        if (next !in children) {
+            minDistance = 0
+            return
+        }
+        if (nextPossibleTasksIds.any { it !in children }) {
+            minDistance = 1
+            return
+        }
+        minDistance =
+            min(children.filter { it.key != next }.minOfOrNull { it.value.minDistance() + 1 } ?: Int.MAX_VALUE,
+                children[next]!!.minDistance)
     }
-
-    //fun goTo(position: Int)
 }
 
 class Interleaving(val path: List<Int>)
 
+/*
 class InterleavingTreeBuilder(
     val maxNumberOfInversions: Int,
     val maxNumberOfFailures: Int,
@@ -180,4 +208,19 @@ class InterleavingTreeBuilder(
         path.add(i)
     }
 }
+ */
 
+class InterleavingTreeBuilder(
+    val switchLimit: Int
+) {
+    var currentSwitchCount: Int = 0
+    val path = mutableListOf<Int>()
+
+    fun build() = Interleaving(path)
+
+    fun addNextTransition(i: Int) {
+        path.add(i)
+    }
+
+    fun remainedSwitches() = switchLimit - currentSwitchCount
+}
