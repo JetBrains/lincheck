@@ -58,6 +58,10 @@ internal class DurableMSQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THR
 
     @DurableRecoverPerThread
     fun recover() = q.recover()
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(25)
+    }
 }
 
 private const val DEFAULT_DELETER = -1
