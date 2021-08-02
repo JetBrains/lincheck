@@ -163,9 +163,11 @@ internal open class DurableMCAS : MCAS {
             val parent = d.value.parent
             val status = parent.status.value
             if (status == Status.ACTIVE) {
-                parent.status.setAndFlush(Status.FAILED)
+                parent.status.value = Status.FAILED
+                parent.status.flush()
             } else {
-                parent.status.setAndFlush(parent.status.value.clean())
+                parent.status.value = parent.status.value.clean()
+                parent.status.flush()
             }
         }
     }
@@ -383,9 +385,12 @@ internal class DurableFailingMCAS7 : DurableMCAS() {
         for (d in data) {
             val parent = d.value.parent
             if (parent.status.value == Status.ACTIVE) {
-                // here should be parent.status.setAndFlush(Status.FAILED)
+                // here should be
+                // parent.status.value = Status.FAILED
+                // parent.status.flush()
             } else {
-                parent.status.setAndFlush(parent.status.value.clean())
+                parent.status.value = parent.status.value.clean()
+                parent.status.flush()
             }
         }
     }
