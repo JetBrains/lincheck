@@ -28,6 +28,15 @@ abstract class AbstractNonVolatilePrimitive {
     internal abstract fun flushInternal()
     internal abstract fun systemCrash()
 
+    //    T1               |      T2
+    //   CAS(0, 6)         |
+    //   flushInternal():  |
+    //      read: 6        |
+    //                     |   CAS(6, 0)
+    //                     |   flushInternal()
+    //                     |
+    //      write(6) <-- OUTDATED, should not happen!!!!!
+
     fun flush() {
         flushInternal()
         NVMCache.remove(NVMState.threadId(), this)
@@ -63,6 +72,7 @@ class NonVolatileRef<T> internal constructor(initialValue: T) : AbstractNonVolat
             addToCache()
         }
 
+    @Synchronized
     override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
@@ -73,7 +83,7 @@ class NonVolatileRef<T> internal constructor(initialValue: T) : AbstractNonVolat
 
     fun setAndFlush(value: T) {
         volatileValue.value = value
-        nonVolatileValue = value
+        flushInternal()
     }
 
     fun compareAndSet(expect: T, update: T): Boolean =
@@ -99,6 +109,7 @@ class NonVolatileInt internal constructor(initialValue: Int) : AbstractNonVolati
             addToCache()
         }
 
+    @Synchronized
     override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
@@ -109,7 +120,7 @@ class NonVolatileInt internal constructor(initialValue: Int) : AbstractNonVolati
 
     fun setAndFlush(value: Int) {
         volatileValue.value = value
-        nonVolatileValue = value
+        flushInternal()
     }
 
     fun compareAndSet(expect: Int, update: Int): Boolean =
@@ -153,6 +164,7 @@ class NonVolatileLong internal constructor(initialValue: Long) : AbstractNonVola
             addToCache()
         }
 
+    @Synchronized
     override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
@@ -163,7 +175,7 @@ class NonVolatileLong internal constructor(initialValue: Long) : AbstractNonVola
 
     fun setAndFlush(value: Long) {
         volatileValue.value = value
-        nonVolatileValue = value
+        flushInternal()
     }
 
     fun compareAndSet(expect: Long, update: Long): Boolean =
@@ -206,6 +218,7 @@ class NonVolatileBoolean internal constructor(initialValue: Boolean) : AbstractN
             addToCache()
         }
 
+    @Synchronized
     override fun flushInternal() {
         nonVolatileValue = volatileValue.value
     }
@@ -216,7 +229,7 @@ class NonVolatileBoolean internal constructor(initialValue: Boolean) : AbstractN
 
     fun setAndFlush(value: Boolean) {
         volatileValue.value = value
-        nonVolatileValue = value
+        flushInternal()
     }
 
     fun compareAndSet(expect: Boolean, update: Boolean): Boolean =
