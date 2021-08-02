@@ -20,18 +20,15 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
 private const val THREADS = 3
 
-class DurableStackTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS, SequentialStack::class, true) {
+class DurableStackTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS, SequentialStack::class) {
     private val stack = DurableStack()
 
     @Operation
@@ -39,13 +36,6 @@ class DurableStackTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS, Seque
 
     @Operation
     fun pop(): Int? = stack.pop()
-
-//    override fun <O : Options<O, *>> O.customize() {
-//        actorsBefore(1)
-//        threads(2)
-//        actorsPerThread(1)
-//        actorsAfter(1)
-//    }
 }
 
 internal class SequentialStack : VerifierState() {
@@ -65,15 +55,20 @@ internal class DurableStack {
     fun push(v: Int) {
         while (true) {
             val cur = head.value
-            if (head.compareAndSet(cur, Node(cur, v))) break
+            if (head.compareAndSet(cur, Node(cur, v))) {
+                head.flush()
+                return
+            }
         }
-        head.flush()
     }
 
     fun pop(): Int? {
         while (true) {
             val cur = head.value
-            if (cur == null) return null
+            if (cur === null) {
+                head.flush()
+                return null
+            }
             val next = cur.next
             if (head.compareAndSet(cur, next)) {
                 head.flush()
