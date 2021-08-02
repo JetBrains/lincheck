@@ -68,20 +68,20 @@ internal open class NRLTestAndSet(private val threadsCount: Int) : TAS {
 
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
-        r[p].setAndFlush(1)
+        r[p].setToNVM(1)
         val returnValue: Int
         if (!doorway.value) {
             returnValue = 1
         } else {
-            r[p].setAndFlush(2)
-            doorway.setAndFlush(false)
+            r[p].setToNVM(2)
+            doorway.setToNVM(false)
             returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
             if (returnValue == 0) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].setToNVM(returnValue)
+        r[p].setToNVM(3)
         return returnValue
     }
 
@@ -89,8 +89,8 @@ internal open class NRLTestAndSet(private val threadsCount: Int) : TAS {
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
-            doorway.setAndFlush(false)
-            r[p].setAndFlush(4)
+            doorway.setToNVM(false)
+            r[p].setToNVM(4)
             for (i in 0 until p) {
                 wailUntil { r[i].value.let { it == 0 || it == 3 } }
             }
@@ -98,7 +98,7 @@ internal open class NRLTestAndSet(private val threadsCount: Int) : TAS {
                 wailUntil { r[i].value.let { it == 0 || it > 2 } }
             }
             if (winner.value == -1) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
@@ -162,20 +162,20 @@ internal class TestAndSetFailingTest8 : TestAndSetFailingTest() {
 internal class NRLFailingTestAndSet1(threadsCount: Int) : NRLTestAndSet(threadsCount) {
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
-        r[p].setAndFlush(1)
+        r[p].setToNVM(1)
         val returnValue: Int
         if (!doorway.value) {
             returnValue = 1
         } else {
-            r[p].setAndFlush(2)
-            // here should be doorway.setAndFlush(false)
+            r[p].setToNVM(2)
+            // here should be doorway.setToNVM(false)
             returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
             if (returnValue == 0) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].setToNVM(returnValue)
+        r[p].setToNVM(3)
         return returnValue
     }
 }
@@ -185,8 +185,8 @@ internal class NRLFailingTestAndSet2(private val threadsCount: Int) : NRLTestAnd
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
-            // here should be doorway.setAndFlush(false)
-            r[p].setAndFlush(4)
+            // here should be doorway.setToNVM(false)
+            r[p].setToNVM(4)
             for (i in 0 until p) {
                 wailUntil { r[i].value.let { it == 0 || it == 3 } }
             }
@@ -194,7 +194,7 @@ internal class NRLFailingTestAndSet2(private val threadsCount: Int) : NRLTestAnd
                 wailUntil { r[i].value.let { it == 0 || it > 2 } }
             }
             if (winner.value == -1) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
@@ -211,8 +211,8 @@ internal class NRLFailingTestAndSet3(private val threadsCount: Int) : NRLTestAnd
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
-            doorway.setAndFlush(false)
-            r[p].setAndFlush(4)
+            doorway.setToNVM(false)
+            r[p].setToNVM(4)
             for (i in 0 until /* here should be p*/ p - 1) {
                 wailUntil { r[i].value.let { it == 0 || it == 3 } }
             }
@@ -220,7 +220,7 @@ internal class NRLFailingTestAndSet3(private val threadsCount: Int) : NRLTestAnd
                 wailUntil { r[i].value.let { it == 0 || it > 2 } }
             }
             if (winner.value == -1) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
@@ -238,8 +238,8 @@ internal class NRLFailingTestAndSet4(private val threadsCount: Int) : NRLTestAnd
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
-            doorway.setAndFlush(false)
-            r[p].setAndFlush(4)
+            doorway.setToNVM(false)
+            r[p].setToNVM(4)
             for (i in 0 until p) {
                 wailUntil { r[i].value.let { it == 0 || it == 3 } }
             }
@@ -247,7 +247,7 @@ internal class NRLFailingTestAndSet4(private val threadsCount: Int) : NRLTestAnd
                 wailUntil { r[i].value.let { it == 0 || it > 2 } }
             }
             if (winner.value == -1) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
@@ -264,8 +264,8 @@ internal class NRLFailingTestAndSet5(private val threadsCount: Int) : NRLTestAnd
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
-            doorway.setAndFlush(false)
-            r[p].setAndFlush(4)
+            doorway.setToNVM(false)
+            r[p].setToNVM(4)
             for (i in 0 until p) {
                 wailUntil { r[i].value.let { it == 0 || it == 3 } }
             }
@@ -274,7 +274,7 @@ internal class NRLFailingTestAndSet5(private val threadsCount: Int) : NRLTestAnd
 //                wailUntil { r[i].value.let { it == 0 || it > 2 } }
 //            }
             if (winner.value == -1) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
         val returnValue = if (winner.value == p) 0 else 1
@@ -289,20 +289,20 @@ internal class NRLFailingTestAndSet5(private val threadsCount: Int) : NRLTestAnd
 internal class NRLFailingTestAndSet6(threadsCount: Int) : NRLTestAndSet(threadsCount) {
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
-        r[p].setAndFlush(1)
+        r[p].setToNVM(1)
         val returnValue: Int
         if (!doorway.value) {
             returnValue = 1
         } else {
-            r[p].setAndFlush(2)
-            doorway.setAndFlush(false)
+            r[p].setToNVM(2)
+            doorway.setToNVM(false)
             returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
             if (returnValue == 0) {
-                // here should be winner.setAndFlush(p)
+                // here should be winner.setToNVM(p)
             }
         }
-        response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        response[p].setToNVM(returnValue)
+        r[p].setToNVM(3)
         return returnValue
     }
 }
@@ -310,20 +310,20 @@ internal class NRLFailingTestAndSet6(threadsCount: Int) : NRLTestAndSet(threadsC
 internal class NRLFailingTestAndSet7(threadsCount: Int) : NRLTestAndSet(threadsCount) {
     @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
-        r[p].setAndFlush(1)
+        r[p].setToNVM(1)
         val returnValue: Int
         if (!doorway.value) {
             returnValue = 1
         } else {
-            r[p].setAndFlush(2)
-            doorway.setAndFlush(false)
+            r[p].setToNVM(2)
+            doorway.setToNVM(false)
             returnValue = if (tas.compareAndSet(0, 1)) 0 else 1
             if (returnValue == 0) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
-        // here should be response[p].setAndFlush(returnValue)
-        r[p].setAndFlush(3)
+        // here should be response[p].setToNVM(returnValue)
+        r[p].setToNVM(3)
         return returnValue
     }
 }
@@ -333,8 +333,8 @@ internal class NRLFailingTestAndSet8(private val threadsCount: Int) : NRLTestAnd
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
-            doorway.setAndFlush(false)
-            r[p].setAndFlush(4)
+            doorway.setToNVM(false)
+            r[p].setToNVM(4)
             // here should be
 //            for (i in 0 until p) {
 //                wailUntil { r[i].value.let { it == 0 || it == 3 } }
@@ -343,7 +343,7 @@ internal class NRLFailingTestAndSet8(private val threadsCount: Int) : NRLTestAnd
                 wailUntil { r[i].value.let { it == 0 || it > 2 } }
             }
             if (winner.value == -1) {
-                winner.setAndFlush(p)
+                winner.setToNVM(p)
             }
         }
         val returnValue = if (winner.value == p) 0 else 1

@@ -28,15 +28,6 @@ abstract class AbstractNonVolatilePrimitive {
     internal abstract fun flushInternal()
     internal abstract fun systemCrash()
 
-    //    T1               |      T2
-    //   CAS(0, 6)         |
-    //   flushInternal():  |
-    //      read: 6        |
-    //                     |   CAS(6, 0)
-    //                     |   flushInternal()
-    //                     |
-    //      write(6) <-- OUTDATED, should not happen!!!!!
-
     fun flush() {
         flushInternal()
         NVMCache.remove(NVMState.threadId(), this)
@@ -81,7 +72,8 @@ class NonVolatileRef<T> internal constructor(initialValue: T) : AbstractNonVolat
         volatileValue.value = nonVolatileValue
     }
 
-    fun setAndFlush(value: T) {
+    @Synchronized
+    fun setToNVM(value: T) {
         volatileValue.value = value
         flushInternal()
     }
@@ -118,7 +110,8 @@ class NonVolatileInt internal constructor(initialValue: Int) : AbstractNonVolati
         volatileValue.value = nonVolatileValue
     }
 
-    fun setAndFlush(value: Int) {
+    @Synchronized
+    fun setToNVM(value: Int) {
         volatileValue.value = value
         flushInternal()
     }
@@ -173,7 +166,8 @@ class NonVolatileLong internal constructor(initialValue: Long) : AbstractNonVola
         volatileValue.value = nonVolatileValue
     }
 
-    fun setAndFlush(value: Long) {
+    @Synchronized
+    fun setToNVM(value: Long) {
         volatileValue.value = value
         flushInternal()
     }
@@ -227,7 +221,8 @@ class NonVolatileBoolean internal constructor(initialValue: Boolean) : AbstractN
         volatileValue.value = nonVolatileValue
     }
 
-    fun setAndFlush(value: Boolean) {
+    @Synchronized
+    fun setToNVM(value: Boolean) {
         volatileValue.value = value
         flushInternal()
     }

@@ -96,9 +96,7 @@ internal open class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null)
         val tmp = register.value
         state[p].value = 1 to tmp
         state[p].flush()
-//        register.value = value 
-//        register.flush()
-        register.setAndFlush(value) // TODO is it possible to replace with code above?
+        register.setToNVM(value)
         state[p].value = 0 to value
         state[p].flush()
     }
@@ -178,7 +176,7 @@ internal class NRLFailingReadWriteObject1<T>(threadsCount: Int) : NRLReadWriteOb
         state[p].value = 1 to tmp
         // Otherwise the error is that a thread completes write operation twice.
         // here should be state[p].flush()
-        register.setAndFlush(value)
+        register.setToNVM(value)
         state[p].value = 0 to value
         state[p].flush()
     }
@@ -189,7 +187,7 @@ internal class NRLFailingReadWriteObject2<T>(threadsCount: Int) : NRLReadWriteOb
         val tmp = register.value
         state[p].value = 1 to tmp
         state[p].flush()
-        register.setAndFlush(value)
+        register.setToNVM(value)
         state[p].value = 0 to value
         // here should be state[p].flush()
     }
