@@ -21,11 +21,9 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
 
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
-import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
@@ -34,7 +32,7 @@ private const val THREADS_NUMBER = 3
 
 internal interface RecoverableQueue<T> {
     fun push(value: T)
-    fun pop(p: Int): T?
+    fun pop(): T?
     fun recover()
     fun sync()
 }
@@ -42,14 +40,14 @@ internal interface RecoverableQueue<T> {
 /**
  * @see  <a href="http://www.cs.technion.ac.il/~erez/Papers/nvm-queue-full.pdf">A Persistent Lock-Free Queue for Non-Volatile Memory</a>
  */
-internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class, false) {
+internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class) {
     private val q = RelaxedQueue<Int>()
 
     @Operation
     fun push(value: Int) = q.push(value).also { q.sync() }
 
     @Operation
-    fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId).also { q.sync() }
+    fun pop() = q.pop().also { q.sync() }
 
     @DurableRecoverAll
     fun recover() = q.recover().also { q.sync() }
@@ -97,7 +95,7 @@ internal open class RelaxedQueue<T> : RecoverableQueue<T> {
         }
     }
 
-    override fun pop(p: Int): T? {
+    override fun pop(): T? {
         while (true) {
             val first = head.value
             val last = tail.value
@@ -147,7 +145,7 @@ internal open class RelaxedQueue<T> : RecoverableQueue<T> {
     }
 
     protected open fun getSnapshot(): LatestData<T> {
-        val temp = Temp<T>(0)
+        var temp = Temp<T>(0)
         while (true) {
             val currentVersion = version.getAndIncrement()
             version.flush()
@@ -163,9 +161,16 @@ internal open class RelaxedQueue<T> : RecoverableQueue<T> {
                 }
             } else {
                 if (nextNode is Temp) {
-                    if (nextNode.version.value > currentVersion || nextNode.head.value == null) {
+                    if (nextNode.version.value >= currentVersion) {
                         help(nextNode)
-                        // do not decrease version !!
+                        temp = nextNode
+                        break
+                    }
+                    if (nextNode.head.compareAndSet(null, head.value)) {
+                        // performed CAS myself => head is fresh
+
+                        help(nextNode)
+                        // do not decrease version
                         temp.head.value = nextNode.head.value
                         temp.tail.value = nextNode.tail.value
                         break
@@ -209,7 +214,7 @@ internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest
     fun push(value: Int) = q.push(value).also { q.sync() }
 
     @Operation
-    fun pop(@Param(gen = ThreadIdGen::class) threadId: Int) = q.pop(threadId).also { q.sync() }
+    fun pop() = q.pop().also { q.sync() }
 
     @DurableRecoverAll
     fun recover() = q.recover().also { q.sync() }
@@ -243,7 +248,7 @@ internal class RelaxedFailingQueue1<T> : RelaxedQueue<T>() {
                 if (nextNode is Temp) {
                     if (nextNode.version.value > currentVersion || nextNode.head.value == null) {
                         help(nextNode)
-                        // version is decreased here
+                        // version is decreased here, head is not fresh
                         temp = nextNode
                         break
                     }
