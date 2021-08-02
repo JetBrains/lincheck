@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 
 private const val THREADS_NUMBER = 3
@@ -201,7 +202,7 @@ internal open class RelaxedQueue<T> : RecoverableQueue<T> {
 }
 
 
-internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class, false) {
+internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class, false) {
     internal abstract val q: RecoverableQueue<Int>
 
     @Operation

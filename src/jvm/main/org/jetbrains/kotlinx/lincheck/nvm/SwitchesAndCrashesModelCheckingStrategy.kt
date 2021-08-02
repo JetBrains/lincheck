@@ -284,4 +284,4 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
 private const val NO_CRASH_INITIATOR = -1
 
-private const val RANDOM_SEEDS_BRANCHING = 16
+private const val RANDOM_SEEDS_BRANCHING = 8
