@@ -22,7 +22,7 @@
 
 package org.jetbrains.kotlinx.lincheck.nvm
 
-const val SIZE = 4
+const val SIZE = 8
 
 /**
  * Set optimised for small number of elements.
