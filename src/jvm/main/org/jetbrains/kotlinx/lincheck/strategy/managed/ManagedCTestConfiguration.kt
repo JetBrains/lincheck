@@ -73,5 +73,4 @@ private fun isTrustedPrimitive(className: String) =
     className == "sun.misc.Unsafe" ||
     className == "jdk.internal.misc.Unsafe" ||
     className.startsWith("java.util.concurrent.atomic.Atomic") || // AFUs and Atomic[Integer/Long/...]
-    className.startsWith("kotlinx.atomicfu.Atomic") ||
-    className.startsWith("org.jetbrains.kotlinx.lincheck.nvm.api.")
+    className.startsWith("kotlinx.atomicfu.Atomic")
