@@ -60,7 +60,7 @@ internal class DurableMSQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THR
     fun recover() = q.recover()
 
     override fun <O : Options<O, *>> O.customize() {
-        iterations(25)
+        iterations(50)
     }
 }
 
