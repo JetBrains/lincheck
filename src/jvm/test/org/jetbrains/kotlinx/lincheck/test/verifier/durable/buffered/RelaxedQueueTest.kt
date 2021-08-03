@@ -19,6 +19,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
@@ -40,7 +41,7 @@ internal interface RecoverableQueue<T> {
 /**
  * @see  <a href="http://www.cs.technion.ac.il/~erez/Papers/nvm-queue-full.pdf">A Persistent Lock-Free Queue for Non-Volatile Memory</a>
  */
-internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class) {
+internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class, false) {
     private val q = RelaxedQueue<Int>()
 
     @Operation
@@ -51,6 +52,10 @@ internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THREA
 
     @DurableRecoverAll
     fun recover() = q.recover().also { q.sync() }
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(50)
+    }
 }
 
 internal open class QueueNode<T>(val next: NonVolatileRef<QueueNode<T>?> = nonVolatile(null), val v: T? = null)

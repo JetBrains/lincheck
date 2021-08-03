@@ -77,7 +77,7 @@ internal class CrashesManagedStrategyTransformer(
                 // then another thread initiates a system crash, force switches to the first thread
                 // which crashes immediately.
                 invokeBeforeNVMOperation()
-                if (name !== null && name.toLowerCase().contains("flush")) invokeBeforeCrashPoint()
+                if (name !== null && (name.toLowerCase().contains("flush") || name.contains("setToNVM"))) invokeBeforeCrashPoint()
             }
             adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
