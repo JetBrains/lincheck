@@ -24,6 +24,7 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Runnable
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeDispatcher.Companion.NodeDispatcherStatus.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -97,16 +98,18 @@ class AlreadyIncrementedCounter : AbstractCoroutineContextElement(Key) {
 /**
  * The dispatcher for executing task related to a single [Node] inside [org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner].
  */
-class NodeDispatcher(val id: Int,
-                     private val taskCounter: DispatcherTaskCounter,
-                     private val runnerHash: Int,
-                     private val executor: ExecutorService) :
+class NodeDispatcher(
+    val id: Int,
+    private val taskCounter: DispatcherTaskCounter,
+    private val runnerHash: Int,
+    private val executor: ExecutorService
+) :
     CoroutineDispatcher() {
     companion object {
         enum class NodeDispatcherStatus { RUNNING, STOPPED, CRASHED }
     }
 
-    private val status = atomic(RUNNING)
+    val status = atomic(RUNNING)
     private var nodeOperationCounter = 0
 
     /**
@@ -172,7 +175,7 @@ class NodeDispatcher(val id: Int,
      */
     fun shutdown() {
         status.lazySet(STOPPED)
-       // executor.shutdown()
+        // executor.shutdown()
     }
 
     /**

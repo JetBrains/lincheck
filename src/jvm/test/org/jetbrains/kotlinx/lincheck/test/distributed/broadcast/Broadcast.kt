@@ -30,6 +30,7 @@ import org.junit.Test
 import java.io.BufferedWriter
 import java.io.FileOutputStream
 import java.util.*
+
 val debugOutput = true
 fun addToFile(f: (BufferedWriter) -> Unit) {
     if (!debugOutput) return
@@ -57,6 +58,9 @@ fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().co
 abstract class AbstractPeer(protected val env: Environment<Message, Message>) : Node<Message> {
     @Validate
     fun check() {
+        if (env.nodeId == 0) {
+            // println("Number of nodes ${env.numberOfNodes}, failed ${env.numberOfNodes - env.correctProcesses().size}")
+        }
         //addToFile { it.appendLine(env.events().flatMap { it }.toString()) }
         // All messages were delivered at most once.
         check(env.log.isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
@@ -73,13 +77,23 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
         // If the message was delivered to one process, it was delivered to all correct processes.
         val logs = env.getLogs()
         env.log.forEach { m ->
-            env.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it" } }
+            env.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it, ${env.nodeId}" } }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
-            env.log.filter { it.from == i }.map { m -> env.sentMessages(i).map { it.message }.indexOf(m) }
+            env.log.filter { it.from == i }
+                .map { m ->
+                    env.sentMessages(i).map { it.message }.filter { it.from == i }.distinctBy { it.id }.indexOf(m)
+                }
         }
-        localMessagesOrder.forEach { check(it.sorted() == it) }
+        localMessagesOrder.forEach {
+            check(it.sorted() == it)
+            if (it.isNotEmpty()) {
+                for (i in 0..it.last()) {
+                    check(i in it)
+                }
+            }
+        }
     }
 }
 
@@ -90,6 +104,11 @@ class Peer(env: Environment<Message, Message>) : AbstractPeer(env) {
         PriorityQueue { x, y -> x.id - y.id }
     }
     private val lastDeliveredId = Array(env.numberOfNodes) { -1 }
+
+    override fun stateRepresentation(): String {
+        return "Received messages=${receivedMessages.toList()}, undelivered ${undeliveredMessages.toList()}, " +
+                "logs=${env.log.toList()}"
+    }
 
     private fun deliver(sender: Int) {
         while (undeliveredMessages[sender].isNotEmpty()) {
@@ -139,19 +158,19 @@ class BroadcastTest {
         .nodeType(Peer::class.java, 2, 4)
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
-        .minimizeFailedScenario(false)
-        //.storeLogsForFailedScenario("broadcast.txt")
+        .minimizeFailedScenario(true)
+        .storeLogsForFailedScenario("broadcast.txt")
         .check()
 
-    @Test//(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testMoreFailures() = createOptions()
-        .nodeType(Peer::class.java, 3)
-        .setMaxNumberOfFailedNodes { (it + 1) / 2 }
+        .nodeType(Peer::class.java, 5)
+        .setMaxNumberOfFailedNodes { it / 2 + 1 }
         .crashMode(CrashMode.NO_RECOVERIES)
         .invocationsPerIteration(50_000)
         .storeLogsForFailedScenario("broadcast.txt")
         .minimizeFailedScenario(false)
-        .setTestMode(TestingMode.MODEL_CHECKING)
+        //.setTestMode(TestingMode.MODEL_CHECKING)
         .check()
 
     @Test
@@ -160,15 +179,15 @@ class BroadcastTest {
         .nodeType(PeerIncorrect::class.java, 3)
         .check()
 
-    @Test//(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
-        //.storeLogsForFailedScenario("broadcast_incorrect.txt")
+        .storeLogsForFailedScenario("broadcast_incorrect.txt")
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
         .actorsPerThread(3)
-        .setTestMode(TestingMode.MODEL_CHECKING)
-        .invocationsPerIteration(50_000)
-        .minimizeFailedScenario(false)
-        .nodeType(PeerIncorrect::class.java, 3)
+        //.setTestMode(TestingMode.MODEL_CHECKING)
+        .invocationsPerIteration(100_000)
+        .minimizeFailedScenario(true)
+        .nodeType(PeerIncorrect::class.java, 4)
         .check()
 }

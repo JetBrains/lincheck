@@ -6,8 +6,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.util.*
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command> {
     private val storage = HashMap<Int, Int>()

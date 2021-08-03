@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongMessage
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongMock
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongNode
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
 sealed class TimerMessage
@@ -87,8 +88,8 @@ class SimpleTimerTest  {
             DistributedOptions<TimerMessage, Unit>()
                 .requireStateEquivalenceImplCheck(false)
                 .threads(2)
-                .invocationsPerIteration(100)
-                .iterations(100)
+                .invocationsPerIteration(10_000)
+                .iterations(1)
                 .sequentialSpecification(PingPongMock::class.java)
                 .actorsPerThread(2)
         )

@@ -32,7 +32,7 @@ enum class TestingMode {
 }
 
 
-class NodeTypeInfo(val minNumberOfInstances: Int, val maxNumberOfInstances: Int, val canFail: Boolean) {
+data class NodeTypeInfo(val minNumberOfInstances: Int, val maxNumberOfInstances: Int, val canFail: Boolean) {
     fun minimize() = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances - 1, canFail)
 }
 

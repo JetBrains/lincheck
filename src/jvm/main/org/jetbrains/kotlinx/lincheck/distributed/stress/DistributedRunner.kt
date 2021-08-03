@@ -26,6 +26,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.modelchecking.debugLogs
+import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
@@ -163,27 +165,27 @@ open class DistributedRunner<Message, Log>(
     private suspend fun receiveMessages(i: Int, sender: Int) {
         val channel = context.messageHandler[sender, i]
         val testInstance = context.testInstances[i]
-        while (true) {
-            val e = channel.receive()
-            //println("[$i]: Receive from ${e.first} ${e.second.message}")
-            val m = e.second
-            context.incClock(i)
-            val clock = context.maxClock(i, m.clock)
-            context.events.put(
-                i to
-                        MessageReceivedEvent(
-                            m.message,
-                            sender = e.first,
-                            id = m.id,
-                            clock = clock,
-                            state = context.getStateRepresentation(i)
-                        )
-            )
-            handleException(i) {
+        handleException(i) {
+            while (true) {
+                val e = channel.receive()
+                //println("[$i]: Receive from ${e.first} ${e.second.message}")
+                val m = e.second
+                context.incClock(i)
+                val clock = context.maxClock(i, m.clock)
+                context.events.put(
+                    i to
+                            MessageReceivedEvent(
+                                m.message,
+                                sender = e.first,
+                                id = m.id,
+                                clock = clock,
+                                state = context.getStateRepresentation(i)
+                            )
+                )
                 testInstance.onMessage(m.message, e.first)
-            }
-            withProbability(CONTEXT_SWITCH_PROBABILITY) {
-                yield()
+                withProbability(CONTEXT_SWITCH_PROBABILITY) {
+                    yield()
+                }
             }
         }
     }
@@ -292,7 +294,6 @@ open class DistributedRunner<Message, Log>(
         context.dispatchers[iNode].crash()
         environments[iNode].isFinished = true
         context.testNodeExecutions.getOrNull(iNode)?.crash()
-        environments[iNode].recordInternalEvent("${context.testNodeExecutions.getOrNull(iNode)?.results?.toList()}")
         if (testCfg.supportRecovery == CrashMode.ALL_NODES_RECOVER ||
             testCfg.supportRecovery == CrashMode.MIXED
             && context.probabilities[iNode].nodeRecovered()

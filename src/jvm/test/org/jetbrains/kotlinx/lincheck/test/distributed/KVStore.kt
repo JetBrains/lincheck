@@ -28,6 +28,8 @@ import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 sealed class Message
@@ -71,13 +73,14 @@ class Server(val env: Environment<Message, Unit>) : Node<Message> {
     }
 }
 
-class SeqSpec {
+class SeqSpec : VerifierState() {
     val storage = mutableMapOf<Int, Int>()
     @Operation
     suspend fun put(key : Int, value: Int) = storage.put(key, value)
 
     @Operation
     suspend fun get(key: Int) = storage[key]
+    override fun extractState(): Any = storage
 }
 
 class Test {
@@ -94,6 +97,7 @@ class Test {
     @Test(expected = LincheckAssertionError::class)
     fun testFail() = createOptions()
         .crashMode(CrashMode.ALL_NODES_RECOVER)
+        //.verifier(EpsilonVerifier::class.java)
         .setMaxNumberOfFailedNodes(Client::class.java) { it }
         .check()
 

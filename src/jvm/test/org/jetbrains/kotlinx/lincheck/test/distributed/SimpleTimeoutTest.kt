@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 sealed class PingPongMessage
@@ -61,7 +62,8 @@ class PingPongNode(val env: Environment<PingPongMessage, Unit>) : Node<PingPongM
     }
 }
 
-class PingPongMock {
+class PingPongMock : VerifierState() {
+    override fun extractState() = true
     suspend fun ping() = true
 }
 

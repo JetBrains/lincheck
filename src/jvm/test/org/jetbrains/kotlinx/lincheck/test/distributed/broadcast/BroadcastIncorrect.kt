@@ -32,12 +32,12 @@ class PeerIncorrect(env: Environment<Message, Message>) : AbstractPeer(env) {
 
     override fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
-        env.recordInternalEvent("On message $message ${receivedMessages[sender]}")
+        //env.recordInternalEvent("On message $message ${receivedMessages[sender]}")
         if (!receivedMessages[message.from].contains(msgId)) {
-            env.broadcast(message)
             receivedMessages[message.from].add(msgId)
             env.log.add(message)
-            env.recordInternalEvent("Add to log ${env.log}")
+            //env.recordInternalEvent("Add to log ${env.log}")
+            env.broadcast(message)
         }
     }
 

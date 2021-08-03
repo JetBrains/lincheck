@@ -109,8 +109,6 @@ class ChannelHandler<E>(
     operator fun get(sender: Int, receiver: Int) = channels[receiver].value!![sender]
 
     fun reset(i: Int) {
-        repeat(numberOfNodes) {
-            channels[it].lazySet(createChannels())
-        }
+        channels[i].lazySet(createChannels())
     }
 }
