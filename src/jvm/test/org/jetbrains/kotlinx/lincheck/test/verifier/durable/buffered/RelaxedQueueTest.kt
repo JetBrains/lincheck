@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
@@ -212,7 +213,7 @@ internal open class RelaxedQueue<T> : RecoverableQueue<T> {
 }
 
 
-internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class, false) {
+internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class) {
     internal abstract val q: RecoverableQueue<Int>
 
     @Operation
@@ -227,10 +228,36 @@ internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest
 
 internal class RelaxedQueueFailingTest1 : RelaxedQueueFailingTest() {
     override val q = RelaxedFailingQueue1<Int>()
+    override fun ModelCheckingOptions.customize() {
+        invocationsPerIteration(1e6.toInt())
+        iterations(0)
+        addCustomScenario {
+            iterations(0)
+            initial { actor(::push, 1) }
+            parallel {
+                thread { actor(::push, 2) }
+                thread { actor(::pop); actor(::pop) }
+            }
+            post { actor(::pop) }
+        }
+    }
 }
 
 internal class RelaxedQueueFailingTest2 : RelaxedQueueFailingTest() {
     override val q = RelaxedFailingQueue2<Int>()
+    override fun ModelCheckingOptions.customize() {
+        invocationsPerIteration(1e6.toInt())
+        iterations(0)
+        addCustomScenario {
+            iterations(0)
+            initial { actor(::push, 1) }
+            parallel {
+                thread { actor(::push, 2) }
+                thread { actor(::pop); actor(::pop) }
+            }
+            post { actor(::pop) }
+        }
+    }
 }
 
 internal class RelaxedFailingQueue1<T> : RelaxedQueue<T>() {
