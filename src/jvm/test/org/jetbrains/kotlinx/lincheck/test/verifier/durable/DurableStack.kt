@@ -23,12 +23,13 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.durable
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
+import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
 private const val THREADS = 3
 
-class DurableStackTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS, SequentialStack::class) {
+internal class DurableStackTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS, SequentialStack::class) {
     private val stack = DurableStack()
 
     @Operation
@@ -47,12 +48,12 @@ internal class SequentialStack : VerifierState() {
     override fun extractState() = stack
 }
 
-private class Node(val next: Node? = null, val value: Int = 0)
+internal class Node(val next: Node? = null, val value: Int = 0)
 
-internal class DurableStack {
-    private val head = nonVolatile<Node?>(null)
+internal open class DurableStack {
+    internal val head = nonVolatile<Node?>(null)
 
-    fun push(v: Int) {
+    open fun push(v: Int) {
         while (true) {
             val cur = head.value
             if (head.compareAndSet(cur, Node(cur, v))) {
@@ -62,7 +63,7 @@ internal class DurableStack {
         }
     }
 
-    fun pop(): Int? {
+    open fun pop(): Int? {
         while (true) {
             val cur = head.value
             if (cur === null) {
@@ -73,6 +74,74 @@ internal class DurableStack {
             if (head.compareAndSet(cur, next)) {
                 head.flush()
                 return cur.value
+            }
+        }
+    }
+}
+
+internal abstract class DurableStackFailingTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS, SequentialStack::class) {
+    abstract val stack: DurableStack
+
+    @Operation
+    fun push(v: Int): Unit = stack.push(v)
+
+    @Operation
+    fun pop(): Int? = stack.pop()
+}
+
+internal class DurableStackFailingTest1 : DurableStackFailingTest() {
+    override val stack = DurableFailingStack1()
+}
+
+internal class DurableStackFailingTest2 : DurableStackFailingTest() {
+    override val stack = DurableFailingStack2()
+}
+
+internal class DurableStackFailingTest3 : DurableStackFailingTest() {
+    override val stack = DurableFailingStack3()
+}
+
+internal open class DurableFailingStack1 : DurableStack() {
+    override fun pop(): Int? {
+        while (true) {
+            val cur = head.value
+            if (cur === null) {
+                // here should be head.flush()
+                return null
+            }
+            val next = cur.next
+            if (head.compareAndSet(cur, next)) {
+                head.flush()
+                return cur.value
+            }
+        }
+    }
+}
+
+internal open class DurableFailingStack2 : DurableStack() {
+    override fun pop(): Int? {
+        while (true) {
+            val cur = head.value
+            if (cur === null) {
+                head.flush()
+                return null
+            }
+            val next = cur.next
+            if (head.compareAndSet(cur, next)) {
+                // here should be head.flush()
+                return cur.value
+            }
+        }
+    }
+}
+
+internal open class DurableFailingStack3 : DurableStack() {
+    override fun push(v: Int) {
+        while (true) {
+            val cur = head.value
+            if (head.compareAndSet(cur, Node(cur, v))) {
+                // here should be head.flush()
+                return
             }
         }
     }
