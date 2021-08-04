@@ -182,14 +182,13 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     private inner class SwitchOrCrashChoosingNode : InterleavingTreeNode() {
         init {
-            choices = if (recoverModel.nonSystemCrashSupported())
-                listOf(
-                    Choice(SwitchChoosingNode(), 0),
-                    Choice(CrashChoosingNode(true), 1),
-                    Choice(CrashChoosingNode(false), 2)
-                )
-            else
-                listOf(Choice(SwitchChoosingNode(), 0), Choice(CrashChoosingNode(true), 1))
+            choices = mutableListOf<Choice>().apply {
+                add(Choice(SwitchChoosingNode(), 0))
+                add(Choice(createCrashChoosingNode(true), 1))
+                if (recoverModel.nonSystemCrashSupported()) {
+                    add(Choice(createCrashChoosingNode(false), 2))
+                }
+            }.toList()
         }
 
         override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {
@@ -200,7 +199,9 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         }
     }
 
-    private inner class AfterCrashRandomChoosingNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode() {
+    private fun createCrashChoosingNode(isSystemCrash: Boolean): InterleavingTreeNode = FlushRandomChoosingNode { CrashChoosingNode(isSystemCrash) }
+
+    private inner class FlushRandomChoosingNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode() {
         init {
             choices = List(RANDOM_SEEDS_BRANCHING) { Choice(createChild(), Probability.generateSeed()) }
         }
@@ -237,7 +238,13 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
         fun isCrashPosition() = executionPosition in crashPositions
         fun isSystemCrash() = executionPosition !in nonSystemCrashes
-        fun chooseRandomSeed() = nextRandomSeed.next()
+        fun chooseRandomSeed() = if (nextRandomSeed.hasNext()) {
+            check(explorationType == ExplorationNodeType.CRASH || explorationType == ExplorationNodeType.NONE || crashPositions.any { it > executionPosition })
+            nextRandomSeed.next()
+        } else {
+            check(explorationType != ExplorationNodeType.CRASH && crashPositions.all { it <= executionPosition })
+            0
+        }
 
         /**
          * Creates a new execution position that corresponds to the current switch/crash point.
@@ -261,9 +268,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
             val moreCrashesPermitted = crashes < recoverModel.defaultExpectedCrashes()
             return when (explorationType) {
                 ExplorationNodeType.SWITCH -> ThreadChoosingNodeWithCrashes(switchableThreads(iThread), moreCrashesPermitted)
-                ExplorationNodeType.CRASH -> AfterCrashRandomChoosingNode {
-                    if (moreCrashesPermitted) SwitchOrCrashChoosingNode() else SwitchChoosingNode()
-                }
+                ExplorationNodeType.CRASH -> if (moreCrashesPermitted) SwitchOrCrashChoosingNode() else SwitchChoosingNode()
                 ExplorationNodeType.NONE -> error("Cannot create child for no exploration node")
             }
         }
@@ -276,7 +281,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     internal inner class SwitchesAndCrashesInterleavingBuilder : InterleavingBuilder<SwitchesAndCrashesInterleaving>() {
         private val crashPositions = mutableListOf<Int>()
         private val nonSystemCrashes = mutableListOf<Int>()
-        private val randomSeeds = mutableListOf(Probability.generateSeed())
+        private val randomSeeds = mutableListOf<Int>()
         override val numberOfEvents get() = switchPositions.size + crashPositions.size
 
         fun addCrashPosition(crashPosition: Int, isSystemCrash: Boolean) {
