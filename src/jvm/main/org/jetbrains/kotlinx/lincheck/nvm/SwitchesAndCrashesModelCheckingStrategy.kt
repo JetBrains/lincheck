@@ -69,6 +69,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     override fun newCrashPoint(iThread: Int) {
         if (!isTestThread(iThread)) return // can crash only test threads
+        if (inIgnoredSection(iThread)) return // cannot crash in ignored sections
         check(iThread == currentThread)
         val isSystemCrash = waitingSystemCrash()
         val shouldCrash = shouldCrash(iThread) || isSystemCrash
