@@ -31,7 +31,6 @@ import kotlin.reflect.jvm.javaMethod
 
 private const val RECOVER_DESCRIPTOR = "()V"
 private const val RECOVER_ALL_GENERATED_NAME = "__recoverAll__"
-private const val RECOVER_ALL_GENERATED_DESCRIPTOR = RECOVER_DESCRIPTOR
 private const val RECOVER_ALL_GENERATED_ACCESS =
     Opcodes.ACC_PRIVATE or Opcodes.ACC_SYNCHRONIZED or Opcodes.ACC_SYNTHETIC
 private val CRASH_TYPE = Type.getType(Crash::class.java)
@@ -99,11 +98,11 @@ internal class DurableRecoverAllGenerator(cv: ClassVisitor, _class: Class<*>) : 
         super.visitMethod(
             RECOVER_ALL_GENERATED_ACCESS,
             RECOVER_ALL_GENERATED_NAME,
-            RECOVER_ALL_GENERATED_DESCRIPTOR,
+            RECOVER_DESCRIPTOR,
             null,
             emptyArray()
         ),
-        RECOVER_ALL_GENERATED_ACCESS, RECOVER_ALL_GENERATED_NAME, RECOVER_ALL_GENERATED_DESCRIPTOR
+        RECOVER_ALL_GENERATED_ACCESS, RECOVER_ALL_GENERATED_NAME, RECOVER_DESCRIPTOR
     ).run {
         visitCode()
         generateRecoverCode(Type.getInternalName(recoverAllMethod!!.declaringClass), recoverAllMethod.name)
@@ -157,24 +156,7 @@ private class DurableRecoverOperationTransformer(
         val recoverAll = cv.recoverAllMethod
         val recoverPerThread = cv.recoverPerThreadMethod
         if (recoverAll !== null) {
-            val endLabel = newLabel()
-            visitMethodInsn(
-                Opcodes.INVOKESTATIC,
-                CRASH_TYPE.internalName,
-                CRASH_IS_CRASHED.name,
-                CRASH_IS_CRASHED.descriptor,
-                false
-            )
-            visitJumpInsn(Opcodes.IFEQ, endLabel)
-            loadThis()
-            mv.visitMethodInsn(
-                Opcodes.INVOKEVIRTUAL,
-                cv.name,
-                RECOVER_ALL_GENERATED_NAME,
-                RECOVER_ALL_GENERATED_DESCRIPTOR,
-                false
-            )
-            mark(endLabel)
+            generateRecoverCode(cv.name, RECOVER_ALL_GENERATED_NAME)
         } else if (recoverPerThread !== null) {
             generateRecoverCode(cv.name, recoverPerThread.name)
         }
