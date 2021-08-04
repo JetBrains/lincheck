@@ -69,7 +69,6 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     override fun newCrashPoint(iThread: Int) {
         if (!isTestThread(iThread)) return // can crash only test threads
-        if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
         val isSystemCrash = waitingSystemCrash()
         val shouldCrash = shouldCrash(iThread) || isSystemCrash
@@ -89,9 +88,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     }
 
     private fun onNewCrash(iThread: Int, mustCrash: Boolean) {
-        if (mustCrash) {
-            currentInterleaving.newExecutionCrashPosition(iThread)
-        } else {
+        if (!mustCrash) {
             Probability.resetRandom(currentInterleaving.chooseRandomSeed())
         }
     }
@@ -248,9 +245,10 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
             max(switchPositions.lastOrNull() ?: -1, crashPositions.lastOrNull() ?: -1)
 
         private fun createChildNode(iThread: Int): InterleavingTreeNode {
-            val moreCrashesPermitted = crashPositions.size < recoverModel.defaultExpectedCrashes()
+            val crashes = crashPositions.size + (explorationType == ExplorationNodeType.CRASH).toInt()
+            val moreCrashesPermitted = crashes < recoverModel.defaultExpectedCrashes()
             return when (explorationType) {
-                ExplorationNodeType.SWITCH -> ThreadChoosingNodeWithCrashes(switchableThreads(iThread))
+                ExplorationNodeType.SWITCH -> ThreadChoosingNodeWithCrashes(switchableThreads(iThread), moreCrashesPermitted)
                 ExplorationNodeType.CRASH -> AfterCrashRandomChoosingNode {
                     if (moreCrashesPermitted) SwitchOrCrashChoosingNode() else SwitchChoosingNode()
                 }
@@ -304,3 +302,5 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 private const val NO_CRASH_INITIATOR = -1
 
 private const val RANDOM_SEEDS_BRANCHING = 4
+
+private fun Boolean.toInt() = if (this) 1 else 0
