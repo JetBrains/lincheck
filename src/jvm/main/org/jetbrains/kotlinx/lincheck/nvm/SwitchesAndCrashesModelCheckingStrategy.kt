@@ -71,14 +71,13 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         if (!isTestThread(iThread)) return // can crash only test threads
         if (inIgnoredSection(iThread)) return // cannot crash in ignored sections
         check(iThread == currentThread)
-        val isSystemCrash = waitingSystemCrash()
-        val shouldCrash = shouldCrash(iThread) || isSystemCrash
-        if (shouldCrash) {
-            val initializeSystemCrash = !isSystemCrash && isSystemCrash(iThread)
-            if (initializeSystemCrash) {
+        check(!waitingSystemCrash()) { "This case must be handled in await." }
+        if (shouldCrash(iThread)) {
+            val systemCrash = isSystemCrash(iThread)
+            if (systemCrash) {
                 systemCrashInitiator = iThread
             }
-            crashCurrentThread(iThread, isSystemCrash, initializeSystemCrash)
+            crashCurrentThread(iThread, systemCrash, systemCrash)
         }
         // continue the operation
     }
@@ -120,7 +119,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     override fun awaitTurn(iThread: Int) {
         super.awaitTurn(iThread)
         if (waitingSystemCrash() && systemCrashInitiator != iThread) {
-            crashCurrentThread(iThread, mustCrash = true, initializeSystemCrash = false)
+            crashCurrentThread(iThread, systemCrash = true, initializeSystemCrash = false)
         }
     }
 
@@ -143,11 +142,10 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     private fun switchableActiveThreads(iThread: Int) = switchableThreads(iThread).filter { started[it] }
 
-    private fun crashCurrentThread(iThread: Int, mustCrash: Boolean, initializeSystemCrash: Boolean) {
-        val systemCrash = mustCrash || initializeSystemCrash
+    private fun crashCurrentThread(iThread: Int, systemCrash: Boolean, initializeSystemCrash: Boolean) {
         val reason = if (systemCrash) CrashReason.SYSTEM_CRASH else CrashReason.CRASH
         traceCollector?.newCrash(iThread, reason)
-        onNewCrash(iThread, mustCrash)
+        onNewCrash(iThread, systemCrash && !initializeSystemCrash)
         Crash.crash(iThread + 1, null, systemCrash)
     }
 
