@@ -303,6 +303,7 @@ internal abstract class AbstractModelCheckingStrategy<
         }
 
         fun addThreadSwitchChoice(iThread: Int) {
+            check(threadSwitchChoices.lastOrNull() != iThread) { "Cannot switch to the same thread!" }
             threadSwitchChoices.add(iThread)
         }
 
