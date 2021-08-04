@@ -111,6 +111,19 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         started[iThread] = true
     }
 
+    override fun onFinish(iThread: Int) {
+        check(!waitingSystemCrash())
+        super.onFinish(iThread)
+    }
+
+    override fun awaitTurn(iThread: Int) {
+        super.awaitTurn(iThread)
+        if (waitingSystemCrash() && systemCrashInitiator != iThread) {
+            crashCurrentThread(iThread, mustCrash = true, initializeSystemCrash = false)
+        }
+    }
+
+
     private fun forceSwitchToAwaitSystemCrash() {
         check(waitingSystemCrash())
         val iThread = currentThread
