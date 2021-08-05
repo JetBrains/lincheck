@@ -20,19 +20,20 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
-import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
 private const val THREADS = 3
 
 @Param(name = "key", gen = IntGen::class, conf = "0:3")
-internal class CASTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS, SequentialCAS::class) {
+internal class CASTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS, SequentialCAS::class) {
     private val cas = DurableCAS()
 
     @Operation
@@ -40,6 +41,14 @@ internal class CASTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS, Seque
 
     @Operation
     fun cas(@Param(name = "key") old: Int, @Param(name = "key") new: Int) = cas.cas(old, new).also { cas.sync() }
+
+    override fun <O : Options<O, *>> O.customize() {
+        threads(2)
+    }
+
+    override fun StressOptions.customize() {
+        invocationsPerIteration(1e5.toInt())
+    }
 }
 
 internal class SequentialCAS : VerifierState() {
@@ -52,6 +61,10 @@ internal class SequentialCAS : VerifierState() {
 }
 
 private const val DIRTY = 1 shl 20
+
+/**
+ * @see  <a href="http://justinlevandoski.org/papers/mwcas.pdf">Easy Lock-Free Indexing in Non-Volatile Memory</a>
+ */
 internal open class DurableCAS {
     protected val word = nonVolatile(0)
 
@@ -59,6 +72,11 @@ internal open class DurableCAS {
         val data = word.value
         if ((data and DIRTY) != 0) {
             word.flush()
+            /*
+            ABA problem here.
+            We mark value as flushed meaning the old cas.
+            The other thread sees the value flushed the new cas.
+             */
             word.compareAndSet(data, data and DIRTY.inv())
         }
         return data and DIRTY.inv()
@@ -94,9 +112,6 @@ internal class CASFailingTest1 : CASFailingTest() {
 }
 
 
-/**
- * @see  <a href="http://justinlevandoski.org/papers/mwcas.pdf">Easy Lock-Free Indexing in Non-Volatile Memory</a>
- */
 internal open class DurableFailingCAS1 : DurableCAS() {
     override fun cas(old: Int, new: Int): Boolean {
         read()
