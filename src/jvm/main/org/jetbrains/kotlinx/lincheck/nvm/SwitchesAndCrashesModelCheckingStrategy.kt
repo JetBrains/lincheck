@@ -318,6 +318,6 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
 private const val NO_CRASH_INITIATOR = -1
 
-private const val RANDOM_SEEDS_BRANCHING = 4
+private const val RANDOM_SEEDS_BRANCHING = 1
 
 private fun Boolean.toInt() = if (this) 1 else 0
