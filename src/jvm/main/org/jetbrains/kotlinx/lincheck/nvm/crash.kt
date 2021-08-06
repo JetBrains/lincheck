@@ -88,7 +88,6 @@ object Crash {
      * @throws CrashError
      */
     internal fun crash(threadId: Int, ste: StackTraceElement?, systemCrash: Boolean) {
-        if (!systemCrash) NVMCache.crash(threadId)
         if (awaitSystemCrashBeforeThrow && systemCrash) awaitSystemCrash()
         val crash = createCrash(ste)
         NVMState.registerCrash(threadId, crash)

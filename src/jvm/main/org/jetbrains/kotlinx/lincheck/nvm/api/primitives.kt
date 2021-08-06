@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.NVMState
 import org.jetbrains.kotlinx.lincheck.nvm.Probability
 
 abstract class AbstractNonVolatilePrimitive {
-    internal abstract fun flushInternal()
+    protected abstract fun flushInternal()
     internal abstract fun systemCrash()
 
     fun flush() {

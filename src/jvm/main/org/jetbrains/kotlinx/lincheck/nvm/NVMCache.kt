@@ -29,14 +29,6 @@ object NVMCache {
 
     private val cache = Array<SmartSet<AbstractNonVolatilePrimitive>?>(MAX_THREADS_NUMBER) { null }
 
-    /** Flushes all local variables of thread. */
-    internal fun flushAll() {
-        val threadId = NVMState.threadId()
-        val localCache = cache[threadId] ?: return
-        localCache.forEach { it.flushInternal() }
-        localCache.clear()
-    }
-
     internal fun add(threadId: Int, variable: AbstractNonVolatilePrimitive) {
         val localCache = cache[threadId] ?: SmartSet<AbstractNonVolatilePrimitive>().also { cache[threadId] = it }
         localCache.add(variable)
@@ -45,11 +37,6 @@ object NVMCache {
     internal fun remove(threadId: Int, variable: AbstractNonVolatilePrimitive) {
         val localCache = cache[threadId] ?: return
         localCache.remove(variable)
-    }
-
-    internal fun crash(threadId: Int) {
-        val localCache = cache[threadId] ?: return
-        localCache.clear()
     }
 
     internal fun systemCrash() {
