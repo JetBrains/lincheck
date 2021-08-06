@@ -79,7 +79,7 @@ abstract class AbstractNVMLincheckTest(
     }
 
     @Test
-    fun testWithStressStrategy(): Unit = StressOptions().run {
+    open fun testWithStressStrategy(): Unit = StressOptions().run {
         commonConfiguration()
         customize()
         runInternalTest()
