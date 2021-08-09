@@ -28,8 +28,8 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.OperationIdGen
 import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
-import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
-import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
 private const val THREADS_NUMBER = 3

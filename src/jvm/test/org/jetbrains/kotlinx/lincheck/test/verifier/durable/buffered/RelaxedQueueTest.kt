@@ -27,8 +27,8 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
-import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckFailingTest
-import org.jetbrains.kotlinx.lincheck.test.verifier.nlr.AbstractNVMLincheckTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckTest
 
 private const val THREADS_NUMBER = 3
 
