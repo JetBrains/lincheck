@@ -82,7 +82,7 @@ public class TestThreadExecutionGenerator {
     private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
 
     private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
-    private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
+    public static final Type RESULT_KT_TYPE = getType(ResultKt.class);
     private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);

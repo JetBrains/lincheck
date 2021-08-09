@@ -150,7 +150,7 @@ class LTS(sequentialSpecification: Class<*>) {
                 (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended && allowExtraSuspension) ||
             this == VoidResult && transitionInfo.result == SuspendedVoidResult ||
             this == SuspendedVoidResult && transitionInfo.result == VoidResult && allowExtraSuspension ||
-            this == CrashResult
+            this is CrashResult
 
 
         private inline fun <T> copyAndApply(

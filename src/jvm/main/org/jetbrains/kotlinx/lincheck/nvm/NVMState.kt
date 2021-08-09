@@ -21,8 +21,10 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
+import org.jetbrains.kotlinx.lincheck.CrashResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
+import java.util.*
 
 private class InvalidThreadIdStateError(s: String) : Throwable(s)
 
@@ -39,6 +41,7 @@ object NVMState {
     internal var crashesEnabled = false
 
     private var crashes = initCrashes()
+    private lateinit var crashResults: MutableList<CrashResult>
     private val crashesCount = atomic(0)
     private val maxCrashesPerThread = atomic(0)
     private val executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER) { -1 }
@@ -64,6 +67,17 @@ object NVMState {
             if (curMax >= myThreadCrashes) break
             if (maxCrashesPerThread.compareAndSet(curMax, myThreadCrashes)) break
         }
+    }
+
+    internal fun registerCrash(crashResult: CrashResult) {
+        crashResults.add(crashResult)
+    }
+
+    internal fun setCrashActors() {
+        for (result in crashResults) {
+            result.crashedActors = IntArray(threads) { t -> executedActors[t] }
+        }
+        crashResults.clear()
     }
 
     internal fun clearCrashes() = crashes.also {
@@ -97,6 +111,7 @@ object NVMState {
         crashesEnabled = false
         threads = 0
         clearCrashes()
+        crashResults = Collections.synchronizedList(mutableListOf())
     }
 
     fun beforeInit(recoverModel: RecoverabilityModel) {

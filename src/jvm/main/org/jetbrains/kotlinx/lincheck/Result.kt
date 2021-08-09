@@ -1,5 +1,6 @@
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.nvm.NVMState
 import java.io.Serializable
 import kotlin.coroutines.*
 
@@ -140,12 +141,24 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
     lateinit var by: Actor
 }
 
-object CrashResult : Result() {
+
+class CrashResult : Result() {
+    var crashedActors: IntArray? = null
     override val wasSuspended get() = false
     override fun toString() = "CRASH"
 
-    @Suppress("unused") // for byte-code generation
-    @JvmSynthetic
-    @JvmStatic
-    fun creteCrashResult() = CrashResult
+    override fun hashCode() = crashedActors.contentHashCode()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CrashResult) return false
+        return crashedActors.contentEquals(other.crashedActors)
+    }
+}
+
+// for byte-code generation
+@JvmSynthetic
+fun createCrashResult(): CrashResult {
+    val result = CrashResult()
+    NVMState.registerCrash(result)
+    return result
 }

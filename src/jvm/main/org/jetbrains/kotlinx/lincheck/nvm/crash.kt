@@ -129,6 +129,7 @@ object Crash {
     internal fun onSystemCrash() {
         systemCrashOccurred.compareAndSet(false, true)
         NVMCache.systemCrash()
+        NVMState.setCrashActors()
     }
 
     /** Should be called when thread finished. */

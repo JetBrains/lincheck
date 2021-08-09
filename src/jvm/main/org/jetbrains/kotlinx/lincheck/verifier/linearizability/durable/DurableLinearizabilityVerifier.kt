@@ -53,7 +53,7 @@ private class DurableLinearizabilityContext : AbstractLinearizabilityContext {
     override fun processResult(container: AbstractLinearizabilityContext.Container, threadId: Int) {
         val actorId = executed[threadId]
         val expectedResult = results[threadId][actorId]
-        if (expectedResult == CrashResult) {
+        if (expectedResult is CrashResult) {
             container.addContext(skipOperation(threadId))
         }
     }

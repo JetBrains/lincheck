@@ -32,7 +32,7 @@ import kotlin.reflect.jvm.javaMethod
 
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
-private val CRASH_RESULT_CREATE_CRASH_RESULT_METHOD = Method.getMethod(CrashResult::creteCrashResult.javaMethod)
+private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("createCrashResult", CRASH_RESULT_TYPE, emptyArray())
 private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val CRASH_AWAIT_SYSTEM_CRASH = Method.getMethod(Crash::awaitSystemCrash.javaMethod)
 private val SET_USE_CLOCKS = Method("useClocksOnce", Type.VOID_TYPE, emptyArray())
@@ -66,7 +66,7 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.loadLocal(iLocal)
 
         // Create crash result instance
-        mv.invokeStatic(CRASH_RESULT_TYPE, CRASH_RESULT_CREATE_CRASH_RESULT_METHOD)
+        mv.invokeStatic(TestThreadExecutionGenerator.RESULT_KT_TYPE, RESULT_KT_CREATE_CRASH_RESULT_METHOD)
         mv.checkCast(RESULT_TYPE)
         mv.arrayStore(RESULT_TYPE)
 
