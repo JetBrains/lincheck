@@ -92,7 +92,7 @@ abstract class ManagedStrategy(
     private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
-    // Stores the currently execuring methods call stack for each thread.
+    // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
     // Stores the global number of method calls.
     private var methodCallNumber = 0
@@ -225,7 +225,7 @@ abstract class ManagedStrategy(
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendln("== Reporting the first execution without execution trace ==")
-                appendln(failingResult.asLincheckFailureWithoutTrace())
+                appendln(failingResult.toLincheckFailure(scenario, null))
                 appendln("== Reporting the second execution ==")
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace, testCfg.verboseTrace)).toString())
             }.toString()
@@ -692,12 +692,6 @@ abstract class ManagedStrategy(
         } else {
             nThreads
         }
-    }
-
-    private fun InvocationResult.asLincheckFailureWithoutTrace(): LincheckFailure {
-        if (this is CompletedInvocationResult)
-            return IncorrectResultsFailure(scenario, results, null)
-        return toLincheckFailure(scenario, null)
     }
 
     /**
