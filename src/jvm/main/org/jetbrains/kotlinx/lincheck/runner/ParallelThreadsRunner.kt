@@ -319,6 +319,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun beforeInit() = executionCallback.beforeInit(scenario, recoverModel)
+    protected open fun beforeStart(iThread: Int) = executionCallback.onStart(iThread)
     private fun beforeParallel(threads: Int) = executionCallback.beforeParallel(threads)
     private fun beforePost() = executionCallback.beforePost()
     private fun afterPost() = executionCallback.afterPost()
@@ -342,7 +343,7 @@ internal open class ParallelThreadsRunner(
 
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
-        executionCallback.onStart(iThread)
+        beforeStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1

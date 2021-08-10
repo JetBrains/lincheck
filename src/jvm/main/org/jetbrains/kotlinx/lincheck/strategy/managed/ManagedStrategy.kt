@@ -770,6 +770,10 @@ internal class ManagedStrategyRunner(
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         managedStrategy.onStart(iThread)
+        super.beforeStart(iThread)
+    }
+
+    override fun beforeStart(iThread: Int) {
     }
 
     override fun onFinish(iThread: Int) {

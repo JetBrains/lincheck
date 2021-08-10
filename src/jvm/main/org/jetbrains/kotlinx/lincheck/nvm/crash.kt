@@ -22,6 +22,8 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
+import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -70,6 +72,10 @@ object Crash {
     internal val threads get() = context.value.threads
 
     @Volatile
+    private var execution: TestThreadExecution? = null
+    private val activeThreads = Collections.synchronizedList(mutableListOf<Int>())
+
+    @Volatile
     var useProxyCrash = true
 
     @Volatile
@@ -88,7 +94,7 @@ object Crash {
      * @throws CrashError
      */
     internal fun crash(threadId: Int, ste: StackTraceElement?, systemCrash: Boolean) {
-        if (awaitSystemCrashBeforeThrow && systemCrash) awaitSystemCrash()
+        if (awaitSystemCrashBeforeThrow && systemCrash) awaitSystemCrash(null)
         val crash = createCrash(ste)
         NVMState.registerCrash(threadId, crash)
         throw crash
@@ -113,7 +119,10 @@ object Crash {
      * Await for all active threads to access this point and crash the cache.
      */
     @JvmStatic
-    fun awaitSystemCrash() = barrierCallback()
+    fun awaitSystemCrash(execution: TestThreadExecution?) {
+        Crash.execution = execution
+        barrierCallback()
+    }
 
     private fun defaultAwaitSystemCrash() {
         var free: AtomicBoolean
@@ -130,10 +139,15 @@ object Crash {
         systemCrashOccurred.compareAndSet(false, true)
         NVMCache.systemCrash()
         NVMState.setCrashActors()
+        val exec = execution ?: return
+        activeThreads.forEach {
+            exec.allThreadExecutions[it - 1].incClock()
+        }
     }
 
     /** Should be called when thread finished. */
     fun exit() {
+        activeThreads.remove(NVMState.threadId())
         while (true) {
             val c = context.value
             val newThreads = c.threads - 1
@@ -149,12 +163,15 @@ object Crash {
             if (currentContext.waitingThreads != 0) continue
             if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads + 1))) break
         }
+        activeThreads.add(NVMState.threadId())
     }
 
     fun reset(recoverModel: RecoverabilityModel) {
         awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
         context.value = SystemContext(0, 0)
         resetAllCrashed()
+        execution = null
+        activeThreads.clear()
     }
 
     fun resetDefault() {

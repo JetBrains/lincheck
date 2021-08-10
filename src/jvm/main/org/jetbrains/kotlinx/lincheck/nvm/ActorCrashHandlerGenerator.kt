@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.Result
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator
 import org.objectweb.asm.Label
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
@@ -70,13 +71,14 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.checkCast(RESULT_TYPE)
         mv.arrayStore(RESULT_TYPE)
 
-        // clock increment must go before barrier
-        TestThreadExecutionGenerator.incrementClock(mv, iLocal)
+        // Increment number of current operation
+        mv.iinc(iLocal, 1)
 
         // force read clocks for next actor
         mv.loadThis()
         mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, SET_USE_CLOCKS)
 
+        mv.loadThis()
         mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
 
         mv.goTo(skip)
@@ -100,6 +102,7 @@ class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandlerGenerator
         mv.goTo(afterActor)
         mv.visitLabel(handlerLabel)
         mv.pop()
+        mv.visitInsn(Opcodes.ACONST_NULL)
         mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
         mv.goTo(startLabel)
         mv.visitLabel(afterActor)
