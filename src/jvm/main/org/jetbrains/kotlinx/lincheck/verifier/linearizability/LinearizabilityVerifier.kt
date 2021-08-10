@@ -53,6 +53,7 @@ private class LinearizabilityContext : AbstractLinearizabilityContext {
     }
 
     override fun createContext(
+        threadId: Int,
         scenario: ExecutionScenario,
         results: ExecutionResult,
         state: LTS.State,

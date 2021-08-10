@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.nvm.DurableModel
+import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.nvm.StrategyRecoveryOptions
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -34,7 +34,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.DurableLinearizabilityVerifier
 import java.lang.reflect.*
 
 /**
@@ -56,7 +55,7 @@ abstract class CTestConfiguration(
     val customScenarios: List<ExecutionScenario>,
     val recoverabilityModel: RecoverabilityModel
 ) {
-    val verifierClass = if (recoverabilityModel is DurableModel) DurableLinearizabilityVerifier::class.java else _verifierClass
+    val verifierClass = if (recoverabilityModel is NoRecoverModel) _verifierClass else recoverabilityModel.verifierClass
 
     abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy

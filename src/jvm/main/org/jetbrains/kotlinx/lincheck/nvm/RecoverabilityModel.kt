@@ -21,6 +21,9 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.DurableLinearizabilityVerifier
 import org.objectweb.asm.ClassVisitor
 
 interface ExecutionCallback {
@@ -29,9 +32,7 @@ interface ExecutionCallback {
     fun beforeParallel(threads: Int)
     fun beforePost()
     fun afterPost()
-    fun onBeforeActorStart()
     fun onActorStart(iThread: Int)
-    fun onAfterActorStart()
     fun onFinish(iThread: Int)
     fun onEnterActorBody(iThread: Int, iActor: Int)
     fun onExitActorBody(iThread: Int, iActor: Int)
@@ -45,9 +46,7 @@ private object NoRecoverExecutionCallBack : ExecutionCallback {
     override fun beforeParallel(threads: Int) {}
     override fun beforePost() {}
     override fun afterPost() {}
-    override fun onBeforeActorStart() {}
     override fun onActorStart(iThread: Int) {}
-    override fun onAfterActorStart() {}
     override fun onFinish(iThread: Int) {}
     override fun onEnterActorBody(iThread: Int, iActor: Int) {}
     override fun onExitActorBody(iThread: Int, iActor: Int) {}
@@ -63,9 +62,7 @@ private object RecoverExecutionCallback : ExecutionCallback {
     override fun beforeParallel(threads: Int) = NVMState.beforeParallel(threads)
     override fun beforePost() = NVMState.beforePost()
     override fun afterPost() = NVMState.afterPost()
-    override fun onBeforeActorStart() = NVMState.onBeforeActorStart()
     override fun onActorStart(iThread: Int) = NVMState.onActorStart(iThread)
-    override fun onAfterActorStart() = NVMState.onAfterActorStart()
     override fun onFinish(iThread: Int) = NVMState.onFinish(iThread)
     override fun onEnterActorBody(iThread: Int, iActor: Int) = NVMState.onEnterActorBody(iThread, iActor)
     override fun onExitActorBody(iThread: Int, iActor: Int) = NVMState.onExitActorBody(iThread, iActor)
@@ -89,16 +86,14 @@ enum class Recover {
     NRL,
     NRL_NO_CRASHES,
     DURABLE,
-    DETECTABLE_EXECUTION,
-    DURABLE_NO_CRASHES;
+    DETECTABLE_EXECUTION;
 
     fun createModel(strategyRecoveryOptions: StrategyRecoveryOptions) = when (this) {
         NO_RECOVER -> NoRecoverModel
         NRL -> NRLModel(true, strategyRecoveryOptions)
         NRL_NO_CRASHES -> NRLModel(false, strategyRecoveryOptions)
-        DURABLE -> DurableModel(true, strategyRecoveryOptions)
+        DURABLE -> DurableModel(strategyRecoveryOptions)
         DETECTABLE_EXECUTION -> DetectableExecutionModel(strategyRecoveryOptions)
-        DURABLE_NO_CRASHES -> DurableModel(false, strategyRecoveryOptions)
     }
 }
 
@@ -114,6 +109,7 @@ interface RecoverabilityModel {
     fun createExecutionCallback(): ExecutionCallback
     fun createProbabilityModel(): ProbabilityModel
     val awaitSystemCrashBeforeThrow: Boolean
+    val verifierClass: Class<out Verifier>
 
     fun nonSystemCrashSupported() = systemCrashProbability() < 1.0
 
@@ -132,6 +128,7 @@ internal object NoRecoverModel : RecoverabilityModel {
     override fun createExecutionCallback(): ExecutionCallback = NoRecoverExecutionCallBack
     override fun createProbabilityModel() = NoCrashesProbabilityModel
     override val awaitSystemCrashBeforeThrow get() = true
+    override val verifierClass get() = LinearizabilityVerifier::class.java
 }
 
 private class NRLModel(
@@ -147,6 +144,7 @@ private class NRLModel(
         if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DetectableExecutionProbabilityModel() else NoCrashesProbabilityModel
 
     override val awaitSystemCrashBeforeThrow get() = true
+    override val verifierClass get() = LinearizabilityVerifier::class.java
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = RecoverabilityTransformer(cv)
         if (crashes) {
@@ -156,10 +154,8 @@ private class NRLModel(
     }
 }
 
-internal open class DurableModel(
-    override val crashes: Boolean,
-    val strategyRecoveryOptions: StrategyRecoveryOptions
-) : RecoverabilityModel {
+private open class DurableModel(val strategyRecoveryOptions: StrategyRecoveryOptions) : RecoverabilityModel {
+    override val crashes get() = true
     override fun needsTransformation() = true
     override fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator = DurableActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 1.0
@@ -169,20 +165,18 @@ internal open class DurableModel(
         if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DurableProbabilityModel() else NoCrashesProbabilityModel
 
     override val awaitSystemCrashBeforeThrow get() = false
+    override val verifierClass: Class<out Verifier> get() = DurableLinearizabilityVerifier::class.java
     override fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = DurableRecoverAllGenerator(cv, clazz)
-    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
-        var result: ClassVisitor = DurableOperationRecoverTransformer(cv, clazz)
-        if (crashes) {
-            result = strategyRecoveryOptions.createCrashTransformer(result, clazz)
-        }
-        return result
-    }
+    override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor =
+        strategyRecoveryOptions.createCrashTransformer(DurableOperationRecoverTransformer(cv, clazz), clazz)
 }
 
 private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecoveryOptions) :
-    DurableModel(true, strategyRecoveryOptions) {
+    DurableModel(strategyRecoveryOptions) {
     override fun createActorCrashHandlerGenerator() = DetectableExecutionActorCrashHandlerGenerator()
     override fun defaultExpectedCrashes() = 5
     override fun createProbabilityModel() =
         if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DetectableExecutionProbabilityModel() else NoCrashesProbabilityModel
+
+    override val verifierClass get() = LinearizabilityVerifier::class.java
 }

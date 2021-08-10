@@ -37,8 +37,8 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
     abstract fun createContainer(): Container
     abstract fun processResult(container: Container, threadId: Int)
     abstract fun createContext(
-        scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
-        executed: IntArray, suspended: BooleanArray, tickets: IntArray
+        threadId: Int, scenario: ExecutionScenario, results: ExecutionResult,
+        state: LTS.State, executed: IntArray, suspended: BooleanArray, tickets: IntArray
     ): VerifierContext
 
     override fun nextContext(threadId: Int): ContextContainer {
@@ -67,7 +67,6 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
             else ContextContainer.EMPTY
         }
         val container = createContainer()
-        processResult(container, threadId)
 
         // Try to make a transition by the next actor from the current thread,
         // passing the ticket corresponding to the current thread.
@@ -75,6 +74,7 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
         if (nextContext !== null) {
             container.addContext(nextContext)
         }
+        processResult(container, threadId)
         return container
     }
 
@@ -110,6 +110,7 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
         if (operationCompleted) nextExecuted[threadId]++
         // create new context
         return createContext(
+            threadId,
             scenario = scenario,
             state = nextState,
             results = results,

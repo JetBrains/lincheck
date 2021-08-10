@@ -252,7 +252,6 @@ internal open class ParallelThreadsRunner(
         beforeInit()
         reset()
         val initResults = scenario.initExecution.mapIndexed { i, initActor ->
-            onBeforeActorStart()
             executeActor(testInstance, initActor).also {
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
                     val s = ExecutionScenario(
@@ -290,7 +289,6 @@ internal open class ParallelThreadsRunner(
         var postPartSuspended = false
         beforePost()
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
-            onAfterActorStart()
             // no actors are executed after suspension of a post part
             val result = if (postPartSuspended) {
                 NoResult
@@ -324,8 +322,6 @@ internal open class ParallelThreadsRunner(
     private fun beforeParallel(threads: Int) = executionCallback.beforeParallel(threads)
     private fun beforePost() = executionCallback.beforePost()
     private fun afterPost() = executionCallback.afterPost()
-    private fun onBeforeActorStart() = executionCallback.onBeforeActorStart()
-    private fun onAfterActorStart() = executionCallback.onAfterActorStart()
     override fun onEnterActorBody(iThread: Int, iActor: Int) = executionCallback.onEnterActorBody(iThread, iActor)
     override fun onExitActorBody(iThread: Int, iActor: Int) = executionCallback.onExitActorBody(iThread, iActor)
     private fun getCrashes() = executionCallback.getCrashes()

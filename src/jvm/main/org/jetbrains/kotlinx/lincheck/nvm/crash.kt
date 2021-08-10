@@ -133,7 +133,7 @@ object Crash {
     }
 
     /** Should be called when thread finished. */
-    fun exit(threadId: Int) {
+    fun exit() {
         while (true) {
             val c = context.value
             val newThreads = c.threads - 1
@@ -143,7 +143,7 @@ object Crash {
     }
 
     /** Should be called when thread started. */
-    fun register(threadId: Int) {
+    fun register() {
         while (true) {
             val currentContext = context.value
             if (currentContext.waitingThreads != 0) continue

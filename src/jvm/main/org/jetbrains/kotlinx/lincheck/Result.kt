@@ -112,6 +112,7 @@ data class ExceptionResult private constructor(val tClazz: Class<out Throwable>,
         fun create(tClazz: Class<out Throwable>, wasSuspended: Boolean = false) = ExceptionResult(tClazz.normalize(), wasSuspended)
     }
 }
+
 // for byte-code generation
 @JvmSynthetic
 fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
@@ -143,9 +144,9 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
 
 
 class CrashResult : Result() {
-    var crashedActors: IntArray? = null
+    lateinit var crashedActors: IntArray
     override val wasSuspended get() = false
-    override fun toString() = "CRASH"
+    override fun toString() = "CRASH${crashedActors.joinToString(",", "(", ")")}"
 
     override fun hashCode() = crashedActors.contentHashCode()
     override fun equals(other: Any?): Boolean {
