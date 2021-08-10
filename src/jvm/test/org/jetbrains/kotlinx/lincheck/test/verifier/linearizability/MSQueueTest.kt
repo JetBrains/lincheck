@@ -51,6 +51,7 @@ class SequentialQueue : VerifierState() {
 
     fun pop() = q.poll()
     fun pop(ignore: Int) = pop()
+    fun sync() {}
 
     override fun extractState() = q.toList()
 }

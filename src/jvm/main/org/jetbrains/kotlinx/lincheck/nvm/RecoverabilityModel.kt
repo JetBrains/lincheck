@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.nvm
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedDurableLinearizabilityVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.DurableLinearizabilityVerifier
 import org.objectweb.asm.ClassVisitor
 
@@ -86,7 +87,8 @@ enum class Recover {
     NRL,
     NRL_NO_CRASHES,
     DURABLE,
-    DETECTABLE_EXECUTION;
+    DETECTABLE_EXECUTION,
+    BUFFERED_DURABLE;
 
     fun createModel(strategyRecoveryOptions: StrategyRecoveryOptions) = when (this) {
         NO_RECOVER -> NoRecoverModel
@@ -94,6 +96,7 @@ enum class Recover {
         NRL_NO_CRASHES -> NRLModel(false, strategyRecoveryOptions)
         DURABLE -> DurableModel(strategyRecoveryOptions)
         DETECTABLE_EXECUTION -> DetectableExecutionModel(strategyRecoveryOptions)
+        BUFFERED_DURABLE -> BufferedDurableModel(strategyRecoveryOptions)
     }
 }
 
@@ -179,4 +182,9 @@ private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecovery
         if (strategyRecoveryOptions == StrategyRecoveryOptions.STRESS) DetectableExecutionProbabilityModel() else NoCrashesProbabilityModel
 
     override val verifierClass get() = LinearizabilityVerifier::class.java
+}
+
+private class BufferedDurableModel(strategyRecoveryOptions: StrategyRecoveryOptions) :
+    DurableModel(strategyRecoveryOptions) {
+    override val verifierClass get() = BufferedDurableLinearizabilityVerifier::class.java
 }

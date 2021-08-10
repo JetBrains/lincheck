@@ -19,9 +19,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
 
-import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Sync
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.HBClock
+import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
@@ -29,6 +33,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckTest
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedDurableLinearizabilityVerifier
+import org.junit.Assert
+import org.junit.Test
 
 private const val THREADS_NUMBER = 3
 
@@ -39,23 +46,89 @@ internal interface RecoverableQueue<T> {
     fun sync()
 }
 
+internal fun result(result: Result, vararg clocks: Int) = ResultWithClock(result, HBClock(clocks))
+
 /**
  * @see  <a href="http://www.cs.technion.ac.il/~erez/Papers/nvm-queue-full.pdf">A Persistent Lock-Free Queue for Non-Volatile Memory</a>
  */
-internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class, false) {
+internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.BUFFERED_DURABLE, THREADS_NUMBER, SequentialQueue::class) {
     private val q = RelaxedQueue<Int>()
 
     @Operation
-    fun push(value: Int) = q.push(value).also { q.sync() }
+    fun push(value: Int) = q.push(value)
 
     @Operation
-    fun pop() = q.pop().also { q.sync() }
+    fun pop() = q.pop()
+
+    @Operation
+    @Sync
+    fun sync() = q.sync()
 
     @DurableRecoverAll
-    fun recover() = q.recover().also { q.sync() }
+    fun recover() = q.recover()
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(50)
+    }
+
+    @Test
+    fun testVerifier1() {
+        val verifier = BufferedDurableLinearizabilityVerifier(SequentialQueue::class.java)
+        val scenario = scenario {
+            initial { actor(::push, 2); actor(::push, 6) }
+            parallel { thread { actor(::pop) } }
+            post { actor(::pop) }
+        }
+        val executionResult = ExecutionResult(
+            listOf(VoidResult, VoidResult),
+            listOf(
+                listOf(result(CrashResult().apply { crashedActors = intArrayOf(0) }, 0))
+            ),
+            listOf(ValueResult(null))
+        )
+        Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
+    }
+
+    @Test
+    fun testVerifier2() {
+        val verifier = BufferedDurableLinearizabilityVerifier(SequentialQueue::class.java)
+        val scenario = scenario {
+            parallel {
+                thread { actor(::push, 1); actor(::pop) }
+                thread { actor(::push, 4); actor(::pop) }
+            }
+        }
+        val executionResult = ExecutionResult(
+            listOf(),
+            listOf(
+                listOf(result(CrashResult().apply { crashedActors = intArrayOf(0, 2) }, 0, 0), result(ValueResult(null), 1, 2)),
+                listOf(result(VoidResult, 0, 0), result(ValueResult(1), 0, 1))
+            ),
+            listOf()
+        )
+        Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
+    }
+
+    @Test
+    fun testVerifier3() {
+        val verifier = BufferedDurableLinearizabilityVerifier(SequentialQueue::class.java)
+        val scenario = scenario {
+            initial { actor(::push, 2); actor(::sync) }
+            parallel {
+                thread { actor(::pop) }
+                thread { actor(::pop) }
+            }
+            post { actor(::pop) }
+        }
+        val executionResult = ExecutionResult(
+            listOf(VoidResult, VoidResult),
+            listOf(
+                listOf(result(CrashResult().apply { crashedActors = intArrayOf(0, 1) }, 0, 0)),
+                listOf(result(ValueResult(null), 0, 0))
+            ),
+            listOf(ValueResult(2))
+        )
+        Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
     }
 }
 
@@ -213,17 +286,17 @@ internal open class RelaxedQueue<T> : RecoverableQueue<T> {
 }
 
 
-internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS_NUMBER, SequentialQueue::class) {
+internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE, THREADS_NUMBER, SequentialQueue::class) {
     internal abstract val q: RecoverableQueue<Int>
 
     @Operation
-    fun push(value: Int) = q.push(value).also { q.sync() }
+    fun push(value: Int) = q.push(value)
 
     @Operation
-    fun pop() = q.pop().also { q.sync() }
+    fun pop() = q.pop()
 
     @DurableRecoverAll
-    fun recover() = q.recover().also { q.sync() }
+    fun recover() = q.recover()
 }
 
 internal class RelaxedQueueFailingTest1 : RelaxedQueueFailingTest() {

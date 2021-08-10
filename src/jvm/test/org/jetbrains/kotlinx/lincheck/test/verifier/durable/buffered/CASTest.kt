@@ -20,27 +20,39 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
 
+import org.jetbrains.kotlinx.lincheck.CrashResult
 import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.ValueResult
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.annotations.Sync
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedDurableLinearizabilityVerifier
+import org.junit.Assert
+import org.junit.Test
 
 private const val THREADS = 3
 
 @Param(name = "key", gen = IntGen::class, conf = "0:3")
-internal class CASTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS, SequentialCAS::class) {
+internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE, THREADS, SequentialCAS::class) {
     private val cas = DurableCAS()
 
     @Operation
     fun read() = cas.read()
 
     @Operation
-    fun cas(@Param(name = "key") old: Int, @Param(name = "key") new: Int) = cas.cas(old, new).also { cas.sync() }
+    fun cas(@Param(name = "key") old: Int, @Param(name = "key") new: Int) = cas.cas(old, new)
+
+    @Operation
+    @Sync
+    fun sync() = cas.sync()
 
     override fun <O : Options<O, *>> O.customize() {
         threads(2)
@@ -49,12 +61,35 @@ internal class CASTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS
     override fun StressOptions.customize() {
         invocationsPerIteration(1e5.toInt())
     }
+
+    @Test
+    fun testVerifier1() {
+        val verifier = BufferedDurableLinearizabilityVerifier(SequentialCAS::class.java)
+        val scenario = scenario {
+            initial { actor(::cas, 0, 1) }
+            parallel {
+                thread { actor(::read); actor(::read) }
+                thread { actor(::cas, 1, 3) }
+            }
+            post { actor(::read); actor(::cas, 1, 2); actor(::read) }
+        }
+        val executionResult = ExecutionResult(
+            listOf(ValueResult(true)),
+            listOf(
+                listOf(result(ValueResult(1), 0, 0), result(ValueResult(1), 1, 1)),
+                listOf(result(CrashResult().apply { crashedActors = intArrayOf(-1, 0) }, 0, 0))
+            ),
+            listOf(ValueResult(1), ValueResult(true), ValueResult(2))
+        )
+        Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
+    }
 }
 
 internal class SequentialCAS : VerifierState() {
     private var data = 0
     override fun extractState() = data
     fun read() = data
+    fun sync() {}
     fun cas(old: Int, new: Int) = (data == old).also {
         if (it) data = new
     }
@@ -97,14 +132,18 @@ internal open class DurableCAS {
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "0:3")
-internal abstract class CASFailingTest : AbstractNVMLincheckFailingTest(Recover.DURABLE, THREADS, SequentialCAS::class) {
+internal abstract class CASFailingTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE, THREADS, SequentialCAS::class) {
     protected abstract val cas: DurableCAS
 
     @Operation
     fun read() = cas.read()
 
     @Operation
-    fun cas(@Param(name = "key") old: Int, @Param(name = "key") new: Int) = cas.cas(old, new).also { cas.sync() }
+    fun cas(@Param(name = "key") old: Int, @Param(name = "key") new: Int) = cas.cas(old, new)
+
+    @Operation
+    @Sync
+    fun sync() = cas.sync()
 }
 
 internal class CASFailingTest1 : CASFailingTest() {
