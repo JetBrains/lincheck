@@ -146,7 +146,7 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
 class CrashResult : Result() {
     lateinit var crashedActors: IntArray
     override val wasSuspended get() = false
-    override fun toString() = "CRASH${crashedActors.joinToString(",", "(", ")")}"
+    override fun toString() = "CRASH${crashedActors.joinToString(",", "(", ")") { s -> if (s == -1) "-" else s.toString() }}"
 
     override fun hashCode() = crashedActors.contentHashCode()
     override fun equals(other: Any?): Boolean {
