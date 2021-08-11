@@ -135,6 +135,27 @@ internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.BUFFERED_DURAB
         )
         Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
     }
+
+    @Test
+    fun testVerifier4() {
+        val verifier = BufferedDurableLinearizabilityVerifier(SequentialQueue::class.java)
+        val scenario = scenario {
+            initial { actor(::push, 2) }
+            parallel {
+                thread { actor(::pop) }
+                thread { actor(::sync) }
+            }
+        }
+        val executionResult = ExecutionResult(
+            listOf(VoidResult),
+            listOf(
+                listOf(result(ValueResult(null), 0, 1)),
+                listOf(result(CrashResult().apply { crashedActors = intArrayOf(-1, 0) }, 0, 0))
+            ),
+            listOf()
+        )
+        Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
+    }
 }
 
 internal open class QueueNode<T>(val next: NonVolatileRef<QueueNode<T>?> = nonVolatile(null), val v: T? = null)

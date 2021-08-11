@@ -20,9 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
 
-import org.jetbrains.kotlinx.lincheck.CrashResult
-import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.ValueResult
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Sync
@@ -30,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
@@ -39,7 +36,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedD
 import org.junit.Assert
 import org.junit.Test
 
-private const val THREADS = 3
+private const val THREADS = 2
 
 @Param(name = "key", gen = IntGen::class, conf = "0:3")
 internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE, THREADS, SequentialCAS::class) {
@@ -60,7 +57,7 @@ internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE
         addCustomScenario {
             initial { actor(::cas, 0, 2) }
             parallel {
-                thread { actor(::cas, 1, 0); actor(::cas, 0, 1); actor(::sync) }
+                thread { actor(::cas, 1, 0); actor(::sync); actor(::cas, 0, 1); actor(::sync) }
                 thread { actor(::cas, 2, 1); actor(::sync); actor(::read) }
             }
             post { actor(::read) }
@@ -68,7 +65,7 @@ internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE
     }
 
     override fun StressOptions.customize() {
-        invocationsPerIteration(1e7.toInt())
+        invocationsPerIteration(1e8.toInt())
     }
 
     override fun ModelCheckingOptions.customize() {
@@ -95,6 +92,28 @@ internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE
             listOf(ValueResult(1), ValueResult(true), ValueResult(2))
         )
         Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
+    }
+
+    @Test
+    fun testVerifier2() {
+        val verifier = BufferedDurableLinearizabilityVerifier(SequentialCAS::class.java)
+        val scenario = scenario {
+            initial { actor(::cas, 0, 1) }
+            parallel {
+                thread { actor(::cas, 1, 2); actor(::sync); actor(::cas, 2, 1); actor(::sync) }
+                thread { actor(::sync); actor(::read) }
+            }
+            post { actor(::read) }
+        }
+        val executionResult = ExecutionResult(
+            listOf(ValueResult(true)),
+            listOf(
+                listOf(result(ValueResult(true), 0, 0), result(VoidResult, 0, 0), result(ValueResult(true), 0, 0), result(VoidResult, 0, 0)),
+                listOf(result(VoidResult, 0, 0), result(CrashResult().apply { crashedActors = intArrayOf(4, 1) }, 0, 0))
+            ),
+            listOf(ValueResult(2))
+        )
+        Assert.assertFalse(verifier.verifyResults(scenario, executionResult))
     }
 }
 

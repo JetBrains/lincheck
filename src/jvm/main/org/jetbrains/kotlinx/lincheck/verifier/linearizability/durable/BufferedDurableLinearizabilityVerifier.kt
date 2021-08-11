@@ -40,11 +40,11 @@ class BufferedDurableLinearizabilityVerifier(sequentialSpecification: Class<*>) 
 
 private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityContext {
     private val persisted: List<LTS.State>
-    private val deferredCrash: CrashResult?
+    private val waitingThreadsToCrash: Int
 
     constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State) : super(scenario, results, state) {
         persisted = listOf(state)
-        deferredCrash = null
+        waitingThreadsToCrash = 0
     }
 
     constructor(
@@ -55,10 +55,10 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
         suspended: BooleanArray,
         tickets: IntArray,
         persisted: List<LTS.State>,
-        deferredCrash: CrashResult?
+        waitingThreadsToCrash: Int
     ) : super(scenario, results, state, executed, suspended, tickets) {
         this.persisted = persisted
-        this.deferredCrash = deferredCrash
+        this.waitingThreadsToCrash = waitingThreadsToCrash
     }
 
     override fun createContainer(): AbstractLinearizabilityContext.Container = Container()
@@ -66,23 +66,17 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
     override fun processResult(container: AbstractLinearizabilityContext.Container, threadId: Int) {
         val actorId = executed[threadId]
         val result = results[threadId][actorId]
-        if (result is CrashResult) {
-            if (result.isLastInSystemCrash(threadId)) {
-                val newExecuted = executed.copyOf()
-                newExecuted[threadId]++
-                addContextsUpToSync(container, newExecuted)
-                return
+        if (result is CrashResult || waitingThreadsToCrash > 0) {
+            val context = container.filterIsInstance<BufferedDurableLinearizabilityContext>().firstOrNull { it.waitingThreadsToCrash == 0 }
+            if (context !== null) {
+                if (scenario[threadId][actorId].isSync() && result !is CrashResult) {
+                    container.addContext(BufferedDurableLinearizabilityContext(scenario, results, state, context.executed, suspended, tickets, listOf(state), 0))
+                } else {
+                    for (q in persisted) {
+                        container.addContext(BufferedDurableLinearizabilityContext(scenario, results, q, context.executed, suspended, tickets, listOf(q), 0))
+                    }
+                }
             }
-        }
-        container
-            .filterIsInstance<BufferedDurableLinearizabilityContext>()
-            .firstOrNull { context -> context.deferredCrash !== null && context.run { context.deferredCrash.isLastInSystemCrash(threadId) } }
-            ?.addContextsUpToSync(container)
-    }
-
-    private fun addContextsUpToSync(container: AbstractLinearizabilityContext.Container, newExecuted: IntArray = executed) {
-        for (q in persisted) {
-            container.addContext(BufferedDurableLinearizabilityContext(scenario, results, q, newExecuted, suspended, tickets, listOf(q), null))
         }
     }
 
@@ -99,14 +93,15 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
         val actor = scenario[threadId][actorId]
         val result = results[threadId][actorId]
         val isSync = actor.isSync() && result !is CrashResult
-        val isSystemCrash = result is CrashResult && result.isLastInSystemCrash(threadId)
+        val newWaiting = if (waitingThreadsToCrash == 0 && result is CrashResult) {
+           result.crashedActors.withIndex().count { executed[it.index + 1] < it.value }
+        } else if (waitingThreadsToCrash > 0 && executed[threadId] == scenario[threadId].size || result is CrashResult) {
+            waitingThreadsToCrash - 1
+        } else waitingThreadsToCrash
+        val isSystemCrash = newWaiting == 0 && (result is CrashResult || waitingThreadsToCrash > 0)
         val newPersisted = if (isSync || isSystemCrash) listOf(state) else persisted.plus(state)
-        val deferredCrash = result as? CrashResult ?: this.deferredCrash
-        return BufferedDurableLinearizabilityContext(scenario, results, state, executed, suspended, tickets, newPersisted, deferredCrash)
+        return BufferedDurableLinearizabilityContext(scenario, results, state, executed, suspended, tickets, newPersisted, newWaiting)
     }
-
-    private fun CrashResult.isLastInSystemCrash(threadId: Int) =
-        crashedActors.withIndex().all { it.index + 1 == threadId || executed[it.index + 1] >= it.value }
 
     private class Container : AbstractLinearizabilityContext.Container {
         private val data = mutableListOf<VerifierContext>()
