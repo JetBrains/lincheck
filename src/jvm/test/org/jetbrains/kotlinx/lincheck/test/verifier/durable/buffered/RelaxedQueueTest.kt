@@ -30,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckTest
@@ -69,6 +70,10 @@ internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.BUFFERED_DURAB
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(50)
+    }
+
+    override fun StressOptions.customize() {
+        iterations(10)
     }
 
     @Test
@@ -295,12 +300,21 @@ internal abstract class RelaxedQueueFailingTest : AbstractNVMLincheckFailingTest
     @Operation
     fun pop() = q.pop()
 
+    @Operation
+    @Sync
+    fun sync() = q.sync()
+
     @DurableRecoverAll
     fun recover() = q.recover()
 }
 
 internal class RelaxedQueueFailingTest1 : RelaxedQueueFailingTest() {
     override val q = RelaxedFailingQueue1<Int>()
+    override fun StressOptions.customize() {
+        invocationsPerIteration(1e6.toInt())
+        threads(2)
+    }
+
     override fun ModelCheckingOptions.customize() {
         invocationsPerIteration(1e6.toInt())
         iterations(0)
@@ -308,8 +322,8 @@ internal class RelaxedQueueFailingTest1 : RelaxedQueueFailingTest() {
             iterations(0)
             initial { actor(::push, 1) }
             parallel {
-                thread { actor(::push, 2) }
-                thread { actor(::pop); actor(::pop) }
+                thread { actor(::push, 2); actor(::sync) }
+                thread { actor(::pop); actor(::sync); actor(::pop) }
             }
             post { actor(::pop) }
         }
@@ -318,6 +332,11 @@ internal class RelaxedQueueFailingTest1 : RelaxedQueueFailingTest() {
 
 internal class RelaxedQueueFailingTest2 : RelaxedQueueFailingTest() {
     override val q = RelaxedFailingQueue2<Int>()
+    override fun StressOptions.customize() {
+        invocationsPerIteration(1e6.toInt())
+        threads(2)
+    }
+
     override fun ModelCheckingOptions.customize() {
         invocationsPerIteration(1e6.toInt())
         iterations(0)
@@ -325,8 +344,8 @@ internal class RelaxedQueueFailingTest2 : RelaxedQueueFailingTest() {
             iterations(0)
             initial { actor(::push, 1) }
             parallel {
-                thread { actor(::push, 2) }
-                thread { actor(::pop); actor(::pop) }
+                thread { actor(::push, 2); actor(::sync) }
+                thread { actor(::pop); actor(::sync) }
             }
             post { actor(::pop) }
         }

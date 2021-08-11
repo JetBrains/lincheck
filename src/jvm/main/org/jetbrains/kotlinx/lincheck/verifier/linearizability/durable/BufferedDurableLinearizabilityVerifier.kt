@@ -71,6 +71,7 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
                 val newExecuted = executed.copyOf()
                 newExecuted[threadId]++
                 addContextsUpToSync(container, newExecuted)
+                return
             }
         }
         container

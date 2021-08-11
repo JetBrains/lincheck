@@ -200,8 +200,8 @@ class ManualDurableMSQueueTest {
         val results = ExecutionResult(
             listOf(VoidResult, VoidResult, ValueResult(2), VoidResult, VoidResult),
             listOf(
-                listOf(CrashResult(), ValueResult(-8), VoidResult, ValueResult(1), VoidResult),
-                listOf(VoidResult, VoidResult, CrashResult(), ValueResult(-6), VoidResult)
+                listOf(CrashResult().apply { crashedActors = intArrayOf(0, 2) }, ValueResult(-8), VoidResult, ValueResult(1), VoidResult),
+                listOf(VoidResult, VoidResult, CrashResult().apply { crashedActors = intArrayOf(0, 2) }, ValueResult(-6), VoidResult)
             ).zip(clocks).map { (res, clock) -> res.zip(clock).map { (r, c) -> ResultWithClock(r, c) } },
             listOf(VoidResult, VoidResult, ValueResult(4), VoidResult, ValueResult(-4))
         )
