@@ -30,7 +30,8 @@ internal abstract class InterleavingTreeExplorer<BUILDER : AbstractModelChecking
     abstract fun hasNextInterleaving(): Boolean
     abstract fun runNextInterleaving(): InvocationResult
     abstract fun AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode.onNodeEntering(builder: BUILDER)
-    abstract fun InterleavingTreeNode.updateExplorationStatistics()
+    abstract fun InterleavingTreeNode.onNodeLeaving()
+    protected abstract fun InterleavingTreeNode.updateExplorationStatistics()
 }
 
 // TODO: think of better names
@@ -80,13 +81,18 @@ internal class DepthMinimizingInterleavingTreeExplorer<BUILDER : AbstractModelCh
     }
 
     override fun runNextInterleaving(): InvocationResult {
-        currentEvents = 0
+        check(currentEvents == 0)
         return root.runNextInterleaving()
     }
 
     override fun AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode.onNodeEntering(builder: BUILDER) {
         // Count only those events that require an invocation to determine node's choices.
         if (needsExploration) currentEvents++
+    }
+
+    override fun InterleavingTreeNode.onNodeLeaving() {
+        updateExplorationStatistics()
+        if (needsExploration) currentEvents--
     }
 
     override fun InterleavingTreeNode.updateExplorationStatistics() {
@@ -120,6 +126,10 @@ internal class RandomDescendingInterleavingTreeExplorer<BUILDER : AbstractModelC
 
     override fun AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode.onNodeEntering(builder: BUILDER) {
         // do nothing
+    }
+
+    override fun InterleavingTreeNode.onNodeLeaving() {
+        updateExplorationStatistics()
     }
 
     override fun InterleavingTreeNode.updateExplorationStatistics() {
@@ -175,6 +185,9 @@ internal class DeeperDescendingInterleavingTreeExplorer<BUILDER : AbstractModelC
     }
 
     override fun runNextInterleaving(): InvocationResult {
+        currentEvents = 0
+        for (node in nodes)
+            if (node.needsExploration) currentEvents++
         if (currentEvents >= maxNumberOfEvents * 2 || nodes.lastOrNull()?.choices?.all { it.node.isFullyExplored } != false) {
             currentEvents = 0
             nodes.clear()
@@ -208,6 +221,11 @@ internal class DeeperDescendingInterleavingTreeExplorer<BUILDER : AbstractModelC
         nodes.add(this)
         // Count only those events that require an invocation to determine node's choices.
         if (needsExploration) currentEvents++
+    }
+
+    override fun InterleavingTreeNode.onNodeLeaving() {
+        updateExplorationStatistics()
+        if (needsExploration) currentEvents--
     }
 
     override fun InterleavingTreeNode.updateExplorationStatistics() {

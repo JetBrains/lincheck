@@ -147,7 +147,7 @@ internal abstract class AbstractModelCheckingStrategy<
 
         private inline fun <T> runAndUpdate(block: () -> T): T {
             val result = block()
-            interleavingExplorer.run { this@InterleavingTreeNode.updateExplorationStatistics() }
+            interleavingExplorer.run { this@InterleavingTreeNode.onNodeLeaving() }
             return result
         }
 
