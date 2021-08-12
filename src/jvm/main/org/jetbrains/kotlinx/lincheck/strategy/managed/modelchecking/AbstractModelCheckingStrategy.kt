@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
+import org.jetbrains.kotlinx.lincheck.runner.InvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
@@ -58,32 +59,24 @@ internal abstract class AbstractModelCheckingStrategy<
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
 
-    // The number of already used invocations.
-    private var usedInvocations = 0
-
-    // The maximum number of thread switch choices that strategy should perform
-    // (increases when all the interleavings with the current depth are studied).
-    protected var maxNumberOfEvents = 0
-
-    // The root of the interleaving tree that chooses the starting thread.
-    private var root: InterleavingTreeNode = createRoot()
-
     // This random is used for choosing the next unexplored interleaving node in the tree.
     private val generationRandom = Random(0)
 
     // The interleaving that will be studied on the next invocation.
     protected lateinit var currentInterleaving: INTERLEAVING
 
+    // The tactic for exploring interleaving tree
+    protected var interleavingExplorer = testCfg.explorationTactic.toInterleavingTreeExplorer(createRoot())
+
     protected abstract fun createBuilder(): BUILDER
     protected open fun createRoot(): InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
 
     override fun runImpl(): LincheckFailure? {
-        while (usedInvocations < maxInvocations) {
-            // get new unexplored interleaving
-            currentInterleaving = root.nextInterleaving() ?: break
+        var usedInvocations = 0
+        while (usedInvocations < maxInvocations && interleavingExplorer.hasNextInterleaving()) {
             usedInvocations++
             // run invocation and check its results
-            checkResult(runInvocation())?.let { return it }
+            checkResult(interleavingExplorer.runNextInterleaving())?.let { return it }
         }
         return null
     }
@@ -116,61 +109,49 @@ internal abstract class AbstractModelCheckingStrategy<
     /**
      * An abstract node with an execution choice in the interleaving tree.
      */
-    abstract inner class InterleavingTreeNode {
-        private var fractionUnexplored = 1.0
+    internal abstract inner class InterleavingTreeNode(choices: List<Choice>? = null) {
+        var fractionUnexplored = 1.0
         lateinit var choices: List<Choice>
         var isFullyExplored: Boolean = false
-            protected set
         val isInitialized get() = ::choices.isInitialized
+        val needsExploration: Boolean
 
-        fun nextInterleaving(): INTERLEAVING? {
-            if (isFullyExplored) {
-                // Increase the maximum number of switches that can be used,
-                // because there are no more not covered interleavings
-                // with the previous maximum number of switches.
-                maxNumberOfEvents++
-                resetExploration()
+        init {
+            if (choices != null) {
+                this.choices = choices
+                if (choices.isEmpty()) {
+                    // Dead end. Set fully explored to prevent descending in this node.
+                    fractionUnexplored = 0.0
+                    isFullyExplored = true
+                }
             }
-            // Check if everything is fully explored and there are no possible interleavings with more switches.
-            if (isFullyExplored) return null
-            return nextInterleaving(createBuilder())
+            needsExploration = !isInitialized
         }
 
-        abstract fun nextInterleaving(interleavingBuilder: BUILDER): INTERLEAVING
+        fun runNextInterleaving(): InvocationResult = runNextInterleaving(createBuilder())
 
-        protected fun resetExploration() {
+        abstract fun BUILDER.applyChoice(choice: Int)
+
+        fun runNextInterleaving(interleavingBuilder: BUILDER): InvocationResult = runAndUpdate {
+            interleavingExplorer.run { this@InterleavingTreeNode.onNodeEntering(interleavingBuilder) }
             if (!isInitialized) {
-                // This is a leaf node.
-                isFullyExplored = false
-                fractionUnexplored = 1.0
-                return
+                interleavingBuilder.addLastNoninitializedNode(this)
+                // Run the new interleaving
+                currentInterleaving = interleavingBuilder.build()
+                return@runAndUpdate runInvocation()
             }
-            choices.forEach { it.node.resetExploration() }
-            updateExplorationStatistics()
+            val choice = chooseUnexploredNode()
+            interleavingBuilder.applyChoice(choice.value)
+            return@runAndUpdate choice.node.runNextInterleaving(interleavingBuilder)
         }
 
-        fun finishExploration() {
-            isFullyExplored = true
-            fractionUnexplored = 0.0
+        private inline fun <T> runAndUpdate(block: () -> T): T {
+            val result = block()
+            interleavingExplorer.run { this@InterleavingTreeNode.updateExplorationStatistics() }
+            return result
         }
 
-        protected fun updateExplorationStatistics() {
-            check(isInitialized) {
-                "An interleaving tree node was not initialized properly. " +
-                    "Probably caused by non-deterministic behaviour (WeakHashMap, Object.hashCode, etc)"
-            }
-            if (choices.isEmpty()) {
-                finishExploration()
-                return
-            }
-            val total = choices.fold(0.0) { acc, choice ->
-                acc + choice.node.fractionUnexplored
-            }
-            fractionUnexplored = total / choices.size
-            isFullyExplored = choices.all { it.node.isFullyExplored }
-        }
-
-        protected fun chooseUnexploredNode(): Choice {
+        fun chooseUnexploredNode(): Choice {
             if (choices.size == 1) return choices.first()
             // Choose a weighted random child.
             val total = choices.sumByDouble { it.node.fractionUnexplored }
@@ -178,7 +159,7 @@ internal abstract class AbstractModelCheckingStrategy<
             var sumWeight = 0.0
             choices.forEach { choice ->
                 sumWeight += choice.node.fractionUnexplored
-                if (sumWeight >= random)
+                if (sumWeight >= random && !choice.node.isFullyExplored)
                     return choice
             }
             // In case of errors because of floating point numbers choose the last unexplored choice.
@@ -189,17 +170,12 @@ internal abstract class AbstractModelCheckingStrategy<
     /**
      * Represents a choice of a thread that should be next in the execution.
      */
-    protected open inner class ThreadChoosingNode(switchableThreads: List<Int>) : InterleavingTreeNode() {
-        init {
-            choices = switchableThreads.map { Choice(SwitchChoosingNode(), it) }
-        }
+    protected open inner class ThreadChoosingNode(switchableThreads: List<Int>) : InterleavingTreeNode(
+        choices = switchableThreads.map { Choice(SwitchChoosingNode(), it) }
+    ) {
 
-        override fun nextInterleaving(interleavingBuilder: BUILDER): INTERLEAVING {
-            val child = chooseUnexploredNode()
-            interleavingBuilder.addThreadSwitchChoice(child.value)
-            val interleaving = child.node.nextInterleaving(interleavingBuilder)
-            updateExplorationStatistics()
-            return interleaving
+        override fun BUILDER.applyChoice(choice: Int) {
+            addThreadSwitchChoice(choice)
         }
     }
 
@@ -207,19 +183,8 @@ internal abstract class AbstractModelCheckingStrategy<
      * Represents a choice of a position of a thread context switch.
      */
     internal inner class SwitchChoosingNode : InterleavingTreeNode() {
-        override fun nextInterleaving(interleavingBuilder: BUILDER): INTERLEAVING {
-            val isLeaf = maxNumberOfEvents == interleavingBuilder.numberOfEvents
-            if (isLeaf) {
-                finishExploration()
-                if (!isInitialized)
-                    interleavingBuilder.addLastNoninitializedNode(this)
-                return interleavingBuilder.build()
-            }
-            val choice = chooseUnexploredNode()
-            interleavingBuilder.addSwitchPosition(choice.value)
-            val interleaving = choice.node.nextInterleaving(interleavingBuilder)
-            updateExplorationStatistics()
-            return interleaving
+        override fun BUILDER.applyChoice(choice: Int) {
+            addSwitchPosition(choice)
         }
     }
 
@@ -228,7 +193,7 @@ internal abstract class AbstractModelCheckingStrategy<
     /**
      * This class specifies an interleaving that is re-producible.
      */
-    open inner class Interleaving(
+    internal open inner class Interleaving(
         protected val switchPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
         protected var lastNotInitializedNode: InterleavingTreeNode?
@@ -295,7 +260,6 @@ internal abstract class AbstractModelCheckingStrategy<
         protected val threadSwitchChoices = mutableListOf<Int>()
         protected var lastNoninitializedNode: InterleavingTreeNode? = null
 
-        open val numberOfEvents get() = switchPositions.size
         abstract fun build(): T
 
         fun addSwitchPosition(switchPosition: Int) {

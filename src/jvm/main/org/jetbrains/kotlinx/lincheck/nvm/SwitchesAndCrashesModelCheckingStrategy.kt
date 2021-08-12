@@ -152,54 +152,32 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     }
 
     private inner class CrashChoosingNode(private val isSystemCrash: Boolean) : InterleavingTreeNode() {
-        override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {
-            val isLeaf = maxNumberOfEvents == interleavingBuilder.numberOfEvents
-            if (isLeaf) {
-                finishExploration()
-                if (!isInitialized)
-                    interleavingBuilder.addLastNoninitializedNode(this)
-                return interleavingBuilder.build()
-            }
-            val choice = chooseUnexploredNode()
-            interleavingBuilder.addCrashPosition(choice.value, isSystemCrash)
-            val interleaving = choice.node.nextInterleaving(interleavingBuilder)
-            updateExplorationStatistics()
-            return interleaving
+        override fun SwitchesAndCrashesInterleavingBuilder.applyChoice(choice: Int) {
+            addCrashPosition(choice, isSystemCrash)
         }
     }
 
-    private inner class SwitchOrCrashChoosingNode : InterleavingTreeNode() {
-        init {
-            choices = mutableListOf<Choice>().apply {
-                add(Choice(SwitchChoosingNode(), 0))
-                add(Choice(createCrashChoosingNode(true), 1))
-                if (recoverModel.nonSystemCrashSupported()) {
-                    add(Choice(createCrashChoosingNode(false), 2))
-                }
-            }.toList()
-        }
-
-        override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {
-            val child = chooseUnexploredNode()
-            val interleaving = child.node.nextInterleaving(interleavingBuilder)
-            updateExplorationStatistics()
-            return interleaving
+    private inner class SwitchOrCrashChoosingNode : InterleavingTreeNode(
+        choices = mutableListOf<Choice>().apply {
+            add(Choice(SwitchChoosingNode(), 0))
+            add(Choice(createCrashChoosingNode(true), 1))
+            if (recoverModel.nonSystemCrashSupported()) {
+                add(Choice(createCrashChoosingNode(false), 2))
+            }
+        }.toList()
+    ) {
+        override fun SwitchesAndCrashesInterleavingBuilder.applyChoice(choice: Int) {
+            // nothing to do
         }
     }
 
     private fun createCrashChoosingNode(isSystemCrash: Boolean): InterleavingTreeNode = FlushRandomChoosingNode { CrashChoosingNode(isSystemCrash) }
 
-    private inner class FlushRandomChoosingNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode() {
-        init {
-            choices = List(RANDOM_SEEDS_BRANCHING) { Choice(createChild(), Probability.generateSeed()) }
-        }
-
-        override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {
-            val child = chooseUnexploredNode()
-            interleavingBuilder.addRandomSeed(child.value)
-            val interleaving = child.node.nextInterleaving(interleavingBuilder)
-            updateExplorationStatistics()
-            return interleaving
+    private inner class FlushRandomChoosingNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode(
+        choices = List(RANDOM_SEEDS_BRANCHING) { Choice(createChild(), Probability.generateSeed()) }
+    ) {
+        override fun SwitchesAndCrashesInterleavingBuilder.applyChoice(choice: Int) {
+            addRandomSeed(choice)
         }
     }
 
@@ -270,7 +248,6 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         private val crashPositions = mutableListOf<Int>()
         private val nonSystemCrashes = mutableListOf<Int>()
         private val randomSeeds = mutableListOf<Int>()
-        override val numberOfEvents get() = switchPositions.size + crashPositions.size
 
         fun addCrashPosition(crashPosition: Int, isSystemCrash: Boolean) {
             crashPositions.add(crashPosition)

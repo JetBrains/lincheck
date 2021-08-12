@@ -35,9 +35,10 @@ import java.lang.reflect.*
 class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
                                       actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
                                       checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
-                                      guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                                      sequentialSpecification: Class<*>, timeoutMs: Long, eliminateLocalObjects: Boolean, verboseTrace: Boolean,
-                                      customScenarios: List<ExecutionScenario>, recoverabilityModel: RecoverabilityModel
+                                      guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean,
+                                      minimizeFailedScenario: Boolean, sequentialSpecification: Class<*>, timeoutMs: Long,
+                                      eliminateLocalObjects: Boolean, verboseTrace: Boolean, customScenarios: List<ExecutionScenario>,
+                                      recoverabilityModel: RecoverabilityModel, val explorationTactic: ExplorationTactic
 ) : ManagedCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
     checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration, guarantees, requireStateEquivalenceCheck,
     minimizeFailedScenario, sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace, customScenarios, recoverabilityModel) {

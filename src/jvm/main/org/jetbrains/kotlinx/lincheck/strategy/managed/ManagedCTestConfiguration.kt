@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ExplorationTactic
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -56,6 +57,7 @@ abstract class ManagedCTestConfiguration(
             // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
             forClasses { className: String -> isTrustedPrimitive(className) }.allMethods().treatAsAtomic()
         )
+        val DEFAULT_EXPLORATION_TACTIC = ExplorationTactic.MINIMIZE_DEPTH
     }
 }
 

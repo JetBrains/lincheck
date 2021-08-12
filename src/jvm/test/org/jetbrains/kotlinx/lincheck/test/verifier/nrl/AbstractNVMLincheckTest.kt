@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ExplorationTactic
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.checkTraceHasNoLincheckEvents
@@ -86,7 +87,16 @@ abstract class AbstractNVMLincheckTest(
     }
 
     @Test
-    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
+    fun testWithModelCheckingStrategy(): Unit = runModelCheckingTest(ExplorationTactic.MINIMIZE_DEPTH)
+
+    @Test
+    fun testWithExperimentalRandomModelCheckingStrategy(): Unit = runModelCheckingTest(ExplorationTactic.DESCEND_RANDOMLY)
+
+    @Test
+    fun testWithExperimentalDeeperModelCheckingStrategy(): Unit = runModelCheckingTest(ExplorationTactic.DESCEND_DEEPER)
+
+    private fun runModelCheckingTest(tactic: ExplorationTactic) = ModelCheckingOptions().run {
+        explorationTactic(tactic)
         commonConfiguration()
         customize()
         runInternalTest()

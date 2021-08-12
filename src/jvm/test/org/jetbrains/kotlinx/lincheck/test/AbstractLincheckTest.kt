@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ExplorationTactic
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -58,8 +59,17 @@ abstract class AbstractLincheckTest(
     }
 
     @Test(timeout = TIMEOUT)
-    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
+    fun testWithModelCheckingStrategy(): Unit = runModelCheckingTest(ExplorationTactic.MINIMIZE_DEPTH)
+
+    @Test(timeout = TIMEOUT)
+    fun testWithExperimentalRandomModelCheckingStrategy(): Unit = runModelCheckingTest(ExplorationTactic.DESCEND_RANDOMLY)
+
+    @Test(timeout = TIMEOUT)
+    fun testWithExperimentalDeeperModelCheckingStrategy(): Unit = runModelCheckingTest(ExplorationTactic.DESCEND_DEEPER)
+
+    private fun runModelCheckingTest(tactic: ExplorationTactic) = ModelCheckingOptions().run {
         invocationsPerIteration(1_000)
+        explorationTactic(tactic)
         commonConfiguration()
         runInternalTest()
     }

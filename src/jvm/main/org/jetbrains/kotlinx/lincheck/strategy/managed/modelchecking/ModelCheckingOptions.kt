@@ -24,16 +24,23 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.nvm.StrategyRecoveryOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_EXPLORATION_TACTIC
 
 /**
  * Options for [model checking][ModelCheckingStrategy] strategy.
  */
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
+    private var explorationTactic = DEFAULT_EXPLORATION_TACTIC
+
+    fun explorationTactic(tactic: ExplorationTactic): ModelCheckingOptions = apply {
+        this.explorationTactic = tactic
+    }
+
     override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
         return ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
                 guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects,
-                verboseTrace, customScenarios, recover.createModel(StrategyRecoveryOptions.MANAGED))
+                verboseTrace, customScenarios, recover.createModel(StrategyRecoveryOptions.MANAGED), explorationTactic)
     }
 }
