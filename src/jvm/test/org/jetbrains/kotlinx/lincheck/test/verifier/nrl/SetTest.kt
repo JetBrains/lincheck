@@ -208,6 +208,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         val result = recoveryData[p].value!!.result.value
         if (result != null) return result
         val node = recoveryData[p].value!!.node.value
+        recoveryData[p].value!!.node.flush()
         if (node != null && node.next.isMarked) {
             node.deleter.compareAndSet(NULL_DELETER, p)
             node.deleter.flush()
