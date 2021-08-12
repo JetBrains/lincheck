@@ -23,13 +23,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 import org.jetbrains.kotlinx.lincheck.runner.InvocationResult
 
 private typealias InterleavingTreeNode = AbstractModelCheckingStrategy<*, *>.InterleavingTreeNode
+private typealias InterleavingBuilder = AbstractModelCheckingStrategy<*, *>.InterleavingBuilder<*>
 
-internal abstract class InterleavingTreeExplorer<BUILDER : AbstractModelCheckingStrategy<*, BUILDER>.InterleavingBuilder<*>>(
-    val root: AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode
+internal abstract class InterleavingTreeExplorer(
+    val root: InterleavingTreeNode
 ) {
     abstract fun hasNextInterleaving(): Boolean
     abstract fun runNextInterleaving(): InvocationResult
-    abstract fun AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode.onNodeEntering(builder: BUILDER)
+    abstract fun InterleavingTreeNode.onNodeEntering()
     abstract fun InterleavingTreeNode.onNodeLeaving()
     protected abstract fun InterleavingTreeNode.updateExplorationStatistics()
 }
@@ -42,16 +43,15 @@ enum class ExplorationTactic {
 }
 
 internal fun <BUILDER : AbstractModelCheckingStrategy<*, BUILDER>.InterleavingBuilder<*>> ExplorationTactic.toInterleavingTreeExplorer(
-    root: AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode
-): InterleavingTreeExplorer<BUILDER> = when (this) {
-    ExplorationTactic.MINIMIZE_DEPTH -> DepthMinimizingInterleavingTreeExplorer(root)
-    ExplorationTactic.DESCEND_RANDOMLY -> RandomDescendingInterleavingTreeExplorer(root)
-    ExplorationTactic.DESCEND_DEEPER -> DeeperDescendingInterleavingTreeExplorer(root)
-}
+    root: AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode, strategy: AbstractModelCheckingStrategy<*, BUILDER>
+): InterleavingTreeExplorer =
+    when (this) {
+        ExplorationTactic.MINIMIZE_DEPTH -> DepthMinimizingInterleavingTreeExplorer(root)
+        ExplorationTactic.DESCEND_RANDOMLY -> RandomDescendingInterleavingTreeExplorer(root)
+        ExplorationTactic.DESCEND_DEEPER -> DeeperDescendingInterleavingTreeExplorer(root, strategy)
+    }
 
-internal class DepthMinimizingInterleavingTreeExplorer<BUILDER : AbstractModelCheckingStrategy<*, BUILDER>.InterleavingBuilder<*>>(
-    root: AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode
-) : InterleavingTreeExplorer<BUILDER>(root) {
+internal class DepthMinimizingInterleavingTreeExplorer(root: InterleavingTreeNode) : InterleavingTreeExplorer(root) {
     var maxNumberOfEvents = 1
     var currentEvents = 0
 
@@ -85,7 +85,7 @@ internal class DepthMinimizingInterleavingTreeExplorer<BUILDER : AbstractModelCh
         return root.runNextInterleaving()
     }
 
-    override fun AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode.onNodeEntering(builder: BUILDER) {
+    override fun InterleavingTreeNode.onNodeEntering() {
         // Count only those events that require an invocation to determine node's choices.
         if (needsExploration) currentEvents++
     }
@@ -117,14 +117,12 @@ internal class DepthMinimizingInterleavingTreeExplorer<BUILDER : AbstractModelCh
 // Decrease in sqrt(2) times per layer, essentially resulting in decrease in 2 times per level (2 layers per level).
 private const val WEIGHT_DECREASING_RATIO = 1.41421356237
 
-internal class RandomDescendingInterleavingTreeExplorer<BUILDER : AbstractModelCheckingStrategy<*, BUILDER>.InterleavingBuilder<*>>(
-    root: AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode
-) : InterleavingTreeExplorer<BUILDER>(root) {
+internal class RandomDescendingInterleavingTreeExplorer(root: InterleavingTreeNode) : InterleavingTreeExplorer(root) {
     override fun hasNextInterleaving(): Boolean = !root.isFullyExplored
 
     override fun runNextInterleaving(): InvocationResult = root.runNextInterleaving()
 
-    override fun AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode.onNodeEntering(builder: BUILDER) {
+    override fun InterleavingTreeNode.onNodeEntering() {
         // do nothing
     }
 
@@ -152,9 +150,8 @@ internal class RandomDescendingInterleavingTreeExplorer<BUILDER : AbstractModelC
 }
 
 internal class DeeperDescendingInterleavingTreeExplorer<BUILDER : AbstractModelCheckingStrategy<*, BUILDER>.InterleavingBuilder<*>>(
-    root: AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode
-) : InterleavingTreeExplorer<BUILDER>(root) {
-    var lastBuilder: BUILDER? = null
+    root: AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode, val strategy: AbstractModelCheckingStrategy<*, BUILDER>
+) : InterleavingTreeExplorer(root) {
     var nodes: MutableList<AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode> = mutableListOf()
     var maxNumberOfEvents = 1
     var currentEvents = 0
@@ -185,18 +182,27 @@ internal class DeeperDescendingInterleavingTreeExplorer<BUILDER : AbstractModelC
     }
 
     override fun runNextInterleaving(): InvocationResult {
+        // Prepare builder and current events according to the last state.
         currentEvents = 0
-        for (node in nodes)
+        val builder = strategy.createBuilder()
+        for (i in nodes.indices) {
+            val node = nodes[i]
             if (node.needsExploration) currentEvents++
+            if (i + 1 <= nodes.lastIndex) {
+                val nextNode = nodes[i + 1]
+                val choice = node.choices.first { it.node === nextNode }.value
+                node.run { builder.applyChoice(choice) }
+            }
+        }
+        // Decide whether to continue the previous path or start a new one.
         if (currentEvents >= maxNumberOfEvents * 2 || nodes.lastOrNull()?.choices?.all { it.node.isFullyExplored } != false) {
             currentEvents = 0
             nodes.clear()
-            lastBuilder = null
             return root.runNextInterleaving()
         } else {
             val nextChoice = nodes.last().chooseUnexploredNode()
-            nodes.last().run { lastBuilder!!.applyChoice(nextChoice.value) }
-            val result = nextChoice.node.runNextInterleaving(lastBuilder!!)
+            nodes.last().run { builder.applyChoice(nextChoice.value) }
+            val result = nextChoice.node.runNextInterleaving(builder)
             for (node in nodes.reversed()) {
                 // Calculate depth of the current node
                 var curEvents = 0
@@ -204,21 +210,19 @@ internal class DeeperDescendingInterleavingTreeExplorer<BUILDER : AbstractModelC
                     if (n.needsExploration) curEvents++
                     if (n == node) break
                 }
-                val previousCurrentEvents = currentEvents
                 // Update node weight
                 currentEvents = curEvents
                 node.updateExplorationStatistics()
-                // Rollback current events count
-                currentEvents = previousCurrentEvents
             }
             return result
         }
     }
 
-    override fun AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode.onNodeEntering(builder: BUILDER) {
-        // Save the last node and builder
-        lastBuilder = builder
-        nodes.add(this)
+    override fun InterleavingTreeNode.onNodeEntering() {
+        // Save the last node.
+        // Unchecked cast to avoid passing BUILDER generic everywhere.
+        @Suppress("UNCHECKED_CAST")
+        nodes.add(this as AbstractModelCheckingStrategy<*, BUILDER>.InterleavingTreeNode)
         // Count only those events that require an invocation to determine node's choices.
         if (needsExploration) currentEvents++
     }

@@ -66,9 +66,10 @@ internal abstract class AbstractModelCheckingStrategy<
     protected lateinit var currentInterleaving: INTERLEAVING
 
     // The tactic for exploring interleaving tree
-    protected var interleavingExplorer = testCfg.explorationTactic.toInterleavingTreeExplorer(createRoot())
+    @Suppress("LeakingThis")
+    protected var interleavingExplorer = testCfg.explorationTactic.toInterleavingTreeExplorer(createRoot(), this)
 
-    protected abstract fun createBuilder(): BUILDER
+    internal abstract fun createBuilder(): BUILDER
     protected open fun createRoot(): InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
 
     override fun runImpl(): LincheckFailure? {
@@ -133,7 +134,7 @@ internal abstract class AbstractModelCheckingStrategy<
         abstract fun BUILDER.applyChoice(choice: Int)
 
         fun runNextInterleaving(interleavingBuilder: BUILDER): InvocationResult = runAndUpdate {
-            interleavingExplorer.run { this@InterleavingTreeNode.onNodeEntering(interleavingBuilder) }
+            interleavingExplorer.run { this@InterleavingTreeNode.onNodeEntering() }
             if (!isInitialized) {
                 interleavingBuilder.addLastNoninitializedNode(this)
                 // Run the new interleaving
@@ -173,7 +174,6 @@ internal abstract class AbstractModelCheckingStrategy<
     protected open inner class ThreadChoosingNode(switchableThreads: List<Int>) : InterleavingTreeNode(
         choices = switchableThreads.map { Choice(SwitchChoosingNode(), it) }
     ) {
-
         override fun BUILDER.applyChoice(choice: Int) {
             addThreadSwitchChoice(choice)
         }

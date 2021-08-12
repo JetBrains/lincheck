@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ExplorationTactic
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
