@@ -69,9 +69,7 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
         if (result is CrashResult || waitingThreadsToCrash > 0) {
             val context = container.filterIsInstance<BufferedDurableLinearizabilityContext>().firstOrNull { it.waitingThreadsToCrash == 0 }
             if (context !== null) {
-                if (scenario[threadId][actorId].isSync() && result !is CrashResult) {
-                    container.addContext(BufferedDurableLinearizabilityContext(scenario, results, state, context.executed, suspended, tickets, listOf(state), 0))
-                } else {
+                if (!scenario[threadId][actorId].isSync() || result is CrashResult) {
                     for (q in persisted) {
                         container.addContext(BufferedDurableLinearizabilityContext(scenario, results, q, context.executed, suspended, tickets, listOf(q), 0))
                     }
