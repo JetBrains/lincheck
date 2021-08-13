@@ -20,7 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CrashResult
+import org.jetbrains.kotlinx.lincheck.ValueResult
+import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Sync
@@ -28,17 +30,17 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedDurableLinearizabilityVerifier
 import org.junit.Assert
 import org.junit.Test
 
-private const val THREADS = 2
+private const val THREADS = 3
 
-@Param(name = "key", gen = IntGen::class, conf = "0:3")
+@Param(name = "key", gen = IntGen::class, conf = "0:2")
 internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE, THREADS, SequentialCAS::class) {
     private val cas = DurableCAS()
 
@@ -51,22 +53,6 @@ internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE
     @Operation
     @Sync
     fun sync() = cas.sync()
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
-        addCustomScenario {
-            initial { actor(::cas, 0, 2) }
-            parallel {
-                thread { actor(::cas, 1, 0); actor(::sync); actor(::cas, 0, 1); actor(::sync) }
-                thread { actor(::cas, 2, 1); actor(::sync); actor(::read) }
-            }
-            post { actor(::read) }
-        }
-    }
-
-    override fun StressOptions.customize() {
-        invocationsPerIteration(1e8.toInt())
-    }
 
     override fun ModelCheckingOptions.customize() {
         invocationsPerIteration(1e5.toInt())
