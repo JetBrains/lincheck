@@ -134,7 +134,6 @@ internal abstract class AbstractModelCheckingStrategy<
         abstract fun BUILDER.applyChoice(choice: Int)
 
         fun runNextInterleaving(interleavingBuilder: BUILDER): InvocationResult = runAndUpdate {
-            interleavingExplorer.run { this@InterleavingTreeNode.onNodeEntering() }
             if (!isInitialized) {
                 interleavingBuilder.addLastNoninitializedNode(this)
                 // Run the new interleaving
@@ -147,6 +146,7 @@ internal abstract class AbstractModelCheckingStrategy<
         }
 
         private inline fun <T> runAndUpdate(block: () -> T): T {
+            interleavingExplorer.run { this@InterleavingTreeNode.onNodeEntering() }
             val result = block()
             interleavingExplorer.run { this@InterleavingTreeNode.onNodeLeaving() }
             return result
