@@ -71,13 +71,14 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         if (!isTestThread(iThread)) return // can crash only test threads
         if (inIgnoredSection(iThread)) return // cannot crash in ignored sections
         check(iThread == currentThread)
-        check(!waitingSystemCrash()) { "This case must be handled in await." }
-        if (shouldCrash(iThread)) {
-            val systemCrash = isSystemCrash(iThread)
-            if (systemCrash) {
+        val isSystemCrash = waitingSystemCrash()
+        check(!isSystemCrash || systemCrashInitiator != iThread)
+        if (shouldCrash(iThread) || isSystemCrash) {
+            val initCrash = isSystemCrash(iThread)
+            if (!isSystemCrash && initCrash) {
                 systemCrashInitiator = iThread
             }
-            crashCurrentThread(iThread, systemCrash, systemCrash)
+            crashCurrentThread(iThread, isSystemCrash || initCrash, !isSystemCrash && initCrash)
         }
         // continue the operation
     }
@@ -110,19 +111,6 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         super.onStart(iThread)
         started[iThread] = true
     }
-
-    override fun onFinish(iThread: Int) {
-        check(!waitingSystemCrash())
-        super.onFinish(iThread)
-    }
-
-    override fun awaitTurn(iThread: Int) {
-        super.awaitTurn(iThread)
-        if (waitingSystemCrash() && systemCrashInitiator != iThread) {
-            crashCurrentThread(iThread, systemCrash = true, initializeSystemCrash = false)
-        }
-    }
-
 
     private fun forceSwitchToAwaitSystemCrash() {
         check(waitingSystemCrash())

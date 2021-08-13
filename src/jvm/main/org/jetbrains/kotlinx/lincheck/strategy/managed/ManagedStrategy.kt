@@ -360,7 +360,7 @@ abstract class ManagedStrategy(
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
      */
-    protected open fun awaitTurn(iThread: Int) {
+    protected fun awaitTurn(iThread: Int) {
         // Wait actively until the thread is allowed to continue
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
