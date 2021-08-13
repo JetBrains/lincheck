@@ -227,7 +227,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         fun isCrashPosition() = executionPosition in crashPositions
         fun isSystemCrash() = executionPosition !in nonSystemCrashes
         fun chooseRandomSeed() = if (nextRandomSeed.hasNext()) {
-            check(explorationType == ExplorationNodeType.CRASH || explorationType == ExplorationNodeType.NONE || crashPositions.any { it > executionPosition })
+            check(explorationType == ExplorationNodeType.CRASH || explorationType == ExplorationNodeType.NONE || crashPositions.any { it >= executionPosition })
             nextRandomSeed.next()
         } else {
             check(explorationType != ExplorationNodeType.CRASH && crashPositions.all { it <= executionPosition })
