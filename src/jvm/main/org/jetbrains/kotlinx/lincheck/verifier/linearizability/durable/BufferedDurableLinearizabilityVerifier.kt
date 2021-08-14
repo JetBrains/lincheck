@@ -66,13 +66,11 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
     override fun processResult(container: AbstractLinearizabilityContext.Container, threadId: Int) {
         val actorId = executed[threadId]
         val result = results[threadId][actorId]
-        if (result is CrashResult || waitingThreadsToCrash > 0) {
+        if (result is CrashResult || (waitingThreadsToCrash > 0 && !scenario[threadId][actorId].isSync())) {
             val context = container.filterIsInstance<BufferedDurableLinearizabilityContext>().firstOrNull { it.waitingThreadsToCrash == 0 }
             if (context !== null) {
-                if (!scenario[threadId][actorId].isSync() || result is CrashResult) {
-                    for (q in persisted) {
-                        container.addContext(BufferedDurableLinearizabilityContext(scenario, results, q, context.executed, suspended, tickets, listOf(q), 0))
-                    }
+                for (q in persisted) {
+                    container.addContext(BufferedDurableLinearizabilityContext(scenario, results, q, context.executed, suspended, tickets, listOf(q), 0))
                 }
             }
         }
@@ -92,7 +90,7 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
         val result = results[threadId][actorId]
         val isSync = actor.isSync() && result !is CrashResult
         val newWaiting = if (waitingThreadsToCrash == 0 && result is CrashResult) {
-           result.crashedActors.withIndex().count { executed[it.index + 1] < it.value }
+            result.crashedActors.withIndex().count { (if (it.value == scenario[it.index + 1].size) executed[it.index + 1] else executed[it.index + 1] - 1) < it.value }
         } else if (waitingThreadsToCrash > 0 && executed[threadId] == scenario[threadId].size || result is CrashResult) {
             waitingThreadsToCrash - 1
         } else waitingThreadsToCrash

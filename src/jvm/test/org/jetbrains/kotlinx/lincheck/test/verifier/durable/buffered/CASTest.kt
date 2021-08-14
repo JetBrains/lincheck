@@ -32,6 +32,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedDurableLinearizabilityVerifier
@@ -55,6 +56,10 @@ internal class CASTest : AbstractNVMLincheckFailingTest(Recover.BUFFERED_DURABLE
     fun sync() = cas.sync()
 
     override fun ModelCheckingOptions.customize() {
+        invocationsPerIteration(1e5.toInt())
+    }
+
+    override fun StressOptions.customize() {
         invocationsPerIteration(1e5.toInt())
     }
 

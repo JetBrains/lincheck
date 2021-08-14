@@ -68,12 +68,8 @@ internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.BUFFERED_DURAB
     @DurableRecoverAll
     fun recover() = q.recover()
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(50)
-    }
-
     override fun StressOptions.customize() {
-        iterations(10)
+        iterations(80)
     }
 
     @Test
@@ -153,6 +149,30 @@ internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.BUFFERED_DURAB
                 listOf(result(CrashResult().apply { crashedActors = intArrayOf(-1, 0) }, 0, 0))
             ),
             listOf()
+        )
+        Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
+    }
+
+    @Test
+    fun testVerifier5() {
+        val verifier = BufferedDurableLinearizabilityVerifier(SequentialQueue::class.java)
+        val scenario = scenario {
+            initial { actor(::push, -7); actor(::sync); actor(::pop); actor(::push, 3) }
+            parallel {
+                thread { actor(::pop);  }
+                thread { actor(::pop); }
+                thread { actor(::push, -4); }
+            }
+            post { actor(::pop) }
+        }
+        val executionResult = ExecutionResult(
+            listOf(VoidResult, VoidResult, ValueResult(-7), VoidResult),
+            listOf(
+                listOf(result(CrashResult().apply { crashedActors = intArrayOf(0, 1, 0) }, 0, 0, 0)),
+                listOf(result(ValueResult(-4), 0, 0, 0)),
+                listOf(result(CrashResult().apply { crashedActors = intArrayOf(0, 1, 0) }, 0, 0, 0))
+            ),
+            listOf(ValueResult(-7))
         )
         Assert.assertTrue(verifier.verifyResults(scenario, executionResult))
     }
