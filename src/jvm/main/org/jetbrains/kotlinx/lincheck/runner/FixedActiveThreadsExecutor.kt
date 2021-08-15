@@ -39,7 +39,7 @@ import kotlin.math.*
  */
 internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
     // Threads used in this runner.
-    private val threads: List<TestThread>
+    val threads: List<TestThread>
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */

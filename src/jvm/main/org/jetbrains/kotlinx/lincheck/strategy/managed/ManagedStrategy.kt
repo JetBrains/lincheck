@@ -716,7 +716,8 @@ abstract class ManagedStrategy(
         }
 
         fun passCodeLocation(tracePoint: TracePoint?) {
-            _trace += tracePoint!!
+            // tracePoint can be null here if trace is not available, e.g. in case of suspension
+            if (tracePoint != null) _trace += tracePoint
         }
 
         fun addStateRepresentation(iThread: Int) {
