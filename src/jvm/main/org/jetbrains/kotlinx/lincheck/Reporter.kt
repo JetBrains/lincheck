@@ -150,7 +150,10 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
     return this
 }
 
-internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
+internal fun StringBuilder.appendFailure(failure: LincheckFailure, iteration: Int? = null, maxIterations: Int? = null): StringBuilder {
+    iteration?.let {
+        appendln("\n= Iteration $iteration / $maxIterations =")
+    }
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)

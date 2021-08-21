@@ -30,7 +30,10 @@ sealed class LincheckFailure(
     val scenario: ExecutionScenario,
     val trace: Trace?
 ) {
-    override fun toString() = StringBuilder().appendFailure(this).toString()
+    var iteration: Int? = null
+    var maxIterations: Int? = null
+
+    override fun toString() = StringBuilder().appendFailure(this, iteration, maxIterations).toString()
 }
 
 internal class IncorrectResultsFailure(

@@ -65,22 +65,31 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier(checkStateEquivalence = true)
+        val maxIterations = customScenarios.size + iterations
         for (i in customScenarios.indices) {
+            val iteration = i + 1
+            if (iteration <= skipIterations) continue // skip the iteration
             val scenario = customScenarios[i]
             scenario.validate()
-            reporter.logIteration(i + 1, customScenarios.size, scenario)
-            val failure = scenario.run(this, verifier)
-            if (failure != null) return failure
+            reporter.logIteration(iteration, maxIterations, scenario)
+            scenario.run(this, verifier)?.let { failure ->
+                reporter.logFailedIteration(failure)
+                failure.iteration = iteration
+                failure.maxIterations = maxIterations
+                return failure
+            }
         }
         repeat(iterations) { i ->
             val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
-            val failure = scenario.run(this, verifier)
-            if (failure != null) {
-                val minimizedFailedIteration = if (!minimizeFailedScenario) failure
-                                               else failure.minimize(this)
+            val iteration = i + 1 + customScenarios.size
+            if (iteration <= skipIterations) return@repeat // skip the iteration
+            reporter.logIteration(iteration, maxIterations, scenario)
+            scenario.run(this, verifier)?.let { failure ->
+                val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
+                minimizedFailedIteration.iteration = iteration
+                minimizedFailedIteration.maxIterations = maxIterations
                 return minimizedFailedIteration
             }
         }

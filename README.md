@@ -30,7 +30,6 @@ Table of contents
     + [Operation groups](#operation-groups)
   * [Parameter generators](#parameter-generators)
     + [Binding parameter and generator names](#binding-parameter-and-generator-names)
-  * [Custom scenarios](#custom-scenarios)
   * [Sequential specification](#sequential-specification)
   * [Validation functions](#validation-functions)
   * [Parameter and result types](#parameter-and-result-types)
@@ -38,7 +37,6 @@ Table of contents
 - [Execution strategies](#execution-strategies)
   * [Stress testing](#stress-testing)
   * [Model checking](#model-checking)
-    + [Modular testing](#modular-testing)
     + [Java 9+ support](#java-9+-support)
   * [State representation](#state-representation)
 - [Correctness contracts](#correctness-contracts)
@@ -53,6 +51,10 @@ Table of contents
   + [States equivalency](#states-equivalency-1)
   + [Test example](#test-example-2)
 - [Configuration via options](#configuration-via-options)
+  * [Custom scenarios](#custom-scenarios)
+  * [Modular testing](#modular-testing)
+  * [Verbose trace](#verbose-trace)
+  * [Skipping iterations](#skipping-iterations)
 - [Example](#example)
 
 
@@ -148,39 +150,6 @@ Unfortunately, this feature is disabled in **javac** compiler by default. Use `-
 
 However, some IDEs (such as IntelliJ IDEA) do not understand build system configuration as well as possible and running a test from these IDEs will not work. In order to solve this issue you can add `-parameters` option for **javac** compiler in your IDE configuration.
 
-## Custom scenarios
-Sometimes, it is important to be confident that the testing algorithm works under some corner-case situations.
-For this purpose, **lincheck** provides a possibility to specify *custom* scenarios via a special Kotlin DSL in a way similar to the example below.
-After the scenario is defined, it can be added to the configuration via `Options.addCustomScenario(ExecutionScenario)`
-(see [Configuration via options](#configuration-via-options) for details of how to configure Lincheck via `Options`).
-In this case, **lincheck**  examines custom scenarios followed by checking the generated ones.
-
-Custom scenario generation in Kotlin can be done as follows:
-```kotlin
-val scenario = scenario {
-  initial { // initialize the queue with two elements
-    actor(SPMCQueue::offer, 1)
-    actor(SPMCQueue::offer, 2)
-  }
-  parallel {
-    thread { // one producer 
-      // add elements one-by-one
-      elements.forEach { actor(SPMCQueue::offer, it) }
-    }
-    repeat(2) { // two consumers
-      thread {
-        repeat(3) { // add three poll-s 
-          actor(SPMCQueue::poll)
-        }
-      }
-    }
-  }
-}
-
-// Add this custom scenario to the test configuration
-options.addCustomScenario(scenario)
-```
-
 ## Sequential specification
 By default, **lincheck** sequentially uses the testing data structure to define the correct specification.
 However, it is sometimes better to define it explicitly, by writing a simple sequential implementation, and be sure that it is correct. 
@@ -267,19 +236,6 @@ Therefore, in **lincheck** we have a model checking mode that works under the se
 Similarly to the stress strategy, model checking can be activated via `@ModelCheckingCTest` annotation or using `ModelCheckingOptions`. The model checking strategy has the same parameters as the stress strategy and the following additional ones:
 * **checkObstructionFreedom** - specifies whether **lincheck** should check the testing algorithm for obstruction-freedom;
 * **hangingDetectionThreshold** - specifies the maximum number of the same code location visits without thread switches that should be considered as hanging (e.g., due to an active lock).
-
-### Modular testing
-It is a common pattern to use linearizable data structures as building blocks of other ones. 
-At the same time, the number of all possible interleavings for non-trivial algorithms usually is enormous. 
-This leads us to add a way of *modular* testing, so that the internal data structures are tested separately, and the operations in them are considered as `atomic` -- only one switch point is inserted for each atomic function invocation then. This feature significantly reduces the number of redundant interleavings and increases coverage at the same time. Moreover, it is also usual to have some debug code that manipulates with the shared memory but does not affect the testing data structure. In **lincheck**, it is possible to ignore such functions for the analysis, so that no switch point is inserted.
-For complex concurrent data structures, a large number of interleavings are not interesting. For instance, it is not useful to switch in an internal data structure if all its methods are synchronized. 
-With model checking strategy you can design separate tests for your inner data structures and then in the main test treat these structures as if they are correct.
-
-The atomicity contracts can be specified via `ModelCheckingOptions` (see [Configuration via options](#configuration-via-options)), the following syntax is used: 
-`options.addGuarantee(forClasses(ConcurrentHashMap.javaClass.name).methods("put", "get").treatAsAtomic())`. 
-The specified guarantee forces **lincheck** not to switch threads inside these `put` and `get` methods, executing them atomically. Thus, the total number of possible interleavings is significantly decreased, and the testing quality is improved. 
-
-Additionally to marking methods as atomic, it is possible to ignore them for the analysis; this is extremely useful for logging and debugging methods.  For such methods, `ignored` guarantee should be used instead of `treatAsAtomic`, and **lincheck** will not add switch points before or after these method calls, considering them in the same way as thread-local operations.
 
 ### Java 9+ support
 Please note that the current version requires the following JVM property 
@@ -479,6 +435,60 @@ public class MyConcurrentTest {
 }
 ```
 
+There are a few advanced features that can be enabled via options but can not via annotations.
+
+## Custom scenarios
+Sometimes, it is important to be confident that the testing algorithm works under some corner-case situations.
+For this purpose, **lincheck** provides a possibility to specify *custom* scenarios via a special Kotlin DSL in a way similar to the example below.
+After the scenario is defined, it can be added to the configuration via `Options.addCustomScenario(ExecutionScenario)`.
+In this case, **lincheck**  examines custom scenarios followed by checking the generated ones.
+
+Custom scenario generation in Kotlin can be done as follows:
+```kotlin
+val scenario = scenario {
+  initial { // initialize the queue with two elements
+    actor(SPMCQueue::offer, 1)
+    actor(SPMCQueue::offer, 2)
+  }
+  parallel {
+    thread { // one producer 
+      // add elements one-by-one
+      elements.forEach { actor(SPMCQueue::offer, it) }
+    }
+    repeat(2) { // two consumers
+      thread {
+        repeat(3) { // add three poll-s 
+          actor(SPMCQueue::poll)
+        }
+      }
+    }
+  }
+}
+
+// Add this custom scenario to the test configuration
+options.addCustomScenario(scenario)
+```
+
+## Modular testing
+It is a common pattern to use linearizable data structures as building blocks of other ones.
+At the same time, the number of all possible interleavings in the model checking mode for non-trivial algorithms usually is enormous.
+This leads us to add a way of *modular* testing, so that the internal data structures are tested separately, and the operations in them are considered as `atomic` -- only one switch point is inserted for each atomic function invocation then. This feature significantly reduces the number of redundant interleavings and increases coverage at the same time. Moreover, it is also usual to have some debug code that manipulates with the shared memory but does not affect the testing data structure. In **lincheck**, it is possible to ignore such functions for the analysis, so that no switch point is inserted.
+For complex concurrent data structures, a large number of interleavings are not interesting. For instance, it is not useful to switch in an internal data structure if all its methods are synchronized.
+With model checking strategy you can design separate tests for your inner data structures and then in the main test treat these structures as if they are correct.
+
+The atomicity contracts can be specified via `ModelCheckingOptions`, the following syntax is used:
+`options.addGuarantee(forClasses(ConcurrentHashMap.javaClass.name).methods("put", "get").treatAsAtomic())`.
+The specified guarantee forces **lincheck** not to switch threads inside these `put` and `get` methods, executing them atomically. Thus, the total number of possible interleavings is significantly decreased, and the testing quality is improved.
+
+Additionally to marking methods as atomic, it is possible to ignore them for the analysis; this is extremely useful for logging and debugging methods.  For such methods, `ignored` guarantee should be used instead of `treatAsAtomic`, and **lincheck** will not add switch points before or after these method calls, considering them in the same way as thread-local operations.
+
+## Verbose trace
+To prevent too large traces in the model checking mode, by default **lincheck** compresses methods that do not contain interesting events (e.g., a threads switch). However, sometimes it may be useful to show all events instead. Use `ModelCheckingOptions.verboseTrace()` in this case.
+
+## Skipping iterations
+**Lincheck** has a deterministic scenario generation, so that it is easier to reproduce a bug. Nevertheless, if an iteration number with a bug is large, it may take much time to reproduce it, while most of the work will be useless. So, in order to re-execute an incorrect scenario it is better to employ custom scenarios (see [Custom scenarios](#custom-scenarios)) or skip iterations before the needed one via `Options.skipIterations(iterations)`.
+
+The model checking strategy is guaranteed to find exactly the same bug on the same iteration. For the stress strategy increasing the number of invocations can help to reproduce bugs reliably.
 
 # Example
 Here is a test for a not thread-safe `HashMap` with the failed scenario and the corresponding result. It uses the default configuration and tests `put` and `get` operations only:

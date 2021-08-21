@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_SKIP_ITERATIONS
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -49,7 +50,8 @@ abstract class CTestConfiguration(
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: Class<*>,
     val timeoutMs: Long,
-    val customScenarios: List<ExecutionScenario>
+    val customScenarios: List<ExecutionScenario>,
+    val skipIterations: Int
 ) {
     abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
@@ -63,6 +65,7 @@ abstract class CTestConfiguration(
         val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
         const val DEFAULT_MINIMIZE_ERROR = true
         const val DEFAULT_TIMEOUT_MS: Long = 10000
+        const val DEFAULT_SKIP_ITERATIONS = 0
     }
 }
 
@@ -74,7 +77,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
                 chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                DEFAULT_TIMEOUT_MS, emptyList()
+                DEFAULT_TIMEOUT_MS, emptyList(), DEFAULT_SKIP_ITERATIONS
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
@@ -84,7 +87,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
                 ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE, emptyList()
+                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE, emptyList(), DEFAULT_SKIP_ITERATIONS
             )
         }
     return stressConfigurations + modelCheckingConfigurations

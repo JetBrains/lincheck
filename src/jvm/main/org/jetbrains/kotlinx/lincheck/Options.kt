@@ -42,6 +42,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
+    protected var skipIterations = CTestConfiguration.DEFAULT_SKIP_ITERATIONS
 
     /**
      * Number of different test scenarios to be executed
@@ -163,6 +164,14 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun addCustomScenario(scenarioBuilder: DSLScenarioBuilder.() -> Unit) =
         addCustomScenario(scenario { scenarioBuilder() })
+
+    /**
+     * Skip the specified number of generated scenarios.
+     * This can be useful for reproducing a bug since scenario generation is deterministic.
+     */
+    fun skipIterations(iterations: Int) = applyAndCast {
+        skipIterations = iterations
+    }
 
     /**
      * Internal, DO NOT USE.

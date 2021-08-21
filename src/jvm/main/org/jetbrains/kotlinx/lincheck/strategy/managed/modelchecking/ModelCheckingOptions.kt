@@ -33,6 +33,6 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
                 guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
                 chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects,
-                verboseTrace, customScenarios)
+                verboseTrace, customScenarios, skipIterations)
     }
 }
