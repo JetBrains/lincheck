@@ -73,12 +73,14 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         check(iThread == currentThread)
         val isSystemCrash = waitingSystemCrash()
         check(!isSystemCrash || systemCrashInitiator != iThread)
-        if (shouldCrash(iThread) || isSystemCrash) {
+        if (isSystemCrash) {
+            crashCurrentThread(iThread, systemCrash = true, initializeSystemCrash = false)
+        } else if (shouldCrash(iThread)) {
             val initCrash = isSystemCrash(iThread)
-            if (!isSystemCrash && initCrash) {
+            if (initCrash) {
                 systemCrashInitiator = iThread
             }
-            crashCurrentThread(iThread, isSystemCrash || initCrash, !isSystemCrash && initCrash)
+            crashCurrentThread(iThread, initCrash, initCrash)
         }
         // continue the operation
     }

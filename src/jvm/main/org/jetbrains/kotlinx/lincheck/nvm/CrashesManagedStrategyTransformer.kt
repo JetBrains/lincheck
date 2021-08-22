@@ -114,11 +114,4 @@ private val BEFORE_CRASH_METHOD = Method.getMethod(ManagedStrategy::beforeCrashP
 private val BEFORE_NVM_OPERATION_METHOD = Method.getMethod(ManagedStrategy::beforeNVMOperation.javaMethod)
 private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
 private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallTracePoint::class.java)
-private val returnInstructions = listOf(
-    Opcodes.RETURN,
-    Opcodes.ARETURN,
-    Opcodes.DRETURN,
-    Opcodes.FRETURN,
-    Opcodes.IRETURN,
-    Opcodes.LRETURN
-)
+private val returnInstructions = Opcodes.IRETURN..Opcodes.RETURN
