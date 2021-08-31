@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.NodeAddressResolver
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
+import java.nio.channels.InterruptedByTimeoutException
 import java.util.*
 import kotlin.random.Random
 
@@ -46,8 +47,6 @@ class ModelCheckingContext<Message, Log>(
     lateinit var testNodeExecutions: Array<TestNodeExecution>
 
     lateinit var testInstances: Array<Node<Message>>
-
-    lateinit var runner: DistributedModelCheckingRunner<Message, Log>
 
     private val vectorClock = Array(addressResolver.totalNumberOfNodes) {
         IntArray(addressResolver.totalNumberOfNodes)
@@ -71,7 +70,6 @@ class ModelCheckingContext<Message, Log>(
 
     var nodeCrashInfo = NodeCrashInfo(testCfg, this)
 
-    val invocation = 0
 
     lateinit var logs: Array<List<Log>>
 
@@ -79,18 +77,26 @@ class ModelCheckingContext<Message, Log>(
 
     fun reset() {
         nodeCrashInfo = NodeCrashInfo(testCfg, this)
-        tasksId = 0
         messageId = 0
         logs = Array(addressResolver.totalNumberOfNodes) {
             emptyList()
         }
         events = LinkedList()
         vectorClock.forEach { it.fill(0) }
+        path.clear()
+        taskManager.clear()
     }
 
     val generatingRandom = Random(0)
 
-    var maxNumberOfErrors = 0
+    var treeNodeId = 0
 
-    var tasksId = 0
+    var currentTreeNode : InterleavingTreeNode? = null
+
+    var interleaving : Interleaving? = null
+
+    val path = mutableListOf<InterleavingTreeNode>()
+    lateinit var dispatcher: ModelCheckingDispatcher
+
+    val taskManager : TaskManager = TaskManager(this)
 }

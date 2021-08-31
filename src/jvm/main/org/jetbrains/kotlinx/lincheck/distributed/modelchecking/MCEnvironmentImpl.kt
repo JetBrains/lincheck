@@ -31,7 +31,7 @@ class MCEnvironmentImpl<Message, Log>(
     val context: ModelCheckingContext<Message, Log>
 ) : Environment<Message, Log> {
     override val coroutineContext: CoroutineContext
-        get() = context.runner.dispatcher
+        get() = context.dispatcher
 
     var isFinished = true
     override fun getAddressesForClass(cls: Class<out Node<Message>>): List<Int>? = context.addressResolver[cls]
@@ -48,32 +48,17 @@ class MCEnvironmentImpl<Message, Log>(
             clock = clock,
             state = context.getStateRepresentation(nodeId)
         )
-        val taskId = context.tasksId++
-        context.runner.curTreeNode!!.addMessage(event.id, taskId)
-        val nextTransition = context.runner.nextTransition()
-        if (nextTransition == taskId) {
-            val newClock = context.incClockAndCopy(nodeId)
-            context.runner.addTask(NodeCrashTask(nodeId, VectorClock(newClock), "Crash node $nodeId") {
-                context.events.add(nodeId to NodeCrashEvent(newClock, context.getStateRepresentation(nodeId)))
-                val tasksToRemove =
-                    context.runner.tasks.filter { it.value.iNode == nodeId && it.key != taskId }.map { it.key }
-                tasksToRemove.forEach { context.runner.tasks.remove(it) }
-                if (context.testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
-                    context.testNodeExecutions.getOrNull(nodeId)?.crashRemained()
-                }
-            }, taskId)
-        }
-        debugLogs.add("[$nodeId]: Send $message to $receiver ${event.id} ${context.runner.curTreeNode?.id}")
+        storeSwitchPoints(event.id)
+        val nextSwitch = context.interleaving?.nextSwitch()
+        if (tryCrashNode(nextSwitch, event.id)) return
         context.events.add(nodeId to event)
 
-        context.runner.addTask(
+        context.taskManager.addTask(
             MessageReceiveTask(
                 receiver,
                 VectorClock(clock),
                 "[$receiver]: Receive $message ${event.id}"
             ) {
-                debugLogs.add("[$receiver]: Receive $message ${event.id} ${context.runner.curTreeNode?.id}")
-                //println(debugLogs.last())
                 context.incClock(receiver)
                 val newclock = context.maxClock(receiver, clock)
                 context.events.add(
@@ -124,5 +109,50 @@ class MCEnvironmentImpl<Message, Log>(
                 context.getStateRepresentation(nodeId)
             )
         )
+    }
+
+    private fun storeSwitchPoints(msgId: Int) {
+        if (context.nodeCrashInfo.canCrash(nodeId)) {
+            context.currentTreeNode?.addSwitchPoint(context.taskManager.getCrashSwitch(msgId, nodeId))
+        }
+        if (!context.testCfg.isNetworkReliable) {
+            context.currentTreeNode?.addSwitchPoint(context.taskManager.getMessageLoseSwitch(msgId))
+        }
+        if (context.testCfg.messageDuplication) {
+            context.currentTreeNode?.addSwitchPoint(context.taskManager.getMessageDuplicationSwitch(msgId))
+        }
+    }
+
+    private fun tryCrashNode(nextSwitch: Switch?, msgId: Int): Boolean {
+        if (nextSwitch is NodeCrash && nextSwitch.msgId == msgId) {
+            val taskId = nextSwitch.taskId
+            val newClock = context.incClockAndCopy(nodeId)
+            context.taskManager.addTask(NodeCrashTask(nodeId, VectorClock(newClock), "Crash node $nodeId") {
+                check(context.nodeCrashInfo.crashNode(nodeId))
+                context.events.add(nodeId to NodeCrashEvent(newClock, context.getStateRepresentation(nodeId)))
+                context.taskManager.removeTaskForNode(nodeId, taskId)
+                if (context.testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
+                    context.testNodeExecutions.getOrNull(nodeId)?.crashRemained()
+                } else {
+                    //TODO: revisit the concept of clock
+                    context.taskManager.addTask(
+                        NodeRecoverTask(
+                            nodeId,
+                            VectorClock(context.copyClock(nodeId)),
+                            "Recover node $nodeId"
+                        ) {
+                            context.events.add(
+                                nodeId to ProcessRecoveryEvent(
+                                    context.incClockAndCopy(nodeId),
+                                    context.getStateRepresentation(nodeId)
+                                )
+                            )
+                            context.nodeCrashInfo.recoverNode(nodeId)
+                        })
+                }
+            }, taskId)
+            return true
+        }
+        return false
     }
 }

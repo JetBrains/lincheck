@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.Node
 
 class NodeCrashInfo(
     private val testCfg: DistributedCTestConfiguration<*, *>,
@@ -33,6 +34,7 @@ class NodeCrashInfo(
         false
     }
     var partitionCount: Int = 0
+    val failedNodesForType = mutableMapOf<Class<out Node<*>>, Int>()
 
     fun canSend(a: Int, b: Int): Boolean {
         return (partitions[0].contains(a) && partitions[0].contains(b) ||
@@ -54,5 +56,12 @@ class NodeCrashInfo(
         check(failedNodes[iNode])
         failedNodes[iNode] = false
         numberOfFailedNodes--
+    }
+
+    fun canCrash(iNode: Int): Boolean {
+        val type = context.addressResolver[iNode]
+        return numberOfFailedNodes < maxNumberOfFailedNodes && !failedNodes[iNode] && failedNodesForType[type] != context.addressResolver.maxNumberOfCrashesForNode(
+            iNode
+        )
     }
 }

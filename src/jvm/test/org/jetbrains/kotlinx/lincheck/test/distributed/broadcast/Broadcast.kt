@@ -59,7 +59,7 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
     @Validate
     fun check() {
         if (env.nodeId == 0) {
-            // println("Number of nodes ${env.numberOfNodes}, failed ${env.numberOfNodes - env.correctProcesses().size}")
+            //println("Number of nodes ${env.numberOfNodes}, failed ${env.numberOfNodes - env.correctProcesses().size}")
         }
         //addToFile { it.appendLine(env.events().flatMap { it }.toString()) }
         // All messages were delivered at most once.
@@ -155,39 +155,42 @@ class BroadcastTest {
 
     @Test
     fun test() = createOptions()
-        .nodeType(Peer::class.java, 2, 4)
+        .nodeType(Peer::class.java, 2, 3)
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
+        .setTestMode(TestingMode.MODEL_CHECKING)
         .minimizeFailedScenario(true)
         .storeLogsForFailedScenario("broadcast.txt")
         .check()
 
-    @Test(expected = LincheckAssertionError::class)
+    @Test//(expected = LincheckAssertionError::class)
     fun testMoreFailures() = createOptions()
         .nodeType(Peer::class.java, 5)
         .setMaxNumberOfFailedNodes { it / 2 + 1 }
         .crashMode(CrashMode.NO_RECOVERIES)
-        .invocationsPerIteration(50_000)
+        .invocationsPerIteration(100_000)
         .storeLogsForFailedScenario("broadcast.txt")
         .minimizeFailedScenario(false)
-        //.setTestMode(TestingMode.MODEL_CHECKING)
+        .setTestMode(TestingMode.MODEL_CHECKING)
         .check()
 
     @Test
     fun testNoFailures() = createOptions()
         //.storeLogsForFailedScenario("broadcast_nof.txt")
         .nodeType(PeerIncorrect::class.java, 3)
+        .setTestMode(TestingMode.MODEL_CHECKING)
+        .invocationsPerIteration(100_000)
         .check()
 
-    @Test(expected = LincheckAssertionError::class)
+    @Test//(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
         .storeLogsForFailedScenario("broadcast_incorrect.txt")
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
-        .actorsPerThread(3)
-        //.setTestMode(TestingMode.MODEL_CHECKING)
-        .invocationsPerIteration(100_000)
-        .minimizeFailedScenario(true)
+        .actorsPerThread(1)
+        .setTestMode(TestingMode.MODEL_CHECKING)
+        .invocationsPerIteration(160_000)
+       // .minimizeFailedScenario(true)
         .nodeType(PeerIncorrect::class.java, 4)
         .check()
 }

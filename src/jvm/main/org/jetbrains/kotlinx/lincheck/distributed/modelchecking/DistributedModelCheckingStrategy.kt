@@ -59,8 +59,10 @@ class DistributedModelCheckingStrategy<Message, Log>(
         runner.use { runner ->
             // Run invocations
             var invocation = 0
+            var interrupted = 0
             while (invocation < invocations) {
-                //println("INVOCATION $invocation")
+                if (invocation % 1000 == 0)
+                    println("INVOCATION $invocation, NODES COUNT ${runner.context.treeNodeId}")
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {
@@ -89,6 +91,10 @@ class DistributedModelCheckingStrategy<Message, Log>(
                     return null
                 }
                 if (!runner.isInterrupted) invocation++
+                else {
+                    interrupted++
+                    //println("Interrupted $interrupted")
+                }
             }
             return null
         }

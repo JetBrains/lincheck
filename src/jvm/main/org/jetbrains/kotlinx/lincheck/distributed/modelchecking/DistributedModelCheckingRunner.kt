@@ -37,7 +37,9 @@ import java.lang.NullPointerException
 import java.lang.reflect.Method
 import java.util.*
 
-val debugLogs = mutableListOf<String>()
+//val debugLogs = mutableListOf<String>()
+val ANSI_RESET = "\u001B[0m"
+val ANSI_RED = "\u001B[31m"
 
 val debugOutput = true
 fun addToFile(filename: String, f: (BufferedWriter) -> Unit) {
@@ -60,10 +62,6 @@ class DistributedModelCheckingRunner<Message, Log>(
 ) {
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
 
-    val tasks = mutableMapOf<Int, Task>()
-    var curTreeNode: InterleavingTreeNode? = null
-    val path = mutableListOf<InterleavingTreeNode>()
-    var interleaving: Interleaving? = null
     val dispatcher = ModelCheckingDispatcher(this)
     var signal = Signal()
     lateinit var environments: Array<MCEnvironmentImpl<Message, Log>>
@@ -71,29 +69,25 @@ class DistributedModelCheckingRunner<Message, Log>(
     val numberOfNodes = context.addressResolver.totalNumberOfNodes
     var exception: Throwable? = null
     val root: InterleavingTreeNode =
-        InterleavingTreeNode(-1, context, OperationTask(-1, VectorClock(IntArray(numberOfNodes)), "start") {})
-    var builder = InterleavingTreeBuilder(0)
+        InterleavingTreeNode(context)
+    var builder = InterleavingTreeBuilder(0, context.nodeCrashInfo)
     var isInterrupted = false
     var numberOfSwitches: Int = 0
     var counter = 0
-    val previousEvents = mutableListOf<String>()
-    val previousPaths = mutableListOf<List<Pair<Int, Task>>>()
+
+
+    //val pathEnds = mutableSetOf<Int>()
+    //val previousPaths = mutableListOf<String>()
+    //val previousPaths = mutableListOf<List<Pair<Int, Task>>>()
 
     override fun initialize() {
         super.initialize()
         testNodeExecutions = Array(context.addressResolver.nodesWithScenario) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
-        context.runner = this
     }
 
     fun isFullyExplored() = root.isFullyExplored
-
-    fun addTask(task: Task, id: Int? = null) {
-        val taskId = id ?: context.tasksId++
-        check(!tasks.containsKey(taskId))
-        tasks[taskId] = task
-    }
 
     fun bfsPrint() {
         val queue = LinkedList<Pair<Int, InterleavingTreeNode>>()
@@ -104,7 +98,7 @@ class DistributedModelCheckingRunner<Message, Log>(
             if (e.first != curId) {
                 curId = e.first
             }
-            println("${e.second.id} ${e.second.task.clock} ${e.second.task.msg} next=${e.second.nextPossibleTasksIds}, filtered=${e.second.notCheckedTasks}, allFiltered=${e.second.allNotChecked}")
+            //println("${e.second.id} ${e.second.task.clock} ${e.second.task.msg} next=${e.second.nextPossibleTasksIds}, filtered=${e.second.notCheckedTasks}, allFiltered=${e.second.allNotChecked}")
             queue.addAll(e.second.children.values.map { curId + 1 to it })
         }
         println()
@@ -112,12 +106,9 @@ class DistributedModelCheckingRunner<Message, Log>(
 
     fun reset() {
         isInterrupted = false
-        debugLogs.clear()
-        curTreeNode = root
-        path.clear()
-        tasks.clear()
-        builder = InterleavingTreeBuilder(numberOfSwitches)
+        context.currentTreeNode = root
         context.reset()
+        context.dispatcher = dispatcher
         environments = Array(numberOfNodes) {
             MCEnvironmentImpl(it, numberOfNodes, context = context)
         }
@@ -132,6 +123,7 @@ class DistributedModelCheckingRunner<Message, Log>(
             ex.results = arrayOfNulls(actors)
             ex.actorId = 0
         }
+        context.path.add(root)
     }
 
     private suspend fun runNode(iNode: Int) {
@@ -142,6 +134,13 @@ class DistributedModelCheckingRunner<Message, Log>(
         val scenarioSize = scenario.parallelExecution[iNode].size
         if (testNodeExecution.actorId == scenarioSize + 1) return
         if (testNodeExecution.actorId == scenarioSize) {
+            context.events.add(
+                iNode to
+                        ScenarioFinishEvent(
+                            context.incClockAndCopy(iNode),
+                            context.getStateRepresentation(iNode)
+                        )
+            )
             context.testInstances[iNode].onScenarioFinish()
             return
         }
@@ -171,7 +170,7 @@ class DistributedModelCheckingRunner<Message, Log>(
                 testNodeExecution.actorId = scenarioSize
             }
         }
-        addTask(
+        context.taskManager.addTask(
             OperationTask(
                 iNode,
                 VectorClock(context.incClockAndCopy(iNode)),
@@ -193,140 +192,65 @@ class DistributedModelCheckingRunner<Message, Log>(
         }
     }
 
-    private suspend fun executeTask(next: Int) {
-        path.add(curTreeNode!!)
-        signal = Signal()
-        GlobalScope.launch(dispatcher + TaskContext()) {
-            handleException {
-                tasks[next]!!.f()
-            }
-        }
-        signal.await()
-        curTreeNode!!.finish(tasks)
-        tasks.remove(next)
-    }
-
-    fun nextTransition(): Int? {
-        if (curTreeNode == null) return null
-        val curTaskId = curTreeNode!!.id
-        val index = interleaving!!.path.indexOf(curTaskId)
-        if (index == -1 || index == interleaving!!.path.size - 1) return null
-        return interleaving!!.path[index + 1]
-    }
-
     override fun run(): InvocationResult {
         reset()
-        tasks[root.id] = root.task
         val coroutine = GlobalScope.launch(dispatcher) {
-            for (i in 0 until numberOfNodes) {
-                context.incClock(i)
-                context.testInstances[i].onStart()
-            }
-            for (i in 0 until numberOfNodes) {
-                addTask(OperationTask(i, VectorClock(context.copyClock(i)), "Run $i") {
-                    runNode(i)
-                })
-            }
-            curTreeNode!!.finish(tasks)
-            tasks.remove(-1)
-            interleaving = root.chooseNextInterleaving(builder)
-            path.add(curTreeNode!!)
-            debugLogs.add("path=${interleaving!!.path}")
-            try {
-                for (next in interleaving!!.path) {
-                    curTreeNode = curTreeNode!![next]
-                    executeTask(next)
-                    if (exception != null) return@launch
+            context.taskManager.addTask(OperationTask(-1, VectorClock(IntArray(numberOfNodes)), "start") {
+                for (i in 0 until numberOfNodes) {
+                    context.incClock(i)
+                    context.testInstances[i].onStart()
                 }
-                //println(if (curTreeNode?.children?.isEmpty() == true) "-------" else "false")
-                while (tasks.isNotEmpty()) {
-                    val next = curTreeNode!!.next()
-                    if (next == null) {
-                        var up = curTreeNode
-                        try {
-                            while (!tasks.any { it.key in up!!.parent!!.nextPossibleTasksIds }) {
-                                up = up!!.parent
-                            }
-                        } catch (e: NullPointerException) {
-                            bfsPrint()
-                            exception = e
-                            return@launch
+                for (i in 0 until numberOfNodes) {
+                    context.taskManager.addTask(OperationTask(i, VectorClock(context.copyClock(i)), "Run $i") {
+                        runNode(i)
+                    })
+                }
+            })
+            do {
+                val res = context.taskManager.getNextTaskAndExecute {
+                    signal = Signal()
+                    GlobalScope.launch(dispatcher + TaskContext()) {
+                        handleException {
+                            it.f()
                         }
-                        check(up!!.task !is NodeCrashTask)
-                        counter++
-                        up!!.parent!!.nextPossibleTasksIds.remove(up.id)
-                        up!!.parent!!.children.remove(up.id)
-
-                        while (tasks.isNotEmpty()) {
-                            val next = tasks.minOfOrNull { it.key }!!
-                            signal = Signal()
-                            GlobalScope.launch(dispatcher + TaskContext()) {
-                                handleException {
-                                    tasks[next]!!.f()
-                                }
-                            }
-                            signal.await()
-                            if (exception != null) return@launch
-                            tasks.remove(next)
-                        }
-                        isInterrupted = true
-                        break
                     }
-                    curTreeNode = curTreeNode!![next]
-                    executeTask(next)
+                    signal.await()
                 }
-            } catch (e: NullPointerException) {
-                bfsPrint()
-                exception = e
-                return@launch
-            }
+                if (exception != null) return@launch
+            } while (res)
+            context.currentTreeNode!!.isFinished = true
         }
         try {
             runBlocking {
-                withTimeout(testCfg.timeoutMs) {
-                    coroutine.join()
-                }
+                /*withTimeout(testCfg.timeoutMs) {
+
+                }*/
+                coroutine.join()
             }
+
         } catch (e: TimeoutCancellationException) {
             return DeadlockInvocationResult(emptyMap())
         }
-        /*if (!isInterrupted) {
-            /*addToFile("${hashCode()}@interleavings.txt") {
-                it.appendLine("$numberOfSwitches ${root.minDistance} ${root.fractionUnexplored}" + interleaving?.path.toString())
-            }
-            addToFile("${hashCode()}@lamport_path.txt") {
-                it.appendLine(path.map { "{id=${it.id}, msg=${it.task}}" }.toString())
-            }
-            addToFile("${hashCode()}@lamport_info.txt") { it.appendLine(context.events.toString()) }
-            addToFile("${hashCode()}@lamport_ids.txt") { it.appendLine(path.map { it.id }.toString()) }*/
-            val e = context.events.toString()
-            if (e in previousEvents) {
-                val same = previousEvents.lastIndexOf(e)
-                addToFile("${hashCode()}@path.txt") {
-                    it.appendLine(same.toString())
-                    previousPaths[same].forEach { i -> it.appendLine(i.toString()) }
-                    it.appendLine(previousPaths.size.toString())
-                    path.map { it.id to it.task }.forEach { i -> it.appendLine(i.toString()) }
-                    it.appendLine()
-                }
-                addToFile("${hashCode()}@logs.txt") {
-                    it.appendLine(same.toString())
-                    it.appendLine(previousEvents[same])
-                    //previousEvents[same].forEach { i -> it.appendLine(i.toString()) }
-                    it.appendLine(previousEvents.size.toString())
-                    it.appendLine(e)
-                    //e.forEach { i -> it.appendLine(i.toString()) }
-                    it.appendLine()
-                }
-            }
-            previousEvents.add(e)
-            previousPaths.add(path.map { it.id to it.task })
-        }*/
-        //println(path[0])
-        path.reversed().forEach { it.updateStats() }
+
+        context.path.reversed().forEach { it.updateStats() }
+        //println("Root min distance ${root.minDistance}, number of switches ${numberOfSwitches}")
         if (root.minDistance > numberOfSwitches) {
             numberOfSwitches++
+            println("Number of switches $numberOfSwitches")
         }
+        builder = InterleavingTreeBuilder(numberOfSwitches, context.nodeCrashInfo)
+        context.interleaving = root.chooseNextInterleaving(builder)
+        addToFile("${hashCode()}@interleavings.txt") {
+            it.appendLine(context.interleaving?.path.toString())
+        }
+        addToFile("${hashCode()}@logs.txt") {
+            it.appendLine(context.events.toString())
+        }
+        addToFile("${hashCode()}@path.txt") {
+            it.appendLine(context.taskManager.path.map { it.first }.toString())
+        }
+        //println()
+        //println(context.interleaving?.path)
         //println("Current number of switches $numberOfSwitches, min distance ${root.minDistance}")
         environments.forEach { it.isFinished = true }
         if (exception != null) {

@@ -108,8 +108,9 @@ class OptimisticMutexIncorrectTest {
                 .threads(3)
                 .actorsPerThread(3)
                 .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(10)
-                .iterations(3000)
+                .invocationsPerIteration(10000)
+                .iterations(30)
+                .setTestMode(TestingMode.MODEL_CHECKING)
         )
     }
 }

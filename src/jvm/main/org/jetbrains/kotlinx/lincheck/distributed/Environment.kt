@@ -134,7 +134,13 @@ data class OperationStartEvent(val actor: Actor, val clock: IntArray, val state:
     Event() {
     override fun toString(): String =
         "Start operation $actor, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
-    }
+}
+
+data class ScenarioFinishEvent(val clock: IntArray, val state: String) :
+    Event() {
+    override fun toString(): String =
+        "Finish scenario, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+}
 
 data class CrashNotificationEvent(
     val crashedNode: Int,
