@@ -64,7 +64,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
         started.fill(false)
         super.initializeInvocation()
-        Probability.resetRandom(currentInterleaving.chooseRandomSeed())
+        resetFlushRandom()
     }
 
     override fun newCrashPoint(iThread: Int) {
@@ -74,13 +74,13 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         val isSystemCrash = waitingSystemCrash()
         check(!isSystemCrash || systemCrashInitiator != iThread)
         if (isSystemCrash) {
-            crashCurrentThread(iThread, systemCrash = true, initializeSystemCrash = false)
+            crashCurrentThread(iThread, true)
         } else if (shouldCrash(iThread)) {
             val initCrash = isSystemCrash(iThread)
             if (initCrash) {
                 systemCrashInitiator = iThread
             }
-            crashCurrentThread(iThread, initCrash, initCrash)
+            crashCurrentThread(iThread, initCrash)
         }
         // continue the operation
     }
@@ -88,12 +88,6 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     override fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (waitingSystemCrash()) return
         super.newSwitchPoint(iThread, codeLocation, tracePoint)
-    }
-
-    private fun onNewCrash(iThread: Int, mustCrash: Boolean) {
-        if (!mustCrash) {
-            Probability.resetRandom(currentInterleaving.chooseRandomSeed())
-        }
     }
 
     private fun shouldCrash(iThread: Int): Boolean {
@@ -126,17 +120,24 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
                 awaitTurn(iThread)
             }
             Crash.onSystemCrash()
+            resetFlushRandom()
             systemCrashInitiator = NO_CRASH_INITIATOR
         }
     }
 
     private fun switchableActiveThreads(iThread: Int) = switchableThreads(iThread).filter { started[it] }
 
-    private fun crashCurrentThread(iThread: Int, systemCrash: Boolean, initializeSystemCrash: Boolean) {
+    private fun crashCurrentThread(iThread: Int, systemCrash: Boolean) {
         val reason = if (systemCrash) CrashReason.SYSTEM_CRASH else CrashReason.CRASH
         traceCollector?.newCrash(iThread, reason)
-        onNewCrash(iThread, systemCrash && !initializeSystemCrash)
+        if (!systemCrash) {
+            resetFlushRandom()
+        }
         Crash.crash(iThread + 1, null, systemCrash)
+    }
+
+    private fun resetFlushRandom() {
+        Probability.resetRandom(currentInterleaving.chooseRandomSeed())
     }
 
     /**
