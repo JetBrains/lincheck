@@ -60,7 +60,7 @@ class ActorGenerator(
         val promptCancellation = cancelOnSuspension and this.promptCancellation and DETERMINISTIC_RANDOM.nextBoolean()
         return Actor(
             method = method,
-            arguments = parameters.toMutableList(),
+            arguments = parameters,
             handledExceptions = handledExceptions,
             cancelOnSuspension = cancelOnSuspension,
             allowExtraSuspension = allowExtraSuspension,

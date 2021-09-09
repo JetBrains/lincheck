@@ -102,12 +102,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         reporter.logScenarioMinimization(scenario)
         var minimizedFailure = this
         while (true) {
-            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
+            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg, minimizedFailure) ?: break
         }
         return minimizedFailure
     }
 
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, currentFailure: LincheckFailure): LincheckFailure? {
         // Reversed indices to avoid conflicts with in-loop removals
         for (i in parallelExecution.indices.reversed()) {
             for (j in parallelExecution[i].indices.reversed()) {
@@ -123,54 +123,62 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val failure = tryMinimize(threads + 1, j, testCfg)
             if (failure != null) return failure
         }
-        if (testCfg is StressCTestConfiguration && testCfg.recoverabilityModel.crashes)
-            return minimizeCrashes(testCfg).also { Probability.resetExpectedCrashes() }
+        if (testCfg is StressCTestConfiguration
+            && testCfg.recoverabilityModel.crashes
+            && currentFailure is IncorrectResultsFailure)
+            return minimizeCrashes(testCfg, currentFailure).also { Probability.resetExpectedCrashes() }
         return null
     }
 
     private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
-        val newScenario = this.copy()
+        var newScenario = this.copy()
         val actors = newScenario[threadId] as MutableList<Actor>
         actors.removeAt(position)
         if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
             // Also remove the empty thread
             newScenario.parallelExecution.removeAt(threadId - 1)
+            newScenario = newScenario.setThreadIds()
         }
-        return newScenario.runTryMinimize(testCfg)
+        return if (newScenario.isValid) {
+            newScenario.runTryMinimize(testCfg)
+        } else null
     }
 
     private fun ExecutionScenario.runTryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
-        setThreadIds()
-        return if (isValid) {
-            val verifier = testCfg.createVerifier(checkStateEquivalence = false)
-            run(testCfg, verifier)
-        } else null
+        val verifier = testCfg.createVerifier(checkStateEquivalence = false)
+        return run(testCfg, verifier)
     }
 
     private fun IncorrectResultsFailure.crashesNumber() = results.crashes.sumBy { it.size }
 
-    private fun ExecutionScenario.minimizeCrashes(
-        testCfg: CTestConfiguration,
-        crashes: Int = testCfg.recoverabilityModel.defaultExpectedCrashes() + 1 // +1 here to replace proxy exceptions with normal ones
-    ): LincheckFailure? {
-        Probability.minimizeCrashes(crashes - 1)
-        repeat(100) {
+    private fun ExecutionScenario.minimizeCrashes(testCfg: CTestConfiguration, failure: IncorrectResultsFailure): LincheckFailure? {
+        var scenario = this
+        var crashes = failure.crashesNumber()
+        var result: LincheckFailure? = null
+        while (true) {
+            Probability.minimizeCrashes(crashes - 1)
             Crash.useProxyCrash = false
-            val newIteration = runTryMinimize(testCfg)
+            val newFailure = scenario.runTryMinimize(testCfg)
             Crash.useProxyCrash = true
-            if (newIteration != null
-                && newIteration is IncorrectResultsFailure
-                && newIteration.crashesNumber() < crashes
-            ) return newIteration.scenario.minimizeCrashes(testCfg, newIteration.crashesNumber())
+            if (newFailure != null
+                && newFailure is IncorrectResultsFailure
+                && newFailure.crashesNumber() < crashes
+            ) {
+                result = newFailure
+                scenario = newFailure.scenario
+                crashes = newFailure.crashesNumber()
+                continue
+            }
+            return result
         }
-        return null
     }
 
-    private fun List<Actor>.setThreadId(threadId: Int) = forEach { actor -> actor.setThreadId(threadId) }
-    private fun ExecutionScenario.setThreadIds() {
-        parallelExecution.forEachIndexed { index, actors -> actors.setThreadId(index + 1) }
-        postExecution.setThreadId(parallelExecution.size + 1)
-    }
+    private fun List<Actor>.copyWithThreadId(threadId: Int) = map { actor -> actor.copyWithThreadId(threadId) }
+    private fun ExecutionScenario.setThreadIds() = ExecutionScenario(
+        initExecution,
+        parallelExecution.mapIndexed { index, actors -> actors.copyWithThreadId(index + 1) },
+        postExecution.copyWithThreadId(parallelExecution.size + 1)
+    )
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(

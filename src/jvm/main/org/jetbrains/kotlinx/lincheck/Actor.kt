@@ -33,7 +33,7 @@ import kotlin.reflect.jvm.*
  */
 data class Actor @JvmOverloads constructor(
     val method: Method,
-    val arguments: MutableList<Any?>,
+    val arguments: List<Any?>,
     val handledExceptions: List<Class<out Throwable>> = emptyList(),
     val cancelOnSuspension: Boolean = false,
     val allowExtraSuspension: Boolean = false,
@@ -59,7 +59,9 @@ data class Actor @JvmOverloads constructor(
 
     val handlesExceptions = handledExceptions.isNotEmpty()
 
-    fun setThreadId(threadId: Int) = threadIdArgsIndices.forEach { index -> arguments[index] = threadId }
+    fun copyWithThreadId(threadId: Int): Actor = copy(arguments = List(arguments.size) { i ->
+        if (i in threadIdArgsIndices) threadId else arguments[i]
+    })
 }
 
 fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false
