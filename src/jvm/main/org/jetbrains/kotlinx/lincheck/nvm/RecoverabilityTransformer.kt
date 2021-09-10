@@ -84,9 +84,9 @@ private open class RecoverableBaseMethodTransformer(
             override fun visit(name: String?, value: Any?) {
                 super.visit(name, value)
                 if (name == "recoverMethod") {
-                    recoverName = value as String
+                    recoverName = (value as String).ifEmpty { null }
                 } else if (name == "beforeMethod") {
-                    beforeName = value as String
+                    beforeName = (value as String).ifEmpty { null }
                 }
             }
         }
