@@ -67,8 +67,8 @@ private open class RecoverableBaseMethodTransformer(
     className: String
 ) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
     protected var shouldTransform = false
-    protected var beforeName = ""
-    protected var recoverName = ""
+    protected var beforeName: String? = null
+    protected var recoverName: String? = null
     protected val tryLabel = Label()
     protected val catchLabel = Label()
 
@@ -96,12 +96,12 @@ private open class RecoverableBaseMethodTransformer(
      * Call [name] method with signature [descriptor] until it completes successfully.
      * @return index of local variable where result is stored or -1 in case of void return type
      */
-    protected fun callUntilSuccess(name: String, descriptor: String?): Int {
+    protected fun callUntilSuccess(name: String, descriptor: String?): Int? {
         val (tryLabel, catchLabel, endLabel) = List(3) { Label() }
         visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
 
         val returnType = Type.getReturnType(descriptor)
-        val result = if (returnType == Type.VOID_TYPE) -1 else newLocal(returnType).also {
+        val result = if (returnType == Type.VOID_TYPE) null else newLocal(returnType).also {
             // init result
             pushDefaultValue(returnType)
             storeLocal(it)
@@ -116,9 +116,7 @@ private open class RecoverableBaseMethodTransformer(
         loadThis()
         loadArgs()
         invokeVirtual(classType, Method(name, descriptor))
-        if (returnType != Type.VOID_TYPE) {
-            storeLocal(result)
-        }
+        result?.let { storeLocal(it) }
         push(true)
         storeLocal(completedVariable)
         goTo(endLabel)
@@ -166,9 +164,9 @@ private class RecoverableMethodTransformer(
         if (!shouldTransform) return
         visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
 
-        if (beforeName.isNotEmpty()) {
+        beforeName?.let {
             val beforeDescriptor = Type.getMethodDescriptor(Type.VOID_TYPE, *Type.getType(descriptor).argumentTypes)
-            callUntilSuccess(beforeName, beforeDescriptor)
+            callUntilSuccess(it, beforeDescriptor)
         }
 
         visitLabel(tryLabel)
@@ -179,10 +177,8 @@ private class RecoverableMethodTransformer(
         if (shouldTransform) {
             visitLabel(catchLabel)
             pop()
-            val result = callUntilSuccess(recoverName.ifEmpty { name }, descriptor)
-            if (result != -1) {
-                loadLocal(result)
-            }
+            callUntilSuccess(recoverName ?: name, descriptor)
+                ?.let { result -> loadLocal(result) }
             returnValue()
             super.visitMaxs(max(1 + maxStack, 1 + argumentTypes.size), maxLocals)
         } else {

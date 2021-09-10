@@ -305,7 +305,7 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
     t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
 }
 
-internal fun getRemapperByTransformers(strategy: Strategy): Remapper? =
+internal fun getRemapperByStrategy(strategy: Strategy): Remapper? =
     when (strategy) {
         is ManagedStrategy -> JavaUtilRemapper()
         else -> null
@@ -325,3 +325,28 @@ private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses
     "Please add the following lines to your test running configuration:\n" +
     "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
     "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+
+internal fun interface BinarySearchSolver {
+    /**
+     *  A monotonically increasing function.
+     */
+    fun f(x: Double): Double
+
+    /**
+     * Find x such that f(x) = 0. x in [[a], [b]].
+     */
+    fun solve(a: Double, b: Double, eps: Double): Double {
+        var l = a
+        var r = b
+        while (r - l > eps) {
+            val x = (r + l) / 2
+            val fValue = f(x)
+            when {
+                fValue > 0 -> r = x
+                fValue < 0 -> l = x
+                else -> return x
+            }
+        }
+        return l
+    }
+}

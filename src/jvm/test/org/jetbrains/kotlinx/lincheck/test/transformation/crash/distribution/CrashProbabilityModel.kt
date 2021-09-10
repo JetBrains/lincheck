@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
 
 import org.apache.commons.math3.analysis.solvers.LaguerreSolver
-import org.jetbrains.kotlinx.lincheck.nvm.BinarySearchSolver
+import org.jetbrains.kotlinx.lincheck.BinarySearchSolver
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow

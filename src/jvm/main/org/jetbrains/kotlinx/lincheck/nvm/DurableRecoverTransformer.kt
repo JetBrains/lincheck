@@ -45,9 +45,9 @@ internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val 
     internal lateinit var name: String
 
     init {
-        val recover = recoverMethods(_class)
-        recoverAllMethod = recover[0]
-        recoverPerThreadMethod = recover[1]
+        val (all, perThread) = recoverMethods(_class)
+        recoverAllMethod = all
+        recoverPerThreadMethod = perThread
     }
 
     override fun visit(
@@ -165,4 +165,9 @@ private class DurableRecoverOperationTransformer(
 
 private fun recoverMethods(clazz: Class<*>) = listOf(DurableRecoverAll::class, DurableRecoverPerThread::class)
     .map { a -> clazz.methods.singleOrNull { m -> m.annotations.any { it.annotationClass == a } } }
-    .onEach { check(it == null || Type.getMethodDescriptor(it) == RECOVER_DESCRIPTOR) }
+    .onEach {
+        check(it == null || Type.getMethodDescriptor(it) == RECOVER_DESCRIPTOR) {
+            """A recover method must have no arguments and return nothing.
+            But method ${it?.name} has signature ${Type.getMethodDescriptor(it)}""".trimIndent()
+        }
+    }

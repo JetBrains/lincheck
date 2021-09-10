@@ -111,7 +111,7 @@ object Crash {
         if (isWaitingSystemCrash() || Probability.shouldCrash()) {
             val ste = StackTraceElement(className, methodName, fileName, lineNumber)
             val systemCrash = isWaitingSystemCrash() || Probability.shouldSystemCrash()
-            crash(NVMState.threadId(), ste, systemCrash)
+            crash(NVMState.currentThreadId(), ste, systemCrash)
         }
     }
 
@@ -138,7 +138,7 @@ object Crash {
     internal fun onSystemCrash() {
         systemCrashOccurred.compareAndSet(false, true)
         NVMCache.systemCrash()
-        NVMState.setCrashActors()
+        NVMState.setCrashedActors()
         val exec = execution ?: return
         activeThreads.forEach {
             exec.allThreadExecutions[it - 1].incClock()
@@ -146,8 +146,8 @@ object Crash {
     }
 
     /** Should be called when thread finished. */
-    fun exit() {
-        activeThreads.remove(NVMState.threadId())
+    fun exitThread() {
+        activeThreads.remove(NVMState.currentThreadId())
         while (true) {
             val c = context.value
             val newThreads = c.threads - 1
@@ -157,13 +157,13 @@ object Crash {
     }
 
     /** Should be called when thread started. */
-    fun register() {
+    fun registerThread() {
         while (true) {
             val currentContext = context.value
             if (currentContext.waitingThreads != 0) continue
             if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads + 1))) break
         }
-        activeThreads.add(NVMState.threadId())
+        activeThreads.add(NVMState.currentThreadId())
     }
 
     fun reset(recoverModel: RecoverabilityModel) {

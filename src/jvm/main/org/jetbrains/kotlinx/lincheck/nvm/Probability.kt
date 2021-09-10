@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.nvm
 
+import org.jetbrains.kotlinx.lincheck.BinarySearchSolver
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
@@ -178,7 +179,7 @@ object Probability {
     @Volatile
     private lateinit var randomGetter: () -> Random
     private val iterationRandom = Random(0)
-    private val mcRandom = Random(42)
+    private val modelCheckingRandom = Random(42)
     private var minimizeCrashes = false
 
     @Volatile
@@ -194,9 +195,9 @@ object Probability {
     fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
     fun shouldCrash(): Boolean {
         if (!NVMState.crashesEnabled) return false
-        val iThread = NVMState.threadId()
-        val j = Statistics.onCrashPoint(iThread)
-        return moreCrashesPermitted() && bernoulli(model.crashPointProbability(iThread, j))
+        val threadId = NVMState.currentThreadId()
+        val j = Statistics.onCrashPoint(threadId)
+        return moreCrashesPermitted() && bernoulli(model.crashPointProbability(threadId, j))
     }
 
     fun resetExpectedCrashes() {
@@ -224,9 +225,9 @@ object Probability {
 
     private fun moreCrashesPermitted() = model.isCrashAllowed(occurredCrashes())
     private fun occurredCrashes() = if (randomSystemCrashProbability < 1.0) {
-        NVMState.crashesCount()
+        NVMState.crashesCount
     } else {
-        NVMState.maxCrashesCountPerThread()
+        NVMState.maxCrashesCountPerThread
     }
 
     private fun bernoulli(probability: Double) = random.nextDouble() < probability
@@ -236,34 +237,9 @@ object Probability {
     }
 
     internal fun resetRandom(seed: Int) {
-        mcRandom.setSeed(seed.toLong())
-        randomGetter = { mcRandom }
+        modelCheckingRandom.setSeed(seed.toLong())
+        randomGetter = { modelCheckingRandom }
     }
 
     internal fun generateSeed(): Int = iterationRandom.nextInt()
-}
-
-internal fun interface BinarySearchSolver {
-    /**
-     *  A monotonically increasing function.
-     */
-    fun f(x: Double): Double
-
-    /**
-     * Find x such that f(x) = 0. x in [[a], [b]].
-     */
-    fun solve(a: Double, b: Double, eps: Double): Double {
-        var l = a
-        var r = b
-        while (r - l > eps) {
-            val x = (r + l) / 2
-            val fValue = f(x)
-            when {
-                fValue > 0 -> r = x
-                fValue < 0 -> l = x
-                else -> return x
-            }
-        }
-        return l
-    }
 }

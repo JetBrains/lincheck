@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import org.jetbrains.kotlinx.lincheck.annotations.CrashFree
+import org.jetbrains.kotlinx.lincheck.nvm.api.AbstractNonVolatilePrimitive
+import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileInt
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -77,7 +79,7 @@ internal class CrashesManagedStrategyTransformer(
                 // then another thread initiates a system crash, force switches to the first thread
                 // which crashes immediately.
                 invokeBeforeNVMOperation()
-                if (name !== null && (name.toLowerCase().contains("flush") || name.contains("setToNVM"))) invokeBeforeCrashPoint()
+                if (name == FLUSH_METHOD_NAME || name == SET_TO_NVM_METHOD_NAME) invokeBeforeCrashPoint()
             }
             adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
@@ -115,3 +117,5 @@ private val BEFORE_NVM_OPERATION_METHOD = Method.getMethod(ManagedStrategy::befo
 private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
 private val METHOD_TRACE_POINT_TYPE = Type.getType(MethodCallTracePoint::class.java)
 private val returnInstructions = Opcodes.IRETURN..Opcodes.RETURN
+private val FLUSH_METHOD_NAME = AbstractNonVolatilePrimitive::flush.name
+private val SET_TO_NVM_METHOD_NAME = NonVolatileInt::setToNVM.name

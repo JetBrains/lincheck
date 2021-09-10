@@ -160,6 +160,6 @@ class CrashResult : Result() {
 @JvmSynthetic
 fun createCrashResult(): CrashResult {
     val result = CrashResult()
-    NVMState.registerCrash(result)
+    NVMState.registerCrashResult(result)
     return result
 }

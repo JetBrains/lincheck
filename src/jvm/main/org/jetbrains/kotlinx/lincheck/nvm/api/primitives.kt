@@ -30,7 +30,7 @@ abstract class AbstractNonVolatilePrimitive {
 
     fun flush() {
         flushInternal()
-        NVMCache.remove(NVMState.threadId(), this)
+        NVMCache.remove(NVMState.currentThreadId(), this)
     }
 
     /**
@@ -40,7 +40,7 @@ abstract class AbstractNonVolatilePrimitive {
         if (Probability.shouldFlush()) {
             flushInternal()
         } else {
-            NVMCache.add(NVMState.threadId(), this)
+            NVMCache.add(NVMState.currentThreadId(), this)
         }
     }
 }

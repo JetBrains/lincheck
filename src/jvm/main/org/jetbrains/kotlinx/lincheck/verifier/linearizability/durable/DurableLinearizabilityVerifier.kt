@@ -98,15 +98,13 @@ private class DurableLinearizabilityContext : AbstractLinearizabilityContext {
         override fun iterator() = object : Iterator<VerifierContext> {
             override fun hasNext() = context1 !== null || context2 !== null
             override fun next(): VerifierContext {
-                val tmp1 = context1
-                if (tmp1 != null) {
+                context1?.let {
                     context1 = null
-                    return tmp1
+                    return it
                 }
-                val tmp2 = context2
-                if (tmp2 != null) {
+                context2?.let {
                     context2 = null
-                    return tmp2
+                    return it
                 }
                 error("Container size exceeded")
             }

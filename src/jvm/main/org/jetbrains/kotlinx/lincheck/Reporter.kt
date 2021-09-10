@@ -231,7 +231,7 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
             "in each of the parallel threads seen at the beginning of the current operation\n---")
     failure.results.crashes.forEachIndexed { threadId, threadCrashes ->
         if (threadCrashes.isNotEmpty()) {
-            appendLine("\nCrashes on thread $threadId:")
+            appendLine("\nCrashes in thread $threadId:")
             threadCrashes.forEach { crash ->
                 val actor = if (crash.actorIndex == -1) "constructor" else "actor ${1 + crash.actorIndex}"
                 appendLine("Crashed inside $actor:")

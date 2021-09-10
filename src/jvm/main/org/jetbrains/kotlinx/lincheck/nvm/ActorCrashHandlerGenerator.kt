@@ -36,7 +36,7 @@ private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
 private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("createCrashResult", CRASH_RESULT_TYPE, emptyArray())
 private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val CRASH_AWAIT_SYSTEM_CRASH = Method.getMethod(Crash::awaitSystemCrash.javaMethod)
-private val SET_USE_CLOCKS = Method("useClocksOnce", Type.VOID_TYPE, emptyArray())
+private val SET_USE_CLOCKS = Method.getMethod(TestThreadExecution::forceUseClocksOnce.javaMethod)
 private val TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution::class.java)
 private val RESULT_TYPE = Type.getType(Result::class.java)
 

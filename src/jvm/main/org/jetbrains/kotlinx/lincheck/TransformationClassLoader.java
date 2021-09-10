@@ -27,14 +27,12 @@ import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
-import org.objectweb.asm.util.*;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
-import java.util.stream.Collectors;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
@@ -59,7 +57,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // Apply the strategy's transformer at first, then the runner's one.
         if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
         if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);
-        remapper = UtilsKt.getRemapperByTransformers(strategy);
+        remapper = UtilsKt.getRemapperByStrategy(strategy);
     }
 
     public TransformationClassLoader(Function<ClassVisitor, ClassVisitor> classTransformer) {

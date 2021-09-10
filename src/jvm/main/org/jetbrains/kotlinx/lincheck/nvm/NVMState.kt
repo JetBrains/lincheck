@@ -42,13 +42,16 @@ object NVMState {
 
     private var crashes = initCrashes()
     private val crashResults = Collections.synchronizedList(mutableListOf<CrashResult>())
-    private val crashesCount = atomic(0)
+    private val _crashesCount = atomic(0)
     private val maxCrashesPerThread = atomic(0)
     private val executedActors = IntArray(NVMCache.MAX_THREADS_NUMBER - 2)
 
+    val crashesCount get() = _crashesCount.value
+    val maxCrashesCountPerThread get() = maxCrashesPerThread.value
+
     private fun initCrashes() = Array(NVMCache.MAX_THREADS_NUMBER) { mutableListOf<CrashError>() }
 
-    fun threadId(): Int = when (state) {
+    fun currentThreadId(): Int = when (state) {
         ExecutionState.INIT -> 0
         ExecutionState.PARALLEL -> Thread.currentThread().let {
             if (it is FixedActiveThreadsExecutor.TestThread) return@let it.iThread + 1
@@ -60,7 +63,7 @@ object NVMState {
     internal fun registerCrash(threadId: Int, crash: CrashError) {
         crash.actorIndex = executedActors[threadId - 1]
         crashes[threadId].add(crash)
-        crashesCount.incrementAndGet()
+        _crashesCount.incrementAndGet()
         val myThreadCrashes = crashes[threadId].size
         while (true) {
             val curMax = maxCrashesPerThread.value
@@ -69,11 +72,11 @@ object NVMState {
         }
     }
 
-    internal fun registerCrash(crashResult: CrashResult) {
+    internal fun registerCrashResult(crashResult: CrashResult) {
         crashResults.add(crashResult)
     }
 
-    internal fun setCrashActors() {
+    internal fun setCrashedActors() {
         for (result in crashResults) {
             result.crashedActors = executedActors.copyOf(threads)
         }
@@ -81,22 +84,19 @@ object NVMState {
     }
 
     internal fun clearCrashes() = crashes.also {
-        crashesCount.value = 0
+        _crashesCount.value = 0
         maxCrashesPerThread.value = 0
         crashes = initCrashes()
     }
 
-    fun crashesCount() = crashesCount.value
-    fun maxCrashesCountPerThread() = maxCrashesPerThread.value
-
     fun onFinish(iThread: Int) {
         // mark thread as finished
         executedActors[iThread]++
-        Crash.exit()
+        Crash.exitThread()
     }
 
     fun onStart(iThread: Int) {
-        Crash.register()
+        Crash.registerThread()
     }
 
     fun reset(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) {
@@ -117,12 +117,12 @@ object NVMState {
         crashResults.clear()
         executedActors.fill(-1)
         state = ExecutionState.INIT
-        Crash.register()
+        Crash.registerThread()
         crashesEnabled = false
     }
 
     fun beforeParallel(threads: Int) {
-        Crash.exit()
+        Crash.exitThread()
         NVMState.threads = threads
         state = ExecutionState.PARALLEL
         crashesEnabled = true
@@ -131,11 +131,11 @@ object NVMState {
     fun beforePost() {
         crashesEnabled = false
         state = ExecutionState.POST
-        Crash.register()
+        Crash.registerThread()
     }
 
     fun afterPost() {
-        Crash.exit()
+        Crash.exitThread()
     }
 
     fun onActorStart(iThread: Int) {

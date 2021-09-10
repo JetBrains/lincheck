@@ -54,7 +54,7 @@ public abstract class TestThreadExecution implements Runnable {
         curClock++;
     }
 
-    public void useClocksOnce() {
+    public void forceUseClocksOnce() {
         useClocksOnce = true;
     }
 

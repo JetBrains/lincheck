@@ -735,7 +735,6 @@ abstract class ManagedStrategy(
         }
     }
 
-
     // == NVM related ==
 
     /**
