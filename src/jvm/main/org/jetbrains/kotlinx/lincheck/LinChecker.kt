@@ -155,7 +155,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         var scenario = this
         var crashes = failure.crashesNumber()
         var result: LincheckFailure? = null
-        while (true) {
+        var iterations = testCfg.iterations
+        while (iterations > 0) {
             Probability.minimizeCrashes(crashes - 1)
             Crash.useProxyCrash = false
             val newFailure = scenario.runTryMinimize(testCfg)
@@ -169,8 +170,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 crashes = newFailure.crashesNumber()
                 continue
             }
-            return result
+            iterations--
         }
+        return result
     }
 
     private fun List<Actor>.copyWithThreadId(threadId: Int) = map { actor -> actor.copyWithThreadId(threadId) }
