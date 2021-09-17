@@ -38,14 +38,14 @@ private val CRASH_IS_CRASHED = Method.getMethod(Crash::isCrashed.javaMethod)
 private val CRASH_RESET_ALL_CRASHED = Method.getMethod(Crash::resetAllCrashed.javaMethod)
 private val OPERATION_TYPE = Type.getType(Operation::class.java)
 
-internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val _class: Class<*>) : ClassVisitor(ASM_API, cv) {
+internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val testClass: Class<*>) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = false
     internal val recoverAllMethod: java.lang.reflect.Method?
     internal val recoverPerThreadMethod: java.lang.reflect.Method?
     internal lateinit var name: String
 
     init {
-        val (all, perThread) = recoverMethods(_class)
+        val (all, perThread) = recoverMethods(testClass)
         recoverAllMethod = all
         recoverPerThreadMethod = perThread
     }
@@ -60,7 +60,7 @@ internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val 
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
         this.name = name!!
-        shouldTransform = name == Type.getInternalName(_class) ||
+        shouldTransform = name == Type.getInternalName(testClass) ||
             recoverAllMethod !== null && name == Type.getInternalName(recoverAllMethod.declaringClass) ||
             recoverPerThreadMethod !== null && name == Type.getInternalName(recoverPerThreadMethod.declaringClass)
     }

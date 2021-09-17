@@ -36,7 +36,7 @@ import java.io.*
  */
 abstract class Runner protected constructor(
     protected val strategy: Strategy,
-    protected val _testClass: Class<*>, // will be transformed later
+    private val _testClass: Class<*>, // will be transformed later
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
