@@ -22,9 +22,14 @@
 package org.jetbrains.kotlinx.lincheck.annotations
 
 /**
- * Marks method recoverable.
+ * Marks a method as recoverable in NRL model.
+ *
  * Links this method to [recoverMethod] that should be called when this method crashes.
  * [recoverMethod] must have the same signature as this method.
+ *
+ * [beforeMethod] will be called before this method invocation util it completes successfully.
+ * It may be used for variable initialisation, must be idempotent.
+ * Has the same parameters as this method, but returns nothing.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
@@ -33,18 +38,35 @@ annotation class Recoverable(
     val beforeMethod: String = ""
 )
 
+/**
+ * Classes or methods marked with this annotation do not crash.
+ * It may be used for progressive development of crash resistant programs.
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR, AnnotationTarget.CLASS)
 annotation class CrashFree
 
+/**
+ * Specifies a recover method in durable linearizability model.
+ * This method will be called after a system crash by *one* of the threads.
+ * This thread should perform a recovery for the whole data structure.
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
 annotation class DurableRecoverAll
 
+/**
+ * Specifies a recover method in durable linearizability model.
+ * This method will be called after a system crash by every thread.
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
 annotation class DurableRecoverPerThread
 
+/**
+ * Marks method as a sync method in buffered durable linearizability model.
+ * After a successful invocation of this method a data structure must be persistent.
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
 annotation class Sync
