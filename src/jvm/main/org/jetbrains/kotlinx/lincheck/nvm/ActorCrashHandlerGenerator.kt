@@ -42,7 +42,7 @@ private val RESULT_TYPE = Type.getType(Result::class.java)
 
 open class ActorCrashHandlerGenerator {
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
-    open fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {}
+    open fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, nextLabel: Label) {}
 }
 
 class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
@@ -54,10 +54,10 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
         mv.visitTryCatchBlock(start, end, handlerLabel, CRASH_ERROR_TYPE.internalName)
     }
 
-    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
-        super.addCrashCatchBlock(mv, resLocal, iLocal, skip)
+    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, nextLabel: Label) {
+        super.addCrashCatchBlock(mv, resLocal, iLocal, nextLabel)
         mv.visitLabel(handlerLabel)
-        storeExceptionResultFromCrash(mv, resLocal, iLocal, skip)
+        storeExceptionResultFromCrash(mv, resLocal, iLocal, nextLabel)
     }
 
     private fun storeExceptionResultFromCrash(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
@@ -96,8 +96,8 @@ class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandlerGenerator
         mv.visitTryCatchBlock(start, end, handlerLabel, CRASH_ERROR_TYPE.internalName)
     }
 
-    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
-        super.addCrashCatchBlock(mv, resLocal, iLocal, skip)
+    override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, nextLabel: Label) {
+        super.addCrashCatchBlock(mv, resLocal, iLocal, nextLabel)
         val afterActor = mv.newLabel()
         mv.goTo(afterActor)
         mv.visitLabel(handlerLabel)
