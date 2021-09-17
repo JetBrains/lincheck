@@ -82,18 +82,12 @@ internal class CrashTransformer(
     ): MethodVisitor {
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (!shouldTransform) return mv
-        return CrashMethodTransformer(mv, access, name, descriptor, this.name, fileName)
+        return CrashMethodTransformer(GeneratorAdapter(mv, access, name, descriptor), this.name, fileName)
     }
 }
 
-private val storeInstructions = listOf(
-    Opcodes.AASTORE, Opcodes.IASTORE, Opcodes.FASTORE, Opcodes.BASTORE,
-    Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.LASTORE, Opcodes.DASTORE
-)
-
-private val returnInstructions = listOf(
-    Opcodes.RETURN, Opcodes.ARETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.IRETURN, Opcodes.LRETURN
-)
+private val storeInstructions = Opcodes.IASTORE..Opcodes.SASTORE
+private val returnInstructions = Opcodes.IRETURN..Opcodes.RETURN
 
 private val POSSIBLY_CRASH_METHOD = Method.getMethod(Crash::possiblyCrash.javaMethod)
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
@@ -101,19 +95,16 @@ private val THROWABLE_TYPE = Type.getType(Throwable::class.java)
 private val CRASH_TYPE = Type.getType(Crash::class.java)
 private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
 
-internal class CrashMethodTransformer(
-    mv: MethodVisitor,
-    access: Int,
-    name: String?,
-    descriptor: String?,
+private class CrashMethodTransformer(
+    private val adapter: GeneratorAdapter,
     private val className: String?,
     private val fileName: String?
-) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
-    private var shouldTransform = name != "<clinit>" && (access and Opcodes.ACC_BRIDGE) == 0
+) : MethodVisitor(ASM_API, adapter) {
+    private var shouldTransform = adapter.name != "<clinit>" && (adapter.access and Opcodes.ACC_BRIDGE) == 0
     private var lineNumber = -1
-    private var superConstructorCalled = name != "<init>"
+    private var superConstructorCalled = adapter.name != "<init>"
 
-    private fun callCrash() {
+    private fun callCrash() = adapter.run {
         if (!shouldTransform || !superConstructorCalled) return
         push(className)
         push(fileName)

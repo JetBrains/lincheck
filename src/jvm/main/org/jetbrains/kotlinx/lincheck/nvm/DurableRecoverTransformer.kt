@@ -74,7 +74,7 @@ internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val 
     ): MethodVisitor {
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (!shouldTransform) return mv
-        return DurableRecoverOperationTransformer(this, mv, access, name, descriptor)
+        return DurableRecoverOperationTransformer(this, GeneratorAdapter(mv, access, name, descriptor))
     }
 }
 
@@ -137,11 +137,8 @@ private fun GeneratorAdapter.generateRecoverCode(className: String, recoverMetho
 /** Adds recover call to methods annotated with [Operation]. */
 private class DurableRecoverOperationTransformer(
     private val cv: DurableOperationRecoverTransformer,
-    mv: MethodVisitor,
-    access: Int,
-    name: String?,
-    descriptor: String?
-) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
+    private val adapter: GeneratorAdapter
+) : MethodVisitor(ASM_API, adapter) {
     private var isOperation = false
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
@@ -156,9 +153,9 @@ private class DurableRecoverOperationTransformer(
         val recoverAll = cv.recoverAllMethod
         val recoverPerThread = cv.recoverPerThreadMethod
         if (recoverAll !== null) {
-            generateRecoverCode(cv.name, RECOVER_ALL_GENERATED_NAME)
+            adapter.generateRecoverCode(cv.name, RECOVER_ALL_GENERATED_NAME)
         } else if (recoverPerThread !== null) {
-            generateRecoverCode(cv.name, recoverPerThread.name)
+            adapter.generateRecoverCode(cv.name, recoverPerThread.name)
         }
     }
 }

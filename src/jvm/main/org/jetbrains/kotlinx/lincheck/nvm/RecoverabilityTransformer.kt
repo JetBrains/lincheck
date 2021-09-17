@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
-import java.lang.Integer.max
 
 
 class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
@@ -53,26 +52,20 @@ class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
     ): MethodVisitor {
         val mv = super.visitMethod(access, name, descriptor, signature, exceptions)
         if (name == "<init>") return mv
-        return RecoverableMethodTransformer(mv, access, name, descriptor, this.name)
+        return RecoverableMethodTransformer(GeneratorAdapter(mv, access, name, descriptor), descriptor, this.name)
     }
 }
 
 private val CRASH_NAME = Type.getInternalName(CrashError::class.java)
 
 private open class RecoverableBaseMethodTransformer(
-    mv: MethodVisitor,
-    access: Int,
-    name: String?,
-    descriptor: String?,
+    protected val adapter: GeneratorAdapter,
     className: String
-) : GeneratorAdapter(ASM_API, mv, access, name, descriptor) {
+) : MethodVisitor(ASM_API, adapter) {
     protected var shouldTransform = false
     protected var beforeName: String? = null
     protected var recoverName: String? = null
-    protected val tryLabel = Label()
-    protected val catchLabel = Label()
 
-    private val completedVariable: Int by lazy { newLocal(Type.BOOLEAN_TYPE) }
     private val classType = Type.getType("L$className;")
 
     /** Check whether method has [Recoverable] annotation. */
@@ -94,9 +87,9 @@ private open class RecoverableBaseMethodTransformer(
 
     /**
      * Call [name] method with signature [descriptor] until it completes successfully.
-     * @return index of local variable where result is stored or -1 in case of void return type
+     * @return index of local variable where result is stored or null in case of void return type
      */
-    protected fun callUntilSuccess(name: String, descriptor: String?): Int? {
+    protected fun callUntilSuccess(name: String, descriptor: String?): Int? = adapter.run {
         val (tryLabel, catchLabel, endLabel) = List(3) { Label() }
         visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
 
@@ -107,33 +100,28 @@ private open class RecoverableBaseMethodTransformer(
             storeLocal(it)
         }
 
-        push(false)
-        storeLocal(completedVariable)
-
         visitLabel(tryLabel)
 
         // invoke `name` method
         loadThis()
         loadArgs()
         invokeVirtual(classType, Method(name, descriptor))
+
+        // success, store result, finish
         result?.let { storeLocal(it) }
-        push(true)
-        storeLocal(completedVariable)
         goTo(endLabel)
 
-        // ignore exception, try again
+        // fail, ignore exception, try again
         visitLabel(catchLabel)
         pop()
+        goTo(tryLabel)
 
         visitLabel(endLabel)
-        // while not successful
-        loadLocal(completedVariable)
-        ifZCmp(EQ, tryLabel)
         return result
     }
 
     /** Push a default value of type [type] on stack. */
-    private fun pushDefaultValue(type: Type) {
+    private fun pushDefaultValue(type: Type) = adapter.run {
         when (type.sort) {
             Type.BOOLEAN, Type.BYTE, Type.CHAR, Type.INT -> push(0)
             Type.LONG -> push(0L)
@@ -151,16 +139,16 @@ private open class RecoverableBaseMethodTransformer(
  * and calls recover method in case of a crash.
  */
 private class RecoverableMethodTransformer(
-    mv: MethodVisitor,
-    access: Int,
-    name: String?,
+    adapter: GeneratorAdapter,
     private val descriptor: String?,
     className: String
-) : RecoverableBaseMethodTransformer(mv, access, name, descriptor, className) {
+) : RecoverableBaseMethodTransformer(adapter, className) {
+    private val tryLabel = Label()
+    private val catchLabel = Label()
 
     /** Call before if name is non-empty and wrap method body with try-catch. */
-    override fun visitCode() {
-        super.visitCode()
+    override fun visitCode() = adapter.run {
+        visitCode()
         if (!shouldTransform) return
         visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
 
@@ -173,16 +161,16 @@ private class RecoverableMethodTransformer(
     }
 
     /** Call recover method in case of crash. */
-    override fun visitMaxs(maxStack: Int, maxLocals: Int) {
+    override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
         if (shouldTransform) {
+            // crash, ignore exception
             visitLabel(catchLabel)
             pop()
+            // call recover, it may be a
             callUntilSuccess(recoverName ?: name, descriptor)
                 ?.let { result -> loadLocal(result) }
             returnValue()
-            super.visitMaxs(max(1 + maxStack, 1 + argumentTypes.size), maxLocals)
-        } else {
-            super.visitMaxs(maxStack, maxLocals)
         }
+        visitMaxs(maxStack, maxLocals)
     }
 }
