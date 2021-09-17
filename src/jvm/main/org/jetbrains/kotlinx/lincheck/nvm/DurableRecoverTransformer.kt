@@ -30,7 +30,7 @@ import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
 private const val RECOVER_DESCRIPTOR = "()V"
-private const val RECOVER_ALL_GENERATED_NAME = "__recoverAll__"
+private const val RECOVER_ALL_GENERATED_NAME = "__\$rec*verAll\$__"
 private const val RECOVER_ALL_GENERATED_ACCESS =
     Opcodes.ACC_PRIVATE or Opcodes.ACC_SYNCHRONIZED or Opcodes.ACC_SYNTHETIC
 private val CRASH_TYPE = Type.getType(Crash::class.java)
