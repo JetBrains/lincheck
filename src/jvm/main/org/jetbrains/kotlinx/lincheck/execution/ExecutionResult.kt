@@ -77,6 +77,12 @@ val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
 )
 
 val ExecutionResult.withoutCrashes: ExecutionResult get() = if (crashes.isEmpty()) this else copy(crashes = emptyList())
+val ExecutionResult.withoutVerificationIrrelevantInformation: ExecutionResult get() = copy(
+    afterInitStateRepresentation = null,
+    afterParallelStateRepresentation = null,
+    afterPostStateRepresentation = null,
+    crashes = emptyList()
+)
 
 val ExecutionResult.parallelResults: List<List<Result>> get() = parallelResultsWithClock.map { it.map { r -> r.result } }
 
