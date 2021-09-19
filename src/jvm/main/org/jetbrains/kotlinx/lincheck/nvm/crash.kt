@@ -27,10 +27,10 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * This exception is used to emulate system crash.
+ * This exception is used to emulate a crash.
  * Must be ignored by user code, namely 'catch (e: Throwable)' constructions should pass this exception.
  */
-abstract class CrashError(enableStackTrace: Boolean) : Throwable(null, null, false, enableStackTrace) {
+abstract class CrashError internal constructor(enableStackTrace: Boolean) : Throwable(null, null, false, enableStackTrace) {
     var actorIndex: Int = -1
     abstract val crashStackTrace: Array<StackTraceElement>
     override fun equals(other: Any?): Boolean {
@@ -50,42 +50,71 @@ abstract class CrashError(enableStackTrace: Boolean) : Throwable(null, null, fal
     }
 }
 
-class CrashErrorImpl : CrashError(true) {
+/**
+ * A usual exception with a stacktrace collected.
+ * Stack trace collection is a long operation, so [CrashErrorProxy] is used whenever it is possible.
+ * This error is used to present the final results.
+ */
+private class CrashErrorImpl : CrashError(true) {
     override val crashStackTrace: Array<StackTraceElement> get() = stackTrace
 }
 
-/** Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot. */
-class CrashErrorProxy(private val ste: StackTraceElement?) : CrashError(false) {
+/** Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot.
+ * Contains only one stack frame element.
+ */
+private class CrashErrorProxy(private val ste: StackTraceElement?) : CrashError(false) {
     override val crashStackTrace get() = if (ste === null) emptyArray() else arrayOf(ste)
 }
 
+/**
+ * Current state describing active threads.
+ * The class is immutable to perform an atomic change of it's values.
+ */
 private data class SystemContext(
+    /** The number of threads waiting for a system crash. */
     val waitingThreads: Int,
+    /** The number of active threads. */
     val threads: Int,
+    /** A lock for the threads waiting in a barrier. */
     val free: AtomicBoolean = AtomicBoolean(true)
 )
 
-object Crash {
+/** Crash related utils. */
+internal object Crash {
+    /** A flag whether a system crash occurred  and not handled be some recover method yet. */
     private val systemCrashOccurred = AtomicBoolean(false)
+
+    /** The current active threads context. */
     private val context = atomic(SystemContext(0, 0))
+
+    /** A flag whether threads must wait for each other before throwing an exception. */
     private var awaitSystemCrashBeforeThrow = true
     internal val threads get() = context.value.threads
 
     @Volatile
     private var execution: TestThreadExecution? = null
+
+    /** Thread ids of currently active threads. */
     private val activeThreads = Collections.synchronizedList(mutableListOf<Int>())
 
+    /**
+     * A flag whether to use a proxy instead of usual exception.
+     */
     @Volatile
     var useProxyCrash = true
 
+    /** An action that must be performed before a barrier opening. */
     @Volatile
     internal lateinit var barrierCallback: () -> Unit
 
     @JvmStatic
-    fun isCrashed() = systemCrashOccurred.get()
+    internal fun isCrashed() = systemCrashOccurred.get()
 
+    /** Set the last system crash handled.
+     * Invoked after some recover method completion.
+     */
     @JvmStatic
-    fun resetAllCrashed() {
+    internal fun resetAllCrashed() {
         systemCrashOccurred.compareAndSet(true, false)
     }
 
@@ -124,6 +153,7 @@ object Crash {
         barrierCallback()
     }
 
+    /** This await method is used in [StressStrategy]. */
     private fun defaultAwaitSystemCrash() {
         var free: AtomicBoolean
         while (true) {
@@ -135,6 +165,9 @@ object Crash {
         while (!free.get());
     }
 
+    /**
+     * An action that must be invoked before the barrier opening.
+     */
     internal fun onSystemCrash() {
         systemCrashOccurred.compareAndSet(false, true)
         NVMCache.systemCrash()
@@ -180,6 +213,7 @@ object Crash {
 
     private fun isWaitingSystemCrash() = context.value.waitingThreads > 0
 
+    /** Atomically update the [context] state. */
     private fun changeState(
         c: SystemContext,
         isLast: Boolean,

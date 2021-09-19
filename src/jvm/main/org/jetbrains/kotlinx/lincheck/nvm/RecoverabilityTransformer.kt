@@ -28,7 +28,7 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 
 
-class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
+internal class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
     private lateinit var name: String
 
     override fun visit(

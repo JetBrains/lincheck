@@ -40,12 +40,22 @@ private val SET_USE_CLOCKS = Method.getMethod(TestThreadExecution::forceUseClock
 private val TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution::class.java)
 private val RESULT_TYPE = Type.getType(Result::class.java)
 
+/** Wraps actor invocation with a try/catch block during actor code generation with [TestThreadExecutionGenerator]. */
 open class ActorCrashHandlerGenerator {
+    /** Add try/catch block and labels. */
     open fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {}
+
+    /** Generate catch block code. */
     open fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, nextLabel: Label) {}
 }
 
-class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
+/**
+ * Crash handler generator in durable model.
+ * In catch block crash result is created and stored as a result,
+ * clocks are incremented (this must be done before the barrier) and
+ * then a barrier method is invoked ([Crash.awaitSystemCrash]).
+ */
+internal class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
     private lateinit var handlerLabel: Label
 
     override fun addCrashTryBlock(start: Label, end: Label, mv: GeneratorAdapter) {
@@ -85,7 +95,11 @@ class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
     }
 }
 
-class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
+/**
+ * Crash handler generator in detectable execution model.
+ * In catch block the crashed actor is invoked again after a system crash barrier.
+ */
+internal class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandlerGenerator() {
     private lateinit var startLabel: Label
     private lateinit var handlerLabel: Label
 

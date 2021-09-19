@@ -32,7 +32,7 @@ internal enum class ExecutionState {
     INIT, PARALLEL, POST
 }
 
-object NVMState {
+internal object NVMState {
     @Volatile
     private var state = ExecutionState.INIT
     private var threads = 0

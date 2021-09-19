@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.AbstractLinearizabilityContext
 
-class DurableLinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVerifier(sequentialSpecification) {
+internal class DurableLinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVerifier(sequentialSpecification) {
     override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
 
     override fun createInitialContext(scenario: ExecutionScenario, results: ExecutionResult): VerifierContext =

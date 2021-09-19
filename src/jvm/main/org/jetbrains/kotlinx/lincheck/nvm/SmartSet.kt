@@ -27,7 +27,7 @@ const val SIZE = 8
 /**
  * Set optimised for small number of elements.
  */
-class SmartSet<E> {
+internal class SmartSet<E> {
     var size = 0
         private set
     private var data: Any? = null

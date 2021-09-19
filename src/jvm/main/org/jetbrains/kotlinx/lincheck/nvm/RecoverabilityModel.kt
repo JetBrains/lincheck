@@ -73,7 +73,7 @@ private object RecoverExecutionCallback : ExecutionCallback {
 }
 
 
-enum class StrategyRecoveryOptions {
+internal enum class StrategyRecoveryOptions {
     STRESS, MANAGED;
 
     fun createCrashTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor = when (this) {
@@ -90,7 +90,7 @@ enum class Recover {
     DETECTABLE_EXECUTION,
     BUFFERED_DURABLE;
 
-    fun createModel(strategyRecoveryOptions: StrategyRecoveryOptions) = when (this) {
+    internal fun createModel(strategyRecoveryOptions: StrategyRecoveryOptions) = when (this) {
         NO_RECOVER -> NoRecoverModel
         NRL -> NRLModel(true, strategyRecoveryOptions)
         NRL_NO_CRASHES -> NRLModel(false, strategyRecoveryOptions)

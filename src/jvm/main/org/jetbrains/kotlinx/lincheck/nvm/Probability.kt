@@ -122,8 +122,7 @@ internal object Statistics {
     private val sum = Array(NVMCache.MAX_THREADS_NUMBER) { intArrayOf() }
     private val count = Array(NVMCache.MAX_THREADS_NUMBER) { intArrayOf() }
     val length = Array(NVMCache.MAX_THREADS_NUMBER) { doubleArrayOf() }
-    internal var maxLength = 0.0
-        private set
+    private var maxLength = 0.0
     internal var totalLength = 0.0
         private set
 
@@ -172,7 +171,7 @@ internal object Statistics {
     internal fun currentActor(iThread: Int) = actor[iThread]
 }
 
-object Probability {
+internal object Probability {
     private const val RANDOM_FLUSH_PROBABILITY = 0.05
     private val random get() = randomGetter()
 
