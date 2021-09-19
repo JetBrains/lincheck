@@ -131,14 +131,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
-        var newScenario = this.copy()
-        val actors = newScenario[threadId] as MutableList<Actor>
-        actors.removeAt(position)
-        if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
-            // Also remove the empty thread
-            newScenario.parallelExecution.removeAt(threadId - 1)
-            newScenario = newScenario.setThreadIds()
-        }
+        val newScenario = this.copyWithRemovedActor(threadId, position)
         return if (newScenario.isValid) {
             newScenario.runTryMinimize(testCfg)
         } else null
@@ -175,13 +168,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return result
     }
 
-    private fun List<Actor>.copyWithThreadId(threadId: Int) = map { actor -> actor.copyWithThreadId(threadId) }
-    private fun ExecutionScenario.setThreadIds() = ExecutionScenario(
-        initExecution,
-        parallelExecution.mapIndexed { index, actors -> actors.copyWithThreadId(index + 1) },
-        postExecution.copyWithThreadId(parallelExecution.size + 1)
-    )
-
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
         testCfg.createStrategy(
             testClass = testClass,
@@ -190,12 +176,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
         ).run()
-
-    private fun ExecutionScenario.copy() = ExecutionScenario(
-        ArrayList(initExecution),
-        parallelExecution.map { ArrayList(it) },
-        ArrayList(postExecution)
-    )
 
     private val ExecutionScenario.isValid: Boolean
         get() = !isParallelPartEmpty &&
