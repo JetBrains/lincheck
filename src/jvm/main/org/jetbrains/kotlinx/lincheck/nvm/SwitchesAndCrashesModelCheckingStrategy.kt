@@ -50,7 +50,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     override fun createRoot(): InterleavingTreeNode = ThreadChoosingNodeWithCrashes((0 until nThreads).toList())
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor {
-        val visitor = CrashEnabledVisitor(cv, testClass, recoverModel.crashes)
+        val visitor = CrashEnabledVisitor(cv, recoverModel.crashes)
         val recoverTransformer = recoverModel.createTransformer(visitor, testClass)
         val managedTransformer = CrashesManagedStrategyTransformer(
             recoverTransformer, tracePointConstructors, testCfg.guarantees, testCfg.eliminateLocalObjects,

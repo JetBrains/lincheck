@@ -28,9 +28,8 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
-internal open class CrashEnabledVisitor(cv: ClassVisitor, testClass: Class<*>, initial: Boolean = true) :
+internal open class CrashEnabledVisitor(cv: ClassVisitor, initial: Boolean = true) :
     ClassVisitor(ASM_API, cv) {
-    private val superClassNames = testClass.superClassNames()
     var shouldTransform = initial
         private set
     var name: String? = null
@@ -48,12 +47,6 @@ internal open class CrashEnabledVisitor(cv: ClassVisitor, testClass: Class<*>, i
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
         this.name = name
-        if (name in superClassNames || name !== null &&
-            name.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-            !name.startsWith("org.jetbrains.kotlinx.lincheck.test.")
-        ) {
-            shouldTransform = false
-        }
     }
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
@@ -69,10 +62,7 @@ internal open class CrashEnabledVisitor(cv: ClassVisitor, testClass: Class<*>, i
     }
 }
 
-internal class CrashTransformer(
-    cv: ClassVisitor,
-    testClass: Class<*>
-) : CrashEnabledVisitor(cv, testClass) {
+internal class CrashTransformer(cv: ClassVisitor) : CrashEnabledVisitor(cv) {
     override fun visitMethod(
         access: Int,
         name: String?,
@@ -192,14 +182,4 @@ internal class CrashRethrowTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API,
             }
         }
     }
-}
-
-private fun Class<*>.superClassNames(): List<String> {
-    val result = mutableListOf<String>()
-    var clazz: Class<*>? = this
-    while (clazz !== null) {
-        result.add(Type.getInternalName(clazz))
-        clazz = clazz.superclass
-    }
-    return result
 }

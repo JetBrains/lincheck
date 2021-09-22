@@ -35,13 +35,17 @@ private const val THREADS_NUMBER = 5
 
 interface TAS {
     fun testAndSet(threadId: Int): Int
+    fun testAndSetRecover(threadId: Int): Int = -1
 }
 
 internal class TestAndSetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialTestAndSet::class) {
     private val tas = NRLTestAndSet(THREADS_NUMBER + 2)
 
+    @Recoverable(recoverMethod = "testAndSetRecover")
     @Operation
     fun testAndSet(@Param(gen = ThreadIdGen::class) threadId: Int) = tas.testAndSet(threadId)
+
+    fun testAndSetRecover(threadId: Int) = tas.testAndSetRecover(threadId)
     override fun <O : Options<O, *>> O.customize() {
         actorsBefore(0)
         actorsPerThread(1)
@@ -66,7 +70,7 @@ internal open class NRLTestAndSet(private val threadsCount: Int) : TAS {
     protected val doorway = nonVolatile(true)
     protected val tas = nonVolatile(0)
 
-    @Recoverable(recoverMethod = "testAndSetRecover")
+
     override fun testAndSet(p: Int): Int {
         r[p].setToNVM(1)
         val returnValue: Int
@@ -85,7 +89,7 @@ internal open class NRLTestAndSet(private val threadsCount: Int) : TAS {
         return returnValue
     }
 
-    protected open fun testAndSetRecover(p: Int): Int {
+    override fun testAndSetRecover(p: Int): Int {
         if (r[p].value < 2) return testAndSet(p)
         if (r[p].value == 3) return response[p].value
         if (winner.value == -1) {
@@ -118,8 +122,11 @@ internal abstract class TestAndSetFailingTest :
     AbstractNVMLincheckFailingTest(Recover.NRL, THREADS_NUMBER, SequentialTestAndSet::class) {
     protected abstract val tas: TAS
 
+    @Recoverable(recoverMethod = "testAndSetRecover")
     @Operation
     fun testAndSet(@Param(gen = ThreadIdGen::class) threadId: Int) = tas.testAndSet(threadId)
+
+    fun testAndSetRecover(threadId: Int) = tas.testAndSetRecover(threadId)
     override fun <O : Options<O, *>> O.customize() {
         actorsBefore(0)
         actorsPerThread(1)
@@ -160,7 +167,6 @@ internal class TestAndSetFailingTest8 : TestAndSetFailingTest() {
 }
 
 internal class NRLFailingTestAndSet1(threadsCount: Int) : NRLTestAndSet(threadsCount) {
-    @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
         r[p].setToNVM(1)
         val returnValue: Int
@@ -287,7 +293,6 @@ internal class NRLFailingTestAndSet5(private val threadsCount: Int) : NRLTestAnd
 }
 
 internal class NRLFailingTestAndSet6(threadsCount: Int) : NRLTestAndSet(threadsCount) {
-    @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
         r[p].setToNVM(1)
         val returnValue: Int
@@ -308,7 +313,6 @@ internal class NRLFailingTestAndSet6(threadsCount: Int) : NRLTestAndSet(threadsC
 }
 
 internal class NRLFailingTestAndSet7(threadsCount: Int) : NRLTestAndSet(threadsCount) {
-    @Recoverable(recoverMethod = "testAndSetRecover")
     override fun testAndSet(p: Int): Int {
         r[p].setToNVM(1)
         val returnValue: Int

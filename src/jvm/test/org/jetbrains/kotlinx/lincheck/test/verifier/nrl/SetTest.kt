@@ -38,7 +38,12 @@ private const val THREADS_NUMBER = 3
 
 internal interface RecoverableSet<T> {
     fun add(p: Int, value: T): Boolean
+    fun addBefore(p: Int, value: T)
+    fun addRecover(p: Int, value: T): Boolean
     fun remove(p: Int, value: T): Boolean
+
+    fun removeBefore(p: Int, value: T)
+    fun removeRecover(p: Int, value: T): Boolean
     operator fun contains(value: T): Boolean
 }
 
@@ -46,13 +51,22 @@ internal interface RecoverableSet<T> {
 internal class SetTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class) {
     private val set = NRLSet<Int>(2 + THREADS_NUMBER)
 
+    @Recoverable(beforeMethod = "addBefore", recoverMethod = "addRecover")
     @Operation
     fun add(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) = set.add(threadId, key)
 
+    fun addRecover(threadId: Int, key: Int) = set.addRecover(threadId, key)
+    fun addBefore(threadId: Int, key: Int) = set.addBefore(threadId, key)
+
+    @Recoverable(beforeMethod = "removeBefore", recoverMethod = "removeRecover")
     @Operation
     fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) =
         set.remove(threadId, key)
 
+    fun removeRecover(threadId: Int, key: Int) = set.removeRecover(threadId, key)
+    fun removeBefore(threadId: Int, key: Int) = set.removeBefore(threadId, key)
+
+    @Recoverable
     @Operation
     fun contains(@Param(name = "key") key: Int) = set.contains(key)
 }
@@ -117,7 +131,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         }
     }
 
-    @Recoverable(beforeMethod = "addBefore", recoverMethod = "addRecover")
+
     override fun add(p: Int, value: T) = addImpl(p, value)
 
     protected open fun addImpl(p: Int, value: T): Boolean {
@@ -145,7 +159,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         }
     }
 
-    protected open fun addBefore(p: Int, value: T) {
+    override fun addBefore(p: Int, value: T) {
         checkPointer[p].value = 0
         checkPointer[p].flush()
         recoveryData[p].value = Info(nonVolatile(Node(value, null)))
@@ -154,7 +168,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         checkPointer[p].flush()
     }
 
-    protected open fun addRecover(p: Int, value: T): Boolean {
+    override fun addRecover(p: Int, value: T): Boolean {
         if (checkPointer[p].value == 0) return addImpl(p, value)
         val node = recoveryData[p].value!!.node.value!!
         val result = recoveryData[p].value!!.result.value
@@ -168,7 +182,6 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         return addImpl(p, value)
     }
 
-    @Recoverable(beforeMethod = "removeBefore", recoverMethod = "removeRecover")
     override fun remove(p: Int, value: T) = removeImpl(p, value)
 
     protected open fun removeImpl(p: Int, value: T): Boolean {
@@ -194,7 +207,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         return result
     }
 
-    protected open fun removeBefore(p: Int, value: T) {
+    override fun removeBefore(p: Int, value: T) {
         checkPointer[p].value = 0
         checkPointer[p].flush()
         recoveryData[p].value = Info()
@@ -203,7 +216,7 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         checkPointer[p].flush()
     }
 
-    protected open fun removeRecover(p: Int, value: T): Boolean {
+    override fun removeRecover(p: Int, value: T): Boolean {
         if (checkPointer[p].value == 0) return removeImpl(p, value)
         val result = recoveryData[p].value!!.result.value
         if (result != null) return result
@@ -219,7 +232,6 @@ internal open class NRLSet<T : Comparable<T>>(threadsCount: Int) : RecoverableSe
         return removeImpl(p, value)
     }
 
-    @Recoverable
     override operator fun contains(value: T): Boolean {
         var current = head.get()
         val isDeleted = booleanArrayOf(false)
@@ -239,13 +251,22 @@ internal abstract class SetFailingTest :
     AbstractNVMLincheckFailingTest(Recover.NRL, THREADS_NUMBER, SequentialSet::class) {
     protected abstract val set: RecoverableSet<Int>
 
+    @Recoverable(beforeMethod = "addBefore", recoverMethod = "addRecover")
     @Operation
     fun add(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) = set.add(threadId, key)
 
+    fun addRecover(threadId: Int, key: Int) = set.addRecover(threadId, key)
+    fun addBefore(threadId: Int, key: Int) = set.addBefore(threadId, key)
+
+    @Recoverable(beforeMethod = "removeBefore", recoverMethod = "removeRecover")
     @Operation
     fun remove(@Param(gen = ThreadIdGen::class) threadId: Int, @Param(name = "key") key: Int) =
         set.remove(threadId, key)
 
+    fun removeRecover(threadId: Int, key: Int) = set.removeRecover(threadId, key)
+    fun removeBefore(threadId: Int, key: Int) = set.removeBefore(threadId, key)
+
+    @Recoverable
     @Operation
     fun contains(@Param(name = "key") key: Int) = set.contains(key)
     override val expectedExceptions = listOf(NullPointerException::class)

@@ -41,6 +41,7 @@ internal class CrashInsertTest : VerifierState() {
     private val c = NVMClass()
 
     @Operation
+    @Recoverable
     fun foo() = c.foo()
     override fun extractState() = 4
 

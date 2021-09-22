@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -32,6 +33,7 @@ import org.junit.Test
 internal class LincheckClassCrashFreeTest : VerifierState() {
 
     @Operation
+    @Recoverable
     fun simple() = 42
 
     @Test

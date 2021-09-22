@@ -34,6 +34,8 @@ private const val THREADS_NUMBER = 3
 internal interface Counter {
     fun increment(threadId: Int)
     fun get(threadId: Int): Int
+    fun incrementBefore(p: Int) {}
+    fun incrementRecover(p: Int) {}
 }
 
 /**
@@ -43,9 +45,13 @@ internal class CounterTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER
     private val counter = NRLCounter(THREADS_NUMBER + 2)
 
     @Operation
+    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
     override fun increment(@Param(gen = ThreadIdGen::class) threadId: Int) = counter.increment(threadId)
+    override fun incrementBefore(p: Int) = counter.incrementBefore(p)
+    override fun incrementRecover(p: Int) = counter.incrementRecover(p)
 
     @Operation
+    @Recoverable
     override fun get(@Param(gen = ThreadIdGen::class) threadId: Int) = counter.get(threadId)
 }
 
@@ -65,10 +71,7 @@ internal open class NRLCounter(threadsCount: Int) : Counter {
     protected val checkPointer = MutableList(threadsCount) { nonVolatile(0) }
     protected val currentValue = MutableList(threadsCount) { nonVolatile(0) }
 
-    @Recoverable
     override fun get(threadId: Int) = r.sumBy { it.read()!! }
-
-    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
     override fun increment(threadId: Int) = incrementImpl(threadId)
 
     protected open fun incrementImpl(p: Int) {
@@ -76,11 +79,11 @@ internal open class NRLCounter(threadsCount: Int) : Counter {
         checkPointer[p].value = 1
     }
 
-    protected open fun incrementRecover(p: Int) {
+    override fun incrementRecover(p: Int) {
         if (checkPointer[p].value == 0) return incrementImpl(p)
     }
 
-    protected open fun incrementBefore(p: Int) {
+    override fun incrementBefore(p: Int) {
         currentValue[p].value = r[p].read()!!
         checkPointer[p].value = 0
         currentValue[p].flush()
@@ -92,10 +95,14 @@ internal abstract class CounterFailingTest :
     AbstractNVMLincheckFailingTest(Recover.NRL, THREADS_NUMBER, SequentialCounter::class) {
     protected abstract val counter: Counter
 
+    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
     @Operation
     fun increment(@Param(gen = ThreadIdGen::class) threadId: Int) = counter.increment(threadId)
+    fun incrementBefore(p: Int) = counter.incrementBefore(p)
+    fun incrementRecover(p: Int) = counter.incrementRecover(p)
 
     @Operation
+    @Recoverable
     fun get(@Param(gen = ThreadIdGen::class) threadId: Int) = counter.get(threadId)
 }
 

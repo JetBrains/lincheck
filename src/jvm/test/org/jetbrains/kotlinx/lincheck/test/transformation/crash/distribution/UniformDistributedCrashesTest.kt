@@ -84,12 +84,12 @@ private data class CrashPosition(val iActor: Int, val line: Int) : Comparable<Cr
 
 class UniformDistributedCrashesTest {
     @Test
-    fun testDurable() = test(/* 2 foo1 + 3 foo2 */37, Recover.DURABLE, SequentialCodeTest::class.java, 1)
+    fun testDurable() = test(/* 2 foo1 + 3 foo2 */42, Recover.DURABLE, SequentialCodeTest::class.java, 1)
 
     @Test
     @Ignore("This model works only with unbounded number of crashes. But this is uncomfortable to use & analyze.")
     fun testDetectableExecution() =
-        test(/* 2 foo1 + 3 foo2 */37, Recover.DETECTABLE_EXECUTION, SequentialCodeTest::class.java, 5)
+        test(/* 2 foo1 + 3 foo2 */42, Recover.DETECTABLE_EXECUTION, SequentialCodeTest::class.java, 5)
 
     private fun test(crashPoints: Int, model: Recover, testClass: Class<*>, expectedCrashes: Int) {
         val n = 1_000_000

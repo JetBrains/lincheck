@@ -37,8 +37,11 @@ private const val THREADS = 3
 internal class RecoverableMutualExclusionWithPrimitivesTest : AbstractNVMLincheckTest(Recover.NRL, THREADS, SequentialCounter::class) {
     private val counter = CounterWithLock(THREADS + 2, LockWithPrimitives(THREADS + 2))
 
+    @Recoverable(recoverMethod = "incRecover", beforeMethod = "incBefore")
     @Operation
     fun inc(@Param(gen = ThreadIdGen::class) threadId: Int): Int = counter.inc(threadId)
+    fun incRecover(threadId: Int) = counter.incRecover(threadId)
+    fun incBefore(threadId: Int) = counter.incBefore(threadId)
 
     override fun testWithStressStrategy() {
         println("${this::class.qualifiedName}:testWithStressStrategy test is ignored as no special atomic primitives available.")
@@ -61,7 +64,6 @@ internal class CounterWithLock(threads: Int, private val lock: DurableLock) {
     private val cp = Array(threads) { nonVolatile(0) }
     private val before = Array(threads) { nonVolatile(0) }
 
-    @Recoverable(recoverMethod = "incRecover", beforeMethod = "incBefore")
     fun inc(threadId: Int) = incInternal(threadId)
 
     private fun incInternal(threadId: Int): Int {
@@ -193,8 +195,11 @@ internal class LockWithPrimitives(threads: Int) : DurableLock {
 internal class MutualExclusionFailingTest : AbstractNVMLincheckFailingTest(Recover.NRL, THREADS, SequentialCounter::class, false, DeadlockWithDumpFailure::class) {
     private val counter = CounterWithLock(THREADS + 2, SimplestLockEver())
 
+    @Recoverable(recoverMethod = "incRecover", beforeMethod = "incBefore")
     @Operation
     fun inc(@Param(gen = ThreadIdGen::class) threadId: Int): Int = counter.inc(threadId)
+    fun incRecover(threadId: Int) = counter.incRecover(threadId)
+    fun incBefore(threadId: Int) = counter.incBefore(threadId)
 
     override fun <O : Options<O, *>> O.customize() {
         actorsBefore(0)

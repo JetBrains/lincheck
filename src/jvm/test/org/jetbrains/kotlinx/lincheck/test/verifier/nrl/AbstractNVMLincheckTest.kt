@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.test.checkTraceHasNoLincheckEvents
 import org.junit.Test
-import java.lang.IllegalStateException
 import java.lang.reflect.InvocationTargetException
 import kotlin.reflect.KClass
 

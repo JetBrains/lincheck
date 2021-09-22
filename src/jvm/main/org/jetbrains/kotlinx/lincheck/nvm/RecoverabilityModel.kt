@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.nvm
 
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
@@ -76,8 +78,8 @@ private object RecoverExecutionCallback : ExecutionCallback {
 internal enum class StrategyRecoveryOptions {
     STRESS, MANAGED;
 
-    fun createCrashTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor = when (this) {
-        STRESS -> CrashRethrowTransformer(CrashTransformer(cv, clazz))
+    fun createCrashTransformer(cv: ClassVisitor): ClassVisitor = when (this) {
+        STRESS -> CrashRethrowTransformer(CrashTransformer(cv))
         MANAGED -> CrashRethrowTransformer(cv) // add crashes in ManagedStrategyTransformer
     }
 }
@@ -111,6 +113,7 @@ interface RecoverabilityModel {
     fun defaultExpectedCrashes(): Int
     fun createExecutionCallback(): ExecutionCallback
     fun createProbabilityModel(): ProbabilityModel
+    fun checkTestClass(testClass: Class<*>) {}
     val awaitSystemCrashBeforeThrow: Boolean
     val verifierClass: Class<out Verifier>
 
@@ -151,9 +154,23 @@ private class NRLModel(
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor {
         var result: ClassVisitor = RecoverabilityTransformer(cv)
         if (crashes) {
-            result = strategyRecoveryOptions.createCrashTransformer(result, clazz)
+            result = strategyRecoveryOptions.createCrashTransformer(result)
         }
         return result
+    }
+
+    override fun checkTestClass(testClass: Class<*>) {
+        var clazz: Class<*>? = testClass
+        while (clazz !== null) {
+            clazz.declaredMethods.forEach { method ->
+                val isOperation = method.isAnnotationPresent(Operation::class.java)
+                val isRecoverable = method.isAnnotationPresent(Recoverable::class.java)
+                require(!isOperation || isRecoverable) {
+                    "Every operation must have a Recovery annotation, but ${method.name} operation in ${clazz!!.name} class is not Recoverable."
+                }
+            }
+            clazz = clazz.superclass
+        }
     }
 }
 
@@ -171,7 +188,7 @@ private open class DurableModel(val strategyRecoveryOptions: StrategyRecoveryOpt
     override val verifierClass: Class<out Verifier> get() = DurableLinearizabilityVerifier::class.java
     override fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = DurableRecoverAllGenerator(cv, clazz)
     override fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor =
-        strategyRecoveryOptions.createCrashTransformer(DurableOperationRecoverTransformer(cv, clazz), clazz)
+        strategyRecoveryOptions.createCrashTransformer(DurableOperationRecoverTransformer(cv, clazz))
 }
 
 private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecoveryOptions) :

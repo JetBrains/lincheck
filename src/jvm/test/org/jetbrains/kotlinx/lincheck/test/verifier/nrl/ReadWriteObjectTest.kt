@@ -43,21 +43,26 @@ private const val THREADS_NUMBER = 3
 interface RWO<T> {
     fun read(): T?
     fun write(value: T, p: Int)
+    fun writeRecover(value: T, p: Int) {}
 }
 
 internal class ReadWriteObjectTest :
     AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialReadWriteObject::class) {
     private val rwo = NRLReadWriteObject<Pair<Int, Int>>(THREADS_NUMBER + 2)
 
+    @Recoverable
     @Operation
     fun read() = rwo.read()?.first
 
+    @Recoverable(recoverMethod = "writeRecover")
     @Operation
     fun write(
         @Param(gen = ThreadIdGen::class) threadId: Int,
         value: Int,
         @Param(gen = OperationIdGen::class) operationId: Int
     ) = rwo.write(value to operationId, threadId)
+
+    fun writeRecover(threadId: Int, value: Int, operationId: Int) = rwo.writeRecover(value to operationId, threadId)
 }
 
 private val nullObject = Any()
@@ -85,10 +90,7 @@ internal open class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null)
     // (state, value) for every thread
     protected val state = MutableList(threadsCount) { nonVolatile(0 to null as T?) }
 
-    @Recoverable
     override fun read(): T? = register.value
-
-    @Recoverable(recoverMethod = "writeRecover")
     override fun write(value: T, p: Int) = writeImpl(value, p)
 
     protected open fun writeImpl(value: T, p: Int) {
@@ -100,7 +102,7 @@ internal open class NRLReadWriteObject<T>(threadsCount: Int, initial: T? = null)
         state[p].flush()
     }
 
-    protected open fun writeRecover(value: T, p: Int) {
+    override fun writeRecover(value: T, p: Int) {
         val (flag, current) = state[p].value
         if (flag == 0 && current != value) return writeImpl(value, p)
         else if (flag == 1 && current === register.value) return writeImpl(value, p)
@@ -114,14 +116,18 @@ internal abstract class ReadWriteObjectFailingTest :
     protected abstract val rwo: RWO<Pair<Int, Int>>
 
     @Operation
+    @Recoverable
     fun read() = rwo.read()?.first
 
     @Operation
+    @Recoverable(recoverMethod = "writeRecover")
     fun write(
         @Param(gen = ThreadIdGen::class) threadId: Int,
         value: Int,
         @Param(gen = OperationIdGen::class) operationId: Int
     ) = rwo.write(value to operationId, threadId)
+
+    fun writeRecover(threadId: Int, value: Int, operationId: Int) = rwo.writeRecover(value to operationId, threadId)
 }
 
 internal class SmallScenarioTest : ReadWriteObjectFailingTest() {

@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.nvm
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
@@ -33,9 +34,11 @@ internal class PersistentTest {
     private val x = nonVolatile(0)
 
     @Operation
+    @Recoverable
     fun read() = x.value
 
     @Operation
+    @Recoverable
     fun write(value: Int) {
         x.value = value
         x.flush()
