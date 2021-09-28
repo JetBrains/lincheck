@@ -20,13 +20,93 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.serialization.Serializable
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
+
+/**
+ * Event for a node.
+ */
+sealed class Event {
+    abstract val iNode: Int
+}
+
+/**
+ *
+ */
+data class MessageSentEvent<Message>(
+    override val iNode: Int,
+    val message: Message,
+    val receiver: Int,
+    val id: Int,
+    val clock: VectorClock,
+    val state: String
+) : Event() {
+    override fun toString(): String =
+        "Send $message to $receiver, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state=$state" else ""
+}
+
+data class MessageReceivedEvent<Message>(
+    override val iNode: Int,
+    val message: Message,
+    val sender: Int,
+    val id: Int,
+    val clock: VectorClock,
+    val state: String
+) : Event() {
+    override fun toString(): String =
+        "Received $message from $sender, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
+}
+
+data class InternalEvent(override val iNode: Int, val attachment: Any, val clock: VectorClock, val state: String) :
+    Event() {
+    override fun toString(): String =
+        "$attachment, clock=$clock" + if (state.isNotBlank()) ", state={$state}" else ""
+}
+
+@Serializable
+data class NodeCrashEvent(override val iNode: Int, val clock: VectorClock, val state: String) : Event()
+
+data class NodeRecoveryEvent(override val iNode: Int, val clock: VectorClock, val state: String) : Event()
+
+data class OperationStartEvent(override val iNode: Int, val actor: Actor, val clock: VectorClock, val state: String) :
+    Event() {
+    override fun toString(): String =
+        "Start operation $actor, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
+}
+
+data class ScenarioFinishEvent(override val iNode: Int, val clock: VectorClock, val state: String) :
+    Event() {
+    override fun toString(): String =
+        "Finish scenario, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
+}
+
+data class CrashNotificationEvent(
+    override val iNode: Int,
+    val crashedNode: Int,
+    val clock: VectorClock,
+    val state: String
+) : Event()
+
+data class SetTimerEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
+    Event()
+
+data class TimerTickEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
+    Event()
+
+data class CancelTimerEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
+    Event()
+
+data class NetworkPartitionEvent(override val iNode: Int, val partitions: List<Set<Int>>, val partitionCount: Int) :
+    Event()
+
+data class NetworkRecoveryEvent(override val iNode: Int, val partitionCount: Int) : Event()
+
 internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) {
     private var msgId = 0
-    private val _events = mutableListOf<Pair<Int, Event>>()
-    val events: List<Pair<Int, Event>>
+    private val _events = mutableListOf<Event>()
+    val events: List<Event>
         get() = _events
     val numberOfNodes = testCfg.addressResolver.totalNumberOfNodes
     private val vectorClocks = Array(numberOfNodes) {
@@ -36,41 +116,55 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
 
     fun createMessageEvent(msg: M, sender: Int, receiver: Int): MessageSentEvent<M> {
         val event = MessageSentEvent(
+            iNode = sender,
             message = msg,
             receiver = receiver,
             id = msgId++,
             vectorClocks[sender].incAndCopy(),
             nodeInstances[sender].stateRepresentation()
         )
-        _events.add(sender to event)
+        _events.add(event)
         return event
     }
 
     fun createOperationEvent(actor: Actor, iNode: Int) {
         val event =
-            OperationStartEvent(actor, vectorClocks[iNode].incAndCopy(), nodeInstances[iNode].stateRepresentation())
-        _events.add(iNode to event)
+            OperationStartEvent(
+                iNode,
+                actor,
+                vectorClocks[iNode].incAndCopy(),
+                nodeInstances[iNode].stateRepresentation()
+            )
+        _events.add(event)
     }
 
     fun createNodeRecoverEvent(iNode: Int) {
-        _events.add(iNode to ProcessRecoveryEvent(vectorClocks[iNode].copy(), nodeInstances[iNode].stateRepresentation()))
+        _events.add(
+            NodeRecoveryEvent(
+                iNode,
+                vectorClocks[iNode].copy(),
+                nodeInstances[iNode].stateRepresentation()
+            )
+        )
     }
 
-    fun createMessageReceiveEvent(sentEvent: MessageSentEvent<M>, sender: Int) {
+    fun createMessageReceiveEvent(sentEvent: MessageSentEvent<M>) {
         val receiver = sentEvent.receiver
         val event = MessageReceivedEvent(
+            iNode = receiver,
             message = sentEvent.message,
-            sender = sender,
+            sender = sentEvent.iNode,
             id = sentEvent.id,
             clock = vectorClocks[receiver].maxClock(sentEvent.clock),
             state = nodeInstances[receiver].stateRepresentation()
         )
-        _events.add(receiver to event)
+        _events.add(event)
     }
 
     fun createTimerTickEvent(name: String, iNode: Int) {
         _events.add(
-            iNode to TimerTickEvent(
+            TimerTickEvent(
+                iNode = iNode,
                 timerName = name,
                 clock = vectorClocks[iNode].copy(),
                 state = nodeInstances[iNode].stateRepresentation()
@@ -80,7 +174,8 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
 
     fun createInternalEvent(attachment: Any, iNode: Int) {
         _events.add(
-            iNode to InternalEvent(
+            InternalEvent(
+                iNode,
                 attachment,
                 vectorClocks[iNode].copy(),
                 nodeInstances[iNode].stateRepresentation()
@@ -89,17 +184,15 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
     }
 
     fun createNodeCrashEvent(iNode: Int) {
-        _events.add(iNode to NodeCrashEvent(vectorClocks[iNode].copy(), nodeInstances[iNode].stateRepresentation()))
+        _events.add(NodeCrashEvent(iNode, vectorClocks[iNode].copy(), nodeInstances[iNode].stateRepresentation()))
     }
 
     fun createScenarioFinishEvent(iNode: Int) {
         _events.add(
-            iNode to ScenarioFinishEvent(
+            ScenarioFinishEvent(iNode,
                 vectorClocks[iNode].copy(),
                 nodeInstances[iNode].stateRepresentation()
             )
         )
     }
-
-    fun events(): List<Pair<Int, Event>> = _events
 }

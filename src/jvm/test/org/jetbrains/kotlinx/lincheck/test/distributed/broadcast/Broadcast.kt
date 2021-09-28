@@ -40,22 +40,22 @@ fun addToFile(f: (BufferedWriter) -> Unit) {
 data class Message(val body: String, val id: Int, val from: Int)
 
 
-fun List<Pair<Int, Event>>.correctProcesses() =
-    groupBy { it.first }.filter { !it.value.map { it.second }.any { p -> p is NodeCrashEvent } }
+fun List<Event>.correctProcesses() =
+    groupBy { it.iNode }.filter { !it.value.any { p -> p is NodeCrashEvent } }
         .map { it.key }
 
-fun <Message> List<Pair<Int, Event>>.sentMessages(iNode: Int) =
-    filter { it.first == iNode }.map { it.second }.filterIsInstance<MessageSentEvent<Message>>()
+fun <Message> List<Event>.sentMessages(iNode: Int) =
+    filter { it.iNode == iNode }.filterIsInstance<MessageSentEvent<Message>>()
 
-fun <Message> List<Pair<Int, Event>>.receivedMessages(iNode: Int) =
-    filter { it.first == iNode }.map { it.second }.filterIsInstance<MessageReceivedEvent<Message>>()
+fun <Message> List<Event>.receivedMessages(iNode: Int) =
+    filter { it.iNode == iNode }.filterIsInstance<MessageReceivedEvent<Message>>()
 
 fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
 
-fun List<Pair<Int, Event>>.isCorrect(iNode: Int) : Boolean = correctProcesses().contains(iNode)
+fun List<Event>.isCorrect(iNode: Int): Boolean = correctProcesses().contains(iNode)
 
 abstract class AbstractPeer(protected val env: Environment<Message, Message>) : Node<Message, Message> {
-    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Message>>) {
+    override fun validate(events: List<Event>, logs: Array<List<Message>>) {
         check(env.log.isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
         env.log.forEach { m ->
@@ -75,7 +75,8 @@ abstract class AbstractPeer(protected val env: Environment<Message, Message>) : 
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
             env.log.filter { it.from == i }
                 .map { m ->
-                    events.sentMessages<Message>(i).map { it.message }.filter { it.from == i }.distinctBy { it.id }.indexOf(m)
+                    events.sentMessages<Message>(i).map { it.message }.filter { it.from == i }.distinctBy { it.id }
+                        .indexOf(m)
                 }
         }
         localMessagesOrder.forEach {

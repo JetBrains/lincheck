@@ -20,10 +20,16 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.lang.Integer.max
 
-@Serializable
+@Serializable(with = VectorClockSerializer::class)
 data class VectorClock(private val clock: IntArray, private val iNode: Int) {
     val nodes: Int get() = clock.size
     val empty: Boolean get() = clock.all { it == 0 }
@@ -64,6 +70,19 @@ data class VectorClock(private val clock: IntArray, private val iNode: Int) {
             clock[i] = max(clock[i], other[i])
         }
         return VectorClock(clock.copyOf(), iNode)
+    }
+}
+
+object VectorClockSerializer : KSerializer<VectorClock> {
+    override fun deserialize(decoder: Decoder): VectorClock {
+        TODO("Not yet implemented")
+    }
+
+    override val descriptor: SerialDescriptor
+        get() = PrimitiveSerialDescriptor("Color", PrimitiveKind.INT)
+
+    override fun serialize(encoder: Encoder, value: VectorClock) {
+        encoder.encodeString(value.toString())
     }
 }
 

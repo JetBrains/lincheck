@@ -122,7 +122,7 @@ internal open class DistributedRunner<Message, Log>(
             val logs: Array<List<Log>> = Array(numberOfNodes) {
                 environments[it].log
             }
-            nodeInstances.forEach { n -> n.validate(eventFactory.events(), logs) }
+            nodeInstances.forEach { n -> n.validate(eventFactory.events, logs) }
         } catch (e: Throwable) {
             return ValidationFailureInvocationResult(scenario, "validate", e)
         }
@@ -239,11 +239,11 @@ internal open class DistributedRunner<Message, Log>(
             out.println()
             eventFactory.events.toList().forEach { p ->
                 val header = if (printInstance) {
-                    "${p.first}, ${testCfg.addressResolver[p.first].simpleName}"
+                    "${p.iNode}, ${testCfg.addressResolver[p.iNode].simpleName}"
                 } else {
-                    p.first
+                    p.iNode
                 }
-                out.println("[${header}]: ${p.second}")
+                out.println("[${header}]: $p")
             }
         }
     }

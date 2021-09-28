@@ -35,7 +35,7 @@ interface Node<Message, Log> {
      */
     fun stateRepresentation(): String = ""
 
-    fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Log>>) {}
+    fun validate(events: List<Event>, logs: Array<List<Log>>) {}
 }
 
 class CrashError : Exception()

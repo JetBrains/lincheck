@@ -52,20 +52,19 @@ class Rel(msgTime: Int) : MutexMessage(msgTime) {
 }
 
 abstract class MutexNode<Message> : Node<Message, Unit> {
-    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Unit>>) {
-        val locksAndUnlocks =
-            events.filter { it.second is InternalEvent }.map { it.first to it.second as InternalEvent }
+    override fun validate(events: List<Event>, logs: Array<List<Unit>>) {
+        val locksAndUnlocks = events.filterIsInstance<InternalEvent>()
         for (i in locksAndUnlocks.indices step 2) {
-            check(locksAndUnlocks[i].second.attachment == "Lock")
+            check(locksAndUnlocks[i].attachment == "Lock")
             if (i + 1 < locksAndUnlocks.size) {
                 check(
-                    locksAndUnlocks[i + 1].second.attachment == "Unlock" && locksAndUnlocks[i].first == locksAndUnlocks[i + 1].first && locksAndUnlocks[i].second.clock.happensBefore(
-                        locksAndUnlocks[i + 1].second.clock
+                    locksAndUnlocks[i + 1].attachment == "Unlock" && locksAndUnlocks[i].iNode == locksAndUnlocks[i + 1].iNode && locksAndUnlocks[i].clock.happensBefore(
+                        locksAndUnlocks[i + 1].clock
                     )
                 )
             }
             if (i >= 1) {
-                check(locksAndUnlocks[i - 1].second.clock.happensBefore(locksAndUnlocks[i].second.clock))
+                check(locksAndUnlocks[i - 1].clock.happensBefore(locksAndUnlocks[i].clock))
             }
         }
     }

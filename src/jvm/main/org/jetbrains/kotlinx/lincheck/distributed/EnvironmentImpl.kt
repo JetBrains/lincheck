@@ -48,7 +48,7 @@ internal class EnvironmentImpl<Message, Log>(
         val rate = strategy.crashOrReturnRate(nodeId, e)
         repeat(rate) {
             taskManager.addTask(MessageReceiveTask(iNode = receiver, from = nodeId) {
-                eventFactory.createMessageReceiveEvent(e, nodeId)
+                eventFactory.createMessageReceiveEvent(e)
                 //TODO: better way to access node instances
                 eventFactory.nodeInstances[receiver].onMessage(message, nodeId)
             })

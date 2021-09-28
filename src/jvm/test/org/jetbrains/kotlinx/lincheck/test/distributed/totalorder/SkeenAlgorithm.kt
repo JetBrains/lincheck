@@ -103,7 +103,7 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode(env) {
         }
     }
 
-    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Message>>) {
+    override fun validate(events: List<Event>, logs: Array<List<Message>>) {
         super.validate(events, logs)
         for (l in logs) {
             for (i in l.indices) {
@@ -118,7 +118,7 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode(env) {
                 }
             }
         }
-        val sent = events.map { it.second }.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
+        val sent = events.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
             .filterIsInstance<RequestMessage>()
         sent.forEach { m ->
             check(logs.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) }) {
