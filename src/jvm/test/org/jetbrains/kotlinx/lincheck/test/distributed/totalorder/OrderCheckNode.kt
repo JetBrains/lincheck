@@ -25,8 +25,8 @@ import org.jetbrains.kotlinx.lincheck.distributed.Event
 import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 
-abstract class OrderCheckNode<M>(val env: Environment<M, M>) : Node<M, M> {
-    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<M>>) {
+abstract class OrderCheckNode(val env: Environment<Message, Message>) : Node<Message, Message> {
+    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Message>>) {
         for (l in logs) {
             for (i in l.indices) {
                 for (j in i + 1 until l.size) {

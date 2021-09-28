@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
-
+/*
 data class SimpleMessage(val id: Int, val from: Int)
 
 class IncorrectOrder(env: Environment<SimpleMessage, SimpleMessage>) : OrderCheckNode<SimpleMessage>(env)  {
@@ -56,4 +56,4 @@ class IncorrectOrderTest {
                 .iterations(1)
                 .verifier(EpsilonVerifier::class.java))
     }
-}
+}*/

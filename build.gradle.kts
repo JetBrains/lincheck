@@ -5,6 +5,7 @@ buildscript {
     val atomicfuVersion: String by project
     dependencies {
         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
+        //classpath("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
     }
 }
 apply(plugin = "kotlinx-atomicfu")
@@ -15,11 +16,15 @@ plugins {
     id("maven-publish")
     id("maven")
     id("kotlinx.team.infra") version "0.2.0-dev-55"
+    kotlin("plugin.serialization") version "1.5.31"
 }
 
 repositories {
     mavenCentral()
     jcenter()
+}
+dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
 }
 
 kotlin {

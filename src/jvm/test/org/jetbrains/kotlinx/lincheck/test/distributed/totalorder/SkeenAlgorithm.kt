@@ -52,7 +52,7 @@ data class RequestMessage(val from: Int, val id: Int, override val clock: Int, v
 
 data class Reply(override val clock: Int) : Message()
 
-class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode<Message>(env) {
+class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode(env) {
     var clock = 0
     var opId = 0
     val resChannel = Channel<Int>(Channel.UNLIMITED)

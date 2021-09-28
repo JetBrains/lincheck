@@ -1,6 +1,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.serialization.Serializable
 import org.jetbrains.kotlinx.lincheck.Actor
 import kotlin.coroutines.CoroutineContext
 
@@ -112,6 +113,7 @@ data class InternalEvent(val attachment: Any, val clock: VectorClock, val state:
         "$attachment, clock=$clock" + if (state.isNotBlank()) ", state={$state}" else ""
     }
 
+@Serializable
 data class NodeCrashEvent(val clock: VectorClock, val state: String) : Event()
 
 data class ProcessRecoveryEvent(val clock: VectorClock, val state: String) : Event()

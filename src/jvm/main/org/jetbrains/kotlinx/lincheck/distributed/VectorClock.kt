@@ -20,8 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.serialization.Serializable
 import java.lang.Integer.max
 
+@Serializable
 data class VectorClock(private val clock: IntArray, private val iNode: Int) {
     val nodes: Int get() = clock.size
     val empty: Boolean get() = clock.all { it == 0 }

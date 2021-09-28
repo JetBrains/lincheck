@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 
-class SkeenAlgorithmIncorrect(env: Environment<Message, Message>) : OrderCheckNode<Message>(env) {
+class SkeenAlgorithmIncorrect(env: Environment<Message, Message>) : OrderCheckNode(env) {
     var clock = 0
     var opId = 0
     val resChannel = Channel<Int>(Channel.UNLIMITED)
