@@ -19,14 +19,10 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
-
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.Event
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.NodeAddressResolver
+/*
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.TestNodeExecution
-import java.nio.channels.InterruptedByTimeoutException
 import java.util.*
 import kotlin.random.Random
 
@@ -99,4 +95,4 @@ class ModelCheckingContext<Message, Log>(
     lateinit var dispatcher: ModelCheckingDispatcher
 
     val taskManager : TaskManager = TaskManager(this)
-}
+}*/

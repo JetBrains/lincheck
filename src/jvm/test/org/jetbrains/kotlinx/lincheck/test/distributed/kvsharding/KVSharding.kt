@@ -53,39 +53,39 @@ data class KVLog(val request: PutRequest, val prev: String?) : Log()
 data class OpId(val id: Int) : Log()
 
 
-class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
+class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage, Log> {
     private var opId = 0
     private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null
 
+    override fun stateRepresentation(): String = "opId=$opId, delegate=$delegate, response=$response, log=${env.log}"
+
     private fun getNodeForKey(key: String) =
         ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
 
     private fun saveToLog(request: PutRequest): String? {
-        val log = env.log
-        val present = log.lastOrNull { it is KVLog && it.request === request }
+        val present = env.log.lastOrNull { it is KVLog && it.request === request }
         if (present != null) {
             return (present as KVLog).prev
         }
-        val index = log.indexOfLast { it is KVLog && it.request.key == request.key }
+        val index = env.log.indexOfLast { it is KVLog && it.request.key == request.key }
         val prev = if (index == -1) {
             null
         } else {
-            val res = (log[index] as KVLog).request.value
+            val res = (env.log[index] as KVLog).request.value
             res
         }
-        log.add(KVLog(request, prev))
+        env.log.add(KVLog(request, prev))
         return prev
     }
 
     private fun getFromLog(key: String): String? {
-        val log = env.log
-        val index = log.indexOfLast { it is KVLog && it.request.key == key }
+        val index = env.log.indexOfLast { it is KVLog && it.request.key == key }
         return if (index == -1) {
             null
         } else {
-            (log[index] as KVLog).request.value
+            (env.log[index] as KVLog).request.value
         }
     }
 
@@ -134,14 +134,19 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage> {
     override fun onMessage(message: KVMessage, sender: Int) {
         if (message is Recover) {
             if (sender == delegate) {
+                env.recordInternalEvent("Signal")
                 semaphore.signal()
             }
             return
         }
         if (!message.isRequest) {
-            if (message.id != opId) return
+            if (message.id != opId) {
+                env.recordInternalEvent("msgId=${message.id}, opId=$opId")
+                return
+            }
             if (response == null) {
                 response = message
+                env.recordInternalEvent("Signal")
                 semaphore.signal()
             }
             return
@@ -192,6 +197,7 @@ class KVShardingTest {
                 .sequentialSpecification(SingleNode::class.java)
                 .actorsPerThread(3)
                 .threads(3)
+                //.storeLogsForFailedScenario("replica.txt")
                 .invocationsPerIteration(1000)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)

@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.stress.withProbability
 import org.junit.Test
 
 sealed class KVMessage
@@ -36,7 +35,7 @@ data class PutKVEntry(val key: String, val value: String) : KVMessage()
 data class GetKVRequest(val key: String) : KVMessage()
 data class GetKVResponse(val value: String?) : KVMessage()
 
-class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage> {
+class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage, Unit> {
     private val storage = mutableMapOf<String, String>()
     override fun onMessage(message: KVMessage, sender: Int) {
         when (message) {
@@ -52,7 +51,7 @@ class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVM
     }
 }
 
-class ClientIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage> {
+class ClientIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage, Unit> {
     private val signal = Signal()
     private var res: GetKVResponse? = null
 

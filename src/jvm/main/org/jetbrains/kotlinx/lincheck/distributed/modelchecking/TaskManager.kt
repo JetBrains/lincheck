@@ -21,43 +21,10 @@
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-
-sealed class Task {
-    abstract val iNode: Int
-    abstract val clock: VectorClock
-    abstract val msg: String
-    abstract val f: suspend () -> Unit
-}
-
-data class MessageReceiveTask(
-    override val iNode: Int,
-    override val clock: VectorClock,
-    override val msg: String,
-    override val f: suspend () -> Unit
-) : Task()
-
-data class OperationTask(
-    override val iNode: Int,
-    override val clock: VectorClock,
-    override val msg: String,
-    override val f: suspend () -> Unit
-) : Task()
-
-data class NodeCrashTask(
-    override val iNode: Int,
-    override val clock: VectorClock,
-    override val msg: String,
-    override val f: suspend () -> Unit
-) : Task()
+import org.jetbrains.kotlinx.lincheck.distributed.VectorClock
 
 
-data class NodeRecoverTask(
-    override val iNode: Int,
-    override val clock: VectorClock,
-    override val msg: String,
-    override val f: suspend () -> Unit
-) : Task()
-
+/*
 class TaskManager(val context: ModelCheckingContext<*, *>) {
     val tasks = mutableMapOf<Int, Task>()
     var currentId = 0
@@ -71,9 +38,6 @@ class TaskManager(val context: ModelCheckingContext<*, *>) {
         val task = if (nextSwitch != null && nextSwitch.after == currentTask?.first) {
             context.interleaving!!.currentSwitch++ //TODO
             context.currentTreeNode!!.isFinished = true
-            if (nextSwitch.taskId !in tasks) {
-                8 + 8
-            }
             context.currentTreeNode = context.currentTreeNode!![nextSwitch]
             if (context.currentTreeNode != null) context.path.add(context.currentTreeNode!!)
             nextSwitch.taskId to tasks[nextSwitch.taskId]!!
@@ -139,4 +103,4 @@ class TaskManager(val context: ModelCheckingContext<*, *>) {
         path.clear()
         currentId = 0
     }
-}
+}*/

@@ -21,7 +21,7 @@ interface Environment<Message, Log> {
     /**
      * Returns identifiers of nodes of the exact class [cls].
      **/
-    fun getAddressesForClass(cls: Class<out Node<Message>>): List<Int>?
+    fun getAddressesForClass(cls: Class<out Node<Message, Log>>): List<Int>?
 
     /**
      * Sends the specified [message] to the process [receiver] (from 0 to [numberOfNodes]).
@@ -47,22 +47,10 @@ interface Environment<Message, Log> {
     val log: MutableList<Log>
 
     /**
-     * Test execution events for each node (including sending and receiving messages,
-     * node failures, logs and etc.)
-     * Should be called only in validation functions to check the invariants.
-     */
-    fun events(): Array<List<Event>>
-
-    /**
-     * Returns the logs for all nodes. Should be called only in validation functions after the execution.
-     */
-    fun getLogs(): Array<List<Log>>
-
-    /**
      * Runs the specified [block] of code with a specified timeout and finishes if timeout was exceeded.
      * The execution will not be finish until the block is executed ot timeout is exceeded.
      */
-    suspend fun withTimeout(ticks: Int, block: suspend CoroutineScope.() -> Unit): Boolean
+    suspend fun withTimeout(ticks: Int, block: suspend () -> Unit): Boolean
 
     /**
      * Can be used as a safe [kotlinx.coroutines.delay]. The execution will not be finished until the program is resumed.
@@ -85,9 +73,7 @@ interface Environment<Message, Log> {
      * Records an internal event [InternalEvent]. Can be used for debugging purposes.
      * [message] is stored in [InternalEvent.message].
      */
-    fun recordInternalEvent(message: String)
-
-    val coroutineContext: CoroutineContext
+    fun recordInternalEvent(attachment: Any)
 }
 
 /**
@@ -102,57 +88,57 @@ data class MessageSentEvent<Message>(
     val message: Message,
     val receiver: Int,
     val id: Int,
-    val clock: IntArray,
+    val clock: VectorClock,
     val state: String
 ) : Event() {
     override fun toString(): String =
-        "Send $message to $receiver, messageId=$id, clock=${clock.toList()}" + if (state.isNotBlank()) ", state=$state" else ""
+        "Send $message to $receiver, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state=$state" else ""
 }
 
 data class MessageReceivedEvent<Message>(
     val message: Message,
     val sender: Int,
     val id: Int,
-    val clock: IntArray,
+    val clock: VectorClock,
     val state: String
 ) : Event() {
     override fun toString(): String =
-        "Received $message from $sender, messageId=$id, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+        "Received $message from $sender, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
 }
 
-data class InternalEvent(val message: String, val clock: IntArray, val state: String) :
+data class InternalEvent(val attachment: Any, val clock: VectorClock, val state: String) :
     Event() {
     override fun toString(): String =
-        "$message, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+        "$attachment, clock=$clock" + if (state.isNotBlank()) ", state={$state}" else ""
     }
 
-data class NodeCrashEvent(val clock: IntArray, val state: String) : Event()
+data class NodeCrashEvent(val clock: VectorClock, val state: String) : Event()
 
-data class ProcessRecoveryEvent(val clock: IntArray, val state: String) : Event()
+data class ProcessRecoveryEvent(val clock: VectorClock, val state: String) : Event()
 
-data class OperationStartEvent(val actor: Actor, val clock: IntArray, val state: String) :
+data class OperationStartEvent(val actor: Actor, val clock: VectorClock, val state: String) :
     Event() {
     override fun toString(): String =
-        "Start operation $actor, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+        "Start operation $actor, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
 }
 
-data class ScenarioFinishEvent(val clock: IntArray, val state: String) :
+data class ScenarioFinishEvent(val clock: VectorClock, val state: String) :
     Event() {
     override fun toString(): String =
-        "Finish scenario, clock=${clock.toList()}" + if (state.isNotBlank()) ", state={$state}" else ""
+        "Finish scenario, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
 }
 
 data class CrashNotificationEvent(
     val crashedNode: Int,
-    val clock: IntArray,
+    val clock: VectorClock,
     val state: String
 ) : Event()
 
-data class SetTimerEvent(val timerName: String, val clock: IntArray, val state: String) : Event()
+data class SetTimerEvent(val timerName: String, val clock: VectorClock, val state: String) : Event()
 
-data class TimerTickEvent(val timerName: String, val clock: IntArray, val state: String) : Event()
+data class TimerTickEvent(val timerName: String, val clock: VectorClock, val state: String) : Event()
 
-data class CancelTimerEvent(val timerName: String, val clock: IntArray, val state: String) : Event()
+data class CancelTimerEvent(val timerName: String, val clock: VectorClock, val state: String) : Event()
 
 data class NetworkPartitionEvent(val partitions: List<Set<Int>>, val partitionCount: Int) : Event()
 

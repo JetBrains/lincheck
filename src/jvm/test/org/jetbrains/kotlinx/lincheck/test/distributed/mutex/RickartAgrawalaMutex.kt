@@ -40,7 +40,7 @@ fun IntArray.happensBefore(other: IntArray): Boolean {
 }
 
 
-class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
     companion object {
         @Volatile
         private var cnt = 0
@@ -76,37 +76,6 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : N
             else -> throw RuntimeException("Unexpected message type")
         }
         checkInCS()
-    }
-
-    @Validate
-    fun validate() {
-        //println("In validate")
-        val events = env.events().map { it.filterIsInstance<InternalEvent>() }
-
-        class Lock(val acquired: IntArray, val released: IntArray?) {
-            fun validate() = check(released == null || acquired.happensBefore(released)) {
-                "$acquired $released"
-            }
-        }
-
-        val locks = events.flatMap { n ->
-            n.mapIndexed { index, l -> l to index }.filter { it.first.message == "Lock" }.map {
-                val released = n.getOrNull(it.second + 1)
-                check(released?.message != "Lock")
-                Lock(it.first.clock, released?.clock).also { it.validate() }
-            }
-        }
-
-        //println(locks)
-        for (i in locks.indices) {
-            for (j in 0 until i) {
-                if (locks[i].acquired.happensBefore(locks[j].acquired)) {
-                    check(locks[i].released!!.happensBefore(locks[j].acquired))
-                } else {
-                    check(locks[j].released!!.happensBefore(locks[i].acquired))
-                }
-            }
-        }
     }
 
     private fun checkInCS() {

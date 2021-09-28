@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
 
-class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
     companion object {
         @Volatile
         private var optimisticIncorrect = 0
@@ -53,16 +53,6 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
         checkCSEnter()
     }
 
-    @Validate
-    fun validate() {
-        val events = env.events().map { it.filterIsInstance<InternalEvent>() }
-        val locks = events.flatMap { it.filter { it.message == "Lock" } }
-        for (i in locks.indices) {
-            for (j in 0..i) {
-                check(locks[i].clock.happensBefore(locks[j].clock) || locks[j].clock.happensBefore(locks[i].clock))
-            }
-        }
-    }
 
     private fun checkCSEnter() {
         if (!requested[env.nodeId] || inCS) return

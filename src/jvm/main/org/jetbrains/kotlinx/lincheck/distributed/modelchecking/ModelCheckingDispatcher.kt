@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
-
+/*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Runnable
 import org.jetbrains.kotlinx.lincheck.distributed.stress.AlreadyIncrementedCounter
@@ -59,4 +59,4 @@ class ModelCheckingDispatcher(val runner : DistributedModelCheckingRunner<*, *>)
     }
 
     fun shutdown() = executor.shutdown()
-}
+}*/

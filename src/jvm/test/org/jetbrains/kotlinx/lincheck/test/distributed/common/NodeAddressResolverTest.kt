@@ -25,19 +25,19 @@ import org.jetbrains.kotlinx.lincheck.distributed.NodeAddressResolver
 import org.junit.Test
 
 class NodeAddressResolverTest {
-    class AClass : Node<Int> {
+    class AClass : Node<Int, Unit> {
         override fun onMessage(message: Int, sender: Int) {
             TODO("Not yet implemented")
         }
     }
 
-    class BClass : Node<Int> {
+    class BClass : Node<Int, Unit> {
         override fun onMessage(message: Int, sender: Int) {
             TODO("Not yet implemented")
         }
     }
 
-    class CClass : Node<Int> {
+    class CClass : Node<Int, Unit> {
         override fun onMessage(message: Int, sender: Int) {
             TODO("Not yet implemented")
         }

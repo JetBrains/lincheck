@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.queue.RandomElementQueue
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.random.Random
 
-
+/*
 interface MessageChannel<E> {
     fun send(item: E)
 
@@ -111,4 +111,4 @@ class ChannelHandler<E>(
     fun reset(i: Int) {
         channels[i].lazySet(createChannels())
     }
-}
+}*/

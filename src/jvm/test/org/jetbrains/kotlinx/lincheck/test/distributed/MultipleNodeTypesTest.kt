@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.*
 import org.junit.Test
 import java.lang.IllegalArgumentException
 
-class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage> {
+class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
     private val signal = Signal()
     private val pongerAddress = env.getAddressesForClass(Ponger::class.java)!![0]
 
@@ -49,7 +49,7 @@ class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
     }
 }
 
-class Ponger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage> {
+class Ponger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
     override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
             is Ping -> env.send(Pong, sender)

@@ -62,7 +62,7 @@ class ErrorResult(val error : Throwable, id : Int) : Command(id) {
 
 
 class SingleNode : VerifierState() {
-    private val storage = HashMap<Int, Int>()
+    private val storage = mutableMapOf<Int, Int>()
 
     @Operation
     suspend fun contains(key: Int) = storage.contains(key)
@@ -76,6 +76,7 @@ class SingleNode : VerifierState() {
     @Operation
     suspend fun remove(key: Int) = storage.remove(key)
 
+    @Operation
     suspend fun add(key: Int, value: Int) = storage.put(key, storage.getOrDefault(key, 0) + value)
     override fun extractState(): Any = storage
 }

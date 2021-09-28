@@ -38,7 +38,7 @@ data class PutResponse(val prevValue: Int?) : Message()
 data class GetRequest(val key: Int) : Message()
 data class GetResponse(val value: Int?) : Message()
 
-class Client(val env: Environment<Message, Unit>) : Node<Message> {
+class Client(val env: Environment<Message, Unit>) : Node<Message, Unit> {
     private val server = env.getAddressesForClass(Server::class.java)!![0]
     private val resultsChannel = Channel<Int?>(UNLIMITED)
 
@@ -62,7 +62,7 @@ class Client(val env: Environment<Message, Unit>) : Node<Message> {
     }
 }
 
-class Server(val env: Environment<Message, Unit>) : Node<Message> {
+class Server(val env: Environment<Message, Unit>) : Node<Message, Unit> {
     private val storage = mutableMapOf<Int, Int>()
 
     override fun onMessage(message: Message, sender: Int) {

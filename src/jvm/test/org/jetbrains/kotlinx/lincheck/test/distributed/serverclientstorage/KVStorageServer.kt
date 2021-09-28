@@ -6,8 +6,11 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.util.*
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
-class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command> {
+class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command, Unit> {
     private val storage = HashMap<Int, Int>()
     private val commandResults = Array<HashMap<Int, Command>>(env.numberOfNodes) {
         HashMap()
@@ -41,20 +44,27 @@ class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Comman
     }
 }
 
-class KVStorageClient(private val environment: Environment<Command, Unit>) : Node<Command> {
+class KVStorageClient(private val environment: Environment<Command, Unit>) : Node<Command, Unit> {
     private var commandId = 0
     private val commandResults = HashMap<Int, Command>()
     private val serverAddr = environment.getAddressesForClass(KVStorageServer::class.java)!![0]
-    private val signal = Signal()
+    private var continuation: Continuation<Unit>? = null
     private val queue = LinkedList<Command>()
 
 
     private suspend fun sendOnce(command: Command): Command {
         while (true) {
             environment.send(command, serverAddr)
+            environment.recordInternalEvent("Before await")
             environment.withTimeout(6) {
-                signal.await()
+                environment.recordInternalEvent("Before suspend")
+                suspendCoroutine { cont ->
+                    continuation = cont
+                    environment.recordInternalEvent("Set continuation $continuation")
+                }
             }
+            continuation = null
+            environment.recordInternalEvent("After await")
             val response = queue.poll()
             if (response != null) {
                 commandResults[response.id] = response
@@ -102,18 +112,20 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
 
     override fun onMessage(message: Command, sender: Int) {
         queue.add(message)
-        signal.signal()
+        environment.recordInternalEvent("Before resume ${continuation}")
+        continuation?.resume(Unit)
     }
 }
 
 class KVStorageServerTestClass {
-    private fun createOptions(serverType: Class<out Node<Command>> = KVStorageServer::class.java) =
+    private fun createOptions(serverType: Class<out Node<Command, Unit>> = KVStorageServer::class.java) =
         DistributedOptions<Command, Unit>()
             .requireStateEquivalenceImplCheck(false)
             .sequentialSpecification(SingleNode::class.java)
-            .invocationsPerIteration(3000)
-            .iterations(10)
+            .invocationsPerIteration(10_000)
+            .iterations(30)
             .threads(3)
+            .minimizeFailedScenario(false)
             .actorsPerThread(3)
             .nodeType(serverType, 1)
 
@@ -121,7 +133,7 @@ class KVStorageServerTestClass {
     fun testAsync() {
         LinChecker.check(
             KVStorageClient::class.java,
-            createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
+            createOptions().messageOrder(MessageOrder.ASYNCHRONOUS).storeLogsForFailedScenario("async.txt")
         )
     }
 
@@ -129,7 +141,7 @@ class KVStorageServerTestClass {
     fun testNetworkUnreliable() {
         LinChecker.check(
             KVStorageClient::class.java,
-            createOptions().networkReliable(false)
+            createOptions().networkReliable(false).storeLogsForFailedScenario("unreliable.txt")
         )
     }
 
@@ -169,6 +181,7 @@ class KVStorageServerTestClass {
             KVStorageClientIncorrect::class.java,
             createOptions(KVStorageServerIncorrect::class.java)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
+                .storeLogsForFailedScenario("async_incorrect.txt")
         )
     }
 

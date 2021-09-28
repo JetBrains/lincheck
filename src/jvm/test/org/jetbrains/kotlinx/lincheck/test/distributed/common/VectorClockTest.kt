@@ -20,14 +20,14 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.common
 
-import org.jetbrains.kotlinx.lincheck.distributed.modelchecking.VectorClock
+import org.jetbrains.kotlinx.lincheck.distributed.VectorClock
 import org.junit.Test
 
 class VectorClockTest {
     @Test
     fun test() {
-        val clock1 = VectorClock(listOf(0, 1).toIntArray())
-        val clock2 = VectorClock(listOf(0, 3).toIntArray())
+        val clock1 = VectorClock(listOf(0, 1).toIntArray(), 0)
+        val clock2 = VectorClock(listOf(0, 3).toIntArray(), 1)
         check(clock1.happensBefore(clock2))
     }
 }

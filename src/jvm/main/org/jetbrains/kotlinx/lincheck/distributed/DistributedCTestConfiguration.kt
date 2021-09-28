@@ -23,8 +23,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
  */
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.modelchecking.DistributedModelCheckingStrategy
-import org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedStrategy
+import org.jetbrains.kotlinx.lincheck.distributed.random.DistributedRandomStrategy
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
@@ -41,11 +40,11 @@ class DistributedCTestConfiguration<Message, Log>(
     val isNetworkReliable: Boolean,
     val messageOrder: MessageOrder,
     val maxNumberOfFailedNodes: (Int) -> Int,
-    val maxNumberOfFailedNodesForType: MutableMap<Class<out Node<Message>>, (Int) -> Int>,
+    val maxNumberOfFailedNodesForType: MutableMap<Class<out Node<Message, Log>>, (Int) -> Int>,
     val supportRecovery: CrashMode,
     val messageDuplication: Boolean,
     val networkPartitions: NetworkPartitionMode,
-    val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
+    private val nodeTypes: Map<Class<out Node<Message, Log>>, NodeTypeInfo>,
     val logFilename: String?,
     val testingMode: TestingMode,
     requireStateEquivalenceCheck: Boolean,
@@ -60,6 +59,7 @@ class DistributedCTestConfiguration<Message, Log>(
         minimizeFailedScenario, sequentialSpecification, timeoutMs,
         customScenarios
     ) {
+    lateinit var addressResolver : NodeAddressResolver<Message, Log>
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
@@ -72,7 +72,12 @@ class DistributedCTestConfiguration<Message, Log>(
         stateRepresentationMethod: Method?,
         verifier: Verifier
     ): Strategy {
-        if (testingMode == TestingMode.STRESS) return DistributedStrategy(
+        addressResolver = NodeAddressResolver(
+            testClass as Class<out Node<Message, Log>>,
+            scenario.threads, nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail },
+            maxNumberOfFailedNodesForType
+        )
+        if (testingMode == TestingMode.STRESS) return DistributedRandomStrategy(
             this,
             testClass,
             scenario,
@@ -80,7 +85,7 @@ class DistributedCTestConfiguration<Message, Log>(
             stateRepresentationMethod,
             verifier
         )
-        else return DistributedModelCheckingStrategy(
+        else return DistributedRandomStrategy(
             this,
             testClass,
             scenario,

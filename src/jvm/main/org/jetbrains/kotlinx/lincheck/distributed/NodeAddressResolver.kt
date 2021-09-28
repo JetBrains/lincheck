@@ -24,17 +24,17 @@ package org.jetbrains.kotlinx.lincheck.distributed
  * Stores information about classes included in the scenario execution.
  * Maps a node id to the corresponding class and the class to a range of corresponding ids.
  */
-class NodeAddressResolver<Message>(
-    testClass: Class<out Node<Message>>,
+class NodeAddressResolver<Message, Log>(
+    testClass: Class<out Node<Message, Log>>,
     val nodesWithScenario: Int,
-    private val additionalClasses: Map<Class<out Node<Message>>, Pair<Int, Boolean>>,
-    private val maxNumberOfFailuresForType : Map<Class<out Node<Message>>, (Int) -> Int>
+    private val additionalClasses: Map<Class<out Node<Message, Log>>, Pair<Int, Boolean>>,
+    maxNumberOfFailuresForType: Map<Class<out Node<Message, Log>>, (Int) -> Int>
 ) {
-    private val nodeTypeToRange: Map<Class<out Node<Message>>, List<Int>>
+    private val nodeTypeToRange: Map<Class<out Node<Message, Log>>, List<Int>>
     val totalNumberOfNodes = if (testClass in additionalClasses) additionalClasses.values.map { it.first }
         .sum() else additionalClasses.values.map { it.first }.sum() + nodesWithScenario
-    private val nodes = mutableListOf<Class<out Node<Message>>>()
-    val maxNumberOfCrashes = mutableMapOf<Class<out Node<Message>>, Int>()
+    private val nodes = mutableListOf<Class<out Node<Message, Log>>>()
+    private val maxNumberOfCrashes = mutableMapOf<Class<out Node<Message, Log>>, Int>()
 
     init {
         repeat(nodesWithScenario) { nodes.add(testClass) }
@@ -49,12 +49,18 @@ class NodeAddressResolver<Message>(
         }
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
         maxNumberOfFailuresForType.forEach { (t, u) -> maxNumberOfCrashes[t] = u(nodeTypeToRange[t]!!.size) }
+        if (maxNumberOfFailuresForType.isNotEmpty()) {
+            nodeTypeToRange.keys.filter { it !in maxNumberOfFailuresForType }
+                .forEach { maxNumberOfCrashes[it] = 0 }
+        } else {
+            nodeTypeToRange.forEach { (cls, range) -> maxNumberOfCrashes[cls] = range.size }
+        }
     }
 
     /**
      * Returns a list of ids for a specified class [cls].
      */
-    operator fun get(cls: Class<out Node<Message>>) = nodeTypeToRange[cls]
+    operator fun get(cls: Class<out Node<Message, Log>>) = nodeTypeToRange[cls]
 
     /**
      * Returns a class for a specified id [iNode].
@@ -67,8 +73,7 @@ class NodeAddressResolver<Message>(
      */
     fun canFail(iNode: Int) = additionalClasses[nodes[iNode]]?.second ?: true
 
-    fun maxNumberOfCrashesForNode(iNode: Int) : Int? {
-        if (maxNumberOfCrashes.isEmpty()) return totalNumberOfNodes
-        return maxNumberOfCrashes[nodes[iNode]]
-    }
+    fun maxNumberOfCrashesForNode(iNode: Int) = maxNumberOfCrashes[get(iNode)]!!
+
+    val isMultipleType = nodeTypeToRange.size > 1
 }

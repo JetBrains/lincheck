@@ -26,14 +26,13 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.File
 import java.lang.reflect.Method
 import kotlin.random.Random
-
+/*
 inline fun withProbability(probability: Double, func: () -> Unit) {
     val rand = Random.nextDouble(0.0, 1.0)
     if (rand <= probability) {
@@ -41,8 +40,8 @@ inline fun withProbability(probability: Double, func: () -> Unit) {
     }
 }
 
-open class DistributedRunner<Message, Log>(
-    strategy: DistributedStrategy<Message, Log>,
+open class DistributedStressRunner<Message, Log>(
+    strategy: DistributedStressStrategy<Message, Log>,
     val testCfg: DistributedCTestConfiguration<Message, Log>,
     testClass: Class<*>,
     validationFunctions: List<Method>,
@@ -361,3 +360,4 @@ open class DistributedRunner<Message, Log>(
         context.executors.forEach { it.shutdown() }
     }
 }
+*/

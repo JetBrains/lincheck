@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
-
+/*
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.stress.newResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -100,3 +100,4 @@ class DistributedModelCheckingStrategy<Message, Log>(
         }
     }
 }
+*/

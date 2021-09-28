@@ -24,7 +24,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import kotlin.coroutines.CoroutineContext
 
-
+/*
 internal class EnvironmentImpl<Message, Log>(
     val context: DistributedRunnerContext<Message, Log>,
     override val nodeId: Int,
@@ -164,4 +164,4 @@ internal class EnvironmentImpl<Message, Log>(
             )
         )
     }
-}
+}*/

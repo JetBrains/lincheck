@@ -35,11 +35,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.coroutines.suspendCoroutine
 
 
-class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
-    companion object {
-        @Volatile
-        var syncCounter = 0
-    }
+class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
 
     private val coordinatorId = 0
     private val isCoordinator = env.nodeId == coordinatorId
@@ -83,11 +79,6 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : No
         } else {
             signal()
         }
-    }
-
-    @Validate
-    fun validate() {
-        syncCounter = 0
     }
 
     @Operation(cancellableOnSuspension = false, blocking = true)

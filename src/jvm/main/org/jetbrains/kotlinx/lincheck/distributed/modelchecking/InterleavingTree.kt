@@ -19,6 +19,8 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
+/*
+import org.jetbrains.kotlinx.lincheck.distributed.NodeCrashInfo
 
 sealed class Switch {
     abstract val after: Int
@@ -115,4 +117,4 @@ class InterleavingTreeBuilder(val switchLimit: Int, val crashInfo: NodeCrashInfo
 
     fun build() = Interleaving(path)
     fun remainedSwitches() = switchLimit - path.size
-}
+}*/

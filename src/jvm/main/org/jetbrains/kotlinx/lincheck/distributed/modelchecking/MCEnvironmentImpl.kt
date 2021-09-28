@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
-
+/*
 import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import kotlin.coroutines.CoroutineContext
@@ -155,4 +155,4 @@ class MCEnvironmentImpl<Message, Log>(
         }
         return false
     }
-}
+}*/

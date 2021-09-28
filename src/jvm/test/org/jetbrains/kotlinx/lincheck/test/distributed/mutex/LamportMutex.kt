@@ -51,7 +51,27 @@ class Rel(msgTime: Int) : MutexMessage(msgTime) {
     }
 }
 
-class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<MutexMessage> {
+abstract class MutexNode<Message> : Node<Message, Unit> {
+    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Unit>>) {
+        val locksAndUnlocks =
+            events.filter { it.second is InternalEvent }.map { it.first to it.second as InternalEvent }
+        for (i in locksAndUnlocks.indices step 2) {
+            check(locksAndUnlocks[i].second.attachment == "Lock")
+            if (i + 1 < locksAndUnlocks.size) {
+                check(
+                    locksAndUnlocks[i + 1].second.attachment == "Unlock" && locksAndUnlocks[i].first == locksAndUnlocks[i + 1].first && locksAndUnlocks[i].second.clock.happensBefore(
+                        locksAndUnlocks[i + 1].second.clock
+                    )
+                )
+            }
+            if (i >= 1) {
+                check(locksAndUnlocks[i - 1].second.clock.happensBefore(locksAndUnlocks[i].second.clock))
+            }
+        }
+    }
+}
+
+class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
@@ -73,38 +93,8 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
         checkInCS()
     }
 
-    @Validate
-    fun validate() {
-        //println("In validate")
-        val events = env.events().map { it.filterIsInstance<InternalEvent>() }
 
-        class Lock(val acquired: IntArray, val released: IntArray?) {
-            fun validate() = check(released == null || acquired.happensBefore(released)) {
-                "$acquired $released"
-            }
-        }
-
-        val locks = events.flatMap { n ->
-            n.mapIndexed { index, l -> l to index }.filter { it.first.message == "Lock" }.map {
-                val released = n.getOrNull(it.second + 1)
-                check(released?.message != "Lock")
-                Lock(it.first.clock, released?.clock).also { it.validate() }
-            }
-        }
-
-        //println(locks)
-        for (i in locks.indices) {
-            for (j in 0 until i) {
-                if (locks[i].acquired.happensBefore(locks[j].acquired)) {
-                    check(locks[i].released!!.happensBefore(locks[j].acquired))
-                } else {
-                    check(locks[j].released!!.happensBefore(locks[i].acquired))
-                }
-            }
-        }
-    }
-
-    //override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
+    override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
 
     private fun checkInCS() {
         val myReqTime = req[env.nodeId]
@@ -153,10 +143,10 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : Node<Mute
 class LamportMutexTest {
     private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
         .requireStateEquivalenceImplCheck(false)
-        .threads(4)
+        .threads(3)
         .verifier(EpsilonVerifier::class.java)
         .actorsPerThread(4)
-        .invocationsPerIteration(10_000)
+        .invocationsPerIteration(1000)
         .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
         .minimizeFailedScenario(false)
@@ -167,7 +157,7 @@ class LamportMutexTest {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions()
-                //.setTestMode(TestingMode.MODEL_CHECKING)
+            //.setTestMode(TestingMode.MODEL_CHECKING)
         )
     }
 

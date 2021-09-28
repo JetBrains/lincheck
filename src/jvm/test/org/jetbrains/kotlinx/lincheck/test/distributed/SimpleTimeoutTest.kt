@@ -33,7 +33,7 @@ sealed class PingPongMessage
 object Ping : PingPongMessage()
 object Pong : PingPongMessage()
 
-class PingPongNode(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage> {
+class PingPongNode(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
     val semaphore = Semaphore(1, 1)
     var hasResult = false
     override fun onMessage(message: PingPongMessage, sender: Int) {

@@ -24,10 +24,8 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Runnable
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.queue.FastQueue
-import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeDispatcher.Companion.NodeDispatcherStatus.*
+//import org.jetbrains.kotlinx.lincheck.distributed.stress.NodeDispatcher.Companion.NodeDispatcherStatus.*
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
@@ -36,6 +34,7 @@ import kotlin.coroutines.CoroutineContext
  * Counts the total number of pending tasks for the [NodeDispatcher] to execute.
  * Signals to the main thread when the execution is other.
  */
+/*
 class DispatcherTaskCounter(
     initialCounter: Int
 ) {
@@ -96,7 +95,7 @@ class AlreadyIncrementedCounter : AbstractCoroutineContextElement(Key) {
 }
 
 /**
- * The dispatcher for executing task related to a single [Node] inside [org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedRunner].
+ * The dispatcher for executing task related to a single [Node] inside [org.jetbrains.kotlinx.lincheck.distributed.stress.DistributedStressRunner].
  */
 class NodeDispatcher(
     val id: Int,
@@ -187,4 +186,4 @@ class NodeDispatcher(
         taskCounter.add(-nodeOperationCounter)
         nodeOperationCounter = 0
     }
-}
+}*/

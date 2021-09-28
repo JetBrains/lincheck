@@ -22,9 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.stress.debugProb
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.io.BufferedWriter
@@ -42,48 +40,42 @@ fun addToFile(f: (BufferedWriter) -> Unit) {
 data class Message(val body: String, val id: Int, val from: Int)
 
 
-fun <Message, Log> Environment<Message, Log>.correctProcesses() =
-    events().mapIndexed { index, list -> index to list }.filter { !it.second.any { p -> p is NodeCrashEvent } }
-        .map { it.first }
+fun List<Pair<Int, Event>>.correctProcesses() =
+    groupBy { it.first }.filter { !it.value.map { it.second }.any { p -> p is NodeCrashEvent } }
+        .map { it.key }
 
-fun <Message, Log> Environment<Message, Log>.sentMessages(processId: Int = nodeId) =
-    events()[processId].filterIsInstance<MessageSentEvent<Message>>()
+fun <Message> List<Pair<Int, Event>>.sentMessages(iNode: Int) =
+    filter { it.first == iNode }.map { it.second }.filterIsInstance<MessageSentEvent<Message>>()
 
-fun <Message, Log> Environment<Message, Log>.receivedMessages(processId: Int = nodeId) =
-    events()[processId].filterIsInstance<MessageReceivedEvent<Message>>()
+fun <Message> List<Pair<Int, Event>>.receivedMessages(iNode: Int) =
+    filter { it.first == iNode }.map { it.second }.filterIsInstance<MessageReceivedEvent<Message>>()
 
 fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
-fun <Message, Log> Environment<Message, Log>.isCorrect() = correctProcesses().contains(nodeId)
 
-abstract class AbstractPeer(protected val env: Environment<Message, Message>) : Node<Message> {
-    @Validate
-    fun check() {
-        if (env.nodeId == 0) {
-            //println("Number of nodes ${env.numberOfNodes}, failed ${env.numberOfNodes - env.correctProcesses().size}")
-        }
-        //addToFile { it.appendLine(env.events().flatMap { it }.toString()) }
-        // All messages were delivered at most once.
+fun List<Pair<Int, Event>>.isCorrect(iNode: Int) : Boolean = correctProcesses().contains(iNode)
+
+abstract class AbstractPeer(protected val env: Environment<Message, Message>) : Node<Message, Message> {
+    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Message>>) {
         check(env.log.isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
         env.log.forEach { m ->
-            check(env.sentMessages(m.from).map { it.message }.contains(m)) {
+            check(events.sentMessages<Message>(m.from).map { it.message }.contains(m)) {
                 m
             }
         }
         // If the correct process sent message m, it should deliver m.
-        if (env.isCorrect()) {
-            env.sentMessages().map { it.message }.forEach { m -> check(m in env.log) }
+        if (events.isCorrect(env.nodeId)) {
+            events.sentMessages<Message>(env.nodeId).map { it.message }.forEach { m -> check(m in env.log) }
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
-        val logs = env.getLogs()
         env.log.forEach { m ->
-            env.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it, ${env.nodeId}" } }
+            events.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it, ${env.nodeId}" } }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
             env.log.filter { it.from == i }
                 .map { m ->
-                    env.sentMessages(i).map { it.message }.filter { it.from == i }.distinctBy { it.id }.indexOf(m)
+                    events.sentMessages<Message>(i).map { it.message }.filter { it.from == i }.distinctBy { it.id }.indexOf(m)
                 }
         }
         localMessagesOrder.forEach {
@@ -163,12 +155,12 @@ class BroadcastTest {
         .storeLogsForFailedScenario("broadcast.txt")
         .check()
 
-    @Test//(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testMoreFailures() = createOptions()
         .nodeType(Peer::class.java, 5)
         .setMaxNumberOfFailedNodes { it / 2 + 1 }
         .crashMode(CrashMode.NO_RECOVERIES)
-        .invocationsPerIteration(100_000)
+        .invocationsPerIteration(50_000)
         .storeLogsForFailedScenario("broadcast.txt")
         .minimizeFailedScenario(false)
         .setTestMode(TestingMode.MODEL_CHECKING)
@@ -182,15 +174,15 @@ class BroadcastTest {
         .invocationsPerIteration(100_000)
         .check()
 
-    @Test//(expected = LincheckAssertionError::class)
+    @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
         .storeLogsForFailedScenario("broadcast_incorrect.txt")
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
         .actorsPerThread(1)
         .setTestMode(TestingMode.MODEL_CHECKING)
-        .invocationsPerIteration(160_000)
-       // .minimizeFailedScenario(true)
+        //.invocationsPerIteration(500_000)
+        // .minimizeFailedScenario(true)
         .nodeType(PeerIncorrect::class.java, 4)
         .check()
 }

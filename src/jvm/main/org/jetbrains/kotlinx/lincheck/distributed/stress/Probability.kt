@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.stress
-
+/*
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import java.io.BufferedWriter
@@ -137,4 +137,4 @@ class Probability(
         prevMsgCount = max(prevMsgCount, curMsgCount)
         curMsgCount = 0
     }
-}
+}*/

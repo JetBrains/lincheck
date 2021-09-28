@@ -49,10 +49,10 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
     private var networkPartitions: NetworkPartitionMode = NetworkPartitionMode.NONE
-    private var testClasses = HashMap<Class<out Node<Message>>, NodeTypeInfo>()
+    private var testClasses = HashMap<Class<out Node<Message, Log>>, NodeTypeInfo>()
     private var logFileName: String? = null
     private var testingMode: TestingMode = TestingMode.STRESS
-    private val maxNumberOfFailedNodesForType = mutableMapOf<Class<out Node<Message>>, (Int) -> Int>()
+    private val maxNumberOfFailedNodesForType = mutableMapOf<Class<out Node<Message, Log>>, (Int) -> Int>()
 
     init {
         timeoutMs = DEFAULT_TIMEOUT_MS
@@ -64,7 +64,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     }
 
     fun nodeType(
-        cls: Class<out Node<Message>>,
+        cls: Class<out Node<Message, Log>>,
         numberOfInstances: Int,
         canFail: Boolean = true
     ): DistributedOptions<Message, Log> {
@@ -73,7 +73,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
     }
 
     fun nodeType(
-        cls: Class<out Node<Message>>,
+        cls: Class<out Node<Message, Log>>,
         minNumberOfInstances: Int,
         maxNumberOfInstances: Int,
         canFail: Boolean = true
@@ -92,7 +92,7 @@ class DistributedOptions<Message, Log> : Options<DistributedOptions<Message, Log
         return this
     }
 
-    fun setMaxNumberOfFailedNodes(cls: Class<out Node<Message>>, maxNumOfFailedNodes: (Int) -> Int): DistributedOptions<Message, Log> {
+    fun setMaxNumberOfFailedNodes(cls: Class<out Node<Message, Log>>, maxNumOfFailedNodes: (Int) -> Int): DistributedOptions<Message, Log> {
         this.maxNumberOfFailedNodesForType[cls] = maxNumOfFailedNodes
         return this
     }

@@ -35,7 +35,7 @@ import java.lang.reflect.Method
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-
+/*
 class DistributedRunnerContext<Message, Log>(
     val testCfg: DistributedCTestConfiguration<Message, Log>,
     val scenario: ExecutionScenario,
@@ -62,7 +62,7 @@ class DistributedRunnerContext<Message, Log>(
 
     lateinit var testInstances: Array<Node<Message>>
 
-    lateinit var runner: DistributedRunner<Message, Log>
+    lateinit var runner: DistributedStressRunner<Message, Log>
 
     private val vectorClock = Array(addressResolver.totalNumberOfNodes) {
         IntArray(addressResolver.totalNumberOfNodes)
@@ -171,3 +171,4 @@ class DistributedRunnerContext<Message, Log>(
         }
     }
 }
+*/

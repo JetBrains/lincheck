@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class NodeThrowsException(val env: Environment<Int, Unit>): Node<Int> {
+class NodeThrowsException(val env: Environment<Int, Unit>): Node<Int, Unit> {
     override fun onMessage(message: Int, sender: Int) {
         if (message != 0) {
             env.broadcast(0)

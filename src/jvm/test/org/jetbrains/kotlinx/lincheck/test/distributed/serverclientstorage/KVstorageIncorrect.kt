@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import java.util.*
 
 
-class KVStorageServerIncorrect(private val env: Environment<Command, Unit>) : Node<Command> {
+class KVStorageServerIncorrect(private val env: Environment<Command, Unit>) : Node<Command, Unit> {
     private val storage = HashMap<Int, Int>()
     private val commandResults = Array<HashMap<Int, Command>>(env.numberOfNodes) {
         HashMap()
@@ -61,7 +61,7 @@ class KVStorageServerIncorrect(private val env: Environment<Command, Unit>) : No
 }
 
 
-class KVStorageClientIncorrect(private val environment: Environment<Command, Unit>) : Node<Command> {
+class KVStorageClientIncorrect(private val environment: Environment<Command, Unit>) : Node<Command, Unit> {
     private var commandId = 0
     private val commandResults = HashMap<Int, Command>()
     private val serverAddr = environment.getAddressesForClass(KVStorageServerIncorrect::class.java)!![0]

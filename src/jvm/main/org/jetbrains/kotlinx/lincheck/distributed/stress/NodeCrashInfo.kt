@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.distributed.stress
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-
+/*
 abstract class NodeCrashInfo(
     protected val testCfg: DistributedCTestConfiguration<*, *>,
     protected val context: DistributedRunnerContext<*, *>,
@@ -242,4 +242,4 @@ class NodeCrashInfoSingle(
         val newFailedNodes = numberOfNodes - component.size
         return NodeCrashInfoSingle(testCfg, context, newFailedNodes, failedNodes, failedNodesForType, newEdges)
     }
-}
+}*/

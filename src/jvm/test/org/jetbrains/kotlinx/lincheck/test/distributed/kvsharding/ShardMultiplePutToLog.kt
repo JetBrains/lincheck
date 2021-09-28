@@ -29,7 +29,7 @@ sealed class LogEntry
 data class KVLogEntry(val key: String, val value: String) : LogEntry()
 data class OpIdEntry(val id: Int) : LogEntry()
 
-class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage> {
+class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage, LogEntry> {
     private var opId = 0
     private val semaphore = Semaphore(1, 1)
     private var response: KVMessage? = null

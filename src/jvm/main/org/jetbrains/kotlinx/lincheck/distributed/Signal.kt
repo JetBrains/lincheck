@@ -20,28 +20,38 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Semaphore
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 /**
- * A wrapper over coroutine [kotlinx.coroutines.sync.Semaphore]
- * to simplify wait() / notify() mechanism.
+ * Simple wait() / notify() mechanism.
  */
 class Signal {
-    private val semaphore = Semaphore(1, 1)
+    private var continuation: CancellableContinuation<Unit>? = null
 
     /**
      * Suspends the coroutine until the signal is received.
      */
     suspend fun await() {
-        semaphore.acquire()
+        check(continuation == null)
+        suspendCancellableCoroutine<Unit> { cont ->
+            continuation = cont
+        }
     }
 
     /**
      * Signals to the awaiting coroutine.
      */
     fun signal() {
-        if (semaphore.availablePermits == 0) {
-            semaphore.release()
+        if (continuation?.isActive == true) {
+            val cont = continuation
+            continuation = null
+            cont?.resume(Unit)
         }
     }
 }

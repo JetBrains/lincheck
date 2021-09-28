@@ -44,7 +44,7 @@ class Value(val sum: Int) : State()
 object Empty : State()
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamport(private val env: Environment<Message, Message>) : Node<Message> {
+class ChandyLamport(private val env: Environment<Message, Message>) : Node<Message, Unit> {
     private val currentSum = atomic(100)
     private var semaphore = Signal()
     private var state = 0

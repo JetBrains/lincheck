@@ -14,7 +14,7 @@ sealed class Message
 data class Offer(val value: Int, val initializer: Int) : Message()
 data class Result(val value: Int) : Message()
 
-class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message> {
+class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message, Unit> {
     private val offers = Array(env.numberOfNodes) {
         mutableListOf<Offer>()
     }

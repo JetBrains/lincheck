@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
-
+/*
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -626,3 +626,4 @@ class Raft(val env: Environment<RKVMessage, RKVData>) : Node<RKVMessage> {
         //println(env.log.filterIsInstance<RKVLog>())
     }
 }
+*/

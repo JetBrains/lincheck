@@ -37,7 +37,7 @@ object TimerPing : TimerMessage()
 object TimerPong : TimerMessage()
 object Heartbeat : TimerMessage()
 
-class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<TimerMessage> {
+class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<TimerMessage, Unit> {
     companion object {
         const val HEARTBEAT_PING_RATE = 3
     }

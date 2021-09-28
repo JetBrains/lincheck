@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Event
 import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
@@ -59,7 +60,7 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode<Messag
     val messages = mutableSetOf<RequestMessage>()
 
     override fun onMessage(message: Message, sender: Int) {
-       // println("[${env.nodeId}]: onMessage from $sender ${message}")
+        // println("[${env.nodeId}]: onMessage from $sender ${message}")
         clock = maxOf(clock, message.clock) + 1
         when (message) {
             is RequestMessage -> {
@@ -102,9 +103,8 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode<Messag
         }
     }
 
-    @Validate
-    fun validateAllReceived() {
-        val logs = env.getLogs().toList()
+    override fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Message>>) {
+        super.validate(events, logs)
         for (l in logs) {
             for (i in l.indices) {
                 for (j in i + 1 until l.size) {
@@ -118,9 +118,8 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode<Messag
                 }
             }
         }
-        val sent = env.events().flatMap {
-            it.filterIsInstance<MessageSentEvent<Message>>().map { it.message }.filterIsInstance<RequestMessage>()
-        }
+        val sent = events.map { it.second }.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
+            .filterIsInstance<RequestMessage>()
         sent.forEach { m ->
             check(logs.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) }) {
                 m.toString()

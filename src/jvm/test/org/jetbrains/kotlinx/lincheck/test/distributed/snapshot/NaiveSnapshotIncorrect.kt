@@ -33,7 +33,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node<Message> {
+class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node<Message, Unit> {
     private val currentSum = atomic(100)
     private val semaphore = Signal()
     private var token = 0

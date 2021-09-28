@@ -18,13 +18,13 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.distributed.stress
+package org.jetbrains.kotlinx.lincheck.distributed
 
-import org.jetbrains.kotlinx.lincheck.distributed.CrashError
-import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 
-class LogList<E>(val context: DistributedRunnerContext<*, E>, val nodeId: Int,
-                 val list: MutableList<E> = mutableListOf()) : MutableList<E> {
+internal class LogList<E>(
+    val strategy: DistributedStrategy<*, E>, val iNode: Int,
+    val list: MutableList<E> = mutableListOf()
+) : MutableList<E> {
     override val size: Int
         get() = list.size
 
@@ -42,40 +42,28 @@ class LogList<E>(val context: DistributedRunnerContext<*, E>, val nodeId: Int,
 
     override fun lastIndexOf(element: E): Int = list.lastIndexOf(element)
 
-    private fun tryCrash() {
-        val probability = context.probabilities[nodeId]
-        probability.curMsgCount++
-        if (context.testCfg.supportRecovery != CrashMode.NO_CRASHES &&
-            context.addressResolver.canFail(nodeId) &&
-            probability.nodeFailed(context.crashInfo.value.remainedNodes) &&
-            context.crashNode(nodeId)
-        ) {
-            throw CrashError()
-        }
-    }
-
     override fun add(element: E): Boolean {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.add(element)
     }
 
     override fun add(index: Int, element: E) {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         list.add(index, element)
     }
 
     override fun addAll(index: Int, elements: Collection<E>): Boolean {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.addAll(index, elements)
     }
 
     override fun addAll(elements: Collection<E>): Boolean {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.addAll(elements)
     }
 
     override fun clear() {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         list.clear()
     }
 
@@ -84,31 +72,33 @@ class LogList<E>(val context: DistributedRunnerContext<*, E>, val nodeId: Int,
     override fun listIterator(index: Int): MutableListIterator<E> = list.listIterator(index)
 
     override fun remove(element: E): Boolean {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.remove(element)
     }
 
     override fun removeAll(elements: Collection<E>): Boolean {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.removeAll(elements)
     }
 
     override fun removeAt(index: Int): E {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.removeAt(index)
     }
 
     override fun retainAll(elements: Collection<E>): Boolean {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.retainAll(elements)
     }
 
     override fun set(index: Int, element: E): E {
-        tryCrash()
+        strategy.beforeLogModify(iNode)
         return list.set(index, element)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<E> {
         return list.subList(fromIndex, toIndex)
     }
+
+    override fun toString(): String = list.toString()
 }

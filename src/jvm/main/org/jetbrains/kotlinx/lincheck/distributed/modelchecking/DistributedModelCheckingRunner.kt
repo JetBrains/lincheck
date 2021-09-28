@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
-
+/*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.createLincheckResult
@@ -33,7 +33,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
-import java.lang.NullPointerException
 import java.lang.reflect.Method
 import java.util.*
 
@@ -299,4 +298,4 @@ class DistributedModelCheckingRunner<Message, Log>(
             }
         }
     }
-}
+}*/

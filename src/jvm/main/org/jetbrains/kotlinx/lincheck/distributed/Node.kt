@@ -3,7 +3,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
 /**
  * Interface for a single node in a distributed algorithm.
  */
-interface Node<Message> {
+interface Node<Message, Log> {
     /**
      * Called when a new message [message] arrives.
      */
@@ -34,6 +34,8 @@ interface Node<Message> {
      * Returns a current node state representation.
      */
     fun stateRepresentation(): String = ""
+
+    fun validate(events: List<Pair<Int, Event>>, logs: Array<List<Log>>) {}
 }
 
 class CrashError : Exception()

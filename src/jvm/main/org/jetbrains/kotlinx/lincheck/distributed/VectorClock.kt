@@ -18,9 +18,11 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
+package org.jetbrains.kotlinx.lincheck.distributed
 
-data class VectorClock(val clock: IntArray) {
+import java.lang.Integer.max
+
+data class VectorClock(private val clock: IntArray, private val iNode: Int) {
     val nodes: Int get() = clock.size
     val empty: Boolean get() = clock.all { it == 0 }
     operator fun get(i: Int) = clock[i]
@@ -36,7 +38,7 @@ data class VectorClock(val clock: IntArray) {
         return clock.contentEquals(other.clock)
     }
 
-    fun happensBefore(other: VectorClock) : Boolean {
+    fun happensBefore(other: VectorClock): Boolean {
         for (i in clock.indices) {
             if (other[i] < this[i]) {
                 return false
@@ -46,5 +48,20 @@ data class VectorClock(val clock: IntArray) {
     }
 
     override fun hashCode() = clock.contentHashCode()
+
+    fun copy() = VectorClock(clock.copyOf(), iNode)
+
+    fun incAndCopy(): VectorClock {
+        clock[iNode]++
+        return VectorClock(clock.copyOf(), iNode)
+    }
+
+    fun maxClock(other: VectorClock): VectorClock {
+        clock[iNode]++
+        for (i in clock.indices) {
+            clock[i] = max(clock[i], other[i])
+        }
+        return VectorClock(clock.copyOf(), iNode)
+    }
 }
 
