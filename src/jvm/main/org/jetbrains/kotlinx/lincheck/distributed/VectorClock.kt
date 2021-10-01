@@ -29,9 +29,11 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.lang.Integer.max
 
+/**
+ * Represents vector clock for nodes in distributed algorithms.
+ */
 @Serializable(with = VectorClockSerializer::class)
 data class VectorClock(private val clock: IntArray, private val iNode: Int) {
-    val nodes: Int get() = clock.size
     val empty: Boolean get() = clock.all { it == 0 }
     operator fun get(i: Int) = clock[i]
 
@@ -79,7 +81,7 @@ object VectorClockSerializer : KSerializer<VectorClock> {
     }
 
     override val descriptor: SerialDescriptor
-        get() = PrimitiveSerialDescriptor("Color", PrimitiveKind.INT)
+        get() = PrimitiveSerialDescriptor("Color", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: VectorClock) {
         encoder.encodeString(value.toString())

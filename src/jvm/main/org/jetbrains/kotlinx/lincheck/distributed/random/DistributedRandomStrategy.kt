@@ -89,17 +89,24 @@ internal class DistributedRandomStrategy<Message, Log>(
         return taskManager.getTaskById(id)
     }
 
+    override fun reset() {
+        val crashExpectation = if (testCfg.supportRecovery == CrashMode.NO_CRASHES) 0 else {
+            3
+        }
+        probability.reset(crashExpectation)
+        crashInfo.reset()
+    }
+
     override fun run(): LincheckFailure? {
         println(scenario)
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until testCfg.invocationsPerIteration) {
                 if (invocation % 1000 == 0) println("INVOCATION $invocation")
-                val crashExpectation = if (testCfg.supportRecovery == CrashMode.NO_CRASHES) 0 else {
-                    3
-                }
-                probability.reset(crashExpectation)
+
+                reset()
                 val ir = runner.run()
+
                 when (ir) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results)) {
@@ -117,6 +124,9 @@ internal class DistributedRandomStrategy<Message, Log>(
                             runner.storeEventsToFile(it)
                         }
                     }
+                }
+                if (!runner.exitCoroutine || runner.continuation != null) {
+                    println("INVOCATION $invocation, ${runner.exitCoroutine}, ${runner.continuation}")
                 }
             }
             return null

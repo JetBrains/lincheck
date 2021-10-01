@@ -47,6 +47,11 @@ data class NodeRecoverTask(
     override val f: suspend () -> Unit
 ) : Task()
 
+data class CrashNotificationTask(
+    override val iNode: Int,
+    override val f: suspend () -> Unit
+) : Task()
+
 data class Timeout(override var ticks: Int, override val iNode: Int, override val f: suspend () -> Unit) : TimeTask()
 data class Timer(override var ticks: Int, override val iNode: Int, override val f: suspend () -> Unit) : TimeTask()
 

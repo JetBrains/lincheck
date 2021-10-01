@@ -92,6 +92,7 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage, Log> {
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
         env.log.add(OpId(++opId))
+        env.recordInternalEvent("Operation id now is $opId")
         val node = getNodeForKey(key)
         val request = PutRequest(key, value, opId)
         if (node == env.nodeId) {
@@ -182,7 +183,6 @@ class KVShardingTest {
             DistributedOptions<KVMessage, KVLogEntry>()
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(SingleNode::class.java)
-                .threads(3)
                 .invocationsPerIteration(1000)
                 .iterations(30)
         )
@@ -196,9 +196,9 @@ class KVShardingTest {
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(SingleNode::class.java)
                 .actorsPerThread(3)
-                .threads(3)
+                .threads(4)
                 //.storeLogsForFailedScenario("replica.txt")
-                .invocationsPerIteration(1000)
+                .invocationsPerIteration(10000)
                 .setMaxNumberOfFailedNodes { it / 2 }
                 .iterations(30)
                 .crashMode(CrashMode.ALL_NODES_RECOVER)

@@ -55,6 +55,8 @@ internal abstract class CrashInfo<M, L>(
     abstract fun addPartition(firstNode: Int, secondNode: Int)
 
     abstract fun removePartition(firstNode: Int, secondNode: Int)
+
+    abstract fun reset()
 }
 
 internal class CrashInfoHalves<M, L>(testCfg: DistributedCTestConfiguration<M, L>, random: Random) :
@@ -104,5 +106,13 @@ internal class CrashInfoHalves<M, L>(testCfg: DistributedCTestConfiguration<M, L
 
     override fun removePartition(firstNode: Int, secondNode: Int) {
         TODO("Not yet implemented")
+    }
+
+    override fun reset() {
+        failedNode.fill(false)
+        unavailableNodeCount = 0
+        firstPartition.clear()
+        secondPartition.clear()
+        secondPartition.addAll(0 until testCfg.addressResolver.totalNumberOfNodes)
     }
 }

@@ -20,10 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.intrinsics.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.lang.IllegalArgumentException
@@ -45,7 +41,7 @@ internal class EnvironmentImpl<Message, Log>(
 
     override fun send(message: Message, receiver: Int) {
         val e = eventFactory.createMessageEvent(message, nodeId, receiver)
-        val rate = strategy.crashOrReturnRate(nodeId, e)
+        val rate = strategy.crashOrReturnRate(e)
         repeat(rate) {
             taskManager.addTask(MessageReceiveTask(iNode = receiver, from = nodeId) {
                 eventFactory.createMessageReceiveEvent(e)
@@ -60,12 +56,10 @@ internal class EnvironmentImpl<Message, Log>(
     override suspend fun withTimeout(ticks: Int, block: suspend () -> Unit): Boolean = try {
         suspendCancellableCoroutine<Unit> { cont ->
             taskManager.addTimeTask(Timeout(ticks, nodeId) {
-                //recordInternalEvent("Before canceling")
                 if (cont.isActive) cont.cancel(TimeoutExceedException)
             })
             block.startCoroutineUnintercepted(cont)
         }
-        //recordInternalEvent("After suspending block")
         true
     } catch (e: TimeoutExceedException) {
         false
@@ -92,6 +86,7 @@ internal class EnvironmentImpl<Message, Log>(
         if (name in timers) {
             throw IllegalArgumentException("Timer with name $name already exists")
         }
+        eventFactory.createSetTimerEvent(nodeId, name)
         timers.add(name)
         taskManager.addTimeTask(Timer(ticks, nodeId) {
             timerTick(name, ticks, f)
@@ -102,6 +97,7 @@ internal class EnvironmentImpl<Message, Log>(
         if (name !in timers) {
             throw IllegalArgumentException("Timer with name $name does not exist")
         }
+        eventFactory.createCancelTimerEvent(nodeId, name)
         timers.remove(name)
     }
 

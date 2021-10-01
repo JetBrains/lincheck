@@ -20,16 +20,13 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.sync.Semaphore
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
- * Simple wait() / notify() mechanism.
+ * Simple wait() / notify() mechanism for coroutines.
+ * It is not thread-safe and can be used only for coroutines running in one thread.
  */
 class Signal {
     private var continuation: CancellableContinuation<Unit>? = null
@@ -38,7 +35,6 @@ class Signal {
      * Suspends the coroutine until the signal is received.
      */
     suspend fun await() {
-        check(continuation == null)
         suspendCancellableCoroutine<Unit> { cont ->
             continuation = cont
         }

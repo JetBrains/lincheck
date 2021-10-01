@@ -148,11 +148,11 @@ class BroadcastTest {
 
     @Test
     fun test() = createOptions()
-        .nodeType(Peer::class.java, 2, 3)
+        .nodeType(Peer::class.java, 2, 4)
         .setMaxNumberOfFailedNodes { it / 2 }
         .crashMode(CrashMode.NO_RECOVERIES)
         .setTestMode(TestingMode.MODEL_CHECKING)
-        .minimizeFailedScenario(true)
+        .minimizeFailedScenario(false)
         .storeLogsForFailedScenario("broadcast.txt")
         .check()
 

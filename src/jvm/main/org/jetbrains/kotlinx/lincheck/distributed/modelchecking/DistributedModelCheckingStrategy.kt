@@ -19,9 +19,9 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
-/*
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.distributed.stress.newResult
+
+import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.random.newResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
@@ -31,18 +31,25 @@ import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
-
-class DistributedModelCheckingStrategy<Message, Log>(
-    val testCfg: DistributedCTestConfiguration<Message, Log>,
+/*
+internal class DistributedModelCheckingStrategy<Message, Log>(
+    testCfg: DistributedCTestConfiguration<Message, Log>,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
-    private val verifier: Verifier
-) : Strategy(scenario) {
+    verifier: Verifier
+) : DistributedStrategy<Message, Log>(
+    testCfg,
+    testClass,
+    scenario,
+    validationFunctions,
+    stateRepresentationFunction,
+    verifier
+) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: DistributedModelCheckingRunner<Message, Log> =
-        DistributedModelCheckingRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
+    private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
+
 
     init {
         // Create runner
@@ -61,8 +68,6 @@ class DistributedModelCheckingStrategy<Message, Log>(
             var invocation = 0
             var interrupted = 0
             while (invocation < invocations) {
-                if (invocation % 1000 == 0)
-                    println("INVOCATION $invocation, NODES COUNT ${runner.context.treeNodeId}")
                 val ir = runner.run()
                 when (ir) {
                     is CompletedInvocationResult -> {
@@ -74,7 +79,7 @@ class DistributedModelCheckingStrategy<Message, Log>(
                             ).also {
                                 runner.storeEventsToFile(it)
                                 //println("Found error")
-                               // debugLogs.forEach {println(it)}
+                                // debugLogs.forEach {println(it)}
                             }
                         }
                     }
@@ -86,18 +91,37 @@ class DistributedModelCheckingStrategy<Message, Log>(
                         }
                     }
                 }
-                if (runner.isFullyExplored()) {
-                    println("Finish on $invocation")
-                    return null
-                }
-                if (!runner.isInterrupted) invocation++
-                else {
-                    interrupted++
-                    //println("Interrupted $interrupted")
-                }
             }
             return null
         }
+    }
+
+    override fun onMessageSent(iNode: Int, event: MessageSentEvent<Message>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun beforeLogModify(iNode: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun next(taskManager: TaskManager): Task? {
+        TODO("Not yet implemented")
+    }
+
+    override fun tryAddCrashBeforeSend(iNode: Int, event: MessageSentEvent<Message>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun reset() {
+        TODO("Not yet implemented")
     }
 }
 */

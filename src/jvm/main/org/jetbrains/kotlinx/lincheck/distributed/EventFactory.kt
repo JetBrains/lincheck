@@ -20,7 +20,15 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
@@ -28,6 +36,7 @@ import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 /**
  * Event for a node.
  */
+@Serializable
 sealed class Event {
     abstract val iNode: Int
 }
@@ -35,6 +44,8 @@ sealed class Event {
 /**
  *
  */
+@Serializable
+@SerialName("Sent")
 data class MessageSentEvent<Message>(
     override val iNode: Int,
     val message: Message,
@@ -47,6 +58,8 @@ data class MessageSentEvent<Message>(
         "Send $message to $receiver, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state=$state" else ""
 }
 
+@Serializable
+@SerialName("Received")
 data class MessageReceivedEvent<Message>(
     override val iNode: Int,
     val message: Message,
@@ -59,29 +72,50 @@ data class MessageReceivedEvent<Message>(
         "Received $message from $sender, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
 }
 
-data class InternalEvent(override val iNode: Int, val attachment: Any, val clock: VectorClock, val state: String) :
+@Serializable
+@SerialName("Internal")
+data class InternalEvent(
+    override val iNode: Int,
+    @Contextual val attachment: Any,
+    val clock: VectorClock,
+    val state: String
+) :
     Event() {
     override fun toString(): String =
         "$attachment, clock=$clock" + if (state.isNotBlank()) ", state={$state}" else ""
 }
 
 @Serializable
+@SerialName("Crash")
 data class NodeCrashEvent(override val iNode: Int, val clock: VectorClock, val state: String) : Event()
 
+@Serializable
+@SerialName("Recover")
 data class NodeRecoveryEvent(override val iNode: Int, val clock: VectorClock, val state: String) : Event()
 
-data class OperationStartEvent(override val iNode: Int, val actor: Actor, val clock: VectorClock, val state: String) :
+@Serializable
+@SerialName("Operation")
+data class OperationStartEvent(
+    override val iNode: Int,
+    @Contextual val actor: Actor,
+    val clock: VectorClock,
+    val state: String
+) :
     Event() {
     override fun toString(): String =
         "Start operation $actor, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
 }
 
+@Serializable
+@SerialName("ScenarioFinish")
 data class ScenarioFinishEvent(override val iNode: Int, val clock: VectorClock, val state: String) :
     Event() {
     override fun toString(): String =
         "Finish scenario, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
 }
 
+@Serializable
+@SerialName("CrashNotification")
 data class CrashNotificationEvent(
     override val iNode: Int,
     val crashedNode: Int,
@@ -89,18 +123,28 @@ data class CrashNotificationEvent(
     val state: String
 ) : Event()
 
+@Serializable
+@SerialName("SetTimer")
 data class SetTimerEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
     Event()
 
+@Serializable
+@SerialName("TimerTick")
 data class TimerTickEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
     Event()
 
+@Serializable
+@SerialName("CancelTimer")
 data class CancelTimerEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
     Event()
 
+@Serializable
+@SerialName("NetworkPartition")
 data class NetworkPartitionEvent(override val iNode: Int, val partitions: List<Set<Int>>, val partitionCount: Int) :
     Event()
 
+@Serializable
+@SerialName("NetworkPartitionRecover")
 data class NetworkRecoveryEvent(override val iNode: Int, val partitionCount: Int) : Event()
 
 internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) {
@@ -189,7 +233,39 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
 
     fun createScenarioFinishEvent(iNode: Int) {
         _events.add(
-            ScenarioFinishEvent(iNode,
+            ScenarioFinishEvent(
+                iNode,
+                vectorClocks[iNode].copy(),
+                nodeInstances[iNode].stateRepresentation()
+            )
+        )
+    }
+
+    fun createCrashNotificationEvent(iNode: Int, crashedNode: Int) {
+        _events.add(
+            CrashNotificationEvent(
+                iNode, crashedNode, vectorClocks[iNode].copy(),
+                nodeInstances[iNode].stateRepresentation()
+            )
+        )
+    }
+
+    fun createSetTimerEvent(iNode: Int, timerName: String) {
+        _events.add(
+            SetTimerEvent(
+                iNode,
+                timerName,
+                vectorClocks[iNode].copy(),
+                nodeInstances[iNode].stateRepresentation()
+            )
+        )
+    }
+
+    fun createCancelTimerEvent(iNode: Int, timerName: String) {
+        _events.add(
+            CancelTimerEvent(
+                iNode,
+                timerName,
                 vectorClocks[iNode].copy(),
                 nodeInstances[iNode].stateRepresentation()
             )

@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 /*
-import org.jetbrains.kotlinx.lincheck.distributed.NodeCrashInfo
-
 sealed class Switch {
     abstract val after: Int
     abstract val taskId: Int
@@ -33,7 +31,7 @@ data class NodeRecover(override val after: Int, override val taskId: Int, val iN
 data class MessageLose(override val after: Int, override val taskId: Int, val msgId: Int) : Switch()
 data class MessageDuplication(override val after: Int, override val taskId: Int, val msgId: Int) : Switch()
 
-class InterleavingTreeNode(val context: ModelCheckingContext<*, *>) {
+class InterleavingTreeNode() {
     val unexploredSwitchPoints = mutableSetOf<Switch>()
     val children = mutableMapOf<Switch, InterleavingTreeNode>()
     var isFinished = false

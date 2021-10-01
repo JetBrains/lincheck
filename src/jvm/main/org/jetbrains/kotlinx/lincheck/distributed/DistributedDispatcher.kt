@@ -20,30 +20,30 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Runnable
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 
-internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>) : CoroutineDispatcher() {
+internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>) : CoroutineDispatcher(), AutoCloseable {
     private val executor = Executors.newSingleThreadExecutor()
     @Volatile
     private var taskCounter = 0
+
     override fun dispatch(context: CoroutineContext, block: Runnable) {
         taskCounter++
-        debugOutput { "Submit task ${block.hashCode()}, taskCounter=$taskCounter"}
         executor.submit {
-            debugOutput { "Run task ${block.hashCode()}, taskCounter=$taskCounter"}
             block.run()
             taskCounter--
-            debugOutput {"Finish task ${block.hashCode()}, taskCounter=$taskCounter"}
             if (taskCounter == 0) {
-                debugOutput { "Try resume ${runner.continuation}" }
-                runner.continuation?.resume(Unit)
+                if (!executor.isShutdown) runner.continuation?.resume(Unit)
             }
         }
     }
 
-    fun shutdown() = executor.shutdown()
+    override fun close() {
+        executor.shutdown()
+    }
 }
