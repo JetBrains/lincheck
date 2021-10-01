@@ -125,9 +125,6 @@ internal class DistributedRandomStrategy<Message, Log>(
                         }
                     }
                 }
-                if (!runner.exitCoroutine || runner.continuation != null) {
-                    println("INVOCATION $invocation, ${runner.exitCoroutine}, ${runner.continuation}")
-                }
             }
             return null
         }
