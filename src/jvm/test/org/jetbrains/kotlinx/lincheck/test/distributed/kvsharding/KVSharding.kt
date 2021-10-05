@@ -59,7 +59,9 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage, Log> {
     private var response: KVMessage? = null
     private var delegate: Int? = null
 
-    override fun stateRepresentation(): String = "opId=$opId, delegate=$delegate, response=$response, log=${env.log}"
+    override fun stateRepresentation(): String {
+        return "opId=$opId, delegate=$delegate, response=$response, log=${env.log}, hash=${hashCode()}"
+    }
 
     private fun getNodeForKey(key: String) =
         ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
@@ -92,7 +94,8 @@ class Shard(val env: Environment<KVMessage, Log>) : Node<KVMessage, Log> {
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
         env.log.add(OpId(++opId))
-        env.recordInternalEvent("Operation id now is $opId")
+        env.recordInternalEvent("Operation id now is $opId, hash=${hashCode()} " + stateRepresentation())
+        //env.recordInternalEvent("Operation id now is $opId " + stateRepresentation())
         val node = getNodeForKey(key)
         val request = PutRequest(key, value, opId)
         if (node == env.nodeId) {

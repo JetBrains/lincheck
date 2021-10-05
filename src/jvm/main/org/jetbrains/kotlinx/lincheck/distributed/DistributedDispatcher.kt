@@ -24,22 +24,29 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Runnable
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 
-internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>) : CoroutineDispatcher(), AutoCloseable {
+internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>) : CoroutineDispatcher(),
+    AutoCloseable {
     private val executor = Executors.newSingleThreadExecutor()
+
     @Volatile
     private var taskCounter = 0
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {
         taskCounter++
-        executor.submit {
-            block.run()
-            taskCounter--
-            if (taskCounter == 0) {
-                if (!executor.isShutdown) runner.continuation?.resume(Unit)
+        try {
+            executor.submit {
+                block.run()
+                taskCounter--
+                if (taskCounter == 0) {
+                    if (!executor.isShutdown) runner.continuation?.resume(Unit)
+                }
             }
+        } catch (_: RejectedExecutionException) {
+            return
         }
     }
 

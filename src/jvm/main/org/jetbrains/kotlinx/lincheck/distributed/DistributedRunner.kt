@@ -201,7 +201,7 @@ internal open class DistributedRunner<Message, Log>(
 
             nodeInstances[iNode] = testCfg.addressResolver[iNode].getConstructor(Environment::class.java)
                 .newInstance(environments[iNode])
-
+            testNodeExecutions.getOrNull(iNode)?.testInstance = nodeInstances[iNode]
             distrStrategy.onNodeRecover(iNode)
             eventFactory.createNodeRecoverEvent(iNode)
             nodeInstances[iNode].recover()
