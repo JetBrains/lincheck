@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-import org.jetbrains.kotlinx.lincheck.distributed.VectorClock
 
 
 /*

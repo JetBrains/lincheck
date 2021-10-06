@@ -1,5 +1,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
+
 /**
  * Interface for a single node in a distributed algorithm.
  */

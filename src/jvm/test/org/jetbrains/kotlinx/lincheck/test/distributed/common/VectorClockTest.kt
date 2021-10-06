@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.common
 
-import org.jetbrains.kotlinx.lincheck.distributed.VectorClock
+import org.jetbrains.kotlinx.lincheck.distributed.event.VectorClock
 import org.junit.Test
 
 class VectorClockTest {

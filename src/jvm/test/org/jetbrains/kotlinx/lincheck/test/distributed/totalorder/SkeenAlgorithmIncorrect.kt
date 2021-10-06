@@ -24,7 +24,6 @@ import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageSentEvent
 
 class SkeenAlgorithmIncorrect(env: Environment<Message, Message>) : OrderCheckNode(env) {
     var clock = 0

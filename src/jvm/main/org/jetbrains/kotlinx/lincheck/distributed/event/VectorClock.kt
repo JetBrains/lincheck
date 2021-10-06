@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.distributed
+package org.jetbrains.kotlinx.lincheck.distributed.event
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable

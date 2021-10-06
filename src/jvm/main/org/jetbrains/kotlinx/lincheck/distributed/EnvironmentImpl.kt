@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.intrinsics.*
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import java.lang.IllegalArgumentException
 
 internal object TimeoutExceedException : Exception()

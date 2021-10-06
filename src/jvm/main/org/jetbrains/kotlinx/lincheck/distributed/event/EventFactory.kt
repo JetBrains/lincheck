@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.distributed
+package org.jetbrains.kotlinx.lincheck.distributed.event
 
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.KSerializer
@@ -30,122 +30,11 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
-
-/**
- * Event for a node.
- */
-@Serializable
-sealed class Event {
-    abstract val iNode: Int
-}
-
-/**
- *
- */
-@Serializable
-@SerialName("Sent")
-data class MessageSentEvent<Message>(
-    override val iNode: Int,
-    val message: Message,
-    val receiver: Int,
-    val id: Int,
-    val clock: VectorClock,
-    val state: String
-) : Event() {
-    override fun toString(): String =
-        "Send $message to $receiver, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state=$state" else ""
-}
-
-@Serializable
-@SerialName("Received")
-data class MessageReceivedEvent<Message>(
-    override val iNode: Int,
-    val message: Message,
-    val sender: Int,
-    val id: Int,
-    val clock: VectorClock,
-    val state: String
-) : Event() {
-    override fun toString(): String =
-        "Received $message from $sender, messageId=$id, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
-}
-
-@Serializable
-@SerialName("Internal")
-data class InternalEvent(
-    override val iNode: Int,
-    @Contextual val attachment: Any,
-    val clock: VectorClock,
-    val state: String
-) :
-    Event() {
-    override fun toString(): String =
-        "$attachment, clock=$clock" + if (state.isNotBlank()) ", state={$state}" else ""
-}
-
-@Serializable
-@SerialName("Crash")
-data class NodeCrashEvent(override val iNode: Int, val clock: VectorClock, val state: String) : Event()
-
-@Serializable
-@SerialName("Recover")
-data class NodeRecoveryEvent(override val iNode: Int, val clock: VectorClock, val state: String) : Event()
-
-@Serializable
-@SerialName("Operation")
-data class OperationStartEvent(
-    override val iNode: Int,
-    @Contextual val actor: Actor,
-    val clock: VectorClock,
-    val state: String
-) :
-    Event() {
-    override fun toString(): String =
-        "Start operation $actor, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
-}
-
-@Serializable
-@SerialName("ScenarioFinish")
-data class ScenarioFinishEvent(override val iNode: Int, val clock: VectorClock, val state: String) :
-    Event() {
-    override fun toString(): String =
-        "Finish scenario, clock=${clock}" + if (state.isNotBlank()) ", state={$state}" else ""
-}
-
-@Serializable
-@SerialName("CrashNotification")
-data class CrashNotificationEvent(
-    override val iNode: Int,
-    val crashedNode: Int,
-    val clock: VectorClock,
-    val state: String
-) : Event()
-
-@Serializable
-@SerialName("SetTimer")
-data class SetTimerEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
-    Event()
-
-@Serializable
-@SerialName("TimerTick")
-data class TimerTickEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
-    Event()
-
-@Serializable
-@SerialName("CancelTimer")
-data class CancelTimerEvent(override val iNode: Int, val timerName: String, val clock: VectorClock, val state: String) :
-    Event()
-
-@Serializable
-@SerialName("NetworkPartition")
-data class NetworkPartitionEvent(override val iNode: Int, val partitions: List<Set<Int>>, val partitionCount: Int) :
-    Event()
-
-@Serializable
-@SerialName("NetworkPartitionRecover")
-data class NetworkRecoveryEvent(override val iNode: Int, val partitionCount: Int) : Event()
 
 internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) {
     private var msgId = 0
