@@ -49,7 +49,7 @@ internal class DurableProbabilityModel(statistics: Statistics, maxCrashes: Int) 
     private val s: Array<DoubleArray>
 
     init {
-        val length = statistics.length
+        val length = statistics.estimatedActorsLength
         c = DoubleArray(length.size) { i -> findC(length[i], maxCrashes) }
         s = Array(length.size) { i -> calculatePreviousCrashesProbabilities(length[i], c[i], maxCrashes) }
     }
@@ -117,44 +117,43 @@ internal class DetectableExecutionProbabilityModel(statistics: Statistics, maxCr
 }
 
 class Statistics(scenario: ExecutionScenario) {
-    private val actor = IntArray(scenario.threads + 2)
-    private val temporary = IntArray(scenario.threads + 2)
-    private val sum = Array(scenario.threads + 2) { threadId -> IntArray(scenario[threadId].size) }
-    private val count = Array(scenario.threads + 2) { threadId -> IntArray(scenario[threadId].size) }
-    val length = Array(scenario.threads + 2) { threadId -> DoubleArray(scenario[threadId].size) }
+    private val currentActor = IntArray(scenario.threads + 2)
+    private val localCrashPoints = IntArray(scenario.threads + 2)
+    private val crashPoints = Array(scenario.threads + 2) { threadId -> IntArray(scenario[threadId].size) }
+    private val invocations = Array(scenario.threads + 2) { threadId -> IntArray(scenario[threadId].size) }
+    val estimatedActorsLength = Array(scenario.threads + 2) { threadId -> DoubleArray(scenario[threadId].size) }
     private var maxLength = 0.0
     internal var totalLength = 0.0
         private set
 
-    internal fun onEnterActorBody(iThread: Int, iActor: Int) {
-        temporary[iThread] = 0
-        actor[iThread] = iActor
+    internal fun onEnterActorBody(threadId: Int, actorId: Int) {
+        localCrashPoints[threadId] = 0
+        currentActor[threadId] = actorId
     }
 
-    internal fun onExitActorBody(iThread: Int, iActor: Int) {
-        sum[iThread][iActor] += temporary[iThread]
-        count[iThread][iActor]++
-        temporary[iThread] = 0
+    internal fun onExitActorBody(threadId: Int, actorId: Int) {
+        crashPoints[threadId][actorId] += localCrashPoints[threadId]
+        invocations[threadId][actorId]++
+        localCrashPoints[threadId] = 0
     }
 
     internal fun onNewInvocation() {
         maxLength = 0.0
         totalLength = 0.0
-        length.forEachIndexed { iThread, l ->
-            l.indices.forEach { iActor ->
-                val length =
-                    if (count[iThread][iActor] == 0) 0.0
-                    else sum[iThread][iActor].toDouble() / count[iThread][iActor]
-                l[iActor] = length
+        for (threadId in estimatedActorsLength.indices) {
+            for (actorId in estimatedActorsLength[threadId].indices) {
+                if (invocations[threadId][actorId] == 0) continue
+                val length = crashPoints[threadId][actorId].toDouble() / invocations[threadId][actorId]
+                estimatedActorsLength[threadId][actorId] = length
                 maxLength = max(maxLength, length)
                 totalLength += length
             }
         }
     }
 
-    internal fun onCrashPoint(iThread: Int) = temporary[iThread]++
-    internal fun actorLength(iThread: Int, iActor: Int) = length[iThread][iActor]
-    internal fun currentActor(iThread: Int) = actor[iThread]
+    internal fun onCrashPoint(threadId: Int) = localCrashPoints[threadId]++
+    internal fun actorLength(threadId: Int, actorId: Int) = estimatedActorsLength[threadId][actorId]
+    internal fun currentActor(threadId: Int) = currentActor[threadId]
 }
 
 private const val RANDOM_FLUSH_PROBABILITY = 0.05
@@ -162,6 +161,7 @@ private const val RANDOM_FLUSH_PROBABILITY = 0.05
 class Probability(scenario: ExecutionScenario, recoverModel: RecoverabilityModel, private val state: NVMState) {
     private val statistics = Statistics(scenario)
     private val randomSystemCrashProbability = recoverModel.systemCrashProbability()
+
     @Volatile
     private var randomGetter: () -> Random = { ThreadLocalRandom.current() }
 
@@ -177,8 +177,8 @@ class Probability(scenario: ExecutionScenario, recoverModel: RecoverabilityModel
     internal fun shouldCrash(): Boolean {
         if (!state.crashesEnabled) return false
         val threadId = state.currentThreadId()
-        val j = statistics.onCrashPoint(threadId)
-        return moreCrashesPermitted() && bernoulli(model.crashPointProbability(threadId, j))
+        val crashPointId = statistics.onCrashPoint(threadId)
+        return moreCrashesPermitted() && bernoulli(model.crashPointProbability(threadId, crashPointId))
     }
 
     internal fun setNewInvocation(recoverModel: RecoverabilityModel) {
@@ -202,6 +202,6 @@ class Probability(scenario: ExecutionScenario, recoverModel: RecoverabilityModel
 
     internal fun generateSeed(): Int = iterationRandom.nextInt()
 
-    internal fun onEnterActorBody(iThread: Int, iActor: Int) = statistics.onEnterActorBody(iThread, iActor)
-    internal fun onExitActorBody(iThread: Int, iActor: Int) = statistics.onExitActorBody(iThread, iActor)
+    internal fun onEnterActorBody(threadId: Int, actorId: Int) = statistics.onEnterActorBody(threadId, actorId)
+    internal fun onExitActorBody(threadId: Int, actorId: Int) = statistics.onExitActorBody(threadId, actorId)
 }
