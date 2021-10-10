@@ -160,6 +160,13 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
         customScenarios.add(scenario)
     }
 
+    /**
+     * Set the recovery model. [Recover.NO_RECOVER] is used by default.
+     * With any other recovery option enables non-volatile memory testing
+     * in the specified model.
+     *
+     * @see Recover
+     */
     fun recover(recoverModel: Recover): OPT = applyAndCast {
         recover = recoverModel
     }
