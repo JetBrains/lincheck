@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.nrl
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.Recoverable
@@ -149,6 +150,10 @@ internal class NRLFailingCounter2(threadsCount: Int) : NRLCounter(threadsCount) 
 }
 
 internal class NRLFailingCounter3(threadsCount: Int) : NRLCounter(threadsCount) {
+    @Recoverable(beforeMethod = "incrementBefore", recoverMethod = "incrementRecover")
+    override fun increment(threadId: Int) {
+        super.increment(threadId)
+    }
     override fun incrementRecover(p: Int) {
         // incrementImpl should be called
         if (checkPointer[p].value == 0) return increment(p)
