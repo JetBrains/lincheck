@@ -45,6 +45,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     @Volatile
     private var systemCrashInitiator: Int = NO_CRASH_INITIATOR
     private val started = BooleanArray(nThreads) { false }
+    private val state get() = recoverModel.getExecutionCallback() as? NVMState
 
     override fun createBuilder() = SwitchesAndCrashesInterleavingBuilder()
     override fun createRoot(): InterleavingTreeNode = ThreadChoosingNodeWithCrashes((0 until nThreads).toList())
@@ -61,7 +62,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     override fun initializeInvocation() {
         systemCrashInitiator = NO_CRASH_INITIATOR
-        Crash.barrierCallback = { forceSwitchToAwaitSystemCrash() }
+        state?.crash?.barrierCallback = { forceSwitchToAwaitSystemCrash() }
         started.fill(false)
         super.initializeInvocation()
         resetFlushRandom()
@@ -119,7 +120,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
                 currentThread = t
                 awaitTurn(iThread)
             }
-            Crash.onSystemCrash()
+            state?.crash?.onSystemCrash()
             resetFlushRandom()
             systemCrashInitiator = NO_CRASH_INITIATOR
         }
@@ -133,11 +134,11 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         if (!systemCrash) {
             resetFlushRandom()
         }
-        Crash.crash(iThread + 1, null, systemCrash)
+        state?.crash?.crash(iThread + 1, null, systemCrash)
     }
 
     private fun resetFlushRandom() {
-        Probability.resetRandom(currentInterleaving.chooseRandomSeed())
+        state?.probability?.resetRandom(currentInterleaving.chooseRandomSeed())
     }
 
     /**
@@ -194,7 +195,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     private inner class FlushRandomChoosingNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode() {
         init {
-            choices = List(RANDOM_SEEDS_BRANCHING) { Choice(createChild(), Probability.generateSeed()) }
+            choices = List(RANDOM_SEEDS_BRANCHING) { Choice(createChild(), state?.probability?.generateSeed() ?: 0)  }
         }
 
         override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {

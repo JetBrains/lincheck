@@ -23,8 +23,6 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.nvm.Crash
-import org.jetbrains.kotlinx.lincheck.nvm.Probability
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -69,7 +67,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier(checkStateEquivalence = true)
         for (i in customScenarios.indices) {
-            Probability.setIterationSeed(-(i + 1))
+            iterationId.set(-(i + 1))
             val scenario = customScenarios[i]
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
@@ -77,7 +75,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             if (failure != null) return failure
         }
         repeat(iterations) { i ->
-            Probability.setIterationSeed(i)
+            iterationId.set(i)
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
@@ -126,7 +124,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         if (testCfg is StressCTestConfiguration
             && testCfg.recoverabilityModel.crashes
             && currentFailure is IncorrectResultsFailure)
-            return minimizeCrashes(testCfg, currentFailure).also { Probability.resetExpectedCrashes() }
+            return minimizeCrashes(testCfg, currentFailure)
         return null
     }
 
@@ -149,11 +147,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         var crashes = failure.crashesNumber()
         var result: LincheckFailure? = null
         var iterations = testCfg.iterations
+        useProxyCrash.set(false)
         while (iterations > 0) {
-            Probability.minimizeCrashes(crashes - 1)
-            Crash.useProxyCrash = false
+            crashesMinimization.set(crashes - 1)
             val newFailure = scenario.runTryMinimize(testCfg)
-            Crash.useProxyCrash = true
             if (newFailure != null
                 && newFailure is IncorrectResultsFailure
                 && newFailure.crashesNumber() < crashes
@@ -165,6 +162,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             }
             iterations--
         }
+        crashesMinimization.remove()
+        useProxyCrash.remove()
         return result
     }
 
@@ -236,6 +235,11 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
             LinChecker(testClass, options).check()
         }
+
+
+        internal val crashesMinimization = ThreadLocal.withInitial<Int?> { null }
+        internal val useProxyCrash = ThreadLocal.withInitial { true }
+        internal val iterationId = ThreadLocal.withInitial { 0 }
     }
 }
 

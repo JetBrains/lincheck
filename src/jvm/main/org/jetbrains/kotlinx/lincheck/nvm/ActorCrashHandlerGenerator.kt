@@ -34,8 +34,8 @@ import kotlin.reflect.jvm.javaMethod
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
 private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("createCrashResult", CRASH_RESULT_TYPE, emptyArray())
-private val CRASH_TYPE = Type.getType(Crash::class.java)
-private val CRASH_AWAIT_SYSTEM_CRASH = Method.getMethod(Crash::awaitSystemCrash.javaMethod)
+private val NVM_STATE_HOLDER_TYPE = Type.getType(NVMStateHolder::class.java)
+private val AWAIT_SYSTEM_CRASH_METHOD = Method.getMethod(NVMStateHolder::awaitSystemCrash.javaMethod)
 private val SET_USE_CLOCKS = Method.getMethod(TestThreadExecution::forceUseClocksOnce.javaMethod)
 private val TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution::class.java)
 private val RESULT_TYPE = Type.getType(Result::class.java)
@@ -89,7 +89,7 @@ internal class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() 
         mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, SET_USE_CLOCKS)
 
         mv.loadThis()
-        mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
+        mv.invokeStatic(NVM_STATE_HOLDER_TYPE, AWAIT_SYSTEM_CRASH_METHOD)
 
         mv.goTo(skip)
     }
@@ -117,7 +117,7 @@ internal class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandler
         mv.visitLabel(handlerLabel)
         mv.pop()
         mv.visitInsn(Opcodes.ACONST_NULL)
-        mv.invokeStatic(CRASH_TYPE, CRASH_AWAIT_SYSTEM_CRASH)
+        mv.invokeStatic(NVM_STATE_HOLDER_TYPE, AWAIT_SYSTEM_CRASH_METHOD)
         mv.goTo(startLabel)
         mv.visitLabel(afterActor)
     }

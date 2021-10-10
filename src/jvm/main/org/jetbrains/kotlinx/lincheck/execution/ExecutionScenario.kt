@@ -64,6 +64,13 @@ data class ExecutionScenario(
      */
     fun hasSuspendableActors() = parallelExecution.asSequence().flatten().plus(postExecution).any(Actor::isSuspendable)
 
+    operator fun get(threadId: Int): List<Actor> = when (threadId) {
+        0 -> initExecution
+        in 1..threads -> parallelExecution[threadId - 1]
+        threads + 1 -> postExecution
+        else -> throw IllegalArgumentException("Thread is is out of bounds: $threadId")
+    }
+
 
     override fun toString() = StringBuilder()
         .also { it.appendExecutionScenario(this) }

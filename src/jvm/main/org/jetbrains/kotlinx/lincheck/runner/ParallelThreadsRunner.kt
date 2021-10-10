@@ -25,6 +25,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.ExecutionCallback
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
@@ -80,12 +81,13 @@ internal open class ParallelThreadsRunner(
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
-    private val executionCallback = recoverModel.createExecutionCallback()
+    private lateinit var executionCallback: ExecutionCallback
 
     override fun initialize() {
-        executionCallback.reset(scenario, recoverModel)
         super.initialize()
+        recoverModel.reset(classLoader, scenario)
         recoverModel.checkTestClass(testClass)
+        executionCallback = recoverModel.getExecutionCallback()
         testThreadExecutions = Array(scenario.threads) { t ->
             TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), recoverModel.createActorCrashHandlerGenerator())
         }
@@ -250,7 +252,7 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
-        beforeInit()
+        executionCallback.beforeInit(recoverModel)
         reset()
         val initResults = scenario.initExecution.mapIndexed { i, initActor ->
             executeActor(testInstance, initActor).also {
@@ -265,7 +267,7 @@ internal open class ParallelThreadsRunner(
             }
         }
         val afterInitStateRepresentation = constructStateRepresentation()
-        beforeParallel(scenario.threads)
+        executionCallback.beforeParallel()
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
@@ -288,7 +290,7 @@ internal open class ParallelThreadsRunner(
         val afterParallelStateRepresentation = constructStateRepresentation()
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
-        beforePost()
+        executionCallback.beforePost()
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
             // no actors are executed after suspension of a post part
             val result = if (postPartSuspended) {
@@ -313,20 +315,15 @@ internal open class ParallelThreadsRunner(
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,
-            postResults, afterPostStateRepresentation, getCrashes()
+            postResults, afterPostStateRepresentation, executionCallback.getCrashes()
         )
-        afterPost()
+        executionCallback.afterPost()
         return CompletedInvocationResult(results)
     }
 
-    private fun beforeInit() = executionCallback.beforeInit(scenario, recoverModel)
     protected open fun beforeStart(iThread: Int) = executionCallback.onStart(iThread)
-    private fun beforeParallel(threads: Int) = executionCallback.beforeParallel(threads)
-    private fun beforePost() = executionCallback.beforePost()
-    private fun afterPost() = executionCallback.afterPost()
     override fun onEnterActorBody(iThread: Int, iActor: Int) = executionCallback.onEnterActorBody(iThread, iActor)
     override fun onExitActorBody(iThread: Int, iActor: Int) = executionCallback.onExitActorBody(iThread, iActor)
-    private fun getCrashes() = executionCallback.getCrashes()
     override fun onActorStart(iThread: Int) {
         super.onActorStart(iThread)
         executionCallback.onActorStart(iThread)

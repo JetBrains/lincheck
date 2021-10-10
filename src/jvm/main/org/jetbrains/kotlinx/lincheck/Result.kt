@@ -1,6 +1,6 @@
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.nvm.NVMState
+import org.jetbrains.kotlinx.lincheck.nvm.NVMStateHolder
 import java.io.Serializable
 import kotlin.coroutines.*
 
@@ -160,6 +160,6 @@ class CrashResult : Result() {
 @JvmSynthetic
 fun createCrashResult(): CrashResult {
     val result = CrashResult()
-    NVMState.registerCrashResult(result)
+    NVMStateHolder.state!!.registerCrashResult(result)
     return result
 }

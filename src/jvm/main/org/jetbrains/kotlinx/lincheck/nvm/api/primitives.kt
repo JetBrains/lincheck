@@ -22,9 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.nvm.api
 
 import kotlinx.atomicfu.atomic
-import org.jetbrains.kotlinx.lincheck.nvm.NVMCache
-import org.jetbrains.kotlinx.lincheck.nvm.NVMState
-import org.jetbrains.kotlinx.lincheck.nvm.Probability
+import org.jetbrains.kotlinx.lincheck.nvm.NVMStateHolder
 
 
 /**
@@ -51,19 +49,23 @@ abstract class AbstractNonVolatilePrimitive {
      */
     fun flush() {
         flushInternal()
-        NVMCache.remove(NVMState.currentThreadId(), this)
+        val state = state()
+        state.cache.remove(state.currentThreadId(), this)
     }
 
     /**
      * Random flush may occur on write to NVM, so the value is flushed or added to the cache.
      */
     protected fun addToCache() {
-        if (Probability.shouldFlush()) {
+        val state = state()
+        if (state.probability.shouldFlush()) {
             flushInternal()
         } else {
-            NVMCache.add(NVMState.currentThreadId(), this)
+            state.cache.add(state.currentThreadId(), this)
         }
     }
+
+    private fun state() = NVMStateHolder.state ?: error("NVM primitives must be used only in test context.")
 }
 
 /**

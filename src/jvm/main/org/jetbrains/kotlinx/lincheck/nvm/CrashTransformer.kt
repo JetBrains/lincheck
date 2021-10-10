@@ -79,10 +79,10 @@ internal class CrashTransformer(cv: ClassVisitor) : CrashEnabledVisitor(cv) {
 private val storeInstructions = Opcodes.IASTORE..Opcodes.SASTORE
 private val returnInstructions = Opcodes.IRETURN..Opcodes.RETURN
 
-private val POSSIBLY_CRASH_METHOD = Method.getMethod(Crash::possiblyCrash.javaMethod)
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
 private val THROWABLE_TYPE = Type.getType(Throwable::class.java)
-private val CRASH_TYPE = Type.getType(Crash::class.java)
+private val NVM_STATE_HOLDER_TYPE = Type.getType(NVMStateHolder::class.java)
+private val POSSIBLY_CRASH_METHOD = Method.getMethod(NVMStateHolder::possiblyCrash.javaMethod)
 private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
 
 private class CrashMethodTransformer(
@@ -100,7 +100,7 @@ private class CrashMethodTransformer(
         push(fileName)
         push(name)
         push(lineNumber)
-        invokeStatic(CRASH_TYPE, POSSIBLY_CRASH_METHOD)
+        invokeStatic(NVM_STATE_HOLDER_TYPE, POSSIBLY_CRASH_METHOD)
     }
 
     override fun visitLineNumber(line: Int, start: Label?) {

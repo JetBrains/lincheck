@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.nvm
 
 import kotlinx.atomicfu.atomic
+import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -80,7 +81,7 @@ private data class SystemContext(
 )
 
 /** Crash related utils. */
-internal object Crash {
+internal class Crash(private val state: NVMState, recoverModel: RecoverabilityModel) {
     /** A flag whether a system crash occurred  and not handled be some recover method yet. */
     private val systemCrashOccurred = AtomicBoolean(false)
 
@@ -88,7 +89,7 @@ internal object Crash {
     private val context = atomic(SystemContext(0, 0))
 
     /** A flag whether threads must wait for each other before throwing an exception. */
-    private var awaitSystemCrashBeforeThrow = true
+    private val awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
     internal val threads get() = context.value.threads
 
     @Volatile
@@ -100,20 +101,17 @@ internal object Crash {
     /**
      * A flag whether to use a proxy instead of usual exception.
      */
-    @Volatile
-    var useProxyCrash = true
+    private val useProxyCrash = LinChecker.useProxyCrash.get() ?: true
 
     /** An action that must be performed before a barrier opening. */
     @Volatile
-    internal lateinit var barrierCallback: () -> Unit
+    internal var barrierCallback: () -> Unit = { defaultAwaitSystemCrash() }
 
-    @JvmStatic
     internal fun isCrashed() = systemCrashOccurred.get()
 
     /** Set the last system crash handled.
      * Invoked after some recover method completion.
      */
-    @JvmStatic
     internal fun resetAllCrashed() {
         systemCrashOccurred.compareAndSet(true, false)
     }
@@ -125,7 +123,7 @@ internal object Crash {
     internal fun crash(threadId: Int, ste: StackTraceElement?, systemCrash: Boolean) {
         if (awaitSystemCrashBeforeThrow && systemCrash) awaitSystemCrash(null)
         val crash = createCrash(ste)
-        NVMState.registerCrash(threadId, crash)
+        state.registerCrash(threadId, crash)
         throw crash
     }
 
@@ -135,21 +133,19 @@ internal object Crash {
      * Random crash simulation. Produces a single thread crash or a system crash.
      * On a system crash a thread waits for other threads to reach this method call.
      */
-    @JvmStatic
-    fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
-        if (isWaitingSystemCrash() || Probability.shouldCrash()) {
+    internal fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int) {
+        if (isWaitingSystemCrash() || state.probability.shouldCrash()) {
             val ste = StackTraceElement(className, methodName, fileName, lineNumber)
-            val systemCrash = isWaitingSystemCrash() || Probability.shouldSystemCrash()
-            crash(NVMState.currentThreadId(), ste, systemCrash)
+            val systemCrash = isWaitingSystemCrash() || state.probability.shouldSystemCrash()
+            crash(state.currentThreadId(), ste, systemCrash)
         }
     }
 
     /**
      * Await for all active threads to access this point and crash the cache.
      */
-    @JvmStatic
-    fun awaitSystemCrash(execution: TestThreadExecution?) {
-        Crash.execution = execution
+    internal fun awaitSystemCrash(execution: TestThreadExecution?) {
+        this.execution = execution
         barrierCallback()
     }
 
@@ -170,8 +166,8 @@ internal object Crash {
      */
     internal fun onSystemCrash() {
         systemCrashOccurred.compareAndSet(false, true)
-        NVMCache.systemCrash()
-        NVMState.setCrashedActors()
+        state.cache.systemCrash()
+        state.setCrashedActors()
         val exec = execution ?: return
         activeThreads.forEach {
             exec.allThreadExecutions[it - 1].incClock()
@@ -180,7 +176,7 @@ internal object Crash {
 
     /** Should be called when thread finished. */
     fun exitThread() {
-        activeThreads.remove(NVMState.currentThreadId())
+        activeThreads.remove(state.currentThreadId())
         while (true) {
             val c = context.value
             val newThreads = c.threads - 1
@@ -196,19 +192,14 @@ internal object Crash {
             if (currentContext.waitingThreads != 0) continue
             if (context.compareAndSet(currentContext, currentContext.copy(threads = currentContext.threads + 1))) break
         }
-        activeThreads.add(NVMState.currentThreadId())
+        activeThreads.add(state.currentThreadId())
     }
 
-    fun reset(recoverModel: RecoverabilityModel) {
-        awaitSystemCrashBeforeThrow = recoverModel.awaitSystemCrashBeforeThrow
+    fun reset() {
         context.value = SystemContext(0, 0)
         resetAllCrashed()
         execution = null
         activeThreads.clear()
-    }
-
-    fun resetDefault() {
-        barrierCallback = { defaultAwaitSystemCrash() }
     }
 
     private fun isWaitingSystemCrash() = context.value.waitingThreads > 0

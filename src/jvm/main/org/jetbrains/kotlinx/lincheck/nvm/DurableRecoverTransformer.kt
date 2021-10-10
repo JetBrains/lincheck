@@ -33,9 +33,9 @@ private const val RECOVER_DESCRIPTOR = "()V"
 private const val RECOVER_ALL_GENERATED_NAME = "__\$rec*verAll\$__"
 private const val RECOVER_ALL_GENERATED_ACCESS =
     Opcodes.ACC_PRIVATE or Opcodes.ACC_SYNCHRONIZED or Opcodes.ACC_SYNTHETIC
-private val CRASH_TYPE = Type.getType(Crash::class.java)
-private val CRASH_IS_CRASHED = Method.getMethod(Crash::isCrashed.javaMethod)
-private val CRASH_RESET_ALL_CRASHED = Method.getMethod(Crash::resetAllCrashed.javaMethod)
+private val NVM_STATE_HOLDER_TYPE = Type.getType(NVMStateHolder::class.java)
+private val IS_CRASHED_METHOD = Method.getMethod(NVMStateHolder::isCrashed.javaMethod)
+private val RESET_ALL_CRASHED_METHOD = Method.getMethod(NVMStateHolder::resetAllCrashed.javaMethod)
 private val OPERATION_TYPE = Type.getType(Operation::class.java)
 
 internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val testClass: Class<*>) : ClassVisitor(ASM_API, cv) {
@@ -114,23 +114,11 @@ internal class DurableRecoverAllGenerator(cv: ClassVisitor, _class: Class<*>) : 
 
 private fun GeneratorAdapter.generateRecoverCode(className: String, recoverMethod: String) {
     val endLabel = newLabel()
-    visitMethodInsn(
-        Opcodes.INVOKESTATIC,
-        CRASH_TYPE.internalName,
-        CRASH_IS_CRASHED.name,
-        CRASH_IS_CRASHED.descriptor,
-        false
-    )
+    invokeStatic(NVM_STATE_HOLDER_TYPE, IS_CRASHED_METHOD)
     visitJumpInsn(Opcodes.IFEQ, endLabel)
     loadThis()
     visitMethodInsn(Opcodes.INVOKEVIRTUAL, className, recoverMethod, RECOVER_DESCRIPTOR, false)
-    visitMethodInsn(
-        Opcodes.INVOKESTATIC,
-        CRASH_TYPE.internalName,
-        CRASH_RESET_ALL_CRASHED.name,
-        CRASH_RESET_ALL_CRASHED.descriptor,
-        false
-    )
+    invokeStatic(NVM_STATE_HOLDER_TYPE, RESET_ALL_CRASHED_METHOD)
     visitLabel(endLabel)
 }
 

@@ -41,8 +41,9 @@ internal class CrashInsertTest : VerifierState() {
     private val c = NVMClass()
 
     @Operation
-    @Recoverable
+    @Recoverable(recoverMethod = "fooRecover")
     fun foo() = c.foo()
+    fun fooRecover() = c.recover()
     override fun extractState() = 4
 
     @Test
@@ -59,7 +60,6 @@ private class NVMClass {
     val x = nonVolatile(0)
     var y = 4
 
-    @Recoverable(recoverMethod = "recover")
     fun foo() {
         x.value = 42
         x.compareAndSet(1, 2)
