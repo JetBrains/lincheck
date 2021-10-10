@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.nvm
 import org.jetbrains.kotlinx.lincheck.CrashResult
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
 
-object NVMStateHolder {
+internal object NVMStateHolder {
     @JvmField
     @Volatile
     var state: NVMState? = null

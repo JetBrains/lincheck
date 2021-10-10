@@ -54,7 +54,7 @@ class NVMState(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) :
     val crashesCount get() = _crashesCount.value
     val maxCrashesCountPerThread get() = maxCrashesPerThread.value
 
-    fun currentThreadId(): Int = when (state) {
+    internal fun currentThreadId(): Int = when (state) {
         INIT -> 0
         PARALLEL -> Thread.currentThread().let {
             if (it is FixedActiveThreadsExecutor.TestThread) return@let it.iThread + 1
