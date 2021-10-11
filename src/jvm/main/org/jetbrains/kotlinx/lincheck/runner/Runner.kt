@@ -146,14 +146,15 @@ abstract class Runner protected constructor(
     }
 
     /**
-     * This method is invoked before the actor start.
+     * This method is invoked before the actor's execution body starts.
+     * This method may be called several time for one actor if it is re-executed.
      * @param iThread number of invoking thread
      * @param iActor the number of executing actor
      */
     open fun onEnterActorBody(iThread: Int, iActor: Int) {}
 
     /**
-     * This method is invoked after the actor finish.
+     * This method is invoked after the actor finishes.
      * if no exception has been thrown.
      * @param iThread number of invoking thread
      */

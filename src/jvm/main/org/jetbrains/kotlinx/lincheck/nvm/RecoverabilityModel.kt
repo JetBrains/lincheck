@@ -29,29 +29,56 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedD
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.DurableLinearizabilityVerifier
 import org.objectweb.asm.ClassVisitor
 
+/**
+ * This callback is plugged in to [ParallelThreadsRunner] to callect information
+ * that is essential for NVM emulation during a test run.
+ */
 interface ExecutionCallback {
-    fun onStart(iThread: Int)
+    /** This method is invoked in the beginning of each test invocation.*/
     fun beforeInit(recoverModel: RecoverabilityModel)
+
+    /** This method is invoked after the init part and before the parallel part of a test. */
     fun beforeParallel()
+
+    /** This method is called before the thread [threadId] starts. */
+    fun onStart(threadId: Int)
+
+    /** This method is invoked before a new actor starts. */
+    fun onActorStart(threadId: Int)
+
+    /**
+     * This method is invoked before the actor's execution body starts.
+     * This method may be called several time for one actor if it is re-executed.
+     */
+    fun onEnterActorBody(threadId: Int, actorId: Int)
+
+    /** This method is invoked after the actor finishes. */
+    fun onExitActorBody(threadId: Int, actorId: Int)
+
+    /** This method is called after the thread [threadId] finishes. */
+    fun onFinish(threadId: Int)
+
+    /** This method is invoked after the parallel part and before the post part of a test. */
     fun beforePost()
+
+    /** This method is invoked in the end of the test. */
     fun afterPost()
-    fun onActorStart(iThread: Int)
-    fun onFinish(iThread: Int)
-    fun onEnterActorBody(iThread: Int, iActor: Int)
-    fun onExitActorBody(iThread: Int, iActor: Int)
+
+    /** This method returns crashes that occurred during the last execution. */
     fun getCrashes(): List<List<CrashError>>
 }
 
+/** Default callback with no action performed. */
 private object NoRecoverExecutionCallBack : ExecutionCallback {
-    override fun onStart(iThread: Int) {}
+    override fun onStart(threadId: Int) {}
     override fun beforeInit(recoverModel: RecoverabilityModel) {}
     override fun beforeParallel() {}
     override fun beforePost() {}
     override fun afterPost() {}
-    override fun onActorStart(iThread: Int) {}
-    override fun onFinish(iThread: Int) {}
-    override fun onEnterActorBody(iThread: Int, iActor: Int) {}
-    override fun onExitActorBody(iThread: Int, iActor: Int) {}
+    override fun onActorStart(threadId: Int) {}
+    override fun onFinish(threadId: Int) {}
+    override fun onEnterActorBody(threadId: Int, actorId: Int) {}
+    override fun onExitActorBody(threadId: Int, actorId: Int) {}
     override fun getCrashes() = emptyList<List<CrashError>>()
 }
 
@@ -67,12 +94,56 @@ internal enum class StrategyRecoveryOptions {
     fun isStress() = this == STRESS
 }
 
+/** Recovery model defines the execution details and the verification method. */
 enum class Recover {
+    /** No NVM support enabled. */
     NO_RECOVER,
+
+    /**
+     * Nesting-safe recoverable linearizability model.
+     *
+     * This model requires using of [Recoverable] methods. The recovery method is called in case of crash occurred.
+     * Note that recovery method must perform the same as the method which is recovered, namely return the result such that
+     * crashed method and subsequent recovery call are still linearizable. The model considers both single-thread and system-wide crashes.
+     * Linearizability criterion is used for verification.
+     * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
+     */
     NRL,
+
+    /**
+     * The same as [NRL], but no crashes occur. This may be used in debug purposes to temporary disable crashes,
+     * but still execute under NRL model.
+     */
     NRL_NO_CRASHES,
+
+    /**
+     * Durable linearizability model.
+     *
+     * This model considers only system-wide crashes. This model requires all successfully operations to be linearizable,
+     * while the interrupted by a crash operations may be not linearizable. After a crash a structure's recovery function is called,
+     * is it is markered with [DurableRecoverAll] or [DurableRecoverPerThread] annotations. Durable linearizability verification is used.
+     * @see  <a href="https://www.cs.rochester.edu/u/scott/papers/2016_DISC_persistence.pdf">Durable Linearizability</a>
+     */
     DURABLE,
+
+    /**
+     * Detectable execution model.
+     *
+     * This is a strengthening of durable linearizability, as it requires an operation to know after a crash was it completed successfully or not.
+     * Practically this means that an operation is called again after a crash, and then the operation is responsible for returning a correct result.
+     * Linearizability verification is used.
+     * @see  <a href="http://www.cs.technion.ac.il/~erez/Papers/nvm-queue-full.pdf">Detectable execution</a>
+     */
     DETECTABLE_EXECUTION,
+
+    /**
+     * Buffered durable linearizability model.
+     *
+     * This is a durable linearizability relaxation. This model requires that only a prefix of successfully completed operations is linearizable.
+     * In practice this a sync method is used which guarantees that a data structure is persisted if this method completes successfully.
+     * So buffered durable linearizability requires that all the operations before the last completed sync are linearizable.
+     * @see  <a href="https://www.cs.rochester.edu/u/scott/papers/2016_DISC_persistence.pdf">Buffered Durable Linearizability</a>
+     */
     BUFFERED_DURABLE;
 
     internal fun createModel(strategyRecoveryOptions: StrategyRecoveryOptions) = when (this) {

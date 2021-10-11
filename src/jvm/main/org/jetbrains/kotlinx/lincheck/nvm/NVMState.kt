@@ -89,13 +89,13 @@ class NVMState(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) :
 
     override fun getCrashes() = _crashes.toList()
 
-    override fun onFinish(iThread: Int) {
+    override fun onFinish(threadId: Int) {
         // mark thread as finished
-        executedActors[iThread]++
+        executedActors[threadId]++
         crash.exitThread()
     }
 
-    override fun onStart(iThread: Int) {
+    override fun onStart(threadId: Int) {
         crash.registerThread()
     }
 
@@ -129,10 +129,10 @@ class NVMState(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) :
         crash.exitThread()
     }
 
-    override fun onActorStart(iThread: Int) {
-        executedActors[iThread]++
+    override fun onActorStart(threadId: Int) {
+        executedActors[threadId]++
     }
 
-    override fun onEnterActorBody(iThread: Int, iActor: Int) = probability.onEnterActorBody(iThread + 1, iActor)
-    override fun onExitActorBody(iThread: Int, iActor: Int) = probability.onExitActorBody(iThread + 1, iActor)
+    override fun onEnterActorBody(threadId: Int, actorId: Int) = probability.onEnterActorBody(threadId + 1, actorId)
+    override fun onExitActorBody(threadId: Int, actorId: Int) = probability.onExitActorBody(threadId + 1, actorId)
 }
