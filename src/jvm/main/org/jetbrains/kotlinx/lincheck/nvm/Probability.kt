@@ -29,80 +29,135 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * This model helps to assign crash probabilities to the crash points so that the frequency of
+ * crashes at each point is more or less equal.
+ *
+ * The model is based on the length of the actors involved, therefore [Statistics] is used.
+ *
+ * @see <a href="https://spb.hse.ru/mirror/pubs/share/480761026.pdf#page=23"> Theoretical reasoning (in Russian) </a>
+ * The notation used is consistent with the theoretical reasoning.
+ */
 abstract class ProbabilityModel(protected val statistics: Statistics, protected val maxCrashes: Int) {
-    protected abstract fun actorProbability(iThread: Int, iActor: Int): Double
+    /** Probability of crash in the first crash point in thread [threadId] actor [actorId]. */
+    protected abstract fun actorProbability(threadId: Int, actorId: Int): Double
+
+    /** Is one more crash allowed with respect of [maxCrashes]. */
     internal abstract fun isCrashAllowed(crashesNumber: Int): Boolean
-    internal fun crashPointProbability(iThread: Int, j: Int): Double {
-        val i = statistics.currentActor(iThread)
-        val c = actorProbability(iThread, i)
+
+    /**
+     * Probability of crash in the [j]-th crash point on the thread [threadId].
+     */
+    internal fun crashPointProbability(threadId: Int, j: Int): Double {
+        val actorId = statistics.currentActor(threadId)
+        val c = actorProbability(threadId, actorId)
         return c / (1 - j * c)
     }
 }
 
+/** Probability model with no crashes allowed. */
 internal class NoCrashesProbabilityModel(statistics: Statistics, maxCrashes: Int) : ProbabilityModel(statistics, maxCrashes) {
-    override fun actorProbability(iThread: Int, iActor: Int) = 0.0
+    override fun actorProbability(threadId: Int, actorId: Int) = 0.0
     override fun isCrashAllowed(crashesNumber: Int) = false
 }
 
+/**
+ * Probability model for durable linearizability execution model with at most [maxCrashes] crashes.
+ *
+ * Note that the original theoretical reasoning does not consider multiply threads, so perfect uniformity is not guarantied for multiply threads.
+ * In this model threads are considered independently.
+ */
 internal class DurableProbabilityModel(statistics: Statistics, maxCrashes: Int) : ProbabilityModel(statistics, maxCrashes) {
+    /** Probability of crash on the first crash point in each actor. */
     private val c: DoubleArray
-    private val s: Array<DoubleArray>
+
+    /** W_i is the probability of less than [maxCrashes] crashes occurred before i-th actor. */
+    private val W: Array<DoubleArray>
 
     init {
         val length = statistics.estimatedActorsLength
         c = DoubleArray(length.size) { i -> findC(length[i], maxCrashes) }
-        s = Array(length.size) { i -> calculatePreviousCrashesProbabilities(length[i], c[i], maxCrashes) }
+        W = Array(length.size) { i -> calculateW(length[i], c[i], maxCrashes) }
     }
 
-    override fun actorProbability(iThread: Int, iActor: Int) =
-        if (iActor == 0) c[iThread] else c[iThread] / s[iThread][iActor - 1]
+    override fun actorProbability(threadId: Int, actorId: Int) =
+        if (actorId == 0) c[threadId] else c[threadId] / W[threadId][actorId - 1]
 
     override fun isCrashAllowed(crashesNumber: Int) = crashesNumber < maxCrashes
 
-    private fun findC(actors: DoubleArray, maxCrashes: Int): Double {
-        val n = actors.size
-        val total = actors.sum()
-        if (total <= 0.0) return 0.0
-        val w0 = DoubleArray(n + 1)
-        val w1 = DoubleArray(n + 1)
-        val s = DoubleArray(n)
+    /**
+     * C can be found via a binary search.
+     * @param length actors' length
+     * @param M maximum number of crashes
+     */
+    private fun findC(length: DoubleArray, M: Int): Double {
+        val n = length.size
+        val N = length.sum()
+        if (N <= 0.0) return 0.0
+        val w0 = DoubleArray(n + 1) // allocate buffer once
+        val w1 = DoubleArray(n + 1) // allocate buffer once
+        val s = DoubleArray(n) // allocate buffer once
         val solver = BinarySearchSolver { c ->
-            val p = calculatePreviousCrashesProbabilities(actors, c, maxCrashes, w0, w1, s)
-            c - (0 until n).minOf { i -> (if (i == 0) 1.0 else p[i - 1]) / actors[i] }
+            val _W = calculateW(length, c, M, w0, w1, s)
+            c - (0 until n).minOf { i -> (if (i == 0) 1.0 else _W[i - 1]) / length[i] }
         }
-        val mc = min(1.0 / actors.maxOrNull()!!, maxCrashes.toDouble() / total)
+        val mc = min(1.0 / length.maxOrNull()!!, M / N) // maximum value of c allowed
         return solver.solve(0.0, mc, 1e-9)
     }
 
-    private fun calculatePreviousCrashesProbabilities(
-        actors: DoubleArray,
+    /**
+     * Calculate W_i with dynamic programming in case of known [c].
+     * @param length actors' length
+     * @param _w0 buffer for internal calculations
+     * @param w1 buffer for internal calculations
+     * @param _W the answer buffer
+     */
+    private fun calculateW(
+        length: DoubleArray,
         c: Double,
         maxCrashes: Int,
-        _w0: DoubleArray = DoubleArray(actors.size + 1),
-        w1: DoubleArray = DoubleArray(actors.size + 1),
-        s: DoubleArray = DoubleArray(actors.size)
+        _w0: DoubleArray = DoubleArray(length.size + 1),
+        w1: DoubleArray = DoubleArray(length.size + 1),
+        _W: DoubleArray = DoubleArray(length.size)
     ): DoubleArray {
         var w0 = _w0
-        val n = actors.size
-        if (n == 0) return s
+        val n = length.size
+        if (n == 0) return _W
+
+        // w_i[k] - probability of exactly k crashes occurred at actors up to i
+        // Implementation note: here we use only two arrays w0 and w1 instead of n arrays
+        // as w_{i - 1} is only used to calculate w_i
+
         w0.fill(0.0, 2)
-        w0[0] = 1 - c * actors[0]; w0[1] = c * actors[0]
-        s[0] = w0[0] + if (maxCrashes == 1) 0.0 else w0[1]
+        w0[0] = 1 - c * length[0]
+        w0[1] = c * length[0]
+
+        _W[0] = w0[0] + if (maxCrashes == 1) 0.0 else w0[1]
         for (i in 1 until n) {
-            val z = c * actors[i] / s[i - 1]
-            w1[0] = (1 - z) * w0[0]
+            val y = c * length[i] / _W[i - 1]
+
+            w1[0] = (1 - y) * w0[0]
             for (k in 1..n) {
-                w1[k] = z * w0[k - 1] + (1 - z) * w0[k]
+                w1[k] = y * w0[k - 1] + (1 - y) * w0[k]
             }
             for (k in 0 until maxCrashes) {
-                s[i] += w1[k]
+                _W[i] += w1[k]
             }
             w0 = w1
         }
-        return s
+        return _W
     }
 }
 
+/**
+ * Probability model for detectable execution model.
+ *
+ * Note that the original theoretical reasoning does not consider multiply threads, so perfect uniformity is not guarantied.
+ * In this model threads are considered independently.
+ *
+ * Note that the original theoretical reasoning supposes infinite possible crashes allowed, which is meaningless in practice.
+ * Therefore, maximum number of crashes is limited, which may break uniformity a little.
+ */
 internal class DetectableExecutionProbabilityModel(statistics: Statistics, maxCrashes: Int) : ProbabilityModel(statistics, maxCrashes) {
     private val c: Double
 
@@ -112,10 +167,18 @@ internal class DetectableExecutionProbabilityModel(statistics: Statistics, maxCr
         c = if (n > 0) e / n else 0.0
     }
 
-    override fun actorProbability(iThread: Int, iActor: Int) = c / (1 + c * statistics.actorLength(iThread, iActor))
+    override fun actorProbability(threadId: Int, actorId: Int) = c / (1 + c * statistics.actorLength(threadId, actorId))
     override fun isCrashAllowed(crashesNumber: Int) = crashesNumber < 2 * maxCrashes
 }
 
+/**
+ * This class calculates the execution statistics used by [ProbabilityModel]s.
+ *
+ * Namely, the target statistic is the estimation of actors' length involved into the current scenario.
+ * This is done by calculating the number of crash points between [onEnterActorBody] and [onExitActorBody] methods invocations.
+ * Note that crashed actors must not be involved into actor's length estimation,
+ * so all calculations are performed locally until [onExitActorBody] is call, then we know that actor has finished successfully.
+ */
 class Statistics(scenario: ExecutionScenario) {
     private val currentActor = IntArray(scenario.threads + 2)
     private val localCrashPoints = IntArray(scenario.threads + 2)
@@ -158,6 +221,13 @@ class Statistics(scenario: ExecutionScenario) {
 
 private const val RANDOM_FLUSH_PROBABILITY = 0.05
 
+/**
+ * This class is an entry point to all random-related methods that are neaded for NVM emulation.
+ *
+ * During execution crashes may happen at random in stress mode, whether to perform them is defined by [shouldCrash] and [shouldSystemCrash] methods.
+ * Also, flush may happen at random, so [shouldFlush] method can be used.
+ * Note that in model checking mode the random seed is changed deterministically with [resetRandom] method.
+ */
 class Probability(scenario: ExecutionScenario, recoverModel: RecoverabilityModel, private val state: NVMState) {
     private val statistics = Statistics(scenario)
     private val randomSystemCrashProbability = recoverModel.systemCrashProbability()
@@ -172,8 +242,10 @@ class Probability(scenario: ExecutionScenario, recoverModel: RecoverabilityModel
     @Volatile
     private lateinit var model: ProbabilityModel
 
-    internal fun shouldSystemCrash() = bernoulli(randomSystemCrashProbability)
     internal fun shouldFlush() = bernoulli(RANDOM_FLUSH_PROBABILITY)
+
+    /** Whether to perform a system crash if [shouldCrash] returned true. */
+    internal fun shouldSystemCrash() = bernoulli(randomSystemCrashProbability)
     internal fun shouldCrash(): Boolean {
         if (!state.crashesEnabled) return false
         val threadId = state.currentThreadId()
@@ -181,6 +253,7 @@ class Probability(scenario: ExecutionScenario, recoverModel: RecoverabilityModel
         return moreCrashesPermitted() && bernoulli(model.crashPointProbability(threadId, crashPointId))
     }
 
+    /** This method should be called on every new invocation to recalculate the values. */
     internal fun setNewInvocation(recoverModel: RecoverabilityModel) {
         statistics.onNewInvocation()
         model = recoverModel.createProbabilityModel(statistics, expectedCrashes)
@@ -195,6 +268,9 @@ class Probability(scenario: ExecutionScenario, recoverModel: RecoverabilityModel
 
     private fun bernoulli(probability: Double) = randomGetter().nextDouble() < probability
 
+    /**
+     * Use this method to set the random seed to make the execution deterministic in model checking mode.
+     */
     internal fun resetRandom(seed: Int) {
         modelCheckingRandom.setSeed(seed.toLong())
         randomGetter = { modelCheckingRandom }
