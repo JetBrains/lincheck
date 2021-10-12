@@ -38,6 +38,7 @@ private val IS_CRASHED_METHOD = Method.getMethod(NVMStateHolder::isCrashed.javaM
 private val RESET_ALL_CRASHED_METHOD = Method.getMethod(NVMStateHolder::resetAllCrashed.javaMethod)
 private val OPERATION_TYPE = Type.getType(Operation::class.java)
 
+/** Generates bytecode for durable linearizability recovery. Every operation calls a recovery function after a system crash. */
 internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val testClass: Class<*>) : ClassVisitor(ASM_API, cv) {
     private var shouldTransform = false
     internal val recoverAllMethod: java.lang.reflect.Method?
@@ -78,6 +79,10 @@ internal class DurableOperationRecoverTransformer(cv: ClassVisitor, private val 
     }
 }
 
+/**
+ * Adds a new synchronized method to perform a single recovery for all operations.
+ * @see [DurableRecoverAll]
+ */
 internal class DurableRecoverAllGenerator(cv: ClassVisitor, _class: Class<*>) : ClassVisitor(ASM_API, cv) {
     private val recoverAllMethod = recoverMethods(_class)[0]
 
@@ -112,6 +117,7 @@ internal class DurableRecoverAllGenerator(cv: ClassVisitor, _class: Class<*>) : 
     }
 }
 
+/** Call the recovery function with name [recoverMethod] if a system crash has just happened. */
 private fun GeneratorAdapter.generateRecoverCode(className: String, recoverMethod: String) {
     val endLabel = newLabel()
     invokeStatic(NVM_STATE_HOLDER_TYPE, IS_CRASHED_METHOD)

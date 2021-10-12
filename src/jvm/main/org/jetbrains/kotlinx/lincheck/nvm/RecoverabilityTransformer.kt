@@ -27,7 +27,7 @@ import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 
-
+/** Generate bytecode for NRL recovery. */
 internal class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
     private lateinit var name: String
 
@@ -58,15 +58,24 @@ internal class RecoverabilityTransformer(cv: ClassVisitor) : ClassVisitor(ASM_AP
 
 private val CRASH_NAME = Type.getInternalName(CrashError::class.java)
 
-private open class RecoverableBaseMethodTransformer(
-    protected val adapter: GeneratorAdapter,
+/**
+ * Modifies body of method if it is marked with [Recoverable] annotation.
+ * Generates a call to before method(if present), wraps method body with try-catch
+ * and calls recover method in case of a crash.
+ */
+private class RecoverableMethodTransformer(
+    private val adapter: GeneratorAdapter,
+    private val descriptor: String?,
     className: String
 ) : MethodVisitor(ASM_API, adapter) {
-    protected var shouldTransform = false
-    protected var beforeName: String? = null
-    protected var recoverName: String? = null
+    private var shouldTransform = false
+    private var beforeName: String? = null
+    private var recoverName: String? = null
 
     private val classType = Type.getType("L$className;")
+
+    private val tryLabel = Label()
+    private val catchLabel = Label()
 
     /** Check whether method has [Recoverable] annotation. */
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
@@ -85,11 +94,39 @@ private open class RecoverableBaseMethodTransformer(
         }
     }
 
+    /** Call before if name is non-empty and wrap method body with try-catch. */
+    override fun visitCode() = adapter.run {
+        visitCode()
+        if (!shouldTransform) return
+        visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
+
+        beforeName?.let {
+            val beforeDescriptor = Type.getMethodDescriptor(Type.VOID_TYPE, *Type.getType(descriptor).argumentTypes)
+            callUntilSuccess(it, beforeDescriptor)
+        }
+
+        visitLabel(tryLabel)
+    }
+
+    /** Call recover method in case of crash. */
+    override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
+        if (shouldTransform) {
+            // crash, ignore exception
+            visitLabel(catchLabel)
+            pop()
+            // call recover, it may be a
+            callUntilSuccess(recoverName ?: name, descriptor)
+                ?.let { result -> loadLocal(result) }
+            returnValue()
+        }
+        visitMaxs(maxStack, maxLocals)
+    }
+
     /**
      * Call [name] method with signature [descriptor] until it completes successfully.
      * @return index of local variable where result is stored or null in case of void return type
      */
-    protected fun callUntilSuccess(name: String, descriptor: String?): Int? = adapter.run {
+    private fun callUntilSuccess(name: String, descriptor: String?): Int? = adapter.run {
         val (tryLabel, catchLabel, endLabel) = List(3) { Label() }
         visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
 
@@ -129,48 +166,5 @@ private open class RecoverableBaseMethodTransformer(
             Type.FLOAT -> push(0.0f)
             Type.ARRAY, Type.METHOD, Type.OBJECT -> visitInsn(Opcodes.ACONST_NULL)
         }
-    }
-}
-
-
-/**
- * Modifies body of method if it is marked with [Recoverable] annotation.
- * Generates a call to before method(if present), wraps method body with try-catch
- * and calls recover method in case of a crash.
- */
-private class RecoverableMethodTransformer(
-    adapter: GeneratorAdapter,
-    private val descriptor: String?,
-    className: String
-) : RecoverableBaseMethodTransformer(adapter, className) {
-    private val tryLabel = Label()
-    private val catchLabel = Label()
-
-    /** Call before if name is non-empty and wrap method body with try-catch. */
-    override fun visitCode() = adapter.run {
-        visitCode()
-        if (!shouldTransform) return
-        visitTryCatchBlock(tryLabel, catchLabel, catchLabel, CRASH_NAME)
-
-        beforeName?.let {
-            val beforeDescriptor = Type.getMethodDescriptor(Type.VOID_TYPE, *Type.getType(descriptor).argumentTypes)
-            callUntilSuccess(it, beforeDescriptor)
-        }
-
-        visitLabel(tryLabel)
-    }
-
-    /** Call recover method in case of crash. */
-    override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
-        if (shouldTransform) {
-            // crash, ignore exception
-            visitLabel(catchLabel)
-            pop()
-            // call recover, it may be a
-            callUntilSuccess(recoverName ?: name, descriptor)
-                ?.let { result -> loadLocal(result) }
-            returnValue()
-        }
-        visitMaxs(maxStack, maxLocals)
     }
 }

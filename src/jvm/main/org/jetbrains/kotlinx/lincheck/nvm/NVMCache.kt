@@ -44,9 +44,5 @@ internal class NVMCache(threads: Int) {
         }
     }
 
-    fun clear() {
-        for (i in cache.indices) {
-            cache[i] = null
-        }
-    }
+    fun clear() = cache.fill(null)
 }

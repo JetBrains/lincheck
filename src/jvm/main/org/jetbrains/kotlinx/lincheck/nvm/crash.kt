@@ -60,7 +60,8 @@ private class CrashErrorImpl : CrashError(true) {
     override val crashStackTrace: Array<StackTraceElement> get() = stackTrace
 }
 
-/** Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot.
+/**
+ * Proxy provided to minimize [fillInStackTrace] calls as it influence performance a lot.
  * Contains only one stack frame element.
  */
 private class CrashErrorProxy(private val ste: StackTraceElement?) : CrashError(false) {
@@ -82,7 +83,7 @@ private data class SystemContext(
 
 /** Crash related utils. */
 internal class Crash(private val state: NVMState, recoverModel: RecoverabilityModel) {
-    /** A flag whether a system crash occurred  and not handled be some recover method yet. */
+    /** A flag whether a system crash occurred and not handled be some recover method yet. */
     private val systemCrashOccurred = AtomicBoolean(false)
 
     /** The current active threads context. */
@@ -109,7 +110,8 @@ internal class Crash(private val state: NVMState, recoverModel: RecoverabilityMo
 
     internal fun isCrashed() = systemCrashOccurred.get()
 
-    /** Set the last system crash handled.
+    /**
+     * Set the last system crash handled.
      * Invoked after some recover method completion.
      */
     internal fun resetAllCrashed() {
@@ -149,7 +151,7 @@ internal class Crash(private val state: NVMState, recoverModel: RecoverabilityMo
         barrierCallback()
     }
 
-    /** This await method is used in [StressStrategy]. */
+    /** This waiting method is used in the stress strategy. */
     private fun defaultAwaitSystemCrash() {
         var free: AtomicBoolean
         while (true) {

@@ -26,12 +26,14 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
 import java.util.*
 
+// for debug usage
 private class InvalidThreadIdStateError(s: String) : Throwable(s)
 
 private const val INIT = (0).toByte()
 private const val PARALLEL = (1).toByte()
 private const val POST = (2).toByte()
 
+/** Handles the state of NVM execution and reacts to [ExecutionCallback] events. */
 class NVMState(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) : ExecutionCallback {
     private val threads = scenario.threads
 
@@ -40,46 +42,50 @@ class NVMState(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) :
     internal val probability = Probability(scenario, recoverModel, this)
 
     @Volatile
-    private var state = INIT
+    private var currentState = INIT
 
+    /** Crashes are enabled only in the parallel part. */
     @Volatile
     internal var crashesEnabled = false
 
-    private val _crashes = Array(threads) { mutableListOf<CrashError>() }
+    private val occurredCrashes = Array(threads) { mutableListOf<CrashError>() }
     private val crashResults = Collections.synchronizedList(mutableListOf<CrashResult>())
-    private val _crashesCount = atomic(0)
+    private val totalCrashes = atomic(0)
     private val maxCrashesPerThread = atomic(0)
+
+    /** The number of actors already executed in every parallel thread. */
     private val executedActors = IntArray(threads)
 
-    val crashesCount get() = _crashesCount.value
+    val crashesCount get() = totalCrashes.value
     val maxCrashesCountPerThread get() = maxCrashesPerThread.value
 
-    internal fun currentThreadId(): Int = when (state) {
+    internal fun currentThreadId(): Int = when (currentState) {
         INIT -> 0
         PARALLEL -> Thread.currentThread().let {
             if (it is FixedActiveThreadsExecutor.TestThread) return@let it.iThread + 1
             throw InvalidThreadIdStateError("State is PARALLEL but thread is not test thread.")
         }
         POST -> threads + 1
-        else -> throw AssertionError("Invalid state $state")
+        else -> throw AssertionError("Invalid state $currentState")
     }
 
     internal fun registerCrash(threadId: Int, crash: CrashError) {
         crash.actorIndex = executedActors[threadId - 1]
-        _crashes[threadId - 1].add(crash)
-        _crashesCount.incrementAndGet()
-        val myThreadCrashes = _crashes[threadId - 1].size
-        while (true) {
+        occurredCrashes[threadId - 1].add(crash)
+        totalCrashes.incrementAndGet()
+        // update maximum value
+        val myThreadCrashes = occurredCrashes[threadId - 1].size
+        do {
             val curMax = maxCrashesPerThread.value
             if (curMax >= myThreadCrashes) break
-            if (maxCrashesPerThread.compareAndSet(curMax, myThreadCrashes)) break
-        }
+        } while (!maxCrashesPerThread.compareAndSet(curMax, myThreadCrashes))
     }
 
     internal fun registerCrashResult(crashResult: CrashResult) {
         crashResults.add(crashResult)
     }
 
+    /** Set actors' state to the crash results that were previously added by [registerCrashResult]. */
     internal fun setCrashedActors() {
         for (result in crashResults) {
             result.crashedActors = executedActors.copyOf(threads)
@@ -87,50 +93,54 @@ class NVMState(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) :
         crashResults.clear()
     }
 
-    override fun getCrashes() = _crashes.toList()
-
-    override fun onFinish(threadId: Int) {
-        // mark thread as finished
-        executedActors[threadId]++
-        crash.exitThread()
-    }
-
-    override fun onStart(threadId: Int) {
-        crash.registerThread()
-    }
+    override fun getCrashes() = occurredCrashes.toList()
 
     override fun beforeInit(recoverModel: RecoverabilityModel) {
-        _crashesCount.value = 0
-        maxCrashesPerThread.value = 0
-        _crashes.indices.forEach { _crashes[it] = mutableListOf() }
+        // reset all services
         cache.clear()
-        probability.setNewInvocation(recoverModel)
         crash.reset()
+        probability.setNewInvocation(recoverModel)
+
+        // reset internal state
+        totalCrashes.value = 0
+        maxCrashesPerThread.value = 0
+        occurredCrashes.indices.forEach { occurredCrashes[it] = mutableListOf() }
         crashResults.clear()
         executedActors.fill(-1)
-        state = INIT
-        crash.registerThread()
+
+        // start new invocation
+        currentState = INIT
+        crash.registerThread() // init thread started
         crashesEnabled = false
     }
 
     override fun beforeParallel() {
-        crash.exitThread()
-        state = PARALLEL
+        crash.exitThread() // init thread finished
+        currentState = PARALLEL
         crashesEnabled = true
     }
 
-    override fun beforePost() {
-        crashesEnabled = false
-        state = POST
-        crash.registerThread()
-    }
-
-    override fun afterPost() {
-        crash.exitThread()
+    override fun onStart(threadId: Int) {
+        crash.registerThread() // parallel thread started
     }
 
     override fun onActorStart(threadId: Int) {
         executedActors[threadId]++
+    }
+
+    override fun onFinish(threadId: Int) {
+        executedActors[threadId]++ // the last actor finished
+        crash.exitThread() // parallel thread finished
+    }
+
+    override fun beforePost() {
+        currentState = POST
+        crash.registerThread() // post thread started
+        crashesEnabled = false
+    }
+
+    override fun afterPost() {
+        crash.exitThread() // post thread finished
     }
 
     override fun onEnterActorBody(threadId: Int, actorId: Int) = probability.onEnterActorBody(threadId + 1, actorId)

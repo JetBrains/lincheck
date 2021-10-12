@@ -29,6 +29,14 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
+/**
+ * Adding crashes in model checking mode.
+ *
+ * Crashes are added before return statements.
+ * A switch and a crash are added before a flush operation as they change the NVM state.
+ *
+ * @see SwitchesAndCrashesModelCheckingStrategy
+ */
 internal class CrashesManagedStrategyTransformer(
     cv: ClassVisitor?,
     tracePointConstructors: MutableList<TracePointConstructor>,

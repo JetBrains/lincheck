@@ -28,6 +28,10 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
+/**
+ * This transformer checks if crashes for a class/method are enabled.
+ * @see CrashFree
+ */
 internal open class CrashEnabledVisitor(cv: ClassVisitor, initial: Boolean = true) :
     ClassVisitor(ASM_API, cv) {
     var shouldTransform = initial
@@ -62,6 +66,7 @@ internal open class CrashEnabledVisitor(cv: ClassVisitor, initial: Boolean = tru
     }
 }
 
+/** Insert crashes in stress testing mode. */
 internal class CrashTransformer(cv: ClassVisitor) : CrashEnabledVisitor(cv) {
     override fun visitMethod(
         access: Int,
@@ -76,15 +81,10 @@ internal class CrashTransformer(cv: ClassVisitor) : CrashEnabledVisitor(cv) {
     }
 }
 
-private val storeInstructions = Opcodes.IASTORE..Opcodes.SASTORE
-private val returnInstructions = Opcodes.IRETURN..Opcodes.RETURN
-
-private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
-private val THROWABLE_TYPE = Type.getType(Throwable::class.java)
-private val NVM_STATE_HOLDER_TYPE = Type.getType(NVMStateHolder::class.java)
-private val POSSIBLY_CRASH_METHOD = Method.getMethod(NVMStateHolder::possiblyCrash.javaMethod)
-private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)
-
+/**
+ * Add crashes to a method.
+ * Crashes are inserted before return instructions, writes to fields and nvm primitives operations.
+ */
 private class CrashMethodTransformer(
     private val adapter: GeneratorAdapter,
     private val className: String?,
@@ -146,7 +146,7 @@ private class CrashMethodTransformer(
     }
 }
 
-
+/** This transformer does not let user code to catch [CrashError] exception (even as [Throwable]) and handle it. */
 internal class CrashRethrowTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
     override fun visitMethod(
         access: Int,
@@ -183,3 +183,12 @@ internal class CrashRethrowTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API,
         }
     }
 }
+
+private val storeInstructions = Opcodes.IASTORE..Opcodes.SASTORE
+private val returnInstructions = Opcodes.IRETURN..Opcodes.RETURN
+
+private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
+private val THROWABLE_TYPE = Type.getType(Throwable::class.java)
+private val NVM_STATE_HOLDER_TYPE = Type.getType(NVMStateHolder::class.java)
+private val POSSIBLY_CRASH_METHOD = Method.getMethod(NVMStateHolder::possiblyCrash.javaMethod)
+private val CRASH_FREE_TYPE = Type.getDescriptor(CrashFree::class.java)

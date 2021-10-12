@@ -156,19 +156,37 @@ enum class Recover {
     }
 }
 
+/**
+ * This interface defined the execution details of a model.
+ */
 interface RecoverabilityModel {
     val crashes: Boolean
 
     fun needsTransformation(): Boolean
     fun createTransformer(cv: ClassVisitor, clazz: Class<*>): ClassVisitor
+
+    /**
+     * Returns a transformer that must come before any other.
+     * @see SwitchesAndCrashesModelCheckingStrategy
+     */
     fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = cv
+
+    /** Create a transformer to process crashes in the [TestThreadExecutionGenerator]. */
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
+
+    /** Defines system-wide crash probability in case of crash happens. Must be 1.0 for only system crash models. */
     fun systemCrashProbability(): Double
     fun defaultExpectedCrashes(): Int
     fun getExecutionCallback(): ExecutionCallback
     fun createProbabilityModel(statistics: Statistics, maxCrashes: Int): ProbabilityModel
+
+    /** Check that the [testClass] meets the requirements of the model. */
     fun checkTestClass(testClass: Class<*>) {}
+
+    /** A flag whether waiting for all threads to crash must be before throwing a [CrashError]. */
     val awaitSystemCrashBeforeThrow: Boolean
+
+    /** A verifier suitable for this model. */
     val verifierClass: Class<out Verifier>
 
     fun nonSystemCrashSupported() = systemCrashProbability() < 1.0
@@ -179,6 +197,7 @@ interface RecoverabilityModel {
     }
 }
 
+/** Default model with no special action. */
 internal object NoRecoverModel : RecoverabilityModel {
     override val crashes get() = false
     override fun needsTransformation() = false
@@ -193,6 +212,7 @@ internal object NoRecoverModel : RecoverabilityModel {
     override fun reset(loader: ClassLoader, scenario: ExecutionScenario) {}
 }
 
+/** The base model manages [NVMState] instance. */
 internal abstract class RecoverabilityModelImpl : RecoverabilityModel {
     private lateinit var state: NVMState
     override fun getExecutionCallback() = state
@@ -203,6 +223,7 @@ internal abstract class RecoverabilityModelImpl : RecoverabilityModel {
     }
 }
 
+/** NRL model description. */
 private class NRLModel(
     override val crashes: Boolean,
     private val strategyRecoveryOptions: StrategyRecoveryOptions
@@ -210,6 +231,8 @@ private class NRLModel(
     override fun createActorCrashHandlerGenerator() = ActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 0.1
     override fun defaultExpectedCrashes() = 10
+
+    /** A special NRL probability model is not yet implemented as in requires measuring statistics for recovery functions separately. */
     override fun createProbabilityModel(statistics: Statistics, maxCrashes: Int) = if (strategyRecoveryOptions.isStress())
         DetectableExecutionProbabilityModel(statistics, maxCrashes) else NoCrashesProbabilityModel(statistics, maxCrashes)
 
@@ -223,6 +246,7 @@ private class NRLModel(
         return result
     }
 
+    /** All operations in the test must be recoverable as they are entry points to the test. */
     override fun checkTestClass(testClass: Class<*>) {
         var clazz: Class<*>? = testClass
         while (clazz !== null) {
@@ -238,10 +262,13 @@ private class NRLModel(
     }
 }
 
+/** Durable model description. */
 private open class DurableModel(val strategyRecoveryOptions: StrategyRecoveryOptions) : RecoverabilityModelImpl() {
     override val crashes get() = true
     override fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator = DurableActorCrashHandlerGenerator()
     override fun systemCrashProbability() = 1.0
+
+    /** Maximum number of crashes it limited to 1 as [DurableLinearizabilityVerifier] becomes much slower in case of many crashes. */
     override fun defaultExpectedCrashes() = 1
     override fun createProbabilityModel(statistics: Statistics, maxCrashes: Int) = if (strategyRecoveryOptions.isStress())
         DurableProbabilityModel(statistics, maxCrashes) else NoCrashesProbabilityModel(statistics, maxCrashes)
@@ -253,6 +280,7 @@ private open class DurableModel(val strategyRecoveryOptions: StrategyRecoveryOpt
         strategyRecoveryOptions.createCrashTransformer(DurableOperationRecoverTransformer(cv, clazz))
 }
 
+/** Detectable execution model description. */
 private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecoveryOptions) :
     DurableModel(strategyRecoveryOptions) {
     override fun createActorCrashHandlerGenerator() = DetectableExecutionActorCrashHandlerGenerator()
@@ -263,6 +291,7 @@ private class DetectableExecutionModel(strategyRecoveryOptions: StrategyRecovery
     override val verifierClass get() = LinearizabilityVerifier::class.java
 }
 
+/** Buffered durable model description. */
 private class BufferedDurableModel(strategyRecoveryOptions: StrategyRecoveryOptions) :
     DurableModel(strategyRecoveryOptions) {
     override val verifierClass get() = BufferedDurableLinearizabilityVerifier::class.java

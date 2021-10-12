@@ -23,11 +23,18 @@ package org.jetbrains.kotlinx.lincheck.nvm
 import org.jetbrains.kotlinx.lincheck.CrashResult
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
 
+/**
+ * This utility class stores the current [NVMState] object. In order to run several tests in parallel,
+ * each iteration should use its own class loader so that the state is unique for each class loader and, therefore,
+ * for each iteration.
+ * @see org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
+ */
 internal object NVMStateHolder {
     @JvmField
     @Volatile
     var state: NVMState? = null
 
+    /** Initialize state with [_state]. */
     fun setState(loader: ClassLoader, _state: NVMState) {
         try {
             val clazz = loader.loadClass(NVMStateHolder::class.java.canonicalName)
