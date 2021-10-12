@@ -47,20 +47,20 @@ internal object NVMStateHolder {
     // auxiliary functions for byte code generation
 
     @JvmStatic
-    fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int) =
+    fun possiblyCrash(className: String?, fileName: String?, methodName: String?, lineNumber: Int): Unit =
         crash.possiblyCrash(className, fileName, methodName, lineNumber)
 
     @JvmStatic
-    fun awaitSystemCrash(execution: TestThreadExecution?) = crash.awaitSystemCrash(execution)
+    fun awaitSystemCrash(execution: TestThreadExecution?): Unit = crash.awaitSystemCrash(execution)
 
     @JvmStatic
-    fun isCrashed() = crash.isCrashed()
+    fun isCrashed(): Boolean = crash.isCrashed()
 
     @JvmStatic
-    fun resetAllCrashed() = crash.resetAllCrashed()
+    fun resetAllCrashed(): Unit = crash.resetAllCrashed()
 
     @JvmStatic
-    fun registerCrashResult(crashResult: CrashResult) = state!!.registerCrashResult(crashResult)
+    fun registerCrashResult(crashResult: CrashResult): Unit = state!!.registerCrashResult(crashResult)
 
     private val crash get() = state!!.crash
 }

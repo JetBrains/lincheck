@@ -20,8 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.nvm
 
-import org.jetbrains.kotlinx.lincheck.CrashResult
 import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.createCrashResult
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator
 import org.objectweb.asm.Label
@@ -32,10 +32,10 @@ import org.objectweb.asm.commons.Method
 import kotlin.reflect.jvm.javaMethod
 
 private val CRASH_ERROR_TYPE = Type.getType(CrashError::class.java)
-private val CRASH_RESULT_TYPE = Type.getType(CrashResult::class.java)
-private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method("createCrashResult", CRASH_RESULT_TYPE, emptyArray())
+private val RESULT_KT_CREATE_CRASH_RESULT_METHOD = Method.getMethod(::createCrashResult.javaMethod)
 private val NVM_STATE_HOLDER_TYPE = Type.getType(NVMStateHolder::class.java)
 private val AWAIT_SYSTEM_CRASH_METHOD = Method.getMethod(NVMStateHolder::awaitSystemCrash.javaMethod)
+private val REGISTER_CRASH_RESULT_METHOD = Method.getMethod(NVMStateHolder::registerCrashResult.javaMethod)
 private val SET_USE_CLOCKS = Method.getMethod(TestThreadExecution::forceUseClocksOnce.javaMethod)
 private val TEST_THREAD_EXECUTION_TYPE = Type.getType(TestThreadExecution::class.java)
 private val RESULT_TYPE = Type.getType(Result::class.java)
@@ -70,28 +70,31 @@ internal class DurableActorCrashHandlerGenerator : ActorCrashHandlerGenerator() 
         storeExceptionResultFromCrash(mv, resLocal, iLocal, nextLabel)
     }
 
-    private fun storeExceptionResultFromCrash(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label) {
-        mv.pop()
+    private fun storeExceptionResultFromCrash(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, skip: Label): Unit = mv.run {
+        pop()
 
-        mv.loadLocal(resLocal)
-        mv.loadLocal(iLocal)
+        loadLocal(resLocal)
+        loadLocal(iLocal)
 
         // Create crash result instance
-        mv.invokeStatic(TestThreadExecutionGenerator.RESULT_KT_TYPE, RESULT_KT_CREATE_CRASH_RESULT_METHOD)
-        mv.checkCast(RESULT_TYPE)
-        mv.arrayStore(RESULT_TYPE)
+        invokeStatic(TestThreadExecutionGenerator.RESULT_KT_TYPE, RESULT_KT_CREATE_CRASH_RESULT_METHOD)
+        // Register crash result
+        dup()
+        invokeStatic(NVM_STATE_HOLDER_TYPE, REGISTER_CRASH_RESULT_METHOD)
+        checkCast(RESULT_TYPE)
+        arrayStore(RESULT_TYPE)
 
         // Increment number of current operation
-        mv.iinc(iLocal, 1)
+        iinc(iLocal, 1)
 
         // force read clocks for next actor
-        mv.loadThis()
-        mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, SET_USE_CLOCKS)
+        loadThis()
+        invokeVirtual(TEST_THREAD_EXECUTION_TYPE, SET_USE_CLOCKS)
 
-        mv.loadThis()
-        mv.invokeStatic(NVM_STATE_HOLDER_TYPE, AWAIT_SYSTEM_CRASH_METHOD)
+        loadThis()
+        invokeStatic(NVM_STATE_HOLDER_TYPE, AWAIT_SYSTEM_CRASH_METHOD)
 
-        mv.goTo(skip)
+        goTo(skip)
     }
 }
 
@@ -112,13 +115,15 @@ internal class DetectableExecutionActorCrashHandlerGenerator : ActorCrashHandler
 
     override fun addCrashCatchBlock(mv: GeneratorAdapter, resLocal: Int, iLocal: Int, nextLabel: Label) {
         super.addCrashCatchBlock(mv, resLocal, iLocal, nextLabel)
-        val afterActor = mv.newLabel()
-        mv.goTo(afterActor)
-        mv.visitLabel(handlerLabel)
-        mv.pop()
-        mv.visitInsn(Opcodes.ACONST_NULL)
-        mv.invokeStatic(NVM_STATE_HOLDER_TYPE, AWAIT_SYSTEM_CRASH_METHOD)
-        mv.goTo(startLabel)
-        mv.visitLabel(afterActor)
+        mv.run {
+            val afterActor = newLabel()
+            goTo(afterActor)
+            visitLabel(handlerLabel)
+            pop()
+            visitInsn(Opcodes.ACONST_NULL)
+            invokeStatic(NVM_STATE_HOLDER_TYPE, AWAIT_SYSTEM_CRASH_METHOD)
+            goTo(startLabel)
+            visitLabel(afterActor)
+        }
     }
 }

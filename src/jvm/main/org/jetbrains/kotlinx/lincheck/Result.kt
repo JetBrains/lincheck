@@ -158,8 +158,4 @@ class CrashResult : Result() {
 
 // for byte-code generation
 @JvmSynthetic
-fun createCrashResult(): CrashResult {
-    val result = CrashResult()
-    NVMStateHolder.state!!.registerCrashResult(result)
-    return result
-}
+fun createCrashResult() = CrashResult()
