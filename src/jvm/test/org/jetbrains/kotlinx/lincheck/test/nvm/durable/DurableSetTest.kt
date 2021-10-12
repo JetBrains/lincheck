@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.verifier.durable
+package org.jetbrains.kotlinx.lincheck.test.nvm.durable
 
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -27,8 +27,8 @@ import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
-import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckTest
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import java.util.concurrent.ConcurrentLinkedDeque
 import kotlin.reflect.KClass

@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
+package org.jetbrains.kotlinx.lincheck.test.nvm.distribution
 
 import org.apache.commons.math3.analysis.solvers.LaguerreSolver
 import org.jetbrains.kotlinx.lincheck.BinarySearchSolver

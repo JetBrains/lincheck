@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.verifier.nrl
+package org.jetbrains.kotlinx.lincheck.test.nvm.nrl
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -30,6 +30,8 @@ import org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialCounter
 
 private const val THREADS = 3

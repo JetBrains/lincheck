@@ -39,8 +39,10 @@ class SmartSetTest {
 
     @Operation
     fun add(value: Int) = set.add(value)
+
     @Operation
     fun remove(value: Int) = set.remove(value)
+
     @Operation
     fun size() = set.size
 

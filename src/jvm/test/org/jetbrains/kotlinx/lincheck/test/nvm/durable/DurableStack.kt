@@ -18,13 +18,13 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.verifier.durable
+package org.jetbrains.kotlinx.lincheck.test.nvm.durable
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
-import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
-import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckTest
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
 private const val THREADS = 3
@@ -42,7 +42,10 @@ internal class DurableStackTest : AbstractNVMLincheckTest(Recover.DURABLE, THREA
 internal class SequentialStack : VerifierState() {
     private val stack = ArrayList<Int>()
 
-    fun push(v: Int) { stack.add(v) }
+    fun push(v: Int) {
+        stack.add(v)
+    }
+
     fun pop(): Int? = stack.removeLastOrNull()
 
     override fun extractState() = stack

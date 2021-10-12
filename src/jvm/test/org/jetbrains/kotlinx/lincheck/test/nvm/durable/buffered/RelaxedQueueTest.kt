@@ -17,7 +17,7 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-package org.jetbrains.kotlinx.lincheck.test.verifier.durable.buffered
+package org.jetbrains.kotlinx.lincheck.test.nvm.durable.buffered
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
@@ -31,9 +31,9 @@ import org.jetbrains.kotlinx.lincheck.nvm.api.NonVolatileRef
 import org.jetbrains.kotlinx.lincheck.nvm.api.nonVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckFailingTest
+import org.jetbrains.kotlinx.lincheck.test.nvm.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SequentialQueue
-import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckFailingTest
-import org.jetbrains.kotlinx.lincheck.test.verifier.nrl.AbstractNVMLincheckTest
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.BufferedDurableLinearizabilityVerifier
 import org.junit.Assert
 import org.junit.Test
@@ -159,7 +159,7 @@ internal class RelaxedQueueTest : AbstractNVMLincheckTest(Recover.BUFFERED_DURAB
         val scenario = scenario {
             initial { actor(::push, -7); actor(::sync); actor(::pop); actor(::push, 3) }
             parallel {
-                thread { actor(::pop);  }
+                thread { actor(::pop); }
                 thread { actor(::pop); }
                 thread { actor(::push, -4); }
             }

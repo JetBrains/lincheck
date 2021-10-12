@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.transformation.crash.distribution
+package org.jetbrains.kotlinx.lincheck.test.nvm.distribution
 
 import kotlin.random.Random
 
@@ -91,7 +91,7 @@ internal class DetectableExecutionEmulator(
     private val statistics: StatisticsModel,
     private val model: CrashProbabilityModel,
     private val random: Random,
-): IExecutionEmulator {
+) : IExecutionEmulator {
     private val actors get() = statistics.actorLengths
 
     override fun emulate(
