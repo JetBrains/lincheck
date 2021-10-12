@@ -19,7 +19,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.paramgen
 
-/** This parameter generator provides a unique id for every operation in scenario */
+/** This parameter generator provides a unique id for every operation in scenario. */
 class OperationIdGen(configuration: String) : ParameterGenerator<Int> {
     override fun generate(): Int {
         throw NotImplementedError()

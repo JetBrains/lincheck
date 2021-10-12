@@ -142,6 +142,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun IncorrectResultsFailure.crashesNumber() = results.crashes.sumBy { it.size }
 
+    /**
+     * Run the scenario at most [testCfg.iterations] times with maximum crashes allowed decreased to minimize the number of crashes.
+     */
     private fun ExecutionScenario.minimizeCrashes(testCfg: CTestConfiguration, failure: IncorrectResultsFailure): LincheckFailure? {
         var scenario = this
         var crashes = failure.crashesNumber()
@@ -236,9 +239,13 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             LinChecker(testClass, options).check()
         }
 
-
+        /** A test-local setting of the maximum number of crashes allowed. */
         internal val crashesMinimization = ThreadLocal.withInitial<Int?> { null }
+
+        /** A test-local setting whether to use crash proxy. Proxy is not used during the minimization only. */
         internal val useProxyCrash = ThreadLocal.withInitial { true }
+
+        /** A test-local storage for the current iteration number. */
         internal val iterationId = ThreadLocal.withInitial { 0 }
     }
 }

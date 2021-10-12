@@ -43,6 +43,7 @@ data class Actor @JvmOverloads constructor(
     // we have to specify `isSuspendable` property explicitly for transformed classes since
     // `isSuspendable` implementation produces a circular dependency and, therefore, fails.
     val isSuspendable: Boolean = method.isSuspendable(),
+    // save the indices of ThreadId params to replace them later in copyWithThreadId
     val threadIdArgsIndices: List<Int> = emptyList()
 ) {
     init {
@@ -59,6 +60,7 @@ data class Actor @JvmOverloads constructor(
 
     val handlesExceptions = handledExceptions.isNotEmpty()
 
+    /** Returns the copy of this actor with all ThreadId params are set to [threadId]. */
     fun copyWithThreadId(threadId: Int): Actor = copy(arguments = List(arguments.size) { i ->
         if (i in threadIdArgsIndices) threadId else arguments[i]
     })
