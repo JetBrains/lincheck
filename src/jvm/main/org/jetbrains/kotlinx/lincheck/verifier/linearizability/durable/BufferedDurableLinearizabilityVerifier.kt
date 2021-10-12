@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.get
 import org.jetbrains.kotlinx.lincheck.verifier.AbstractLTSVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.ContextsList
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.AbstractLinearizabilityContext
@@ -61,19 +62,19 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
         this.waitingThreadsToCrash = waitingThreadsToCrash
     }
 
-    override fun createContainer(): AbstractLinearizabilityContext.Container = Container()
-
-    override fun processResult(container: AbstractLinearizabilityContext.Container, threadId: Int) {
+    override fun processResult(nextContexts: ContextsList, threadId: Int): ContextsList {
+        var contexts = nextContexts
         val actorId = executed[threadId]
         val result = results[threadId][actorId]
         if (result is CrashResult || (waitingThreadsToCrash > 0 && !scenario[threadId][actorId].isSync())) {
-            val context = container.filterIsInstance<BufferedDurableLinearizabilityContext>().firstOrNull { it.waitingThreadsToCrash == 0 }
+            val context = nextContexts.firstOrNull { it is BufferedDurableLinearizabilityContext && it.waitingThreadsToCrash == 0 } as BufferedDurableLinearizabilityContext?
             if (context !== null) {
                 for (q in persisted) {
-                    container.addContext(BufferedDurableLinearizabilityContext(scenario, results, q, context.executed, suspended, tickets, listOf(q), 0))
+                    contexts += BufferedDurableLinearizabilityContext(scenario, results, q, context.executed, suspended, tickets, listOf(q), 0)
                 }
             }
         }
+        return contexts
     }
 
     override fun createContext(
@@ -97,14 +98,6 @@ private class BufferedDurableLinearizabilityContext : AbstractLinearizabilityCon
         val isSystemCrash = newWaiting == 0 && (result is CrashResult || waitingThreadsToCrash > 0)
         val newPersisted = if (isSync || isSystemCrash) listOf(state) else persisted.plus(state)
         return BufferedDurableLinearizabilityContext(scenario, results, state, executed, suspended, tickets, newPersisted, newWaiting)
-    }
-
-    private class Container : AbstractLinearizabilityContext.Container {
-        private val data = mutableListOf<VerifierContext>()
-        override fun iterator(): Iterator<VerifierContext> = data.iterator()
-        override fun addContext(context: VerifierContext) {
-            data.add(context)
-        }
     }
 }
 

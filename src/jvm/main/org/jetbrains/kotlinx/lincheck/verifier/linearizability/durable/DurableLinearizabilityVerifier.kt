@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.get
 import org.jetbrains.kotlinx.lincheck.verifier.AbstractLTSVerifier
+import org.jetbrains.kotlinx.lincheck.verifier.ContextsList
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.AbstractLinearizabilityContext
@@ -49,13 +50,13 @@ private class DurableLinearizabilityContext : AbstractLinearizabilityContext {
         tickets: IntArray
     ) : super(scenario, results, state, executed, suspended, tickets)
 
-    override fun createContainer(): AbstractLinearizabilityContext.Container = Container()
-    override fun processResult(container: AbstractLinearizabilityContext.Container, threadId: Int) {
+    override fun processResult(nextContexts: ContextsList, threadId: Int): ContextsList {
         val actorId = executed[threadId]
         val expectedResult = results[threadId][actorId]
         if (expectedResult is CrashResult) {
-            container.addContext(skipOperation(threadId))
+            return nextContexts + skipOperation(threadId)
         }
+        return nextContexts
     }
 
     override fun createContext(
@@ -79,35 +80,5 @@ private class DurableLinearizabilityContext : AbstractLinearizabilityContext {
             suspended = suspended,
             tickets = tickets
         )
-    }
-
-    private class Container : AbstractLinearizabilityContext.Container {
-        private var context1: VerifierContext? = null
-        private var context2: VerifierContext? = null
-
-        override fun addContext(context: VerifierContext) {
-            if (context1 == null) {
-                context1 = context
-            } else if (context2 == null) {
-                context2 = context
-            } else {
-                error("Container size exceeded")
-            }
-        }
-
-        override fun iterator() = object : Iterator<VerifierContext> {
-            override fun hasNext() = context1 !== null || context2 !== null
-            override fun next(): VerifierContext {
-                context1?.let {
-                    context1 = null
-                    return it
-                }
-                context2?.let {
-                    context2 = null
-                    return it
-                }
-                error("Container size exceeded")
-            }
-        }
     }
 }

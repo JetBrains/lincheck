@@ -45,7 +45,7 @@ abstract class AbstractLTSVerifier(protected val sequentialSpecification: Class<
         // Traverse through next possible transitions using depth-first search (DFS). Note that
         // initial and post parts are represented as threads with ids `0` and `threads + 1` respectively.
         for (threadId in threads) {
-            for (nextContext in nextContext(threadId)) {
+            nextContext(threadId).forEach { nextContext ->
                 if (nextContext.verify()) return true
             }
         }
@@ -93,7 +93,7 @@ abstract class VerifierContext(
     /**
      * Counts next possible states and the corresponding contexts if the specified thread is executed.
      */
-    abstract fun nextContext(threadId: Int): ContextContainer
+    internal abstract fun nextContext(threadId: Int): ContextsList
 
     /**
      * Returns `true` if all actors in the specified thread are executed.
@@ -136,17 +136,38 @@ abstract class VerifierContext(
     private val completedThreads: Int get() = completedThreads(threads)
 }
 
-interface ContextContainer : Iterable<VerifierContext> {
-    companion object {
-        val EMPTY = object : ContextContainer {
-            override fun iterator() = object : Iterator<VerifierContext> {
-                override fun hasNext() = false
-                override fun next(): VerifierContext {
-                    error("Container size exceeded")
-                }
 
-            }
 
+@Suppress("UNCHECKED_CAST")
+internal inline class ContextsList(private val holder: Any? = null) {
+    operator fun plus(context: VerifierContext): ContextsList = when (holder) {
+        null -> ContextsList(context)
+        is VerifierContext -> ContextsList(holder to context)
+        is Pair<*, *> -> ContextsList(mutableListOf(holder.first as VerifierContext, holder.second as VerifierContext, context))
+        else -> {
+            (holder as MutableList<VerifierContext>).add(context)
+            this
         }
     }
+
+    inline fun forEach(action: (VerifierContext) -> Unit) {
+        when (holder) {
+            null -> {}
+            is VerifierContext -> action(holder)
+            is Pair<*, *> -> {
+                action(holder.first as VerifierContext)
+                action(holder.second as VerifierContext)
+            }
+            else -> (holder as List<VerifierContext>).forEach(action)
+        }
+    }
+
+    inline fun firstOrNull(predicate: (VerifierContext) -> Boolean): VerifierContext? {
+        forEach { context ->
+            if (predicate(context)) return context
+        }
+        return null
+    }
 }
+
+internal fun emptyContextsList() = ContextsList()

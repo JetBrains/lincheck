@@ -34,15 +34,14 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
         executed: IntArray, suspended: BooleanArray, tickets: IntArray
     ) : super(scenario, results, state, executed, suspended, tickets)
 
-    abstract fun createContainer(): Container
-    abstract fun processResult(container: Container, threadId: Int)
+    internal abstract fun processResult(nextContexts: ContextsList, threadId: Int): ContextsList
     abstract fun createContext(
         threadId: Int, scenario: ExecutionScenario, results: ExecutionResult,
         state: LTS.State, executed: IntArray, suspended: BooleanArray, tickets: IntArray
     ): VerifierContext
 
-    override fun nextContext(threadId: Int): ContextContainer {
-        if (isCompleted(threadId)) return ContextContainer.EMPTY
+    override fun nextContext(threadId: Int): ContextsList {
+        if (isCompleted(threadId)) return emptyContextsList()
         // Check whether an actorWithToken from the specified thread can be executed
         // in accordance with the rule that all actors from init part should be
         // executed at first, after that all actors from parallel part, and
@@ -52,7 +51,7 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
             in 1..scenario.threads -> isCompleted(0) && hblegal(threadId) // PARALLEL
             else -> initCompleted && parallelCompleted // POST
         }
-        if (!legal) return ContextContainer.EMPTY
+        if (!legal) return emptyContextsList()
         val actorId = executed[threadId]
         val actor = scenario[threadId][actorId]
         val expectedResult = results[threadId][actorId]
@@ -61,21 +60,18 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
         val promptCancel = actor.promptCancellation && ticket != NO_TICKET && expectedResult === Cancelled
         if (suspended[threadId] || promptCancel) {
             return if (actor.cancelOnSuspension && expectedResult === Cancelled)
-                createContainer().also { container ->
-                    container.addContext(state.nextByCancellation(actor, ticket).createContext(threadId))
-                }
-            else ContextContainer.EMPTY
+                ContextsList(state.nextByCancellation(actor, ticket).createContext(threadId))
+            else emptyContextsList()
         }
-        val container = createContainer()
+        var nextContexts = ContextsList()
 
         // Try to make a transition by the next actor from the current thread,
         // passing the ticket corresponding to the current thread.
         val nextContext = state.next(actor, expectedResult, tickets[threadId])?.createContext(threadId)
         if (nextContext !== null) {
-            container.addContext(nextContext)
+            nextContexts += nextContext
         }
-        processResult(container, threadId)
-        return container
+        return processResult(nextContexts, threadId)
     }
 
     // checks whether the transition does not violate the happens-before relation constructed on the clocks
@@ -118,9 +114,5 @@ abstract class AbstractLinearizabilityContext : VerifierContext {
             suspended = nextSuspended,
             tickets = nextTickets
         )
-    }
-
-    interface Container : ContextContainer {
-        fun addContext(context: VerifierContext)
     }
 }

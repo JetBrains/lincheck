@@ -48,9 +48,7 @@ private class LinearizabilityContext : AbstractLinearizabilityContext {
         executed: IntArray, suspended: BooleanArray, tickets: IntArray
     ) : super(scenario, results, state, executed, suspended, tickets)
 
-    override fun createContainer(): AbstractLinearizabilityContext.Container = Container()
-    override fun processResult(container: AbstractLinearizabilityContext.Container, threadId: Int) {
-    }
+    override fun processResult(nextContexts: ContextsList, threadId: Int) = nextContexts
 
     override fun createContext(
         threadId: Int,
@@ -61,24 +59,4 @@ private class LinearizabilityContext : AbstractLinearizabilityContext {
         suspended: BooleanArray,
         tickets: IntArray
     ) = LinearizabilityContext(scenario, results, state, executed, suspended, tickets)
-
-    private class Container : AbstractLinearizabilityContext.Container {
-        private var context: VerifierContext? = null
-        override fun addContext(context: VerifierContext) {
-            check(this.context === null) { "Container size exceeded" }
-            this.context = context
-        }
-
-        override fun iterator() = object : Iterator<VerifierContext> {
-            override fun hasNext() = context != null
-            override fun next(): VerifierContext {
-                val tmp = context
-                check(tmp != null) { "Container size exceeded" }
-                context = null
-                return tmp
-            }
-        }
-    }
-
-
 }
