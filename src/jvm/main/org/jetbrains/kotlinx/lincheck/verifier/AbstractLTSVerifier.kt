@@ -136,38 +136,38 @@ abstract class VerifierContext(
     private val completedThreads: Int get() = completedThreads(threads)
 }
 
+internal typealias ContextsList = InlineList<VerifierContext>
 
+internal fun emptyContextsList() = ContextsList()
 
+/**
+ * This is a list optimized to store and iterate 0, 1 or 2 elements.
+ */
 @Suppress("UNCHECKED_CAST")
-internal inline class ContextsList(private val holder: Any? = null) {
-    operator fun plus(context: VerifierContext): ContextsList = when (holder) {
-        null -> ContextsList(context)
-        is VerifierContext -> ContextsList(holder to context)
-        is Pair<*, *> -> ContextsList(mutableListOf(holder.first as VerifierContext, holder.second as VerifierContext, context))
-        else -> {
-            (holder as MutableList<VerifierContext>).add(context)
-            this
-        }
+internal inline class InlineList<E>(private val holder: Any? = null) {
+    operator fun plus(e: E): InlineList<E> = when (holder) {
+        null -> InlineList(e)
+        is Pair<*, *> -> InlineList(mutableListOf(holder.first, holder.second, e))
+        is List<*> -> this.also { (holder as MutableList<E>).add(e) }
+        else -> InlineList(holder to e)
     }
 
-    inline fun forEach(action: (VerifierContext) -> Unit) {
+    inline fun forEach(action: (E) -> Unit) {
         when (holder) {
             null -> {}
-            is VerifierContext -> action(holder)
             is Pair<*, *> -> {
-                action(holder.first as VerifierContext)
-                action(holder.second as VerifierContext)
+                action(holder.first as E)
+                action(holder.second as E)
             }
-            else -> (holder as List<VerifierContext>).forEach(action)
+            is List<*> -> (holder as List<E>).forEach(action)
+            else -> action(holder as E)
         }
     }
 
-    inline fun firstOrNull(predicate: (VerifierContext) -> Boolean): VerifierContext? {
-        forEach { context ->
-            if (predicate(context)) return context
+    inline fun firstOrNull(predicate: (E) -> Boolean): E? {
+        forEach { e ->
+            if (predicate(e)) return e
         }
         return null
     }
 }
-
-internal fun emptyContextsList() = ContextsList()
