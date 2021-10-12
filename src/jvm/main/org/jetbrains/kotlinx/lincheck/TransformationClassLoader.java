@@ -22,6 +22,8 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import kotlin.io.ByteStreamsKt;
+import org.jetbrains.kotlinx.lincheck.nvm.NVMStateHolder;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
@@ -80,8 +82,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                    !className.startsWith("kotlin.ranges.") // transform kotlin ranges
                ) ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                   !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                   !className.equals(ManagedStrategyStateHolder.class.getName())
+                   !className.startsWith("org.jetbrains.kotlinx.lincheck.test.")
                ) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||
@@ -94,6 +95,17 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     boolean shouldBeTransformed(Class<?> clazz) {
         return !doNotTransform(remapClassName(clazz.getName()));
+    }
+
+    /**
+     * Returns `true`  is the specified class should be reloaded with this class loader.
+     *
+     * @see ManagedStrategyStateHolder
+     * @see NVMStateHolder
+     */
+    private boolean shouldBeReloaded(String className) {
+        return className.equals(ManagedStrategyStateHolder.class.getName()) ||
+            className.equals(NVMStateHolder.class.getName());
     }
 
     /**
@@ -114,6 +126,17 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             Class<?> result = cache.get(name);
             if (result != null) {
                 return result;
+            }
+            if (shouldBeReloaded(name)) {
+                try (InputStream is = getResourceAsStream(originalName(name).replace('.', '/') + ".class")) {
+                    if (is == null) throw new IllegalStateException("Cannot find class to reload " + name);
+                    byte[] bytes = ByteStreamsKt.readBytes(is);
+                    result = defineClass(name, bytes, 0, bytes.length);
+                    cache.put(name, result);
+                    return result;
+                } catch (IOException e) {
+                    throw new IllegalStateException("Cannot reload class " + name, e);
+                }
             }
             if (doNotTransform(name)) {
                 result = super.loadClass(name);

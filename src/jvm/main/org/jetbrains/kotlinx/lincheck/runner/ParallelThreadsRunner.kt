@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.nvm.ExecutionCallback
+import org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
 import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
@@ -355,7 +356,7 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun needsTransformation() = true
-    override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
+    override fun createTransformer(cv: ClassVisitor) = PrimitivesSetStateTransformer(CancellabilitySupportClassTransformer(cv))
 
     override fun constructStateRepresentation() =
         stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
