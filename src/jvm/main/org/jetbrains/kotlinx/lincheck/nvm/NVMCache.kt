@@ -24,16 +24,17 @@ package org.jetbrains.kotlinx.lincheck.nvm
 import org.jetbrains.kotlinx.lincheck.nvm.api.AbstractNonVolatilePrimitive
 
 /** Volatile cache of non-volatile memory emulation. */
-internal class NVMCache(threads: Int) {
+internal class NVMCache(private val state: NVMState, threads: Int) {
     private val cache = Array<SmartSet<AbstractNonVolatilePrimitive>?>(threads + 2) { null }
 
-    fun add(threadId: Int, variable: AbstractNonVolatilePrimitive) {
+    fun add(variable: AbstractNonVolatilePrimitive) {
+        val threadId = state.currentThreadId()
         val localCache = cache[threadId] ?: SmartSet<AbstractNonVolatilePrimitive>().also { cache[threadId] = it }
         localCache.add(variable)
     }
 
-    fun remove(threadId: Int, variable: AbstractNonVolatilePrimitive) {
-        val localCache = cache[threadId] ?: return
+    fun remove(variable: AbstractNonVolatilePrimitive) {
+        val localCache = cache[state.currentThreadId()] ?: return
         localCache.remove(variable)
     }
 

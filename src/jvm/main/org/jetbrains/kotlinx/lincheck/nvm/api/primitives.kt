@@ -49,8 +49,7 @@ abstract class AbstractNonVolatilePrimitive {
      */
     fun flush() {
         flushInternal()
-        val state = state()
-        state.cache.remove(state.currentThreadId(), this)
+        state().cache.remove(this)
     }
 
     /**
@@ -61,7 +60,7 @@ abstract class AbstractNonVolatilePrimitive {
         if (state.probability.shouldFlush()) {
             flushInternal()
         } else {
-            state.cache.add(state.currentThreadId(), this)
+            state.cache.add(this)
         }
     }
 

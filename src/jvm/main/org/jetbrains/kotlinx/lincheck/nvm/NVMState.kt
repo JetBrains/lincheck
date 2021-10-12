@@ -38,7 +38,7 @@ class NVMState(scenario: ExecutionScenario, recoverModel: RecoverabilityModel) :
     private val threads = scenario.threads
 
     internal val crash = Crash(this, recoverModel)
-    internal val cache = NVMCache(threads)
+    internal val cache = NVMCache(this, threads)
     internal val probability = Probability(scenario, recoverModel, this)
 
     @Volatile
