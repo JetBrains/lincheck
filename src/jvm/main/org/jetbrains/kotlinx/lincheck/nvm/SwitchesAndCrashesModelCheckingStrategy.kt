@@ -30,6 +30,12 @@ import org.objectweb.asm.ClassVisitor
 import java.lang.reflect.Method
 import kotlin.math.max
 
+/**
+ * Model checking strategy with both switches and crashes involved.
+ *
+ * Note that this strategy does not consider all possible random flush execution as there are too mush possible states.
+ * This is simplified to deterministic choice of a random seed, that is changed during the execution.
+ */
 internal class SwitchesAndCrashesModelCheckingStrategy(
     testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
@@ -86,6 +92,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         // continue the operation
     }
 
+    /** Switches are prohibited during a system crash. */
     override fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (waitingSystemCrash()) return
         super.newSwitchPoint(iThread, codeLocation, tracePoint)
@@ -109,6 +116,11 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         started[iThread] = true
     }
 
+    /**
+     * This method is a barrier in model checking mode.
+     * All the parallel threads except the initiator return the execution back to the initiator when achieving this method.
+     * The initiator iterates over the active threads and switches to them to make sure thet all the active threads accomplished a system crash.
+     */
     private fun forceSwitchToAwaitSystemCrash() {
         check(waitingSystemCrash())
         val iThread = currentThread
@@ -155,6 +167,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         }
     }
 
+    /** This node chooses between possible crash points. */
     private inner class CrashChoosingNode(private val isSystemCrash: Boolean) : InterleavingTreeNode() {
         override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {
             val isLeaf = maxNumberOfEvents == interleavingBuilder.numberOfEvents
@@ -172,6 +185,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         }
     }
 
+    /** This node choses whether to perform a switch or a crash (single-thread or system-wide). */
     private inner class SwitchOrCrashChoosingNode : InterleavingTreeNode() {
         init {
             choices = mutableListOf<Choice>().apply {
@@ -193,9 +207,12 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
 
     private fun createCrashChoosingNode(isSystemCrash: Boolean): InterleavingTreeNode = FlushRandomChoosingNode { CrashChoosingNode(isSystemCrash) }
 
+    /**
+     * This node is responsible for reseting the random seed. This is done to simulate different flush strategies.
+     */
     private inner class FlushRandomChoosingNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode() {
         init {
-            choices = List(RANDOM_SEEDS_BRANCHING) { Choice(createChild(), state?.probability?.generateSeed() ?: 0)  }
+            choices = List(RANDOM_SEEDS_BRANCHING) { Choice(createChild(), state?.probability?.generateSeed() ?: 0) }
         }
 
         override fun nextInterleaving(interleavingBuilder: SwitchesAndCrashesInterleavingBuilder): SwitchesAndCrashesInterleaving {
@@ -308,8 +325,10 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     }
 }
 
+/** A marker that no thread is initiating a ssystem crash now. */
 private const val NO_CRASH_INITIATOR = -1
 
+/** The number of different seeds to choose from after every crash. */
 private const val RANDOM_SEEDS_BRANCHING = 1
 
 private fun Boolean.toInt() = if (this) 1 else 0
