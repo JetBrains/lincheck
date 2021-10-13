@@ -22,9 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.nvm.api
 
 import kotlinx.atomicfu.atomic
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.nvm.NVMState
-import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
 
 
 /**
@@ -33,7 +31,7 @@ import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
  * A user may persist a value by calling [flush] method. Also, a value may be flushed randomly be a system.
  * While a system may reset an unpersisted value to the last persisted state in case of a crash.
  */
-abstract class AbstractNonVolatilePrimitive(private val state: NVMState) {
+abstract class AbstractNonVolatilePrimitive(private val state: NVMState?) {
     /**
      * Move value to a persisted storage, do not operate with a cache.
      * After a successful invocation of this method the value can be seen even after a crash.
@@ -51,6 +49,7 @@ abstract class AbstractNonVolatilePrimitive(private val state: NVMState) {
      */
     fun flush() {
         flushInternal()
+        if (state === null) return
         state.cache.remove(this)
     }
 
@@ -58,6 +57,7 @@ abstract class AbstractNonVolatilePrimitive(private val state: NVMState) {
      * Random flush may occur on write to NVM, so the value is flushed or added to the cache.
      */
     protected fun addToCache() {
+        if (state === null) return
         if (state.probability.shouldFlush()) {
             flushInternal()
         } else {
@@ -70,59 +70,56 @@ abstract class AbstractNonVolatilePrimitive(private val state: NVMState) {
  * Create non-volatile integer.
  * @param value initial value
  */
-fun nonVolatile(value: Int) = nonVolatile(value, STATE.get())
+fun nonVolatile(value: Int) = nonVolatile(value, null)
 
 /**
  * This is an actual constructor method that is used during the test.
  *
  * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
  */
-fun nonVolatile(value: Int, state: NVMState) = NonVolatileInt(value, state)
+fun nonVolatile(value: Int, state: NVMState?) = NonVolatileInt(value, state)
 
 /**
  * Create non-volatile long.
  * @param value initial value
  */
-fun nonVolatile(value: Long) = nonVolatile(value, STATE.get())
+fun nonVolatile(value: Long) = nonVolatile(value, null)
 
 /**
  * This is an actual constructor method that is used during the test.
  *
  * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
  */
-fun nonVolatile(value: Long, state: NVMState) = NonVolatileLong(value, state)
+fun nonVolatile(value: Long, state: NVMState?) = NonVolatileLong(value, state)
 
 /**
  * Create non-volatile boolean.
  * @param value initial value
  */
-fun nonVolatile(value: Boolean) = nonVolatile(value, STATE.get())
+fun nonVolatile(value: Boolean) = nonVolatile(value, null)
 
 /**
  * This is an actual constructor method that is used during the test.
  *
  * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
  */
-fun nonVolatile(value: Boolean, state: NVMState) = NonVolatileBoolean(value, state)
+fun nonVolatile(value: Boolean, state: NVMState?) = NonVolatileBoolean(value, state)
 
 /**
  * Create non-volatile reference.
  * @param value initial value
  */
-fun <T> nonVolatile(value: T) = nonVolatile(value, STATE.get())
+fun <T> nonVolatile(value: T) = nonVolatile(value, null)
 
 /**
  * This is an actual constructor method that is used during the test.
  *
  * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
  */
-fun <T> nonVolatile(value: T, state: NVMState) = NonVolatileRef(value, state)
-
-/** This state is used when running not from a Lincheck test. */
-private val STATE = ThreadLocal.withInitial { NVMState(ExecutionScenario(listOf(), listOf(), listOf()), NoRecoverModel) }
+fun <T> nonVolatile(value: T, state: NVMState?) = NonVolatileRef(value, state)
 
 /** Persistent reference emulates non-volatile memory variable with volatile cached value. */
-class NonVolatileRef<T> internal constructor(initialValue: T, state: NVMState) : AbstractNonVolatilePrimitive(state) {
+class NonVolatileRef<T> internal constructor(initialValue: T, state: NVMState?) : AbstractNonVolatilePrimitive(state) {
     /**
      * A persisted value. The value is stored here after a [flush] call.
      */
@@ -192,7 +189,7 @@ class NonVolatileRef<T> internal constructor(initialValue: T, state: NVMState) :
     }
 }
 
-class NonVolatileInt internal constructor(initialValue: Int, state: NVMState) : AbstractNonVolatilePrimitive(state) {
+class NonVolatileInt internal constructor(initialValue: Int, state: NVMState?) : AbstractNonVolatilePrimitive(state) {
     /**
      * A persisted value. The value is stored here after a [flush] call.
      */
@@ -293,7 +290,7 @@ class NonVolatileInt internal constructor(initialValue: Int, state: NVMState) : 
 }
 
 
-class NonVolatileLong internal constructor(initialValue: Long, state: NVMState) : AbstractNonVolatilePrimitive(state) {
+class NonVolatileLong internal constructor(initialValue: Long, state: NVMState?) : AbstractNonVolatilePrimitive(state) {
     /**
      * A persisted value. The value is stored here after a [flush] call.
      */
@@ -393,7 +390,7 @@ class NonVolatileLong internal constructor(initialValue: Long, state: NVMState) 
     }
 }
 
-class NonVolatileBoolean internal constructor(initialValue: Boolean, state: NVMState) : AbstractNonVolatilePrimitive(state) {
+class NonVolatileBoolean internal constructor(initialValue: Boolean, state: NVMState?) : AbstractNonVolatilePrimitive(state) {
     /**
      * A persisted value. The value is stored here after a [flush] call.
      */
