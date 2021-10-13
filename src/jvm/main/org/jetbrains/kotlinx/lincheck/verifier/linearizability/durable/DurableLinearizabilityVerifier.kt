@@ -30,6 +30,12 @@ import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.AbstractLinearizabilityContext
 
+/**
+ * Verifier for durable linearizability.
+ *
+ * This criterion requires all successfully operations to be linearizable, while the interrupted by a crash operations may be not linearizable.
+ * @see org.jetbrains.kotlinx.lincheck.nvm.Recover.DURABLE
+ */
 internal class DurableLinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVerifier(sequentialSpecification) {
     override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
 
@@ -50,6 +56,7 @@ private class DurableLinearizabilityContext : AbstractLinearizabilityContext {
         tickets: IntArray
     ) : super(scenario, results, state, executed, suspended, tickets)
 
+    /** If this operation has been crashed, it may be skipped. */
     override fun processResult(nextContexts: ContextsList, threadId: Int): ContextsList {
         val actorId = executed[threadId]
         val expectedResult = results[threadId][actorId]

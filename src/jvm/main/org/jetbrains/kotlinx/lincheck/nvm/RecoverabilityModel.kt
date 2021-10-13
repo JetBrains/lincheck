@@ -143,7 +143,7 @@ enum class Recover {
      * Buffered durable linearizability model.
      *
      * This is a durable linearizability relaxation. This model requires that only a prefix of successfully completed operations is linearizable.
-     * In practice this a sync method (annotated with special annotation) is used which guarantees that a data structure is persisted if this method completes successfully.
+     * In practice a sync method (annotated with special annotation) is used which guarantees that a data structure is persisted if this method completes successfully.
      * So buffered durable linearizability requires that all the operations before the last completed sync are linearizable.
      * @see  <a href="https://www.cs.rochester.edu/u/scott/papers/2016_DISC_persistence.pdf">Buffered Durable Linearizability</a>
      * @see org.jetbrains.kotlinx.lincheck.annotations.Sync

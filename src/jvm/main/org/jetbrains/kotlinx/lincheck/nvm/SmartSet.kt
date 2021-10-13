@@ -27,6 +27,7 @@ const val SIZE = 8
 /**
  * Set optimised for small number of elements.
  */
+@Suppress("UNCHECKED_CAST")
 internal class SmartSet<E> {
     var size = 0
         private set

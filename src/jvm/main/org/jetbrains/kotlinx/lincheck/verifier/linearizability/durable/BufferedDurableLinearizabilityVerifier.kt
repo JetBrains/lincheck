@@ -32,6 +32,14 @@ import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierContext
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.AbstractLinearizabilityContext
 
+/**
+ * Verifier for buffered durable linearizability.
+ *
+ * This criterion requires that only a prefix of successfully completed operations is linearizable.
+ * In practice a sync method is used which guarantees that a data structure is persisted if this method completes successfully.
+ * So buffered durable linearizability requires that all the operations before the last completed sync are linearizable.
+ * @see org.jetbrains.kotlinx.lincheck.nvm.Recover.BUFFERED_DURABLE
+ */
 internal class BufferedDurableLinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVerifier(sequentialSpecification) {
     override val lts: LTS = LTS(sequentialSpecification = sequentialSpecification)
 
