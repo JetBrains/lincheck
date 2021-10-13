@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.durable.DurableLi
 import org.objectweb.asm.ClassVisitor
 
 /**
- * This callback is plugged in to [ParallelThreadsRunner] to callect information
+ * This callback is plugged in to ParallelThreadsRunner to collect information
  * that is essential for NVM emulation during a test run.
  */
 interface ExecutionCallback {
@@ -107,11 +107,12 @@ enum class Recover {
      * crashed method and subsequent recovery call are still linearizable. The model considers both single-thread and system-wide crashes.
      * Linearizability criterion is used for verification.
      * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
+     * @see Recoverable
      */
     NRL,
 
     /**
-     * The same as [NRL], but no crashes occur. This may be used in debug purposes to temporary disable crashes,
+     * The same as [NRL], but no crashes occur. This may be used in debug purposes to temporarily disable crashes,
      * but still execute under NRL model.
      */
     NRL_NO_CRASHES,
@@ -121,8 +122,10 @@ enum class Recover {
      *
      * This model considers only system-wide crashes. This model requires all successfully operations to be linearizable,
      * while the interrupted by a crash operations may be not linearizable. After a crash a structure's recovery function is called,
-     * is it is markered with [DurableRecoverAll] or [DurableRecoverPerThread] annotations. Durable linearizability verification is used.
+     * is it is marked with special annotations. Durable linearizability verification is used.
      * @see  <a href="https://www.cs.rochester.edu/u/scott/papers/2016_DISC_persistence.pdf">Durable Linearizability</a>
+     * @see org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverAll
+     * @see org.jetbrains.kotlinx.lincheck.annotations.DurableRecoverPerThread
      */
     DURABLE,
 
@@ -140,9 +143,10 @@ enum class Recover {
      * Buffered durable linearizability model.
      *
      * This is a durable linearizability relaxation. This model requires that only a prefix of successfully completed operations is linearizable.
-     * In practice this a sync method is used which guarantees that a data structure is persisted if this method completes successfully.
+     * In practice this a sync method (annotated with special annotation) is used which guarantees that a data structure is persisted if this method completes successfully.
      * So buffered durable linearizability requires that all the operations before the last completed sync are linearizable.
      * @see  <a href="https://www.cs.rochester.edu/u/scott/papers/2016_DISC_persistence.pdf">Buffered Durable Linearizability</a>
+     * @see org.jetbrains.kotlinx.lincheck.annotations.Sync
      */
     BUFFERED_DURABLE;
 
@@ -171,7 +175,10 @@ interface RecoverabilityModel {
      */
     fun createTransformerWrapper(cv: ClassVisitor, clazz: Class<*>) = cv
 
-    /** Create a transformer to process crashes in the [TestThreadExecutionGenerator]. */
+    /**
+     * Create a transformer to process crashes in the TestThreadExecutionGenerator.
+     * @see org.jetbrains.kotlinx.lincheck.runner.TestThreadExecutionGenerator
+     */
     fun createActorCrashHandlerGenerator(): ActorCrashHandlerGenerator
 
     /** Defines system-wide crash probability in case of crash happens. Must be 1.0 for only system crash models. */

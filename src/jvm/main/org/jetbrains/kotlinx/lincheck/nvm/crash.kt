@@ -70,7 +70,7 @@ private class CrashErrorProxy(private val ste: StackTraceElement?) : CrashError(
 
 /**
  * Current state describing active threads.
- * The class is immutable to perform an atomic change of it's values.
+ * The class is immutable to perform an atomic change of its values.
  */
 private data class SystemContext(
     /** The number of threads waiting for a system crash. */

@@ -119,7 +119,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     /**
      * This method is a barrier in model checking mode.
      * All the parallel threads except the initiator return the execution back to the initiator when achieving this method.
-     * The initiator iterates over the active threads and switches to them to make sure thet all the active threads accomplished a system crash.
+     * The initiator iterates over the active threads and switches to them to make sure that all the active threads accomplished a system crash.
      */
     private fun forceSwitchToAwaitSystemCrash() {
         check(waitingSystemCrash())
@@ -185,7 +185,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
         }
     }
 
-    /** This node choses whether to perform a switch or a crash (single-thread or system-wide). */
+    /** This node chooses whether to perform a switch or a crash (single-thread or system-wide). */
     private inner class SwitchOrCrashChoosingNode : InterleavingTreeNode() {
         init {
             choices = mutableListOf<Choice>().apply {
@@ -208,7 +208,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     private fun createCrashChoosingNode(isSystemCrash: Boolean): InterleavingTreeNode = FlushRandomChoosingNode { CrashChoosingNode(isSystemCrash) }
 
     /**
-     * This node is responsible for reseting the random seed. This is done to simulate different flush strategies.
+     * This node is responsible for resetting the random seed. This is done to simulate different flush strategies.
      */
     private inner class FlushRandomChoosingNode(createChild: () -> InterleavingTreeNode) : InterleavingTreeNode() {
         init {
@@ -325,7 +325,7 @@ internal class SwitchesAndCrashesModelCheckingStrategy(
     }
 }
 
-/** A marker that no thread is initiating a ssystem crash now. */
+/** A marker that no thread is initiating a system crash now. */
 private const val NO_CRASH_INITIATOR = -1
 
 /** The number of different seeds to choose from after every crash. */

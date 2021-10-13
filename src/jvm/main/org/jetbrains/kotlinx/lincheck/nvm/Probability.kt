@@ -222,7 +222,7 @@ class Statistics(scenario: ExecutionScenario) {
 private const val RANDOM_FLUSH_PROBABILITY = 0.05
 
 /**
- * This class is an entry point to all random-related methods that are neaded for NVM emulation.
+ * This class is an entry point to all random-related methods that are needed for NVM emulation.
  *
  * During execution crashes may happen at random in stress mode, whether to perform them is defined by [shouldCrash] and [shouldSystemCrash] methods.
  * Also, flush may happen at random, so [shouldFlush] method can be used.
