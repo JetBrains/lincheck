@@ -66,58 +66,6 @@ abstract class AbstractNonVolatilePrimitive(private val state: NVMState?) {
     }
 }
 
-/**
- * Create non-volatile integer.
- * @param value initial value
- */
-fun nonVolatile(value: Int) = nonVolatile(value, null)
-
-/**
- * This is an actual constructor method that is used during the test.
- *
- * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
- */
-fun nonVolatile(value: Int, state: NVMState?) = NonVolatileInt(value, state)
-
-/**
- * Create non-volatile long.
- * @param value initial value
- */
-fun nonVolatile(value: Long) = nonVolatile(value, null)
-
-/**
- * This is an actual constructor method that is used during the test.
- *
- * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
- */
-fun nonVolatile(value: Long, state: NVMState?) = NonVolatileLong(value, state)
-
-/**
- * Create non-volatile boolean.
- * @param value initial value
- */
-fun nonVolatile(value: Boolean) = nonVolatile(value, null)
-
-/**
- * This is an actual constructor method that is used during the test.
- *
- * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
- */
-fun nonVolatile(value: Boolean, state: NVMState?) = NonVolatileBoolean(value, state)
-
-/**
- * Create non-volatile reference.
- * @param value initial value
- */
-fun <T> nonVolatile(value: T) = nonVolatile(value, null)
-
-/**
- * This is an actual constructor method that is used during the test.
- *
- * @see org.jetbrains.kotlinx.lincheck.nvm.PrimitivesSetStateTransformer
- */
-fun <T> nonVolatile(value: T, state: NVMState?) = NonVolatileRef(value, state)
-
 /** Persistent reference emulates non-volatile memory variable with volatile cached value. */
 class NonVolatileRef<T> internal constructor(initialValue: T, state: NVMState?) : AbstractNonVolatilePrimitive(state) {
     /**

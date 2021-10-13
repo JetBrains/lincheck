@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck;
 
 import kotlin.io.ByteStreamsKt;
 import org.jetbrains.kotlinx.lincheck.nvm.NVMStateHolder;
+import org.jetbrains.kotlinx.lincheck.nvm.api.NvmKt;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
@@ -105,7 +106,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     private boolean shouldBeReloaded(String className) {
         return className.equals(ManagedStrategyStateHolder.class.getName()) ||
-            className.equals(NVMStateHolder.class.getName());
+            className.equals(NVMStateHolder.class.getName()) ||
+            className.equals(NvmKt.class.getName());
     }
 
     /**
