@@ -252,19 +252,11 @@ internal open class DistributedRunner<Message, Log>(
     }
 
     fun storeEventsToFile(failure: LincheckFailure) {
-        val printInstance = testCfg.addressResolver.isMultipleType
         if (testCfg.logFilename == null) return
         File(testCfg.logFilename).printWriter().use { out ->
             out.println(failure)
             out.println()
-            eventFactory.events.toList().forEach { p ->
-                val header = if (printInstance) {
-                    "${p.iNode}, ${testCfg.addressResolver[p.iNode].simpleName}"
-                } else {
-                    p.iNode
-                }
-                out.println("[${header}]: $p")
-            }
+            testCfg.formatter.format(eventFactory.events).forEach { out.println(it) }
         }
     }
 }

@@ -23,6 +23,8 @@ package org.jetbrains.kotlinx.lincheck.distributed
  */
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.event.EventFormatter
+import org.jetbrains.kotlinx.lincheck.distributed.event.TextEventFormatter
 import org.jetbrains.kotlinx.lincheck.distributed.random.DistributedRandomStrategy
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -31,7 +33,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
 
-class DistributedCTestConfiguration<Message, Log>(
+internal class DistributedCTestConfiguration<Message, Log>(
     testClass: Class<*>, iterations: Int,
     threads: Int, actorsPerThread: Int,
     generatorClass: Class<out ExecutionGenerator>,
@@ -59,7 +61,7 @@ class DistributedCTestConfiguration<Message, Log>(
         minimizeFailedScenario, sequentialSpecification, timeoutMs,
         customScenarios
     ) {
-    lateinit var addressResolver : NodeAddressResolver<Message, Log>
+    lateinit var addressResolver: NodeAddressResolver<Message, Log>
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
@@ -125,4 +127,6 @@ class DistributedCTestConfiguration<Message, Log>(
         }
         return res
     }
+
+    val formatter: EventFormatter = TextEventFormatter(addressResolver)
 }
