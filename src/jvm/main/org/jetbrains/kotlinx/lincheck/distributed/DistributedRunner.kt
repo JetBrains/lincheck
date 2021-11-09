@@ -256,7 +256,7 @@ internal open class DistributedRunner<Message, Log>(
         File(testCfg.logFilename).printWriter().use { out ->
             out.println(failure)
             out.println()
-            testCfg.formatter.format(eventFactory.events).forEach { out.println(it) }
+            testCfg.getFormatter().format(eventFactory.events).forEach { out.println(it) }
         }
     }
 }

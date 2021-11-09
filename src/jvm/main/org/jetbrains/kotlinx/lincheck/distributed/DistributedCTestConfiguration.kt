@@ -33,7 +33,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
 
-internal class DistributedCTestConfiguration<Message, Log>(
+class DistributedCTestConfiguration<Message, Log>(
     testClass: Class<*>, iterations: Int,
     threads: Int, actorsPerThread: Int,
     generatorClass: Class<out ExecutionGenerator>,
@@ -128,5 +128,5 @@ internal class DistributedCTestConfiguration<Message, Log>(
         return res
     }
 
-    val formatter: EventFormatter = TextEventFormatter(addressResolver)
+    internal fun getFormatter(): EventFormatter = TextEventFormatter(addressResolver)
 }
