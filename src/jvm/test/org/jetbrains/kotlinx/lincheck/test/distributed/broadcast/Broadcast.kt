@@ -23,20 +23,13 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.event.*
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
+import org.jetbrains.kotlinx.lincheck.distributed.event.MessageReceivedEvent
+import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
+import org.jetbrains.kotlinx.lincheck.distributed.event.NodeCrashEvent
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
-import java.io.BufferedWriter
-import java.io.FileOutputStream
 import java.util.*
-
-val debugOutput = true
-fun addToFile(f: (BufferedWriter) -> Unit) {
-    if (!debugOutput) return
-    FileOutputStream("broadcast_info.txt", true).bufferedWriter().use {
-        f(it)
-    }
-}
 
 data class Message(val body: String, val id: Int, val from: Int)
 
