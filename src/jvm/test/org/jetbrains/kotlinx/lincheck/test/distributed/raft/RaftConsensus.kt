@@ -19,12 +19,14 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
-/*
+
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
+import org.jetbrains.kotlinx.lincheck.test.distributed.broadcast.Message
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import kotlin.random.Random
@@ -33,7 +35,7 @@ sealed class RLog
 data class RTerm(val term: Int) : RLog()
 data class RVote(val votedFor: Int?) : RLog()
 
-class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
+class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage, RLog> {
     companion object {
         const val HEARTBEAT_RATE = 30
         const val MISSED_HEARTBEAT_LIMIT = 5
@@ -309,11 +311,10 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage> {
         env.recordInternalEvent("Operations over")
     }
 
-    @Validate
-    fun validate() {
-        val t =
-            env.events()[env.nodeId].filterIsInstance<InternalEvent>().filter { it.message == "Operations over" }.size
+    /*@Validate
+    override fun validate(events : List<Event>, logs: Array<List<RLog>>) {
+        /*val t =
+            env.events[env.nodeId].filterIsInstance<InternalEvent>().filter { it.message == "Operations over" }.size*/
         check(t <= 1)
-    }
+    }*/
 }
-*/
