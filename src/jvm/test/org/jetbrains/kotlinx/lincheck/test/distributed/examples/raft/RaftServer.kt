@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
-
+/*
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import kotlin.random.Random
@@ -75,3 +75,5 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentObject>) : 
         TODO("Not yet implemented")
     }
 }
+
+ */

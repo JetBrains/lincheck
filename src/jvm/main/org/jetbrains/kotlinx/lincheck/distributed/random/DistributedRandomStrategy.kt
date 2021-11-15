@@ -40,14 +40,14 @@ fun ExecutionResult.newResult(stateRepresentation: String?): ExecutionResult = E
     afterPostStateRepresentation
 )
 
-internal class DistributedRandomStrategy<Message, Log>(
-    testCfg: DistributedCTestConfiguration<Message, Log>,
+internal class DistributedRandomStrategy<Message, DB>(
+    testCfg: DistributedCTestConfiguration<Message, DB>,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
     verifier: Verifier
-) : DistributedStrategy<Message, Log>(
+) : DistributedStrategy<Message, DB>(
     testCfg,
     testClass,
     scenario,

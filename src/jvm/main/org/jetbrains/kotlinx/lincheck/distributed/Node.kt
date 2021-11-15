@@ -5,7 +5,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 /**
  * Interface for a single node in a distributed algorithm.
  */
-interface Node<Message, Log> {
+interface Node<Message, DB> {
     /**
      * Called when a new message [message] arrives.
      */
@@ -37,7 +37,7 @@ interface Node<Message, Log> {
      */
     fun stateRepresentation(): String = ""
 
-    fun validate(events: List<Event>, logs: Array<List<Log>>) {}
+    fun validate(events: List<Event>, logs: List<DB>) {}
 }
 
 class CrashError : Exception()

@@ -43,9 +43,9 @@ interface Environment<Message, Log> {
     }
 
     /**
-     * Logs for current node.
+     * Persistent storage for a current node.
      */
-    val log: MutableList<Log>
+    val database: Log
 
     /**
      * Runs the specified [block] of code with a specified timeout and finishes if timeout was exceeded.

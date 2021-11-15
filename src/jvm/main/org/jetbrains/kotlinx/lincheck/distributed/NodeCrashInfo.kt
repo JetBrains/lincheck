@@ -24,8 +24,8 @@ import java.lang.Integer.min
 import java.util.*
 import kotlin.random.Random
 
-internal abstract class CrashInfo<M, L>(
-    protected val testCfg: DistributedCTestConfiguration<M, L>,
+internal abstract class CrashInfo<Message, DB>(
+    protected val testCfg: DistributedCTestConfiguration<Message, DB>,
     protected val random: Random
 ) {
     companion object {

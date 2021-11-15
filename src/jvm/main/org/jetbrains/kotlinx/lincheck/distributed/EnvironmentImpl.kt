@@ -27,17 +27,23 @@ import java.lang.IllegalArgumentException
 
 internal object TimeoutExceedException : Exception()
 
-internal class EnvironmentImpl<Message, Log>(
+internal class EnvironmentImpl<Message, DB>(
     override val nodeId: Int,
     override val numberOfNodes: Int,
-    override val log: MutableList<Log>,
-    private val eventFactory: EventFactory<Message, Log>,
-    private val strategy: DistributedStrategy<Message, Log>,
+    private val _database: DB,
+    private val eventFactory: EventFactory<Message, DB>,
+    private val strategy: DistributedStrategy<Message, DB>,
     private val taskManager: TaskManager
-) : Environment<Message, Log> {
+) : Environment<Message, DB> {
+    override val database: DB
+        get() {
+            strategy.beforeLogModify(nodeId)
+            return _database
+        }
+
     private val timers = mutableSetOf<String>()
 
-    override fun getAddressesForClass(cls: Class<out Node<Message, Log>>): List<Int>? =
+    override fun getAddressesForClass(cls: Class<out Node<Message, DB>>): List<Int>? =
         strategy.testCfg.addressResolver[cls]
 
     override fun send(message: Message, receiver: Int) {

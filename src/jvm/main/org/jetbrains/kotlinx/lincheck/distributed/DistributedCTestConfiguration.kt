@@ -33,7 +33,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
 
-class DistributedCTestConfiguration<Message, Log>(
+class DistributedCTestConfiguration<Message, DB>(
     testClass: Class<*>, iterations: Int,
     threads: Int, actorsPerThread: Int,
     generatorClass: Class<out ExecutionGenerator>,
@@ -42,13 +42,14 @@ class DistributedCTestConfiguration<Message, Log>(
     val isNetworkReliable: Boolean,
     val messageOrder: MessageOrder,
     val maxNumberOfFailedNodes: (Int) -> Int,
-    val maxNumberOfFailedNodesForType: MutableMap<Class<out Node<Message, Log>>, (Int) -> Int>,
+    val maxNumberOfFailedNodesForType: MutableMap<Class<out Node<Message, DB>>, (Int) -> Int>,
     val supportRecovery: CrashMode,
     val messageDuplication: Boolean,
     val networkPartitions: NetworkPartitionMode,
-    private val nodeTypes: Map<Class<out Node<Message, Log>>, NodeTypeInfo>,
+    private val nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
     val logFilename: String?,
     val testingMode: TestingMode,
+    val databaseFactory: () -> DB,
     requireStateEquivalenceCheck: Boolean,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>, timeoutMs: Long,
@@ -61,7 +62,7 @@ class DistributedCTestConfiguration<Message, Log>(
         minimizeFailedScenario, sequentialSpecification, timeoutMs,
         customScenarios
     ) {
-    lateinit var addressResolver: NodeAddressResolver<Message, Log>
+    lateinit var addressResolver: NodeAddressResolver<Message, DB>
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
@@ -75,7 +76,7 @@ class DistributedCTestConfiguration<Message, Log>(
         verifier: Verifier
     ): Strategy {
         addressResolver = NodeAddressResolver(
-            testClass as Class<out Node<Message, Log>>,
+            testClass as Class<out Node<Message, DB>>,
             scenario.threads, nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail },
             maxNumberOfFailedNodesForType
         )
@@ -97,8 +98,8 @@ class DistributedCTestConfiguration<Message, Log>(
         )
     }
 
-    fun nextConfigurations(): List<DistributedCTestConfiguration<Message, Log>> {
-        val res = mutableListOf<DistributedCTestConfiguration<Message, Log>>()
+    fun nextConfigurations(): List<DistributedCTestConfiguration<Message, DB>> {
+        val res = mutableListOf<DistributedCTestConfiguration<Message, DB>>()
         for ((cls, nodeInfo) in nodeTypes) {
             if (nodeInfo.maxNumberOfInstances == nodeInfo.minNumberOfInstances) {
                 continue
@@ -119,7 +120,7 @@ class DistributedCTestConfiguration<Message, Log>(
                     supportRecovery,
                     messageDuplication,
                     networkPartitions,
-                    newNodeTypes, logFilename, testingMode, requireStateEquivalenceImplCheck,
+                    newNodeTypes, logFilename, testingMode, databaseFactory, requireStateEquivalenceImplCheck,
                     minimizeFailedScenario,
                     sequentialSpecification, timeoutMs, customScenarios
                 )

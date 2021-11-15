@@ -27,8 +27,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 import kotlin.random.Random
 
-internal abstract class DistributedStrategy<Message, Log>(
-    val testCfg: DistributedCTestConfiguration<Message, Log>,
+internal abstract class DistributedStrategy<Message, DB>(
+    val testCfg: DistributedCTestConfiguration<Message, DB>,
     protected val testClass: Class<*>,
     scenario: ExecutionScenario,
     protected val validationFunctions: List<Method>,

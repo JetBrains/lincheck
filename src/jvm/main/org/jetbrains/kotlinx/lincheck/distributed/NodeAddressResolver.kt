@@ -24,17 +24,17 @@ package org.jetbrains.kotlinx.lincheck.distributed
  * Stores information about classes included in the scenario execution.
  * Maps a node id to the corresponding class and the class to a range of corresponding ids.
  */
-class NodeAddressResolver<Message, Log>(
-    testClass: Class<out Node<Message, Log>>,
+class NodeAddressResolver<Message, DB>(
+    testClass: Class<out Node<Message, DB>>,
     val nodesWithScenario: Int,
-    private val additionalClasses: Map<Class<out Node<Message, Log>>, Pair<Int, Boolean>>,
-    maxNumberOfFailuresForType: Map<Class<out Node<Message, Log>>, (Int) -> Int>
+    private val additionalClasses: Map<Class<out Node<Message, DB>>, Pair<Int, Boolean>>,
+    maxNumberOfFailuresForType: Map<Class<out Node<Message, DB>>, (Int) -> Int>
 ) {
-    private val nodeTypeToRange: Map<Class<out Node<Message, Log>>, List<Int>>
+    private val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
     val totalNumberOfNodes = if (testClass in additionalClasses) additionalClasses.values.map { it.first }
         .sum() else additionalClasses.values.map { it.first }.sum() + nodesWithScenario
-    private val nodes = mutableListOf<Class<out Node<Message, Log>>>()
-    private val maxNumberOfCrashes = mutableMapOf<Class<out Node<Message, Log>>, Int>()
+    private val nodes = mutableListOf<Class<out Node<Message, DB>>>()
+    private val maxNumberOfCrashes = mutableMapOf<Class<out Node<Message, DB>>, Int>()
 
     init {
         repeat(nodesWithScenario) { nodes.add(testClass) }
@@ -60,7 +60,7 @@ class NodeAddressResolver<Message, Log>(
     /**
      * Returns a list of ids for a specified class [cls].
      */
-    operator fun get(cls: Class<out Node<Message, Log>>) = nodeTypeToRange[cls]
+    operator fun get(cls: Class<out Node<Message, DB>>) = nodeTypeToRange[cls]
 
     /**
      * Returns a class for a specified id [iNode].

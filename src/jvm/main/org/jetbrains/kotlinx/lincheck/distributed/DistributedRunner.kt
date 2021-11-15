@@ -52,6 +52,11 @@ internal open class DistributedRunner<Message, Log>(
     private val distrStrategy: DistributedStrategy<Message, Log> = strategy
     private val numberOfNodes = testCfg.addressResolver.totalNumberOfNodes
     private lateinit var eventFactory: EventFactory<Message, Log>
+    private val databases = mutableListOf<Log>().apply {
+        repeat(numberOfNodes) {
+            this.add(testCfg.databaseFactory())
+        }
+    }
     private lateinit var environments: Array<EnvironmentImpl<Message, Log>>
     private lateinit var nodeInstances: Array<Node<Message, Log>>
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
@@ -76,11 +81,12 @@ internal open class DistributedRunner<Message, Log>(
         } else {
             NoFifoTaskManager()
         }
+        databases.indices.forEach { databases[it] = testCfg.databaseFactory() }
         environments = Array(numberOfNodes) {
             EnvironmentImpl(
                 it,
                 numberOfNodes,
-                LogList(distrStrategy, it),
+                databases[it],
                 eventFactory,
                 distrStrategy,
                 taskManager
@@ -125,10 +131,7 @@ internal open class DistributedRunner<Message, Log>(
                 return UnexpectedExceptionInvocationResult(exception!!)
             }
             try {
-                val logs: Array<List<Log>> = Array(numberOfNodes) {
-                    environments[it].log
-                }
-                nodeInstances.forEach { n -> n.validate(eventFactory.events, logs) }
+                nodeInstances.forEach { n -> n.validate(eventFactory.events, databases) }
             } catch (e: Throwable) {
                 return ValidationFailureInvocationResult(scenario, "validate", e)
             }
@@ -198,7 +201,7 @@ internal open class DistributedRunner<Message, Log>(
         }
         taskManager.addTask(NodeRecoverTask(iNode) {
             environments[iNode] =
-                EnvironmentImpl(iNode, numberOfNodes, environments[iNode].log, eventFactory, distrStrategy, taskManager)
+                EnvironmentImpl(iNode, numberOfNodes, databases[iNode], eventFactory, distrStrategy, taskManager)
 
             nodeInstances[iNode] = testCfg.addressResolver[iNode].getConstructor(Environment::class.java)
                 .newInstance(environments[iNode])
