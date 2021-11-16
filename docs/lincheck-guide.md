@@ -18,7 +18,8 @@ This hands-on guide will help you get in touch with the framework and try the mo
 
 ## Given Talks
 
-* TODO: workshop by Masha
+* [Workshop. Lincheck: Testing concurrency on the JVM (Part 1)](https://www.youtube.com/watch?v=YNtUK9GK4pA), 
+  [Workshop. Lincheck: Testing concurrency on the JVM (Part 2)](https://www.youtube.com/watch?v=EW7mkAOErWw) (Hydra 2021, EN)
 * [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019, RU)
 * [Testing concurrent algorithms with Lincheck](https://nkoval.com/talks/#lincheck-joker-2019) (Joker 2019, RU)
 * [Lincheck: testing concurrent data structures on Java](https://nkoval.com/talks/#lincheck-hydra-2019) (Hydra 2019, RU)
