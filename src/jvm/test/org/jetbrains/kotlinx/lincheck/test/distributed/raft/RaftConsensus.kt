@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.test.distributed.broadcast.Message
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import kotlin.random.Random
-
+/*
 sealed class RLog
 data class RTerm(val term: Int) : RLog()
 data class RVote(val votedFor: Int?) : RLog()
@@ -318,3 +318,4 @@ class RaftConsensus(val env: Environment<RMessage, RLog>) : Node<RMessage, RLog>
         check(t <= 1)
     }*/
 }
+*/

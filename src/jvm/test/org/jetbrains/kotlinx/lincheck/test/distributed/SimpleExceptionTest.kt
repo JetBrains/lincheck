@@ -23,10 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.debugOutput
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
@@ -46,16 +43,12 @@ class NodeThrowsException(val env: Environment<Int, Unit>): Node<Int, Unit> {
 
 class SimpleExceptionTest {
     @Test(expected = LincheckAssertionError::class)
-    fun test() {
-        LinChecker.check(
-            NodeThrowsException::class.java,
-            DistributedOptions<Int, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .actorsPerThread(2)
-                .threads(3)
-                .invocationsPerIteration(10)
-                .iterations(1)
-                .verifier(EpsilonVerifier::class.java)
-        )
-    }
+    fun test() = createDistributedOptions<Int>()
+        .nodeType(NodeThrowsException::class.java, 3)
+        .requireStateEquivalenceImplCheck(false)
+        .actorsPerThread(2)
+        .invocationsPerIteration(10)
+        .iterations(1)
+        .verifier(EpsilonVerifier::class.java)
+        .check()
 }

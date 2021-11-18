@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
-
+/*
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
@@ -130,4 +130,4 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         appliedOperations[sender][message.id] = msg
         env.send(msg, sender)
     }
-}
+}*/

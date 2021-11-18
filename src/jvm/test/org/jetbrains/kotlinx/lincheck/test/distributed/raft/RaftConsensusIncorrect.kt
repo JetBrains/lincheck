@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
-
+/*
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -277,4 +277,4 @@ class RaftConsensusIncorrect(val env: Environment<RMessage, Int>) : Node<RMessag
     override suspend fun onScenarioFinish() {
         env.recordInternalEvent("Operations over")
     }
-}
+}*/

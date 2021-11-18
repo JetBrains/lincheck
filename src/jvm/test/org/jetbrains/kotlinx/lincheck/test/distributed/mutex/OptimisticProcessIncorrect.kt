@@ -92,7 +92,7 @@ class OptimisticMutexIncorrectTest {
     fun testSimple() {
         LinChecker.check(
             OptimisticMutexIncorrect::class.java,
-            DistributedOptions<MutexMessage, Unit>()
+            createDistributedOptions<MutexMessage>()
                 .requireStateEquivalenceImplCheck(false)
                 .verifier(EpsilonVerifier::class.java)
                 .threads(3)

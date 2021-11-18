@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -69,17 +70,13 @@ class PingPongMock : VerifierState() {
 
 class SimpleTimeoutTest {
     @Test
-    fun test() {
-        LinChecker.check(
-            PingPongNode::class.java,
-            DistributedOptions<PingPongMessage, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .threads(2)
-                .networkReliable(false)
-                .invocationsPerIteration(100)
-                .iterations(100)
-                .sequentialSpecification(PingPongMock::class.java)
-                .actorsPerThread(2)
-        )
-    }
+    fun test() = createDistributedOptions<PingPongMessage>()
+        .nodeType(PingPongNode::class.java, 2)
+        .requireStateEquivalenceImplCheck(false)
+        .networkReliable(false)
+        .invocationsPerIteration(100)
+        .iterations(100)
+        .sequentialSpecification(PingPongMock::class.java)
+        .actorsPerThread(2)
+        .check()
 }

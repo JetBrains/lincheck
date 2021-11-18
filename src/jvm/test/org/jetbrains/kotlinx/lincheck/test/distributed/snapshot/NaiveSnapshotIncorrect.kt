@@ -31,7 +31,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import java.util.concurrent.locks.ReentrantLock
 
-
+/*
 @OpGroupConfig(name = "observer", nonParallel = true)
 class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node<Message, Unit> {
     private val currentSum = atomic(100)
@@ -96,3 +96,4 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
         return res / env.numberOfNodes + res % env.numberOfNodes
     }
 }
+*/

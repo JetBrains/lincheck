@@ -123,7 +123,7 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
 
 class KVStorageServerTestClass {
     private fun createOptions(serverType: Class<out Node<Command, Unit>> = KVStorageServer::class.java) =
-        DistributedOptions<Command, Unit>()
+        createDistributedOptions<Command>()
             .requireStateEquivalenceImplCheck(false)
             .sequentialSpecification(SingleNode::class.java)
             .invocationsPerIteration(10_000)

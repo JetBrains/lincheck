@@ -130,7 +130,7 @@ class RickartAgrawalaMutexTest {
     fun testSimple() {
         LinChecker.check(
             RickartAgrawalaMutex::class.java,
-            DistributedOptions<MutexMessage, Unit>()
+            createDistributedOptions<MutexMessage>()
                 .requireStateEquivalenceImplCheck(false)
                 .verifier(EpsilonVerifier::class.java)
                  //.sequentialSpecification(MutexSpecification::class.java)
@@ -146,7 +146,7 @@ class RickartAgrawalaMutexTest {
     fun testNoFifo() {
         LinChecker.check(
             RickartAgrawalaMutex::class.java,
-            DistributedOptions<MutexMessage, Unit>()
+            createDistributedOptions<MutexMessage>()
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(MutexSpecification::class.java)
                 .threads(3)

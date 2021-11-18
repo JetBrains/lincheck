@@ -42,19 +42,15 @@ class Smoke(val env: Environment<Int, Unit>) : Node<Int, Unit> {
 
 class SmokeTest {
     @Test
-    fun test() {
-        LinChecker.check(
-            Smoke::class.java,
-            DistributedOptions<Int, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .actorsPerThread(2)
-                .threads(3)
-                .invocationsPerIteration(300)
-                .setMaxNumberOfFailedNodes { it / 2 }
-                .iterations(100)
-                .crashMode(CrashMode.ALL_NODES_RECOVER)
-                .verifier(EpsilonVerifier::class.java)
-        )
-    }
+    fun test() = createDistributedOptions<Int>()
+        .nodeType(Smoke::class.java, 3)
+        .requireStateEquivalenceImplCheck(false)
+        .actorsPerThread(2)
+        .invocationsPerIteration(300)
+        .setMaxNumberOfFailedNodes { it / 2 }
+        .iterations(100)
+        .crashMode(CrashMode.ALL_NODES_RECOVER)
+        .verifier(EpsilonVerifier::class.java)
+        .check()
 }
 

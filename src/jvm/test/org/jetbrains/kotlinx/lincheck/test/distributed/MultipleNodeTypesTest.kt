@@ -22,10 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.*
 import org.junit.Test
 import java.lang.IllegalArgumentException
@@ -60,17 +57,16 @@ class Ponger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
 
 class MultipleNodeTypesTest {
     @Test
-    fun test() {
-        LinChecker.check(
-            Pinger::class.java,
-            DistributedOptions<PingPongMessage, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .threads(2)
-                .nodeType(Ponger::class.java, 1)
-                .invocationsPerIteration(100)
-                .iterations(100)
-                .sequentialSpecification(PingPongMock::class.java)
-                .actorsPerThread(2)
-        )
-    }
+    fun test() =
+        createDistributedOptions<PingPongMessage>()
+            .nodeType(Pinger::class.java, 2)
+            .requireStateEquivalenceImplCheck(false)
+            .threads(2)
+            .nodeType(Ponger::class.java, 1)
+            .invocationsPerIteration(100)
+            .iterations(100)
+            .sequentialSpecification(PingPongMock::class.java)
+            .actorsPerThread(2)
+            .check()
+
 }

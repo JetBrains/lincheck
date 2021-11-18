@@ -53,7 +53,7 @@ class Rel(msgTime: Int) : MutexMessage(msgTime) {
 }
 
 abstract class MutexNode<Message> : Node<Message, Unit> {
-    override fun validate(events: List<Event>, logs: Array<List<Unit>>) {
+    override fun validate(events: List<Event>, logs: List<Unit>) {
         val locksAndUnlocks = events.filterIsInstance<InternalEvent>()
         for (i in locksAndUnlocks.indices step 2) {
             check(locksAndUnlocks[i].attachment == "Lock")
@@ -141,7 +141,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
 }
 
 class LamportMutexTest {
-    private fun createOptions() = DistributedOptions<MutexMessage, Unit>()
+    private fun createOptions() = createDistributedOptions<MutexMessage>()
         .requireStateEquivalenceImplCheck(false)
         .threads(3)
         .verifier(EpsilonVerifier::class.java)

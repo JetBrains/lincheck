@@ -22,10 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongMessage
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongMock
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongNode
@@ -41,12 +38,13 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
     companion object {
         const val HEARTBEAT_PING_RATE = 3
     }
+
     private val pingSignal = Signal()
     private val pongSignal = Signal()
     private var heartbeatCnt = 0
     private var shouldReply = false
     override fun onMessage(message: TimerMessage, sender: Int) {
-        when(message) {
+        when (message) {
             is Heartbeat -> {
                 heartbeatCnt++
                 if (heartbeatCnt == HEARTBEAT_PING_RATE) {
@@ -72,7 +70,7 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
     }
 
     @Operation
-    suspend fun ping() : Boolean {
+    suspend fun ping(): Boolean {
         env.send(TimerPing, 1 - env.nodeId)
         pongSignal.await()
         return true
@@ -80,18 +78,14 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
 }
 
 
-class SimpleTimerTest  {
+class SimpleTimerTest {
     @Test
-    fun test() {
-        LinChecker.check(
-            SimpleTimerNode::class.java,
-            DistributedOptions<TimerMessage, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .threads(2)
-                .invocationsPerIteration(10_000)
-                .iterations(1)
-                .sequentialSpecification(PingPongMock::class.java)
-                .actorsPerThread(2)
-        )
-    }
+    fun test() = createDistributedOptions<TimerMessage>()
+        .nodeType(SimpleTimerNode::class.java, 2)
+        .requireStateEquivalenceImplCheck(false)
+        .invocationsPerIteration(10_000)
+        .iterations(1)
+        .sequentialSpecification(PingPongMock::class.java)
+        .actorsPerThread(2)
+        .check()
 }

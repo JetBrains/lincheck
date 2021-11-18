@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
-
+/*
 sealed class KVMessage(val id: Int, val isRequest: Boolean)
 class GetRequest(val key: String, id: Int) : KVMessage(id, true) {
     override fun toString() = "GetRequest(key=$key, id=$id)"
@@ -209,4 +209,4 @@ class KVShardingTest {
                 .minimizeFailedScenario(true)
         )
     }
-}
+}*/

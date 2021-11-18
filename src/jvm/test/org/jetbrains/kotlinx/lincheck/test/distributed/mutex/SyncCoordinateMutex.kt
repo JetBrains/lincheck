@@ -25,10 +25,7 @@ import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Validate
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.util.ArrayDeque
 import java.util.concurrent.locks.ReentrantLock
@@ -116,7 +113,7 @@ class SyncCoordinateMutexTest {
     fun testSimple() {
         LinChecker.check(
             SyncCoordinateMutex::class.java,
-            DistributedOptions<MutexMessage, Unit>()
+            createDistributedOptions<MutexMessage>()
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(MutexSpecification::class.java)
                 .threads(3)
@@ -131,7 +128,7 @@ class SyncCoordinateMutexTest {
     fun testNoFifo() {
         LinChecker.check(
             SyncCoordinateMutex::class.java,
-            DistributedOptions<MutexMessage, Unit>()
+            createDistributedOptions<MutexMessage>()
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(MutexSpecification::class.java)
                 .threads(3)

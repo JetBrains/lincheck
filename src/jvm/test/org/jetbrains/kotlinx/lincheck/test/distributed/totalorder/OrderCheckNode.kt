@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
-
+/*
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.distributed.Node
@@ -47,4 +47,4 @@ abstract class OrderCheckNode(val env: Environment<Message, Message>) : Node<Mes
             }
         }
     }
-}
+}*/

@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
-
+/*
 sealed class Message
 data class Transaction(val sum: Int) : Message()
 data class Marker(val initializer: Int, val token: Int) : Message()
@@ -207,4 +207,4 @@ class SnapshotTest {
                 .iterations(1000)
         )
     }
-}
+}*/

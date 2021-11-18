@@ -23,10 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.replicas
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 
 sealed class KVMessage
@@ -98,7 +95,7 @@ class ReplicaIncorrectTest {
     fun test() {
         LinChecker.check(
             ClientIncorrect::class.java,
-            DistributedOptions<KVMessage, Unit>()
+            createDistributedOptions<KVMessage>()
                 .requireStateEquivalenceImplCheck(false)
                 .sequentialSpecification(ReplicaSpecification::class.java)
                 .nodeType(ReplicaIncorrect::class.java, 1, 3)

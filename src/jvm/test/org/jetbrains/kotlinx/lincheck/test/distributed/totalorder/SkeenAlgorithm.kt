@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
-
+/*
 sealed class Message {
     abstract val clock: Int
 }
@@ -168,4 +168,4 @@ class SkeenTest {
                 .minimizeFailedScenario(false)
         )
     }
-}
+}*/

@@ -3,10 +3,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.consensus
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.util.concurrent.ThreadLocalRandom
 
@@ -90,17 +87,13 @@ class Checker {
 
 class ConsensusNaiveTest {
     @Test
-    fun test() {
-        LinChecker.check(
-            ConsensusNoFailures::class.java,
-            DistributedOptions<Message, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(Checker::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(30)
-                .iterations(1000)
-        )
-    }
+    fun test() = createDistributedOptions<Message>()
+        .nodeType(ConsensusNoFailures::class.java, 3)
+        .requireStateEquivalenceImplCheck(false)
+        .sequentialSpecification(Checker::class.java)
+        .actorsPerThread(3)
+        .messageOrder(MessageOrder.FIFO)
+        .invocationsPerIteration(30)
+        .iterations(1000)
+        .check()
 }

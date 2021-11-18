@@ -24,6 +24,8 @@ sealed class RaftMessage {
     abstract val term: Int
 }
 
+sealed interface ResponseToClient
+
 /**
  * Send by leader to replicate log index. Also used as heartbeat.
  * [term] leader's term
@@ -35,7 +37,6 @@ sealed class RaftMessage {
  */
 data class AppendEntries(
     override val term: Int,
-    val leaderId: Int,
     val prevLogIndex: Int,
     val prevLogTerm: Int,
     val entries: List<LogEntry>,
@@ -47,7 +48,7 @@ data class AppendEntries(
  * [term] currentTerm, for leader to update itself
  * [success] true if follower contained entry matching prevLogIndex and prevLogTerm
  */
-data class AppendEntriesResponse(override val term: Int, val success: Boolean) : RaftMessage()
+data class AppendEntriesResponse(override val term: Int, val success: Boolean, val lastLogIndex: Int) : RaftMessage()
 
 /**
  * Send by candidates to gather votes.
@@ -65,3 +66,10 @@ data class RequestVote(override val term: Int, val candidateId: Int, val lastLog
  * [voteGranted] true means candidate received vote
  */
 data class RequestVoteResponse(override val term: Int, val voteGranted: Boolean) : RaftMessage()
+
+data class ClientRequest(val command: Command, override val term: Int = -1) : RaftMessage()
+data class NotALeader(val leaderId: Int, override val term: Int = -1) : RaftMessage(), ResponseToClient
+data class LeaderUnknown(override val term: Int = -1) : RaftMessage(), ResponseToClient
+data class RejectOperation(override val term: Int = -1) : RaftMessage(), ResponseToClient
+data class ClientResult(val res: String?, val commandId: CommandId, override val term: Int = -1) : RaftMessage(),
+    ResponseToClient

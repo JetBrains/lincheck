@@ -93,6 +93,7 @@ internal open class DistributedRunner<Message, Log>(
             )
         }
         nodeInstances = Array(numberOfNodes) {
+            //println("${testCfg.addressResolver[it].simpleName} ${environments[it]}")
             testCfg.addressResolver[it].getConstructor(Environment::class.java)
                 .newInstance(environments[it])
         }

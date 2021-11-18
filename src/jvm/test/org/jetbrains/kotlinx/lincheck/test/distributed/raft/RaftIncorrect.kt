@@ -19,7 +19,7 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
-
+/*
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -453,3 +453,4 @@ class ReplicaSpecification {
         storage[key] = value
     }
 }
+*/
