@@ -55,9 +55,11 @@ data class CrashNotificationTask(
 data class Timeout(override var ticks: Int, override val iNode: Int, override val f: suspend () -> Unit) : TimeTask()
 data class Timer(override var ticks: Int, override val iNode: Int, override val f: suspend () -> Unit) : TimeTask()
 
+
 internal abstract class TaskManager {
     var counter = 0
     var currentTaskId = -1
+    var processedTaskCount = 0
     val timers = mutableMapOf<Int, TimeTask>()
 
     protected fun getId(initial: Int): Int {
@@ -69,7 +71,7 @@ internal abstract class TaskManager {
     protected abstract fun taskWithIdExists(id: Int): Boolean
 
     fun addTimeTask(task: TimeTask) {
-        val id = getId(counter + task.ticks - 1)
+        val id = getId(processedTaskCount + task.ticks)
         timers[id] = task
     }
 
@@ -110,6 +112,7 @@ internal class NoFifoTaskManager : TaskManager() {
     }
 
     override fun getTaskById(taskId: Int): Task? {
+        processedTaskCount++
         timers.forEach { (_, u) -> u.ticks-- }
         val timeTaskToMove = timers.filter { it.value.ticks <= 0 }
         timeTaskToMove.forEach { (t, u) ->
@@ -136,6 +139,7 @@ internal class FifoTaskManager : TaskManager() {
 
     override fun addTask(task: Task) {
         val id = getId(counter)
+        counter = id + 1
         taskIds.add(id)
         if (task !is MessageReceiveTask) {
             tasks.add(ArrayDeque(listOf(id to task)))
@@ -153,6 +157,7 @@ internal class FifoTaskManager : TaskManager() {
     }
 
     override fun getTaskById(taskId: Int): Task? {
+        processedTaskCount++
         taskIds.remove(taskId)
         val queue = tasks.find { it.peek()?.first == taskId } ?: return null
         return queue.poll().second.also {
