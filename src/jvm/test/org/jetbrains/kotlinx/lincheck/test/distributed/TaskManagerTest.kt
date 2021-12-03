@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 
+/*
 class TaskManagerTest {
     private fun addMessageTask(manager: TaskManager, from: Int, to: Int) =
         MessageReceiveTask(to, from) {}.also { manager.addTask(it) }
@@ -82,4 +83,4 @@ class TaskManagerTest {
         check(manager.getTaskById(2) == operation3)
         println(manager.getAvailableTasks())
     }
-}
+}*/

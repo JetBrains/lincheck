@@ -63,7 +63,7 @@ interface Environment<Message, Log> {
      * Timer executes function [f] periodically each [ticks] time,
      * until the execution is over.
      */
-    fun setTimer(name: String, ticks: Int, f: suspend () -> Unit)
+    fun setTimer(name: String, ticks: Int, f: () -> Unit)
 
     /**
      * Cancels timer with the name [name].

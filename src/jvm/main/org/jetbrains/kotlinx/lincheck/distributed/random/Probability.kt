@@ -20,13 +20,15 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
+import org.apache.commons.math3.distribution.PoissonDistribution
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.math.max
 import kotlin.random.Random
 
-internal class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val rand : Random) {
+internal class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val rand: Random) {
     companion object {
+        const val MEAN_POISSON_DISTRIBUTION = 0.1
         const val MESSAGE_SENT_PROBABILITY = 0.95
         const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
         const val NODE_FAIL_PROBABILITY = 0.05
@@ -34,6 +36,8 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         var failedNodesExpectation = -1
         var networkPartitionsExpectation = 8
     }
+
+    private val poissonDistribution = PoissonDistribution(MEAN_POISSON_DISTRIBUTION)
 
     var nextNumberOfCrashes = 0
     private val numberOfNodes: Int = testCfg.addressResolver.totalNumberOfNodes
@@ -49,6 +53,8 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         }
         return if (rand.nextDouble(1.0) < MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
     }
+
+    fun poissonProbability(x: Int) = poissonDistribution.probability(x) >= rand.nextDouble(1.0)
 
     private fun messageIsSent(): Boolean {
         if (testCfg.isNetworkReliable) {

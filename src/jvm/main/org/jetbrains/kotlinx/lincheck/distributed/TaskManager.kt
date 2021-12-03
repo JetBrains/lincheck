@@ -20,169 +20,109 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import java.util.*
 
 sealed class Task {
+    abstract val id: Int
     abstract val iNode: Int
-    abstract val f: suspend () -> Unit
-}
-
-sealed class TimeTask : Task() {
-    abstract var ticks: Int
+    abstract val action: suspend () -> Unit
 }
 
 data class MessageReceiveTask(
+    override val id: Int,
     override val iNode: Int,
     val from: Int,
-    override val f: suspend () -> Unit
+    override val action: suspend () -> Unit
 ) : Task()
 
-data class OperationTask(
+data class ActionTask(
+    override val id: Int,
     override val iNode: Int,
-    override val f: suspend () -> Unit
+    override val action: suspend () -> Unit
 ) : Task()
 
-data class NodeRecoverTask(
-    override val iNode: Int,
-    override val f: suspend () -> Unit
-) : Task()
-
-data class CrashNotificationTask(
-    override val iNode: Int,
-    override val f: suspend () -> Unit
-) : Task()
-
-data class Timeout(override var ticks: Int, override val iNode: Int, override val f: suspend () -> Unit) : TimeTask()
-data class Timer(override var ticks: Int, override val iNode: Int, override val f: suspend () -> Unit) : TimeTask()
-
-
-internal abstract class TaskManager {
-    var counter = 0
-    var currentTaskId = -1
-    var processedTaskCount = 0
-    val timers = mutableMapOf<Int, TimeTask>()
-
-    protected fun getId(initial: Int): Int {
-        var id = initial
-        while (id == currentTaskId || id in timers || taskWithIdExists(id)) id++
-        return id
-    }
-
-    protected abstract fun taskWithIdExists(id: Int): Boolean
-
-    fun addTimeTask(task: TimeTask) {
-        val id = getId(processedTaskCount + task.ticks)
-        timers[id] = task
-    }
-
-    abstract fun addTask(task: Task)
-
-    abstract fun getTaskById(taskId: Int): Task?
-
-    open fun removeAllForNode(iNode: Int) {
-        val timersToRemove = timers.filter { it.value.iNode == iNode }
-        timersToRemove.forEach { timers.remove(it.key) }
-    }
-
-    abstract fun getAvailableTasks(): Map<Int, Task>
+sealed class TimeTask() : Task() {
+    abstract val time: Int
 }
 
-internal class NoFifoTaskManager : TaskManager() {
-    private val tasks = mutableMapOf<Int, Task>()
-    override fun getAvailableTasks(): Map<Int, Task> {
-        if (tasks.isEmpty()) {
-            val minValue = timers.minOfOrNull { it.value.ticks }
-            val nextTimers = timers.filter { it.value.ticks == minValue }
-            nextTimers.forEach { (t, u) ->
-                check(t !in tasks)
-                tasks[t] = u
-                timers.remove(t)
+data class PeriodicTimer(
+    override val id: Int,
+    override val time: Int,
+    override val iNode: Int,
+    override val action: suspend () -> Unit
+) : TimeTask()
+
+data class Timeout(
+    override val id: Int,
+    override val time: Int,
+    override val iNode: Int,
+    override val action: suspend () -> Unit
+) : TimeTask()
+
+internal class TaskManager(private val messageOrder: MessageOrder) {
+    private var _taskId: Int = 0
+    private var _time: Int = 0
+    private val _tasks = mutableListOf<Task>()
+    private val _timeTasks = mutableListOf<TimeTask>()
+
+    private fun nextMessagesForFifoOrder(): List<Task> {
+        val senderReceiverPairs = mutableSetOf<Pair<Int, Int>>()
+        return _tasks.filterIsInstance<MessageReceiveTask>().filter { senderReceiverPairs.add(it.iNode to it.from) }
+    }
+
+    val tasks: List<Task>
+        get() = when (messageOrder) {
+            MessageOrder.ASYNCHRONOUS -> _tasks
+            MessageOrder.FIFO -> {
+                _tasks.filterIsInstance<ActionTask>() + nextMessagesForFifoOrder()
             }
         }
-        return tasks
-    }
 
-    override fun taskWithIdExists(id: Int): Boolean = id in tasks
+    val timeTasks: List<TimeTask>
+        get() = _timeTasks
 
-    override fun addTask(task: Task) {
-        val taskId = getId(counter)
-        counter = taskId + 1
-        check(taskId !in tasks)
-        tasks[taskId] = task
-    }
-
-    override fun getTaskById(taskId: Int): Task? {
-        processedTaskCount++
-        timers.forEach { (_, u) -> u.ticks-- }
-        val timeTaskToMove = timers.filter { it.value.ticks <= 0 }
-        timeTaskToMove.forEach { (t, u) ->
-            check(t !in tasks)
-            tasks[t] = u
+    val time: Int
+        get() {
+            if (_tasks.isEmpty() && _timeTasks.isNotEmpty()) {
+                _time = _timeTasks.minOf { it.time }
+            }
+            return _time
         }
-        timeTaskToMove.forEach { (t, _) -> timers.remove(t) }
-        currentTaskId = taskId
-        return tasks.remove(taskId)
+
+    fun addMessageReceiveTask(from: Int, to: Int, action: suspend () -> Unit): MessageReceiveTask {
+        val task = MessageReceiveTask(id = _taskId++, iNode = to, from = from, action = action)
+        _tasks.add(task)
+        return task
     }
 
-    override fun removeAllForNode(iNode: Int) {
-        super.removeAllForNode(iNode)
-        val tasksToRemove = tasks.filter { it.value.iNode == iNode }
-        tasksToRemove.forEach { (t, _) -> tasks.remove(t) }
+    fun addActionTask(iNode: Int, action: suspend () -> Unit): ActionTask {
+        val task = ActionTask(id = _taskId++, iNode = iNode, action = action)
+        _tasks.add(task)
+        return task
     }
-}
 
-internal class FifoTaskManager : TaskManager() {
-    private val tasks = mutableListOf<Queue<Pair<Int, Task>>>()
-    private val taskIds = mutableSetOf<Int>()
+    fun addTimer(iNode: Int, ticks: Int, action: suspend () -> Unit): TimeTask {
+        val task = PeriodicTimer(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
+        _timeTasks.add(task)
+        return task
+    }
 
-    override fun taskWithIdExists(id: Int): Boolean = id in taskIds
+    fun addTimeout(iNode: Int, ticks: Int, action: suspend () -> Unit): TimeTask {
+        val task = Timeout(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
+        _timeTasks.add(task)
+        return task
+    }
 
-    override fun addTask(task: Task) {
-        val id = getId(counter)
-        counter = id + 1
-        taskIds.add(id)
-        if (task !is MessageReceiveTask) {
-            tasks.add(ArrayDeque(listOf(id to task)))
-            return
-        }
-        val queue = tasks.find {
-            val top = it.peek()?.second ?: false
-            top is MessageReceiveTask && top.from == task.from && top.iNode == task.iNode
-        }
-        if (queue != null) {
-            queue.add(id to task)
+    fun removeTask(task: Task) {
+        _time++
+        if (task is TimeTask) {
+            _timeTasks.remove(task)
         } else {
-            tasks.add(ArrayDeque(listOf(id to task)))
+            _tasks.remove(task)
         }
     }
 
-    override fun getTaskById(taskId: Int): Task? {
-        processedTaskCount++
-        taskIds.remove(taskId)
-        val queue = tasks.find { it.peek()?.first == taskId } ?: return null
-        return queue.poll().second.also {
-            if (queue.isEmpty()) {
-                tasks.remove(queue)
-            }
-        }
-    }
-
-    override fun getAvailableTasks(): Map<Int, Task> {
-        tasks.removeAll { it.isEmpty() }
-        if (tasks.isEmpty()) {
-            val minValue = timers.minOfOrNull { it.value.ticks }
-            val nextTimers = timers.filter { it.value.ticks == minValue }
-            nextTimers.forEach { (k, v) ->
-                tasks.add(ArrayDeque(listOf(k to v)))
-                timers.remove(k)
-            }
-        }
-        return tasks.associate { it.peek().first to it.peek().second }
-    }
-
-    override fun removeAllForNode(iNode: Int) {
-        super.removeAllForNode(iNode)
-        tasks.removeAll { it.isEmpty() || it.peek().second.iNode == iNode }
+    fun removeAllForNode(iNode: Int) {
+        _tasks.removeAll { it.iNode == iNode }
+        _timeTasks.removeAll { it.iNode == iNode }
     }
 }
-

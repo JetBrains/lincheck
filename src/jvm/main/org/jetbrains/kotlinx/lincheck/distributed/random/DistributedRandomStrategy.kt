@@ -84,10 +84,20 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun next(taskManager: TaskManager): Task? {
-        val tasks = taskManager.getAvailableTasks()
-        if (tasks.isEmpty() || runner.hasAllResults() && tasks.all { it.value is Timer }) return null
-        val id = tasks.keys.random(generatingRandom)
-        return taskManager.getTaskById(id)
+        val tasks = taskManager.tasks
+        val timeTasks = taskManager.timeTasks
+        if (tasks.isEmpty() && (runner.hasAllResults()
+                    && timeTasks.none { it is Timeout } || timeTasks.isEmpty())
+        ) return null
+        val time = taskManager.time
+        var tasksToProcess: List<Task>
+        do {
+            tasksToProcess =
+                timeTasks.filter { time > it.time || probability.poissonProbability(it.time - time) } + tasks
+        } while (tasksToProcess.isEmpty())
+        val task = tasksToProcess.random(probability.rand)
+        taskManager.removeTask(task)
+        return task
     }
 
     override fun reset() {

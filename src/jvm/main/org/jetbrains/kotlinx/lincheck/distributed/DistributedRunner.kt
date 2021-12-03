@@ -76,11 +76,7 @@ internal open class DistributedRunner<Message, Log>(
         dispatcher = DistributedDispatcher(this)
         exception = null
         eventFactory = EventFactory(testCfg)
-        taskManager = if (testCfg.messageOrder == MessageOrder.FIFO) {
-            FifoTaskManager()
-        } else {
-            NoFifoTaskManager()
-        }
+        taskManager = TaskManager(testCfg.messageOrder)
         databases.indices.forEach { databases[it] = testCfg.databaseFactory() }
         environments = Array(numberOfNodes) {
             EnvironmentImpl(
@@ -108,14 +104,14 @@ internal open class DistributedRunner<Message, Log>(
 
     override fun run(): InvocationResult {
         reset()
-        dispatcher.use { dispatcher ->
+        dispatcher.use { _ ->
             for (i in 0 until numberOfNodes) {
-                taskManager.addTask(OperationTask(i) {
+                taskManager.addActionTask(i) {
                     nodeInstances[i].onStart()
-                    taskManager.addTask(OperationTask(i) {
+                    taskManager.addActionTask(i) {
                         runNode(i)
-                    })
-                })
+                    }
+                }
             }
             val coroutine = createMainCoroutine()
             try {
@@ -166,7 +162,7 @@ internal open class DistributedRunner<Message, Log>(
                 continuation = cont
                 GlobalScope.launch(dispatcher) {
                     try {
-                        next.f()
+                        next.action()
                     } catch (e: CrashError) {
                         onNodeCrash(next.iNode)
                     } catch (e: Throwable) {
@@ -190,17 +186,17 @@ internal open class DistributedRunner<Message, Log>(
         testNodeExecutions.getOrNull(iNode)?.crash()
         nodeInstances.forEachIndexed { index, node ->
             if (index != iNode) {
-                taskManager.addTask(CrashNotificationTask(index) {
+                taskManager.addActionTask(index) {
                     eventFactory.createCrashNotificationEvent(index, iNode)
                     node.onNodeUnavailable(iNode)
-                })
+                }
             }
         }
         if (testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }
-        taskManager.addTask(NodeRecoverTask(iNode) {
+        taskManager.addActionTask(iNode) {
             environments[iNode] =
                 EnvironmentImpl(iNode, numberOfNodes, databases[iNode], eventFactory, distrStrategy, taskManager)
 
@@ -210,10 +206,10 @@ internal open class DistributedRunner<Message, Log>(
             distrStrategy.onNodeRecover(iNode)
             eventFactory.createNodeRecoverEvent(iNode)
             nodeInstances[iNode].recover()
-            taskManager.addTask(OperationTask(iNode) {
+            taskManager.addActionTask(iNode) {
                 runNode(iNode)
-            })
-        })
+            }
+        }
     }
 
     fun hasAllResults() = testNodeExecutions.all { it.results.none { r -> r == null } }
@@ -248,11 +244,9 @@ internal open class DistributedRunner<Message, Log>(
                 throw e
             }
         }
-        taskManager.addTask(
-            OperationTask(iNode) {
-                runNode(iNode)
-            }
-        )
+        taskManager.addActionTask(iNode) {
+            runNode(iNode)
+        }
     }
 
     fun storeEventsToFile(failure: LincheckFailure) {

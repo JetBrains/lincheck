@@ -50,11 +50,11 @@ internal class EnvironmentImpl<Message, DB>(
         val e = eventFactory.createMessageEvent(message, nodeId, receiver)
         val rate = strategy.crashOrReturnRate(e)
         repeat(rate) {
-            taskManager.addTask(MessageReceiveTask(iNode = receiver, from = nodeId) {
+            taskManager.addMessageReceiveTask(to = receiver, from = nodeId) {
                 eventFactory.createMessageReceiveEvent(e)
                 //TODO: better way to access node instances
                 eventFactory.nodeInstances[receiver].onMessage(message, nodeId)
-            })
+            }
         }
         strategy.onMessageSent(nodeId, e)
     }
@@ -62,9 +62,9 @@ internal class EnvironmentImpl<Message, DB>(
     @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
     override suspend fun withTimeout(ticks: Int, block: suspend () -> Unit): Boolean = try {
         suspendCancellableCoroutine<Unit> { cont ->
-            taskManager.addTimeTask(Timeout(ticks, nodeId) {
+            taskManager.addTimeout(ticks = ticks, iNode = nodeId) {
                 if (cont.isActive) cont.cancel(TimeoutExceedException)
-            })
+            }
             block.startCoroutineUnintercepted(cont)
         }
         true
@@ -74,30 +74,30 @@ internal class EnvironmentImpl<Message, DB>(
 
     override suspend fun sleep(ticks: Int) {
         suspendCancellableCoroutine<Unit> { cont ->
-            taskManager.addTimeTask(Timeout(ticks, nodeId) {
+            taskManager.addTimeout(ticks = ticks, iNode = nodeId) {
                 if (cont.isActive) cont.resumeWith(Result.success(Unit))
-            })
+            }
         }
     }
 
-    private suspend fun timerTick(name: String, ticks: Int, f: suspend () -> Unit) {
+    private fun timerTick(name: String, ticks: Int, f: () -> Unit) {
         if (name !in timers) return
         eventFactory.createTimerTickEvent(name, nodeId)
         f()
-        taskManager.addTimeTask(Timer(ticks, nodeId) {
+        taskManager.addTimer(ticks = ticks, iNode = nodeId) {
             timerTick(name, ticks, f)
-        })
+        }
     }
 
-    override fun setTimer(name: String, ticks: Int, f: suspend () -> Unit) {
+    override fun setTimer(name: String, ticks: Int, f: () -> Unit) {
         if (name in timers) {
             throw IllegalArgumentException("Timer with name $name already exists")
         }
         eventFactory.createSetTimerEvent(nodeId, name)
         timers.add(name)
-        taskManager.addTimeTask(Timer(ticks, nodeId) {
+        taskManager.addTimer(ticks = ticks, iNode = nodeId) {
             timerTick(name, ticks, f)
-        })
+        }
     }
 
     override fun cancelTimer(name: String) {
