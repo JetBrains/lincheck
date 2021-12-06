@@ -23,64 +23,68 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 
-/*
+
 class TaskManagerTest {
-    private fun addMessageTask(manager: TaskManager, from: Int, to: Int) =
-        MessageReceiveTask(to, from) {}.also { manager.addTask(it) }
+    private fun addMessageTask(manager: TaskManager, from: Int, to: Int, expectedId: Int) =
+        manager.addMessageReceiveTask(from, to) {}.also { check(it.id == expectedId) }
 
-    private fun addOperationTask(manager: TaskManager, iNode: Int) =
-        OperationTask(iNode) {}.also { manager.addTask(it) }
+    private fun addActionTask(manager: TaskManager, iNode: Int, expectedId: Int) =
+        manager.addActionTask(iNode) {}.also { check(it.id == expectedId) }
 
-    private fun addTimeTask(manager: TaskManager, ticks: Int, iNode: Int) =
-        Timer(ticks, iNode) {}.also { manager.addTimeTask(it) }
+    private fun addTimer(manager: TaskManager, ticks: Int, iNode: Int, expectedId: Int, expectedTime: Int) =
+        manager.addTimer(iNode = iNode, ticks = ticks) {}.also { check(it.id == expectedId && it.time == expectedTime) }
+
+    private fun addTimeout(manager: TaskManager, ticks: Int, iNode: Int, expectedId: Int, expectedTime: Int) =
+        manager.addTimeout(iNode = iNode, ticks = ticks) {}.also { check(it.id == expectedId && it.time == expectedTime) }
 
     @Test
-    fun testFifoTaskManager() {
-        val manager = FifoTaskManager()
-        val operation = addOperationTask(manager, 0)
-        val message1 = addMessageTask(manager, 0, 1)
-        val message2 = addMessageTask(manager, 0, 0)
-        val message3 = addMessageTask(manager, 0, 1)
-        check(manager.getAvailableTasks() == mapOf(0 to operation, 1 to message1, 2 to message2))
-        check(manager.getTaskById(1) == message1)
-        check(manager.getAvailableTasks() == mapOf(0 to operation, 2 to message2, 3 to message3))
+    fun testFifoMessageOrder() {
+        val manager = TaskManager(MessageOrder.FIFO)
+        val operation = addActionTask(manager, 0, 0)
+        val message1 = addMessageTask(manager, 0, 1, 1)
+        val message2 = addMessageTask(manager, 0, 1, 2)
+        val message3 = addMessageTask(manager, 0, 0, 3)
+        check(manager.tasks == listOf(operation, message1, message3))
+        manager.removeTask(message1)
+        check(manager.tasks == listOf(operation, message2, message3))
     }
 
     @Test
-    fun testNoFifo() {
-        val manager = NoFifoTaskManager()
-        val operation = addOperationTask(manager, 0)
-        val message1 = addMessageTask(manager, 0, 1)
-        val message2 = addMessageTask(manager, 0, 0)
-        val message3 = addMessageTask(manager, 0, 1)
-        check(manager.getAvailableTasks() == mapOf(0 to operation, 1 to message1, 2 to message2, 3 to message3))
-    }
-
-    private fun testTimerWithoutOtherTasks(manager: TaskManager) {
-        val task = addTimeTask(manager, 10, 0)
-        check(manager.getAvailableTasks() == mapOf(10 to task))
+    fun testAsynchronousOrder() {
+        val manager = TaskManager(MessageOrder.ASYNCHRONOUS)
+        val operation = addActionTask(manager, 0, 0)
+        val message1 = addMessageTask(manager, 0, 1, 1)
+        val message2 = addMessageTask(manager, 0, 1, 2)
+        val message3 = addMessageTask(manager, 0, 0, 3)
+        check(manager.tasks == listOf(operation, message1, message2, message3))
     }
 
     @Test
-    fun testFifoManagerTimerWithoutOtherTasks() = testTimerWithoutOtherTasks(FifoTaskManager())
-
-    @Test
-    fun testNoFifoManagerTimerWithoutOtherTasks() = testTimerWithoutOtherTasks(NoFifoTaskManager())
-
-    @Test
-    fun testFifoWithTimers() {
-        val manager = FifoTaskManager()
-        val operation1 = addOperationTask(manager, 0)
-        println(manager.counter)
-        val operation2 = addOperationTask(manager, 1)
-        println(manager.counter)
-        val operation3 = addOperationTask(manager, 2)
-        println(manager.counter)
-        check(manager.getTaskById(0) == operation1)
-        val timer = addTimeTask(manager, 10, 1)
-        check(manager.getAvailableTasks() == mapOf(1 to operation2, 2 to operation3))
-        check(manager.getTaskById(1) == operation2)
-        check(manager.getTaskById(2) == operation3)
-        println(manager.getAvailableTasks())
+    fun testTimeTasks() {
+        val manager = TaskManager(MessageOrder.FIFO)
+        val timer = addTimer(manager, ticks = 10, iNode = 1, expectedId = 0, expectedTime = 10)
+        val operation = addActionTask(manager, iNode = 2, expectedId = 1)
+        check(manager.timeTasks == listOf(timer))
+        manager.removeTask(operation)
+        val timeout = addTimeout(manager, ticks = 5, iNode = 0, expectedId = 2, expectedTime = 6)
+        check(manager.timeTasks == listOf(timer, timeout))
+        manager.removeTask(timeout)
+        check(manager.timeTasks == listOf(timer))
     }
-}*/
+
+    @Test
+    fun testTime() {
+        val manager = TaskManager(MessageOrder.FIFO)
+        val operation = addActionTask(manager, iNode = 1, expectedId = 0)
+        val timer = addTimer(manager, iNode = 1, ticks = 10, expectedId = 1, expectedTime = 10)
+        addTimer(manager, iNode = 0, ticks = 20, expectedId = 2, expectedTime = 20)
+        val message = addMessageTask(manager, from = 2, to = 1, expectedId = 3)
+        check(manager.time == 0)
+        manager.removeTask(operation)
+        check(manager.time == 1)
+        manager.removeTask(message)
+        check(manager.time == 10)
+        manager.removeTask(timer)
+        check(manager.time == 20)
+    }
+}

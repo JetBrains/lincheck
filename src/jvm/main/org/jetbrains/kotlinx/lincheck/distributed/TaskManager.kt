@@ -100,13 +100,13 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
-    fun addTimer(iNode: Int, ticks: Int, action: suspend () -> Unit): TimeTask {
+    fun addTimer(iNode: Int, ticks: Int, action: suspend () -> Unit): PeriodicTimer {
         val task = PeriodicTimer(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
         _timeTasks.add(task)
         return task
     }
 
-    fun addTimeout(iNode: Int, ticks: Int, action: suspend () -> Unit): TimeTask {
+    fun addTimeout(iNode: Int, ticks: Int, action: suspend () -> Unit): Timeout {
         val task = Timeout(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
         _timeTasks.add(task)
         return task
