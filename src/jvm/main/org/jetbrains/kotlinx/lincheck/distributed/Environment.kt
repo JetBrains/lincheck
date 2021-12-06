@@ -8,7 +8,7 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Environment interface for communication with other processes.
  */
-interface Environment<Message, Log> {
+interface Environment<Message, DB> {
     /**
      * Identifier of this node (from 0 to [numberOfNodes]).
      */
@@ -22,7 +22,7 @@ interface Environment<Message, Log> {
     /**
      * Returns identifiers of nodes of the exact class [cls].
      **/
-    fun getAddressesForClass(cls: Class<out Node<Message, Log>>): List<Int>?
+    fun getAddressesForClass(cls: Class<out Node<Message, DB>>): List<Int>?
 
     /**
      * Sends the specified [message] to the process [receiver] (from 0 to [numberOfNodes]).
@@ -42,10 +42,17 @@ interface Environment<Message, Log> {
         }
     }
 
+    fun broadcastToGroup(message: Message, cls: Class<out Node<Message, DB>>, skipItself: Boolean = true) {
+        for (i in getAddressesForClass(cls)!!) {
+            if (i == nodeId && skipItself) continue
+            send(message, i)
+        }
+    }
+
     /**
      * Persistent storage for a current node.
      */
-    val database: Log
+    val database: DB
 
     /**
      * Runs the specified [block] of code with a specified timeout and finishes if timeout was exceeded.
