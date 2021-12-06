@@ -20,16 +20,13 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Runnable
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.resume
 
-internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>) : CoroutineDispatcher(),
-    AutoCloseable {
+internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>) : CoroutineDispatcher() {
     private val executor = Executors.newSingleThreadExecutor()
 
     @Volatile
@@ -42,7 +39,9 @@ internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>
                 block.run()
                 taskCounter--
                 if (taskCounter == 0) {
-                    if (!executor.isShutdown) runner.continuation?.resume(Unit)
+                    if (!runner.launchNextTask()) {
+                        runner.signal()
+                    }
                 }
             }
         } catch (_: RejectedExecutionException) {
@@ -50,7 +49,7 @@ internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>
         }
     }
 
-    override fun close() {
+    fun close() {
         executor.shutdown()
     }
 }

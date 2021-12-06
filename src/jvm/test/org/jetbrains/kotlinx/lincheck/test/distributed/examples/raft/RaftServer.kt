@@ -38,6 +38,8 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
         const val MAX_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 40
     }
 
+    private val nodeCount = env.getAddressesForClass(RaftServer::class.java)!!.count()
+
     private var status = Status.FOLLOWER
     private var commitIndex = -1
     private var lastApplied = -1
@@ -46,7 +48,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
     }
     private var receivedHeartbeatCount = 0L
     private val random = Random(env.nodeId)
-    private val majority = env.numberOfNodes / 2 + 1
+    private val majority = nodeCount / 2 + 1
     private var receivedOks = Array(env.numberOfNodes) { false }
     private var leaderId: Int? = null
     private val matchIndices = Array(env.numberOfNodes) { 0 }
@@ -84,13 +86,13 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
         env.database.votedFor = env.nodeId
         receivedOks.fill(false)
         receivedOks[env.nodeId] = true
-        env.broadcast(
+        env.broadcastToGroup(
             RequestVote(
                 env.database.currentTerm,
                 env.nodeId,
                 lastLogIndex = env.database.lastLogIndex,
                 lastLogTerm = env.database.lastLogTerm
-            )
+            ), RaftServer::class.java
         )
     }
 
@@ -132,7 +134,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
 
     private fun broadcastEntries() {
         if (status != Status.LEADER) return
-        for (i in nextIndices.indices) {
+        for (i in env.getAddressesForClass(RaftServer::class.java)!!) {
             if (i == env.nodeId) continue
             env.send(
                 AppendEntries(

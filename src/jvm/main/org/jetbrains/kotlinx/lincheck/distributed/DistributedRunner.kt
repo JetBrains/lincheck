@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.atomicfu.locks.ReentrantLock
+import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.createExceptionResult
@@ -33,6 +35,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.File
 import java.lang.reflect.Method
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.suspendCoroutine
 
@@ -61,19 +64,21 @@ internal open class DistributedRunner<Message, Log>(
     private lateinit var nodeInstances: Array<Node<Message, Log>>
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var taskManager: TaskManager
-    var continuation: Continuation<Unit>? = null
-    private lateinit var dispatcher: DistributedDispatcher
     private var exception: Throwable? = null
+
+    private lateinit var dispatcher: DistributedDispatcher
+    private val lock = ReentrantLock()
+    private val condition = lock.newCondition()
 
     override fun initialize() {
         super.initialize()
         testNodeExecutions = Array(testCfg.addressResolver.nodesWithScenario) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
+        dispatcher = DistributedDispatcher(this)
     }
 
     private fun reset() {
-        dispatcher = DistributedDispatcher(this)
         exception = null
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
@@ -104,81 +109,73 @@ internal open class DistributedRunner<Message, Log>(
 
     override fun run(): InvocationResult {
         reset()
-        dispatcher.use { _ ->
-            for (i in 0 until numberOfNodes) {
+        for (i in 0 until numberOfNodes) {
+            taskManager.addActionTask(i) {
+                nodeInstances[i].onStart()
                 taskManager.addActionTask(i) {
-                    nodeInstances[i].onStart()
-                    taskManager.addActionTask(i) {
-                        runNode(i)
-                    }
+                    runNode(i)
                 }
-            }
-            val coroutine = createMainCoroutine()
-            try {
-                runBlocking {
-                    withTimeout(testCfg.timeoutMs) {
-                        coroutine.join()
-                    }
-                }
-            } catch (_: TimeoutCancellationException) {
-                return DeadlockInvocationResult(emptyMap())
-            }
-
-            if (exception != null) {
-                return UnexpectedExceptionInvocationResult(exception!!)
-            }
-            try {
-                nodeInstances.forEach { n -> n.validate(eventFactory.events, databases) }
-            } catch (e: Throwable) {
-                return ValidationFailureInvocationResult(scenario, "validate", e)
-            }
-            nodeInstances.forEach {
-                executeValidationFunctions(it, validationFunctions) { functionName, exception ->
-                    val s = ExecutionScenario(
-                        scenario.initExecution,
-                        scenario.parallelExecution,
-                        emptyList()
-                    )
-                    return ValidationFailureInvocationResult(s, functionName, exception)
-                }
-            }
-            testNodeExecutions.zip(scenario.parallelExecution).forEach { it.first.setSuspended(it.second) }
-            val parallelResultsWithClock = testNodeExecutions.mapIndexed { i, ex ->
-                //TODO: add real clock
-                ex.results.map { it!!.withEmptyClock(numberOfNodes) }
-            }
-            val results = ExecutionResult(
-                emptyList(), null, parallelResultsWithClock, super.constructStateRepresentation(),
-                emptyList(), null
-            )
-            return CompletedInvocationResult(results)
-        }
-    }
-
-    private fun createMainCoroutine() = GlobalScope.launch(dispatcher) {
-        while (true) {
-            val next = distrStrategy.next(taskManager) ?: break
-            suspendCoroutine<Unit> { cont ->
-                continuation = cont
-                GlobalScope.launch(dispatcher) {
-                    try {
-                        next.action()
-                    } catch (e: CrashError) {
-                        onNodeCrash(next.iNode)
-                    } catch (e: Throwable) {
-                        if (exception == null) {
-                            exception = e
-                        }
-                    }
-                }
-            }
-            continuation = null
-            if (exception != null) {
-                break
             }
         }
-        continuation = null
+        launchNextTask()
+        val finishedOnTime = try {
+            lock.withLock { condition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
+        } catch (_: InterruptedException) {
+            false
+        }
+        if (!finishedOnTime) {
+            return DeadlockInvocationResult(emptyMap())
+        }
+        if (exception != null) {
+            return UnexpectedExceptionInvocationResult(exception!!)
+        }
+        try {
+            nodeInstances.forEach { n -> n.validate(eventFactory.events, databases) }
+        } catch (e: Throwable) {
+            return ValidationFailureInvocationResult(scenario, "validate", e)
+        }
+        nodeInstances.forEach {
+            executeValidationFunctions(it, validationFunctions) { functionName, exception ->
+                val s = ExecutionScenario(
+                    scenario.initExecution,
+                    scenario.parallelExecution,
+                    emptyList()
+                )
+                return ValidationFailureInvocationResult(s, functionName, exception)
+            }
+        }
+        testNodeExecutions.zip(scenario.parallelExecution).forEach { it.first.setSuspended(it.second) }
+        val parallelResultsWithClock = testNodeExecutions.mapIndexed { i, ex ->
+            //TODO: add real clock
+            ex.results.map { it!!.withEmptyClock(numberOfNodes) }
+        }
+        val results = ExecutionResult(
+            emptyList(), null, parallelResultsWithClock, super.constructStateRepresentation(),
+            emptyList(), null
+        )
+        return CompletedInvocationResult(results)
     }
+
+    fun launchNextTask(): Boolean {
+        if (exception != null) return false
+        val next = distrStrategy.next(taskManager) ?: return false
+        GlobalScope.launch(dispatcher) {
+            GlobalScope.launch(dispatcher) {
+                try {
+                    next.action()
+                } catch (e: CrashError) {
+                    onNodeCrash(next.iNode)
+                } catch (e: Throwable) {
+                    if (exception == null) {
+                        exception = e
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    fun signal() = lock.withLock { condition.signal() }
 
     private fun onNodeCrash(iNode: Int) {
         eventFactory.createNodeCrashEvent(iNode)
@@ -256,5 +253,9 @@ internal open class DistributedRunner<Message, Log>(
             out.println()
             testCfg.getFormatter().format(eventFactory.events).forEach { out.println(it) }
         }
+    }
+
+    override fun close() {
+        dispatcher.close()
     }
 }
