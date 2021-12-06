@@ -41,7 +41,7 @@ internal abstract class DistributedStrategy<Message, DB>(
     fun crashOrReturnRate(event: MessageSentEvent<Message>) : Int {
         val iNode = event.iNode
         if (!crashInfo.canSend(iNode, event.receiver)) return 0
-        if (crashInfo.canCrash(iNode)) tryAddCrashBeforeSend(iNode, event)
+        tryAddCrashBeforeSend(iNode, event)
         if (tryAddPartitionBeforeSend(iNode, event)) return 0
         return getMessageRate(iNode, event)
     }

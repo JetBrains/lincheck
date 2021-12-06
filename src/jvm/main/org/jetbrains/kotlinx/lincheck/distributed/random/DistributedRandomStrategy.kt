@@ -69,7 +69,7 @@ internal class DistributedRandomStrategy<Message, DB>(
 
 
     private fun tryCrash(iNode: Int) {
-        if (probability.nodeFailed(crashInfo.remainedNodeCount())) {
+        if (crashInfo.canCrash(iNode) && probability.nodeFailed(crashInfo.remainedNodeCount())) {
             crashInfo.crashNode(iNode)
             throw CrashError()
         }
