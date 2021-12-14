@@ -36,8 +36,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.File
 import java.lang.reflect.Method
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.suspendCoroutine
 
 fun debugOutput(f: () -> String) {
     return
@@ -66,7 +64,7 @@ internal open class DistributedRunner<Message, Log>(
     private lateinit var taskManager: TaskManager
     private var exception: Throwable? = null
 
-    private lateinit var dispatcher: DistributedDispatcher
+    private lateinit var executor: DistributedExecutor
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()
 
@@ -75,7 +73,7 @@ internal open class DistributedRunner<Message, Log>(
         testNodeExecutions = Array(testCfg.addressResolver.nodesWithScenario) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
-        dispatcher = DistributedDispatcher(this)
+        executor = DistributedExecutor(this)
     }
 
     private fun reset() {
@@ -112,7 +110,7 @@ internal open class DistributedRunner<Message, Log>(
         for (i in 0 until numberOfNodes) {
             taskManager.addActionTask(i) {
                 nodeInstances[i].onStart()
-                taskManager.addActionTask(i) {
+                taskManager.addSuspendedTask(i) {
                     runNode(i)
                 }
             }
@@ -159,8 +157,23 @@ internal open class DistributedRunner<Message, Log>(
     fun launchNextTask(): Boolean {
         if (exception != null) return false
         val next = distrStrategy.next(taskManager) ?: return false
-        GlobalScope.launch(dispatcher) {
-            GlobalScope.launch(dispatcher) {
+        //TODO remove code duplication
+        //if (next is Timeout) println("Launching timeout")
+        if (next is InstantTask) {
+            executor.execute {
+                try {
+                    next.action()
+                } catch (e: CrashError) {
+                    onNodeCrash(next.iNode)
+                } catch (e: Throwable) {
+                    if (exception == null) {
+                        exception = e
+                    }
+                }
+            }
+        }
+        if (next is SuspendedTask) {
+            GlobalScope.launch(executor.asCoroutineDispatcher()) {
                 try {
                     next.action()
                 } catch (e: CrashError) {
@@ -178,6 +191,7 @@ internal open class DistributedRunner<Message, Log>(
     fun signal() = lock.withLock { condition.signal() }
 
     private fun onNodeCrash(iNode: Int) {
+        println("[$iNode]: Crashed")
         eventFactory.createNodeCrashEvent(iNode)
         taskManager.removeAllForNode(iNode)
         testNodeExecutions.getOrNull(iNode)?.crash()
@@ -203,7 +217,7 @@ internal open class DistributedRunner<Message, Log>(
             distrStrategy.onNodeRecover(iNode)
             eventFactory.createNodeRecoverEvent(iNode)
             nodeInstances[iNode].recover()
-            taskManager.addActionTask(iNode) {
+            taskManager.addSuspendedTask(iNode) {
                 runNode(iNode)
             }
         }
@@ -241,7 +255,7 @@ internal open class DistributedRunner<Message, Log>(
                 throw e
             }
         }
-        taskManager.addActionTask(iNode) {
+        taskManager.addSuspendedTask(iNode) {
             runNode(iNode)
         }
     }
@@ -249,13 +263,19 @@ internal open class DistributedRunner<Message, Log>(
     fun storeEventsToFile(failure: LincheckFailure) {
         if (testCfg.logFilename == null) return
         File(testCfg.logFilename).printWriter().use { out ->
+            println(Thread.currentThread().name)
             out.println(failure)
             out.println()
-            testCfg.getFormatter().format(eventFactory.events).forEach { out.println(it) }
+            val formatter = testCfg.getFormatter()
+            val events = eventFactory.events.toList()
+            val list = formatter.format(events)
+            list.take(2000).forEach {
+                out.println(it) }
+            //testCfg.getFormatter().format(eventFactory.events).forEach { out.println(it) }
         }
     }
 
     override fun close() {
-        dispatcher.close()
+        executor.close()
     }
 }

@@ -24,23 +24,26 @@ package org.jetbrains.kotlinx.lincheck.distributed
 sealed class Task {
     abstract val id: Int
     abstract val iNode: Int
-    abstract val action: suspend () -> Unit
+}
+
+sealed class InstantTask : Task() {
+    abstract val action: () -> Unit
 }
 
 data class MessageReceiveTask(
     override val id: Int,
     override val iNode: Int,
     val from: Int,
-    override val action: suspend () -> Unit
-) : Task()
+    override val action: () -> Unit
+) : InstantTask()
 
 data class ActionTask(
     override val id: Int,
     override val iNode: Int,
-    override val action: suspend () -> Unit
-) : Task()
+    override val action: () -> Unit
+) : InstantTask()
 
-sealed class TimeTask() : Task() {
+sealed class TimeTask : InstantTask() {
     abstract val time: Int
 }
 
@@ -48,15 +51,21 @@ data class PeriodicTimer(
     override val id: Int,
     override val time: Int,
     override val iNode: Int,
-    override val action: suspend () -> Unit
+    override val action: () -> Unit
 ) : TimeTask()
 
 data class Timeout(
     override val id: Int,
     override val time: Int,
     override val iNode: Int,
-    override val action: suspend () -> Unit
+    override val action: () -> Unit
 ) : TimeTask()
+
+data class SuspendedTask(
+    override val id: Int,
+    override val iNode: Int,
+    val action: suspend () -> Unit
+) : Task()
 
 internal class TaskManager(private val messageOrder: MessageOrder) {
     private var _taskId: Int = 0
@@ -73,7 +82,7 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         get() = when (messageOrder) {
             MessageOrder.ASYNCHRONOUS -> _tasks
             MessageOrder.FIFO -> {
-                _tasks.filterIsInstance<ActionTask>() + nextMessagesForFifoOrder()
+                _tasks.filter { it !is MessageReceiveTask } + nextMessagesForFifoOrder()
             }
         }
 
@@ -88,27 +97,33 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
             return _time
         }
 
-    fun addMessageReceiveTask(from: Int, to: Int, action: suspend () -> Unit): MessageReceiveTask {
+    fun addMessageReceiveTask(from: Int, to: Int, action: () -> Unit): MessageReceiveTask {
         val task = MessageReceiveTask(id = _taskId++, iNode = to, from = from, action = action)
         _tasks.add(task)
         return task
     }
 
-    fun addActionTask(iNode: Int, action: suspend () -> Unit): ActionTask {
+    fun addActionTask(iNode: Int, action: () -> Unit): ActionTask {
         val task = ActionTask(id = _taskId++, iNode = iNode, action = action)
         _tasks.add(task)
         return task
     }
 
-    fun addTimer(iNode: Int, ticks: Int, action: suspend () -> Unit): PeriodicTimer {
+    fun addTimer(iNode: Int, ticks: Int, action: () -> Unit): PeriodicTimer {
         val task = PeriodicTimer(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
         _timeTasks.add(task)
         return task
     }
 
-    fun addTimeout(iNode: Int, ticks: Int, action: suspend () -> Unit): Timeout {
+    fun addTimeout(iNode: Int, ticks: Int, action: () -> Unit): Timeout {
         val task = Timeout(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
         _timeTasks.add(task)
+        return task
+    }
+
+    fun addSuspendedTask(iNode: Int, action: suspend () -> Unit): SuspendedTask {
+        val task = SuspendedTask(id = _taskId++, iNode = iNode, action = action)
+        _tasks.add(task)
         return task
     }
 

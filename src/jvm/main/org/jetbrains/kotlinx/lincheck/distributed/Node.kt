@@ -30,7 +30,7 @@ interface Node<Message, DB> {
      * Called after all operations for the node are finished.
      * Is not called if the node has no scenario.
      */
-    suspend fun onScenarioFinish() {}
+    fun onScenarioFinish() {}
 
     /**
      * Returns a current node state representation.

@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -35,14 +37,14 @@ object Ping : PingPongMessage()
 object Pong : PingPongMessage()
 
 class PingPongNode(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
-    val semaphore = Semaphore(1, 1)
+    val channel = Channel<PingPongMessage>(UNLIMITED)
     var hasResult = false
     override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
             is Ping -> env.send(Pong, sender)
-            is Pong -> if (semaphore.availablePermits == 0) {
+            is Pong -> {
+                channel.offer(message)
                 hasResult = true
-                semaphore.release()
             }
         }
     }
@@ -50,14 +52,13 @@ class PingPongNode(val env: Environment<PingPongMessage, Unit>) : Node<PingPongM
     @Operation
     suspend fun ping(): Boolean {
         hasResult = false
-        if (env.nodeId == 0) {
-            return true
-        }
         while (true) {
             env.send(Ping, 0)
-            env.withTimeout(5) {
-                semaphore.acquire()
+            val res = env.withTimeout(50) {
+                channel.receive()
+                println("[${env.nodeId}]: Inside timeout")
             }
+            println("[${env.nodeId}]: Exit timeout $res")
             if (hasResult) return true
         }
     }

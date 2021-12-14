@@ -69,7 +69,6 @@ data class RequestVoteResponse(override val term: Int, val voteGranted: Boolean)
 
 data class ClientRequest(val command: Command, override val term: Int = -1) : RaftMessage()
 data class NotALeader(val leaderId: Int, override val term: Int = -1) : RaftMessage(), ResponseToClient
-data class LeaderUnknown(override val term: Int = -1) : RaftMessage(), ResponseToClient
 data class RejectOperation(override val term: Int = -1) : RaftMessage(), ResponseToClient
 data class ClientResult(val res: String?, val commandId: CommandId, override val term: Int = -1) : RaftMessage(),
     ResponseToClient

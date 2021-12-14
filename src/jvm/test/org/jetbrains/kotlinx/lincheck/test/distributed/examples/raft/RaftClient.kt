@@ -50,29 +50,31 @@ class RaftClient(private val env: Environment<RaftMessage, PersistentStorage>) :
         opId++
         val command = createCommand()
         var leader: Int? = null
+        var response: ClientResult? = null
         while (true) {
-            var response: ClientResult? = null
             val nodeToSend = leader ?: servers.random(random)
             env.send(ClientRequest(command), nodeToSend)
             env.withTimeout(OPERATION_TIMEOUT) {
                 val msg = responseChannel.receive()
                 if (msg is ClientResult && opId == msg.commandId.opId) {
                     response = msg
-                    return@withTimeout
+                    //return@withTimeout
                 }
                 if (msg is NotALeader) {
                     leader = msg.leaderId
                 }
+                //return@withTimeout
             }
+            //env.recordInternalEvent("Continue loop $res")
             if (response != null) return response!!.res
         }
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? =
         executeOperation { GetCommand(CommandId(client = env.nodeId, opId = opId), key) }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? =
         executeOperation { PutCommand(CommandId(client = env.nodeId, opId = opId), key, value) }
 }
@@ -86,13 +88,17 @@ class RaftSpecification() : VerifierState() {
 
 class RaftTest {
     private fun options() = createDistributedOptions<RaftMessage, PersistentStorage>(::PersistentStorage)
-        .nodeType(RaftClient::class.java, 1, false)
-        .nodeType(RaftServer::class.java, 1, 3)
-        //.crashMode(CrashMode.ALL_NODES_RECOVER)
-        //.setMaxNumberOfFailedNodes(RaftServer::class.java) { (it - 1) / 2 }
+        .nodeType(RaftClient::class.java, 3, false)
+        .nodeType(RaftServer::class.java, 1, 5)
+        .crashMode(CrashMode.ALL_NODES_RECOVER)
+        .setMaxNumberOfFailedNodes(RaftServer::class.java) { (it + 1) / 2 }
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(RaftSpecification::class.java)
         .storeLogsForFailedScenario("raft.txt")
+        .actorsPerThread(3)
+        .invocationsPerIteration(10_000)
+        .minimizeFailedScenario(false)
+        .iterations(30)
 
     @Test
     fun test() = options().check()

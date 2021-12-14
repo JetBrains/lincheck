@@ -20,10 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.intrinsics.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import java.lang.IllegalArgumentException
+import kotlin.coroutines.Continuation
 
 internal object TimeoutExceedException : Exception()
 

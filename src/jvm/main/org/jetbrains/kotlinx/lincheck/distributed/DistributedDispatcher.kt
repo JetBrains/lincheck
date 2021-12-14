@@ -20,26 +20,31 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Runnable
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
-import kotlin.coroutines.CoroutineContext
 
-internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>) : CoroutineDispatcher() {
+internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) : Executor {
     private val executor = Executors.newSingleThreadExecutor()
 
     @Volatile
     private var taskCounter = 0
 
-    override fun dispatch(context: CoroutineContext, block: Runnable) {
+
+    fun close() {
+        executor.shutdown()
+    }
+
+    override fun execute(command: Runnable) {
         taskCounter++
         try {
             executor.submit {
-                block.run()
+               // println("Run command $command")
+                command.run()
                 taskCounter--
                 if (taskCounter == 0) {
                     if (!runner.launchNextTask()) {
+                        //println("Finished")
                         runner.signal()
                     }
                 }
@@ -47,9 +52,5 @@ internal class DistributedDispatcher(private val runner: DistributedRunner<*, *>
         } catch (_: RejectedExecutionException) {
             return
         }
-    }
-
-    fun close() {
-        executor.shutdown()
     }
 }

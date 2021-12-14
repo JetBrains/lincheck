@@ -83,32 +83,32 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
         }
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun contains(key: Int): Boolean {
         val response = sendOnce(ContainsCommand(key, commandId++)) as ContainsResult
         return response.res
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun put(key: Int, value: Int): Int? {
         val response = sendOnce(PutCommand(key, value, commandId++)) as PutResult
         return response.res
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun remove(key: Int): Int? {
         val response = sendOnce(RemoveCommand(key, commandId++)) as RemoveResult
         return response.res
     }
 
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun get(key: Int): Int? {
         val response = sendOnce(GetCommand(key, commandId++)) as GetResult
         return response.res
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun add(key: Int, value: Int): Int? {
         val response = sendOnce(AddCommand(key, value, commandId++)) as AddResult
         return response.res

@@ -86,6 +86,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
         env.database.votedFor = env.nodeId
         receivedOks.fill(false)
         receivedOks[env.nodeId] = true
+        env.recordInternalEvent("Start election")
         env.broadcastToGroup(
             RequestVote(
                 env.database.currentTerm,
@@ -125,6 +126,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
     private fun onElectionSuccess() {
         status = Status.LEADER
         leaderId = env.nodeId
+        env.recordInternalEvent("Election success")
         onNewEntry(null)
         env.setTimer("HEARTBEAT", HEARTBEAT_RATE) {
             if (status == Status.LEADER) broadcastEntries()
@@ -235,7 +237,6 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
 
     private fun onClientRequest(message: ClientRequest, sender: Int) {
         if (leaderId == null) {
-            env.send(LeaderUnknown(), sender)
             return
         }
         if (status != Status.LEADER) {
@@ -279,6 +280,10 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
             }
             else -> throw IllegalStateException("Unexpected message $message to server ${env.nodeId}")
         }
+    }
+
+    override fun stateRepresentation(): String {
+        return "$status, leaderId=$leaderId, receivedOksCount=${receivedOks.count { it }}, heartbeats=$receivedHeartbeatCount"
     }
 }
 
