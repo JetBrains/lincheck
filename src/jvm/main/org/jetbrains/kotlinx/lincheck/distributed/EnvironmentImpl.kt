@@ -20,12 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.*
 import kotlinx.coroutines.intrinsics.*
-import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import java.lang.IllegalArgumentException
 import kotlin.coroutines.Continuation
+import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 
 internal object TimeoutExceedException : Exception()
 
@@ -52,7 +52,11 @@ internal class EnvironmentImpl<Message, DB>(
         val e = eventFactory.createMessageEvent(message, nodeId, receiver)
         val rate = strategy.crashOrReturnRate(e)
         repeat(rate) {
-            taskManager.addMessageReceiveTask(to = receiver, from = nodeId) {
+            taskManager.addMessageReceiveTask(
+                to = receiver,
+                from = nodeId,
+                stringRepresentation = "Message(to=$receiver, from=$nodeId, msg=$message)"
+            ) {
                 eventFactory.createMessageReceiveEvent(e)
                 //TODO: better way to access node instances
                 eventFactory.nodeInstances[receiver].onMessage(message, nodeId)
@@ -61,23 +65,40 @@ internal class EnvironmentImpl<Message, DB>(
         strategy.onMessageSent(nodeId, e)
     }
 
+    @OptIn(InternalCoroutinesApi::class)
     @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-    override suspend fun withTimeout(ticks: Int, block: suspend () -> Unit): Boolean = try {
-        suspendCancellableCoroutine<Unit> { cont ->
-            taskManager.addTimeout(ticks = ticks, iNode = nodeId) {
-                if (cont.isActive) cont.cancel(TimeoutExceedException)
+    override suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T): T? {
+        if (ticks <= 0) return null
+        var coroutine: TimeoutCoroutine<T?, T?>? = null
+        try {
+            return suspendCoroutineUninterceptedOrReturn { uCont ->
+                val timeoutCoroutine = TimeoutCoroutine(ticks, uCont)
+                coroutine = timeoutCoroutine
+                val task = taskManager.addTimeout(nodeId, ticks, "Timeout(iNode=$nodeId, ticks=$ticks)") {
+                    timeoutCoroutine.run()
+                }
+                val handle = DisposableHandle {
+                    taskManager.removeTask(task)
+                }
+                setupTimeout<T?, T?>(timeoutCoroutine, block, handle)
             }
-            block.startCoroutineUnintercepted(cont)
+        } catch (e: TimeoutCancellationException) {
+            // Return null if it's our exception, otherwise propagate it upstream (e.g. in case of nested withTimeouts)
+            if (e.coroutine === coroutine) {
+                return null
+            }
+            throw e
         }
-        true
-    } catch (e: TimeoutExceedException) {
-        false
     }
 
     override suspend fun sleep(ticks: Int) {
         suspendCancellableCoroutine<Unit> { cont ->
-            taskManager.addTimeout(ticks = ticks, iNode = nodeId) {
-                if (cont.isActive) cont.resumeWith(Result.success(Unit))
+            taskManager.addTimeout(
+                ticks = ticks,
+                iNode = nodeId,
+                stringRepresentation = "Sleep(iNode=$nodeId, ticks=$ticks)"
+            ) {
+                cont.resumeWith(Result.success(Unit))
             }
         }
     }
@@ -86,7 +107,11 @@ internal class EnvironmentImpl<Message, DB>(
         if (name !in timers) return
         eventFactory.createTimerTickEvent(name, nodeId)
         f()
-        taskManager.addTimer(ticks = ticks, iNode = nodeId) {
+        taskManager.addTimer(
+            ticks = ticks,
+            iNode = nodeId,
+            stringRepresentation = "Timer(name=$name, iNode=$nodeId, ticks=$ticks)"
+        ) {
             timerTick(name, ticks, f)
         }
     }
@@ -97,7 +122,11 @@ internal class EnvironmentImpl<Message, DB>(
         }
         eventFactory.createSetTimerEvent(nodeId, name)
         timers.add(name)
-        taskManager.addTimer(ticks = ticks, iNode = nodeId) {
+        taskManager.addTimer(
+            ticks = ticks,
+            iNode = nodeId,
+            stringRepresentation = "Timer(name=$name, iNode=$nodeId, ticks=$ticks)"
+        ) {
             timerTick(name, ticks, f)
         }
     }

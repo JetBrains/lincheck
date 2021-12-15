@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.ReentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.*
@@ -37,11 +38,6 @@ import java.io.File
 import java.lang.reflect.Method
 import java.util.concurrent.TimeUnit
 
-fun debugOutput(f: () -> String) {
-    return
-    val msg = Thread.currentThread().name + ": " + f()
-    println(msg)
-}
 
 internal open class DistributedRunner<Message, Log>(
     strategy: DistributedStrategy<Message, Log>,
@@ -62,6 +58,9 @@ internal open class DistributedRunner<Message, Log>(
     private lateinit var nodeInstances: Array<Node<Message, Log>>
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var taskManager: TaskManager
+    private val isSignal = atomic(false)
+
+    @Volatile
     private var exception: Throwable? = null
 
     private lateinit var executor: DistributedExecutor
@@ -77,6 +76,7 @@ internal open class DistributedRunner<Message, Log>(
     }
 
     private fun reset() {
+        isSignal.lazySet(false)
         exception = null
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
@@ -108,9 +108,10 @@ internal open class DistributedRunner<Message, Log>(
     override fun run(): InvocationResult {
         reset()
         for (i in 0 until numberOfNodes) {
-            taskManager.addActionTask(i) {
+            taskManager.addActionTask(i, "On start(iNode=$i)") {
                 nodeInstances[i].onStart()
-                taskManager.addSuspendedTask(i) {
+                if (i >= testCfg.addressResolver.nodesWithScenario) return@addActionTask
+                taskManager.addSuspendedTask(i, "Run operation(iNode=$i)") {
                     runNode(i)
                 }
             }
@@ -119,10 +120,12 @@ internal open class DistributedRunner<Message, Log>(
         val finishedOnTime = try {
             lock.withLock { condition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
         } catch (_: InterruptedException) {
+            //TODO (don't know how to handle it correctly)
             false
         }
-        if (!finishedOnTime) {
-            return DeadlockInvocationResult(emptyMap())
+        if (!finishedOnTime && !isSignal.value) {
+            val stackTrace = executor.shutdownNow() ?: emptyArray()
+            return LivelockInvocationResult(taskManager.allTasks, stackTrace)
         }
         if (exception != null) {
             return UnexpectedExceptionInvocationResult(exception!!)
@@ -188,7 +191,12 @@ internal open class DistributedRunner<Message, Log>(
         return true
     }
 
-    fun signal() = lock.withLock { condition.signal() }
+    fun signal() {
+        isSignal.lazySet(true)
+        lock.withLock {
+            condition.signal()
+        }
+    }
 
     private fun onNodeCrash(iNode: Int) {
         println("[$iNode]: Crashed")
@@ -197,7 +205,7 @@ internal open class DistributedRunner<Message, Log>(
         testNodeExecutions.getOrNull(iNode)?.crash()
         nodeInstances.forEachIndexed { index, node ->
             if (index != iNode) {
-                taskManager.addActionTask(index) {
+                taskManager.addActionTask(index, "Crash notification(iNode=$index, crashNode=$iNode)") {
                     eventFactory.createCrashNotificationEvent(index, iNode)
                     node.onNodeUnavailable(iNode)
                 }
@@ -207,7 +215,7 @@ internal open class DistributedRunner<Message, Log>(
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }
-        taskManager.addActionTask(iNode) {
+        taskManager.addActionTask(iNode, "Recover(iNode=$iNode)") {
             environments[iNode] =
                 EnvironmentImpl(iNode, numberOfNodes, databases[iNode], eventFactory, distrStrategy, taskManager)
 
@@ -217,7 +225,7 @@ internal open class DistributedRunner<Message, Log>(
             distrStrategy.onNodeRecover(iNode)
             eventFactory.createNodeRecoverEvent(iNode)
             nodeInstances[iNode].recover()
-            taskManager.addSuspendedTask(iNode) {
+            taskManager.addSuspendedTask(iNode, "Run operation(iNode=$iNode)") {
                 runNode(iNode)
             }
         }
@@ -255,7 +263,7 @@ internal open class DistributedRunner<Message, Log>(
                 throw e
             }
         }
-        taskManager.addSuspendedTask(iNode) {
+        taskManager.addSuspendedTask(iNode, "Run operation(iNode=$iNode)") {
             runNode(iNode)
         }
     }
@@ -270,7 +278,8 @@ internal open class DistributedRunner<Message, Log>(
             val events = eventFactory.events.toList()
             val list = formatter.format(events)
             list.take(2000).forEach {
-                out.println(it) }
+                out.println(it)
+            }
             //testCfg.getFormatter().format(eventFactory.events).forEach { out.println(it) }
         }
     }

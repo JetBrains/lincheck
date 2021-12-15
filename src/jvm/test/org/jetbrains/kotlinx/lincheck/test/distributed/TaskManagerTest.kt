@@ -26,16 +26,16 @@ import org.junit.Test
 
 class TaskManagerTest {
     private fun addMessageTask(manager: TaskManager, from: Int, to: Int, expectedId: Int) =
-        manager.addMessageReceiveTask(from, to) {}.also { check(it.id == expectedId) }
+        manager.addMessageReceiveTask(from, to, "") {}.also { check(it.id == expectedId) }
 
     private fun addActionTask(manager: TaskManager, iNode: Int, expectedId: Int) =
-        manager.addActionTask(iNode) {}.also { check(it.id == expectedId) }
+        manager.addActionTask(iNode, "") {}.also { check(it.id == expectedId) }
 
     private fun addTimer(manager: TaskManager, ticks: Int, iNode: Int, expectedId: Int, expectedTime: Int) =
-        manager.addTimer(iNode = iNode, ticks = ticks) {}.also { check(it.id == expectedId && it.time == expectedTime) }
+        manager.addTimer(iNode = iNode, ticks = ticks, "") {}.also { check(it.id == expectedId && it.time == expectedTime) }
 
     private fun addTimeout(manager: TaskManager, ticks: Int, iNode: Int, expectedId: Int, expectedTime: Int) =
-        manager.addTimeout(iNode = iNode, ticks = ticks) {}.also { check(it.id == expectedId && it.time == expectedTime) }
+        manager.addTimeout(iNode = iNode, ticks = ticks, "") {}.also { check(it.id == expectedId && it.time == expectedTime) }
 
     @Test
     fun testFifoMessageOrder() {

@@ -62,7 +62,7 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
             environment.recordInternalEvent("Before await")
             environment.withTimeout(6) {
                 environment.recordInternalEvent("Before suspend")
-                suspendCoroutine { cont ->
+                suspendCoroutine<Unit> { cont ->
                     continuation = cont
                     environment.recordInternalEvent("Set continuation $continuation")
                 }

@@ -23,6 +23,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
+import org.jetbrains.kotlinx.lincheck.distributed.Timeout
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -51,48 +52,54 @@ class Reporter constructor(val logLevel: LoggingLevel) {
         appendStateEquivalenceViolationMessage(sequentialSpecification)
     }
 
-    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
-        if (this.logLevel > logLevel) return
-        val sb = StringBuilder()
-        msg(sb)
-        val output = if (logLevel == WARN) outErr else out
-        output.println(sb)
-    }
+    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit =
+        synchronized(this) {
+            if (this.logLevel > logLevel) return
+            val sb = StringBuilder()
+            msg(sb)
+            val output = if (logLevel == WARN) outErr else out
+            output.println(sb)
+        }
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = WARN
+@JvmField
+val DEFAULT_LOG_LEVEL = WARN
+
 enum class LoggingLevel {
     INFO, WARN
 }
 
 internal fun <T> printInColumnsCustom(
-        groupedObjects: List<List<T>>,
-        joinColumns: (List<String>) -> String
+    groupedObjects: List<List<T>>,
+    joinColumns: (List<String>) -> String
 ): String {
     val nRows = groupedObjects.map { it.size }.maxOrNull() ?: 0
     val nColumns = groupedObjects.size
     val rows = (0 until nRows).map { rowIndex ->
         (0 until nColumns)
-                .map { groupedObjects[it] }
-                .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
+            .map { groupedObjects[it] }
+            .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
     }
     val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
         (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.maxOrNull() ?: 0
     }
     return (0 until nRows)
-            .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
-            .map { rowCells -> joinColumns(rowCells) }
-            .joinToString(separator = "\n")
+        .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
+        .map { rowCells -> joinColumns(rowCells) }
+        .joinToString(separator = "\n")
 }
 
-private fun <T> printInColumns(groupedObjects: List<List<T>>) = printInColumnsCustom(groupedObjects) { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
+private fun <T> printInColumns(groupedObjects: List<List<T>>) =
+    printInColumnsCustom(groupedObjects) { it.joinToString(separator = " | ", prefix = "| ", postfix = " |") }
 
-private class ActorWithResult(val actorRepresentation: String, val spacesAfterActor: Int,
-                              val resultRepresentation: String, val spacesAfterResult: Int,
-                              val clockRepresentation: String) {
+private class ActorWithResult(
+    val actorRepresentation: String, val spacesAfterActor: Int,
+    val resultRepresentation: String, val spacesAfterResult: Int,
+    val clockRepresentation: String
+) {
     override fun toString(): String =
         actorRepresentation + ":" + " ".repeat(spacesAfterActor) + resultRepresentation +
-                                    " ".repeat(spacesAfterResult) + clockRepresentation
+                " ".repeat(spacesAfterResult) + clockRepresentation
 }
 
 private fun uniteActorsAndResultsLinear(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
@@ -104,7 +111,10 @@ private fun uniteActorsAndResultsLinear(actors: List<Actor>, results: List<Resul
     }
 }
 
-private fun uniteParallelActorsAndResults(actors: List<List<Actor>>, results: List<List<ResultWithClock>>): List<List<ActorWithResult>> {
+private fun uniteParallelActorsAndResults(
+    actors: List<List<Actor>>,
+    results: List<List<ResultWithClock>>
+): List<List<ActorWithResult>> {
     require(actors.size == results.size) {
         "Different numbers of threads and matching results found (${actors.size} != ${results.size})"
     }
@@ -157,6 +167,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
+        is LivelockWithRemainedTasksFailure -> appendLiveLockWithRemainedTasksFailure(failure)
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
@@ -187,11 +198,16 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
         stackTrace.map {
-            StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
+            StackTraceElement(
+                it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
+                it.methodName,
+                it.fileName,
+                it.lineNumber
+            )
         }.map { it.toString() }.filter { line ->
             "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
+                    && "org.jetbrains.kotlinx.lincheck.runner" !in line
+                    && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
         }.forEach { appendLine("\t$it") }
     }
     return this
@@ -206,7 +222,8 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
     if (failure.results.afterInitStateRepresentation != null)
         appendln("STATE: ${failure.results.afterInitStateRepresentation}")
     appendln("Parallel part:")
-    val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
+    val parallelExecutionData =
+        uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
     append(printInColumns(parallelExecutionData))
     if (failure.results.afterParallelStateRepresentation != null) {
         appendln()
@@ -222,8 +239,10 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
         append("STATE: ${failure.results.afterPostStateRepresentation}")
     }
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
-        appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
-            "in each of the parallel threads seen at the beginning of the current operation\n---")
+        appendln(
+            "\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
+                    "in each of the parallel threads seen at the beginning of the current operation\n---"
+        )
     return this
 }
 
@@ -247,8 +266,31 @@ private fun StringBuilder.appendException(t: Throwable) {
 }
 
 internal fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: Class<*>) {
-    append("To make verification faster, you can specify the state equivalence relation on your sequential specification.\n" +
-        "At the current moment, `${sequentialSpecification.simpleName}` does not specify it, or the equivalence relation implementation is incorrect.\n" +
-        "To fix this, please implement `equals()` and `hashCode()` functions on `${sequentialSpecification.simpleName}`; the simplest way is to extend `VerifierState`\n" +
-        "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations.")
+    append(
+        "To make verification faster, you can specify the state equivalence relation on your sequential specification.\n" +
+                "At the current moment, `${sequentialSpecification.simpleName}` does not specify it, or the equivalence relation implementation is incorrect.\n" +
+                "To fix this, please implement `equals()` and `hashCode()` functions on `${sequentialSpecification.simpleName}`; the simplest way is to extend `VerifierState`\n" +
+                "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations."
+    )
+}
+
+internal fun StringBuilder.appendLiveLockWithRemainedTasksFailure(failure: LivelockWithRemainedTasksFailure): StringBuilder {
+    appendLine("= The execution timeout exceeded, see current stacktrace and remained tasks =")
+    appendExecutionScenario(failure.scenario)
+    appendLine()
+    failure.stackTrace.map {
+        StackTraceElement(
+            it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
+            it.methodName,
+            it.fileName,
+            it.lineNumber
+        )
+    }.map { it.toString() }.filter { line ->
+        "org.jetbrains.kotlinx.lincheck.strategy" !in line
+                && "org.jetbrains.kotlinx.lincheck.runner" !in line
+                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
+    }.forEach { appendLine("\t$it") }
+    appendLine()
+    failure.tasks.map { it.stringRepresentation }.forEach { appendLine(it) }
+    return this
 }

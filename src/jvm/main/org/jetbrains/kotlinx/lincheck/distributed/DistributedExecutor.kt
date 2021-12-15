@@ -23,9 +23,16 @@ package org.jetbrains.kotlinx.lincheck.distributed
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadFactory
+import kotlin.concurrent.thread
 
 internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) : Executor {
-    private val executor = Executors.newSingleThreadExecutor()
+    private lateinit var thread: Thread
+    private val executor =
+        Executors.newSingleThreadExecutor {
+            thread = Executors.defaultThreadFactory().newThread(it)
+            thread
+        }
 
     @Volatile
     private var taskCounter = 0
@@ -35,11 +42,17 @@ internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) 
         executor.shutdown()
     }
 
+    fun shutdownNow(): Array<StackTraceElement>? {
+        val stackTrace = getStackTrace()
+        executor.shutdownNow()
+        return stackTrace
+    }
+
     override fun execute(command: Runnable) {
         taskCounter++
         try {
             executor.submit {
-               // println("Run command $command")
+                // println("Run command $command")
                 command.run()
                 taskCounter--
                 if (taskCounter == 0) {
@@ -53,4 +66,6 @@ internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) 
             return
         }
     }
+
+    private fun getStackTrace(): Array<StackTraceElement>? = Thread.getAllStackTraces()[thread]
 }

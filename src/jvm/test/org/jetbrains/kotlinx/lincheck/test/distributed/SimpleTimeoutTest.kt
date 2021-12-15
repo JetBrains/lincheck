@@ -33,32 +33,50 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 sealed class PingPongMessage
-object Ping : PingPongMessage()
-object Pong : PingPongMessage()
+object Ping : PingPongMessage() {
+    override fun toString() = "Ping"
+}
 
-class PingPongNode(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
-    val channel = Channel<PingPongMessage>(UNLIMITED)
-    var hasResult = false
+object Pong : PingPongMessage() {
+    override fun toString() = "Pong"
+}
+
+class UnreliablePingPongServer(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+    var shouldSkip = true
     override fun onMessage(message: PingPongMessage, sender: Int) {
-        when (message) {
-            is Ping -> env.send(Pong, sender)
-            is Pong -> {
-                channel.offer(message)
-                hasResult = true
-            }
+        check(message is Ping) {
+            "Unexpected message type"
         }
+        if (shouldSkip) {
+            shouldSkip = false
+            return
+        }
+        env.send(Pong, sender)
+        shouldSkip = true
+    }
+}
+
+class PingPongClient(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+    private val channel = Channel<PingPongMessage>(UNLIMITED)
+    private val server = env.getAddressesForClass(UnreliablePingPongServer::class.java)!![0]
+    override fun onMessage(message: PingPongMessage, sender: Int) {
+        check(message is Pong) {
+            "Unexpected message type"
+        }
+        channel.offer(message)
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun ping(): Boolean {
-        hasResult = false
         while (true) {
-            env.send(Ping, 0)
+            var hasResult = false
+            env.send(Ping, server)
             val res = env.withTimeout(50) {
                 channel.receive()
-                println("[${env.nodeId}]: Inside timeout")
+                hasResult = true
             }
-            println("[${env.nodeId}]: Exit timeout $res")
+            check(hasResult == (res != null))
+            //println("[${env.nodeId}]: Exit timeout $res")
             if (hasResult) return true
         }
     }
@@ -72,12 +90,13 @@ class PingPongMock : VerifierState() {
 class SimpleTimeoutTest {
     @Test
     fun test() = createDistributedOptions<PingPongMessage>()
-        .nodeType(PingPongNode::class.java, 2)
+        .nodeType(PingPongClient::class.java, 1)
+        .nodeType(UnreliablePingPongServer::class.java, 1)
         .requireStateEquivalenceImplCheck(false)
-        .networkReliable(false)
-        .invocationsPerIteration(100)
-        .iterations(100)
+        .invocationsPerIteration(30_000)
+        .iterations(500)
         .sequentialSpecification(PingPongMock::class.java)
         .actorsPerThread(2)
+        .storeLogsForFailedScenario("ping_pong_timeout.txt")
         .check()
 }

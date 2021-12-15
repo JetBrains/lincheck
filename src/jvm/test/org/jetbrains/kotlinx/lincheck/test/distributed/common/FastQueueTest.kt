@@ -36,14 +36,13 @@ class IntQueue {
     fun poll() = queue.poll()
 }
 
-@OpGroupConfig(name = "consumer", nonParallel = true)
 class FastQueueTest : AbstractLincheckTest() {
-    private val queue = LinkedBlockingQueue<Int>()
+    private val queue = FastQueue<Int>()
 
     @Operation
     fun put(value: Int) = queue.put(value)
 
-    @Operation(group = "consumer")
+    @Operation
     fun poll() = queue.poll()
 
     override fun <O : Options<O, *>> O.customize() {

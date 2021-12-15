@@ -25,7 +25,7 @@ import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 
 
-class FastQueue<E> : LockFreeQueue<E> {
+class FastQueue<E> {
     private val tail: AtomicRef<Segment<E>>
     private val head: AtomicRef<Segment<E>>
 
@@ -36,7 +36,7 @@ class FastQueue<E> : LockFreeQueue<E> {
         head = atomic(segment)
     }
 
-    override fun put(item: E) {
+    fun put(item: E) {
         while (true) {
             val tmpTail = tail.value
             val idx = tmpTail.enqIdx.getAndIncrement()
@@ -60,7 +60,7 @@ class FastQueue<E> : LockFreeQueue<E> {
         }
     }
 
-    override fun poll(): E? {
+    fun poll(): E? {
         while (true) {
             val tmpHead = head.value
             if (tmpHead.deqIdx.value >= tmpHead.enqIdx.value && tmpHead.next.value == null) return null
@@ -74,20 +74,6 @@ class FastQueue<E> : LockFreeQueue<E> {
             if (item != null) {
                 return (item as ValueItem<E>).value ?: continue
             }
-        }
-    }
-
-    fun toList() : List<E> {
-        val res = mutableListOf<E>()
-        var cur = head.value
-        while(true) {
-            for (i in 0 until BUFFER_SIZE) {
-                val item = cur.items[i].value
-                if (item is ValueItem<*> && item.value != null) {
-                    res.add((item as ValueItem<E>).value!!)
-                }
-            }
-            cur = cur.next.value ?: return res
         }
     }
 }

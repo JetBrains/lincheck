@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
 sealed class Task {
     abstract val id: Int
     abstract val iNode: Int
+    abstract val stringRepresentation: String
 }
 
 sealed class InstantTask : Task() {
@@ -34,12 +35,14 @@ data class MessageReceiveTask(
     override val id: Int,
     override val iNode: Int,
     val from: Int,
+    override val stringRepresentation: String,
     override val action: () -> Unit
 ) : InstantTask()
 
 data class ActionTask(
     override val id: Int,
     override val iNode: Int,
+    override val stringRepresentation: String,
     override val action: () -> Unit
 ) : InstantTask()
 
@@ -51,6 +54,7 @@ data class PeriodicTimer(
     override val id: Int,
     override val time: Int,
     override val iNode: Int,
+    override val stringRepresentation: String,
     override val action: () -> Unit
 ) : TimeTask()
 
@@ -58,12 +62,14 @@ data class Timeout(
     override val id: Int,
     override val time: Int,
     override val iNode: Int,
+    override val stringRepresentation: String,
     override val action: () -> Unit
 ) : TimeTask()
 
 data class SuspendedTask(
     override val id: Int,
     override val iNode: Int,
+    override val stringRepresentation: String,
     val action: suspend () -> Unit
 ) : Task()
 
@@ -97,32 +103,60 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
             return _time
         }
 
-    fun addMessageReceiveTask(from: Int, to: Int, action: () -> Unit): MessageReceiveTask {
-        val task = MessageReceiveTask(id = _taskId++, iNode = to, from = from, action = action)
+    val allTasks: List<Task>
+        get() = _tasks + _timeTasks
+
+    fun addMessageReceiveTask(
+        from: Int,
+        to: Int,
+        stringRepresentation: String,
+        action: () -> Unit
+    ): MessageReceiveTask {
+        val task = MessageReceiveTask(
+            id = _taskId++,
+            iNode = to,
+            from = from,
+            stringRepresentation = stringRepresentation,
+            action = action
+        )
         _tasks.add(task)
         return task
     }
 
-    fun addActionTask(iNode: Int, action: () -> Unit): ActionTask {
-        val task = ActionTask(id = _taskId++, iNode = iNode, action = action)
+    fun addActionTask(iNode: Int, stringRepresentation: String, action: () -> Unit): ActionTask {
+        val task =
+            ActionTask(id = _taskId++, iNode = iNode, stringRepresentation = stringRepresentation, action = action)
         _tasks.add(task)
         return task
     }
 
-    fun addTimer(iNode: Int, ticks: Int, action: () -> Unit): PeriodicTimer {
-        val task = PeriodicTimer(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
+    fun addTimer(iNode: Int, ticks: Int, stringRepresentation: String, action: () -> Unit): PeriodicTimer {
+        val task = PeriodicTimer(
+            id = _taskId++,
+            time = _time + ticks,
+            iNode = iNode,
+            stringRepresentation = stringRepresentation,
+            action = action
+        )
         _timeTasks.add(task)
         return task
     }
 
-    fun addTimeout(iNode: Int, ticks: Int, action: () -> Unit): Timeout {
-        val task = Timeout(id = _taskId++, time = _time + ticks, iNode = iNode, action = action)
+    fun addTimeout(iNode: Int, ticks: Int, stringRepresentation: String, action: () -> Unit): Timeout {
+        val task = Timeout(
+            id = _taskId++,
+            time = _time + ticks,
+            iNode = iNode,
+            stringRepresentation = stringRepresentation,
+            action = action
+        )
         _timeTasks.add(task)
         return task
     }
 
-    fun addSuspendedTask(iNode: Int, action: suspend () -> Unit): SuspendedTask {
-        val task = SuspendedTask(id = _taskId++, iNode = iNode, action = action)
+    fun addSuspendedTask(iNode: Int, stringRepresentation: String, action: suspend () -> Unit): SuspendedTask {
+        val task =
+            SuspendedTask(id = _taskId++, iNode = iNode, stringRepresentation = stringRepresentation, action = action)
         _tasks.add(task)
         return task
     }

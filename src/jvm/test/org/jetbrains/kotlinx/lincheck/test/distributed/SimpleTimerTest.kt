@@ -20,13 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongMessage
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongMock
-import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongNode
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
 sealed class TimerMessage

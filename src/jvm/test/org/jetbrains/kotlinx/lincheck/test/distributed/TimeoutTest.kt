@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
-
+/*
 class WaitingServer(private val env: Environment<Boolean, Unit>) : Node<Boolean, Unit> {
     var counter = 0
     override fun onMessage(message: Boolean, sender: Int) {
@@ -94,4 +94,4 @@ class TimeoutTest {
 
     @Test
     fun test() = options().check()
-}
+}*/

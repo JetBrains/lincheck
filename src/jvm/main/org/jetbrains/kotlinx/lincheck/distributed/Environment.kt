@@ -58,7 +58,7 @@ interface Environment<Message, DB> {
      * Runs the specified [block] of code with a specified timeout and finishes if timeout was exceeded.
      * The execution will not be finish until the block is executed ot timeout is exceeded.
      */
-    suspend fun withTimeout(ticks: Int, block: suspend () -> Unit): Boolean
+    suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T,): T?
 
     /**
      * Can be used as a safe [kotlinx.coroutines.delay]. The execution will not be finished until the program is resumed.

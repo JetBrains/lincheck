@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import org.jetbrains.kotlinx.lincheck.distributed.Task
 import org.jetbrains.kotlinx.lincheck.execution.*
 
 /**
@@ -61,7 +62,8 @@ class ValidationFailureInvocationResult(
 ) : InvocationResult()
 
 class LivelockInvocationResult(
-    val threadDump: Map<Thread, Array<StackTraceElement>>
+    val remainedTasks : List<Task>,
+    val stackTrace : Array<StackTraceElement>
 ) : InvocationResult()
 
 /**
