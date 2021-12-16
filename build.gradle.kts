@@ -75,6 +75,14 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+sourceSets.main {
+    java.srcDirs("src/jvm/main")
+}
+
+sourceSets.test {
+    java.srcDirs("src/jvm/test")
+}
+
 tasks {
     withType<Test> {
         maxParallelForks = 1
