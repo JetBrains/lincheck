@@ -10,7 +10,7 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
 3. Make sure the `master` branch is fully merged into `develop`: <br>
    `git merge origin/master`
 
-4. Replace `<old-version>` with `<version>` in [`gradle.properties`](gradle.properties), and uncomment `<releaseVersion>` property.
+4. Replace `<old-version>` with `<version>` in [`gradle.properties`](gradle.properties).
 
 5. Commit the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties` <br>
@@ -29,7 +29,7 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
    
 9. Make sure that the `master` branch build is green on [Teamcity](https://teamcity.jetbrains.com/project/KotlinTools_KotlinxLincheck?branch=%3Cdefault%3E&mode=builds)
 
-10. Press 'deploy' button in the [Teamcity publish configuration](https://teamcity.jetbrains.com/buildConfiguration/KotlinTools_KotlinxLincheck_Publish?branch=%3Cdefault%3E&buildTypeTab=overview&mode=builds). Make sure that the build is green
+10. Press 'deploy' button in the [Teamcity publish configuration](https://teamcity.jetbrains.com/buildConfiguration/KotlinTools_KotlinxLincheck_Publish?branch=%3Cdefault%3E&buildTypeTab=overview&mode=builds). Set `releaseVersion` property to `version` in the pop-up window. Make sure that the build is green
 
 11. In [Sonatype](https://oss.sonatype.org/) admin interface close staging repository and release it.
 
@@ -40,7 +40,7 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
 13. Switch into `develop` branch back: <br>
     `git checkout develop`
 
-14. Update the version to the next `SNAPSHOT` one in [`gradle.properties`](gradle.properties), and comment `<releaseVersion>` property.
+14. Update the version to the next `SNAPSHOT` one in [`gradle.properties`](gradle.properties).
 
 15. Commit and push the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties` <br>
