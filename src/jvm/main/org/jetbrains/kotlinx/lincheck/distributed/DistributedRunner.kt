@@ -211,7 +211,7 @@ internal open class DistributedRunner<Message, Log>(
                 }
             }
         }
-        if (testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
+        if (testCfg.addressResolver.crashTypeForNode(iNode) == CrashMode.NO_RECOVER) {
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }

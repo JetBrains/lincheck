@@ -43,13 +43,13 @@ class Smoke(val env: Environment<Int, Unit>) : Node<Int, Unit> {
 class SmokeTest {
     @Test
     fun test() = createDistributedOptions<Int>()
-        .nodeType(Smoke::class.java, 3)
+        .nodeType(Smoke::class.java, numberOfInstances = 3,
+            crashType = CrashMode.ALL_NODES_RECOVER,
+            maxNumberOfCrashedNodes = { it / 2 })
         .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(2)
         .invocationsPerIteration(300)
-        .setMaxNumberOfFailedNodes { it / 2 }
         .iterations(100)
-        .crashMode(CrashMode.ALL_NODES_RECOVER)
         .verifier(EpsilonVerifier::class.java)
         .check()
 }

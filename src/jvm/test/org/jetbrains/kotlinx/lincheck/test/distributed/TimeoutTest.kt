@@ -26,72 +26,72 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
-import org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
-/*
-class WaitingServer(private val env: Environment<Boolean, Unit>) : Node<Boolean, Unit> {
-    var counter = 0
-    override fun onMessage(message: Boolean, sender: Int) {
-        counter++
-        if (counter == 2) {
-            env.send(false, sender)
-        }
-        if (counter == 4) {
-            println("Sending true")
-            env.send(true, sender)
-            counter = 0
-        }
-    }
 
+sealed class PingPongMessage
+object Ping : PingPongMessage() {
+    override fun toString() = "Ping"
 }
 
-class WaitingClient(private val env: Environment<Boolean, Unit>) : Node<Boolean, Unit> {
-    private val responseChannel = Channel<Boolean>(UNLIMITED)
-    override fun onMessage(message: Boolean, sender: Int) {
-        responseChannel.offer(message)
+object Pong : PingPongMessage() {
+    override fun toString() = "Pong"
+}
+
+class UnreliablePingPongServer(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+    var shouldSkip = true
+    override fun onMessage(message: PingPongMessage, sender: Int) {
+        check(message is Ping) {
+            "Unexpected message type"
+        }
+        if (shouldSkip) {
+            shouldSkip = false
+            return
+        }
+        env.send(Pong, sender)
+        shouldSkip = true
+    }
+}
+
+class PingPongClient(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+    private val channel = Channel<PingPongMessage>(UNLIMITED)
+    private val server = env.getAddressesForClass(UnreliablePingPongServer::class.java)!![0]
+    override fun onMessage(message: PingPongMessage, sender: Int) {
+        check(message is Pong) {
+            "Unexpected message type"
+        }
+        channel.offer(message)
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun operation() : Boolean {
-        var count = 0
+    suspend fun ping()  {
         while (true) {
-            count++
-            var response = false to count
-            env.send(true, env.getAddressesForClass(WaitingServer::class.java)!![0])
-            val res = env.withTimeout(RaftClient.OPERATION_TIMEOUT) {
-                val msg = responseChannel.receive()
-                response = msg to count
-                env.recordInternalEvent("Inside timeout $msg")
-                println("Inside timeout $msg, $response")
+            var hasResult = false
+            env.send(Ping, server)
+            val res = env.withTimeout(50) {
+                channel.receive()
+                hasResult = true
             }
-            println("Exit loop $res, response=$response")
-            if (res) {
-                println("Exit loop")
-            }
-            env.recordInternalEvent("Continue loop $res")
-            if (response.first) return response.first
+            check(hasResult == (res != null))
+            if (hasResult) return
         }
     }
 }
 
-class WaitingSpec : VerifierState() {
-    override fun extractState() = true
-    suspend fun operation() = true
+class PingPongMock : VerifierState() {
+    override fun extractState() = Unit
+    suspend fun ping() = Unit
 }
 
 class TimeoutTest {
-    private fun options() = createDistributedOptions<Boolean>()
-        .nodeType(WaitingClient::class.java, 1, false)
-        .nodeType(WaitingServer::class.java, 1, )
-        .requireStateEquivalenceImplCheck(false)
-        .sequentialSpecification(WaitingSpec::class.java)
-        .storeLogsForFailedScenario("wait.txt")
-        .actorsPerThread(1)
-        .invocationsPerIteration(1)
-        .minimizeFailedScenario(false)
-        .iterations(1)
-
     @Test
-    fun test() = options().check()
-}*/
+    fun test() = createDistributedOptions<PingPongMessage>()
+        .nodeType(PingPongClient::class.java, 1)
+        .nodeType(UnreliablePingPongServer::class.java, 1)
+        .invocationsPerIteration(600_000)
+        .iterations(1)
+        .sequentialSpecification(PingPongMock::class.java)
+        .actorsPerThread(2)
+        .networkReliable(false)
+        .check()
+}

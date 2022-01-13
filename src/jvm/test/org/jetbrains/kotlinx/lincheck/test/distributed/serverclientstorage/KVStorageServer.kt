@@ -52,7 +52,7 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
     private var commandId = 0
     private val commandResults = HashMap<Int, Command>()
     private val serverAddr = environment.getAddressesForClass(KVStorageServer::class.java)!![0]
-    private var continuation: Continuation<Unit>? = null
+    private val signal = Signal()
     private val queue = LinkedList<Command>()
 
 
@@ -62,12 +62,8 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
             environment.recordInternalEvent("Before await")
             environment.withTimeout(6) {
                 environment.recordInternalEvent("Before suspend")
-                suspendCoroutine<Unit> { cont ->
-                    continuation = cont
-                    environment.recordInternalEvent("Set continuation $continuation")
-                }
+                signal.await()
             }
-            continuation = null
             environment.recordInternalEvent("After await")
             val response = queue.poll()
             if (response != null) {
@@ -116,8 +112,8 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
 
     override fun onMessage(message: Command, sender: Int) {
         queue.add(message)
-        environment.recordInternalEvent("Before resume ${continuation}")
-        continuation?.resume(Unit)
+        environment.recordInternalEvent("Before resume")
+        signal.signal()
     }
 }
 

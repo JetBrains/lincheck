@@ -100,7 +100,6 @@ class OptimisticMutexIncorrectTest {
                 .messageOrder(MessageOrder.FIFO)
                 .invocationsPerIteration(10000)
                 .iterations(30)
-                .setTestMode(TestingMode.MODEL_CHECKING)
         )
     }
 }

@@ -20,33 +20,28 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import java.lang.Integer.min
-import java.util.*
-import kotlin.random.Random
-
 internal abstract class CrashInfo<Message, DB>(
-    protected val testCfg: DistributedCTestConfiguration<Message, DB>,
-    protected val random: Random
+    protected val addressResolver: NodeAddressResolver<Message, DB>
 ) {
     companion object {
-        fun <M, L> createCrashInfo(testCfg: DistributedCTestConfiguration<M, L>, random: Random): CrashInfo<M, L> =
-            CrashInfoHalves(testCfg, random)
+        fun <Message, DB> createCrashInfo(
+            addressResolver: NodeAddressResolver<Message, DB>,
+            strategy: DistributedStrategy<Message, DB>
+        ): CrashInfo<Message, DB> =
+            CrashInfoHalves(addressResolver, strategy)
     }
 
-    protected val addressResolver = testCfg.addressResolver
-    protected val maxNumberOfFailedNodes = testCfg.maxNumberOfFailedNodes(addressResolver.totalNumberOfNodes)
     protected val failedNode = Array(addressResolver.totalNumberOfNodes) {
         false
     }
-    protected var unavailableNodeCount = 0
-
-    fun remainedNodeCount() = maxNumberOfFailedNodes - unavailableNodeCount
 
     abstract fun canSend(from: Int, to: Int): Boolean
 
     operator fun get(iNode: Int) = failedNode[iNode]
 
     abstract fun crashNode(iNode: Int)
+
+    abstract fun canAddPartition(firstNode: Int, secondNode: Int): Boolean
 
     abstract fun canCrash(iNode: Int): Boolean
 
@@ -59,60 +54,116 @@ internal abstract class CrashInfo<Message, DB>(
     abstract fun reset()
 }
 
-internal class CrashInfoHalves<M, L>(testCfg: DistributedCTestConfiguration<M, L>, random: Random) :
-    CrashInfo<M, L>(testCfg, random) {
-    private val firstPartition = mutableSetOf<Int>()
-    private val secondPartition = (0 until testCfg.addressResolver.totalNumberOfNodes).toMutableSet()
+internal class CrashInfoHalves<Message, DB>(
+    addressResolver: NodeAddressResolver<Message, DB>,
+    private val strategy: DistributedStrategy<Message, DB>
+) :
+    CrashInfo<Message, DB>(addressResolver) {
+    private val partitions = mutableMapOf<Class<out Node<Message, DB>>, Pair<MutableSet<Int>, MutableSet<Int>>>()
+    private val unavailableNodeCount = mutableMapOf<Class<out Node<Message, DB>>, Int>()
 
+    init {
+        reset()
+    }
 
-    override fun canSend(from: Int, to: Int) = !failedNode[from] &&
-            !failedNode[to] &&
-            (firstPartition.containsAll(listOf(from, to))
-                    || secondPartition.containsAll(listOf(from, to)))
+    override fun canSend(from: Int, to: Int): Boolean {
+        if (failedNode[from] || failedNode[to]) {
+            return false
+        }
+        val cls1 = addressResolver[from]
+        val cls2 = addressResolver[to]
+        if (cls1 != cls2) {
+            return partitions[cls1]!!.second.contains(from)
+                    && partitions[cls2]!!.second.contains(to)
+        }
+        return partitions[cls1]!!.first.containsAll(listOf(from, to))
+                || partitions[cls1]!!.second.containsAll(listOf(from, to))
+    }
+
+    private fun incrementCrashedNodes(iNode: Int) {
+        val cls = addressResolver[iNode]
+        if (failedNode[iNode] || partitions[cls]!!.first.contains(iNode)) return
+        unavailableNodeCount[cls] = unavailableNodeCount[cls]!! + 1
+    }
+
+    private fun decrementCrashedNodes(iNode: Int) {
+        val cls = addressResolver[iNode]
+        if (failedNode[iNode] && partitions[cls]!!.first.contains(iNode)) return
+        unavailableNodeCount[cls] = unavailableNodeCount[cls]!! - 1
+    }
 
     override fun crashNode(iNode: Int) {
         check(!failedNode[iNode])
+        incrementCrashedNodes(iNode)
         failedNode[iNode] = true
-        unavailableNodeCount++
     }
 
     override fun canCrash(iNode: Int): Boolean {
         if (failedNode[iNode]) return false
-        if (maxNumberOfFailedNodes == 0) return false
-        val type = addressResolver[iNode]
-        val maxFailedForType = addressResolver.maxNumberOfCrashesForNode(iNode)
-        if (maxFailedForType == 0) return false
-        if (maxFailedForType != addressResolver[type]!!.size) {
-            val failedNodesForType =
-                failedNode.filterIndexed { index, value -> addressResolver[index] == type && value }.size + min(
-                    firstPartition.filter { addressResolver[it] == type }.size,
-                    secondPartition.filter { addressResolver[it] == type }.size
-                )
-            return maxNumberOfFailedNodes > unavailableNodeCount && failedNodesForType < maxFailedForType
-        }
-        return maxNumberOfFailedNodes > unavailableNodeCount
+        val cls = addressResolver[iNode]
+        return addressResolver.crashType(cls) != CrashMode.NO_CRASHES
+                && unavailableNodeCount[cls]!! < addressResolver.maxNumberOfCrashes(cls)
     }
 
     override fun recoverNode(iNode: Int) {
-        //println("Before recover ${failedNode[iNode]}")
         check(failedNode[iNode])
+        decrementCrashedNodes(iNode)
         failedNode[iNode] = false
-        unavailableNodeCount--
+    }
+
+    override fun canAddPartition(firstNode: Int, secondNode: Int): Boolean {
+        val cls = addressResolver[firstNode]
+        if (addressResolver.partitionType(cls) == NetworkPartitionMode.NONE) {
+            return false
+        }
+        return unavailableNodeCount[cls]!! < addressResolver.maxNumberOfCrashes(cls)
+                && partitions[cls]!!.second.contains(firstNode)
     }
 
     override fun addPartition(firstNode: Int, secondNode: Int) {
+        addNodeToPartition(firstNode)
+        removeNodeFromPartition(secondNode)
+        val cls = addressResolver[firstNode]
+        val nodes = addressResolver.nodeTypeToRange[cls]!!.filter { it != firstNode && it != secondNode }
+        val limit = addressResolver.maxNumberOfCrashes(cls) - unavailableNodeCount[cls]!!
+        val nodesForPartition = strategy.choosePartitionComponent(nodes, limit)
+        for (node in nodes) {
+            if (node in nodesForPartition) {
+                addNodeToPartition(node)
+            } else {
+                removeNodeFromPartition(node)
+            }
+        }
+    }
 
+    private fun addNodeToPartition(iNode: Int) {
+        val cls = addressResolver[iNode]
+        if (partitions[cls]!!.first.contains(iNode)) return
+        incrementCrashedNodes(iNode)
+        partitions[cls]!!.second.remove(iNode)
+        partitions[cls]!!.first.add(iNode)
+    }
+
+    private fun removeNodeFromPartition(iNode: Int) {
+        val cls = addressResolver[iNode]
+        if (partitions[cls]!!.second.contains(iNode)) return
+        decrementCrashedNodes(iNode)
+        partitions[cls]!!.first.remove(iNode)
+        partitions[cls]!!.second.add(iNode)
     }
 
     override fun removePartition(firstNode: Int, secondNode: Int) {
-        TODO("Not yet implemented")
+        removeNodeFromPartition(secondNode)
+        for (node in partitions[addressResolver[firstNode]]!!.first) {
+            removeNodeFromPartition(node)
+        }
     }
 
     override fun reset() {
         failedNode.fill(false)
-        unavailableNodeCount = 0
-        firstPartition.clear()
-        secondPartition.clear()
-        secondPartition.addAll(0 until testCfg.addressResolver.totalNumberOfNodes)
+        addressResolver.nodeTypeToRange.forEach { (cls, range) ->
+            partitions[cls] = mutableSetOf<Int>() to range.toMutableSet()
+            unavailableNodeCount[cls] = 0
+        }
     }
 }

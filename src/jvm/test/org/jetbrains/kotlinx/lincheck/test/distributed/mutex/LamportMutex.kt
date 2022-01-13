@@ -150,14 +150,12 @@ class LamportMutexTest {
         .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
         .minimizeFailedScenario(false)
-        .setTestMode(TestingMode.MODEL_CHECKING)
 
     @Test
     fun testSimple() {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions()
-            //.setTestMode(TestingMode.MODEL_CHECKING)
         )
     }
 
@@ -166,8 +164,6 @@ class LamportMutexTest {
         LinChecker.check(
             LamportMutex::class.java,
             createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
-                .setTestMode(TestingMode.MODEL_CHECKING)
-            //.storeLogsForFailedScenario("lamport_nofifo.txt")
         )
     }
 }

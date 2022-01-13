@@ -143,42 +143,42 @@ class BroadcastTest {
 
     @Test
     fun test() = createOptions()
-        .nodeType(Peer::class.java, 2, 4)
-        .setMaxNumberOfFailedNodes { it / 2 }
-        .crashMode(CrashMode.NO_RECOVERIES)
-        .setTestMode(TestingMode.MODEL_CHECKING)
+        .nodeType(
+            Peer::class.java,
+            minNumberOfInstances = 2,
+            maxNumberOfInstances = 4,
+            crashType = CrashMode.NO_RECOVER,
+            maxNumberOfCrashedNodes = { it / 2 }
+        )
         .minimizeFailedScenario(false)
         .storeLogsForFailedScenario("broadcast.txt")
         .check()
 
     @Test(expected = LincheckAssertionError::class)
     fun testMoreFailures() = createOptions()
-        .nodeType(Peer::class.java, 5)
-        .setMaxNumberOfFailedNodes { it / 2 + 1 }
-        .crashMode(CrashMode.NO_RECOVERIES)
+        .nodeType(Peer::class.java,
+            numberOfInstances = 5,
+            crashType = CrashMode.NO_RECOVER,
+            maxNumberOfCrashedNodes = { it / 2 + 1 }
+        )
         .invocationsPerIteration(50_000)
-        .storeLogsForFailedScenario("broadcast.txt")
         .minimizeFailedScenario(false)
-        .setTestMode(TestingMode.MODEL_CHECKING)
         .check()
 
     @Test
     fun testNoFailures() = createOptions()
-        //.storeLogsForFailedScenario("broadcast_nof.txt")
         .nodeType(PeerIncorrect::class.java, 3)
-        .setTestMode(TestingMode.MODEL_CHECKING)
         .invocationsPerIteration(100_000)
         .check()
 
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
         .storeLogsForFailedScenario("broadcast_incorrect.txt")
-        .setMaxNumberOfFailedNodes { it / 2 }
-        .crashMode(CrashMode.NO_RECOVERIES)
         .actorsPerThread(1)
-        .setTestMode(TestingMode.MODEL_CHECKING)
-        //.invocationsPerIteration(500_000)
-        // .minimizeFailedScenario(true)
-        .nodeType(PeerIncorrect::class.java, 4)
+        .nodeType(PeerIncorrect::class.java,
+            numberOfInstances = 4,
+            crashType = CrashMode.NO_RECOVER,
+            maxNumberOfCrashedNodes = { it / 2 }
+        )
         .check()
 }

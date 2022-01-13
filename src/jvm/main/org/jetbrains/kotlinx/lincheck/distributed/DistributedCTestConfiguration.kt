@@ -41,14 +41,9 @@ class DistributedCTestConfiguration<Message, DB>(
     val invocationsPerIteration: Int,
     val isNetworkReliable: Boolean,
     val messageOrder: MessageOrder,
-    val maxNumberOfFailedNodes: (Int) -> Int,
-    val maxNumberOfFailedNodesForType: MutableMap<Class<out Node<Message, DB>>, (Int) -> Int>,
-    val supportRecovery: CrashMode,
     val messageDuplication: Boolean,
-    val networkPartitions: NetworkPartitionMode,
     private val nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
     val logFilename: String?,
-    val testingMode: TestingMode,
     val databaseFactory: () -> DB,
     requireStateEquivalenceCheck: Boolean,
     minimizeFailedScenario: Boolean,
@@ -62,7 +57,11 @@ class DistributedCTestConfiguration<Message, DB>(
         minimizeFailedScenario, sequentialSpecification, timeoutMs,
         customScenarios
     ) {
-    lateinit var addressResolver: NodeAddressResolver<Message, DB>
+    var addressResolver: NodeAddressResolver<Message, DB> = NodeAddressResolver(
+        testClass as Class<out Node<Message, DB>>,
+        nodeTypes[testClass]?.maxNumberOfInstances ?: threads,
+        nodeTypes
+    )
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
@@ -77,25 +76,16 @@ class DistributedCTestConfiguration<Message, DB>(
     ): Strategy {
         addressResolver = NodeAddressResolver(
             testClass as Class<out Node<Message, DB>>,
-            scenario.threads, nodeTypes.mapValues { it.value.maxNumberOfInstances to it.value.canFail },
-            maxNumberOfFailedNodesForType
+            scenario.threads, nodeTypes
         )
-        if (testingMode == TestingMode.STRESS) return DistributedRandomStrategy(
+        return DistributedRandomStrategy(
             this,
             testClass,
             scenario,
             validationFunctions,
             stateRepresentationMethod,
             verifier
-        )
-        else return DistributedRandomStrategy(
-            this,
-            testClass,
-            scenario,
-            validationFunctions,
-            stateRepresentationMethod,
-            verifier
-        )
+        ).also { it.initialize() }
     }
 
     fun nextConfigurations(): List<DistributedCTestConfiguration<Message, DB>> {
@@ -115,12 +105,8 @@ class DistributedCTestConfiguration<Message, DB>(
                     invocationsPerIteration,
                     isNetworkReliable,
                     messageOrder,
-                    maxNumberOfFailedNodes,
-                    maxNumberOfFailedNodesForType,
-                    supportRecovery,
                     messageDuplication,
-                    networkPartitions,
-                    newNodeTypes, logFilename, testingMode, databaseFactory, requireStateEquivalenceImplCheck,
+                    newNodeTypes, logFilename, databaseFactory, requireStateEquivalenceImplCheck,
                     minimizeFailedScenario,
                     sequentialSpecification, timeoutMs, customScenarios
                 )

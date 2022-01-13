@@ -72,8 +72,9 @@ class Server(val env: Environment<Message, Unit>) : Node<Message, Unit> {
 
 class SeqSpec : VerifierState() {
     val storage = mutableMapOf<Int, Int>()
+
     @Operation
-    suspend fun put(key : Int, value: Int) = storage.put(key, value)
+    suspend fun put(key: Int, value: Int) = storage.put(key, value)
 
     @Operation
     suspend fun get(key: Int) = storage[key]
@@ -93,9 +94,10 @@ class Test {
 
     @Test(expected = LincheckAssertionError::class)
     fun testFail() = createOptions()
-        .crashMode(CrashMode.ALL_NODES_RECOVER)
-        //.verifier(EpsilonVerifier::class.java)
-        .setMaxNumberOfFailedNodes(Client::class.java) { it }
+        .nodeType(
+            Client::class.java, numberOfInstances = 3, crashType = CrashMode.ALL_NODES_RECOVER,
+            maxNumberOfCrashedNodes = { it }
+        )
         .check()
 
     @Test

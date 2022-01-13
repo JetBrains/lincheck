@@ -88,10 +88,13 @@ class RaftSpecification() : VerifierState() {
 
 class RaftTest {
     private fun options() = createDistributedOptions<RaftMessage, PersistentStorage>(::PersistentStorage)
-        .nodeType(RaftClient::class.java, 3, false)
-        .nodeType(RaftServer::class.java, 1, 5)
-        .crashMode(CrashMode.ALL_NODES_RECOVER)
-        .setMaxNumberOfFailedNodes(RaftServer::class.java) { (it + 1) / 2 }
+        .nodeType(RaftClient::class.java, 3)
+        .nodeType(
+            RaftServer::class.java,
+            minNumberOfInstances = 1,
+            maxNumberOfInstances = 5,
+            crashType = CrashMode.ALL_NODES_RECOVER,
+            maxNumberOfCrashedNodes = { (it + 1) / 2 })
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(RaftSpecification::class.java)
         .storeLogsForFailedScenario("raft.txt")

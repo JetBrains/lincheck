@@ -55,7 +55,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     stateRepresentationFunction,
     verifier
 ) {
-    private val probability = Probability(testCfg, generatingRandom)
+    private val probability = Probability(testCfg)
     private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
 
     init {
@@ -69,7 +69,7 @@ internal class DistributedRandomStrategy<Message, DB>(
 
 
     private fun tryCrash(iNode: Int) {
-        if (crashInfo.canCrash(iNode) && probability.nodeFailed(crashInfo.remainedNodeCount())) {
+        if (crashInfo.canCrash(iNode) && probability.nodeFailed()) {
             crashInfo.crashNode(iNode)
             throw CrashError()
         }
@@ -101,9 +101,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun reset() {
-        val crashExpectation = if (testCfg.supportRecovery == CrashMode.NO_CRASHES) 0 else {
-            3
-        }
+        val crashExpectation = 3
         probability.reset(crashExpectation)
         crashInfo.reset()
     }
@@ -113,7 +111,7 @@ internal class DistributedRandomStrategy<Message, DB>(
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until testCfg.invocationsPerIteration) {
-                if (invocation % 1000 == 0) println("INVOCATION $invocation")
+                //println("INVOCATION $invocation")
 
                 reset()
                 val ir = runner.run()
@@ -151,4 +149,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>): Int = probability.duplicationRate()
+
+    override fun choosePartitionComponent(nodes: List<Int>, limit: Int): Set<Int> =
+        probability.partition(nodes, limit).toSet()
 }

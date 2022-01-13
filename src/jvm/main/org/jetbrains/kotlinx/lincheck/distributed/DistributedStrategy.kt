@@ -35,10 +35,13 @@ internal abstract class DistributedStrategy<Message, DB>(
     protected val stateRepresentationFunction: Method?,
     protected val verifier: Verifier
 ) : Strategy(scenario) {
-    protected val generatingRandom = Random(0)
-    protected val crashInfo = CrashInfo.createCrashInfo(testCfg, generatingRandom)
+    protected lateinit var crashInfo: CrashInfo<Message, DB>
 
-    fun crashOrReturnRate(event: MessageSentEvent<Message>) : Int {
+    fun initialize() {
+        crashInfo = CrashInfo.createCrashInfo(testCfg.addressResolver, this)
+    }
+
+    fun crashOrReturnRate(event: MessageSentEvent<Message>): Int {
         val iNode = event.iNode
         if (!crashInfo.canSend(iNode, event.receiver)) return 0
         tryAddCrashBeforeSend(iNode, event)
@@ -58,9 +61,11 @@ internal abstract class DistributedStrategy<Message, DB>(
 
     protected abstract fun tryAddCrashBeforeSend(iNode: Int, event: MessageSentEvent<Message>)
 
-    protected abstract fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>) : Boolean
+    protected abstract fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean
 
-    protected abstract fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>) : Int
+    protected abstract fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>): Int
 
     abstract fun reset()
+
+    abstract fun choosePartitionComponent(nodes: List<Int>, limit: Int): Set<Int>
 }

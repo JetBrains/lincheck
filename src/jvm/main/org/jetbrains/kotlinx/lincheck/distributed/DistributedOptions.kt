@@ -12,10 +12,9 @@ enum class MessageOrder {
     ASYNCHRONOUS
 }
 
-
 enum class CrashMode {
     NO_CRASHES,
-    NO_RECOVERIES,
+    NO_RECOVER,
     ALL_NODES_RECOVER,
     MIXED
 }
@@ -26,33 +25,37 @@ enum class NetworkPartitionMode {
     SINGLE
 }
 
-enum class TestingMode {
-    STRESS,
-    MODEL_CHECKING
+data class NodeTypeInfo(
+    val minNumberOfInstances: Int,
+    val maxNumberOfInstances: Int,
+    val crashType: CrashMode,
+    val networkPartition: NetworkPartitionMode,
+    val maxNumberOfCrashes: (Int) -> Int
+) {
+    fun minimize() =
+        NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances - 1, crashType, networkPartition, maxNumberOfCrashes)
+
+    val maxCrashes = if (crashType == CrashMode.NO_CRASHES && networkPartition == NetworkPartitionMode.NONE) {
+        0
+    } else {
+        maxNumberOfCrashes(maxNumberOfInstances)
+    }
 }
 
-
-data class NodeTypeInfo(val minNumberOfInstances: Int, val maxNumberOfInstances: Int, val canFail: Boolean) {
-    fun minimize() = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances - 1, canFail)
-}
-
-class DistributedOptions<Message, DB> internal constructor(private val databaseFactory: () -> DB) : Options<DistributedOptions<Message, DB>,
-        DistributedCTestConfiguration<Message, DB>>() {
+class DistributedOptions<Message, DB> internal constructor(private val databaseFactory: () -> DB) :
+    Options<DistributedOptions<Message, DB>,
+            DistributedCTestConfiguration<Message, DB>>() {
     companion object {
         const val DEFAULT_TIMEOUT_MS: Long = 5000
     }
 
     private var isNetworkReliable: Boolean = true
     private var messageOrder: MessageOrder = MessageOrder.FIFO
-    private var maxNumberOfFailedNodes: (Int) -> Int = { 0 }
-    private var crashMode: CrashMode = CrashMode.NO_RECOVERIES
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
-    private var networkPartitions: NetworkPartitionMode = NetworkPartitionMode.NONE
     private var testClasses = HashMap<Class<out Node<Message, DB>>, NodeTypeInfo>()
     private var logFileName: String? = null
-    private var testingMode: TestingMode = TestingMode.STRESS
-    private val maxNumberOfFailedNodesForType = mutableMapOf<Class<out Node<Message, DB>>, (Int) -> Int>()
+    private var _testClass: Class<out Node<Message, DB>>? = null
 
     init {
         timeoutMs = DEFAULT_TIMEOUT_MS
@@ -66,9 +69,12 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     fun nodeType(
         cls: Class<out Node<Message, DB>>,
         numberOfInstances: Int,
-        canFail: Boolean = true
+        crashType: CrashMode = CrashMode.NO_CRASHES,
+        networkPartition: NetworkPartitionMode = NetworkPartitionMode.NONE,
+        maxNumberOfCrashedNodes: (Int) -> Int = { it }
     ): DistributedOptions<Message, DB> {
-        this.testClasses[cls] = NodeTypeInfo(numberOfInstances, numberOfInstances, canFail)
+        this.testClasses[cls] =
+            NodeTypeInfo(numberOfInstances, numberOfInstances, crashType, networkPartition, maxNumberOfCrashedNodes)
         return this
     }
 
@@ -76,32 +82,22 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         cls: Class<out Node<Message, DB>>,
         minNumberOfInstances: Int,
         maxNumberOfInstances: Int,
-        canFail: Boolean = true
+        crashType: CrashMode = CrashMode.NO_CRASHES,
+        networkPartition: NetworkPartitionMode = NetworkPartitionMode.NONE,
+        maxNumberOfCrashedNodes: (Int) -> Int = { it }
     ): DistributedOptions<Message, DB> {
-        this.testClasses[cls] = NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances, canFail)
+        this.testClasses[cls] = NodeTypeInfo(
+            minNumberOfInstances,
+            maxNumberOfInstances,
+            crashType,
+            networkPartition,
+            maxNumberOfCrashedNodes
+        )
         return this
     }
 
     fun messageOrder(messageOrder: MessageOrder): DistributedOptions<Message, DB> {
         this.messageOrder = messageOrder
-        return this
-    }
-
-    fun setMaxNumberOfFailedNodes(maxNumOfFailedNodes: (Int) -> Int): DistributedOptions<Message, DB> {
-        this.maxNumberOfFailedNodes = maxNumOfFailedNodes
-        return this
-    }
-
-    fun setMaxNumberOfFailedNodes(
-        cls: Class<out Node<Message, DB>>,
-        maxNumOfFailedNodes: (Int) -> Int
-    ): DistributedOptions<Message, DB> {
-        this.maxNumberOfFailedNodesForType[cls] = maxNumOfFailedNodes
-        return this
-    }
-
-    fun crashMode(crashMode: CrashMode): DistributedOptions<Message, DB> {
-        this.crashMode = crashMode
         return this
     }
 
@@ -115,40 +111,43 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         return this
     }
 
-    fun networkPartitions(partitionMode: NetworkPartitionMode): DistributedOptions<Message, DB> {
-        this.networkPartitions = partitionMode
-        return this
-    }
-
     fun storeLogsForFailedScenario(fileName: String): DistributedOptions<Message, DB> {
         logFileName = fileName
         return this
     }
 
-    fun setTestMode(mode: TestingMode): DistributedOptions<Message, DB> {
-        testingMode = mode
-        return this
-    }
-
-    override fun createTestConfigurations(testClass: Class<*>): DistributedCTestConfiguration<Message, DB> {
-        return DistributedCTestConfiguration(
+    override fun createTestConfigurations(testClass: Class<*>): DistributedCTestConfiguration<Message, DB> =
+        DistributedCTestConfiguration(
             testClass, iterations, threads,
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, isNetworkReliable,
-            messageOrder, maxNumberOfFailedNodes, maxNumberOfFailedNodesForType, crashMode,
-            messageDuplication, networkPartitions, testClasses, logFileName, testingMode, databaseFactory,
+            messageOrder, messageDuplication, testClasses, logFileName, databaseFactory,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
         )
-    }
+
+    fun createTestConfiguration() = DistributedCTestConfiguration(
+        testClass, iterations, threads,
+        actorsPerThread, executionGenerator,
+        verifier, invocationsPerIteration, isNetworkReliable,
+        messageOrder, messageDuplication, testClasses, logFileName, databaseFactory,
+        requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
+        chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
+    )
+
+    private val testClass: Class<out Node<Message, DB>>
+        get() {
+            if (_testClass == null) {
+                _testClass = testClasses.keys.find {
+                    it.methods.any { m ->
+                        m.isAnnotationPresent(Operation::class.java)
+                    }
+                } ?: throw IllegalArgumentException("No operations to check")
+            }
+            return _testClass!!
+        }
 
     fun check() {
-        val testClass = testClasses.keys.find {
-            it.methods.any { m ->
-                m.isAnnotationPresent(Operation::class.java)
-            }
-        }
-            ?: throw IllegalArgumentException("No operations to check")
         threads = testClasses[testClass]!!.maxNumberOfInstances
         LinChecker.check(testClass, options = this)
     }

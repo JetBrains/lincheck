@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.math.max
 import kotlin.random.Random
 
-internal class Probability(private val testCfg: DistributedCTestConfiguration<*, *>, val rand: Random) {
+internal class Probability(private val testCfg: DistributedCTestConfiguration<*, *>) {
     companion object {
         const val MEAN_POISSON_DISTRIBUTION = 0.1
         const val MESSAGE_SENT_PROBABILITY = 0.95
@@ -35,7 +35,10 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         const val NODE_RECOVERY_PROBABILITY = 0.7
         var failedNodesExpectation = -1
         var networkPartitionsExpectation = 8
+        const val SIMULTANEOUS_CRASH_COUNT = 3
     }
+
+    val rand = Random(0)
 
     private val poissonDistribution = PoissonDistribution(MEAN_POISSON_DISTRIBUTION)
 
@@ -63,12 +66,8 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         return rand.nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
     }
 
-    fun nodeFailed(maxNumCanFail: Int): Boolean {
+    fun nodeFailed(): Boolean {
         currentErrorPoint++
-        if (maxNumCanFail == 0) {
-            nextNumberOfCrashes = 0
-            return false
-        }
         if (nextNumberOfCrashes > 0) {
             nextNumberOfCrashes--
             return true
@@ -76,13 +75,11 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         val r = rand.nextDouble(1.0)
         val p = nodeFailProbability()
         if (r >= p) return false
-        //println("True")
-        nextNumberOfCrashes = rand.nextInt(1, maxNumCanFail + 1) - 1
+        nextNumberOfCrashes = rand.nextInt(0, SIMULTANEOUS_CRASH_COUNT)
         return true
     }
 
     fun nodeRecovered(): Boolean = rand.nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
-
 
     private fun nodeFailProbability(): Double {
         //return NODE_FAIL_PROBABILITY
@@ -90,11 +87,12 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
             0.0
         } else {
             val q = failedNodesExpectation.toDouble() / numberOfNodes
-            return if (testCfg.supportRecovery == CrashMode.NO_RECOVERIES) {
+            return q
+            /*return if (testCfg.supportRecovery == CrashMode.NO_RECOVER) {
                 q / (previousNumberOfPoints - (currentErrorPoint - 1) * q)
             } else {
                 q / previousNumberOfPoints
-            }
+            }*/
         }
     }
 
@@ -104,6 +102,11 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         val p = q / previousNumberOfPoints
         val r = rand.nextDouble(1.0)
         return r < p
+    }
+
+    fun partition(nodes: List<Int>, limit: Int): List<Int> {
+        val count = rand.nextInt(limit)
+        return nodes.shuffled(rand).take(count)
     }
 
     fun reset(failedNodesExp: Int = 0) {

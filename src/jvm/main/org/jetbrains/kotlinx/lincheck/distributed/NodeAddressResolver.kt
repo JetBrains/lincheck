@@ -20,6 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+private data class CrashInfoForType(
+    val crashMode: CrashMode,
+    val partitionMode: NetworkPartitionMode,
+    val maxNumberOfCrashes: Int
+)
+
 /**
  * Stores information about classes included in the scenario execution.
  * Maps a node id to the corresponding class and the class to a range of corresponding ids.
@@ -27,33 +33,34 @@ package org.jetbrains.kotlinx.lincheck.distributed
 class NodeAddressResolver<Message, DB>(
     testClass: Class<out Node<Message, DB>>,
     val nodesWithScenario: Int,
-    private val additionalClasses: Map<Class<out Node<Message, DB>>, Pair<Int, Boolean>>,
-    maxNumberOfFailuresForType: Map<Class<out Node<Message, DB>>, (Int) -> Int>
+    nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
 ) {
-    private val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
-    val totalNumberOfNodes = if (testClass in additionalClasses) additionalClasses.values.map { it.first }
-        .sum() else additionalClasses.values.map { it.first }.sum() + nodesWithScenario
+    val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
+    val totalNumberOfNodes =
+        if (testClass in nodeTypes) nodeTypes.values.sumOf { it.maxNumberOfInstances } else nodeTypes.values.sumOf { it.maxNumberOfInstances } + nodesWithScenario
     private val nodes = mutableListOf<Class<out Node<Message, DB>>>()
-    private val maxNumberOfCrashes = mutableMapOf<Class<out Node<Message, DB>>, Int>()
+    private val crashes = mutableMapOf<Class<out Node<Message, DB>>, CrashInfoForType>()
 
     init {
         repeat(nodesWithScenario) { nodes.add(testClass) }
-        if (additionalClasses.containsKey(testClass)) {
-            repeat(additionalClasses[testClass]!!.first - nodesWithScenario) {
+        if (nodeTypes.containsKey(testClass)) {
+            repeat(nodeTypes[testClass]!!.maxNumberOfInstances - nodesWithScenario) {
                 nodes.add(testClass)
             }
         }
-        for ((cls, p) in additionalClasses) {
+        for ((cls, info) in nodeTypes) {
             if (cls == testClass) continue
-            else repeat(p.first) { nodes.add(cls) }
+            else repeat(info.maxNumberOfInstances) { nodes.add(cls) }
         }
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
-        maxNumberOfFailuresForType.forEach { (t, u) -> maxNumberOfCrashes[t] = u(nodeTypeToRange[t]!!.size) }
-        if (maxNumberOfFailuresForType.isNotEmpty()) {
-            nodeTypeToRange.keys.filter { it !in maxNumberOfFailuresForType }
-                .forEach { maxNumberOfCrashes[it] = 0 }
-        } else {
-            nodeTypeToRange.forEach { (cls, range) -> maxNumberOfCrashes[cls] = range.size }
+        if (nodeTypeToRange.size > 1 && nodeTypes.values.any { it.networkPartition == NetworkPartitionMode.SINGLE }) {
+            throw IllegalArgumentException("Cannot use this type of network partition with multiple types of nodes. Use 'isNetworkReliable' parameter for message loss instead.")
+        }
+        nodeTypes.forEach { (cls, info) ->
+            crashes[cls] = CrashInfoForType(info.crashType, info.networkPartition, info.maxCrashes)
+        }
+        if (testClass !in crashes) {
+            crashes[testClass] = CrashInfoForType(CrashMode.NO_CRASHES, NetworkPartitionMode.NONE, 0)
         }
     }
 
@@ -67,13 +74,15 @@ class NodeAddressResolver<Message, DB>(
      */
     operator fun get(iNode: Int) = nodes[iNode]
 
-    /**
-     * Returns if the node with a specified id [iNode] support failures. Some node class do not support
-     * failures according to user configuration.
-     */
-    fun canFail(iNode: Int) = additionalClasses[nodes[iNode]]?.second ?: true
+    fun crashTypeForNode(iNode: Int) = crashes[get(iNode)]!!.crashMode
 
-    fun maxNumberOfCrashesForNode(iNode: Int) = maxNumberOfCrashes[get(iNode)]!!
+    fun partitionTypeForNode(iNode: Int) = crashes[get(iNode)]!!.partitionMode
+
+    fun crashType(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.crashMode
+
+    fun partitionType(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.partitionMode
+
+    fun maxNumberOfCrashes(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.maxNumberOfCrashes
 
     val isMultipleType = nodeTypeToRange.size > 1
 }

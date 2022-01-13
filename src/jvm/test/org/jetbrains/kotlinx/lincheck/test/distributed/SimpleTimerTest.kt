@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
-import org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage.PingPongMock
 import org.junit.Test
 
 sealed class TimerMessage
