@@ -45,7 +45,6 @@ internal abstract class DistributedStrategy<Message, DB>(
         val iNode = event.iNode
         if (!crashInfo.canSend(iNode, event.receiver)) return 0
         tryAddCrashBeforeSend(iNode, event)
-        if (tryAddPartitionBeforeSend(iNode, event)) return 0
         return getMessageRate(iNode, event)
     }
 
@@ -61,11 +60,15 @@ internal abstract class DistributedStrategy<Message, DB>(
 
     protected abstract fun tryAddCrashBeforeSend(iNode: Int, event: MessageSentEvent<Message>)
 
-    protected abstract fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean
+    abstract fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean
 
     protected abstract fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>): Int
 
     abstract fun reset()
 
-    abstract fun choosePartitionComponent(nodes: List<Int>, limit: Int): Set<Int>
+    abstract fun choosePartitionComponent(nodes: List<Int>, limit: Int): List<Int>
+
+    abstract fun getRecoverTimeout(taskManager: TaskManager): Int
+
+    abstract fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>)
 }

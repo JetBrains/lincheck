@@ -36,6 +36,7 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         var failedNodesExpectation = -1
         var networkPartitionsExpectation = 8
         const val SIMULTANEOUS_CRASH_COUNT = 3
+        const val DEFAULT_RECOVER_TIMEOUT = 10
     }
 
     val rand = Random(0)
@@ -114,4 +115,6 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         previousNumberOfPoints = max(previousNumberOfPoints, currentErrorPoint)
         currentErrorPoint = 0
     }
+
+    fun recoverTimeout(maxTimeout: Int): Int = rand.nextInt(1, maxTimeout * 2)
 }

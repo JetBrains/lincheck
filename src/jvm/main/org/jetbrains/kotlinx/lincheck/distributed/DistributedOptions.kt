@@ -7,11 +7,25 @@ import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import java.lang.IllegalArgumentException
 import java.util.*
 
+/**
+ * Represents the guarantees on message order.
+ * [MessageOrder.FIFO] guarantees that if message m1 from node A to node B
+ * was sent before message m2 from node A to node B, m1 will be received by B before m2.
+ * [MessageOrder.ASYNCHRONOUS] gives no guarantees on the order in which messages will be received.
+ */
 enum class MessageOrder {
     FIFO,
     ASYNCHRONOUS
 }
 
+/**
+ * The crash returns node to the initial state, but does not affect the database.
+ * [NO_CRASHES] means that there is no such crashes in the system for this node type.
+ * Note that the network partitions and other network failure for the node type are still possible.
+ * [NO_RECOVER] means that if the node crashed it doesn't recover.
+ * [ALL_NODES_RECOVER] means that if the node has crashed, it will be recovered.
+ * [MIXED] means that the node may recover or may not recover.
+ */
 enum class CrashMode {
     NO_CRASHES,
     NO_RECOVER,
@@ -19,6 +33,10 @@ enum class CrashMode {
     MIXED
 }
 
+/**
+ * Network partition mode.
+ *
+ */
 enum class NetworkPartitionMode {
     NONE,
     HALVES,

@@ -167,7 +167,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
-        is LivelockWithRemainedTasksFailure -> appendLiveLockWithRemainedTasksFailure(failure)
+        //is LivelockWithRemainedTasksFailure -> appendLiveLockWithRemainedTasksFailure(failure)
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
@@ -273,7 +273,7 @@ internal fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpec
                 "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations."
     )
 }
-
+/*
 internal fun StringBuilder.appendLiveLockWithRemainedTasksFailure(failure: LivelockWithRemainedTasksFailure): StringBuilder {
     appendLine("= The execution timeout exceeded, see current stacktrace and remained tasks =")
     appendExecutionScenario(failure.scenario)
@@ -293,4 +293,4 @@ internal fun StringBuilder.appendLiveLockWithRemainedTasksFailure(failure: Livel
     appendLine()
     failure.tasks.map { it.stringRepresentation }.forEach { appendLine(it) }
     return this
-}
+}*/

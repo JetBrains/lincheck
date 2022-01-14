@@ -47,7 +47,7 @@ internal abstract class CrashInfo<Message, DB>(
 
     abstract fun recoverNode(iNode: Int)
 
-    abstract fun addPartition(firstNode: Int, secondNode: Int)
+    abstract fun addPartition(firstNode: Int, secondNode: Int): Pair<List<Int>, List<Int>>
 
     abstract fun removePartition(firstNode: Int, secondNode: Int)
 
@@ -120,7 +120,7 @@ internal class CrashInfoHalves<Message, DB>(
                 && partitions[cls]!!.second.contains(firstNode)
     }
 
-    override fun addPartition(firstNode: Int, secondNode: Int) {
+    override fun addPartition(firstNode: Int, secondNode: Int): Pair<List<Int>, List<Int>> {
         addNodeToPartition(firstNode)
         removeNodeFromPartition(secondNode)
         val cls = addressResolver[firstNode]
@@ -134,6 +134,8 @@ internal class CrashInfoHalves<Message, DB>(
                 removeNodeFromPartition(node)
             }
         }
+        val firstPart = nodesForPartition + firstNode
+        return firstPart to (0 until addressResolver.totalNumberOfNodes).filter { it !in firstPart }
     }
 
     private fun addNodeToPartition(iNode: Int) {

@@ -108,10 +108,10 @@ internal open class DistributedRunner<Message, Log>(
     override fun run(): InvocationResult {
         reset()
         for (i in 0 until numberOfNodes) {
-            taskManager.addActionTask(i, "On start(iNode=$i)") {
+            taskManager.addActionTask(i) {
                 nodeInstances[i].onStart()
                 if (i >= testCfg.addressResolver.nodesWithScenario) return@addActionTask
-                taskManager.addSuspendedTask(i, "Run operation(iNode=$i)") {
+                taskManager.addSuspendedTask(i) {
                     runNode(i)
                 }
             }
@@ -161,7 +161,6 @@ internal open class DistributedRunner<Message, Log>(
         if (exception != null) return false
         val next = distrStrategy.next(taskManager) ?: return false
         //TODO remove code duplication
-        //if (next is Timeout) println("Launching timeout")
         if (next is InstantTask) {
             executor.execute {
                 try {
@@ -205,7 +204,7 @@ internal open class DistributedRunner<Message, Log>(
         testNodeExecutions.getOrNull(iNode)?.crash()
         nodeInstances.forEachIndexed { index, node ->
             if (index != iNode) {
-                taskManager.addActionTask(index, "Crash notification(iNode=$index, crashNode=$iNode)") {
+                taskManager.addActionTask(index) {
                     eventFactory.createCrashNotificationEvent(index, iNode)
                     node.onNodeUnavailable(iNode)
                 }
@@ -215,7 +214,7 @@ internal open class DistributedRunner<Message, Log>(
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }
-        taskManager.addActionTask(iNode, "Recover(iNode=$iNode)") {
+        taskManager.addActionTask(iNode) {
             environments[iNode] =
                 EnvironmentImpl(iNode, numberOfNodes, databases[iNode], eventFactory, distrStrategy, taskManager)
 
@@ -225,9 +224,24 @@ internal open class DistributedRunner<Message, Log>(
             distrStrategy.onNodeRecover(iNode)
             eventFactory.createNodeRecoverEvent(iNode)
             nodeInstances[iNode].recover()
-            taskManager.addSuspendedTask(iNode, "Run operation(iNode=$iNode)") {
+            taskManager.addSuspendedTask(iNode) {
                 runNode(iNode)
             }
+        }
+    }
+
+    fun onPartition(firstPart: List<Int>, secondPart: List<Int>) {
+        //TODO create partition event
+        for (i in firstPart) {
+            for (index in secondPart) {
+                taskManager.addActionTask(index) {
+                    eventFactory.createCrashNotificationEvent(index, i)
+                    nodeInstances[index].onNodeUnavailable(i)
+                }
+            }
+        }
+        taskManager.addRecoverTask(iNode = firstPart.last(), ticks = distrStrategy.getRecoverTimeout(taskManager)) {
+            distrStrategy.recoverPartition(firstPart, secondPart)
         }
     }
 
@@ -263,7 +277,7 @@ internal open class DistributedRunner<Message, Log>(
                 throw e
             }
         }
-        taskManager.addSuspendedTask(iNode, "Run operation(iNode=$iNode)") {
+        taskManager.addSuspendedTask(iNode) {
             runNode(iNode)
         }
     }

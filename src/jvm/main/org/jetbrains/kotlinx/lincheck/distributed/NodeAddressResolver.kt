@@ -29,6 +29,7 @@ private data class CrashInfoForType(
 /**
  * Stores information about classes included in the scenario execution.
  * Maps a node id to the corresponding class and the class to a range of corresponding ids.
+ * Keeps information of crash types for each class and maximum number of crashes.
  */
 class NodeAddressResolver<Message, DB>(
     testClass: Class<out Node<Message, DB>>,

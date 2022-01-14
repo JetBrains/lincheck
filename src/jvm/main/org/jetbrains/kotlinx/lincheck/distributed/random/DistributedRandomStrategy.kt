@@ -67,7 +67,6 @@ internal class DistributedRandomStrategy<Message, DB>(
         }
     }
 
-
     private fun tryCrash(iNode: Int) {
         if (crashInfo.canCrash(iNode) && probability.nodeFailed()) {
             crashInfo.crashNode(iNode)
@@ -144,12 +143,26 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean {
-        //TODO
+        val receiver = event.receiver
+        if (crashInfo.canAddPartition(iNode, receiver) && probability.isNetworkPartition()) {
+            val partitions = crashInfo.addPartition(iNode, receiver)
+            runner.onPartition(partitions.first, partitions.second)
+            return true
+        }
         return false
     }
 
     override fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>): Int = probability.duplicationRate()
 
-    override fun choosePartitionComponent(nodes: List<Int>, limit: Int): Set<Int> =
-        probability.partition(nodes, limit).toSet()
+    override fun choosePartitionComponent(nodes: List<Int>, limit: Int): List<Int> =
+        probability.partition(nodes, limit)
+
+    override fun getRecoverTimeout(taskManager: TaskManager): Int {
+        val maxTimeout = taskManager.timeTasks.maxOfOrNull { it.time } ?: Probability.DEFAULT_RECOVER_TIMEOUT
+        return probability.recoverTimeout(maxTimeout)
+    }
+
+    override fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>) {
+        TODO("Not yet implemented")
+    }
 }

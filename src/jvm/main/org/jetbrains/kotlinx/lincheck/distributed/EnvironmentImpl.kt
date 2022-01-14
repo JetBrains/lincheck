@@ -35,7 +35,7 @@ internal class EnvironmentImpl<Message, DB>(
     private val _database: DB,
     private val eventFactory: EventFactory<Message, DB>,
     private val strategy: DistributedStrategy<Message, DB>,
-    private val taskManager: TaskManager
+    private val taskManager: TaskManager,
 ) : Environment<Message, DB> {
     override val database: DB
         get() {
@@ -51,11 +51,16 @@ internal class EnvironmentImpl<Message, DB>(
     override fun send(message: Message, receiver: Int) {
         val e = eventFactory.createMessageEvent(message, nodeId, receiver)
         val rate = strategy.crashOrReturnRate(e)
+        if (strategy.tryAddPartitionBeforeSend(nodeId, e)) {
+            val ticks = strategy.getRecoverTimeout(taskManager)
+            taskManager.addRecoverTask(nodeId, ticks) {
+                strategy
+            }
+        }
         repeat(rate) {
             taskManager.addMessageReceiveTask(
                 to = receiver,
-                from = nodeId,
-                stringRepresentation = "Message(to=$receiver, from=$nodeId, msg=$message)"
+                from = nodeId
             ) {
                 eventFactory.createMessageReceiveEvent(e)
                 //TODO: better way to access node instances
@@ -74,7 +79,7 @@ internal class EnvironmentImpl<Message, DB>(
             return suspendCoroutineUninterceptedOrReturn { uCont ->
                 val timeoutCoroutine = TimeoutCoroutine(ticks, uCont)
                 coroutine = timeoutCoroutine
-                val task = taskManager.addTimeout(nodeId, ticks, "Timeout(iNode=$nodeId, ticks=$ticks)") {
+                val task = taskManager.addTimeout(nodeId, ticks) {
                     timeoutCoroutine.run()
                 }
                 val handle = DisposableHandle {
@@ -95,8 +100,7 @@ internal class EnvironmentImpl<Message, DB>(
         suspendCancellableCoroutine<Unit> { cont ->
             taskManager.addTimeout(
                 ticks = ticks,
-                iNode = nodeId,
-                stringRepresentation = "Sleep(iNode=$nodeId, ticks=$ticks)"
+                iNode = nodeId
             ) {
                 cont.resumeWith(Result.success(Unit))
             }
@@ -109,8 +113,7 @@ internal class EnvironmentImpl<Message, DB>(
         f()
         taskManager.addTimer(
             ticks = ticks,
-            iNode = nodeId,
-            stringRepresentation = "Timer(name=$name, iNode=$nodeId, ticks=$ticks)"
+            iNode = nodeId
         ) {
             timerTick(name, ticks, f)
         }
@@ -124,8 +127,7 @@ internal class EnvironmentImpl<Message, DB>(
         timers.add(name)
         taskManager.addTimer(
             ticks = ticks,
-            iNode = nodeId,
-            stringRepresentation = "Timer(name=$name, iNode=$nodeId, ticks=$ticks)"
+            iNode = nodeId
         ) {
             timerTick(name, ticks, f)
         }
