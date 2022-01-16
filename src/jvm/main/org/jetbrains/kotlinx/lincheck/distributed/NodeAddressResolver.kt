@@ -37,7 +37,7 @@ class NodeAddressResolver<Message, DB>(
     nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
 ) {
     val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
-    val totalNumberOfNodes =
+    val nodeCount =
         if (testClass in nodeTypes) nodeTypes.values.sumOf { it.maxNumberOfInstances } else nodeTypes.values.sumOf { it.maxNumberOfInstances } + nodesWithScenario
     private val nodes = mutableListOf<Class<out Node<Message, DB>>>()
     private val crashes = mutableMapOf<Class<out Node<Message, DB>>, CrashInfoForType>()

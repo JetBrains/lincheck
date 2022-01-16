@@ -31,7 +31,7 @@ internal abstract class CrashInfo<Message, DB>(
             CrashInfoHalves(addressResolver, strategy)
     }
 
-    protected val failedNode = Array(addressResolver.totalNumberOfNodes) {
+    protected val failedNode = Array(addressResolver.nodeCount) {
         false
     }
 
@@ -135,7 +135,7 @@ internal class CrashInfoHalves<Message, DB>(
             }
         }
         val firstPart = nodesForPartition + firstNode
-        return firstPart to (0 until addressResolver.totalNumberOfNodes).filter { it !in firstPart }
+        return firstPart to (0 until addressResolver.nodeCount).filter { it !in firstPart }
     }
 
     private fun addNodeToPartition(iNode: Int) {
@@ -166,6 +166,88 @@ internal class CrashInfoHalves<Message, DB>(
         addressResolver.nodeTypeToRange.forEach { (cls, range) ->
             partitions[cls] = mutableSetOf<Int>() to range.toMutableSet()
             unavailableNodeCount[cls] = 0
+        }
+    }
+}
+
+internal class CrashInfoSingle<Message, DB>(
+    addressResolver: NodeAddressResolver<Message, DB>
+) : CrashInfo<Message, DB>(addressResolver) {
+    private val nodeCount = addressResolver.nodeCount
+    private val connections = Array(nodeCount) {
+        (0 until nodeCount).toMutableSet()
+    }
+
+    private fun findMaxComponentSize(): Int {
+        val visited = Array(nodeCount) { false }
+        val componentSizes = mutableListOf<Int>()
+        for (node in 0 until nodeCount) {
+            if (visited[node]) continue
+            componentSizes.add(dfs(node, visited))
+        }
+        return componentSizes.maxOrNull()!!
+    }
+
+    private fun dfs(node: Int, visited: Array<Boolean>): Int {
+        if (visited[node]) return 0
+        visited[node] = true
+        return connections[node].sumOf { dfs(it, visited) } + 1
+    }
+
+    override fun canSend(from: Int, to: Int): Boolean {
+        return connections[from].contains(to)
+    }
+
+    override fun crashNode(iNode: Int) {
+        check(!failedNode[iNode])
+        failedNode[iNode] = true
+        for (node in 0 until nodeCount) {
+            connections[node].remove(iNode)
+        }
+        connections[iNode].clear()
+    }
+
+    override fun canAddPartition(firstNode: Int, secondNode: Int): Boolean {
+        if (!connections[firstNode].contains(secondNode) || firstNode == secondNode) return false
+        addPartition(firstNode, secondNode)
+        val size = findMaxComponentSize()
+        val res = (size >= nodeCount - addressResolver.maxNumberOfCrashes(addressResolver[firstNode]))
+        removePartition(firstNode, secondNode)
+        return res
+    }
+
+    override fun canCrash(iNode: Int): Boolean {
+        crashNode(iNode)
+        val size = findMaxComponentSize()
+        val res = (size >= nodeCount - addressResolver.maxNumberOfCrashes(addressResolver[iNode]))
+        recoverNode(iNode)
+        return res
+    }
+
+    override fun recoverNode(iNode: Int) {
+        check(failedNode[iNode])
+        failedNode[iNode] = false
+        for (node in 0 until nodeCount) {
+            connections[node].add(iNode)
+            connections[iNode].add(node)
+        }
+    }
+
+    override fun addPartition(firstNode: Int, secondNode: Int): Pair<List<Int>, List<Int>> {
+        connections[firstNode].remove(secondNode)
+        connections[secondNode].remove(firstNode)
+        return listOf(firstNode) to listOf(secondNode)
+    }
+
+    override fun removePartition(firstNode: Int, secondNode: Int) {
+        connections[firstNode].add(secondNode)
+        connections[secondNode].add(firstNode)
+    }
+
+    override fun reset() {
+        failedNode.fill(false)
+        for (i in 0 until nodeCount) {
+            connections[i] = (0 until nodeCount).toMutableSet()
         }
     }
 }

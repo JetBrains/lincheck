@@ -68,7 +68,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     private fun tryCrash(iNode: Int) {
-        if (crashInfo.canCrash(iNode) && probability.nodeFailed()) {
+        if (probability.nodeFailed() && crashInfo.canCrash(iNode)) {
             crashInfo.crashNode(iNode)
             throw CrashError()
         }
@@ -144,7 +144,7 @@ internal class DistributedRandomStrategy<Message, DB>(
 
     override fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean {
         val receiver = event.receiver
-        if (crashInfo.canAddPartition(iNode, receiver) && probability.isNetworkPartition()) {
+        if (probability.isNetworkPartition() && crashInfo.canAddPartition(iNode, receiver)) {
             val partitions = crashInfo.addPartition(iNode, receiver)
             runner.onPartition(partitions.first, partitions.second)
             return true

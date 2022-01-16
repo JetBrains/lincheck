@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
 import org.apache.commons.math3.distribution.PoissonDistribution
-import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.math.max
 import kotlin.random.Random
@@ -44,7 +43,7 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
     private val poissonDistribution = PoissonDistribution(MEAN_POISSON_DISTRIBUTION)
 
     var nextNumberOfCrashes = 0
-    private val numberOfNodes: Int = testCfg.addressResolver.totalNumberOfNodes
+    private val numberOfNodes: Int = testCfg.addressResolver.nodeCount
     private var currentErrorPoint = 0
     private var previousNumberOfPoints = 0
 

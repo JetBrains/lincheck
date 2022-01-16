@@ -47,7 +47,7 @@ internal open class DistributedRunner<Message, Log>(
     stateRepresentationFunction: Method?
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val distrStrategy: DistributedStrategy<Message, Log> = strategy
-    private val numberOfNodes = testCfg.addressResolver.totalNumberOfNodes
+    private val numberOfNodes = testCfg.addressResolver.nodeCount
     private lateinit var eventFactory: EventFactory<Message, Log>
     private val databases = mutableListOf<Log>().apply {
         repeat(numberOfNodes) {

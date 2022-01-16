@@ -20,19 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.event
 
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
 
@@ -41,7 +31,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
     private val _events = mutableListOf<Event>()
     val events: List<Event>
         get() = _events
-    val numberOfNodes = testCfg.addressResolver.totalNumberOfNodes
+    val numberOfNodes = testCfg.addressResolver.nodeCount
     private val vectorClocks = Array(numberOfNodes) {
         VectorClock(emptyClockArray(numberOfNodes), it)
     }
