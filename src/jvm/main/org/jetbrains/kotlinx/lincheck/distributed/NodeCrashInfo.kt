@@ -49,7 +49,7 @@ internal abstract class CrashInfo<Message, DB>(
 
     abstract fun addPartition(firstNode: Int, secondNode: Int): Pair<List<Int>, List<Int>>
 
-    abstract fun removePartition(firstNode: Int, secondNode: Int)
+    abstract fun removePartition(firstPart: List<Int>, secondPart: List<Int>)
 
     abstract fun reset()
 }
@@ -154,9 +154,8 @@ internal class CrashInfoHalves<Message, DB>(
         partitions[cls]!!.second.add(iNode)
     }
 
-    override fun removePartition(firstNode: Int, secondNode: Int) {
-        removeNodeFromPartition(secondNode)
-        for (node in partitions[addressResolver[firstNode]]!!.first) {
+    override fun removePartition(firstPart: List<Int>, secondPart: List<Int>) {
+        for (node in firstPart) {
             removeNodeFromPartition(node)
         }
     }
@@ -239,7 +238,11 @@ internal class CrashInfoSingle<Message, DB>(
         return listOf(firstNode) to listOf(secondNode)
     }
 
-    override fun removePartition(firstNode: Int, secondNode: Int) {
+    override fun removePartition(firstPart: List<Int>, secondPart: List<Int>) {
+        removePartition(firstPart[0], secondPart[0])
+    }
+
+    private fun removePartition(firstNode: Int, secondNode: Int) {
         connections[firstNode].add(secondNode)
         connections[secondNode].add(firstNode)
     }

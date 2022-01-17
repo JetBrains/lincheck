@@ -164,6 +164,6 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>) {
-        TODO("Not yet implemented")
+        crashInfo.removePartition(firstPart, secondPart)
     }
 }
