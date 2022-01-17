@@ -94,14 +94,15 @@ class RaftTest {
             minNumberOfInstances = 1,
             maxNumberOfInstances = 5,
             crashType = CrashMode.ALL_NODES_RECOVER,
-            maxNumberOfCrashedNodes = { (it + 1) / 2 })
+            maxNumberOfCrashedNodes = { (it + 1) / 2 - 1})
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(RaftSpecification::class.java)
         .storeLogsForFailedScenario("raft.txt")
         .actorsPerThread(3)
-        .invocationsPerIteration(10_000)
+        .sendCrashNotifications(false)
+        .invocationsPerIteration(30_000)
         .minimizeFailedScenario(false)
-        .iterations(30)
+        .iterations(10)
 
     @Test
     fun test() = options().check()

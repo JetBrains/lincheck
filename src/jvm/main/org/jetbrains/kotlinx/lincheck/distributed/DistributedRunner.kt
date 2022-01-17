@@ -61,6 +61,12 @@ internal open class DistributedRunner<Message, Log>(
     private val isSignal = atomic(false)
 
     @Volatile
+    private var _isRunning = false
+
+    val isRunning
+        get() = _isRunning
+
+    @Volatile
     private var exception: Throwable? = null
 
     private lateinit var executor: DistributedExecutor
@@ -103,6 +109,7 @@ internal open class DistributedRunner<Message, Log>(
             ex.actorId = 0
         }
         eventFactory.nodeInstances = nodeInstances
+        _isRunning = true
     }
 
     override fun run(): InvocationResult {
@@ -123,6 +130,7 @@ internal open class DistributedRunner<Message, Log>(
             //TODO (don't know how to handle it correctly)
             false
         }
+        _isRunning = false
         if (!finishedOnTime && !isSignal.value) {
             val stackTrace = executor.shutdownNow() ?: emptyArray()
             return LivelockInvocationResult(taskManager.allTasks, stackTrace)
@@ -198,18 +206,10 @@ internal open class DistributedRunner<Message, Log>(
     }
 
     private fun onNodeCrash(iNode: Int) {
-        println("[$iNode]: Crashed")
         eventFactory.createNodeCrashEvent(iNode)
         taskManager.removeAllForNode(iNode)
         testNodeExecutions.getOrNull(iNode)?.crash()
-        nodeInstances.forEachIndexed { index, node ->
-            if (index != iNode) {
-                taskManager.addActionTask(index) {
-                    eventFactory.createCrashNotificationEvent(index, iNode)
-                    node.onNodeUnavailable(iNode)
-                }
-            }
-        }
+        sendCrashNotifications(iNode)
         if (testCfg.addressResolver.crashTypeForNode(iNode) == CrashMode.NO_RECOVER) {
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
@@ -233,12 +233,7 @@ internal open class DistributedRunner<Message, Log>(
     fun onPartition(firstPart: List<Int>, secondPart: List<Int>) {
         //TODO create partition event
         for (i in firstPart) {
-            for (index in secondPart) {
-                taskManager.addActionTask(index) {
-                    eventFactory.createCrashNotificationEvent(index, i)
-                    nodeInstances[index].onNodeUnavailable(i)
-                }
-            }
+            sendCrashNotifications(i)
         }
         taskManager.addRecoverTask(iNode = firstPart.last(), ticks = distrStrategy.getRecoverTimeout(taskManager)) {
             distrStrategy.recoverPartition(firstPart, secondPart)
@@ -279,6 +274,19 @@ internal open class DistributedRunner<Message, Log>(
         }
         taskManager.addSuspendedTask(iNode) {
             runNode(iNode)
+        }
+    }
+
+    private fun sendCrashNotifications(iNode: Int) {
+        if (!testCfg.crashNotifications) return
+        nodeInstances.forEachIndexed { index, node ->
+            if (index != iNode) {
+                taskManager.addActionTask(index) {
+                    if (distrStrategy.isCrashed(index)) return@addActionTask
+                    eventFactory.createCrashNotificationEvent(index, iNode)
+                    node.onNodeUnavailable(iNode)
+                }
+            }
         }
     }
 

@@ -47,8 +47,10 @@ data class AppendEntries(
  * Response to the [AppendEntries].
  * [term] currentTerm, for leader to update itself
  * [success] true if follower contained entry matching prevLogIndex and prevLogTerm
+ * [lastLogIndex]
+ * [prevLogLeaderIndex]
  */
-data class AppendEntriesResponse(override val term: Int, val success: Boolean, val lastLogIndex: Int) : RaftMessage()
+data class AppendEntriesResponse(override val term: Int, val success: Boolean, val lastLogIndex: Int, val prevLogLeaderIndex: Int) : RaftMessage()
 
 /**
  * Send by candidates to gather votes.

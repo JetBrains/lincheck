@@ -86,7 +86,7 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         return if (previousNumberOfPoints == 0) {
             0.0
         } else {
-            val q = failedNodesExpectation.toDouble() / numberOfNodes
+            val q = failedNodesExpectation.toDouble() / previousNumberOfPoints
             return q
             /*return if (testCfg.supportRecovery == CrashMode.NO_RECOVER) {
                 q / (previousNumberOfPoints - (currentErrorPoint - 1) * q)

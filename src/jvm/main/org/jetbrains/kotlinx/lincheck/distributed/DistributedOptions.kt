@@ -73,6 +73,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     private var messageDuplication: Boolean = false
     private var testClasses = HashMap<Class<out Node<Message, DB>>, NodeTypeInfo>()
     private var logFileName: String? = null
+    private var crashNotifications = true
     private var _testClass: Class<out Node<Message, DB>>? = null
 
     init {
@@ -134,12 +135,17 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         return this
     }
 
+    fun sendCrashNotifications(crashNotifications: Boolean) : DistributedOptions<Message, DB> {
+        this.crashNotifications = crashNotifications
+        return this
+    }
+
     override fun createTestConfigurations(testClass: Class<*>): DistributedCTestConfiguration<Message, DB> =
         DistributedCTestConfiguration(
             testClass, iterations, threads,
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, isNetworkReliable,
-            messageOrder, messageDuplication, testClasses, logFileName, databaseFactory,
+            messageOrder, messageDuplication, testClasses, logFileName, crashNotifications, databaseFactory,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
         )
@@ -148,7 +154,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         testClass, iterations, threads,
         actorsPerThread, executionGenerator,
         verifier, invocationsPerIteration, isNetworkReliable,
-        messageOrder, messageDuplication, testClasses, logFileName, databaseFactory,
+        messageOrder, messageDuplication, testClasses, logFileName, crashNotifications, databaseFactory,
         requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
         chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
     )

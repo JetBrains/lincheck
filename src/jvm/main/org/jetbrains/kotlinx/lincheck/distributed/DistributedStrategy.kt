@@ -71,4 +71,6 @@ internal abstract class DistributedStrategy<Message, DB>(
     abstract fun getRecoverTimeout(taskManager: TaskManager): Int
 
     abstract fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>)
+
+    fun isCrashed(iNode: Int) = crashInfo[iNode]
 }

@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
 
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import java.lang.Integer.max
 import java.lang.Integer.min
 import kotlin.random.Random
 
@@ -171,13 +172,23 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
      */
     private fun onAppendEntries(message: AppendEntries, sender: Int) {
         if (env.database.currentTerm > message.term) {
-            env.send(AppendEntriesResponse(env.database.currentTerm, false, env.database.lastLogIndex), sender)
+            env.send(
+                AppendEntriesResponse(
+                    env.database.currentTerm,
+                    false,
+                    env.database.lastLogIndex,
+                    message.prevLogIndex
+                ), sender
+            )
             return
         }
         receivedHeartbeatCount++
         leaderId = sender
         if (!env.database.containsEntry(message.prevLogIndex, message.prevLogTerm)) {
-            env.send(AppendEntriesResponse(message.term, false, env.database.lastLogIndex), sender)
+            env.send(
+                AppendEntriesResponse(message.term, false, env.database.lastLogIndex, message.prevLogIndex),
+                sender
+            )
             return
         }
         message.entries.forEachIndexed { index, entry ->
@@ -191,7 +202,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
             commitIndex = min(message.leaderCommit, env.database.lastLogIndex)
         }
         applyEntries()
-        env.send(AppendEntriesResponse(message.term, true, env.database.lastLogIndex), sender)
+        env.send(AppendEntriesResponse(message.term, true, env.database.lastLogIndex, message.prevLogIndex), sender)
     }
 
     private fun onAppendEntriesResponse(message: AppendEntriesResponse, sender: Int) {
@@ -205,7 +216,10 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
             }
             return
         }
-        nextIndices[sender]--
+        nextIndices[sender] = min(nextIndices[sender], message.prevLogLeaderIndex)
+        if (nextIndices[sender] < 0) {
+            env.recordInternalEvent("Next index less than 0, ${nextIndices[sender]}")
+        }
         env.send(
             AppendEntries(
                 term = env.database.currentTerm,
@@ -283,7 +297,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
     }
 
     override fun stateRepresentation(): String {
-        return "$status, leaderId=$leaderId, receivedOksCount=${receivedOks.count { it }}, heartbeats=$receivedHeartbeatCount"
+        return "$status, leaderId=$leaderId, receivedOksCount=${receivedOks.count { it }}, heartbeats=$receivedHeartbeatCount, nextIndices=${nextIndices.toList()}"
     }
 }
 

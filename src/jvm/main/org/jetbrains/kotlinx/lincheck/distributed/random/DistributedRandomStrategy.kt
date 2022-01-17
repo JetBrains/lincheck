@@ -79,6 +79,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun beforeLogModify(iNode: Int) {
+        if (!runner.isRunning) return
         tryCrash(iNode)
     }
 

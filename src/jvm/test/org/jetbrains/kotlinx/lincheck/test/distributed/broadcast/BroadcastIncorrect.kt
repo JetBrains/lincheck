@@ -48,6 +48,6 @@ class PeerIncorrect(env: Environment<Message, MutableList<Message>>) : AbstractP
     }
 
     override fun stateRepresentation(): String {
-        return "${env.database}"
+        return "${receivedMessages.toList()}"
     }
 }

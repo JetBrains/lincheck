@@ -173,8 +173,8 @@ class BroadcastTest {
 
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
-        .storeLogsForFailedScenario("broadcast_incorrect.txt")
-        .actorsPerThread(1)
+        .minimizeFailedScenario(false)
+        //.storeLogsForFailedScenario("broadcast_incorrect.txt")
         .nodeType(PeerIncorrect::class.java,
             numberOfInstances = 4,
             crashType = CrashMode.NO_RECOVER,

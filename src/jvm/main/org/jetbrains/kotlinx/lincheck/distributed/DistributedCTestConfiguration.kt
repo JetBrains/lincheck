@@ -44,6 +44,7 @@ class DistributedCTestConfiguration<Message, DB>(
     val messageDuplication: Boolean,
     private val nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
     val logFilename: String?,
+    val crashNotifications: Boolean,
     val databaseFactory: () -> DB,
     requireStateEquivalenceCheck: Boolean,
     minimizeFailedScenario: Boolean,
@@ -106,7 +107,7 @@ class DistributedCTestConfiguration<Message, DB>(
                     isNetworkReliable,
                     messageOrder,
                     messageDuplication,
-                    newNodeTypes, logFilename, databaseFactory, requireStateEquivalenceImplCheck,
+                    newNodeTypes, logFilename, crashNotifications, databaseFactory, requireStateEquivalenceImplCheck,
                     minimizeFailedScenario,
                     sequentialSpecification, timeoutMs, customScenarios
                 )
