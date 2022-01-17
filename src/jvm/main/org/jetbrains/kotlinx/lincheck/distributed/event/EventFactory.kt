@@ -23,10 +23,11 @@ package org.jetbrains.kotlinx.lincheck.distributed.event
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.random.canCrashBeforeAccessingDatabase
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
 
-internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) {
+internal class EventFactory<M, DB>(testCfg: DistributedCTestConfiguration<M, DB>) {
     private var msgId = 0
     private val _events = mutableListOf<Event>()
     val events: List<Event>
@@ -35,9 +36,15 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
     private val vectorClocks = Array(numberOfNodes) {
         VectorClock(emptyClockArray(numberOfNodes), it)
     }
-    lateinit var nodeInstances: Array<out Node<M, L>>
+    lateinit var nodeInstances: Array<out Node<M, DB>>
 
-    fun createMessageEvent(msg: M, sender: Int, receiver: Int): MessageSentEvent<M> {
+    private fun <T> safeDatabaseAccess(f: () -> T): T {
+        val prev = canCrashBeforeAccessingDatabase
+        canCrashBeforeAccessingDatabase = false
+        return f().also { canCrashBeforeAccessingDatabase = prev }
+    }
+
+    fun createMessageEvent(msg: M, sender: Int, receiver: Int): MessageSentEvent<M> = safeDatabaseAccess {
         val event = MessageSentEvent(
             iNode = sender,
             message = msg,
@@ -47,10 +54,10 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
             nodeInstances[sender].stateRepresentation()
         )
         _events.add(event)
-        return event
+        event
     }
 
-    fun createOperationEvent(actor: Actor, iNode: Int) {
+    fun createOperationEvent(actor: Actor, iNode: Int) = safeDatabaseAccess {
         val event =
             OperationStartEvent(
                 iNode,
@@ -61,7 +68,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         _events.add(event)
     }
 
-    fun createNodeRecoverEvent(iNode: Int) {
+    fun createNodeRecoverEvent(iNode: Int) = safeDatabaseAccess {
         _events.add(
             NodeRecoveryEvent(
                 iNode,
@@ -71,7 +78,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         )
     }
 
-    fun createMessageReceiveEvent(sentEvent: MessageSentEvent<M>) {
+    fun createMessageReceiveEvent(sentEvent: MessageSentEvent<M>) = safeDatabaseAccess {
         val receiver = sentEvent.receiver
         val event = MessageReceivedEvent(
             iNode = receiver,
@@ -84,7 +91,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         _events.add(event)
     }
 
-    fun createTimerTickEvent(name: String, iNode: Int) {
+    fun createTimerTickEvent(name: String, iNode: Int) = safeDatabaseAccess {
         _events.add(
             TimerTickEvent(
                 iNode = iNode,
@@ -95,7 +102,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         )
     }
 
-    fun createInternalEvent(attachment: Any, iNode: Int) {
+    fun createInternalEvent(attachment: Any, iNode: Int) = safeDatabaseAccess {
         _events.add(
             InternalEvent(
                 iNode,
@@ -106,11 +113,11 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         )
     }
 
-    fun createNodeCrashEvent(iNode: Int) {
+    fun createNodeCrashEvent(iNode: Int) = safeDatabaseAccess {
         _events.add(NodeCrashEvent(iNode, vectorClocks[iNode].copy(), nodeInstances[iNode].stateRepresentation()))
     }
 
-    fun createScenarioFinishEvent(iNode: Int) {
+    fun createScenarioFinishEvent(iNode: Int) = safeDatabaseAccess {
         _events.add(
             ScenarioFinishEvent(
                 iNode,
@@ -120,7 +127,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         )
     }
 
-    fun createCrashNotificationEvent(iNode: Int, crashedNode: Int) {
+    fun createCrashNotificationEvent(iNode: Int, crashedNode: Int) = safeDatabaseAccess {
         _events.add(
             CrashNotificationEvent(
                 iNode, crashedNode, vectorClocks[iNode].copy(),
@@ -129,7 +136,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         )
     }
 
-    fun createSetTimerEvent(iNode: Int, timerName: String) {
+    fun createSetTimerEvent(iNode: Int, timerName: String) = safeDatabaseAccess {
         _events.add(
             SetTimerEvent(
                 iNode,
@@ -140,7 +147,7 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
         )
     }
 
-    fun createCancelTimerEvent(iNode: Int, timerName: String) {
+    fun createCancelTimerEvent(iNode: Int, timerName: String) = safeDatabaseAccess {
         _events.add(
             CancelTimerEvent(
                 iNode,
@@ -149,5 +156,17 @@ internal class EventFactory<M, L>(testCfg: DistributedCTestConfiguration<M, L>) 
                 nodeInstances[iNode].stateRepresentation()
             )
         )
+    }
+
+    fun createNetworkPartitionEvent(
+        firstPart: List<Int>,
+        secondPart: List<Int>,
+        partitionCount: Int
+    ) {
+        _events.add(NetworkPartitionEvent(firstPart, secondPart, partitionCount))
+    }
+
+    fun createNetworkRecoverEvent(partitionCount: Int) {
+        _events.add(NetworkRecoveryEvent(partitionCount))
     }
 }

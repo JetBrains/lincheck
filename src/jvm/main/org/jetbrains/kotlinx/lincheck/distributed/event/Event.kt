@@ -21,15 +21,16 @@
 package org.jetbrains.kotlinx.lincheck.distributed.event
 
 import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
 
 /**
  * Event for a node.
  */
 sealed class Event {
-    abstract val iNode: Int
-    abstract val clock : VectorClock
-    abstract val state : String
+    abstract val iNode: Int?
+    abstract val clock: VectorClock
+    abstract val state: String
 }
 
 /**
@@ -60,9 +61,11 @@ data class InternalEvent(
     override val state: String
 ) : Event()
 
-data class NodeCrashEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) : Event()
+data class NodeCrashEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
+    Event()
 
-data class NodeRecoveryEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) : Event()
+data class NodeRecoveryEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
+    Event()
 
 data class OperationStartEvent(
     override val iNode: Int,
@@ -71,7 +74,8 @@ data class OperationStartEvent(
     override val state: String
 ) : Event()
 
-data class ScenarioFinishEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) : Event()
+data class ScenarioFinishEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
+    Event()
 
 data class CrashNotificationEvent(
     override val iNode: Int,
@@ -80,17 +84,44 @@ data class CrashNotificationEvent(
     override val state: String
 ) : Event()
 
-data class SetTimerEvent(override val iNode: Int, val timerName: String, override val clock: VectorClock, override val state: String) :
+data class SetTimerEvent(
+    override val iNode: Int,
+    val timerName: String,
+    override val clock: VectorClock,
+    override val state: String
+) :
     Event()
 
-data class TimerTickEvent(override val iNode: Int, val timerName: String, override val clock: VectorClock, override val state: String) :
+data class TimerTickEvent(
+    override val iNode: Int,
+    val timerName: String,
+    override val clock: VectorClock,
+    override val state: String
+) :
     Event()
 
-data class CancelTimerEvent(override val iNode: Int, val timerName: String, override val clock: VectorClock, override val state: String) :
+data class CancelTimerEvent(
+    override val iNode: Int,
+    val timerName: String,
+    override val clock: VectorClock,
+    override val state: String
+) :
     Event()
 
-data class NetworkPartitionEvent(override val iNode: Int, val partitions: List<Set<Int>>, val partitionCount: Int,
-                                 override val clock: VectorClock, override val state: String) :
-    Event()
+data class NetworkPartitionEvent(
+    val firstPart: List<Int>, val secondPart: List<Int>, val partitionCount: Int,
 
-data class NetworkRecoveryEvent(override val iNode: Int, val partitionCount: Int, override val clock: VectorClock, override val state: String) : Event()
+    ) :
+    Event() {
+    override val iNode: Int? = null
+    override val clock: VectorClock = VectorClock(emptyClockArray(1), -1)
+    override val state: String = ""
+}
+
+data class NetworkRecoveryEvent(
+    val partitionCount: Int
+) : Event() {
+    override val iNode: Int? = null
+    override val clock: VectorClock = VectorClock(emptyClockArray(1), -1)
+    override val state: String = ""
+}

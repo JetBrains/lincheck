@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.createExceptionResult
 import org.jetbrains.kotlinx.lincheck.createLincheckResult
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
+import org.jetbrains.kotlinx.lincheck.distributed.random.canCrashBeforeAccessingDatabase
 import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -59,12 +60,6 @@ internal open class DistributedRunner<Message, Log>(
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var taskManager: TaskManager
     private val isSignal = atomic(false)
-
-    @Volatile
-    private var _isRunning = false
-
-    val isRunning
-        get() = _isRunning
 
     @Volatile
     private var exception: Throwable? = null
@@ -109,7 +104,7 @@ internal open class DistributedRunner<Message, Log>(
             ex.actorId = 0
         }
         eventFactory.nodeInstances = nodeInstances
-        _isRunning = true
+        canCrashBeforeAccessingDatabase = true
     }
 
     override fun run(): InvocationResult {
@@ -130,7 +125,7 @@ internal open class DistributedRunner<Message, Log>(
             //TODO (don't know how to handle it correctly)
             false
         }
-        _isRunning = false
+        canCrashBeforeAccessingDatabase = false
         if (!finishedOnTime && !isSignal.value) {
             val stackTrace = executor.shutdownNow() ?: emptyArray()
             return LivelockInvocationResult(taskManager.allTasks, stackTrace)
@@ -230,12 +225,13 @@ internal open class DistributedRunner<Message, Log>(
         }
     }
 
-    fun onPartition(firstPart: List<Int>, secondPart: List<Int>) {
-        //TODO create partition event
+    fun onPartition(firstPart: List<Int>, secondPart: List<Int>, partitionId: Int) {
+        eventFactory.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
         for (i in firstPart) {
             sendCrashNotifications(i)
         }
         taskManager.addPartitionRecoverTask(ticks = distrStrategy.getRecoverTimeout(taskManager)) {
+            eventFactory.createNetworkRecoverEvent(partitionId)
             distrStrategy.recoverPartition(firstPart, secondPart)
         }
     }
@@ -293,7 +289,6 @@ internal open class DistributedRunner<Message, Log>(
     fun storeEventsToFile(failure: LincheckFailure) {
         if (testCfg.logFilename == null) return
         File(testCfg.logFilename).printWriter().use { out ->
-            println(Thread.currentThread().name)
             out.println(failure)
             out.println()
             val formatter = testCfg.getFormatter()

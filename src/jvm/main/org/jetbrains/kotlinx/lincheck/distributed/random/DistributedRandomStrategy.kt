@@ -40,6 +40,8 @@ fun ExecutionResult.newResult(stateRepresentation: String?): ExecutionResult = E
     afterPostStateRepresentation
 )
 
+internal var canCrashBeforeAccessingDatabase = false
+
 internal class DistributedRandomStrategy<Message, DB>(
     testCfg: DistributedCTestConfiguration<Message, DB>,
     testClass: Class<*>,
@@ -68,7 +70,10 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     private fun tryCrash(iNode: Int) {
-        if (probability.nodeFailed() && crashInfo.canCrash(iNode)) {
+        if (testCfg.addressResolver.crashTypeForNode(iNode) != CrashMode.NO_CRASHES
+            && probability.nodeFailed()
+            && crashInfo.canCrash(iNode)
+        ) {
             crashInfo.crashNode(iNode)
             throw CrashError()
         }
@@ -79,7 +84,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun beforeLogModify(iNode: Int) {
-        if (!runner.isRunning) return
+        if (!canCrashBeforeAccessingDatabase) return
         tryCrash(iNode)
     }
 
@@ -111,7 +116,6 @@ internal class DistributedRandomStrategy<Message, DB>(
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until testCfg.invocationsPerIteration) {
-                //println("INVOCATION $invocation")
 
                 reset()
                 val ir = runner.run()
@@ -145,9 +149,12 @@ internal class DistributedRandomStrategy<Message, DB>(
 
     override fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean {
         val receiver = event.receiver
-        if (probability.isNetworkPartition() && crashInfo.canAddPartition(iNode, receiver)) {
-            val partitions = crashInfo.addPartition(iNode, receiver)
-            runner.onPartition(partitions.first, partitions.second)
+        if (testCfg.addressResolver.partitionTypeForNode(iNode) != NetworkPartitionMode.NONE
+            && probability.isNetworkPartition()
+            && crashInfo.canAddPartition(iNode, receiver)
+        ) {
+            val partitionResult = crashInfo.partition(iNode, receiver)
+            runner.onPartition(partitionResult.firstPart, partitionResult.secondPart, partitionResult.partitionId)
             return true
         }
         return false

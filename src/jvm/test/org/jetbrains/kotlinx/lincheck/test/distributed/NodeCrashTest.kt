@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
-import kotlin.random.Random
 
 class Node1(env: Environment<Unit, Unit>) : Node<Unit, Unit> {
     override fun onMessage(message: Unit, sender: Int) {
@@ -117,7 +116,7 @@ class NodeCrashTest {
         return CrashInfoHalves(NodeAddressResolver(Node1::class.java, 2, typeInfo), MockDistributedStrategy())
     }
 
-    private fun checkClique(nodes: Iterable<Int>, crashInfo: CrashInfo<Unit, Unit>) {
+    private fun checkClique(nodes: Iterable<Int>, crashInfo: FailureManager<Unit, Unit>) {
         for (i in nodes) {
             for (j in nodes) {
                 check(crashInfo.canSend(i, j))

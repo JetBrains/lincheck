@@ -20,24 +20,30 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-internal abstract class CrashInfo<Message, DB>(
+internal data class PartitionResult(
+    val partitionId: Int,
+    val firstPart: List<Int>,
+    val secondPart: List<Int>
+)
+
+internal abstract class FailureManager<Message, DB>(
     protected val addressResolver: NodeAddressResolver<Message, DB>
 ) {
     companion object {
-        fun <Message, DB> createCrashInfo(
+        fun <Message, DB> create(
             addressResolver: NodeAddressResolver<Message, DB>,
             strategy: DistributedStrategy<Message, DB>
-        ): CrashInfo<Message, DB> =
-            CrashInfoHalves(addressResolver, strategy)
+        ): FailureManager<Message, DB> =
+            if (addressResolver.singlePartitionType) CrashInfoSingle(addressResolver)
+            else CrashInfoHalves(addressResolver, strategy)
     }
 
-    protected val failedNode = Array(addressResolver.nodeCount) {
-        false
-    }
+    protected val crashedNodes = Array(addressResolver.nodeCount) { false }
+    private var partitionCount: Int = 0
 
     abstract fun canSend(from: Int, to: Int): Boolean
 
-    operator fun get(iNode: Int) = failedNode[iNode]
+    operator fun get(iNode: Int) = crashedNodes[iNode]
 
     abstract fun crashNode(iNode: Int)
 
@@ -47,7 +53,13 @@ internal abstract class CrashInfo<Message, DB>(
 
     abstract fun recoverNode(iNode: Int)
 
-    abstract fun addPartition(firstNode: Int, secondNode: Int): Pair<List<Int>, List<Int>>
+    fun partition(firstNode: Int, secondNode: Int): PartitionResult {
+        val id = partitionCount++
+        val parts = addPartition(firstNode, secondNode)
+        return PartitionResult(id, parts.first, parts.second)
+    }
+
+    protected abstract fun addPartition(firstNode: Int, secondNode: Int): Pair<List<Int>, List<Int>>
 
     abstract fun removePartition(firstPart: List<Int>, secondPart: List<Int>)
 
@@ -58,7 +70,7 @@ internal class CrashInfoHalves<Message, DB>(
     addressResolver: NodeAddressResolver<Message, DB>,
     private val strategy: DistributedStrategy<Message, DB>
 ) :
-    CrashInfo<Message, DB>(addressResolver) {
+    FailureManager<Message, DB>(addressResolver) {
     private val partitions = mutableMapOf<Class<out Node<Message, DB>>, Pair<MutableSet<Int>, MutableSet<Int>>>()
     private val unavailableNodeCount = mutableMapOf<Class<out Node<Message, DB>>, Int>()
 
@@ -67,7 +79,7 @@ internal class CrashInfoHalves<Message, DB>(
     }
 
     override fun canSend(from: Int, to: Int): Boolean {
-        if (failedNode[from] || failedNode[to]) {
+        if (crashedNodes[from] || crashedNodes[to]) {
             return false
         }
         val cls1 = addressResolver[from]
@@ -82,40 +94,36 @@ internal class CrashInfoHalves<Message, DB>(
 
     private fun incrementCrashedNodes(iNode: Int) {
         val cls = addressResolver[iNode]
-        if (failedNode[iNode] || partitions[cls]!!.first.contains(iNode)) return
+        if (crashedNodes[iNode] || partitions[cls]!!.first.contains(iNode)) return
         unavailableNodeCount[cls] = unavailableNodeCount[cls]!! + 1
     }
 
     private fun decrementCrashedNodes(iNode: Int) {
         val cls = addressResolver[iNode]
-        if (failedNode[iNode] && partitions[cls]!!.first.contains(iNode)) return
+        if (crashedNodes[iNode] && partitions[cls]!!.first.contains(iNode)) return
         unavailableNodeCount[cls] = unavailableNodeCount[cls]!! - 1
     }
 
     override fun crashNode(iNode: Int) {
-        check(!failedNode[iNode])
+        check(!crashedNodes[iNode])
         incrementCrashedNodes(iNode)
-        failedNode[iNode] = true
+        crashedNodes[iNode] = true
     }
 
     override fun canCrash(iNode: Int): Boolean {
-        if (failedNode[iNode]) return false
+        if (crashedNodes[iNode]) return false
         val cls = addressResolver[iNode]
-        return addressResolver.crashType(cls) != CrashMode.NO_CRASHES
-                && unavailableNodeCount[cls]!! < addressResolver.maxNumberOfCrashes(cls)
+        return unavailableNodeCount[cls]!! < addressResolver.maxNumberOfCrashes(cls)
     }
 
     override fun recoverNode(iNode: Int) {
-        check(failedNode[iNode])
+        check(crashedNodes[iNode])
         decrementCrashedNodes(iNode)
-        failedNode[iNode] = false
+        crashedNodes[iNode] = false
     }
 
     override fun canAddPartition(firstNode: Int, secondNode: Int): Boolean {
         val cls = addressResolver[firstNode]
-        if (addressResolver.partitionType(cls) == NetworkPartitionMode.NONE) {
-            return false
-        }
         return unavailableNodeCount[cls]!! < addressResolver.maxNumberOfCrashes(cls)
                 && partitions[cls]!!.second.contains(firstNode)
     }
@@ -161,7 +169,7 @@ internal class CrashInfoHalves<Message, DB>(
     }
 
     override fun reset() {
-        failedNode.fill(false)
+        crashedNodes.fill(false)
         addressResolver.nodeTypeToRange.forEach { (cls, range) ->
             partitions[cls] = mutableSetOf<Int>() to range.toMutableSet()
             unavailableNodeCount[cls] = 0
@@ -171,7 +179,7 @@ internal class CrashInfoHalves<Message, DB>(
 
 internal class CrashInfoSingle<Message, DB>(
     addressResolver: NodeAddressResolver<Message, DB>
-) : CrashInfo<Message, DB>(addressResolver) {
+) : FailureManager<Message, DB>(addressResolver) {
     private val nodeCount = addressResolver.nodeCount
     private val connections = Array(nodeCount) {
         (0 until nodeCount).toMutableSet()
@@ -198,8 +206,8 @@ internal class CrashInfoSingle<Message, DB>(
     }
 
     override fun crashNode(iNode: Int) {
-        check(!failedNode[iNode])
-        failedNode[iNode] = true
+        check(!crashedNodes[iNode])
+        crashedNodes[iNode] = true
         for (node in 0 until nodeCount) {
             connections[node].remove(iNode)
         }
@@ -224,8 +232,8 @@ internal class CrashInfoSingle<Message, DB>(
     }
 
     override fun recoverNode(iNode: Int) {
-        check(failedNode[iNode])
-        failedNode[iNode] = false
+        check(crashedNodes[iNode])
+        crashedNodes[iNode] = false
         for (node in 0 until nodeCount) {
             connections[node].add(iNode)
             connections[iNode].add(node)
@@ -248,7 +256,7 @@ internal class CrashInfoSingle<Message, DB>(
     }
 
     override fun reset() {
-        failedNode.fill(false)
+        crashedNodes.fill(false)
         for (i in 0 until nodeCount) {
             connections[i] = (0 until nodeCount).toMutableSet()
         }

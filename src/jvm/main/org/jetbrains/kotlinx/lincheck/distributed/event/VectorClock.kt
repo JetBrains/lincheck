@@ -32,7 +32,6 @@ import java.lang.Integer.max
 /**
  * Represents vector clock for nodes in distributed algorithms.
  */
-@Serializable(with = VectorClockSerializer::class)
 data class VectorClock(private val clock: IntArray, private val iNode: Int) {
     val empty: Boolean get() = clock.all { it == 0 }
     operator fun get(i: Int) = clock[i]

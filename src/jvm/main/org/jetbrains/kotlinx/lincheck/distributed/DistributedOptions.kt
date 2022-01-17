@@ -131,7 +131,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     }
 
     fun storeLogsForFailedScenario(fileName: String): DistributedOptions<Message, DB> {
-        logFileName = fileName
+        this.logFileName = fileName
         return this
     }
 

@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
-import kotlin.random.Random
 
 internal abstract class DistributedStrategy<Message, DB>(
     val testCfg: DistributedCTestConfiguration<Message, DB>,
@@ -35,10 +34,10 @@ internal abstract class DistributedStrategy<Message, DB>(
     protected val stateRepresentationFunction: Method?,
     protected val verifier: Verifier
 ) : Strategy(scenario) {
-    protected lateinit var crashInfo: CrashInfo<Message, DB>
+    protected lateinit var crashInfo: FailureManager<Message, DB>
 
     fun initialize() {
-        crashInfo = CrashInfo.createCrashInfo(testCfg.addressResolver, this)
+        crashInfo = FailureManager.create(testCfg.addressResolver, this)
     }
 
     fun crashOrReturnRate(event: MessageSentEvent<Message>): Int {

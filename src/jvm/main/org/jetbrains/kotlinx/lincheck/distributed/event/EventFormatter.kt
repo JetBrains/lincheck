@@ -49,7 +49,7 @@ internal class TextEventFormatter(private val addressResolver: NodeAddressResolv
                 )
             }"
             is InternalEvent -> "${event.attachment}${formatClockAndState(event)}"
-            is NetworkPartitionEvent -> "Network partition partitionId=${event.partitionCount}, partitions=${event.partitions}${
+            is NetworkPartitionEvent -> "Network partition partitionId=${event.partitionCount}, firstPart=${event.firstPart}, secondPart=${event.secondPart}${
                 formatClockAndState(
                     event
                 )
@@ -68,10 +68,15 @@ internal class TextEventFormatter(private val addressResolver: NodeAddressResolv
         }
     }
 
-    private fun formatHeader(iNode: Int) = if (addressResolver.isMultipleType) {
-        "[$iNode, ${addressResolver[iNode].simpleName}]: "
-    } else {
-        "[$iNode]: "
+    private fun formatHeader(iNode: Int?): String {
+        if (iNode == null) {
+            return "[-]: "
+        }
+        return if (addressResolver.isMultipleType) {
+            "[$iNode, ${addressResolver[iNode].simpleName}]: "
+        } else {
+            "[$iNode]: "
+        }
     }
 
     override fun format(events: List<Event>): List<String> = events.map { e -> formatHeader(e.iNode) + formatEvent(e) }

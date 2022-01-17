@@ -86,4 +86,7 @@ class NodeAddressResolver<Message, DB>(
     fun maxNumberOfCrashes(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.maxNumberOfCrashes
 
     val isMultipleType = nodeTypeToRange.size > 1
+
+    val singlePartitionType =
+        nodeTypes.size == 1 && crashes.all { it.value.partitionMode == NetworkPartitionMode.SINGLE }
 }
