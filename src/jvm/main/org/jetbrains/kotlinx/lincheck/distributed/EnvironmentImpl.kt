@@ -21,10 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import java.lang.IllegalArgumentException
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 
 internal object TimeoutExceedException : Exception()
@@ -53,7 +51,7 @@ internal class EnvironmentImpl<Message, DB>(
         val rate = strategy.crashOrReturnRate(e)
         if (strategy.tryAddPartitionBeforeSend(nodeId, e)) {
             val ticks = strategy.getRecoverTimeout(taskManager)
-            taskManager.addRecoverTask(nodeId, ticks) {
+            taskManager.addCrashRecoverTask(nodeId, ticks) {
                 strategy
             }
         }

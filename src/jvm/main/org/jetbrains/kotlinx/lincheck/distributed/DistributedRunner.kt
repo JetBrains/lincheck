@@ -174,7 +174,7 @@ internal open class DistributedRunner<Message, Log>(
                 try {
                     next.action()
                 } catch (e: CrashError) {
-                    onNodeCrash(next.iNode)
+                    onNodeCrash((next as NodeTask).iNode)
                 } catch (e: Throwable) {
                     if (exception == null) {
                         exception = e
@@ -235,7 +235,7 @@ internal open class DistributedRunner<Message, Log>(
         for (i in firstPart) {
             sendCrashNotifications(i)
         }
-        taskManager.addRecoverTask(iNode = firstPart.last(), ticks = distrStrategy.getRecoverTimeout(taskManager)) {
+        taskManager.addPartitionRecoverTask(ticks = distrStrategy.getRecoverTimeout(taskManager)) {
             distrStrategy.recoverPartition(firstPart, secondPart)
         }
     }

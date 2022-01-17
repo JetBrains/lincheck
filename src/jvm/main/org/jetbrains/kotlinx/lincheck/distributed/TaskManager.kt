@@ -20,10 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+interface NodeTask {
+    val iNode: Int
+}
 
 sealed class Task {
     abstract val id: Int
-    abstract val iNode: Int
 }
 
 sealed class InstantTask : Task() {
@@ -35,13 +37,13 @@ data class MessageReceiveTask(
     override val iNode: Int,
     val from: Int,
     override val action: () -> Unit
-) : InstantTask()
+) : InstantTask(), NodeTask
 
 data class ActionTask(
     override val id: Int,
     override val iNode: Int,
     override val action: () -> Unit
-) : InstantTask()
+) : InstantTask(), NodeTask
 
 sealed class TimeTask : InstantTask() {
     abstract val time: Int
@@ -52,19 +54,25 @@ data class PeriodicTimer(
     override val time: Int,
     override val iNode: Int,
     override val action: () -> Unit
-) : TimeTask()
+) : TimeTask(), NodeTask
 
 data class Timeout(
     override val id: Int,
     override val time: Int,
     override val iNode: Int,
     override val action: () -> Unit
-) : TimeTask()
+) : TimeTask(), NodeTask
 
-data class RecoverTask(
+data class CrashRecoverTask(
     override val id: Int,
     override val time: Int,
     override val iNode: Int,
+    override val action: () -> Unit
+) : TimeTask(), NodeTask
+
+data class PartitionRecoverTask(
+    override val id: Int,
+    override val time: Int,
     override val action: () -> Unit
 ) : TimeTask()
 
@@ -72,7 +80,7 @@ data class SuspendedTask(
     override val id: Int,
     override val iNode: Int,
     val action: suspend () -> Unit
-) : Task()
+) : Task(), NodeTask
 
 internal class TaskManager(private val messageOrder: MessageOrder) {
     private var _taskId: Int = 0
@@ -151,11 +159,21 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
-    fun addRecoverTask(iNode: Int, ticks: Int, action: () -> Unit): RecoverTask {
-        val task = RecoverTask(
+    fun addCrashRecoverTask(iNode: Int, ticks: Int, action: () -> Unit): CrashRecoverTask {
+        val task = CrashRecoverTask(
             id = _taskId++,
             time = _time + ticks,
             iNode = iNode,
+            action = action
+        )
+        _timeTasks.add(task)
+        return task
+    }
+
+    fun addPartitionRecoverTask(ticks: Int, action: () -> Unit): PartitionRecoverTask {
+        val task = PartitionRecoverTask(
+            id = _taskId++,
+            time = _time + ticks,
             action = action
         )
         _timeTasks.add(task)
@@ -179,7 +197,7 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
     }
 
     fun removeAllForNode(iNode: Int) {
-        _tasks.removeAll { it.iNode == iNode }
-        _timeTasks.removeAll { it.iNode == iNode }
+        _tasks.removeAll { it is NodeTask && it.iNode == iNode }
+        _timeTasks.removeAll { it is NodeTask && it.iNode == iNode }
     }
 }
