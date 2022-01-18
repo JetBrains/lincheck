@@ -146,7 +146,7 @@ class LamportMutexTest {
         .threads(3)
         .verifier(EpsilonVerifier::class.java)
         .actorsPerThread(4)
-        .invocationsPerIteration(1000)
+        .invocationsPerIteration(30_000)
         .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
         .minimizeFailedScenario(false)

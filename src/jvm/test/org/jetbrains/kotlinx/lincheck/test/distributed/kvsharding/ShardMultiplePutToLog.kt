@@ -19,19 +19,20 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
-/*
+
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
 
-sealed class LogEntry
-data class KVLogEntry(val key: String, val value: String) : LogEntry()
-data class OpIdEntry(val id: Int) : LogEntry()
+class SimpleStorage {
+    var opId = 0
+    val keyValues = mutableMapOf<String, String>()
+}
 
-class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KVMessage, LogEntry> {
-    private var opId = 0
-    private val semaphore = Semaphore(1, 1)
+class ShardMultiplePutToLog(val env: Environment<KVMessage, SimpleStorage>) : Node<KVMessage, SimpleStorage> {
+    private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null
     private var appliedOperations = Array(env.numberOfNodes) {
@@ -42,31 +43,14 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
 
     private fun saveToLog(key: String, value: String): String? {
-        val log = env.log
-        val index = log.indexOfFirst { it is KVLogEntry && it.key == key }
-        return if (index == -1) {
-            log.add(KVLogEntry(key, value))
-            null
-        } else {
-            val res = (log[index] as KVLogEntry).value
-            log[index] = KVLogEntry(key, value)
-            res
-        }
+        return env.database.keyValues.put(key, value)
     }
 
-    private fun getFromLog(key: String): String? {
-        val log = env.log
-        val index = log.indexOfFirst { it is KVLogEntry && it.key == key }
-        return if (index == -1) {
-            null
-        } else {
-            (log[index] as KVLogEntry).value
-        }
-    }
+    private fun getFromLog(key: String): String? = env.database.keyValues[key]
 
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
-        env.log.add(OpIdEntry(++opId))
+        val opId = ++(env.database.opId)
         val node = getNodeForKey(key)
         if (node == env.nodeId) {
             return saveToLog(key, value)
@@ -80,7 +64,7 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         delegate = receiver
         while (true) {
             env.send(request, receiver)
-            semaphore.acquire()
+            semaphore.await()
             response ?: continue
             delegate = null
             return response!!
@@ -88,14 +72,13 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
     }
 
     override fun recover() {
-        val id = env.log.filterIsInstance(OpIdEntry::class.java).lastOrNull()?.id ?: -1
-        opId = id + 1
+        env.database.opId++
         env.broadcast(Recover)
     }
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? {
-        env.log.add(OpIdEntry(++opId))
+        val opId = ++(env.database.opId)
         val node = getNodeForKey(key)
         if (node == env.nodeId) {
             return getFromLog(key)
@@ -107,15 +90,16 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
     override fun onMessage(message: KVMessage, sender: Int) {
         if (message is Recover) {
             if (sender == delegate) {
-                semaphore.release()
+                semaphore.signal()
             }
             return
         }
         if (!message.isRequest) {
-            if (message.id != opId) return
+            if (message.id != env.database.opId) return
             if (response == null) {
                 response = message
-                semaphore.release()
+                semaphore.signal()
+                env.recordInternalEvent("Signal")
             }
             return
         }
@@ -130,4 +114,8 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, LogEntry>) : Node<KV
         appliedOperations[sender][message.id] = msg
         env.send(msg, sender)
     }
-}*/
+
+    override fun stateRepresentation(): String {
+        return "opId=${env.database.opId}, response=$response"
+    }
+}

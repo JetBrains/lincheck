@@ -177,7 +177,7 @@ class NodeCrashTest {
     @Test
     fun testPartitionSameType() {
         val crashInfo = createCrashInfo()
-        crashInfo.addPartition(0, 1)
+        crashInfo.partition(0, 1)
         val partition = listOf(0, 2)
         val available = listOf(1, 3, 4, 5, 6)
         for (i in partition) {

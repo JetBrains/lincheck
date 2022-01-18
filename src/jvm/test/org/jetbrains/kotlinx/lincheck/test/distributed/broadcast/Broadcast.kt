@@ -64,7 +64,7 @@ abstract class AbstractPeer(protected val env: Environment<Message, MutableList<
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
         logs[env.nodeId].forEach { m ->
-            events.correctProcesses().forEach { check(logs[it].contains(m)) { "$m, $it, ${env.nodeId}" } }
+            events.correctProcesses().forEach { check(logs[it!!].contains(m)) { "$m, $it, ${env.nodeId}" } }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
