@@ -37,10 +37,9 @@ class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
     }
 
     @Operation
-    suspend fun ping(): Boolean {
+    suspend fun ping() {
         env.send(Ping, pongerAddress)
         signal.await()
-        return true
     }
 }
 
@@ -59,12 +58,12 @@ class MultipleNodeTypesTest {
         createDistributedOptions<PingPongMessage>()
             .nodeType(Pinger::class.java, 2)
             .requireStateEquivalenceImplCheck(false)
-            .threads(2)
             .nodeType(Ponger::class.java, 1)
-            .invocationsPerIteration(100)
+            .invocationsPerIteration(1000)
             .iterations(100)
             .sequentialSpecification(PingPongMock::class.java)
             .actorsPerThread(2)
+            .storeLogsForFailedScenario("pingpong.txt")
             .check()
 
 }

@@ -26,10 +26,11 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
-/*
+
 sealed class Message {
     abstract val clock: Int
 }
@@ -50,7 +51,7 @@ data class RequestMessage(val from: Int, val id: Int, override val clock: Int, v
 
 data class Reply(override val clock: Int) : Message()
 
-class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode(env) {
+class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderCheckNode(env) {
     var clock = 0
     var opId = 0
     val resChannel = Channel<Int>(Channel.UNLIMITED)
@@ -84,7 +85,7 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode(env) {
         sb.append(", replies=")
         sb.append(replyTimes)
         sb.append(", log=")
-        sb.append(env.log)
+        sb.append(env.database)
         return sb.toString()
     }
 
@@ -97,11 +98,11 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode(env) {
             msg = messages.filter { it.time == msg?.time }.minByOrNull { it.from }
             messages.removeIf { it == msg }
             env.recordInternalEvent("Add message $msg")
-            env.log.add(msg!!)
+            env.database.add(msg!!)
         }
     }
 
-    override fun validate(events: List<Event>, logs: Array<List<Message>>) {
+    override fun validate(events: List<Event>, logs: List<MutableList<Message>>) {
         super.validate(events, logs)
         for (l in logs) {
             for (i in l.indices) {
@@ -142,7 +143,7 @@ class SkeenAlgorithm(env: Environment<Message, Message>) : OrderCheckNode(env) {
 
 class SkeenTest {
     private fun createOptions() =
-        DistributedOptions<Message, Message>()
+        createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
             .requireStateEquivalenceImplCheck(false)
             .actorsPerThread(3)
             .threads(3)
@@ -168,4 +169,4 @@ class SkeenTest {
                 .minimizeFailedScenario(false)
         )
     }
-}*/
+}

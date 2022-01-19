@@ -30,7 +30,7 @@ import org.junit.Test
 /*
 data class SimpleMessage(val id: Int, val from: Int)
 
-class IncorrectOrder(env: Environment<SimpleMessage, SimpleMessage>) : OrderCheckNode<SimpleMessage>(env)  {
+class IncorrectOrder(env: Environment<SimpleMessage, MutableList<SimpleMessage>>) : OrderCheckNode<SimpleMessage>(env)  {
     var opId = 0
     override fun onMessage(message: SimpleMessage, sender: Int) {
         env.log.add(message)

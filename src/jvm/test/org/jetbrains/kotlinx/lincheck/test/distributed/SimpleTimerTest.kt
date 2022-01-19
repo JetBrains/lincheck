@@ -68,10 +68,9 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
     }
 
     @Operation
-    suspend fun ping(): Boolean {
+    suspend fun ping() {
         env.send(TimerPing, 1 - env.nodeId)
         pongSignal.await()
-        return true
     }
 }
 

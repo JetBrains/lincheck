@@ -19,13 +19,13 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
-/*
+
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 
-abstract class OrderCheckNode(val env: Environment<Message, Message>) : Node<Message, Message> {
-    override fun validate(events: List<Event>, logs: Array<List<Message>>) {
+abstract class OrderCheckNode(val env: Environment<Message, MutableList<Message>>) : Node<Message, MutableList<Message>> {
+    override fun validate(events: List<Event>, logs: List<MutableList<Message>>) {
         for (l in logs) {
             for (i in l.indices) {
                 for (j in i + 1 until l.size) {
@@ -47,4 +47,4 @@ abstract class OrderCheckNode(val env: Environment<Message, Message>) : Node<Mes
             }
         }
     }
-}*/
+}

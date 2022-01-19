@@ -29,8 +29,9 @@ import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
-/*
+
 sealed class Message
 data class Transaction(val sum: Int) : Message()
 data class Marker(val initializer: Int, val token: Int) : Message()
@@ -44,7 +45,7 @@ class Value(val sum: Int) : State()
 object Empty : State()
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamport(private val env: Environment<Message, Message>) : Node<Message, Unit> {
+class ChandyLamport(private val env: Environment<Message, MutableList<Message>>) : Node<Message, MutableList<Message>> {
     private val currentSum = atomic(100)
     private var semaphore = Signal()
     private var state = 0
@@ -61,7 +62,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
         when (message) {
             is Transaction -> {
                 currentSum.getAndAdd(message.sum)
-                env.log.add(OpStateReceive(currentSum.value, message.sum))
+                env.database.add(OpStateReceive(currentSum.value, message.sum))
                 if (marker != null && (channels[sender].isEmpty() || channels[sender].last() !is Empty)) {
                     channels[sender].add(Value(message.sum))
                 }
@@ -71,7 +72,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
                 markerCount++
                 if (marker == null) {
                     state = currentSum.value
-                    env.log.add(CurState(state))
+                    env.database.add(CurState(state))
                     marker = message
                     env.broadcast(message)
                 }
@@ -114,7 +115,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
         val receiver = kotlin.math.abs(to) % env.numberOfNodes
         if (receiver == env.nodeId) return
         currentSum.getAndAdd(-sum)
-        env.log.add(OpStateSend(currentSum.value, sum))
+        env.database.add(OpStateSend(currentSum.value, sum))
         env.send(Transaction(sum), receiver)
     }
 
@@ -132,7 +133,7 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
     suspend fun snapshot(): Int {
         semaphore = Signal()
         state = currentSum.value
-        env.log.add(CurState(state))
+        env.database.add(CurState(state))
         marker = Marker(env.nodeId, token++)
         env.broadcast(marker!!)
         if (env.numberOfNodes == 1) {
@@ -149,62 +150,54 @@ class ChandyLamport(private val env: Environment<Message, Message>) : Node<Messa
     }
 }
 
-class MockSnapshot {
+class MockSnapshot() : VerifierState() {
     @Operation()
     fun transaction(to: Int, sum: Int) {
     }
 
     @Operation
     suspend fun snapshot() = 100
+    override fun extractState(): Any = 100
 }
 
 class SnapshotTest {
     @Test
     fun testSimple() {
-        LinChecker.check(
-            ChandyLamport::class.java,
-            DistributedOptions<Message, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(MockSnapshot::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(3_000)
-                .iterations(10)
-                //.storeLogsForFailedScenario("chandy_lamport.txt")
-                .minimizeFailedScenario(false)
-        )
+        createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
+            .nodeType(ChandyLamport::class.java, 3)
+            .sequentialSpecification(MockSnapshot::class.java)
+            .actorsPerThread(3)
+            .invocationsPerIteration(30_000)
+            .iterations(10)
+            //.storeLogsForFailedScenario("chandy_lamport.txt")
+            .minimizeFailedScenario(false)
+            .check()
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
-        LinChecker.check(
-            ChandyLamport::class.java,
-            DistributedOptions<Message, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(MockSnapshot::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(3_000)
-                .iterations(10)
-                //.storeLogsForFailedScenario("chandy_lamport.txt")
-                .minimizeFailedScenario(false)
-        )
+        createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
+            .nodeType(ChandyLamport::class.java, 3)
+            .sequentialSpecification(MockSnapshot::class.java)
+            .threads(3)
+            .actorsPerThread(3)
+            .messageOrder(MessageOrder.ASYNCHRONOUS)
+            .invocationsPerIteration(3_000)
+            .iterations(10)
+            .minimizeFailedScenario(false)
+            .check()
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testNaiveIncorrect() {
-        LinChecker.check(
-            NaiveSnapshotIncorrect::class.java,
-            DistributedOptions<Message, Unit>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(MockSnapshot::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(30)
-                .iterations(1000)
-        )
+        createDistributedOptions<Message>()
+            .nodeType(NaiveSnapshotIncorrect::class.java, 3)
+            .sequentialSpecification(MockSnapshot::class.java)
+            .actorsPerThread(3)
+            .invocationsPerIteration(30_000)
+            .iterations(10)
+            //.storeLogsForFailedScenario("chandy_lamport.txt")
+            .minimizeFailedScenario(false)
+            .check()
     }
-}*/
+}
