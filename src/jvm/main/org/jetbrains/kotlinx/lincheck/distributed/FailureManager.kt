@@ -34,8 +34,8 @@ internal abstract class FailureManager<Message, DB>(
             addressResolver: NodeAddressResolver<Message, DB>,
             strategy: DistributedStrategy<Message, DB>
         ): FailureManager<Message, DB> =
-            if (addressResolver.singlePartitionType) CrashInfoSingle(addressResolver)
-            else CrashInfoHalves(addressResolver, strategy)
+            if (addressResolver.singlePartitionType) FailureManagerSingleEdge(addressResolver)
+            else FailureManagerComponent(addressResolver, strategy)
     }
 
     protected val crashedNodes = Array(addressResolver.nodeCount) { false }
@@ -66,7 +66,7 @@ internal abstract class FailureManager<Message, DB>(
     abstract fun reset()
 }
 
-internal class CrashInfoHalves<Message, DB>(
+internal class FailureManagerComponent<Message, DB>(
     addressResolver: NodeAddressResolver<Message, DB>,
     private val strategy: DistributedStrategy<Message, DB>
 ) :
@@ -177,7 +177,7 @@ internal class CrashInfoHalves<Message, DB>(
     }
 }
 
-internal class CrashInfoSingle<Message, DB>(
+internal class FailureManagerSingleEdge<Message, DB>(
     addressResolver: NodeAddressResolver<Message, DB>
 ) : FailureManager<Message, DB>(addressResolver) {
     private val nodeCount = addressResolver.nodeCount

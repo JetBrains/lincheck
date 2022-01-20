@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.random.canCrashBeforeAccessingDatabase
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
-
 internal class EventFactory<M, DB>(testCfg: DistributedCTestConfiguration<M, DB>) {
     private var msgId = 0
     private val _events = mutableListOf<Event>()

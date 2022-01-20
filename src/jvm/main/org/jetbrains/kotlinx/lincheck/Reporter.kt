@@ -167,7 +167,8 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
-        //is LivelockWithRemainedTasksFailure -> appendLiveLockWithRemainedTasksFailure(failure)
+        is LivelockFailure -> appendLivelockFailure()
+        is TaskLimitExceededFailure -> appendTaskLimitExceededFailure()
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
@@ -253,6 +254,18 @@ private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): S
     return this
 }
 
+private fun StringBuilder.appendLivelockFailure(): StringBuilder {
+    //TODO better message
+    appendln("= The execution timeout exceeded. Look for infinite loops, recursion, etc =")
+    return this
+}
+
+private fun StringBuilder.appendTaskLimitExceededFailure(): StringBuilder {
+    //TODO better message
+    appendln("= Task limit exceeded = ")
+    return this
+}
+
 private fun StringBuilder.appendObstructionFreedomViolationFailure(failure: ObstructionFreedomViolationFailure): StringBuilder {
     appendln("= ${failure.reason} =")
     appendExecutionScenario(failure.scenario)
@@ -273,24 +286,3 @@ internal fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpec
                 "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations."
     )
 }
-/*
-internal fun StringBuilder.appendLiveLockWithRemainedTasksFailure(failure: LivelockWithRemainedTasksFailure): StringBuilder {
-    appendLine("= The execution timeout exceeded, see current stacktrace and remained tasks =")
-    appendExecutionScenario(failure.scenario)
-    appendLine()
-    failure.stackTrace.map {
-        StackTraceElement(
-            it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
-            it.methodName,
-            it.fileName,
-            it.lineNumber
-        )
-    }.map { it.toString() }.filter { line ->
-        "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
-    }.forEach { appendLine("\t$it") }
-    appendLine()
-    failure.tasks.map { it.stringRepresentation }.forEach { appendLine(it) }
-    return this
-}*/

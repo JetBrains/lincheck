@@ -42,22 +42,18 @@ internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) 
         executor.shutdown()
     }
 
-    fun shutdownNow(): Array<StackTraceElement>? {
-        val stackTrace = getStackTrace()
+    fun shutdownNow() {
         executor.shutdownNow()
-        return stackTrace
     }
 
     override fun execute(command: Runnable) {
         taskCounter++
         try {
             executor.submit {
-                // println("Run command $command")
                 command.run()
                 taskCounter--
                 if (taskCounter == 0) {
                     if (!runner.launchNextTask()) {
-                        //println("Finished")
                         runner.signal()
                     }
                 }
@@ -66,6 +62,4 @@ internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) 
             return
         }
     }
-
-    private fun getStackTrace(): Array<StackTraceElement>? = Thread.getAllStackTraces()[thread]
 }

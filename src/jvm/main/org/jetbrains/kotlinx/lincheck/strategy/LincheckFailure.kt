@@ -22,7 +22,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.distributed.Task
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -65,10 +64,13 @@ internal class ObstructionFreedomViolationFailure(
     trace: Trace? = null
 ) : LincheckFailure(scenario, trace)
 
-internal class LivelockWithRemainedTasksFailure(
+internal class LivelockFailure(
     scenario: ExecutionScenario,
-    val tasks: List<Task>,
-    val stackTrace : Array<StackTraceElement>,
+    trace: Trace? = null
+) : LincheckFailure(scenario, trace)
+
+internal class TaskLimitExceededFailure(
+    scenario: ExecutionScenario,
     trace: Trace? = null
 ) : LincheckFailure(scenario, trace)
 
@@ -77,6 +79,7 @@ internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, tra
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, trace)
     is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)
-    is LivelockInvocationResult -> LivelockWithRemainedTasksFailure(scenario, remainedTasks, stackTrace, trace)
+    is LivelockInvocationResult -> LivelockFailure(scenario, trace)
+    is TaskLimitExceededResult -> TaskLimitExceededFailure(scenario, trace)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

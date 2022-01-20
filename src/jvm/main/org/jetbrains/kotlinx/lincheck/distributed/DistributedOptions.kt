@@ -4,6 +4,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.lang.IllegalArgumentException
 import java.util.*
 
@@ -135,7 +136,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         return this
     }
 
-    fun sendCrashNotifications(crashNotifications: Boolean) : DistributedOptions<Message, DB> {
+    fun sendCrashNotifications(crashNotifications: Boolean): DistributedOptions<Message, DB> {
         this.crashNotifications = crashNotifications
         return this
     }
@@ -174,6 +175,11 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     fun check() {
         threads = testClasses[testClass]!!.maxNumberOfInstances
         LinChecker.check(testClass, options = this)
+    }
+
+    internal fun checkImpl(): LincheckFailure? {
+        threads = testClasses[testClass]!!.maxNumberOfInstances
+        return LinChecker(testClass, this).checkImpl()
     }
 }
 

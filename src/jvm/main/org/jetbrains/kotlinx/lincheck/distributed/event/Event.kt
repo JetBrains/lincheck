@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.distributed.event
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
-
 /**
  * Event for a node.
  */

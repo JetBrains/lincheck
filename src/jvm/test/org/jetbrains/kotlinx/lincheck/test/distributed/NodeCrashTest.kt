@@ -105,7 +105,7 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
 }
 
 class NodeCrashTest {
-    private fun createCrashInfo(): CrashInfoHalves<Unit, Unit> {
+    private fun createCrashInfo(): FailureManagerComponent<Unit, Unit> {
         val typeInfo = mapOf(Node1::class.java to NodeTypeInfo(
             3,
             4,
@@ -113,7 +113,7 @@ class NodeCrashTest {
             NetworkPartitionMode.HALVES
         ) { it / 2 },
             Node2::class.java to NodeTypeInfo(1, 3, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 })
-        return CrashInfoHalves(NodeAddressResolver(Node1::class.java, 2, typeInfo), MockDistributedStrategy())
+        return FailureManagerComponent(NodeAddressResolver(Node1::class.java, 2, typeInfo), MockDistributedStrategy())
     }
 
     private fun checkClique(nodes: Iterable<Int>, crashInfo: FailureManager<Unit, Unit>) {

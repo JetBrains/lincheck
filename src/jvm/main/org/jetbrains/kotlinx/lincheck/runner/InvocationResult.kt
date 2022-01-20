@@ -61,11 +61,6 @@ class ValidationFailureInvocationResult(
     val exception: Throwable
 ) : InvocationResult()
 
-class LivelockInvocationResult(
-    val remainedTasks : List<Task>,
-    val stackTrace : Array<StackTraceElement>
-) : InvocationResult()
-
 /**
  * Obstruction freedom check is requested,
  * but an invocation that hangs has been found.
@@ -73,3 +68,7 @@ class LivelockInvocationResult(
 class ObstructionFreedomViolationInvocationResult(
     val reason: String
 ) : InvocationResult()
+
+object LivelockInvocationResult : InvocationResult()
+
+object TaskLimitExceededResult : InvocationResult()

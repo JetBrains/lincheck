@@ -47,6 +47,10 @@ internal open class DistributedRunner<Message, Log>(
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
+    companion object {
+        const val TASK_LIMIT = 10_000
+    }
+
     private val distrStrategy: DistributedStrategy<Message, Log> = strategy
     private val numberOfNodes = testCfg.addressResolver.nodeCount
     private lateinit var eventFactory: EventFactory<Message, Log>
@@ -60,6 +64,10 @@ internal open class DistributedRunner<Message, Log>(
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var taskManager: TaskManager
     private val isSignal = atomic(false)
+    private var taskCount = 0
+
+    @Volatile
+    private var isTaskLimitExceeded = false
 
     @Volatile
     private var exception: Throwable? = null
@@ -77,6 +85,7 @@ internal open class DistributedRunner<Message, Log>(
     }
 
     private fun reset() {
+        taskCount = 0
         isSignal.lazySet(false)
         exception = null
         eventFactory = EventFactory(testCfg)
@@ -127,11 +136,14 @@ internal open class DistributedRunner<Message, Log>(
         }
         canCrashBeforeAccessingDatabase = false
         if (!finishedOnTime && !isSignal.value) {
-            val stackTrace = executor.shutdownNow() ?: emptyArray()
-            return LivelockInvocationResult(taskManager.allTasks, stackTrace)
+            executor.shutdownNow()
+            return LivelockInvocationResult
         }
         if (exception != null) {
             return UnexpectedExceptionInvocationResult(exception!!)
+        }
+        if (isTaskLimitExceeded) {
+            return TaskLimitExceededResult
         }
         try {
             nodeInstances.forEach { n -> n.validate(eventFactory.events, databases) }
@@ -163,6 +175,11 @@ internal open class DistributedRunner<Message, Log>(
     fun launchNextTask(): Boolean {
         if (exception != null) return false
         val next = distrStrategy.next(taskManager) ?: return false
+        taskCount++
+        if (taskCount > TASK_LIMIT) {
+            isTaskLimitExceeded = true
+            return false
+        }
         //TODO remove code duplication
         if (next is InstantTask) {
             executor.execute {
