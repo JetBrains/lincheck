@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.math.max
 import kotlin.random.Random
 
-internal class Probability(private val testCfg: DistributedCTestConfiguration<*, *>) {
+internal class ProbabilityModel(private val testCfg: DistributedCTestConfiguration<*, *>) {
     companion object {
         const val MEAN_POISSON_DISTRIBUTION = 0.1
         const val MESSAGE_SENT_PROBABILITY = 0.95
@@ -38,14 +38,16 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
     }
 
     val rand = Random(0)
-
     private val poissonDistribution = PoissonDistribution(MEAN_POISSON_DISTRIBUTION)
 
-    var nextNumberOfCrashes = 0
+    private var nextNumberOfCrashes = 0
     private val numberOfNodes: Int = testCfg.addressResolver.nodeCount
     private var currentErrorPoint = 0
     private var previousNumberOfPoints = 0
 
+    /**
+     * Returns how many times the message should be sent (from 0 to 2).
+     */
     fun duplicationRate(): Int {
         if (!messageIsSent()) {
             return 0
@@ -56,8 +58,16 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         return if (rand.nextDouble(1.0) > MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
     }
 
+    /**
+     * Returns the Poisson probability for value [x].
+     * It used in [DistributedRandomStrategy][DistributedRandomStrategy] to decide which [time tasks][org.jetbrains.kotlinx.lincheck.distributed.TimeTask]
+     * will be considered to be chosen for the next iteration.
+     */
     fun poissonProbability(x: Int) = poissonDistribution.probability(x) >= rand.nextDouble(1.0)
 
+    /**
+     * Returns if the message should be sent.
+     */
     private fun messageIsSent(): Boolean {
         if (testCfg.isNetworkReliable) {
             return true
@@ -78,10 +88,12 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         return true
     }
 
+    /**
+     * Returns if the node should be recovered. 0-
+     */
     fun nodeRecovered(): Boolean = rand.nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
 
     private fun nodeFailProbability(): Double {
-        //return NODE_FAIL_PROBABILITY
         return if (previousNumberOfPoints == 0) {
             0.0
         } else {
@@ -115,5 +127,8 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         currentErrorPoint = 0
     }
 
+    /**
+     * Returns the recover timeout for the node crash or network partition.
+     */
     fun recoverTimeout(maxTimeout: Int): Int = rand.nextInt(1, maxTimeout * 2)
 }

@@ -28,7 +28,7 @@ internal interface EventFormatter {
 
 internal class TextEventFormatter(private val addressResolver: NodeAddressResolver<*, *>) : EventFormatter {
     private fun formatClockAndState(event: Event) =
-        ", clock=${event.clock}" + if (event.state.isNotBlank()) ", state=${event.state}" else ""
+        ", clock=${event.clock}" + if (!event.state.isNullOrBlank()) ", state=${event.state}" else ""
 
     private fun formatEvent(event: Event): String {
         return when (event) {
@@ -49,12 +49,12 @@ internal class TextEventFormatter(private val addressResolver: NodeAddressResolv
                 )
             }"
             is InternalEvent -> "${event.attachment}${formatClockAndState(event)}"
-            is NetworkPartitionEvent -> "Network partition partitionId=${event.partitionCount}, firstPart=${event.firstPart}, secondPart=${event.secondPart}${
+            is NetworkPartitionEvent -> "Network partition partitionId=${event.partitionId}, firstPart=${event.firstPart}, secondPart=${event.secondPart}${
                 formatClockAndState(
                     event
                 )
             }"
-            is NetworkRecoveryEvent -> "Network partition recovery partitionId=${event.partitionCount}${
+            is NetworkRecoveryEvent -> "Network partition recovery partitionId=${event.partitionId}${
                 formatClockAndState(
                     event
                 )

@@ -72,4 +72,6 @@ internal abstract class DistributedStrategy<Message, DB>(
     abstract fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>)
 
     fun isCrashed(iNode: Int) = crashInfo[iNode]
+
+    abstract fun isRecover(iNode: Int) : Boolean
 }

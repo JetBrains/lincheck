@@ -38,23 +38,23 @@ class NodeAddressResolver<Message, DB>(
 ) {
     val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
     val nodeCount =
-        if (testClass in nodeTypes) nodeTypes.values.sumOf { it.maxNumberOfInstances } else nodeTypes.values.sumOf { it.maxNumberOfInstances } + nodesWithScenario
+        if (testClass in nodeTypes) nodeTypes.values.sumOf { it.numberOfInstances } else nodeTypes.values.sumOf { it.numberOfInstances } + nodesWithScenario
     private val nodes = mutableListOf<Class<out Node<Message, DB>>>()
     private val crashes = mutableMapOf<Class<out Node<Message, DB>>, CrashInfoForType>()
 
     init {
         repeat(nodesWithScenario) { nodes.add(testClass) }
         if (nodeTypes.containsKey(testClass)) {
-            repeat(nodeTypes[testClass]!!.maxNumberOfInstances - nodesWithScenario) {
+            repeat(nodeTypes[testClass]!!.numberOfInstances - nodesWithScenario) {
                 nodes.add(testClass)
             }
         }
         for ((cls, info) in nodeTypes) {
             if (cls == testClass) continue
-            else repeat(info.maxNumberOfInstances) { nodes.add(cls) }
+            else repeat(info.numberOfInstances) { nodes.add(cls) }
         }
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
-        if (nodeTypeToRange.size > 1 && nodeTypes.values.any { it.networkPartition == NetworkPartitionMode.SINGLE }) {
+        if (nodeTypeToRange.size > 1 && nodeTypes.values.any { it.networkPartition == NetworkPartitionMode.SINGLE_EDGE }) {
             throw IllegalArgumentException("Cannot use this type of network partition with multiple types of nodes. Use 'isNetworkReliable' parameter for message loss instead.")
         }
         nodeTypes.forEach { (cls, info) ->
@@ -88,5 +88,5 @@ class NodeAddressResolver<Message, DB>(
     val isMultipleType = nodeTypeToRange.size > 1
 
     val singlePartitionType =
-        nodeTypes.size == 1 && crashes.all { it.value.partitionMode == NetworkPartitionMode.SINGLE }
+        nodeTypes.size == 1 && crashes.all { it.value.partitionMode == NetworkPartitionMode.SINGLE_EDGE }
 }

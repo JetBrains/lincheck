@@ -24,16 +24,19 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
 /**
- * Event for a node.
+ * Represents the event which happened during the execution of distributed algorithm.
+ * [iNode] is the node to which the event belongs or null, if the event doesn't belong to any node.
+ * [clock] is the vector clock corresponding to this event
+ * [state] is the state of the [iNode] (or null if [iNode] is null)
  */
 sealed class Event {
     abstract val iNode: Int?
     abstract val clock: VectorClock
-    abstract val state: String
+    abstract val state: String?
 }
 
 /**
- *
+ * Indicates that message [message] with id [id] was sent by node [iNode] to node [receiver].
  */
 data class MessageSentEvent<Message>(
     override val iNode: Int,
@@ -44,6 +47,10 @@ data class MessageSentEvent<Message>(
     override val state: String
 ) : Event()
 
+/**
+ * Indicates that message [message] with id [id] from node [sender]
+ * was received by node [iNode].
+ */
 data class MessageReceivedEvent<Message>(
     override val iNode: Int,
     val message: Message,
@@ -53,6 +60,10 @@ data class MessageReceivedEvent<Message>(
     override val state: String
 ) : Event()
 
+/**
+ * Any event stored by user during the execution.
+ * See [org.jetbrains.kotlinx.lincheck.distributed.Environment.recordInternalEvent]
+ */
 data class InternalEvent(
     override val iNode: Int,
     val attachment: Any,
@@ -60,12 +71,21 @@ data class InternalEvent(
     override val state: String
 ) : Event()
 
+/**
+ * Indicates that the node [iNode] has crashed.
+ */
 data class NodeCrashEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
     Event()
 
+/**
+ * Indicates that node [iNode] has recovered after crash.
+ */
 data class NodeRecoveryEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
     Event()
 
+/**
+ * Indicates that operation with actor [actor] has started.
+ */
 data class OperationStartEvent(
     override val iNode: Int,
     val actor: Actor,
@@ -73,9 +93,17 @@ data class OperationStartEvent(
     override val state: String
 ) : Event()
 
+/**
+ * Indicates that all operations for node [iNode] have been executed.
+ * The event is not stored if the node wasn't included in the execution scenario.
+ */
 data class ScenarioFinishEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
     Event()
 
+/**
+ * Indicates that [iNode] received the crash notification from [crashedNode].
+ * See [org.jetbrains.kotlinx.lincheck.distributed.Node.onNodeUnavailable]
+ */
 data class CrashNotificationEvent(
     override val iNode: Int,
     val crashedNode: Int,
@@ -83,6 +111,10 @@ data class CrashNotificationEvent(
     override val state: String
 ) : Event()
 
+/**
+ * Indicates that node [iNode] set the timer with name [timerName].
+ * See [org.jetbrains.kotlinx.lincheck.distributed.Environment.setTimer]
+ */
 data class SetTimerEvent(
     override val iNode: Int,
     val timerName: String,
@@ -91,6 +123,10 @@ data class SetTimerEvent(
 ) :
     Event()
 
+/**
+ *
+ */
+//TODO translate таймер сработал
 data class TimerTickEvent(
     override val iNode: Int,
     val timerName: String,
@@ -99,6 +135,10 @@ data class TimerTickEvent(
 ) :
     Event()
 
+/**
+ * Indicates that node [iNode] cancelled the timer with name [timerName].
+ * See [org.jetbrains.kotlinx.lincheck.distributed.Environment.cancelTimer]
+ */
 data class CancelTimerEvent(
     override val iNode: Int,
     val timerName: String,
@@ -107,20 +147,27 @@ data class CancelTimerEvent(
 ) :
     Event()
 
+/**
+ * Indicates that the network partition with id [partitionId] has been created.
+ * [firstPart] is the first part of the partition
+ * [secondPart] is the second part of the partition
+ */
 data class NetworkPartitionEvent(
-    val firstPart: List<Int>, val secondPart: List<Int>, val partitionCount: Int,
-
-    ) :
+    val firstPart: List<Int>, val secondPart: List<Int>, val partitionId: Int
+) :
     Event() {
     override val iNode: Int? = null
     override val clock: VectorClock = VectorClock(emptyClockArray(1), -1)
-    override val state: String = ""
+    override val state: String? = null
 }
 
+/**
+ * Indicates that partition with id [partitionId] has been removed.
+ */
 data class NetworkRecoveryEvent(
-    val partitionCount: Int
+    val partitionId: Int
 ) : Event() {
     override val iNode: Int? = null
     override val clock: VectorClock = VectorClock(emptyClockArray(1), -1)
-    override val state: String = ""
+    override val state: String? = null
 }

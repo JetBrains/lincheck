@@ -60,7 +60,7 @@ class DistributedCTestConfiguration<Message, DB>(
     ) {
     var addressResolver: NodeAddressResolver<Message, DB> = NodeAddressResolver(
         testClass as Class<out Node<Message, DB>>,
-        nodeTypes[testClass]?.maxNumberOfInstances ?: threads,
+        nodeTypes[testClass]?.numberOfInstances ?: threads,
         nodeTypes
     )
 
@@ -92,7 +92,7 @@ class DistributedCTestConfiguration<Message, DB>(
     fun nextConfigurations(): List<DistributedCTestConfiguration<Message, DB>> {
         val res = mutableListOf<DistributedCTestConfiguration<Message, DB>>()
         for ((cls, nodeInfo) in nodeTypes) {
-            if (nodeInfo.maxNumberOfInstances == nodeInfo.minNumberOfInstances) {
+            if (nodeInfo.numberOfInstances == nodeInfo.minNumberOfInstances) {
                 continue
             }
             val newNodeTypes = nodeTypes.toMutableMap()

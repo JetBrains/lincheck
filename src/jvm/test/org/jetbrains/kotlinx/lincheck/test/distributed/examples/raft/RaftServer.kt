@@ -276,6 +276,9 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
         if (env.database.currentTerm < message.term) {
             env.database.currentTerm = message.term
             env.database.votedFor = null
+            if (status == Status.LEADER) {
+                env.cancelTimer("HEARTBEAT")
+            }
             status = Status.FOLLOWER
         }
         when (message) {
@@ -297,7 +300,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
     }
 
     override fun stateRepresentation(): String {
-        return "$status, leaderId=$leaderId, receivedOksCount=${receivedOks.count { it }}, heartbeats=$receivedHeartbeatCount, nextIndices=${nextIndices.toList()}"
+        return "$status, term=${env.database.currentTerm}, leaderId=$leaderId, receivedOksCount=${receivedOks.count { it }}, heartbeats=$receivedHeartbeatCount, nextIndices=${nextIndices.toList()}"
     }
 }
 

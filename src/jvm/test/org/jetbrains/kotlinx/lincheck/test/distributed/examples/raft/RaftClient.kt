@@ -23,10 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import kotlin.random.Random
@@ -54,18 +51,19 @@ class RaftClient(private val env: Environment<RaftMessage, PersistentStorage>) :
         while (true) {
             val nodeToSend = leader ?: servers.random(random)
             env.send(ClientRequest(command), nodeToSend)
-            env.withTimeout(OPERATION_TIMEOUT) {
+            leader = env.withTimeout(OPERATION_TIMEOUT) {
                 val msg = responseChannel.receive()
                 if (msg is ClientResult && opId == msg.commandId.opId) {
                     response = msg
-                    //return@withTimeout
+                } else {
+                    leader = if (msg is NotALeader) {
+                        msg.leaderId
+                    } else {
+                        null
+                    }
                 }
-                if (msg is NotALeader) {
-                    leader = msg.leaderId
-                }
-                //return@withTimeout
+                leader
             }
-            //env.recordInternalEvent("Continue loop $res")
             if (response != null) return response!!.res
         }
     }
@@ -93,17 +91,28 @@ class RaftTest {
             RaftServer::class.java,
             minNumberOfInstances = 1,
             maxNumberOfInstances = 5,
-            crashType = CrashMode.ALL_NODES_RECOVER,
-            maxNumberOfCrashedNodes = { (it + 1) / 2 - 1})
+            crashType = CrashMode.MIXED,
+            networkPartition = NetworkPartitionMode.COMPONENTS,
+            maxNumberOfCrashedNodes = { (it + 1) / 2 - 1 })
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(RaftSpecification::class.java)
         .storeLogsForFailedScenario("raft.txt")
         .actorsPerThread(3)
         .sendCrashNotifications(false)
         .invocationsPerIteration(30_000)
-        .minimizeFailedScenario(false)
+        //.minimizeFailedScenario(false)
         .iterations(10)
 
     @Test
     fun test() = options().check()
+
+    @Test
+    fun testMoreFailure() = options().nodeType(
+        RaftServer::class.java,
+        minNumberOfInstances = 1,
+        maxNumberOfInstances = 5,
+        crashType = CrashMode.ALL_NODES_RECOVER,
+        networkPartition = NetworkPartitionMode.COMPONENTS,
+        maxNumberOfCrashedNodes = { it })
+        .check()
 }

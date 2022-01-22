@@ -20,7 +20,7 @@ enum class MessageOrder {
 }
 
 /**
- * The crash returns node to the initial state, but does not affect the database.
+ * The crash returns the node to the initial state, but does not affect the database.
  * [NO_CRASHES] means that there is no such crashes in the system for this node type.
  * Note that the network partitions and other network failure for the node type are still possible.
  * [NO_RECOVER] means that if the node crashed it doesn't recover.
@@ -36,28 +36,39 @@ enum class CrashMode {
 
 /**
  * Network partition mode.
- *
+ * [NONE] means no partitions happen in the system, although message still can be lost.
+ * [COMPONENTS] means that network partition separates a set of nodes from other nodes.
+ * Nodes within the set are still available for each other, as well as nodes outside the set.
+ * [SINGLE_EDGE] means that two nodes become unavailable to each other.
  */
 enum class NetworkPartitionMode {
     NONE,
-    HALVES,
-    SINGLE
+    COMPONENTS,
+    SINGLE_EDGE
 }
 
+/**
+ * Information about the node type (Class<out Node>).
+ * [minNumberOfInstances] is the minimum number of instances of this node type to make the system work.
+ * [numberOfInstances] is the number of instance for this node type which will be created.
+ * [crashType] is the crash type for this node.
+ * [networkPartition] is the network partition type for this node.
+ * [maxNumberOfCrashes] is
+ */
 data class NodeTypeInfo(
     val minNumberOfInstances: Int,
-    val maxNumberOfInstances: Int,
+    val numberOfInstances: Int,
     val crashType: CrashMode,
     val networkPartition: NetworkPartitionMode,
     val maxNumberOfCrashes: (Int) -> Int
 ) {
     fun minimize() =
-        NodeTypeInfo(minNumberOfInstances, maxNumberOfInstances - 1, crashType, networkPartition, maxNumberOfCrashes)
+        NodeTypeInfo(minNumberOfInstances, numberOfInstances - 1, crashType, networkPartition, maxNumberOfCrashes)
 
     val maxCrashes = if (crashType == CrashMode.NO_CRASHES && networkPartition == NetworkPartitionMode.NONE) {
         0
     } else {
-        maxNumberOfCrashes(maxNumberOfInstances)
+        maxNumberOfCrashes(numberOfInstances)
     }
 }
 
@@ -173,12 +184,12 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         }
 
     fun check() {
-        threads = testClasses[testClass]!!.maxNumberOfInstances
+        threads = testClasses[testClass]!!.numberOfInstances
         LinChecker.check(testClass, options = this)
     }
 
     internal fun checkImpl(): LincheckFailure? {
-        threads = testClasses[testClass]!!.maxNumberOfInstances
+        threads = testClasses[testClass]!!.numberOfInstances
         return LinChecker(testClass, this).checkImpl()
     }
 }

@@ -57,7 +57,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     stateRepresentationFunction,
     verifier
 ) {
-    private val probability = Probability(testCfg)
+    private val probability = ProbabilityModel(testCfg)
     private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
 
     init {
@@ -166,11 +166,20 @@ internal class DistributedRandomStrategy<Message, DB>(
         probability.partition(nodes, limit)
 
     override fun getRecoverTimeout(taskManager: TaskManager): Int {
-        val maxTimeout = taskManager.timeTasks.maxOfOrNull { it.time } ?: Probability.DEFAULT_RECOVER_TIMEOUT
+        val maxTimeout = taskManager.timeTasks.maxOfOrNull { it.time } ?: ProbabilityModel.DEFAULT_RECOVER_TIMEOUT
         return probability.recoverTimeout(maxTimeout)
     }
 
     override fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>) {
         crashInfo.removePartition(firstPart, secondPart)
+    }
+
+    override fun isRecover(iNode: Int): Boolean {
+        return when (testCfg.addressResolver.crashTypeForNode(iNode)) {
+            CrashMode.NO_CRASHES -> false
+            CrashMode.ALL_NODES_RECOVER -> true
+            CrashMode.MIXED -> probability.nodeRecovered()
+            else -> throw IllegalArgumentException()
+        }
     }
 }

@@ -167,8 +167,8 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
-        is LivelockFailure -> appendLivelockFailure()
-        is TaskLimitExceededFailure -> appendTaskLimitExceededFailure()
+        is LivelockFailure -> appendLivelockFailure(failure)
+        is TaskLimitExceededFailure -> appendTaskLimitExceededFailure(failure)
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
@@ -254,15 +254,17 @@ private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): S
     return this
 }
 
-private fun StringBuilder.appendLivelockFailure(): StringBuilder {
+private fun StringBuilder.appendLivelockFailure(failure: LivelockFailure): StringBuilder {
     //TODO better message
     appendln("= The execution timeout exceeded. Look for infinite loops, recursion, etc =")
+    appendExecutionScenario(failure.scenario)
     return this
 }
 
-private fun StringBuilder.appendTaskLimitExceededFailure(): StringBuilder {
+private fun StringBuilder.appendTaskLimitExceededFailure(failure: TaskLimitExceededFailure): StringBuilder {
     //TODO better message
     appendln("= Task limit exceeded = ")
+    appendExecutionScenario(failure.scenario)
     return this
 }
 

@@ -222,7 +222,7 @@ internal open class DistributedRunner<Message, Log>(
         taskManager.removeAllForNode(iNode)
         testNodeExecutions.getOrNull(iNode)?.crash()
         sendCrashNotifications(iNode)
-        if (testCfg.addressResolver.crashTypeForNode(iNode) == CrashMode.NO_RECOVER) {
+        if (!distrStrategy.isRecover(iNode)) {
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }

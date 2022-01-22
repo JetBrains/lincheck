@@ -102,6 +102,10 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
     override fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>) {
         TODO("Not yet implemented")
     }
+
+    override fun isRecover(iNode: Int): Boolean {
+        TODO("Not yet implemented")
+    }
 }
 
 class NodeCrashTest {
@@ -110,7 +114,7 @@ class NodeCrashTest {
             3,
             4,
             CrashMode.ALL_NODES_RECOVER,
-            NetworkPartitionMode.HALVES
+            NetworkPartitionMode.COMPONENTS
         ) { it / 2 },
             Node2::class.java to NodeTypeInfo(1, 3, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 })
         return FailureManagerComponent(NodeAddressResolver(Node1::class.java, 2, typeInfo), MockDistributedStrategy())

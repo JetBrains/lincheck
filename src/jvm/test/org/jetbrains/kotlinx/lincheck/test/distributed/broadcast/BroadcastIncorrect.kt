@@ -32,22 +32,20 @@ class PeerIncorrect(env: Environment<Message, MutableList<Message>>) : AbstractP
 
     override fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
-        //env.recordInternalEvent("On message $message ${receivedMessages[sender]}")
         if (!receivedMessages[message.from].contains(msgId)) {
             receivedMessages[message.from].add(msgId)
             env.database.add(message)
-            //env.recordInternalEvent("Add to log ${env.log}")
             env.broadcast(message)
         }
     }
 
-    @Operation(cancellableOnSuspension = false)
-    suspend fun send(msg: String) {
+    @Operation
+    fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.nodeId)
         env.broadcast(message, skipItself = false)
     }
 
     override fun stateRepresentation(): String {
-        return "${receivedMessages.toList()}"
+        return env.database.toString()
     }
 }

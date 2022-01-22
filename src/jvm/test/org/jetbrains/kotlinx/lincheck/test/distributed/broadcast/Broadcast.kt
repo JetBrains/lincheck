@@ -22,9 +22,11 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
-import org.jetbrains.kotlinx.lincheck.distributed.event.MessageReceivedEvent
 import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.distributed.event.NodeCrashEvent
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
@@ -33,54 +35,59 @@ import java.util.*
 
 data class Message(val body: String, val id: Int, val from: Int)
 
-
+/**
+ * Returns the list of node ids which didn't crash during the execution.
+ */
 fun List<Event>.correctProcesses() =
-    groupBy { it.iNode }.filter { !it.value.any { p -> p is NodeCrashEvent } }
+    groupBy { it.iNode }.filter { it.value.none { p -> p is NodeCrashEvent } }
         .map { it.key }
 
+/**
+ * Returns the list of messages sent by the node [iNode].
+ */
 fun <Message> List<Event>.sentMessages(iNode: Int) =
-    filter { it.iNode == iNode }.filterIsInstance<MessageSentEvent<Message>>()
+    filter { it.iNode == iNode }.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
 
-fun <Message> List<Event>.receivedMessages(iNode: Int) =
-    filter { it.iNode == iNode }.filterIsInstance<MessageReceivedEvent<Message>>()
-
+/**
+ * Returns if the messages in the list are distinct.
+ */
 fun <Message> List<Message>.isDistinct(): Boolean = distinctBy { System.identityHashCode(it) } == this
 
-fun List<Event>.isCorrect(iNode: Int): Boolean = correctProcesses().contains(iNode)
+/**
+ * Returns if the node [iNode] is correct (didn't crash during the execution).
+ */
+fun List<Event>.isCorrect(iNode: Int): Boolean = none { it.iNode == iNode && it is NodeCrashEvent }
 
+/**
+ * Abstract class for node participating in broadcast which validates the results.
+ */
 abstract class AbstractPeer(protected val env: Environment<Message, MutableList<Message>>) :
     Node<Message, MutableList<Message>> {
     override fun validate(events: List<Event>, logs: List<MutableList<Message>>) {
         check(logs[env.nodeId].isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
         logs[env.nodeId].forEach { m ->
-            check(events.sentMessages<Message>(m.from).map { it.message }.contains(m)) {
-                m
-            }
+            check(events.sentMessages<Message>(m.from).contains(m))
         }
         // If the correct process sent message m, it should deliver m.
         if (events.isCorrect(env.nodeId)) {
-            events.sentMessages<Message>(env.nodeId).map { it.message }.forEach { m -> check(m in logs[env.nodeId]) }
+            events.sentMessages<Message>(env.nodeId).forEach { m -> check(m in logs[env.nodeId]) }
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
         logs[env.nodeId].forEach { m ->
-            events.correctProcesses().forEach { check(logs[it!!].contains(m)) { "$m, $it, ${env.nodeId}" } }
+            events.correctProcesses().forEach { check(logs[it!!].contains(m)) }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
+        //For each store the order in which messages were sent
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
             logs[env.nodeId].filter { it.from == i }
                 .map { m ->
-                    events.sentMessages<Message>(i).map { it.message }.filter { it.from == i }.distinctBy { it.id }
-                        .indexOf(m)
+                    events.sentMessages<Message>(i).filter { it.from == i }.distinctBy { it.id }.indexOf(m)
                 }
         }
-        localMessagesOrder.forEach {
-            check(it.sorted() == it)
-            if (it.isNotEmpty()) {
-                for (i in 0..it.last()) {
-                    check(i in it)
-                }
-            }
+        // Check if message order contains all numbers from 0 to
+        localMessagesOrder.filter { it.isNotEmpty() }.forEach {
+            check(it == it.indices.toList())
         }
     }
 }
@@ -108,12 +115,9 @@ class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) 
             lastDeliveredId[sender]++
             env.database.add(lastMessage)
         }
-        //println("Finish deliver")
     }
 
-
     override fun onMessage(message: Message, sender: Int) {
-        //println("In on message")
         val msgId = message.id
         val from = message.from
         if (!receivedMessages[from].contains(msgId)) {
@@ -174,7 +178,6 @@ class BroadcastTest {
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
         .minimizeFailedScenario(false)
-        //.storeLogsForFailedScenario("broadcast_incorrect.txt")
         .nodeType(PeerIncorrect::class.java,
             numberOfInstances = 4,
             crashType = CrashMode.NO_RECOVER,
