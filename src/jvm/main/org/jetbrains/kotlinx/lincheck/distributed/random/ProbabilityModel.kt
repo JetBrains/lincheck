@@ -29,11 +29,10 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
     companion object {
         const val MEAN_POISSON_DISTRIBUTION = 0.1
         const val MESSAGE_SENT_PROBABILITY = 0.95
-        const val MESSAGE_DUPLICATION_PROBABILITY = 0.9
-        const val NODE_FAIL_PROBABILITY = 0.05
+        const val MESSAGE_DUPLICATION_PROBABILITY = 0.1
         const val NODE_RECOVERY_PROBABILITY = 0.7
         var failedNodesExpectation = -1
-        var networkPartitionsExpectation = 8
+        var networkPartitionsExpectation = 2
         const val SIMULTANEOUS_CRASH_COUNT = 3
         const val DEFAULT_RECOVER_TIMEOUT = 10
     }
@@ -54,7 +53,7 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
         if (!testCfg.messageDuplication) {
             return 1
         }
-        return if (rand.nextDouble(1.0) < MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
+        return if (rand.nextDouble(1.0) > MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
     }
 
     fun poissonProbability(x: Int) = poissonDistribution.probability(x) >= rand.nextDouble(1.0)
@@ -105,6 +104,7 @@ internal class Probability(private val testCfg: DistributedCTestConfiguration<*,
     }
 
     fun partition(nodes: List<Int>, limit: Int): List<Int> {
+        if (limit == 0) return emptyList()
         val count = rand.nextInt(limit)
         return nodes.shuffled(rand).take(count)
     }
