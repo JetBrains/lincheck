@@ -23,20 +23,12 @@ package org.jetbrains.kotlinx.lincheck.distributed
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.ThreadFactory
-import kotlin.concurrent.thread
 
 internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) : Executor {
-    private lateinit var thread: Thread
-    private val executor =
-        Executors.newSingleThreadExecutor {
-            thread = Executors.defaultThreadFactory().newThread(it)
-            thread
-        }
+    private val executor = Executors.newSingleThreadExecutor()
 
     @Volatile
     private var taskCounter = 0
-
 
     fun close() {
         executor.shutdown()

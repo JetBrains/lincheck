@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
@@ -69,21 +68,21 @@ internal class DistributedRandomStrategy<Message, DB>(
         }
     }
 
-    private fun tryCrash(iNode: Int) {
+    override fun tryCrash(iNode: Int) {
         if (testCfg.addressResolver.crashTypeForNode(iNode) != CrashMode.NO_CRASHES
             && probability.nodeFailed()
-            && crashInfo.canCrash(iNode)
+            && failureManager.canCrash(iNode)
         ) {
-            crashInfo.crashNode(iNode)
+            failureManager.crashNode(iNode)
             throw CrashError()
         }
     }
 
-    override fun onMessageSent(iNode: Int, event: MessageSentEvent<Message>) {
-        tryCrash(iNode)
+    override fun onMessageSent(sender: Int, receiver: Int, messageId: Int) {
+        tryCrash(sender)
     }
 
-    override fun beforeLogModify(iNode: Int) {
+    override fun beforeDatabaseAccess(iNode: Int) {
         if (!canCrashBeforeAccessingDatabase) return
         tryCrash(iNode)
     }
@@ -92,7 +91,7 @@ internal class DistributedRandomStrategy<Message, DB>(
         val tasks = taskManager.tasks
         val timeTasks = taskManager.timeTasks
         if (tasks.isEmpty() && (runner.hasAllResults()
-                    && timeTasks.none { it is Timeout } || timeTasks.isEmpty())
+                    && timeTasks.all { it is PeriodicTimer })
         ) return null
         val time = taskManager.time
         var tasksToProcess: List<Task>
@@ -108,7 +107,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     override fun reset() {
         val crashExpectation = 3
         probability.reset(crashExpectation)
-        crashInfo.reset()
+        failureManager.reset()
     }
 
     override fun run(): LincheckFailure? {
@@ -143,24 +142,19 @@ internal class DistributedRandomStrategy<Message, DB>(
         }
     }
 
-    override fun tryAddCrashBeforeSend(iNode: Int, event: MessageSentEvent<Message>) {
-        tryCrash(iNode)
-    }
-
-    override fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean {
-        val receiver = event.receiver
-        if (testCfg.addressResolver.partitionTypeForNode(iNode) != NetworkPartitionMode.NONE
+    override fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean {
+        if (testCfg.addressResolver.partitionTypeForNode(sender) != NetworkPartitionMode.NONE
             && probability.isNetworkPartition()
-            && crashInfo.canAddPartition(iNode, receiver)
+            && failureManager.canAddPartition(sender, receiver)
         ) {
-            val partitionResult = crashInfo.partition(iNode, receiver)
+            val partitionResult = failureManager.partition(sender, receiver)
             runner.onPartition(partitionResult.firstPart, partitionResult.secondPart, partitionResult.partitionId)
             return true
         }
         return false
     }
 
-    override fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>): Int = probability.duplicationRate()
+    override fun getMessageRate(sender: Int, receiver: Int, messageId: Int): Int = probability.duplicationRate()
 
     override fun choosePartitionComponent(nodes: List<Int>, limit: Int): List<Int> =
         probability.partition(nodes, limit)
@@ -171,12 +165,12 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>) {
-        crashInfo.removePartition(firstPart, secondPart)
+        failureManager.removePartition(firstPart, secondPart)
     }
 
-    override fun isRecover(iNode: Int): Boolean {
+    override fun shouldRecover(iNode: Int): Boolean {
         return when (testCfg.addressResolver.crashTypeForNode(iNode)) {
-            CrashMode.NO_CRASHES -> false
+            CrashMode.NO_RECOVER -> false
             CrashMode.ALL_NODES_RECOVER -> true
             CrashMode.MIXED -> probability.nodeRecovered()
             else -> throw IllegalArgumentException()

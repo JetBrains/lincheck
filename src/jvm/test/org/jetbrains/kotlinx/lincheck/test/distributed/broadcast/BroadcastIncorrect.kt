@@ -21,9 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Validate
-import org.jetbrains.kotlinx.lincheck.distributed.*
-import java.util.*
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
 
 
 class PeerIncorrect(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {

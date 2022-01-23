@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import java.lang.Integer.min
+
 internal data class PartitionResult(
     val partitionId: Int,
     val firstPart: List<Int>,
@@ -39,7 +41,7 @@ internal abstract class FailureManager<Message, DB>(
     }
 
     protected val crashedNodes = Array(addressResolver.nodeCount) { false }
-    private var partitionCount: Int = 0
+    protected var partitionCount: Int = 0
 
     abstract fun canSend(from: Int, to: Int): Boolean
 
@@ -133,7 +135,8 @@ internal class FailureManagerComponent<Message, DB>(
         removeNodeFromPartition(secondNode)
         val cls = addressResolver[firstNode]
         val nodes = addressResolver.nodeTypeToRange[cls]!!.filter { it != firstNode && it != secondNode }
-        val limit = addressResolver.maxNumberOfCrashes(cls) - unavailableNodeCount[cls]!!
+        val limit =
+            min(addressResolver.maxNumberOfCrashes(cls) - unavailableNodeCount[cls]!!, addressResolver[cls]!!.size / 2)
         val nodesForPartition = strategy.choosePartitionComponent(nodes, limit)
         for (node in nodes) {
             if (node in nodesForPartition) {
@@ -169,6 +172,7 @@ internal class FailureManagerComponent<Message, DB>(
     }
 
     override fun reset() {
+        partitionCount = 0
         crashedNodes.fill(false)
         addressResolver.nodeTypeToRange.forEach { (cls, range) ->
             partitions[cls] = mutableSetOf<Int>() to range.toMutableSet()
@@ -256,6 +260,7 @@ internal class FailureManagerSingleEdge<Message, DB>(
     }
 
     override fun reset() {
+        partitionCount = 0
         crashedNodes.fill(false)
         for (i in 0 until nodeCount) {
             connections[i] = (0 until nodeCount).toMutableSet()

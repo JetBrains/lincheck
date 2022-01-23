@@ -25,8 +25,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import java.lang.IllegalArgumentException
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 
-internal object TimeoutExceedException : Exception()
-
 internal class EnvironmentImpl<Message, DB>(
     override val nodeId: Int,
     override val numberOfNodes: Int,
@@ -37,7 +35,7 @@ internal class EnvironmentImpl<Message, DB>(
 ) : Environment<Message, DB> {
     override val database: DB
         get() {
-            strategy.beforeLogModify(nodeId)
+            strategy.beforeDatabaseAccess(nodeId)
             return _database
         }
 
@@ -48,13 +46,7 @@ internal class EnvironmentImpl<Message, DB>(
 
     override fun send(message: Message, receiver: Int) {
         val e = eventFactory.createMessageEvent(message, nodeId, receiver)
-        val rate = strategy.crashOrReturnRate(e)
-        if (strategy.tryAddPartitionBeforeSend(nodeId, e)) {
-            val ticks = strategy.getRecoverTimeout(taskManager)
-            taskManager.addCrashRecoverTask(nodeId, ticks) {
-                strategy
-            }
-        }
+        val rate = strategy.crashOrReturnRate(nodeId, receiver, e.id)
         repeat(rate) {
             taskManager.addMessageReceiveTask(
                 to = receiver,
@@ -65,7 +57,7 @@ internal class EnvironmentImpl<Message, DB>(
                 eventFactory.nodeInstances[receiver].onMessage(message, nodeId)
             }
         }
-        strategy.onMessageSent(nodeId, e)
+        if (rate > 0) strategy.onMessageSent(nodeId, receiver, e.id)
     }
 
     @OptIn(InternalCoroutinesApi::class)

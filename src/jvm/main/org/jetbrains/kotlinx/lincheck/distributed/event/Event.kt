@@ -36,7 +36,7 @@ sealed class Event {
 }
 
 /**
- * Indicates that message [message] with id [id] was sent by node [iNode] to node [receiver].
+ * Indicates that [message][message] with [id][id] was sent by node [iNode] to node [receiver].
  */
 data class MessageSentEvent<Message>(
     override val iNode: Int,
@@ -48,7 +48,7 @@ data class MessageSentEvent<Message>(
 ) : Event()
 
 /**
- * Indicates that message [message] with id [id] from node [sender]
+ * Indicates that [message][message] with id [id] from node [sender]
  * was received by node [iNode].
  */
 data class MessageReceivedEvent<Message>(
@@ -72,19 +72,19 @@ data class InternalEvent(
 ) : Event()
 
 /**
- * Indicates that the node [iNode] has crashed.
+ * Indicates that the [node][iNode] has crashed.
  */
 data class NodeCrashEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
     Event()
 
 /**
- * Indicates that node [iNode] has recovered after crash.
+ * Indicates that [node][iNode] has recovered after crash.
  */
 data class NodeRecoveryEvent(override val iNode: Int, override val clock: VectorClock, override val state: String) :
     Event()
 
 /**
- * Indicates that operation with actor [actor] has started.
+ * Indicates that operation with [actor][actor] has started.
  */
 data class OperationStartEvent(
     override val iNode: Int,

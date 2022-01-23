@@ -59,8 +59,8 @@ internal class TextEventFormatter(private val addressResolver: NodeAddressResolv
                     event
                 )
             }"
-            is NodeCrashEvent -> "Crash ${formatClockAndState(event)}"
-            is NodeRecoveryEvent -> "Recovered ${formatClockAndState(event)}"
+            is NodeCrashEvent -> "Crash${formatClockAndState(event)}"
+            is NodeRecoveryEvent -> "Recovered${formatClockAndState(event)}"
             is OperationStartEvent -> "Start operation ${event.actor}${formatClockAndState(event)}"
             is ScenarioFinishEvent -> "Finish scenario${formatClockAndState(event)}"
             is SetTimerEvent -> "Set timer ${event.timerName}${formatClockAndState(event)}"

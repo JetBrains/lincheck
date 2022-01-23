@@ -7,17 +7,18 @@ import org.jetbrains.kotlinx.lincheck.distributed.event.Event
  */
 interface Node<Message, DB> {
     /**
-     * Called when a new message [message] arrives.
+     * Called when a new [message][message] from [sender][sender] arrives.
      */
     fun onMessage(message: Message, sender: Int)
 
     /**
-     * Called when the node restarts after failure.
+     * Called when the node restarts after crash.
      */
     fun recover() {}
 
     /**
-     * Called when the node receives notification about failure of [iNode]
+     * Called when the node receives notification that [iNode] is not available.
+     * It happens when [iNode] crashed or the nodes were partitioned.
      */
     fun onNodeUnavailable(iNode: Int) {}
 
@@ -37,7 +38,13 @@ interface Node<Message, DB> {
      */
     fun stateRepresentation(): String = ""
 
-    fun validate(events: List<Event>, logs: List<DB>) {}
+    /**
+     * Called in the end of the execution.
+     * Can be used for validation.
+     * [events] is the list of all events which occurred in the system during the execution.
+     * [databases] are databases of all nodes in the system.
+     */
+    fun validate(events: List<Event>, databases: List<DB>) {}
 }
 
 class CrashError : Exception()

@@ -20,12 +20,14 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
+/**
+ * Represents the strategy for executing the distributed algorithm.
+ */
 internal abstract class DistributedStrategy<Message, DB>(
     val testCfg: DistributedCTestConfiguration<Message, DB>,
     protected val testClass: Class<*>,
@@ -34,44 +36,94 @@ internal abstract class DistributedStrategy<Message, DB>(
     protected val stateRepresentationFunction: Method?,
     protected val verifier: Verifier
 ) : Strategy(scenario) {
-    protected lateinit var crashInfo: FailureManager<Message, DB>
+    protected lateinit var failureManager: FailureManager<Message, DB>
 
     fun initialize() {
-        crashInfo = FailureManager.create(testCfg.addressResolver, this)
+        failureManager = FailureManager.create(testCfg.addressResolver, this)
     }
-
-    fun crashOrReturnRate(event: MessageSentEvent<Message>): Int {
-        val iNode = event.iNode
-        if (!crashInfo.canSend(iNode, event.receiver)) return 0
-        tryAddCrashBeforeSend(iNode, event)
-        return getMessageRate(iNode, event)
-    }
-
-    abstract fun onMessageSent(iNode: Int, event: MessageSentEvent<Message>)
-
-    abstract fun beforeLogModify(iNode: Int)
-
-    abstract fun next(taskManager: TaskManager): Task?
-
-    fun onNodeRecover(iNode: Int) {
-        crashInfo.recoverNode(iNode)
-    }
-
-    protected abstract fun tryAddCrashBeforeSend(iNode: Int, event: MessageSentEvent<Message>)
-
-    abstract fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Message>): Boolean
-
-    protected abstract fun getMessageRate(iNode: Int, event: MessageSentEvent<Message>): Int
 
     abstract fun reset()
 
+    /**
+     * Decides which task from [taskManager] will be executed next.
+     */
+    abstract fun next(taskManager: TaskManager): Task?
+
+    /**
+     * Returns how many times the message with [id][messageId] should be delivered from [sender] to [receiver].
+     * If the strategy decides to crash the sender, [CrashError] will be thrown.
+     * The result considers possible message loss and duplication, and can initialize the network partition.
+     */
+    fun crashOrReturnRate(sender: Int, receiver: Int, messageId: Int): Int {
+        tryCrash(sender)
+        tryAddPartitionBeforeSend(sender, receiver, messageId)
+        if (!failureManager.canSend(sender, receiver)) return 0
+        return getMessageRate(sender, receiver, messageId)
+    }
+
+    /**
+     * Called when the message from [sender] to [receiver] with id [messageId] was sent.
+     * Could cause the crash of the node.
+     */
+    abstract fun onMessageSent(sender: Int, receiver: Int, messageId: Int)
+
+    /**
+     * Called before the database of node [iNode] is accessed.
+     * Could cause the crash of the node.
+     */
+    abstract fun beforeDatabaseAccess(iNode: Int)
+
+    /**
+     * Called when the node [iNode] recovers.
+     */
+    fun onNodeRecover(iNode: Int) {
+        failureManager.recoverNode(iNode)
+    }
+
+    /**
+     * Chooses the nodes which will be separated from other nodes.
+     * [nodes] are the nodes which can be included in the partition.
+     * [limit] is the maximum number of nodes which can be included in the partition.
+     */
     abstract fun choosePartitionComponent(nodes: List<Int>, limit: Int): List<Int>
 
+    /**
+     * Chooses the timeout for node to recover.
+     * [taskManager] is used to get the approximate timeout.
+     */
     abstract fun getRecoverTimeout(taskManager: TaskManager): Int
 
+    /**
+     * Removes the partition between [firstPart] and [secondPart].
+     */
     abstract fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>)
 
-    fun isCrashed(iNode: Int) = crashInfo[iNode]
+    /**
+     * Returns if [iNode] is crashed now.
+     */
+    fun isCrashed(iNode: Int) = failureManager[iNode]
 
-    abstract fun isRecover(iNode: Int) : Boolean
+    /**
+     * Returns if the [iNode] should be recovered after crash.
+     * Makes decision if the crash mode for this type is [CrashMode.MIXED].
+     */
+    abstract fun shouldRecover(iNode: Int): Boolean
+
+    /**
+     * Checks if the [test configuration][DistributedCTestConfiguration] allows adding crash,
+     * when decides if the crash should be added here and if so throws [CrashError].
+     */
+    protected abstract fun tryCrash(iNode: Int)
+
+    /**
+     * Returns how much times the message from [sender] should be delivered to the receiver.
+     * It is guaranteed that it is possible to send message from [sender] to [receiver].
+     */
+    protected abstract fun getMessageRate(sender: Int, receiver: Int, messageId: Int): Int
+
+    /**
+     * Adds the network partition if it is possible according to [test configuration][DistributedCTestConfiguration]
+     * and if it should be added according to strategy.
+     */
+    protected abstract fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean
 }

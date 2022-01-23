@@ -54,30 +54,13 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
 ) {
     private var callCount = 0
 
-    override fun onMessageSent(iNode: Int, event: MessageSentEvent<Unit>) {
-        TODO("Not yet implemented")
-    }
-
-    override fun beforeLogModify(iNode: Int) {
+    override fun beforeDatabaseAccess(iNode: Int) {
         TODO("Not yet implemented")
     }
 
     override fun next(taskManager: TaskManager): Task? {
         TODO("Not yet implemented")
     }
-
-    override fun tryAddCrashBeforeSend(iNode: Int, event: MessageSentEvent<Unit>) {
-        TODO("Not yet implemented")
-    }
-
-    override fun tryAddPartitionBeforeSend(iNode: Int, event: MessageSentEvent<Unit>): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun getMessageRate(iNode: Int, event: MessageSentEvent<Unit>): Int {
-        TODO("Not yet implemented")
-    }
-
     override fun reset() {
         TODO("Not yet implemented")
     }
@@ -103,7 +86,23 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
         TODO("Not yet implemented")
     }
 
-    override fun isRecover(iNode: Int): Boolean {
+    override fun shouldRecover(iNode: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun onMessageSent(sender: Int, receiver: Int, messageId: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun tryCrash(iNode: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getMessageRate(sender: Int, receiver: Int, messageId: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean {
         TODO("Not yet implemented")
     }
 }

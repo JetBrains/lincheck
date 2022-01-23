@@ -63,24 +63,24 @@ fun List<Event>.isCorrect(iNode: Int): Boolean = none { it.iNode == iNode && it 
  */
 abstract class AbstractPeer(protected val env: Environment<Message, MutableList<Message>>) :
     Node<Message, MutableList<Message>> {
-    override fun validate(events: List<Event>, logs: List<MutableList<Message>>) {
-        check(logs[env.nodeId].isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
+    override fun validate(events: List<Event>, databases: List<MutableList<Message>>) {
+        check(databases[env.nodeId].isDistinct()) { "Process ${env.nodeId} contains repeated messages" }
         // If message m from process s was delivered, it was sent by process s before.
-        logs[env.nodeId].forEach { m ->
+        databases[env.nodeId].forEach { m ->
             check(events.sentMessages<Message>(m.from).contains(m))
         }
         // If the correct process sent message m, it should deliver m.
         if (events.isCorrect(env.nodeId)) {
-            events.sentMessages<Message>(env.nodeId).forEach { m -> check(m in logs[env.nodeId]) }
+            events.sentMessages<Message>(env.nodeId).forEach { m -> check(m in databases[env.nodeId]) }
         }
         // If the message was delivered to one process, it was delivered to all correct processes.
-        logs[env.nodeId].forEach { m ->
-            events.correctProcesses().forEach { check(logs[it!!].contains(m)) }
+        databases[env.nodeId].forEach { m ->
+            events.correctProcesses().forEach { check(databases[it!!].contains(m)) }
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         //For each store the order in which messages were sent
         val localMessagesOrder = Array(env.numberOfNodes) { i ->
-            logs[env.nodeId].filter { it.from == i }
+            databases[env.nodeId].filter { it.from == i }
                 .map { m ->
                     events.sentMessages<Message>(i).filter { it.from == i }.distinctBy { it.id }.indexOf(m)
                 }
@@ -92,6 +92,9 @@ abstract class AbstractPeer(protected val env: Environment<Message, MutableList<
     }
 }
 
+/**
+ *
+ */
 class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
     private val receivedMessages = Array<HashMap<Int, Int>>(env.numberOfNodes) { HashMap() }
     private var messageId = 0

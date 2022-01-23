@@ -20,10 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.ReentrantLock
 import kotlinx.atomicfu.locks.withLock
-import kotlinx.coroutines.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
 import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.createExceptionResult
 import org.jetbrains.kotlinx.lincheck.createLincheckResult
@@ -39,10 +40,12 @@ import java.io.File
 import java.lang.reflect.Method
 import java.util.concurrent.TimeUnit
 
-
-internal open class DistributedRunner<Message, Log>(
-    strategy: DistributedStrategy<Message, Log>,
-    val testCfg: DistributedCTestConfiguration<Message, Log>,
+/**
+ * Executes the distributed algorithms.
+ */
+internal open class DistributedRunner<Message, DB>(
+    strategy: DistributedStrategy<Message, DB>,
+    val testCfg: DistributedCTestConfiguration<Message, DB>,
     testClass: Class<*>,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?
@@ -51,30 +54,33 @@ internal open class DistributedRunner<Message, Log>(
         const val TASK_LIMIT = 10_000
     }
 
-    private val distrStrategy: DistributedStrategy<Message, Log> = strategy
-    private val numberOfNodes = testCfg.addressResolver.nodeCount
-    private lateinit var eventFactory: EventFactory<Message, Log>
-    private val databases = mutableListOf<Log>().apply {
-        repeat(numberOfNodes) {
-            this.add(testCfg.databaseFactory())
+    //Note: cast strategy to DistributedStrategy
+    private val distrStrategy: DistributedStrategy<Message, DB> = strategy
+    private val nodeCount = testCfg.addressResolver.nodeCount
+    private lateinit var eventFactory: EventFactory<Message, DB>
+
+    //Note: cannot use array (??)
+    private val databases = mutableListOf<DB>().apply {
+        repeat(nodeCount) {
+            add(testCfg.databaseFactory())
         }
     }
-    private lateinit var environments: Array<EnvironmentImpl<Message, Log>>
-    private lateinit var nodeInstances: Array<Node<Message, Log>>
+
+    private lateinit var environments: Array<EnvironmentImpl<Message, DB>>
+    private lateinit var nodeInstances: Array<Node<Message, DB>>
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var taskManager: TaskManager
-    private val isSignal = atomic(false)
     private var taskCount = 0
+    private lateinit var executor: DistributedExecutor
+    private val lock = ReentrantLock()
+    private val condition = lock.newCondition()
+    private var isSignal = false
 
     @Volatile
     private var isTaskLimitExceeded = false
 
     @Volatile
     private var exception: Throwable? = null
-
-    private lateinit var executor: DistributedExecutor
-    private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
 
     override fun initialize() {
         super.initialize()
@@ -84,25 +90,27 @@ internal open class DistributedRunner<Message, Log>(
         executor = DistributedExecutor(this)
     }
 
+    /**
+     * Resets the runner to the initial state before next invocation.
+     */
     private fun reset() {
         taskCount = 0
-        isSignal.lazySet(false)
+        isSignal = false
         exception = null
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
         databases.indices.forEach { databases[it] = testCfg.databaseFactory() }
-        environments = Array(numberOfNodes) {
+        environments = Array(nodeCount) {
             EnvironmentImpl(
                 it,
-                numberOfNodes,
+                nodeCount,
                 databases[it],
                 eventFactory,
                 distrStrategy,
                 taskManager
             )
         }
-        nodeInstances = Array(numberOfNodes) {
-            //println("${testCfg.addressResolver[it].simpleName} ${environments[it]}")
+        nodeInstances = Array(nodeCount) {
             testCfg.addressResolver[it].getConstructor(Environment::class.java)
                 .newInstance(environments[it])
         }
@@ -116,17 +124,12 @@ internal open class DistributedRunner<Message, Log>(
         canCrashBeforeAccessingDatabase = true
     }
 
+    /**
+     * Runs the invocation.
+     */
     override fun run(): InvocationResult {
         reset()
-        for (i in 0 until numberOfNodes) {
-            taskManager.addActionTask(i) {
-                nodeInstances[i].onStart()
-                if (i >= testCfg.addressResolver.nodesWithScenario) return@addActionTask
-                taskManager.addSuspendedTask(i) {
-                    runNode(i)
-                }
-            }
-        }
+        addInitialTasks()
         launchNextTask()
         val finishedOnTime = try {
             lock.withLock { condition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
@@ -135,16 +138,20 @@ internal open class DistributedRunner<Message, Log>(
             false
         }
         canCrashBeforeAccessingDatabase = false
-        if (!finishedOnTime && !isSignal.value) {
+        // The execution didn't finish within the [org.jetbrains.kotlinx.lincheck.Options.timeoutMs]
+        if (!finishedOnTime && !lock.withLock { isSignal }) {
             executor.shutdownNow()
             return LivelockInvocationResult
         }
+        // The exception occurred during the execution.
         if (exception != null) {
             return UnexpectedExceptionInvocationResult(exception!!)
         }
+        // The number of tasks is exceeded.
         if (isTaskLimitExceeded) {
             return TaskLimitExceededResult
         }
+        // The validation function exception.
         try {
             nodeInstances.forEach { n -> n.validate(eventFactory.events, databases) }
         } catch (e: Throwable) {
@@ -162,8 +169,8 @@ internal open class DistributedRunner<Message, Log>(
         }
         testNodeExecutions.zip(scenario.parallelExecution).forEach { it.first.setSuspended(it.second) }
         val parallelResultsWithClock = testNodeExecutions.mapIndexed { i, ex ->
-            //TODO: add real clock
-            ex.results.map { it!!.withEmptyClock(numberOfNodes) }
+            //TODO: add real clock. Cannot use it now, because checks in verifier (see org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityContext.hblegal)
+            ex.results.map { it!!.withEmptyClock(nodeCount) }
         }
         val results = ExecutionResult(
             emptyList(), null, parallelResultsWithClock, super.constructStateRepresentation(),
@@ -172,6 +179,24 @@ internal open class DistributedRunner<Message, Log>(
         return CompletedInvocationResult(results)
     }
 
+    /**
+     * Add initial tasks to task manager.
+     */
+    private fun addInitialTasks() {
+        repeat(nodeCount) { i ->
+            taskManager.addActionTask(i) {
+                nodeInstances[i].onStart()
+                if (i >= testCfg.addressResolver.nodesWithScenario) return@addActionTask
+                taskManager.addSuspendedTask(i) {
+                    runNode(i)
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns true if the next task was executed successfully, false if the execution should be stopped.
+     */
     fun launchNextTask(): Boolean {
         if (exception != null) return false
         val next = distrStrategy.next(taskManager) ?: return false
@@ -180,7 +205,7 @@ internal open class DistributedRunner<Message, Log>(
             isTaskLimitExceeded = true
             return false
         }
-        //TODO remove code duplication
+        //TODO remove code duplication. Can be solved by updating Kotlin version.
         if (next is InstantTask) {
             executor.execute {
                 try {
@@ -210,25 +235,21 @@ internal open class DistributedRunner<Message, Log>(
         return true
     }
 
-    fun signal() {
-        isSignal.lazySet(true)
-        lock.withLock {
-            condition.signal()
-        }
-    }
-
+    /**
+     * 
+     */
     private fun onNodeCrash(iNode: Int) {
         eventFactory.createNodeCrashEvent(iNode)
         taskManager.removeAllForNode(iNode)
         testNodeExecutions.getOrNull(iNode)?.crash()
         sendCrashNotifications(iNode)
-        if (!distrStrategy.isRecover(iNode)) {
+        if (!distrStrategy.shouldRecover(iNode)) {
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }
-        taskManager.addActionTask(iNode) {
+        taskManager.addCrashRecoverTask(iNode = iNode, ticks = distrStrategy.getRecoverTimeout(taskManager)) {
             environments[iNode] =
-                EnvironmentImpl(iNode, numberOfNodes, databases[iNode], eventFactory, distrStrategy, taskManager)
+                EnvironmentImpl(iNode, nodeCount, databases[iNode], eventFactory, distrStrategy, taskManager)
 
             nodeInstances[iNode] = testCfg.addressResolver[iNode].getConstructor(Environment::class.java)
                 .newInstance(environments[iNode])
@@ -244,9 +265,7 @@ internal open class DistributedRunner<Message, Log>(
 
     fun onPartition(firstPart: List<Int>, secondPart: List<Int>, partitionId: Int) {
         eventFactory.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
-        for (i in firstPart) {
-            sendCrashNotifications(i)
-        }
+        sendCrashNotifications(firstPart, secondPart)
         taskManager.addPartitionRecoverTask(ticks = distrStrategy.getRecoverTimeout(taskManager)) {
             eventFactory.createNetworkRecoverEvent(partitionId)
             distrStrategy.recoverPartition(firstPart, secondPart)
@@ -290,16 +309,37 @@ internal open class DistributedRunner<Message, Log>(
         }
     }
 
+    private fun crashNotification(iNode: Int, crashedNode: Int) {
+        if (!distrStrategy.isCrashed(iNode)) {
+            taskManager.addActionTask(iNode) {
+                eventFactory.createCrashNotificationEvent(iNode, crashedNode)
+                nodeInstances[iNode].onNodeUnavailable(crashedNode)
+            }
+        }
+    }
+
     private fun sendCrashNotifications(iNode: Int) {
         if (!testCfg.crashNotifications) return
-        nodeInstances.forEachIndexed { index, node ->
-            if (index != iNode) {
-                taskManager.addActionTask(index) {
-                    if (distrStrategy.isCrashed(index)) return@addActionTask
-                    eventFactory.createCrashNotificationEvent(index, iNode)
-                    node.onNodeUnavailable(iNode)
-                }
+        for (i in 0 until nodeCount) {
+            if (i == iNode) continue
+            crashNotification(i, iNode)
+        }
+    }
+
+    private fun sendCrashNotifications(firstPart: List<Int>, secondPart: List<Int>) {
+        if (!testCfg.crashNotifications) return
+        for (firstNode in firstPart) {
+            for (secondNode in secondPart) {
+                crashNotification(firstNode, secondNode)
+                crashNotification(secondNode, firstNode)
             }
+        }
+    }
+
+    fun signal() {
+        lock.withLock {
+            isSignal = true
+            condition.signal()
         }
     }
 

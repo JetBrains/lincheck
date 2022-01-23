@@ -25,16 +25,16 @@ import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 
 abstract class OrderCheckNode(val env: Environment<Message, MutableList<Message>>) : Node<Message, MutableList<Message>> {
-    override fun validate(events: List<Event>, logs: List<MutableList<Message>>) {
-        for (l in logs) {
+    override fun validate(events: List<Event>, databases: List<MutableList<Message>>) {
+        for (l in databases) {
             for (i in l.indices) {
                 for (j in i + 1 until l.size) {
-                    check(logs.none {
+                    check(databases.none {
                         val first = it.lastIndexOf(l[i])
                         val second = it.lastIndexOf(l[j])
                         first != -1 && second != -1 && first >= second
                     }) {
-                        "logs=$logs, first=${l[i]}, second=${l[j]}"
+                        "logs=$databases, first=${l[i]}, second=${l[j]}"
                     }
                 }
             }
@@ -42,7 +42,7 @@ abstract class OrderCheckNode(val env: Environment<Message, MutableList<Message>
         val sent = events.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
             .filterIsInstance<RequestMessage>()
         sent.forEach { m ->
-            check(logs.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) }) {
+            check(databases.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) }) {
                 m.toString()
             }
         }

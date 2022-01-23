@@ -20,33 +20,52 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
-import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.locks.withLock
-import kotlinx.coroutines.sync.Semaphore
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
+import kotlin.math.abs
 
+/**
+ * A message for Chandy-Lamport algorithm.
+ */
 sealed class Message
-data class Transaction(val sum: Int) : Message()
-data class Marker(val initializer: Int, val token: Int) : Message()
-data class Reply(val state: Int, val token: Int) : Message()
-data class CurState(val state: Int) : Message()
-data class OpStateReceive(val state: Int, val sum : Int) : Message()
-data class OpStateSend(val state: Int, val sum : Int) : Message()
 
+/**
+ * A transaction between two nodes.
+ */
+data class Transaction(val sum: Int) : Message()
+
+/**
+ * A marker which indicates that the snapshot of the system is taken.
+ */
+data class Marker(val initializer: Int, val token: Int) : Message()
+
+/**
+ * When the node state is stored, it is sent to the snapshot initializer.
+ */
+data class Reply(val state: Int, val token: Int) : Message()
+
+/**
+ * Stored in the channels while snapshot is taken.
+ */
 sealed class State
-class Value(val sum: Int) : State()
+
+/**
+ * The value which was received.
+ */
+data class Value(val sum: Int) : State()
+
+/**
+ * Indicates that writing to this channel is finished.
+ */
 object Empty : State()
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamport(private val env: Environment<Message, MutableList<Message>>) : Node<Message, MutableList<Message>> {
-    private val currentSum = atomic(100)
+class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message, Unit> {
+    private var currentSum = 100
     private var semaphore = Signal()
     private var state = 0
     private var token = 0
@@ -54,15 +73,12 @@ class ChandyLamport(private val env: Environment<Message, MutableList<Message>>)
     private var marker: Marker? = null
     private val replies = Array<Reply?>(env.numberOfNodes) { null }
     private val channels = Array<MutableList<State>>(env.numberOfNodes) { mutableListOf() }
-
-    @Volatile
     private var gotSnapshot = false
 
     override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Transaction -> {
-                currentSum.getAndAdd(message.sum)
-                env.database.add(OpStateReceive(currentSum.value, message.sum))
+                currentSum += message.sum
                 if (marker != null && (channels[sender].isEmpty() || channels[sender].last() !is Empty)) {
                     channels[sender].add(Value(message.sum))
                 }
@@ -71,13 +87,9 @@ class ChandyLamport(private val env: Environment<Message, MutableList<Message>>)
                 channels[sender].add(Empty)
                 markerCount++
                 if (marker == null) {
-                    state = currentSum.value
-                    env.database.add(CurState(state))
+                    state = currentSum
                     marker = message
                     env.broadcast(message)
-                }
-                check(marker == message) {
-                    "Execution is not non parallel"
                 }
                 if (markerCount == env.numberOfNodes - 1) {
                     val res = finishSnapshot()
@@ -87,21 +99,19 @@ class ChandyLamport(private val env: Environment<Message, MutableList<Message>>)
             }
             is Reply -> {
                 replies[sender] = message
+                checkAllRepliesReceived()
             }
         }
-        checkAllRepliesReceived()
     }
 
     private fun finishSnapshot(): Int {
         val stored =
-            channels.map { it.filterIsInstance(Value::class.java).map { v -> v.sum }.sum() }.sum()
-
+            channels.sumOf { it.filterIsInstance(Value::class.java).sumOf { v -> v.sum } }
         val res = state + stored
         markerCount = 0
         channels.forEach { it.clear() }
         return res
     }
-
 
     private fun checkAllRepliesReceived() {
         if (replies.filterNotNull().size == env.numberOfNodes) {
@@ -112,17 +122,15 @@ class ChandyLamport(private val env: Environment<Message, MutableList<Message>>)
 
     @Operation(cancellableOnSuspension = false)
     fun transaction(to: Int, sum: Int) {
-        val receiver = kotlin.math.abs(to) % env.numberOfNodes
+        val receiver = abs(to) % env.numberOfNodes
         if (receiver == env.nodeId) return
-        currentSum.getAndAdd(-sum)
-        env.database.add(OpStateSend(currentSum.value, sum))
+        currentSum -= sum
         env.send(Transaction(sum), receiver)
     }
 
-    @StateRepresentation
     override fun stateRepresentation(): String {
         val res = StringBuilder()
-        res.append("[${env.nodeId}]: Cursum ${currentSum.value}\n")
+        res.append("[${env.nodeId}]: Current sum ${currentSum}\n")
         res.append("[${env.nodeId}]: State $state\n")
         channels.forEachIndexed { i, c -> res.append("[${env.nodeId}]: channel[$i] $c\n") }
         replies.forEachIndexed { i, c -> res.append("[${env.nodeId}]: reply[$i] $c\n") }
@@ -131,9 +139,7 @@ class ChandyLamport(private val env: Environment<Message, MutableList<Message>>)
 
     @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun snapshot(): Int {
-        semaphore = Signal()
-        state = currentSum.value
-        env.database.add(CurState(state))
+        state = currentSum
         marker = Marker(env.nodeId, token++)
         env.broadcast(marker!!)
         if (env.numberOfNodes == 1) {
@@ -142,7 +148,7 @@ class ChandyLamport(private val env: Environment<Message, MutableList<Message>>)
         while (!gotSnapshot) {
             semaphore.await()
         }
-        val res = replies.map { it as Reply }.map { it.state }.sum()
+        val res = replies.map { it as Reply }.sumOf { it.state }
         marker = null
         gotSnapshot = false
         replies.fill(null)
@@ -163,7 +169,7 @@ class MockSnapshot() : VerifierState() {
 class SnapshotTest {
     @Test
     fun testSimple() {
-        createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
+        createDistributedOptions<Message>()
             .nodeType(ChandyLamport::class.java, 3)
             .sequentialSpecification(MockSnapshot::class.java)
             .actorsPerThread(3)
@@ -176,7 +182,7 @@ class SnapshotTest {
 
     @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
-        createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
+        createDistributedOptions<Message>()
             .nodeType(ChandyLamport::class.java, 3)
             .sequentialSpecification(MockSnapshot::class.java)
             .threads(3)
