@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2022 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
+package org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -92,11 +92,9 @@ abstract class AbstractPeer(protected val env: Environment<Message, MutableList<
     }
 }
 
-/**
- *
- */
+
 class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
-    private val receivedMessages = Array<HashMap<Int, Int>>(env.numberOfNodes) { HashMap() }
+    private val receivedMessages = Array<MutableMap<Int, Int>>(env.numberOfNodes) { mutableMapOf() }
     private var messageId = 0
     private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
         PriorityQueue { x, y -> x.id - y.id }
@@ -163,7 +161,8 @@ class BroadcastTest {
 
     @Test(expected = LincheckAssertionError::class)
     fun testMoreFailures() = createOptions()
-        .nodeType(Peer::class.java,
+        .nodeType(
+            Peer::class.java,
             numberOfInstances = 5,
             crashType = CrashMode.NO_RECOVER,
             maxNumberOfCrashedNodes = { it / 2 + 1 }
@@ -181,7 +180,8 @@ class BroadcastTest {
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrect() = createOptions()
         .minimizeFailedScenario(false)
-        .nodeType(PeerIncorrect::class.java,
+        .nodeType(
+            PeerIncorrect::class.java,
             numberOfInstances = 4,
             crashType = CrashMode.NO_RECOVER,
             maxNumberOfCrashedNodes = { it / 2 }

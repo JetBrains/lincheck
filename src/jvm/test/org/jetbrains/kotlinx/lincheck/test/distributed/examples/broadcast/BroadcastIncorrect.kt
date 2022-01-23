@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2022 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -18,14 +18,15 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.distributed.broadcast
+package org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast.Message
 
 
 class PeerIncorrect(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
-    private val receivedMessages = Array<HashSet<Int>>(env.numberOfNodes) { HashSet() }
+    private val receivedMessages = Array<MutableSet<Int>>(env.numberOfNodes) { mutableSetOf() }
     private var messageId = 0
 
     override fun onMessage(message: Message, sender: Int) {

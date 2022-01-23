@@ -20,16 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.raft
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Validate
-import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.event.Event
-import org.jetbrains.kotlinx.lincheck.test.distributed.broadcast.Message
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
-import org.junit.Test
-import kotlin.random.Random
 /*
 sealed class RLog
 data class RTerm(val term: Int) : RLog()

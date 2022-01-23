@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -106,12 +107,12 @@ class RaftTest {
     @Test
     fun test() = options().check()
 
-    @Test
+    @Test(expected = LincheckAssertionError::class)
     fun testMoreFailure() = options().nodeType(
         RaftServer::class.java,
         minNumberOfInstances = 1,
         maxNumberOfInstances = 5,
-        crashType = CrashMode.ALL_NODES_RECOVER,
+        crashType = CrashMode.MIXED,
         networkPartition = NetworkPartitionMode.COMPONENTS,
         maxNumberOfCrashedNodes = { it })
         .check()
