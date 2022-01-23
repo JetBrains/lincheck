@@ -31,7 +31,7 @@ import kotlin.random.Random
 
 class RaftClient(private val env: Environment<RaftMessage, PersistentStorage>) : Node<RaftMessage, PersistentStorage> {
     companion object {
-        const val OPERATION_TIMEOUT = 120
+        const val OPERATION_TIMEOUT = 200
     }
 
     private val servers = env.getAddressesForClass(RaftServer::class.java)!!
@@ -100,7 +100,7 @@ class RaftTest {
         .storeLogsForFailedScenario("raft.txt")
         .actorsPerThread(3)
         .sendCrashNotifications(false)
-        .invocationsPerIteration(30_000)
+        .invocationsPerIteration(60_000)
         //.minimizeFailedScenario(false)
         .iterations(10)
 

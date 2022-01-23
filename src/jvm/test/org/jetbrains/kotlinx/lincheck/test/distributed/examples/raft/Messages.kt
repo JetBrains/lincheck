@@ -29,7 +29,6 @@ sealed interface ResponseToClient
 /**
  * Send by leader to replicate log index. Also used as heartbeat.
  * [term] leader's term
- * [leaderId] leader's id so the follower can redirect requests
  * [prevLogIndex] index of log entry immediately preceding new ones
  * [prevLogTerm] term of prevLogIndex entry
  * [entries] log entries to store (empty for heartbeat; may send more than one for efficiency)
@@ -43,6 +42,9 @@ data class AppendEntries(
     val leaderCommit: Int
 ) : RaftMessage()
 
+
+data class OutdatedTermResponse(override val term: Int) : RaftMessage()
+
 /**
  * Response to the [AppendEntries].
  * [term] currentTerm, for leader to update itself
@@ -50,7 +52,12 @@ data class AppendEntries(
  * [lastLogIndex]
  * [prevLogLeaderIndex]
  */
-data class AppendEntriesResponse(override val term: Int, val success: Boolean, val lastLogIndex: Int, val prevLogLeaderIndex: Int) : RaftMessage()
+data class AppendEntriesResponse(
+    override val term: Int,
+    val success: Boolean,
+    val lastLogIndex: Int,
+    val prevLogLeaderIndex: Int
+) : RaftMessage()
 
 /**
  * Send by candidates to gather votes.

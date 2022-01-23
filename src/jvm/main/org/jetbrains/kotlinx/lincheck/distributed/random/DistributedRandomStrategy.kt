@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.Integer.max
 import java.lang.reflect.Method
 
 fun ExecutionResult.newResult(stateRepresentation: String?): ExecutionResult = ExecutionResult(
@@ -39,6 +40,10 @@ fun ExecutionResult.newResult(stateRepresentation: String?): ExecutionResult = E
     afterPostStateRepresentation
 )
 
+/**
+ * Indicates if the crash can be added before accessing database.
+ * Set to false after the execution is over or than the event is created (see [org.jetbrains.kotlinx.lincheck.distributed.event.Event])
+ */
 internal var canCrashBeforeAccessingDatabase = false
 
 internal class DistributedRandomStrategy<Message, DB>(
@@ -115,10 +120,9 @@ internal class DistributedRandomStrategy<Message, DB>(
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until testCfg.invocationsPerIteration) {
-
                 reset()
                 val ir = runner.run()
-
+                //println("INVOCATION $invocation")
                 when (ir) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results)) {
@@ -160,7 +164,9 @@ internal class DistributedRandomStrategy<Message, DB>(
         probability.partition(nodes, limit)
 
     override fun getRecoverTimeout(taskManager: TaskManager): Int {
-        val maxTimeout = taskManager.timeTasks.maxOfOrNull { it.time } ?: ProbabilityModel.DEFAULT_RECOVER_TIMEOUT
+        val time = taskManager.time
+        val maxTimeout =
+            max(taskManager.timeTasks.maxOfOrNull { it.time - time } ?: 0, ProbabilityModel.DEFAULT_RECOVER_TIMEOUT)
         return probability.recoverTimeout(maxTimeout)
     }
 

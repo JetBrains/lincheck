@@ -34,9 +34,9 @@ enum class Status {
 
 class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) : Node<RaftMessage, PersistentStorage> {
     companion object {
-        const val HEARTBEAT_RATE = 5
-        const val MIN_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 20
-        const val MAX_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 40
+        const val HEARTBEAT_RATE = 50
+        const val MIN_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 10
+        const val MAX_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 20
     }
 
     private val nodeCount = env.getAddressesForClass(RaftServer::class.java)!!.count()
@@ -172,14 +172,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
      */
     private fun onAppendEntries(message: AppendEntries, sender: Int) {
         if (env.database.currentTerm > message.term) {
-            env.send(
-                AppendEntriesResponse(
-                    env.database.currentTerm,
-                    false,
-                    env.database.lastLogIndex,
-                    message.prevLogIndex
-                ), sender
-            )
+            env.send(OutdatedTermResponse(env.database.currentTerm), sender)
             return
         }
         receivedHeartbeatCount++
@@ -295,6 +288,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
             is AppendEntriesResponse -> {
                 onAppendEntriesResponse(message, sender)
             }
+            is OutdatedTermResponse -> return
             else -> throw IllegalStateException("Unexpected message $message to server ${env.nodeId}")
         }
     }
