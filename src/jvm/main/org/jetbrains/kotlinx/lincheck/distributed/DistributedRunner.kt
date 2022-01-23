@@ -236,7 +236,8 @@ internal open class DistributedRunner<Message, DB>(
     }
 
     /**
-     * 
+     * Removes all remained tasks for [iNode], sends crash notifications to other nodes,
+     * add recover task if necessary.
      */
     private fun onNodeCrash(iNode: Int) {
         eventFactory.createNodeCrashEvent(iNode)
@@ -263,6 +264,9 @@ internal open class DistributedRunner<Message, DB>(
         }
     }
 
+    /**
+     * Sends crash notifications between nodes from different parts and creates partition recover task.
+     */
     fun onPartition(firstPart: List<Int>, secondPart: List<Int>, partitionId: Int) {
         eventFactory.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
         sendCrashNotifications(firstPart, secondPart)
@@ -272,8 +276,14 @@ internal open class DistributedRunner<Message, DB>(
         }
     }
 
+    /**
+     * Returns true if results of all operations are received.
+     */
     fun hasAllResults() = testNodeExecutions.all { it.results.none { r -> r == null } }
 
+    /**
+     * Runs the operations for node.
+     */
     private suspend fun runNode(iNode: Int) {
         if (iNode >= testCfg.addressResolver.nodesWithScenario) {
             return
@@ -309,6 +319,9 @@ internal open class DistributedRunner<Message, DB>(
         }
     }
 
+    /**
+     * Sends notification to [iNode] what [crashedNode] is unavailable.
+     */
     private fun crashNotification(iNode: Int, crashedNode: Int) {
         if (!distrStrategy.isCrashed(iNode)) {
             taskManager.addActionTask(iNode) {
@@ -318,6 +331,9 @@ internal open class DistributedRunner<Message, DB>(
         }
     }
 
+    /**
+     * Sends notification about crashed node [iNode].
+     */
     private fun sendCrashNotifications(iNode: Int) {
         if (!testCfg.crashNotifications) return
         for (i in 0 until nodeCount) {
@@ -326,6 +342,9 @@ internal open class DistributedRunner<Message, DB>(
         }
     }
 
+    /**
+     * Sends crash notifications between partitions.
+     */
     private fun sendCrashNotifications(firstPart: List<Int>, secondPart: List<Int>) {
         if (!testCfg.crashNotifications) return
         for (firstNode in firstPart) {
@@ -336,6 +355,9 @@ internal open class DistributedRunner<Message, DB>(
         }
     }
 
+    /**
+     * Signals that the execution is over.
+     */
     fun signal() {
         lock.withLock {
             isSignal = true
@@ -343,6 +365,9 @@ internal open class DistributedRunner<Message, DB>(
         }
     }
 
+    /**
+     * Stores the events to file.
+     */
     fun storeEventsToFile(failure: LincheckFailure) {
         if (testCfg.logFilename == null) return
         File(testCfg.logFilename).printWriter().use { out ->
