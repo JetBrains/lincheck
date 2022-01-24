@@ -28,14 +28,14 @@ interface NodeTask {
 }
 
 /**
- * Abstract class for task. Task is an action happening in the system.
+ * Abstract class for task with unique [id]. Task is an action happening in the system.
  */
 sealed class Task {
     abstract val id: Int
 }
 
 /**
- * Task which action is not suspended.
+ * Task which [action] is not suspendable.
  */
 sealed class InstantTask : Task() {
     abstract val action: () -> Unit
@@ -62,13 +62,14 @@ data class ActionTask(
 
 /**
  * Task which should not be taken immediately for execution.
+ * [time] is an approximate time when the task should be completed.
  */
 sealed class TimeTask : InstantTask() {
     abstract val time: Int
 }
 
 /**
- * Task for a tick of periodic timer.
+ * Task for a tick of periodic timer. See [Environment.setTimer]
  */
 data class PeriodicTimer(
     override val id: Int,
@@ -107,7 +108,7 @@ data class PartitionRecoverTask(
 ) : TimeTask()
 
 /**
- * Task for suspended action (operations in scenario).
+ * Task for suspendable [action] (operations in scenario).
  */
 data class SuspendedTask(
     override val id: Int,
@@ -115,19 +116,27 @@ data class SuspendedTask(
     val action: suspend () -> Unit
 ) : Task(), NodeTask
 
+/**
+ * Stores the tasks which arise during the execution and the logical time.
+ * The time is incremented when the task is taken for execution. If there are only time tasks left,
+ * the time is set to the minimum time of the time tasks.
+ */
 internal class TaskManager(private val messageOrder: MessageOrder) {
     private var _taskId: Int = 0
     private var _time: Int = 0
     private val _tasks = mutableListOf<Task>()
     private val _timeTasks = mutableListOf<TimeTask>()
 
+    /**
+     * Returns the list of [MessageReceiveTask] which can be executed next according to FIFO order.
+     */
     private fun nextMessagesForFifoOrder(): List<Task> {
         val senderReceiverPairs = mutableSetOf<Pair<Int, Int>>()
         return _tasks.filterIsInstance<MessageReceiveTask>().filter { senderReceiverPairs.add(it.iNode to it.from) }
     }
 
     /**
-     * Returns the list of tasks which can be completed immediately.
+     * Returns the list of tasks which can be executed next. Doesn't include time tasks.
      */
     val tasks: List<Task>
         get() = when (messageOrder) {
@@ -137,9 +146,15 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
             }
         }
 
+    /**
+     * Returns the list of time tasks.
+     */
     val timeTasks: List<TimeTask>
         get() = _timeTasks
 
+    /**
+     * Updates the time if necessary and returns the current time.
+     */
     val time: Int
         get() {
             if (_tasks.isEmpty() && _timeTasks.isNotEmpty()) {
@@ -147,6 +162,23 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
             }
             return _time
         }
+
+    /**
+     * Removes all tasks for [iNode] after crash.
+     */
+    fun removeAllForNode(iNode: Int) {
+        _tasks.removeAll { it is NodeTask && it.iNode == iNode }
+        _timeTasks.removeAll { it is NodeTask && it.iNode == iNode }
+    }
+
+    fun removeTask(task: Task) {
+        _time++
+        if (task is TimeTask) {
+            _timeTasks.remove(task)
+        } else {
+            _tasks.remove(task)
+        }
+    }
 
     fun addMessageReceiveTask(
         from: Int,
@@ -218,22 +250,5 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
             SuspendedTask(id = _taskId++, iNode = iNode, action = action)
         _tasks.add(task)
         return task
-    }
-
-    fun removeTask(task: Task) {
-        _time++
-        if (task is TimeTask) {
-            _timeTasks.remove(task)
-        } else {
-            _tasks.remove(task)
-        }
-    }
-
-    /**
-     * Removes all tasks for [iNode] after crash.
-     */
-    fun removeAllForNode(iNode: Int) {
-        _tasks.removeAll { it is NodeTask && it.iNode == iNode }
-        _timeTasks.removeAll { it is NodeTask && it.iNode == iNode }
     }
 }

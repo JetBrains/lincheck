@@ -20,14 +20,20 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import java.lang.Integer.min
+import kotlin.math.min
 
+/**
+ * Contains [partition id][partitionId] and both partitions.
+ */
 internal data class PartitionResult(
     val partitionId: Int,
     val firstPart: List<Int>,
     val secondPart: List<Int>
 )
 
+/**
+ * Contains information about node crashes and partitions.
+ */
 internal abstract class FailureManager<Message, DB>(
     protected val addressResolver: NodeAddressResolver<Message, DB>
 ) {
@@ -43,28 +49,58 @@ internal abstract class FailureManager<Message, DB>(
     protected val crashedNodes = Array(addressResolver.nodeCount) { false }
     protected var partitionCount: Int = 0
 
-    abstract fun canSend(from: Int, to: Int): Boolean
+    /**
+     * Returns if the message can be sent from [sender] to [receiver].
+     */
+    abstract fun canSend(sender: Int, receiver: Int): Boolean
 
+    /**
+     * Returns if [iNode] is crashed now.
+     */
     operator fun get(iNode: Int) = crashedNodes[iNode]
 
+    /**
+     * Sets [iNode] to 'crashed'.
+     */
     abstract fun crashNode(iNode: Int)
 
+    /**
+     * Returns if the partition can be added between [firstNode] and [secondNode] without violation of the restrictions.
+     */
     abstract fun canAddPartition(firstNode: Int, secondNode: Int): Boolean
 
+    /**
+     * Returns if [iNode] can be crashed without violation the maximum number of unavailable nodes restriction.
+     */
     abstract fun canCrash(iNode: Int): Boolean
 
+    /**
+     * Sets [iNode] to recovered.
+     */
     abstract fun recoverNode(iNode: Int)
 
+    /**
+     * Adds partition between [firstNode] and [secondNode] and returns the [PartitionResult]
+     */
     fun partition(firstNode: Int, secondNode: Int): PartitionResult {
         val id = partitionCount++
         val parts = addPartition(firstNode, secondNode)
         return PartitionResult(id, parts.first, parts.second)
     }
 
+    /**
+     * Adds partition between [firstNode] and [secondNode] returns two parts.
+     */
     protected abstract fun addPartition(firstNode: Int, secondNode: Int): Pair<List<Int>, List<Int>>
 
+    /**
+     * Removes partition between two parts.
+     */
     abstract fun removePartition(firstPart: List<Int>, secondPart: List<Int>)
 
+    /**
+     * Resets to the initial state.
+     */
     abstract fun reset()
 }
 
@@ -80,18 +116,18 @@ internal class FailureManagerComponent<Message, DB>(
         reset()
     }
 
-    override fun canSend(from: Int, to: Int): Boolean {
-        if (crashedNodes[from] || crashedNodes[to]) {
+    override fun canSend(sender: Int, receiver: Int): Boolean {
+        if (crashedNodes[sender] || crashedNodes[receiver]) {
             return false
         }
-        val cls1 = addressResolver[from]
-        val cls2 = addressResolver[to]
+        val cls1 = addressResolver[sender]
+        val cls2 = addressResolver[receiver]
         if (cls1 != cls2) {
-            return partitions[cls1]!!.second.contains(from)
-                    && partitions[cls2]!!.second.contains(to)
+            return partitions[cls1]!!.second.contains(sender)
+                    && partitions[cls2]!!.second.contains(receiver)
         }
-        return partitions[cls1]!!.first.containsAll(listOf(from, to))
-                || partitions[cls1]!!.second.containsAll(listOf(from, to))
+        return partitions[cls1]!!.first.containsAll(listOf(sender, receiver))
+                || partitions[cls1]!!.second.containsAll(listOf(sender, receiver))
     }
 
     private fun incrementCrashedNodes(iNode: Int) {
@@ -205,8 +241,8 @@ internal class FailureManagerSingleEdge<Message, DB>(
         return connections[node].sumOf { dfs(it, visited) } + 1
     }
 
-    override fun canSend(from: Int, to: Int): Boolean {
-        return connections[from].contains(to)
+    override fun canSend(sender: Int, receiver: Int): Boolean {
+        return connections[sender].contains(receiver)
     }
 
     override fun crashNode(iNode: Int) {

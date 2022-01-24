@@ -140,11 +140,10 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
 
 class LamportMutexTest {
     private fun createOptions() = createDistributedOptions<MutexMessage>()
-        .nodeType(LamportMutex::class.java, 2, 3)
+        .nodeType(LamportMutex::class.java, 2, 2)
         .requireStateEquivalenceImplCheck(false)
-        .threads(3)
         .verifier(EpsilonVerifier::class.java)
-        .actorsPerThread(4)
+        .actorsPerThread(2)
         .invocationsPerIteration(30_000)
         .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
