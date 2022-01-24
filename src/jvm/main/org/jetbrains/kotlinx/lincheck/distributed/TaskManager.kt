@@ -171,6 +171,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         _timeTasks.removeAll { it is NodeTask && it.iNode == iNode }
     }
 
+    /**
+     * Removes [task] and increments the time.
+     */
     fun removeTask(task: Task) {
         _time++
         if (task is TimeTask) {
@@ -180,6 +183,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         }
     }
 
+    /**
+     * Creates [MessageReceiveTask]
+     */
     fun addMessageReceiveTask(
         from: Int,
         to: Int,
@@ -195,6 +201,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
+    /**
+     * Creates [ActionTask].
+     */
     fun addActionTask(iNode: Int, action: () -> Unit): ActionTask {
         val task =
             ActionTask(id = _taskId++, iNode = iNode, action = action)
@@ -202,6 +211,10 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
+    /**
+     * Creates [PeriodicTimer].
+     * [ticks] is the approximate time before the task should be completed.
+     */
     fun addTimer(iNode: Int, ticks: Int, action: () -> Unit): PeriodicTimer {
         val task = PeriodicTimer(
             id = _taskId++,
@@ -213,6 +226,10 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
+    /**
+     * Creates [Timeout].
+     * [ticks] is the approximate time before the task should be completed.
+     */
     fun addTimeout(iNode: Int, ticks: Int, action: () -> Unit): Timeout {
         val task = Timeout(
             id = _taskId++,
@@ -224,6 +241,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
+    /**
+     * Creates [CrashRecoverTask].
+     */
     fun addCrashRecoverTask(iNode: Int, ticks: Int, action: () -> Unit): CrashRecoverTask {
         val task = CrashRecoverTask(
             id = _taskId++,
@@ -235,6 +255,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
+    /**
+     * Creates [PartitionRecoverTask].
+     */
     fun addPartitionRecoverTask(ticks: Int, action: () -> Unit): PartitionRecoverTask {
         val task = PartitionRecoverTask(
             id = _taskId++,
@@ -245,6 +268,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return task
     }
 
+    /**
+     * Creates [SuspendedTask].
+     */
     fun addSuspendedTask(iNode: Int, action: suspend () -> Unit): SuspendedTask {
         val task =
             SuspendedTask(id = _taskId++, iNode = iNode, action = action)

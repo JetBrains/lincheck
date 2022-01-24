@@ -75,6 +75,9 @@ class NodeAddressResolver<Message, DB>(
      */
     operator fun get(iNode: Int) = nodes[iNode]
 
+    /**
+     *
+     */
     fun crashTypeForNode(iNode: Int) = crashes[get(iNode)]!!.crashMode
 
     fun partitionTypeForNode(iNode: Int) = crashes[get(iNode)]!!.partitionMode

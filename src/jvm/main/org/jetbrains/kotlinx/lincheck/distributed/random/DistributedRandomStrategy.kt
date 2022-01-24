@@ -95,7 +95,7 @@ internal class DistributedRandomStrategy<Message, DB>(
     override fun next(taskManager: TaskManager): Task? {
         val tasks = taskManager.tasks
         val timeTasks = taskManager.timeTasks
-        if (tasks.isEmpty() && (runner.hasAllResults()
+        if (tasks.isEmpty() && (timeTasks.isEmpty() || runner.hasAllResults()
                     && timeTasks.all { it is PeriodicTimer })
         ) return null
         val time = taskManager.time
