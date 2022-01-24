@@ -5,14 +5,7 @@ import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
-import org.reflections.serializers.JsonSerializer
 import java.util.*
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
-import kotlinx.serialization.*
-import kotlinx.serialization.json.Json
-import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
 class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command, Unit> {
     private val storage = HashMap<Int, Int>()
@@ -141,7 +134,7 @@ class KVStorageServerTestClass {
     fun testNetworkUnreliable() {
         LinChecker.check(
             KVStorageClient::class.java,
-            createOptions().networkReliable(false).storeLogsForFailedScenario("unreliable.txt")
+            createOptions().messageLoss(false).storeLogsForFailedScenario("unreliable.txt")
         )
     }
 
@@ -159,7 +152,7 @@ class KVStorageServerTestClass {
             KVStorageClient::class.java,
             createOptions()
                 .messageDuplications(true)
-                .networkReliable(false)
+                .messageLoss(false)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
         )
     }
@@ -170,7 +163,7 @@ class KVStorageServerTestClass {
             KVStorageClientIncorrect::class.java,
             createOptions(KVStorageServerIncorrect::class.java)
                 .messageDuplications(true)
-                .networkReliable(false)
+                .messageLoss(false)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
         )
     }
@@ -190,7 +183,7 @@ class KVStorageServerTestClass {
         LinChecker.check(
             KVStorageClientIncorrect::class.java,
             createOptions(KVStorageServerIncorrect::class.java)
-                .networkReliable(false)
+                .messageLoss(false)
         )
     }
 

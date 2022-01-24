@@ -20,18 +20,30 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+/**
+ * Task which belongs to specified [iNode].
+ */
 interface NodeTask {
     val iNode: Int
 }
 
+/**
+ * Abstract class for task. Task is an action happening in the system.
+ */
 sealed class Task {
     abstract val id: Int
 }
 
+/**
+ * Task which action is not suspended.
+ */
 sealed class InstantTask : Task() {
     abstract val action: () -> Unit
 }
 
+/**
+ * Task to deliver message from node [from] to [iNode].
+ */
 data class MessageReceiveTask(
     override val id: Int,
     override val iNode: Int,
@@ -39,16 +51,25 @@ data class MessageReceiveTask(
     override val action: () -> Unit
 ) : InstantTask(), NodeTask
 
+/**
+ * Other tasks which are not suspended and not MessageReceiveTask.
+ */
 data class ActionTask(
     override val id: Int,
     override val iNode: Int,
     override val action: () -> Unit
 ) : InstantTask(), NodeTask
 
+/**
+ * Task which should not be taken immediately for execution.
+ */
 sealed class TimeTask : InstantTask() {
     abstract val time: Int
 }
 
+/**
+ * Task for a tick of periodic timer.
+ */
 data class PeriodicTimer(
     override val id: Int,
     override val time: Int,
@@ -56,6 +77,9 @@ data class PeriodicTimer(
     override val action: () -> Unit
 ) : TimeTask(), NodeTask
 
+/**
+ * Task for a timeout. See [Environment.withTimeout]
+ */
 data class Timeout(
     override val id: Int,
     override val time: Int,
@@ -63,6 +87,9 @@ data class Timeout(
     override val action: () -> Unit
 ) : TimeTask(), NodeTask
 
+/**
+ * Task for recovering node from crash.
+ */
 data class CrashRecoverTask(
     override val id: Int,
     override val time: Int,
@@ -70,12 +97,18 @@ data class CrashRecoverTask(
     override val action: () -> Unit
 ) : TimeTask(), NodeTask
 
+/**
+ * Task for recovering partition.
+ */
 data class PartitionRecoverTask(
     override val id: Int,
     override val time: Int,
     override val action: () -> Unit
 ) : TimeTask()
 
+/**
+ * Task for suspended action (operations in scenario).
+ */
 data class SuspendedTask(
     override val id: Int,
     override val iNode: Int,
@@ -93,6 +126,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         return _tasks.filterIsInstance<MessageReceiveTask>().filter { senderReceiverPairs.add(it.iNode to it.from) }
     }
 
+    /**
+     * Returns the list of tasks which can be completed immediately.
+     */
     val tasks: List<Task>
         get() = when (messageOrder) {
             MessageOrder.ASYNCHRONOUS -> _tasks
@@ -111,9 +147,6 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
             }
             return _time
         }
-
-    val allTasks: List<Task>
-        get() = _tasks + _timeTasks
 
     fun addMessageReceiveTask(
         from: Int,
@@ -196,6 +229,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
         }
     }
 
+    /**
+     * Removes all tasks for [iNode] after crash.
+     */
     fun removeAllForNode(iNode: Int) {
         _tasks.removeAll { it is NodeTask && it.iNode == iNode }
         _timeTasks.removeAll { it is NodeTask && it.iNode == iNode }

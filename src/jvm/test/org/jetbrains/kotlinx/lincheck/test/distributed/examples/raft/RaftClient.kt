@@ -91,7 +91,7 @@ class RaftTest {
         .nodeType(
             RaftServer::class.java,
             minNumberOfInstances = 1,
-            maxNumberOfInstances = 5,
+            numberOfInstances = 5,
             crashType = CrashMode.MIXED,
             networkPartition = NetworkPartitionMode.COMPONENTS,
             maxNumberOfCrashedNodes = { (it + 1) / 2 - 1 })
@@ -111,9 +111,9 @@ class RaftTest {
     fun testMoreFailure() = options().nodeType(
         RaftServer::class.java,
         minNumberOfInstances = 1,
-        maxNumberOfInstances = 5,
+        numberOfInstances = 5,
         crashType = CrashMode.MIXED,
         networkPartition = NetworkPartitionMode.COMPONENTS,
-        maxNumberOfCrashedNodes = { it })
+        maxNumberOfCrashedNodes = { (it + 1) / 2 + 1 })
         .check()
 }

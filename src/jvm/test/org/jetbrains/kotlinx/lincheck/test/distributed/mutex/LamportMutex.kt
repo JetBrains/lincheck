@@ -20,13 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.event.*
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
+import org.jetbrains.kotlinx.lincheck.distributed.event.InternalEvent
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.lang.Integer.max
@@ -142,6 +140,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
 
 class LamportMutexTest {
     private fun createOptions() = createDistributedOptions<MutexMessage>()
+        .nodeType(LamportMutex::class.java, 2, 3)
         .requireStateEquivalenceImplCheck(false)
         .threads(3)
         .verifier(EpsilonVerifier::class.java)
@@ -149,22 +148,12 @@ class LamportMutexTest {
         .invocationsPerIteration(30_000)
         .iterations(10)
         .storeLogsForFailedScenario("lamport.txt")
-        .minimizeFailedScenario(false)
+        .minimizeFailedScenario(true)
 
     @Test
-    fun testSimple() {
-        LinChecker.check(
-            LamportMutex::class.java,
-            createOptions()
-        )
-    }
+    fun testSimple() = createOptions().check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testNoFifo() {
-        LinChecker.check(
-            LamportMutex::class.java,
-            createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)
-        )
-    }
+    fun testNoFifo() = createOptions().messageOrder(MessageOrder.ASYNCHRONOUS).check()
 }
 

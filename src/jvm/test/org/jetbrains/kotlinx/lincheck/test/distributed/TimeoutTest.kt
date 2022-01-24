@@ -92,6 +92,6 @@ class TimeoutTest {
         .iterations(1)
         .sequentialSpecification(PingPongMock::class.java)
         .actorsPerThread(2)
-        .networkReliable(false)
+        .messageLoss(false)
         .check()
 }

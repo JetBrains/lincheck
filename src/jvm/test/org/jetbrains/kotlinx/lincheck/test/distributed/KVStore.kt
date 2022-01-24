@@ -25,7 +25,6 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -87,7 +86,7 @@ class Test {
             .sequentialSpecification(SeqSpec::class.java)
             .invocationsPerIteration(3_000)
             .iterations(10)
-            .nodeType(Server::class.java, minNumberOfInstances = 1, maxNumberOfInstances = 1)
+            .nodeType(Server::class.java, minNumberOfInstances = 1, numberOfInstances = 1)
             .nodeType(Client::class.java, 3)
             .requireStateEquivalenceImplCheck(false)
             .storeLogsForFailedScenario("kvstore.txt")

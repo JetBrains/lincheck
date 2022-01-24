@@ -1,28 +1,21 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.consensus
 
-import kotlinx.coroutines.sync.Semaphore
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
-import java.util.concurrent.ThreadLocalRandom
+import kotlin.random.Random
 
 sealed class Message
 data class Offer(val value: Int, val initializer: Int) : Message()
 data class Result(val value: Int) : Message()
 
 class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message, Unit> {
-    private val offers = Array(env.numberOfNodes) {
-        mutableListOf<Offer>()
-    }
-
-    private val results = Array<Int?>(env.numberOfNodes) {
-        null
-    }
-
+    private val offers = Array(env.numberOfNodes) { mutableListOf<Offer>() }
+    private val results = Array<Int?>(env.numberOfNodes) { null }
     private var ok: Boolean? = null
-
-    private val semaphore = Semaphore(1, 1)
+    private val semaphore = Signal()
+    private val rand = Random(env.nodeId)
 
     override fun onMessage(message: Message, sender: Int) {
         when (message) {
@@ -61,39 +54,40 @@ class ConsensusNoFailures(val env: Environment<Message, Unit>) : Node<Message, U
 
     private fun checkConsensusIsCorrect() {
         // Check if all results received.
-        if (!results.any { it == null }) {
+        if (results.none { it == null }) {
             ok = results.all { it == results[0] }
             results.fill(null)
-            semaphore.release()
+            semaphore.signal()
         }
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun startElection(): Boolean {
         ok = null
         val offer = Offer(nextValue(), initializer = env.nodeId)
         offers[env.nodeId].add(offer)
         env.broadcast(offer)
-        semaphore.acquire()
+        semaphore.await()
         return ok!!
     }
 
-    private fun nextValue() = ThreadLocalRandom.current().nextInt()
+    private fun nextValue() = rand.nextInt()
 }
 
-class Checker {
+class Checker : VerifierState() {
     suspend fun startElection() = true
+    override fun extractState(): Any = true
 }
 
 class ConsensusNaiveTest {
     @Test
     fun test() = createDistributedOptions<Message>()
-        .nodeType(ConsensusNoFailures::class.java, 3)
+        .nodeType(ConsensusNoFailures::class.java, 2,3)
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(Checker::class.java)
         .actorsPerThread(3)
         .messageOrder(MessageOrder.FIFO)
-        .invocationsPerIteration(30)
-        .iterations(1000)
+        .invocationsPerIteration(500_000)
+        .iterations(1)
         .check()
 }

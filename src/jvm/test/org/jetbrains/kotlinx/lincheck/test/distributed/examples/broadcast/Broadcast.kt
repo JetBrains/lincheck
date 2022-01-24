@@ -92,7 +92,6 @@ abstract class AbstractPeer(protected val env: Environment<Message, MutableList<
     }
 }
 
-
 class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
     private val receivedMessages = Array<MutableMap<Int, Int>>(env.numberOfNodes) { mutableMapOf() }
     private var messageId = 0
@@ -151,7 +150,7 @@ class BroadcastTest {
         .nodeType(
             Peer::class.java,
             minNumberOfInstances = 2,
-            maxNumberOfInstances = 4,
+            numberOfInstances = 4,
             crashType = CrashMode.NO_RECOVER,
             maxNumberOfCrashedNodes = { it / 2 }
         )

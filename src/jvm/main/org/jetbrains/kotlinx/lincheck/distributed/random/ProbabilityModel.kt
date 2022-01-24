@@ -41,7 +41,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     private val poissonDistribution = PoissonDistribution(MEAN_POISSON_DISTRIBUTION)
 
     private var nextNumberOfCrashes = 0
-    private val numberOfNodes: Int = testCfg.addressResolver.nodeCount
+    private val nodeCount: Int = testCfg.addressResolver.nodeCount
     private var currentErrorPoint = 0
     private var previousNumberOfPoints = 0
 
@@ -109,7 +109,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
 
     fun isNetworkPartition(): Boolean {
         if (previousNumberOfPoints == 0) return false
-        val q = networkPartitionsExpectation.toDouble() / numberOfNodes
+        val q = networkPartitionsExpectation.toDouble() / nodeCount
         val p = q / previousNumberOfPoints
         val r = rand.nextDouble(1.0)
         return r < p

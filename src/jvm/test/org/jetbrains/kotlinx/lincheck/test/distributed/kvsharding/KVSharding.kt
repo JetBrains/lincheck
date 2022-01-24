@@ -21,7 +21,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
@@ -60,7 +59,6 @@ class Storage {
 }
 
 data class KVLog(val request: PutRequest, val prev: String?)
-
 
 class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage> {
     private val semaphore = Signal()
@@ -174,14 +172,10 @@ class SingleNode : VerifierState() {
     private val storage = mutableMapOf<String, String>()
 
     @Operation
-    suspend fun put(key: String, value: String): String? {
-        return storage.put(key, value)
-    }
+    suspend fun put(key: String, value: String) = storage.put(key, value)
 
     @Operation
-    suspend fun get(key: String): String? {
-        return storage[key]
-    }
+    suspend fun get(key: String) = storage[key]
 
     override fun extractState(): Any {
         return storage

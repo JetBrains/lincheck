@@ -58,7 +58,7 @@ class NodeAddressResolver<Message, DB>(
             throw IllegalArgumentException("Cannot use this type of network partition with multiple types of nodes. Use 'isNetworkReliable' parameter for message loss instead.")
         }
         nodeTypes.forEach { (cls, info) ->
-            crashes[cls] = CrashInfoForType(info.crashType, info.networkPartition, info.maxCrashes)
+            crashes[cls] = CrashInfoForType(info.crashType, info.networkPartition, info.maxNumberOfCrashes)
         }
         if (testClass !in crashes) {
             crashes[testClass] = CrashInfoForType(CrashMode.NO_CRASHES, NetworkPartitionMode.NONE, 0)
