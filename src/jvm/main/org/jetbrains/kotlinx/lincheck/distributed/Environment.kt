@@ -1,9 +1,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.serialization.Serializable
-import org.jetbrains.kotlinx.lincheck.Actor
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Environment interface for communication with other processes.
@@ -30,8 +27,8 @@ interface Environment<Message, DB> {
     fun send(message: Message, receiver: Int)
 
     /**
-     * Sends the specified [message] to all processes (from 0 to
-     * [numberOfNodes]).
+     * Sends the specified [message] to all processes (from 0 to [numberOfNodes]).
+     * If [skipItself] is true, doesn't send the message to itself.
      */
     fun broadcast(message: Message, skipItself: Boolean = true) {
         for (i in 0 until numberOfNodes) {
@@ -58,28 +55,29 @@ interface Environment<Message, DB> {
      * Runs the specified [block] of code with a specified timeout and finishes if timeout was exceeded.
      * The execution will not be finish until the block is executed ot timeout is exceeded.
      */
-    suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T,): T?
+    suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T): T?
 
     /**
-     * Can be used as a safe [kotlinx.coroutines.delay]. The execution will not be finished until the program is resumed.
+     * Can be used as an alternative to [kotlinx.coroutines.delay]. The execution will not be finished until the program is resumed.
      */
     suspend fun sleep(ticks: Int)
 
     /**
      * Sets a timer with the specified [name].
-     * Timer executes function [f] periodically each [ticks] time,
-     * until the execution is over.
+     * Timer executes function [f] periodically each [ticks] time, until the execution is over.
+     * Throws [IllegalArgumentException] if timer with name [name] already exists.
      */
     fun setTimer(name: String, ticks: Int, f: () -> Unit)
 
     /**
      * Cancels timer with the name [name].
+     * Throws [IllegalArgumentException] if timer with name [name] doesn't exist.
      */
     fun cancelTimer(name: String)
 
     /**
-     * Records an internal event [InternalEvent]. Can be used for debugging purposes.
-     * [message] is stored in [InternalEvent.message].
+     * Records an internal event [org.jetbrains.kotlinx.lincheck.distributed.event.InternalEvent]. Can be used for debugging purposes.
+     * Can store any object as [attachment].
      */
     fun recordInternalEvent(attachment: Any)
 }

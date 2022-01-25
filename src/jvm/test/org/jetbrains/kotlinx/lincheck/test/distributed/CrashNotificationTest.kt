@@ -80,6 +80,6 @@ class CrashNotificationTest {
     fun test() = createDistributedOptions<Int>()
         .nodeType(CrashingNode::class.java, 2, 4, CrashMode.NO_CRASHES, NetworkPartitionMode.COMPONENTS)
         .verifier(EpsilonVerifier::class.java)
-        .storeLogsForFailedScenario("logs.txt")
+        //.storeLogsForFailedScenario("logs.txt")
         .check()
 }

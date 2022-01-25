@@ -21,9 +21,11 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.junit.Test
-import java.lang.IllegalArgumentException
 
 class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
     private val signal = Signal()
@@ -63,7 +65,7 @@ class MultipleNodeTypesTest {
             .iterations(100)
             .sequentialSpecification(PingPongMock::class.java)
             .actorsPerThread(2)
-            .storeLogsForFailedScenario("pingpong.txt")
+            //.storeLogsForFailedScenario("pingpong.txt")
             .check()
 
 }

@@ -191,7 +191,7 @@ class KVShardingTest {
             .invocationsPerIteration(10_000)
             .actorsPerThread(3)
             .iterations(30)
-            .storeLogsForFailedScenario("multiple_puts.txt")
+            //.storeLogsForFailedScenario("multiple_puts.txt")
             .check()
     }
 
@@ -204,7 +204,7 @@ class KVShardingTest {
             .invocationsPerIteration(10_000)
             .iterations(30)
             .minimizeFailedScenario(false)
-            .storeLogsForFailedScenario("multiple_puts.txt")
+            //.storeLogsForFailedScenario("multiple_puts.txt")
             .check()
     }
 
@@ -216,7 +216,7 @@ class KVShardingTest {
             .actorsPerThread(3)
             .invocationsPerIteration(50_000)
             .iterations(20)
-            .storeLogsForFailedScenario("kvsharding.txt")
+            //.storeLogsForFailedScenario("kvsharding.txt")
             .minimizeFailedScenario(false)
             .check()
     }

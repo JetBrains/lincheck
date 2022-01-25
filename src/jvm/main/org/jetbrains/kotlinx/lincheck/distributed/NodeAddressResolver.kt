@@ -76,20 +76,38 @@ class NodeAddressResolver<Message, DB>(
     operator fun get(iNode: Int) = nodes[iNode]
 
     /**
-     *
+     * Returns the crash mode for [iNode].
      */
     fun crashTypeForNode(iNode: Int) = crashes[get(iNode)]!!.crashMode
 
+    /**
+     * Returns the partition mode for [iNode].
+     */
     fun partitionTypeForNode(iNode: Int) = crashes[get(iNode)]!!.partitionMode
 
+    /**
+     * Returns the crash mode for [cls].
+     */
     fun crashType(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.crashMode
 
+    /**
+     * Returns the partition mode for [cls].
+     */
     fun partitionType(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.partitionMode
 
+    /**
+     * Returns maximum number of unavailable nodes for [cls].
+     */
     fun maxNumberOfCrashes(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.maxNumberOfCrashes
 
+    /**
+     * If there are multiple types of nodes in the system.
+     */
     val isMultipleType = nodeTypeToRange.size > 1
 
+    /**
+     * If the partition type is [NetworkPartitionMode.SINGLE_EDGE] (it is possible if there is only one type of node).
+     */
     val singlePartitionType =
         nodeTypes.size == 1 && crashes.all { it.value.partitionMode == NetworkPartitionMode.SINGLE_EDGE }
 }

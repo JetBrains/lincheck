@@ -155,7 +155,7 @@ class BroadcastTest {
             maxNumberOfCrashedNodes = { it / 2 }
         )
         .minimizeFailedScenario(false)
-        .storeLogsForFailedScenario("broadcast.txt")
+        //.storeLogsForFailedScenario("broadcast.txt")
         .check()
 
     @Test(expected = LincheckAssertionError::class)

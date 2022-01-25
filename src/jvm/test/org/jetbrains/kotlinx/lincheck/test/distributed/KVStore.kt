@@ -92,7 +92,7 @@ class Test {
             .nodeType(Server::class.java, minNumberOfInstances = 1, numberOfInstances = 1)
             .nodeType(Client::class.java, 3)
             .requireStateEquivalenceImplCheck(false)
-            .storeLogsForFailedScenario("kvstore.txt")
+            //.storeLogsForFailedScenario("kvstore.txt")
 
     @Test(expected = LincheckAssertionError::class)
     fun testFail() = createOptions()

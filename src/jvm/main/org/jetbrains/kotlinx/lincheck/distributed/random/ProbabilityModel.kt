@@ -25,6 +25,9 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.math.max
 import kotlin.random.Random
 
+/**
+ * Probability model which generates random events which happen during the execution.
+ */
 internal class ProbabilityModel(private val testCfg: DistributedCTestConfiguration<*, *>) {
     companion object {
         const val MEAN_POISSON_DISTRIBUTION = 0.1
@@ -75,6 +78,9 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
         return rand.nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
     }
 
+    /**
+     * Returns if the node should fail.
+     */
     fun nodeFailed(): Boolean {
         currentErrorPoint++
         if (nextNumberOfCrashes > 0) {
@@ -89,10 +95,13 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     }
 
     /**
-     * Returns if the node should be recovered. 0-
+     * Returns if the node should be recovered.
      */
     fun nodeRecovered(): Boolean = rand.nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
 
+    /**
+     * Generates node fail probability.
+     */
     private fun nodeFailProbability(): Double {
         return if (previousNumberOfPoints == 0) {
             0.0
@@ -107,6 +116,9 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
         }
     }
 
+    /**
+     * Returns if the network partition should be added here.
+     */
     fun isNetworkPartition(): Boolean {
         if (previousNumberOfPoints == 0) return false
         val q = networkPartitionsExpectation.toDouble() / nodeCount
@@ -115,12 +127,18 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
         return r < p
     }
 
+    /**
+     * Chooses randomly nodes which will be included in the partition.
+     */
     fun partition(nodes: List<Int>, limit: Int): List<Int> {
         if (limit == 0) return emptyList()
         val count = rand.nextInt(limit)
         return nodes.shuffled(rand).take(count)
     }
 
+    /**
+     * Resets the probability to the initial state.
+     */
     fun reset(failedNodesExp: Int = 0) {
         if (failedNodesExpectation == -1) failedNodesExpectation = failedNodesExp
         previousNumberOfPoints = max(previousNumberOfPoints, currentErrorPoint)

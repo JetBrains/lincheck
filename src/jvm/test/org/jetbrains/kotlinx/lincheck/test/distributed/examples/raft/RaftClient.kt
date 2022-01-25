@@ -97,11 +97,11 @@ class RaftTest {
             maxNumberOfCrashedNodes = { (it + 1) / 2 - 1 })
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(RaftSpecification::class.java)
-        .storeLogsForFailedScenario("raft.txt")
+        //.storeLogsForFailedScenario("raft.txt")
         .actorsPerThread(3)
         .sendCrashNotifications(false)
-        .invocationsPerIteration(60_000)
-        //.minimizeFailedScenario(false)
+        .invocationsPerIteration(30_000)
+        .minimizeFailedScenario(false)
         .iterations(10)
 
     @Test

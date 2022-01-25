@@ -89,6 +89,9 @@ class DistributedCTestConfiguration<Message, DB>(
         ).also { it.initialize() }
     }
 
+    /**
+     *
+     */
     fun nextConfigurations(): List<DistributedCTestConfiguration<Message, DB>> {
         val res = mutableListOf<DistributedCTestConfiguration<Message, DB>>()
         for ((cls, nodeInfo) in nodeTypes) {

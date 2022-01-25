@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
@@ -31,14 +30,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.Integer.max
 import java.lang.reflect.Method
 
-fun ExecutionResult.newResult(stateRepresentation: String?): ExecutionResult = ExecutionResult(
-    initResults,
-    afterInitStateRepresentation,
-    parallelResultsWithClock,
-    stateRepresentation,
-    postResults,
-    afterPostStateRepresentation
-)
 
 /**
  * Indicates if the crash can be added before accessing database.
@@ -46,6 +37,10 @@ fun ExecutionResult.newResult(stateRepresentation: String?): ExecutionResult = E
  */
 internal var canCrashBeforeAccessingDatabase = false
 
+/**
+ * Represents random strategy.
+ * The execution order is generated randomly, and the system faults are introduced in random places.
+ */
 internal class DistributedRandomStrategy<Message, DB>(
     testCfg: DistributedCTestConfiguration<Message, DB>,
     testClass: Class<*>,
@@ -73,10 +68,15 @@ internal class DistributedRandomStrategy<Message, DB>(
         }
     }
 
+    /**
+     * Tries to crash [iNode].
+     * Checks if the node type supports crashes, when if probability generates crash,
+     * and if the crash doesn't violate the max unavailable number of nodes restriction
+     */
     override fun tryCrash(iNode: Int) {
         if (testCfg.addressResolver.crashTypeForNode(iNode) != CrashMode.NO_CRASHES
             && probability.nodeFailed()
-            && failureManager.canCrash(iNode)
+            && failureManager.canCrash(iNode) // can be time-consuming
         ) {
             failureManager.crashNode(iNode)
             throw CrashError()
@@ -92,12 +92,19 @@ internal class DistributedRandomStrategy<Message, DB>(
         tryCrash(iNode)
     }
 
+    /**
+     * Chooses the next task to be completed.
+     */
     override fun next(taskManager: TaskManager): Task? {
         val tasks = taskManager.tasks
         val timeTasks = taskManager.timeTasks
+        // If no tasks and no time tasks left, or results of all operations are received
+        // and only timers left, return null
         if (tasks.isEmpty() && (timeTasks.isEmpty() || runner.hasAllResults()
                     && timeTasks.all { it is PeriodicTimer })
         ) return null
+        // Adds to the tasks the time tasks which are chosen by Poisson probability.
+        // The closer the task time is to the current time, the more likely it is that the task will be selected
         val time = taskManager.time
         var tasksToProcess: List<Task>
         do {
@@ -121,15 +128,13 @@ internal class DistributedRandomStrategy<Message, DB>(
             // Run invocations
             for (invocation in 0 until testCfg.invocationsPerIteration) {
                 reset()
-                val ir = runner.run()
                 //println("INVOCATION $invocation")
-                when (ir) {
+                when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results)) {
-                            val stateRepresentation = runner.constructStateRepresentation()
                             return IncorrectResultsFailure(
                                 scenario,
-                                ir.results.newResult(stateRepresentation)
+                                ir.results
                             ).also {
                                 runner.storeEventsToFile(it)
                             }
@@ -146,6 +151,10 @@ internal class DistributedRandomStrategy<Message, DB>(
         }
     }
 
+    /**
+     * Tries to add partition, and if succeed calls [org.jetbrains.kotlinx.lincheck.distributed.DistributedRunner.onPartition]
+     * to add it.
+     */
     override fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean {
         if (testCfg.addressResolver.partitionTypeForNode(sender) != NetworkPartitionMode.NONE
             && probability.isNetworkPartition()

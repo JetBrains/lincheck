@@ -22,9 +22,11 @@ package org.jetbrains.kotlinx.lincheck.distributed
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
-import java.lang.IllegalArgumentException
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 
+/**
+ * Implementation of the environment.
+ */
 internal class EnvironmentImpl<Message, DB>(
     override val nodeId: Int,
     override val numberOfNodes: Int,

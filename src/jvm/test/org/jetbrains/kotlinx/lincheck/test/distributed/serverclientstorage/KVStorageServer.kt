@@ -126,7 +126,7 @@ class KVStorageServerTestClass {
     fun testAsync() {
         LinChecker.check(
             KVStorageClient::class.java,
-            createOptions().messageOrder(MessageOrder.ASYNCHRONOUS).storeLogsForFailedScenario("async.txt")
+            createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)//.storeLogsForFailedScenario("async.txt")
         )
     }
 
@@ -134,7 +134,7 @@ class KVStorageServerTestClass {
     fun testNetworkUnreliable() {
         LinChecker.check(
             KVStorageClient::class.java,
-            createOptions().messageLoss(false).storeLogsForFailedScenario("unreliable.txt")
+            createOptions().messageLoss(false)//.storeLogsForFailedScenario("unreliable.txt")
         )
     }
 
@@ -174,7 +174,7 @@ class KVStorageServerTestClass {
             KVStorageClientIncorrect::class.java,
             createOptions(KVStorageServerIncorrect::class.java)
                 .messageOrder(MessageOrder.ASYNCHRONOUS)
-                .storeLogsForFailedScenario("async_incorrect.txt")
+                //.storeLogsForFailedScenario("async_incorrect.txt")
         )
     }
 

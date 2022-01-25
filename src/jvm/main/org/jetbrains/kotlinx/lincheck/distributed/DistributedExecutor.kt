@@ -20,15 +20,19 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import kotlinx.atomicfu.atomic
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 
+/**
+ * Executor for distributed algorithms.
+ * Counts the pending tasks and, if no tasks left, launches next task.
+ */
 internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) : Executor {
     private val executor = Executors.newSingleThreadExecutor()
 
-    @Volatile
-    private var taskCounter = 0
+    private val counter = atomic(0)
 
     fun close() {
         executor.shutdown()
@@ -39,12 +43,12 @@ internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) 
     }
 
     override fun execute(command: Runnable) {
-        taskCounter++
+        counter.incrementAndGet()
         try {
             executor.submit {
                 command.run()
-                taskCounter--
-                if (taskCounter == 0) {
+                val counter = counter.decrementAndGet()
+                if (counter == 0) {
                     if (!runner.launchNextTask()) {
                         runner.signal()
                     }
