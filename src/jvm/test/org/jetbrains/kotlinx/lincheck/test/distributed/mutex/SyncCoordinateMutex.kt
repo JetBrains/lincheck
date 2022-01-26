@@ -20,15 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.junit.Test
 import java.util.ArrayDeque
-import java.util.concurrent.locks.ReentrantLock
 import kotlin.coroutines.suspendCoroutine
 
 

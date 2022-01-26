@@ -38,20 +38,20 @@ class NodeAddressResolver<Message, DB>(
 ) {
     val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
     val nodeCount =
-        if (testClass in nodeTypes) nodeTypes.values.sumOf { it.numberOfInstances } else nodeTypes.values.sumOf { it.numberOfInstances } + nodesWithScenario
+        if (testClass in nodeTypes) nodeTypes.values.sumOf { it.nodes } else nodeTypes.values.sumOf { it.nodes } + nodesWithScenario
     private val nodes = mutableListOf<Class<out Node<Message, DB>>>()
     private val crashes = mutableMapOf<Class<out Node<Message, DB>>, CrashInfoForType>()
 
     init {
         repeat(nodesWithScenario) { nodes.add(testClass) }
         if (nodeTypes.containsKey(testClass)) {
-            repeat(nodeTypes[testClass]!!.numberOfInstances - nodesWithScenario) {
+            repeat(nodeTypes[testClass]!!.nodes - nodesWithScenario) {
                 nodes.add(testClass)
             }
         }
         for ((cls, info) in nodeTypes) {
             if (cls == testClass) continue
-            else repeat(info.numberOfInstances) { nodes.add(cls) }
+            else repeat(info.nodes) { nodes.add(cls) }
         }
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
         if (nodeTypeToRange.size > 1 && nodeTypes.values.any { it.networkPartition == NetworkPartitionMode.SINGLE_EDGE }) {
@@ -61,7 +61,7 @@ class NodeAddressResolver<Message, DB>(
             crashes[cls] = CrashInfoForType(info.crashType, info.networkPartition, info.maxNumberOfCrashes)
         }
         if (testClass !in crashes) {
-            crashes[testClass] = CrashInfoForType(CrashMode.NO_CRASHES, NetworkPartitionMode.NONE, 0)
+            crashes[testClass] = CrashInfoForType(CrashMode.NO_CRASH, NetworkPartitionMode.NONE, 0)
         }
     }
 

@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
@@ -45,7 +44,7 @@ class Node2(env: Environment<Unit, Unit>) : Node<Unit, Unit> {
 }
 
 internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
-    createDistributedOptions<Unit>().nodeType(Node1::class.java, 1).createTestConfiguration(),
+    createDistributedOptions<Unit>().addNodes(Node1::class.java, 1).createTestConfiguration(),
     Node1::class.java,
     ExecutionScenario(emptyList(), emptyList(), emptyList()),
     emptyList(),
@@ -112,10 +111,10 @@ class NodeCrashTest {
         val typeInfo = mapOf(Node1::class.java to NodeTypeInfo(
             3,
             4,
-            CrashMode.ALL_NODES_RECOVER,
+            CrashMode.RECOVER_ON_CRASH,
             NetworkPartitionMode.COMPONENTS
         ) { it / 2 },
-            Node2::class.java to NodeTypeInfo(1, 3, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 })
+            Node2::class.java to NodeTypeInfo(1, 3, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 })
         return FailureManagerComponent(NodeAddressResolver(Node1::class.java, 2, typeInfo), MockDistributedStrategy())
     }
 

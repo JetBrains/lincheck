@@ -87,14 +87,14 @@ class RaftSpecification() : VerifierState() {
 
 class RaftTest {
     private fun options() = createDistributedOptions<RaftMessage, PersistentStorage>(::PersistentStorage)
-        .nodeType(RaftClient::class.java, 3)
-        .nodeType(
+        .addNodes(RaftClient::class.java, 3)
+        .addNodes(
             RaftServer::class.java,
-            minNumberOfInstances = 1,
-            numberOfInstances = 5,
-            crashType = CrashMode.MIXED,
+            minNodes = 1,
+            nodes = 5,
+            crashMode = CrashMode.FINISH_OR_RECOVER_ON_CRASH,
             networkPartition = NetworkPartitionMode.COMPONENTS,
-            maxNumberOfCrashedNodes = { (it + 1) / 2 - 1 })
+            maxUnavailableNodes = { (it + 1) / 2 - 1 })
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(RaftSpecification::class.java)
         //.storeLogsForFailedScenario("raft.txt")
@@ -108,12 +108,11 @@ class RaftTest {
     fun test() = options().check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testMoreFailure() = options().nodeType(
+    fun testMoreFailure() = options().addNodes(
         RaftServer::class.java,
-        minNumberOfInstances = 1,
-        numberOfInstances = 5,
-        crashType = CrashMode.MIXED,
+        nodes = 5,
+        crashMode = CrashMode.FINISH_OR_RECOVER_ON_CRASH,
         networkPartition = NetworkPartitionMode.COMPONENTS,
-        maxNumberOfCrashedNodes = { (it + 1) / 2 + 1 })
+        maxUnavailableNodes = { (it + 1) / 2 + 1 })
         .check()
 }

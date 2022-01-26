@@ -50,8 +50,8 @@ class NodeAddressResolverTest {
     @Test
     fun testIdToClass() {
         val nodeInfo = mapOf(
-            BClass::class.java to NodeTypeInfo(4, 4, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 },
-            CClass::class.java to NodeTypeInfo(5, 5, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 }
+            BClass::class.java to NodeTypeInfo(4, 4, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 },
+            CClass::class.java to NodeTypeInfo(5, 5, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 }
         )
         val addressResolver = NodeAddressResolver(
             AClass::class.java,
@@ -71,9 +71,9 @@ class NodeAddressResolverTest {
     @Test
     fun testIdToClassWithTestClassInfo() {
         val nodeInfo = mapOf(
-            AClass::class.java to NodeTypeInfo(4, 5, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 },
-            BClass::class.java to NodeTypeInfo(4, 4, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 },
-            CClass::class.java to NodeTypeInfo(5, 5, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { 0 }
+            AClass::class.java to NodeTypeInfo(4, 5, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 },
+            BClass::class.java to NodeTypeInfo(4, 4, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 },
+            CClass::class.java to NodeTypeInfo(5, 5, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 }
         )
         val addressResolver = NodeAddressResolver(
             AClass::class.java,
@@ -93,9 +93,9 @@ class NodeAddressResolverTest {
     @Test
     fun testCrashTypes() {
         val nodeInfo = mapOf(
-            AClass::class.java to NodeTypeInfo(4, 5, CrashMode.ALL_NODES_RECOVER, NetworkPartitionMode.COMPONENTS) { it },
-            BClass::class.java to NodeTypeInfo(4, 4, CrashMode.NO_CRASHES, NetworkPartitionMode.NONE) { it },
-            CClass::class.java to NodeTypeInfo(5, 5, CrashMode.NO_RECOVER, NetworkPartitionMode.NONE) { it / 2 }
+            AClass::class.java to NodeTypeInfo(4, 5, CrashMode.RECOVER_ON_CRASH, NetworkPartitionMode.COMPONENTS) { it },
+            BClass::class.java to NodeTypeInfo(4, 4, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { it },
+            CClass::class.java to NodeTypeInfo(5, 5, CrashMode.FINISH_ON_CRASH, NetworkPartitionMode.NONE) { it / 2 }
         )
         val addressResolver = NodeAddressResolver(
             AClass::class.java,
@@ -103,24 +103,24 @@ class NodeAddressResolverTest {
             nodeInfo
         )
         repeat(5) {
-            check(addressResolver.crashTypeForNode(it) == CrashMode.ALL_NODES_RECOVER)
+            check(addressResolver.crashTypeForNode(it) == CrashMode.RECOVER_ON_CRASH)
             check(addressResolver.partitionTypeForNode(it) == NetworkPartitionMode.COMPONENTS)
         }
-        check(addressResolver.crashType(AClass::class.java) == CrashMode.ALL_NODES_RECOVER)
+        check(addressResolver.crashType(AClass::class.java) == CrashMode.RECOVER_ON_CRASH)
         check(addressResolver.partitionType(AClass::class.java) == NetworkPartitionMode.COMPONENTS)
         check(addressResolver.maxNumberOfCrashes(AClass::class.java) == 5)
         repeat(4) {
-            check(addressResolver.crashTypeForNode(it + 5) == CrashMode.NO_CRASHES)
+            check(addressResolver.crashTypeForNode(it + 5) == CrashMode.NO_CRASH)
             check(addressResolver.partitionTypeForNode(it + 5) == NetworkPartitionMode.NONE)
         }
-        check(addressResolver.crashType(BClass::class.java) == CrashMode.NO_CRASHES)
+        check(addressResolver.crashType(BClass::class.java) == CrashMode.NO_CRASH)
         check(addressResolver.partitionType(BClass::class.java) == NetworkPartitionMode.NONE)
         check(addressResolver.maxNumberOfCrashes(BClass::class.java) == 0)
         repeat(5) {
-            check(addressResolver.crashTypeForNode(it + 9) == CrashMode.NO_RECOVER)
+            check(addressResolver.crashTypeForNode(it + 9) == CrashMode.FINISH_ON_CRASH)
             check(addressResolver.partitionTypeForNode(it + 5) == NetworkPartitionMode.NONE)
         }
-        check(addressResolver.crashType(CClass::class.java) == CrashMode.NO_RECOVER)
+        check(addressResolver.crashType(CClass::class.java) == CrashMode.FINISH_ON_CRASH)
         check(addressResolver.partitionType(CClass::class.java) == NetworkPartitionMode.NONE)
         check(addressResolver.maxNumberOfCrashes(CClass::class.java) == 2)
     }

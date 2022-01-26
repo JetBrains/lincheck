@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
@@ -44,7 +43,7 @@ class NodeThrowsException(val env: Environment<Int, Unit>): Node<Int, Unit> {
 class SimpleExceptionTest {
     @Test(expected = LincheckAssertionError::class)
     fun test() = createDistributedOptions<Int>()
-        .nodeType(NodeThrowsException::class.java, 3)
+        .addNodes(NodeThrowsException::class.java, 3)
         .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(2)
         .invocationsPerIteration(10)

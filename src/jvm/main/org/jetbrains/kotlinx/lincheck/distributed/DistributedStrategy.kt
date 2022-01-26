@@ -105,7 +105,7 @@ internal abstract class DistributedStrategy<Message, DB>(
 
     /**
      * Returns if the [iNode] should be recovered after crash.
-     * Makes decision if the crash mode for this type is [CrashMode.MIXED].
+     * Makes decision if the crash mode for this type is [CrashMode.FINISH_OR_RECOVER_ON_CRASH].
      */
     abstract fun shouldRecover(iNode: Int): Boolean
 

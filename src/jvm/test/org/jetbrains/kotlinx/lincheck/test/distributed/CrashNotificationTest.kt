@@ -78,7 +78,7 @@ class CrashingNode(private val env: Environment<Int, Unit>) : Node<Int, Unit> {
 class CrashNotificationTest {
     @Test
     fun test() = createDistributedOptions<Int>()
-        .nodeType(CrashingNode::class.java, 2, 4, CrashMode.NO_CRASHES, NetworkPartitionMode.COMPONENTS)
+        .addNodes(CrashingNode::class.java, 2, 4, CrashMode.NO_CRASH, NetworkPartitionMode.COMPONENTS)
         .verifier(EpsilonVerifier::class.java)
         //.storeLogsForFailedScenario("logs.txt")
         .check()

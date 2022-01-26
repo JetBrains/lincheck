@@ -170,7 +170,7 @@ class SnapshotTest {
     @Test
     fun testSimple() {
         createDistributedOptions<Message>()
-            .nodeType(ChandyLamport::class.java, 3)
+            .addNodes(ChandyLamport::class.java, 3)
             .sequentialSpecification(MockSnapshot::class.java)
             .actorsPerThread(3)
             .invocationsPerIteration(30_000)
@@ -183,7 +183,7 @@ class SnapshotTest {
     @Test(expected = LincheckAssertionError::class)
     fun testNoFifo() {
         createDistributedOptions<Message>()
-            .nodeType(ChandyLamport::class.java, 3)
+            .addNodes(ChandyLamport::class.java, 3)
             .sequentialSpecification(MockSnapshot::class.java)
             .threads(3)
             .actorsPerThread(3)
@@ -197,7 +197,7 @@ class SnapshotTest {
     @Test(expected = LincheckAssertionError::class)
     fun testNaiveIncorrect() {
         createDistributedOptions<Message>()
-            .nodeType(NaiveSnapshotIncorrect::class.java, 3)
+            .addNodes(NaiveSnapshotIncorrect::class.java, 3)
             .sequentialSpecification(MockSnapshot::class.java)
             .actorsPerThread(3)
             .invocationsPerIteration(30_000)

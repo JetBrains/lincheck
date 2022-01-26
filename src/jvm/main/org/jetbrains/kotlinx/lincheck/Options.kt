@@ -31,7 +31,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal var logLevel = DEFAULT_LOG_LEVEL
     protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
-    protected var threads = CTestConfiguration.DEFAULT_THREADS
+    protected open var threads = CTestConfiguration.DEFAULT_THREADS
     protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
     protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
     protected var actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER

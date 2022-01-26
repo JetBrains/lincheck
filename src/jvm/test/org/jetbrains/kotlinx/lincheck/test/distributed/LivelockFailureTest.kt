@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
@@ -46,7 +45,7 @@ class LivelockFailureTest {
     @Test
     fun test() {
         val failure = createDistributedOptions<Unit>()
-            .nodeType(InfiniteNode::class.java, 2)
+            .addNodes(InfiniteNode::class.java, 2)
             .verifier(EpsilonVerifier::class.java)
             .minimizeFailedScenario(false)
             .checkImpl()

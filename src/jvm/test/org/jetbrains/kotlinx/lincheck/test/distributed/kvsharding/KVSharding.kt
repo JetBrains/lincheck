@@ -186,7 +186,7 @@ class KVShardingTest {
     @Test
     fun testNoFailures() {
         createDistributedOptions<KVMessage, SimpleStorage>(::SimpleStorage)
-            .nodeType(ShardMultiplePutToLog::class.java, 4)
+            .addNodes(ShardMultiplePutToLog::class.java, 4)
             .sequentialSpecification(SingleNode::class.java)
             .invocationsPerIteration(10_000)
             .actorsPerThread(3)
@@ -198,7 +198,7 @@ class KVShardingTest {
     @Test(expected = LincheckAssertionError::class)
     fun testFail() {
         createDistributedOptions<KVMessage, SimpleStorage>(::SimpleStorage)
-            .nodeType(ShardMultiplePutToLog::class.java, 4, CrashMode.ALL_NODES_RECOVER) { it / 2 }
+            .addNodes(ShardMultiplePutToLog::class.java, 4, CrashMode.RECOVER_ON_CRASH) { it / 2 }
             .sequentialSpecification(SingleNode::class.java)
             .actorsPerThread(3)
             .invocationsPerIteration(10_000)
@@ -211,7 +211,7 @@ class KVShardingTest {
     @Test
     fun test() {
         createDistributedOptions<KVMessage, Storage>(::Storage)
-            .nodeType(Shard::class.java, 4, CrashMode.ALL_NODES_RECOVER) { it / 2 }
+            .addNodes(Shard::class.java, 4, CrashMode.RECOVER_ON_CRASH) { it / 2 }
             .sequentialSpecification(SingleNode::class.java)
             .actorsPerThread(3)
             .invocationsPerIteration(50_000)

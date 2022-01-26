@@ -51,8 +51,8 @@ class TaskLimitExceededFailureTest {
     @Test
     fun test() {
         val failure = createDistributedOptions<Unit>()
-            .nodeType(InfinitePinger::class.java, 2)
-            .nodeType(InfinitePonger::class.java, 1)
+            .addNodes(InfinitePinger::class.java, 2)
+            .addNodes(InfinitePonger::class.java, 1)
             .verifier(EpsilonVerifier::class.java)
             .minimizeFailedScenario(false)
             .checkImpl()

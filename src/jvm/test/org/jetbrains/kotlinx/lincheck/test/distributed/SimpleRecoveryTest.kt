@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
@@ -43,8 +42,8 @@ class Smoke(val env: Environment<Int, Unit>) : Node<Int, Unit> {
 class SmokeTest {
     @Test
     fun test() = createDistributedOptions<Int>()
-        .nodeType(Smoke::class.java, numberOfInstances = 3,
-            crashType = CrashMode.ALL_NODES_RECOVER,
+        .addNodes(Smoke::class.java, nodes = 3,
+            crashType = CrashMode.RECOVER_ON_CRASH,
             maxNumberOfCrashedNodes = { it / 2 })
         .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(2)

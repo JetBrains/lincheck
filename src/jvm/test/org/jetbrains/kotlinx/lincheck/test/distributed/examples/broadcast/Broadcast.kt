@@ -22,13 +22,14 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast
 
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.*
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.distributed.event.NodeCrashEvent
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.util.*
@@ -138,52 +139,50 @@ class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) 
 }
 
 class BroadcastTest {
-    private fun createOptions() = createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
+    private fun commonOptions() = createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
         .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(3)
         .invocationsPerIteration(30_000)
-        .iterations(1)
+        .iterations(1) // we always have the same scenario here
         .verifier(EpsilonVerifier::class.java)
 
     @Test
-    fun test() = createOptions()
-        .nodeType(
-            Peer::class.java,
-            minNumberOfInstances = 2,
-            numberOfInstances = 4,
-            crashType = CrashMode.NO_RECOVER,
-            maxNumberOfCrashedNodes = { it / 2 }
+    fun `correct algorithm`() = commonOptions()
+        .addNodes<Peer>(
+            minNodes = 2,
+            nodes = 4,
+            crashMode = FINISH_ON_CRASH,
+            maxUnavailableNodes = { it / 2 }
         )
-        .minimizeFailedScenario(false)
-        //.storeLogsForFailedScenario("broadcast.txt")
-        .check()
-
-    @Test(expected = LincheckAssertionError::class)
-    fun testMoreFailures() = createOptions()
-        .nodeType(
-            Peer::class.java,
-            numberOfInstances = 5,
-            crashType = CrashMode.NO_RECOVER,
-            maxNumberOfCrashedNodes = { it / 2 + 1 }
-        )
-        .invocationsPerIteration(50_000)
-        .minimizeFailedScenario(false)
         .check()
 
     @Test
-    fun testNoFailures() = createOptions()
-        .nodeType(PeerIncorrect::class.java, 3)
+    fun `correct algorithm with too much unavailable nodes`() {
+        val failure = commonOptions()
+            .addNodes<Peer>(
+                nodes = 5,
+                crashMode = FINISH_ON_CRASH,
+                maxUnavailableNodes = { it / 2 + 1 }
+            )
+            .invocationsPerIteration(50_000)
+            .minimizeFailedScenario(false)
+            .checkImpl()
+        assert(failure is ValidationFailure)
+    }
+
+    @Test
+    fun `incorrect algorithm without crashes`() = commonOptions()
+        .addNodes<PeerIncorrect>(nodes = 3)
         .invocationsPerIteration(100_000)
         .check()
 
-    @Test(expected = LincheckAssertionError::class)
-    fun testIncorrect() = createOptions()
-        .minimizeFailedScenario(false)
-        .nodeType(
-            PeerIncorrect::class.java,
-            numberOfInstances = 4,
-            crashType = CrashMode.NO_RECOVER,
-            maxNumberOfCrashedNodes = { it / 2 }
+    @Test(expected = LincheckAssertionError::class) // TODO checkImpl instead
+    fun `incorrect algorithm`() = commonOptions()
+        .addNodes<PeerIncorrect>(
+            nodes = 4,
+            crashMode = FINISH_ON_CRASH,
+            maxUnavailableNodes = { it / 2 }
         )
+        .minimizeFailedScenario(false)
         .check()
 }

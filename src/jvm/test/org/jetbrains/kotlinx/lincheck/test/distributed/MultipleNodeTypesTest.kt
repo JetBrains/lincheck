@@ -58,9 +58,9 @@ class MultipleNodeTypesTest {
     @Test
     fun test() =
         createDistributedOptions<PingPongMessage>()
-            .nodeType(Pinger::class.java, 2)
+            .addNodes(Pinger::class.java, 2)
             .requireStateEquivalenceImplCheck(false)
-            .nodeType(Ponger::class.java, 1)
+            .addNodes(Ponger::class.java, 1)
             .invocationsPerIteration(1000)
             .iterations(100)
             .sequentialSpecification(PingPongMock::class.java)

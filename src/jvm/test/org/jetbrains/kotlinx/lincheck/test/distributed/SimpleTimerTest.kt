@@ -78,7 +78,7 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
 class SimpleTimerTest {
     @Test
     fun test() = createDistributedOptions<TimerMessage>()
-        .nodeType(SimpleTimerNode::class.java, 2)
+        .addNodes(SimpleTimerNode::class.java, 2)
         .requireStateEquivalenceImplCheck(false)
         .invocationsPerIteration(10_000)
         .iterations(1)

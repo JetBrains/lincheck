@@ -1,12 +1,10 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.*
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.*
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 /**
  * Represents the guarantees on message order.
@@ -21,17 +19,17 @@ enum class MessageOrder {
 
 /**
  * The crash returns the node to the initial state, but does not affect the database.
- * [NO_CRASHES] means that there is no such crashes in the system for this node type.
+ * [NO_CRASH] means that there is no such crashes in the system for this node type.
  * Note that the network partitions and other network failure for the node type are still possible.
- * [NO_RECOVER] means that if the node crashed it doesn't recover.
- * [ALL_NODES_RECOVER] means that if the node has crashed, it will be recovered.
- * [MIXED] means that the node may recover or may not recover.
+ * [FINISH_ON_CRASH] means that if the node crashed it doesn't recover.
+ * [RECOVER_ON_CRASH] means that if the node has crashed, it will be recovered.
+ * [FINISH_OR_RECOVER_ON_CRASH] means that the node may recover or may not recover.
  */
 enum class CrashMode {
-    NO_CRASHES,
-    NO_RECOVER,
-    ALL_NODES_RECOVER,
-    MIXED
+    NO_CRASH,
+    FINISH_ON_CRASH,
+    RECOVER_ON_CRASH,
+    FINISH_OR_RECOVER_ON_CRASH
 }
 
 /**
@@ -50,7 +48,7 @@ enum class NetworkPartitionMode {
 /**
  * Information about the node type (Class<out Node>).
  * [minNumberOfInstances] is the minimum number of instances of this node type to make the system work.
- * [numberOfInstances] is the number of instance for this node type which will be created.
+ * [nodes] is the number of instance for this node type which will be created.
  * [crashType] is the crash type for this node.
  * [networkPartition] is the network partition type for this node.
  * [maxNumberOfCrashesFunction] takes number of nodes and returns maximum number of unavailable nodes.
@@ -58,7 +56,7 @@ enum class NetworkPartitionMode {
  */
 data class NodeTypeInfo(
     val minNumberOfInstances: Int,
-    val numberOfInstances: Int,
+    val nodes: Int,
     val crashType: CrashMode,
     val networkPartition: NetworkPartitionMode,
     val maxNumberOfCrashesFunction: (Int) -> Int
@@ -66,16 +64,16 @@ data class NodeTypeInfo(
     fun minimize() =
         NodeTypeInfo(
             minNumberOfInstances,
-            numberOfInstances - 1,
+            nodes - 1,
             crashType,
             networkPartition,
             maxNumberOfCrashesFunction
         )
 
-    val maxNumberOfCrashes = if (crashType == NO_CRASHES && networkPartition == NONE) {
+    val maxNumberOfCrashes = if (crashType == NO_CRASH && networkPartition == NONE) {
         0
     } else {
-        maxNumberOfCrashesFunction(numberOfInstances)
+        maxNumberOfCrashesFunction(nodes)
     }
 }
 
@@ -113,33 +111,28 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Adds node type and information about it.
      */
-    fun nodeType(
-        cls: Class<out Node<Message, DB>>,
-        numberOfInstances: Int,
-        crashType: CrashMode = NO_CRASHES,
+    inline fun <reified T : Node<Message, DB>> addNodes(
+        nodes: Int,
+        minNodes: Int = 1,
+        crashMode: CrashMode = NO_CRASH,
         networkPartition: NetworkPartitionMode = NONE,
-        maxNumberOfCrashedNodes: (Int) -> Int = { it }
+        noinline maxUnavailableNodes: (Int) -> Int = { it }
     ): DistributedOptions<Message, DB> {
-        this.testClasses[cls] =
-            NodeTypeInfo(1, numberOfInstances, crashType, networkPartition, maxNumberOfCrashedNodes)
+        addNodes(T::class.java, nodes, minNodes, crashMode, networkPartition, maxUnavailableNodes)
         return this
     }
 
-    fun nodeType(
+    // TODO: internal/private
+    fun addNodes(
         cls: Class<out Node<Message, DB>>,
-        minNumberOfInstances: Int,
-        numberOfInstances: Int,
-        crashType: CrashMode = NO_CRASHES,
-        networkPartition: NetworkPartitionMode = NONE,
-        maxNumberOfCrashedNodes: (Int) -> Int = { it }
+        nodes: Int,
+        minNodes: Int,
+        crashType: CrashMode,
+        networkPartition: NetworkPartitionMode,
+        maxNumberOfCrashedNodes: (Int) -> Int
     ): DistributedOptions<Message, DB> {
-        this.testClasses[cls] = NodeTypeInfo(
-            minNumberOfInstances,
-            numberOfInstances,
-            crashType,
-            networkPartition,
-            maxNumberOfCrashedNodes
-        )
+        this.testClasses[cls] =
+            NodeTypeInfo(minNodes, nodes, crashType, networkPartition, maxNumberOfCrashedNodes)
         return this
     }
 
@@ -191,21 +184,9 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         )
 
     /**
-     * The same as [createTestConfigurations] but the test class is not specified.
-     */
-    fun createTestConfiguration() = DistributedCTestConfiguration(
-        testClass, iterations, threads,
-        actorsPerThread, executionGenerator,
-        verifier, invocationsPerIteration, messageLoss,
-        messageOrder, messageDuplication, testClasses, logFileName, crashNotifications, databaseFactory,
-        requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-        chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
-    )
-
-    /**
      * Extracts test class from node types.
      */
-    private val testClass: Class<out Node<Message, DB>>
+    private val clientClass: Class<out Node<Message, DB>>
         get() {
             if (_testClass == null) {
                 _testClass = testClasses.keys.find {
@@ -216,6 +197,10 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
             }
             return _testClass!!
         }
+
+    override var threads: Int
+        get() = testClasses[clientClass]!!.nodes
+        set(_) { error("should not be changed") }
 
     /**
      * Runs the tests for current configuration.

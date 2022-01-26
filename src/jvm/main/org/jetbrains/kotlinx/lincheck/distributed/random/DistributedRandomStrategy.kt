@@ -74,7 +74,7 @@ internal class DistributedRandomStrategy<Message, DB>(
      * and if the crash doesn't violate the max unavailable number of nodes restriction
      */
     override fun tryCrash(iNode: Int) {
-        if (testCfg.addressResolver.crashTypeForNode(iNode) != CrashMode.NO_CRASHES
+        if (testCfg.addressResolver.crashTypeForNode(iNode) != CrashMode.NO_CRASH
             && probability.nodeFailed()
             && failureManager.canCrash(iNode) // can be time-consuming
         ) {
@@ -185,9 +185,9 @@ internal class DistributedRandomStrategy<Message, DB>(
 
     override fun shouldRecover(iNode: Int): Boolean {
         return when (testCfg.addressResolver.crashTypeForNode(iNode)) {
-            CrashMode.NO_RECOVER -> false
-            CrashMode.ALL_NODES_RECOVER -> true
-            CrashMode.MIXED -> probability.nodeRecovered()
+            CrashMode.FINISH_ON_CRASH -> false
+            CrashMode.RECOVER_ON_CRASH -> true
+            CrashMode.FINISH_OR_RECOVER_ON_CRASH -> probability.nodeRecovered()
             else -> throw IllegalArgumentException()
         }
     }

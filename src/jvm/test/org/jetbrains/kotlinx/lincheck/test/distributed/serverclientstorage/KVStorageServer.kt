@@ -115,24 +115,24 @@ class KVStorageServerTestClass {
             .iterations(10)
             .minimizeFailedScenario(false)
             .actorsPerThread(3)
-            .nodeType(serverType, 1)
+            .addNodes(serverType, 1)
 
     @Test
     fun testAsync() = createOptions()
         .messageOrder(MessageOrder.ASYNCHRONOUS)
-        .nodeType(KVStorageClient::class.java, 3)
+        .addNodes(KVStorageClient::class.java, 3)
         .check()
 
     @Test
     fun testNetworkUnreliable() = createOptions()
         .messageLoss(false)
-        .nodeType(KVStorageClient::class.java, 3)
+        .addNodes(KVStorageClient::class.java, 3)
         .check()
 
     @Test
     fun testMessageDuplications() = createOptions()
         .messageDuplications(true)
-        .nodeType(KVStorageClient::class.java, 3)
+        .addNodes(KVStorageClient::class.java, 3)
         .check()
 
     @Test
@@ -140,7 +140,7 @@ class KVStorageServerTestClass {
         .messageDuplications(true)
         .messageLoss(false)
         .messageOrder(MessageOrder.ASYNCHRONOUS)
-        .nodeType(KVStorageClient::class.java, 3)
+        .addNodes(KVStorageClient::class.java, 3)
         .check()
 
     @Test(expected = LincheckAssertionError::class)
@@ -148,24 +148,24 @@ class KVStorageServerTestClass {
         .messageDuplications(true)
         .messageLoss(false)
         .messageOrder(MessageOrder.ASYNCHRONOUS)
-        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .addNodes(KVStorageClientIncorrect::class.java, 3)
         .check()
 
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrectAsync() = createOptions(KVStorageServerIncorrect::class.java)
         .messageOrder(MessageOrder.ASYNCHRONOUS)
-        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .addNodes(KVStorageClientIncorrect::class.java, 3)
         .check()
 
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrectNetworkUnreliable() = createOptions(KVStorageServerIncorrect::class.java)
         .messageLoss(false)
-        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .addNodes(KVStorageClientIncorrect::class.java, 3)
         .check()
 
     @Test(expected = LincheckAssertionError::class)
     fun testIncorrectMessageDuplications() = createOptions(KVStorageServerIncorrect::class.java)
         .messageDuplications(true)
-        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .addNodes(KVStorageClientIncorrect::class.java, 3)
         .check()
 }

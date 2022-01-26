@@ -89,15 +89,15 @@ class Test {
             .sequentialSpecification(SeqSpec::class.java)
             .invocationsPerIteration(30_000)
             .iterations(10)
-            .nodeType(Server::class.java, minNumberOfInstances = 1, numberOfInstances = 1)
-            .nodeType(Client::class.java, 3)
+            .addNodes(Server::class.java, minNodes = 1, nodes = 1)
+            .addNodes(Client::class.java, 3)
             .requireStateEquivalenceImplCheck(false)
             //.storeLogsForFailedScenario("kvstore.txt")
 
     @Test(expected = LincheckAssertionError::class)
     fun testFail() = createOptions()
-        .nodeType(
-            Client::class.java, numberOfInstances = 3, crashType = CrashMode.ALL_NODES_RECOVER,
+        .addNodes(
+            Client::class.java, nodes = 3, crashType = CrashMode.RECOVER_ON_CRASH,
             maxNumberOfCrashedNodes = { it }
         )
         .check()

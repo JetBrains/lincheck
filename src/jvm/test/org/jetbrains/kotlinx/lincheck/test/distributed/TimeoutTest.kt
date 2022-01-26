@@ -86,8 +86,8 @@ class PingPongMock : VerifierState() {
 class TimeoutTest {
     @Test
     fun test() = createDistributedOptions<PingPongMessage>()
-        .nodeType(PingPongClient::class.java, 1)
-        .nodeType(UnreliablePingPongServer::class.java, 1)
+        .addNodes(PingPongClient::class.java, 1)
+        .addNodes(UnreliablePingPongServer::class.java, 1)
         .invocationsPerIteration(600_000)
         .iterations(1)
         .sequentialSpecification(PingPongMock::class.java)

@@ -82,7 +82,7 @@ class Checker : VerifierState() {
 class ConsensusNaiveTest {
     @Test
     fun test() = createDistributedOptions<Message>()
-        .nodeType(ConsensusNoFailures::class.java, 2,3)
+        .addNodes(ConsensusNoFailures::class.java, 2,3)
         .requireStateEquivalenceImplCheck(false)
         .sequentialSpecification(Checker::class.java)
         .actorsPerThread(3)
