@@ -1,6 +1,5 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
@@ -8,9 +7,9 @@ import org.junit.Test
 import java.util.*
 
 class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command, Unit> {
-    private val storage = HashMap<Int, Int>()
-    private val commandResults = Array<HashMap<Int, Command>>(env.numberOfNodes) {
-        HashMap()
+    private val storage = mutableMapOf<Int, Int>()
+    private val commandResults = Array<MutableMap<Int, Command>>(env.numberOfNodes) {
+        mutableMapOf()
     }
 
     override fun onMessage(message: Command, sender: Int) {
@@ -43,11 +42,10 @@ class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Comman
 
 class KVStorageClient(private val environment: Environment<Command, Unit>) : Node<Command, Unit> {
     private var commandId = 0
-    private val commandResults = HashMap<Int, Command>()
+    private val commandResults = mutableMapOf<Int, Command>()
     private val serverAddr = environment.getAddressesForClass(KVStorageServer::class.java)!![0]
     private val signal = Signal()
     private val queue = LinkedList<Command>()
-
 
     private suspend fun sendOnce(command: Command): Command {
         while (true) {
@@ -90,7 +88,6 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
         return response.res
     }
 
-
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: Int): Int? {
         val response = sendOnce(GetCommand(key, commandId++)) as GetResult
@@ -113,86 +110,62 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
 class KVStorageServerTestClass {
     private fun createOptions(serverType: Class<out Node<Command, Unit>> = KVStorageServer::class.java) =
         createDistributedOptions<Command>()
-            .requireStateEquivalenceImplCheck(false)
             .sequentialSpecification(SingleNode::class.java)
-            .invocationsPerIteration(10_000)
-            .iterations(30)
-            .threads(3)
+            .invocationsPerIteration(30_000)
+            .iterations(10)
             .minimizeFailedScenario(false)
             .actorsPerThread(3)
             .nodeType(serverType, 1)
 
     @Test
-    fun testAsync() {
-        LinChecker.check(
-            KVStorageClient::class.java,
-            createOptions().messageOrder(MessageOrder.ASYNCHRONOUS)//.storeLogsForFailedScenario("async.txt")
-        )
-    }
+    fun testAsync() = createOptions()
+        .messageOrder(MessageOrder.ASYNCHRONOUS)
+        .nodeType(KVStorageClient::class.java, 3)
+        .check()
 
     @Test
-    fun testNetworkUnreliable() {
-        LinChecker.check(
-            KVStorageClient::class.java,
-            createOptions().messageLoss(false)//.storeLogsForFailedScenario("unreliable.txt")
-        )
-    }
+    fun testNetworkUnreliable() = createOptions()
+        .messageLoss(false)
+        .nodeType(KVStorageClient::class.java, 3)
+        .check()
 
     @Test
-    fun testMessageDuplications() {
-        LinChecker.check(
-            KVStorageClient::class.java,
-            createOptions().messageDuplications(true)
-        )
-    }
+    fun testMessageDuplications() = createOptions()
+        .messageDuplications(true)
+        .nodeType(KVStorageClient::class.java, 3)
+        .check()
 
     @Test
-    fun test() {
-        LinChecker.check(
-            KVStorageClient::class.java,
-            createOptions()
-                .messageDuplications(true)
-                .messageLoss(false)
-                .messageOrder(MessageOrder.ASYNCHRONOUS)
-        )
-    }
+    fun test() = createOptions()
+        .messageDuplications(true)
+        .messageLoss(false)
+        .messageOrder(MessageOrder.ASYNCHRONOUS)
+        .nodeType(KVStorageClient::class.java, 3)
+        .check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testIncorrect() {
-        LinChecker.check(
-            KVStorageClientIncorrect::class.java,
-            createOptions(KVStorageServerIncorrect::class.java)
-                .messageDuplications(true)
-                .messageLoss(false)
-                .messageOrder(MessageOrder.ASYNCHRONOUS)
-        )
-    }
+    fun testIncorrect() = createOptions(KVStorageServerIncorrect::class.java)
+        .messageDuplications(true)
+        .messageLoss(false)
+        .messageOrder(MessageOrder.ASYNCHRONOUS)
+        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testIncorrectAsync() {
-        LinChecker.check(
-            KVStorageClientIncorrect::class.java,
-            createOptions(KVStorageServerIncorrect::class.java)
-                .messageOrder(MessageOrder.ASYNCHRONOUS)
-                //.storeLogsForFailedScenario("async_incorrect.txt")
-        )
-    }
+    fun testIncorrectAsync() = createOptions(KVStorageServerIncorrect::class.java)
+        .messageOrder(MessageOrder.ASYNCHRONOUS)
+        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testIncorrectNetworkUnreliable() {
-        LinChecker.check(
-            KVStorageClientIncorrect::class.java,
-            createOptions(KVStorageServerIncorrect::class.java)
-                .messageLoss(false)
-        )
-    }
+    fun testIncorrectNetworkUnreliable() = createOptions(KVStorageServerIncorrect::class.java)
+        .messageLoss(false)
+        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .check()
 
     @Test(expected = LincheckAssertionError::class)
-    fun testIncorrectMessageDuplications() {
-        LinChecker.check(
-            KVStorageClientIncorrect::class.java,
-            createOptions(KVStorageServerIncorrect::class.java)
-                .messageDuplications(true)
-        )
-    }
+    fun testIncorrectMessageDuplications() = createOptions(KVStorageServerIncorrect::class.java)
+        .messageDuplications(true)
+        .nodeType(KVStorageClientIncorrect::class.java, 3)
+        .check()
 }
