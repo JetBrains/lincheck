@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
@@ -78,8 +79,14 @@ class CrashingNode(private val env: Environment<Int, Unit>) : Node<Int, Unit> {
 class CrashNotificationTest {
     @Test
     fun test() = createDistributedOptions<Int>()
-        .addNodes(CrashingNode::class.java, 2, 4, CrashMode.NO_CRASH, NetworkPartitionMode.COMPONENTS)
+        .addNodes<CrashingNode>(
+            nodes = 4,
+            minNodes = 2,
+            crashMode = CrashMode.RECOVER_ON_CRASH,
+            NetworkPartitionMode.COMPONENTS
+        )
         .verifier(EpsilonVerifier::class.java)
-        //.storeLogsForFailedScenario("logs.txt")
-        .check()
+        .iterations(1)
+        .invocationsPerIteration(500_000)
+        .check(CrashingNode::class.java)
 }

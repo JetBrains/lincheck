@@ -21,12 +21,15 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import kotlinx.coroutines.sync.Semaphore
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.max
 
 fun IntArray.happensBefore(other: IntArray): Boolean {
     check(size == other.size)
@@ -53,13 +56,12 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
 
     override fun onMessage(message: MutexMessage, sender: Int) {
         val time = message.msgTime
-        clock = Integer.max(clock, time) + 1
+        clock = max(clock, time) + 1
         when (message) {
             is Req -> {
                 val reqTime = message.reqTime
                 req[sender] = reqTime
                 val myReqTime = req[env.nodeId]
-                //println("[${env.nodeId}]: myReqTime $myReqTime reqTime $reqTime sender $sender")
                 if (reqTime < myReqTime || reqTime == myReqTime && sender < env.nodeId) {
                     env.send(Ok(++clock), sender)
                 } else {
@@ -91,7 +93,6 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
 
     @Operation(cancellableOnSuspension = false, blocking = true)
     suspend fun lock() {
-        //println("[${env.nodeId}]: Request lock")
         if (inCS) {
             suspendCoroutine<Unit> { }
         }
@@ -104,15 +105,15 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
             semaphore.acquire()
             check(inCS)
         }
-        env.recordInternalEvent("Lock")
+        env.recordInternalEvent(Lock)
     }
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation
     fun unlock() {
         if (!inCS) return
         inCS = false
         req[env.nodeId] = inf
-        env.recordInternalEvent("Unlock")
+        env.recordInternalEvent(Unlock)
         for (i in 0 until env.numberOfNodes) {
             if (pendingOk[i]) {
                 pendingOk[i] = false
@@ -123,34 +124,18 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
 }
 
 class RickartAgrawalaMutexTest {
-    @Test
-    fun testSimple() {
-        LinChecker.check(
-            RickartAgrawalaMutex::class.java,
-            createDistributedOptions<MutexMessage>()
-                .requireStateEquivalenceImplCheck(false)
-                .verifier(EpsilonVerifier::class.java)
-                 //.sequentialSpecification(MutexSpecification::class.java)
-                .threads(4)
-                .messageOrder(MessageOrder.FIFO)
-                .actorsPerThread(3)
-                .invocationsPerIteration(5_000)
-                .iterations(10)
-        )
-    }
+    private fun commonOptions() = createDistributedOptions<MutexMessage>()
+        .addNodes<RickartAgrawalaMutex>(nodes = 4, minNodes = 2)
+        .verifier(EpsilonVerifier::class.java)
+        .actorsPerThread(3)
+        .invocationsPerIteration(50_000)
+        .iterations(10)
 
     @Test
-    fun testNoFifo() {
-        LinChecker.check(
-            RickartAgrawalaMutex::class.java,
-            createDistributedOptions<MutexMessage>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(MutexSpecification::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(3000)
-                .iterations(10)
-        )
-    }
+    fun `algorithm with FIFO`() = commonOptions().check(RickartAgrawalaMutex::class.java)
+
+    @Test
+    fun `algorithm without FIFO`() = commonOptions()
+        .messageOrder(ASYNCHRONOUS)
+        .check(RickartAgrawalaMutex::class.java)
 }

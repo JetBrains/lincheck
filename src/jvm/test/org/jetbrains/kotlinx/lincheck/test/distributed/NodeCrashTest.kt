@@ -44,7 +44,7 @@ class Node2(env: Environment<Unit, Unit>) : Node<Unit, Unit> {
 }
 
 internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
-    createDistributedOptions<Unit>().addNodes(Node1::class.java, 1).createTestConfiguration(),
+    createDistributedOptions<Unit>().addNodes<Node1>(nodes = 1).createTestConfigurations(Node1::class.java),
     Node1::class.java,
     ExecutionScenario(emptyList(), emptyList(), emptyList()),
     emptyList(),
@@ -60,6 +60,7 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
     override fun next(taskManager: TaskManager): Task? {
         TODO("Not yet implemented")
     }
+
     override fun reset() {
         TODO("Not yet implemented")
     }

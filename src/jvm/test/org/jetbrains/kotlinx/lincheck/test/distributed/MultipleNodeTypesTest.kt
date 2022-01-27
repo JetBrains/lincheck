@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
@@ -58,14 +59,11 @@ class MultipleNodeTypesTest {
     @Test
     fun test() =
         createDistributedOptions<PingPongMessage>()
-            .addNodes(Pinger::class.java, 2)
-            .requireStateEquivalenceImplCheck(false)
-            .addNodes(Ponger::class.java, 1)
-            .invocationsPerIteration(1000)
-            .iterations(100)
+            .addNodes<Pinger>(nodes = 2)
+            .addNodes<Ponger>(nodes = 1)
+            .invocationsPerIteration(30_000)
+            .iterations(10)
             .sequentialSpecification(PingPongMock::class.java)
             .actorsPerThread(2)
-            //.storeLogsForFailedScenario("pingpong.txt")
-            .check()
-
+            .check(Pinger::class.java)
 }

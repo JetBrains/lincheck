@@ -20,26 +20,30 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.replicas
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
+import kotlin.random.Random
 
 sealed class KVMessage
-data class PutKVRequest(val key: String, val value: String) : KVMessage()
-data class PutKVEntry(val key: String, val value: String) : KVMessage()
-data class GetKVRequest(val key: String) : KVMessage()
-data class GetKVResponse(val value: String?) : KVMessage()
+data class PutKVRequest(val key: Int, val value: Int) : KVMessage()
+data class PutKVEntry(val key: Int, val value: Int) : KVMessage()
+data class GetKVRequest(val key: Int) : KVMessage()
+data class GetKVResponse(val value: Int?) : KVMessage()
 
 class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage, Unit> {
-    private val storage = mutableMapOf<String, String>()
+    private val storage = mutableMapOf<Int, Int>()
     override fun onMessage(message: KVMessage, sender: Int) {
         when (message) {
             is PutKVRequest -> {
                 storage[message.key] = message.value
-                env.getAddressesForClass(ReplicaIncorrect::class.java)?.filter { it != env.nodeId }
-                    ?.forEach { env.send(PutKVEntry(message.key, message.value), it) }
+                env.broadcastToGroup(PutKVEntry(message.key, message.value), ReplicaIncorrect::class.java)
             }
             is PutKVEntry -> storage[message.key] = message.value
             is GetKVRequest -> env.send(GetKVResponse(storage[message.key]), sender)
@@ -51,11 +55,12 @@ class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVM
 class ClientIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage, Unit> {
     private val signal = Signal()
     private var res: GetKVResponse? = null
+    private val rand = Random(env.nodeId)
 
-    private fun getRandomReplica() = env.getAddressesForClass(ReplicaIncorrect::class.java)!!.random()
+    private fun getRandomReplica() = env.getAddressesForClass(ReplicaIncorrect::class.java)!!.random(rand)
 
-    @Operation
-    suspend fun get(key: String): String? {
+    @Operation(cancellableOnSuspension = false)
+    suspend fun get(key: Int): Int? {
         val replica = getRandomReplica()
         env.send(GetKVRequest(key), replica)
         signal.await()
@@ -63,7 +68,7 @@ class ClientIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMe
     }
 
     @Operation
-    fun put(key: String, value: String) {
+    fun put(key: Int, value: Int) {
         val replica = getRandomReplica()
         env.send(PutKVRequest(key, value), replica)
     }
@@ -78,31 +83,31 @@ class ClientIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMe
     }
 }
 
-class ReplicaSpecification {
-    private val storage = mutableMapOf<String, String>()
+class ReplicaSpecification : VerifierState() {
+    private val storage = mutableMapOf<Int, Int>()
 
     @Operation
-    suspend fun get(key: String) = storage[key]
+    suspend fun get(key: Int) = storage[key]
 
     @Operation
-    fun put(key: String, value: String) {
+    fun put(key: Int, value: Int) {
         storage[key] = value
     }
+
+    override fun extractState(): Any = storage
 }
 
 class ReplicaIncorrectTest {
-    @Test(expected = LincheckAssertionError::class)
+    @Test
     fun test() {
-        LinChecker.check(
-            ClientIncorrect::class.java,
-            createDistributedOptions<KVMessage>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(ReplicaSpecification::class.java)
-                .addNodes(ReplicaIncorrect::class.java, 1, 3)
-                .threads(2)
-                .invocationsPerIteration(100)
-                .iterations(300)
-        )
+        val failure = createDistributedOptions<KVMessage>()
+            .addNodes<ReplicaIncorrect>(nodes = 4, minNodes = 1)
+            .addNodes<ClientIncorrect>(nodes = 3, minNodes = 1)
+            .invocationsPerIteration(100_000)
+            .iterations(30)
+            .sequentialSpecification(ReplicaSpecification::class.java)
+            .checkImpl(ClientIncorrect::class.java)
+        assert(failure is IncorrectResultsFailure)
     }
 }
 

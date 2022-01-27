@@ -20,16 +20,17 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.distributed.event.NodeCrashEvent
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.util.*
@@ -154,7 +155,7 @@ class BroadcastTest {
             crashMode = FINISH_ON_CRASH,
             maxUnavailableNodes = { it / 2 }
         )
-        .check()
+        .check(Peer::class.java)
 
     @Test
     fun `correct algorithm with too much unavailable nodes`() {
@@ -166,7 +167,7 @@ class BroadcastTest {
             )
             .invocationsPerIteration(50_000)
             .minimizeFailedScenario(false)
-            .checkImpl()
+            .checkImpl(Peer::class.java)
         assert(failure is ValidationFailure)
     }
 
@@ -174,15 +175,18 @@ class BroadcastTest {
     fun `incorrect algorithm without crashes`() = commonOptions()
         .addNodes<PeerIncorrect>(nodes = 3)
         .invocationsPerIteration(100_000)
-        .check()
+        .check(PeerIncorrect::class.java)
 
-    @Test(expected = LincheckAssertionError::class) // TODO checkImpl instead
-    fun `incorrect algorithm`() = commonOptions()
-        .addNodes<PeerIncorrect>(
-            nodes = 4,
-            crashMode = FINISH_ON_CRASH,
-            maxUnavailableNodes = { it / 2 }
-        )
-        .minimizeFailedScenario(false)
-        .check()
+    @Test
+    fun `incorrect algorithm`()  {
+        val failure = commonOptions()
+            .addNodes<PeerIncorrect>(
+                nodes = 4,
+                crashMode = FINISH_ON_CRASH,
+                maxUnavailableNodes = { it / 2 }
+            )
+            .minimizeFailedScenario(false)
+            .checkImpl(PeerIncorrect::class.java)
+        assert(failure is ValidationFailure)
+    }
 }

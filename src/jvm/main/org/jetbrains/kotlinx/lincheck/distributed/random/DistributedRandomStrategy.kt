@@ -123,12 +123,10 @@ internal class DistributedRandomStrategy<Message, DB>(
     }
 
     override fun run(): LincheckFailure? {
-        println(scenario)
         runner.use { runner ->
             // Run invocations
             for (invocation in 0 until testCfg.invocationsPerIteration) {
                 reset()
-                //println("INVOCATION $invocation")
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results)) {

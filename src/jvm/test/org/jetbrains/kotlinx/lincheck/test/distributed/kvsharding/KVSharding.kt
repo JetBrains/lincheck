@@ -21,9 +21,15 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.RECOVER_ON_CRASH
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -183,41 +189,35 @@ class SingleNode : VerifierState() {
 }
 
 class KVShardingTest {
-    @Test
-    fun testNoFailures() {
-        createDistributedOptions<KVMessage, SimpleStorage>(::SimpleStorage)
-            .addNodes(ShardMultiplePutToLog::class.java, 4)
-            .sequentialSpecification(SingleNode::class.java)
-            .invocationsPerIteration(10_000)
-            .actorsPerThread(3)
-            .iterations(30)
-            //.storeLogsForFailedScenario("multiple_puts.txt")
-            .check()
-    }
-
-    @Test(expected = LincheckAssertionError::class)
-    fun testFail() {
-        createDistributedOptions<KVMessage, SimpleStorage>(::SimpleStorage)
-            .addNodes(ShardMultiplePutToLog::class.java, 4, CrashMode.RECOVER_ON_CRASH) { it / 2 }
-            .sequentialSpecification(SingleNode::class.java)
-            .actorsPerThread(3)
-            .invocationsPerIteration(10_000)
-            .iterations(30)
-            .minimizeFailedScenario(false)
-            //.storeLogsForFailedScenario("multiple_puts.txt")
-            .check()
-    }
+    private fun <T> options(f: () -> T) = createDistributedOptions<KVMessage, T>(f)
+        .sequentialSpecification(SingleNode::class.java)
+        .invocationsPerIteration(30_000)
+        .actorsPerThread(3)
+        .minimizeFailedScenario(false)
+        .iterations(10)
 
     @Test
-    fun test() {
-        createDistributedOptions<KVMessage, Storage>(::Storage)
-            .addNodes(Shard::class.java, 4, CrashMode.RECOVER_ON_CRASH) { it / 2 }
-            .sequentialSpecification(SingleNode::class.java)
-            .actorsPerThread(3)
-            .invocationsPerIteration(50_000)
-            .iterations(20)
-            //.storeLogsForFailedScenario("kvsharding.txt")
-            .minimizeFailedScenario(false)
-            .check()
+    fun `correct algorithm`() = options(::Storage)
+        .addNodes<Shard>(
+            nodes = 4,
+            crashMode = RECOVER_ON_CRASH,
+            maxUnavailableNodes = { it / 2 }
+        ).check(Shard::class.java)
+
+    @Test
+    fun `incorrect algorithm without crashes`() = options(::SimpleStorage)
+        .addNodes<ShardMultiplePutToLog>(nodes = 4)
+        .check(ShardMultiplePutToLog::class.java)
+
+    @Test
+    fun `incorrect algorithm`() {
+        val failure = options(::SimpleStorage)
+            .addNodes<ShardMultiplePutToLog>(
+                nodes = 4,
+                crashMode = RECOVER_ON_CRASH,
+                maxUnavailableNodes = { it / 2 }
+            )
+            .checkImpl(ShardMultiplePutToLog::class.java)
+        assert(failure is IncorrectResultsFailure)
     }
 }

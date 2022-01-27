@@ -22,9 +22,15 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_OR_RECOVER_ON_CRASH
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.COMPONENTS
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.strategy.TaskLimitExceededFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import kotlin.random.Random
@@ -87,17 +93,8 @@ class RaftSpecification() : VerifierState() {
 
 class RaftTest {
     private fun options() = createDistributedOptions<RaftMessage, PersistentStorage>(::PersistentStorage)
-        .addNodes(RaftClient::class.java, 3)
-        .addNodes(
-            RaftServer::class.java,
-            minNodes = 1,
-            nodes = 5,
-            crashMode = CrashMode.FINISH_OR_RECOVER_ON_CRASH,
-            networkPartition = NetworkPartitionMode.COMPONENTS,
-            maxUnavailableNodes = { (it + 1) / 2 - 1 })
-        .requireStateEquivalenceImplCheck(false)
+        .addNodes<RaftClient>(nodes = 3)
         .sequentialSpecification(RaftSpecification::class.java)
-        //.storeLogsForFailedScenario("raft.txt")
         .actorsPerThread(3)
         .sendCrashNotifications(false)
         .invocationsPerIteration(30_000)
@@ -105,14 +102,23 @@ class RaftTest {
         .iterations(10)
 
     @Test
-    fun test() = options().check()
+    fun `correct algorithm`() = options()
+        .addNodes<RaftServer>(
+            nodes = 5,
+            minNodes = 1,
+            crashMode = FINISH_OR_RECOVER_ON_CRASH,
+            networkPartition = COMPONENTS,
+            maxUnavailableNodes = { (it + 1) / 2 - 1 })
+        .check(RaftClient::class.java)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun testMoreFailure() = options().addNodes(
-        RaftServer::class.java,
-        nodes = 5,
-        crashMode = CrashMode.FINISH_OR_RECOVER_ON_CRASH,
-        networkPartition = NetworkPartitionMode.COMPONENTS,
-        maxUnavailableNodes = { (it + 1) / 2 + 1 })
-        .check()
+    @Test
+    fun `correct algorithm with too much unavailable nodes`() {
+        val failure = options().addNodes<RaftServer>(
+            nodes = 5,
+            crashMode = FINISH_OR_RECOVER_ON_CRASH,
+            networkPartition = COMPONENTS,
+            maxUnavailableNodes = { (it + 1) / 2 + 1 })
+            .checkImpl(RaftClient::class.java)
+        assert(failure is TaskLimitExceededFailure)
+    }
 }

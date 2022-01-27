@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
@@ -32,7 +33,7 @@ object TimerPing : TimerMessage()
 object TimerPong : TimerMessage()
 object Heartbeat : TimerMessage()
 
-class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<TimerMessage, Unit> {
+class TimerNode(private val env: Environment<TimerMessage, Unit>) : Node<TimerMessage, Unit> {
     companion object {
         const val HEARTBEAT_PING_RATE = 3
     }
@@ -75,14 +76,14 @@ class SimpleTimerNode(private val env: Environment<TimerMessage, Unit>) : Node<T
 }
 
 
-class SimpleTimerTest {
+class TimerTest {
     @Test
     fun test() = createDistributedOptions<TimerMessage>()
-        .addNodes(SimpleTimerNode::class.java, 2)
+        .addNodes<TimerNode>(nodes = 2)
         .requireStateEquivalenceImplCheck(false)
         .invocationsPerIteration(10_000)
         .iterations(1)
         .sequentialSpecification(PingPongMock::class.java)
         .actorsPerThread(2)
-        .check()
+        .check(TimerNode::class.java)
 }

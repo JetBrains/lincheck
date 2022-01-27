@@ -20,10 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import kotlin.math.abs
@@ -167,43 +169,35 @@ class MockSnapshot() : VerifierState() {
 }
 
 class SnapshotTest {
+    private fun commonOptions() = createDistributedOptions<Message>()
+        .sequentialSpecification(MockSnapshot::class.java)
+        .actorsPerThread(3)
+        .invocationsPerIteration(30_000)
+        .iterations(10)
+
     @Test
-    fun testSimple() {
-        createDistributedOptions<Message>()
-            .addNodes(ChandyLamport::class.java, 3)
-            .sequentialSpecification(MockSnapshot::class.java)
-            .actorsPerThread(3)
-            .invocationsPerIteration(30_000)
-            .iterations(10)
-            //.storeLogsForFailedScenario("chandy_lamport.txt")
-            .minimizeFailedScenario(false)
-            .check()
-    }
+    fun `correct algorithm`() = commonOptions()
+        .addNodes<ChandyLamport>(nodes = 4, minNodes = 2)
+        .check(ChandyLamport::class.java)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun testNoFifo() {
-        createDistributedOptions<Message>()
-            .addNodes(ChandyLamport::class.java, 3)
-            .sequentialSpecification(MockSnapshot::class.java)
-            .threads(3)
-            .actorsPerThread(3)
+    @Test
+    fun `correct algorithm without FIFO`() {
+        val failure = commonOptions()
+            .addNodes<ChandyLamport>(nodes = 4, minNodes = 2)
             .messageOrder(MessageOrder.ASYNCHRONOUS)
-            .invocationsPerIteration(3_000)
-            .iterations(10)
             .minimizeFailedScenario(false)
-            .check()
+            .checkImpl(ChandyLamport::class.java)
+        assert(failure is IncorrectResultsFailure)
     }
 
-    @Test(expected = LincheckAssertionError::class)
-    fun testNaiveIncorrect() {
-        createDistributedOptions<Message>()
-            .addNodes(NaiveSnapshotIncorrect::class.java, 3)
+    @Test
+    fun `incorrect algorithm`() {
+        val failure = commonOptions()
+            .addNodes<NaiveSnapshotIncorrect>(nodes = 4, minNodes = 2)
             .sequentialSpecification(MockSnapshot::class.java)
-            .actorsPerThread(3)
-            .invocationsPerIteration(30_000)
-            .iterations(10)
-            //.storeLogsForFailedScenario("chandy_lamport.txt")
             .minimizeFailedScenario(false)
-            .check()
+            .checkImpl(NaiveSnapshotIncorrect::class.java)
+        println(failure)
+        assert(failure is IncorrectResultsFailure)
     }
 }

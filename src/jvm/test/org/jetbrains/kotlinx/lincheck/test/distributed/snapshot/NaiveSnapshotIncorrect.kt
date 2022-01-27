@@ -21,15 +21,12 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
 import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.locks.withLock
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import java.util.concurrent.locks.ReentrantLock
+import kotlin.math.abs
 
 
 @OpGroupConfig(name = "observer", nonParallel = true)
@@ -53,7 +50,6 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
             is Reply -> {
                 replies[sender] = message
             }
-            else -> throw IllegalArgumentException("Unexpected message")
         }
         checkAllRepliesReceived()
     }
@@ -66,15 +62,14 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
         }
     }
 
-    @Operation()
+    @Operation
     fun transaction(to: Int, sum: Int) {
-        val receiver = to % env.numberOfNodes
+        val receiver = abs(to) % env.numberOfNodes
         if (to == env.nodeId) return
         currentSum.getAndAdd(-sum)
         env.send(Transaction(sum), receiver)
     }
 
-    @StateRepresentation
     override fun stateRepresentation(): String {
         val res = StringBuilder()
         res.append("[${env.nodeId}]: Cursum ${currentSum.value}\n")
@@ -82,7 +77,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
         return res.toString()
     }
 
-    @Operation(group = "observer")
+    @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun snapshot(): Int {
         val state = currentSum.value
         val marker = Marker(env.nodeId, token++)
@@ -90,7 +85,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
         while (!gotSnapshot) {
             semaphore.await()
         }
-        val res = replies.filterNotNull().map { it as Reply }.map { it.state }.sum() + state
+        val res = replies.filterNotNull().sumOf { it.state } + state
         gotSnapshot = false
         replies.fill(null)
         return res / env.numberOfNodes + res % env.numberOfNodes

@@ -21,16 +21,18 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import kotlinx.coroutines.sync.Semaphore
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
-import java.util.ArrayDeque
+import java.util.*
 import kotlin.coroutines.suspendCoroutine
 
 
 class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
-
     private val coordinatorId = 0
     private val isCoordinator = env.nodeId == coordinatorId
     private val queue = ArrayDeque<Int>()
@@ -80,7 +82,6 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Mu
         if (inCS == env.nodeId) {
             suspendCoroutine<Unit> { }
         }
-        //println("[${env.nodeId}]: Request lock")
         if (isCoordinator) {
             queue.add(coordinatorId)
             checkCSEnter()
@@ -94,8 +95,7 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Mu
 
     @Operation
     fun unlock() {
-        //println("[${env.nodeId}]: Release lock")
-        if(inCS != env.nodeId) return
+        if (inCS != env.nodeId) return
         inCS = -1
         if (isCoordinator) {
             checkCSEnter()
@@ -106,33 +106,17 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Mu
 }
 
 class SyncCoordinateMutexTest {
-    @Test
-    fun testSimple() {
-        LinChecker.check(
-            SyncCoordinateMutex::class.java,
-            createDistributedOptions<MutexMessage>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(MutexSpecification::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(3000)
-                .iterations(10)
-        )
-    }
+    private fun commonOptions() =
+        createDistributedOptions<MutexMessage>()
+            .addNodes<SyncCoordinateMutex>(nodes = 3, minNodes = 2)
+            .invocationsPerIteration(30_000)
+            .iterations(10)
+            .actorsPerThread(3)
+            .verifier(EpsilonVerifier::class.java)
 
     @Test
-    fun testNoFifo() {
-        LinChecker.check(
-            SyncCoordinateMutex::class.java,
-            createDistributedOptions<MutexMessage>()
-                .requireStateEquivalenceImplCheck(false)
-                .sequentialSpecification(MutexSpecification::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.ASYNCHRONOUS)
-                .invocationsPerIteration(3000)
-                .iterations(10)
-        )
-    }
+    fun `algorithm with FIFO`() = commonOptions().check(SyncCoordinateMutex::class.java)
+
+    @Test
+    fun `algorithm without FIFO`() = commonOptions().messageOrder(ASYNCHRONOUS).check(SyncCoordinateMutex::class.java)
 }

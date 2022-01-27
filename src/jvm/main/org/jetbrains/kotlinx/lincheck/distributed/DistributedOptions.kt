@@ -200,23 +200,25 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
 
     override var threads: Int
         get() = testClasses[clientClass]!!.nodes
-        set(_) { error("should not be changed") }
+        set(_) {
+            error("should not be changed")
+        }
 
     /**
      * Runs the tests for current configuration.
      */
-    fun check() {
-        threads = testClasses[testClass]!!.numberOfInstances
-        LinChecker.check(testClass, options = this)
+    /*fun check() {
+        threads = testClasses[clientClass]!!.nodes
+        LinChecker.check(clientClass, options = this)
     }
 
     /**
      * Runs the tests and returns failure.
      */
     internal fun checkImpl(): LincheckFailure? {
-        threads = testClasses[testClass]!!.numberOfInstances
-        return LinChecker(testClass, this).checkImpl()
-    }
+        threads = testClasses[clientClass]!!.nodes
+        return LinChecker(clientClass, this).checkImpl()
+    }*/
 }
 
 fun <Message> createDistributedOptions() = DistributedOptions<Message, Unit> { }

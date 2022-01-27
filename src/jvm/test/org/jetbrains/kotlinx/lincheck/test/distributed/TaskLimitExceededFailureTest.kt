@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
@@ -51,11 +52,11 @@ class TaskLimitExceededFailureTest {
     @Test
     fun test() {
         val failure = createDistributedOptions<Unit>()
-            .addNodes(InfinitePinger::class.java, 2)
-            .addNodes(InfinitePonger::class.java, 1)
+            .addNodes<InfinitePinger>(nodes = 2)
+            .addNodes<InfinitePonger>(nodes = 1)
             .verifier(EpsilonVerifier::class.java)
             .minimizeFailedScenario(false)
-            .checkImpl()
+            .checkImpl(InfinitePinger::class.java)
         check(failure is TaskLimitExceededFailure)
     }
 }

@@ -21,12 +21,14 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import kotlinx.coroutines.sync.Semaphore
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
+import kotlin.coroutines.suspendCoroutine
 
 
 class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
@@ -61,8 +63,10 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
     }
 
     @Operation(cancellableOnSuspension = false, blocking = false)
-    suspend fun lock(){
-        check(!requested[env.nodeId])
+    suspend fun lock() {
+        if (requested[env.nodeId]) {
+            suspendCoroutine<Unit> { }
+        }
         requested[env.nodeId] = true
         env.broadcast(Req(0, 0))
         checkCSEnter()
@@ -72,7 +76,7 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
             inCS = true
         }
         check(inCS)
-        env.recordInternalEvent("Lock")
+        env.recordInternalEvent(Lock)
     }
 
     @Operation(cancellableOnSuspension = false)
@@ -80,25 +84,23 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
         if (!inCS) return
         inCS = false
         requested[env.nodeId] = false
-        env.recordInternalEvent("Unlock")
+        env.recordInternalEvent(Unlock)
         env.broadcast(Rel(0))
     }
 }
 
 
 class OptimisticMutexIncorrectTest {
-    @Test(expected = LincheckAssertionError::class)
-    fun testSimple() {
-        LinChecker.check(
-            OptimisticMutexIncorrect::class.java,
-            createDistributedOptions<MutexMessage>()
-                .requireStateEquivalenceImplCheck(false)
-                .verifier(EpsilonVerifier::class.java)
-                .threads(3)
-                .actorsPerThread(3)
-                .messageOrder(MessageOrder.FIFO)
-                .invocationsPerIteration(10000)
-                .iterations(30)
-        )
+    @Test
+    fun `incorrect algorithm`() {
+        val failure = createDistributedOptions<MutexMessage>()
+            .addNodes<OptimisticMutexIncorrect>(nodes = 4, minNodes = 2)
+            .verifier(EpsilonVerifier::class.java)
+            .actorsPerThread(3)
+            .invocationsPerIteration(10000)
+            .iterations(30)
+            .minimizeFailedScenario(false)
+            .checkImpl(OptimisticMutexIncorrect::class.java)
+        assert(failure is ValidationFailure)
     }
 }

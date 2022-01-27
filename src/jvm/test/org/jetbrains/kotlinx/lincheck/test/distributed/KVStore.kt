@@ -22,12 +22,14 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -83,25 +85,27 @@ class SeqSpec : VerifierState() {
     override fun extractState(): Any = storage
 }
 
-class Test {
-    private fun createOptions() =
+class KVStoreTest {
+    private fun commonOptions() =
         createDistributedOptions<Message>()
             .sequentialSpecification(SeqSpec::class.java)
             .invocationsPerIteration(30_000)
             .iterations(10)
-            .addNodes(Server::class.java, minNodes = 1, nodes = 1)
-            .addNodes(Client::class.java, 3)
-            .requireStateEquivalenceImplCheck(false)
-            //.storeLogsForFailedScenario("kvstore.txt")
-
-    @Test(expected = LincheckAssertionError::class)
-    fun testFail() = createOptions()
-        .addNodes(
-            Client::class.java, nodes = 3, crashType = CrashMode.RECOVER_ON_CRASH,
-            maxNumberOfCrashedNodes = { it }
-        )
-        .check()
+            .addNodes<Server>(nodes = 1)
 
     @Test
-    fun test() = createOptions().check()
+    fun `incorrect algorithm with crashes`() {
+        val failure = commonOptions()
+            .addNodes<Client>(
+                nodes = 3,
+                crashMode = CrashMode.RECOVER_ON_CRASH,
+                maxUnavailableNodes = { it }
+            ).checkImpl(Client::class.java)
+        assert(failure is IncorrectResultsFailure)
+    }
+
+    @Test
+    fun `incorrect algorithm without crashes`() = commonOptions()
+        .addNodes<Client>(nodes = 3)
+        .check(Client::class.java)
 }

@@ -20,36 +20,36 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class Smoke(val env: Environment<Int, Unit>) : Node<Int, Unit> {
+class NodeThrowsException(val env: Environment<Int, Unit>) : Node<Int, Unit> {
     override fun onMessage(message: Int, sender: Int) {
-        if (message == 1) {
-            env.send(0, sender)
+        if (message != 0) {
+            env.broadcast(0)
         }
     }
 
     @Operation
     suspend fun op() {
         env.broadcast(1)
+        throw RuntimeException()
     }
 }
 
-
-class SmokeTest {
-    @Test
+class ExceptionTest {
+    @Test(expected = LincheckAssertionError::class)
     fun test() = createDistributedOptions<Int>()
-        .addNodes(Smoke::class.java, nodes = 3,
-            crashType = CrashMode.RECOVER_ON_CRASH,
-            maxNumberOfCrashedNodes = { it / 2 })
-        .requireStateEquivalenceImplCheck(false)
+        .addNodes<NodeThrowsException>(nodes = 3)
         .actorsPerThread(2)
-        .invocationsPerIteration(300)
-        .iterations(100)
+        .invocationsPerIteration(10)
+        .iterations(1)
         .verifier(EpsilonVerifier::class.java)
-        .check()
+        .check(NodeThrowsException::class.java)
 }
-

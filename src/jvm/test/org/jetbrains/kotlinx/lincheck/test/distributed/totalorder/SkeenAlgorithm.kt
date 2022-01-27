@@ -21,12 +21,11 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
 
 import kotlinx.coroutines.channels.Channel
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
@@ -51,14 +50,13 @@ data class RequestMessage(val from: Int, val id: Int, override val clock: Int, v
 data class Reply(override val clock: Int) : Message()
 
 class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderCheckNode(env) {
-    var clock = 0
-    var opId = 0
-    val resChannel = Channel<Int>(Channel.UNLIMITED)
-    val replyTimes = mutableListOf<Int>()
-    val messages = mutableSetOf<RequestMessage>()
+    private var clock = 0
+    private var opId = 0
+    private val resChannel = Channel<Int>(Channel.UNLIMITED)
+    private val replyTimes = mutableListOf<Int>()
+    private val messages = mutableSetOf<RequestMessage>()
 
     override fun onMessage(message: Message, sender: Int) {
-        // println("[${env.nodeId}]: onMessage from $sender ${message}")
         clock = maxOf(clock, message.clock) + 1
         when (message) {
             is RequestMessage -> {
@@ -91,37 +89,11 @@ class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderChe
     private fun deliver() {
         while (true) {
             var msg = messages.minByOrNull { it.time }
-
-            // env.recordInternalEvent("Min message $msg"
             if (msg?.finalized != true || messages.any { it.time == msg?.time && !it.finalized }) return
             msg = messages.filter { it.time == msg?.time }.minByOrNull { it.from }
             messages.removeIf { it == msg }
             env.recordInternalEvent("Add message $msg")
             env.database.add(msg!!)
-        }
-    }
-
-    override fun validate(events: List<Event>, databases: List<MutableList<Message>>) {
-        super.validate(events, databases)
-        for (l in databases) {
-            for (i in l.indices) {
-                for (j in i + 1 until l.size) {
-                    check(databases.none {
-                        val first = it.lastIndexOf(l[i])
-                        val second = it.lastIndexOf(l[j])
-                        first != -1 && second != -1 && first >= second
-                    }) {
-                        "logs=$databases, first=${l[i]}, second=${l[j]}"
-                    }
-                }
-            }
-        }
-        val sent = events.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
-            .filterIsInstance<RequestMessage>()
-        sent.forEach { m ->
-            check(databases.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) }) {
-                m.toString()
-            }
         }
     }
 
@@ -141,31 +113,25 @@ class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderChe
 }
 
 class SkeenTest {
-    private fun createOptions() =
+    private fun commonOptions() =
         createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
-            .requireStateEquivalenceImplCheck(false)
             .actorsPerThread(3)
-            .threads(3)
-            .invocationsPerIteration(50_000)
+            .invocationsPerIteration(500_000)
             .iterations(1)
             .verifier(EpsilonVerifier::class.java)
-            //.storeLogsForFailedScenario("skeen.txt")
             .minimizeFailedScenario(false)
 
     @Test
-    fun test() {
-        LinChecker.check(
-            SkeenAlgorithm::class.java,
-            createOptions()
-        )
-    }
+    fun `correct algorithm`() = commonOptions()
+        .addNodes<SkeenAlgorithm>(nodes = 3, minNodes = 1)
+        .check(SkeenAlgorithm::class.java)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun testIncorrect() {
-        LinChecker.check(
-            SkeenAlgorithmIncorrect::class.java,
-            createOptions()
-                .minimizeFailedScenario(false)
-        )
+    @Test
+    fun `incorrect algorithm`() {
+        val failure = commonOptions()
+            .addNodes<SkeenAlgorithmIncorrect>(nodes = 3, minNodes = 1)
+            .minimizeFailedScenario(false)
+            .checkImpl(SkeenAlgorithmIncorrect::class.java)
+        assert(failure != null)
     }
 }

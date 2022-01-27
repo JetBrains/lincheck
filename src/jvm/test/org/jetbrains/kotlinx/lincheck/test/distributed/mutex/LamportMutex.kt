@@ -20,46 +20,44 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.InternalEvent
+import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.lang.Integer.max
 import kotlin.coroutines.suspendCoroutine
 
-sealed class MutexMessage(val msgTime: Int)
-
-class Req(msgTime: Int, val reqTime: Int) : MutexMessage(msgTime) {
-    override fun toString(): String {
-        return "REQ($msgTime, $reqTime)"
-    }
+sealed class MutexMessage {
+    abstract val msgTime: Int
 }
 
-class Ok(msgTime: Int) : MutexMessage(msgTime) {
-    override fun toString(): String {
-        return "OK($msgTime)"
-    }
-}
+data class Req(override val msgTime: Int, val reqTime: Int) : MutexMessage()
+data class Ok(override val msgTime: Int) : MutexMessage()
+data class Rel(override val msgTime: Int) : MutexMessage()
 
-class Rel(msgTime: Int) : MutexMessage(msgTime) {
-    override fun toString(): String {
-        return "REL($msgTime)"
-    }
-}
+sealed class MutexEvent
+object Lock : MutexEvent()
+object Unlock : MutexEvent()
 
 abstract class MutexNode<Message> : Node<Message, Unit> {
-    override fun validate(events: List<Event>, logs: List<Unit>) {
+    override fun validate(events: List<Event>, databases: List<Unit>) {
         val locksAndUnlocks = events.filterIsInstance<InternalEvent>()
         for (i in locksAndUnlocks.indices step 2) {
-            check(locksAndUnlocks[i].attachment == "Lock")
+            check(locksAndUnlocks[i].attachment == Lock)
             if (i + 1 < locksAndUnlocks.size) {
                 check(
-                    locksAndUnlocks[i + 1].attachment == "Unlock" && locksAndUnlocks[i].iNode == locksAndUnlocks[i + 1].iNode && locksAndUnlocks[i].clock.happensBefore(
-                        locksAndUnlocks[i + 1].clock
-                    )
+                    locksAndUnlocks[i + 1].attachment == Unlock
+                            && locksAndUnlocks[i].iNode == locksAndUnlocks[i + 1].iNode
+                            && locksAndUnlocks[i].clock.happensBefore(locksAndUnlocks[i + 1].clock)
                 )
             }
             if (i >= 1) {
@@ -123,36 +121,37 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
         while (!inCS) {
             signal.await()
         }
-        env.recordInternalEvent("Lock")
+        env.recordInternalEvent(Lock)
     }
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation
     fun unlock() {
         if (!inCS) {
             return
         }
         inCS = false
         req[env.nodeId] = inf
-        env.recordInternalEvent("Unlock")
+        env.recordInternalEvent(Unlock)
         env.broadcast(Rel(++clock))
     }
 }
 
 class LamportMutexTest {
-    private fun createOptions() = createDistributedOptions<MutexMessage>()
-        .addNodes(LamportMutex::class.java, 2, 2)
-        .requireStateEquivalenceImplCheck(false)
+    private fun commonOptions() = createDistributedOptions<MutexMessage>()
+        .addNodes<LamportMutex>(nodes = 4, minNodes = 2)
         .verifier(EpsilonVerifier::class.java)
-        .actorsPerThread(2)
+        .actorsPerThread(3)
         .invocationsPerIteration(30_000)
         .iterations(10)
-        //.storeLogsForFailedScenario("lamport.txt")
         .minimizeFailedScenario(true)
 
     @Test
-    fun testSimple() = createOptions().check()
+    fun `correct algorithm`() = commonOptions().check(LamportMutex::class.java)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun testNoFifo() = createOptions().messageOrder(MessageOrder.ASYNCHRONOUS).check()
+    @Test
+    fun `correct algorithm without FIFO`() {
+        val failure = commonOptions().messageOrder(ASYNCHRONOUS).checkImpl(LamportMutex::class.java)
+        assert(failure is ValidationFailure)
+    }
 }
 

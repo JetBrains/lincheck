@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
@@ -64,7 +65,7 @@ class PingPongClient(val env: Environment<PingPongMessage, Unit>) : Node<PingPon
     }
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun ping()  {
+    suspend fun ping() {
         while (true) {
             var hasResult = false
             env.send(Ping, server)
@@ -86,12 +87,12 @@ class PingPongMock : VerifierState() {
 class TimeoutTest {
     @Test
     fun test() = createDistributedOptions<PingPongMessage>()
-        .addNodes(PingPongClient::class.java, 1)
-        .addNodes(UnreliablePingPongServer::class.java, 1)
+        .addNodes<PingPongClient>(nodes = 1)
+        .addNodes<UnreliablePingPongServer>(nodes = 1)
         .invocationsPerIteration(600_000)
         .iterations(1)
         .sequentialSpecification(PingPongMock::class.java)
         .actorsPerThread(2)
         .messageLoss(false)
-        .check()
+        .check(PingPongClient::class.java)
 }

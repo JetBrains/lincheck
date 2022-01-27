@@ -21,30 +21,29 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
 
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.event.*
 import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
+import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 
-abstract class OrderCheckNode(val env: Environment<Message, MutableList<Message>>) : Node<Message, MutableList<Message>> {
+abstract class OrderCheckNode(val env: Environment<Message, MutableList<Message>>) :
+    Node<Message, MutableList<Message>> {
     override fun validate(events: List<Event>, databases: List<MutableList<Message>>) {
-        for (l in databases) {
-            for (i in l.indices) {
-                for (j in i + 1 until l.size) {
+        // Check total order
+        for (storedMessages in databases) {
+            for (i in storedMessages.indices) {
+                for (j in i + 1 until storedMessages.size) {
                     check(databases.none {
-                        val first = it.lastIndexOf(l[i])
-                        val second = it.lastIndexOf(l[j])
+                        val first = it.lastIndexOf(storedMessages[i])
+                        val second = it.lastIndexOf(storedMessages[j])
                         first != -1 && second != -1 && first >= second
-                    }) {
-                        "logs=$databases, first=${l[i]}, second=${l[j]}"
-                    }
+                    })
                 }
             }
         }
         val sent = events.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
             .filterIsInstance<RequestMessage>()
         sent.forEach { m ->
-            check(databases.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) }) {
-                m.toString()
-            }
+            check(databases.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) })
         }
     }
 }

@@ -1,7 +1,11 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.consensus
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import kotlin.random.Random
@@ -82,12 +86,10 @@ class Checker : VerifierState() {
 class ConsensusNaiveTest {
     @Test
     fun test() = createDistributedOptions<Message>()
-        .addNodes(ConsensusNoFailures::class.java, 2,3)
-        .requireStateEquivalenceImplCheck(false)
+        .addNodes<ConsensusNoFailures>(nodes = 3, minNodes = 2)
         .sequentialSpecification(Checker::class.java)
         .actorsPerThread(3)
-        .messageOrder(MessageOrder.FIFO)
         .invocationsPerIteration(500_000)
         .iterations(1)
-        .check()
+        .check(ConsensusNoFailures::class.java)
 }

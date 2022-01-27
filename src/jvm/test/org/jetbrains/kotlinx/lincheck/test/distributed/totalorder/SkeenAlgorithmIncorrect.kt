@@ -22,15 +22,14 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
 
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 
 class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) : OrderCheckNode(env) {
-    var clock = 0
-    var opId = 0
-    val resChannel = Channel<Int>(Channel.UNLIMITED)
-    val replyTimes = mutableListOf<Int>()
-    val messages = mutableSetOf<RequestMessage>()
+    private var clock = 0
+    private var opId = 0
+    private val resChannel = Channel<Int>(Channel.UNLIMITED)
+    private val replyTimes = mutableListOf<Int>()
+    private val messages = mutableSetOf<RequestMessage>()
 
     override fun onMessage(message: Message, sender: Int) {
         clock = maxOf(clock, message.clock) + 1
@@ -65,8 +64,6 @@ class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) :
     private fun deliver() {
         while (true) {
             val msg = messages.minByOrNull { it.time }
-
-            // env.recordInternalEvent("Min message $msg"
             if (msg?.finalized != true) return
             messages.removeIf { it == msg }
             env.recordInternalEvent("Add message $msg")
