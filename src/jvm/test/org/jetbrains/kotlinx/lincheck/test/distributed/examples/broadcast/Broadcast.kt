@@ -95,7 +95,7 @@ abstract class AbstractPeer(protected val env: Environment<Message, MutableList<
 }
 
 class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
-    private val receivedMessages = Array<MutableMap<Int, Int>>(env.numberOfNodes) { mutableMapOf() }
+    private val messageCount = Array<MutableMap<Int, Int>>(env.numberOfNodes) { mutableMapOf() }
     private var messageId = 0
     private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
         PriorityQueue { x, y -> x.id - y.id }
@@ -103,14 +103,15 @@ class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) 
     private val lastDeliveredId = Array(env.numberOfNodes) { -1 }
 
     override fun stateRepresentation(): String {
-        return "Received messages=${receivedMessages.toList()}, undelivered ${undeliveredMessages.toList()}, " +
+        return "Received messages=${messageCount.toList()}, undelivered ${undeliveredMessages.toList()}, " +
                 "logs=${env.database}"
     }
 
     private fun deliver(sender: Int) {
         while (undeliveredMessages[sender].isNotEmpty()) {
             val lastMessage = undeliveredMessages[sender].peek()
-            if (lastMessage.id != lastDeliveredId[sender] + 1 || receivedMessages[sender][lastMessage.id]!! < (env.numberOfNodes + 1) / 2) {
+            if (lastMessage.id != lastDeliveredId[sender] + 1
+                || messageCount[sender][lastMessage.id]!! < (env.numberOfNodes + 1) / 2) {
                 return
             }
             undeliveredMessages[sender].remove()
@@ -122,12 +123,12 @@ class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) 
     override fun onMessage(message: Message, sender: Int) {
         val msgId = message.id
         val from = message.from
-        if (!receivedMessages[from].contains(msgId)) {
-            receivedMessages[from][msgId] = 2
+        if (!messageCount[from].contains(msgId)) {
+            messageCount[from][msgId] = 2
             undeliveredMessages[from].add(message)
             env.broadcast(message)
         } else {
-            receivedMessages[from][msgId] = receivedMessages[from][msgId]!! + 1
+            messageCount[from][msgId] = messageCount[from][msgId]!! + 1
         }
         deliver(from)
     }

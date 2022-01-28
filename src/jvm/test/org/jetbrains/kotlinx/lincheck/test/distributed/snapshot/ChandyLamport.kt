@@ -197,7 +197,6 @@ class SnapshotTest {
             .sequentialSpecification(MockSnapshot::class.java)
             .minimizeFailedScenario(false)
             .checkImpl(NaiveSnapshotIncorrect::class.java)
-        println(failure)
         assert(failure is IncorrectResultsFailure)
     }
 }
