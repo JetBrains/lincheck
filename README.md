@@ -465,7 +465,7 @@ class ChanelLinearizabilityTest : VerifierState() {
 Instead of using `@..CTest` annotations for specifying the execution strategy and other parameters, it is possible to use `LinChecker.check(Class<?>, Options)` method and provide options for it. Every execution strategy has its own Options class (e.g., `StressOptions` for stress strategy) which should be used for it. See an example with stress strategy:
 
 ```java
-public class MyConcurrentTest {
+public class StressOptionsTest {
   <empty constructor and operations>
   
   @Test 
