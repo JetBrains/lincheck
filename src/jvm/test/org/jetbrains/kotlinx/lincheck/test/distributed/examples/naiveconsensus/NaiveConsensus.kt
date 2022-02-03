@@ -43,7 +43,7 @@ class NaiveConsensus(private val env: Environment<Offer, MutableMap<OfferId, Int
     }
 
     private fun appendResults() =
-        offers.filter { it.value.size == env.numberOfNodes }
+        offers.filter { it.value.size == env.nodes }
             .forEach {
                 env.database[it.key] = it.value.minOf { o -> o.value }
             }

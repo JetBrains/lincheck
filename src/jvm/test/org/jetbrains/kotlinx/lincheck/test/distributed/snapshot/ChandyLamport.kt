@@ -73,8 +73,8 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
     private var token = 0
     private var markerCount = 0
     private var marker: Marker? = null
-    private val replies = Array<Reply?>(env.numberOfNodes) { null }
-    private val channels = Array<MutableList<State>>(env.numberOfNodes) { mutableListOf() }
+    private val replies = Array<Reply?>(env.nodes) { null }
+    private val channels = Array<MutableList<State>>(env.nodes) { mutableListOf() }
     private var gotSnapshot = false
 
     override fun onMessage(message: Message, sender: Int) {
@@ -93,7 +93,7 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
                     marker = message
                     env.broadcast(message)
                 }
-                if (markerCount == env.numberOfNodes - 1) {
+                if (markerCount == env.nodes - 1) {
                     val res = finishSnapshot()
                     env.send(Reply(res, marker!!.token), marker!!.initializer)
                     marker = null
@@ -116,7 +116,7 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
     }
 
     private fun checkAllRepliesReceived() {
-        if (replies.filterNotNull().size == env.numberOfNodes) {
+        if (replies.filterNotNull().size == env.nodes) {
             gotSnapshot = true
             semaphore.signal()
         }
@@ -124,7 +124,7 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
 
     @Operation(cancellableOnSuspension = false)
     fun transaction(to: Int, sum: Int) {
-        val receiver = abs(to) % env.numberOfNodes
+        val receiver = abs(to) % env.nodes
         if (receiver == env.nodeId) return
         currentSum -= sum
         env.send(Transaction(sum), receiver)
@@ -144,7 +144,7 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
         state = currentSum
         marker = Marker(env.nodeId, token++)
         env.broadcast(marker!!)
-        if (env.numberOfNodes == 1) {
+        if (env.nodes == 1) {
             return state
         }
         while (!gotSnapshot) {
@@ -154,7 +154,7 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
         marker = null
         gotSnapshot = false
         replies.fill(null)
-        return res / env.numberOfNodes + res % env.numberOfNodes
+        return res / env.nodes + res % env.nodes
     }
 }
 

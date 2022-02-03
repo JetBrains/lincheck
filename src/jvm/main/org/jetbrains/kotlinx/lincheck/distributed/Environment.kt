@@ -7,14 +7,14 @@ import kotlinx.coroutines.CoroutineScope
  */
 interface Environment<Message, DB> {
     /**
-     * Identifier of this node (from 0 to [numberOfNodes]).
+     * Identifier of this node (from 0 to [nodes]).
      */
     val nodeId: Int
 
     /**
      * The total number of nodes in the system.
      */
-    val numberOfNodes: Int
+    val nodes: Int
 
     /**
      * Returns identifiers of nodes of the exact class [cls].
@@ -22,16 +22,16 @@ interface Environment<Message, DB> {
     fun getAddressesForClass(cls: Class<out Node<Message, DB>>): List<Int>?
 
     /**
-     * Sends the specified [message] to the process [receiver] (from 0 to [numberOfNodes]).
+     * Sends the specified [message] to the process [receiver] (from 0 to [nodes]).
      */
     fun send(message: Message, receiver: Int)
 
     /**
-     * Sends the specified [message] to all processes (from 0 to [numberOfNodes]).
+     * Sends the specified [message] to all processes (from 0 to [nodes]).
      * If [skipItself] is true, doesn't send the message to itself.
      */
     fun broadcast(message: Message, skipItself: Boolean = true) {
-        for (i in 0 until numberOfNodes) {
+        for (i in 0 until nodes) {
             if (i == nodeId && skipItself) {
                 continue
             }

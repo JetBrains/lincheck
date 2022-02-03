@@ -62,6 +62,8 @@ object Recover : KVMessage() {
 class Storage {
     var opId: Int = 0
     val keyValues = mutableListOf<KVLog>()
+
+    fun getPrevValue(index: Int) = keyValues[index].request.value
 }
 
 data class KVLog(val request: PutRequest, val prev: String?)
@@ -76,7 +78,7 @@ class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage>
     }
 
     private fun getNodeForKey(key: String) =
-        ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
+        ((key.hashCode() % env.nodes) + env.nodes) % env.nodes
 
     private fun saveToLog(request: PutRequest): String? {
         val present = env.database.keyValues.lastOrNull { it.request == request }
@@ -87,8 +89,7 @@ class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage>
         val prev = if (index == -1) {
             null
         } else {
-            val res = env.database.keyValues[index].request.value
-            res
+            env.database.getPrevValue(index)
         }
         env.database.keyValues.add(KVLog(request, prev))
         return prev
@@ -99,7 +100,7 @@ class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage>
         return if (index == -1) {
             null
         } else {
-            env.database.keyValues[index].request.value
+            env.database.getPrevValue(index)
         }
     }
 
@@ -148,19 +149,16 @@ class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage>
     override fun onMessage(message: KVMessage, sender: Int) {
         if (message is Recover) {
             if (sender == delegate) {
-                env.recordInternalEvent("Signal")
                 semaphore.signal()
             }
             return
         }
         if (!message.isRequest) {
             if (message.id != env.database.opId) {
-                env.recordInternalEvent("msgId=${message.id}, opId=${env.database.opId}")
                 return
             }
             if (response == null) {
                 response = message
-                env.recordInternalEvent("Signal")
                 semaphore.signal()
             }
             return
@@ -205,13 +203,13 @@ class KVShardingTest {
         ).check(Shard::class.java)
 
     @Test
-    fun `incorrect algorithm without crashes`() = options(::SimpleStorage)
+    fun `incorrect algorithm without crashes`() = options(::IncorrectStorage)
         .addNodes<ShardMultiplePutToLog>(nodes = 4)
         .check(ShardMultiplePutToLog::class.java)
 
     @Test
     fun `incorrect algorithm`() {
-        val failure = options(::SimpleStorage)
+        val failure = options(::IncorrectStorage)
             .addNodes<ShardMultiplePutToLog>(
                 nodes = 4,
                 crashMode = RECOVER_ON_CRASH,

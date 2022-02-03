@@ -22,11 +22,9 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast.Message
-
 
 class PeerIncorrect(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
-    private val receivedMessages = Array<MutableSet<Int>>(env.numberOfNodes) { mutableSetOf() }
+    private val receivedMessages = Array<MutableSet<Int>>(env.nodes) { mutableSetOf() }
     private var messageId = 0
 
     override fun onMessage(message: Message, sender: Int) {

@@ -42,7 +42,7 @@ class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) :
             }
             is Reply -> {
                 replyTimes.add(message.clock)
-                if (replyTimes.size == env.numberOfNodes - 1) {
+                if (replyTimes.size == env.nodes - 1) {
                     resChannel.offer(replyTimes.maxOf { it })
                 }
             }
@@ -74,7 +74,7 @@ class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) :
 
     @Operation(cancellableOnSuspension = false)
     suspend fun broadcast() {
-        if (env.numberOfNodes == 1) return
+        if (env.nodes == 1) return
         replyTimes.clear()
         ++clock
         val msg = RequestMessage(from = env.nodeId, id = opId++, clock = clock, finalized = false, time = clock)

@@ -65,7 +65,7 @@ class NodeAddressResolverTest {
         check(addressResolver[BClass::class.java] == listOf(3, 4, 5, 6))
         check(addressResolver[CClass::class.java] == listOf(7, 8, 9, 10, 11))
         check(addressResolver.nodeCount == 12)
-        check(addressResolver.nodesWithScenario == 3)
+        check(addressResolver.scenarioSize == 3)
     }
 
     @Test
@@ -87,7 +87,7 @@ class NodeAddressResolverTest {
         check(addressResolver[BClass::class.java] == listOf(5, 6, 7, 8))
         check(addressResolver[CClass::class.java] == listOf(9, 10, 11, 12, 13))
         check(addressResolver.nodeCount == 14)
-        check(addressResolver.nodesWithScenario == 3)
+        check(addressResolver.scenarioSize == 3)
     }
 
     @Test

@@ -29,7 +29,7 @@ import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
  */
 internal class EnvironmentImpl<Message, DB>(
     override val nodeId: Int,
-    override val numberOfNodes: Int,
+    override val nodes: Int,
     private val _database: DB,
     private val eventFactory: EventFactory<Message, DB>,
     private val strategy: DistributedStrategy<Message, DB>,

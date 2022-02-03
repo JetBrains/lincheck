@@ -14,7 +14,7 @@ import java.util.*
 
 class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command, Unit> {
     private val storage = mutableMapOf<Int, Int>()
-    private val commandResults = Array<MutableMap<Int, Command>>(env.numberOfNodes) {
+    private val commandResults = Array<MutableMap<Int, Command>>(env.nodes) {
         mutableMapOf()
     }
 

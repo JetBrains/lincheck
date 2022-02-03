@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
 import org.apache.commons.math3.distribution.PoissonDistribution
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.math.max
 import kotlin.random.Random
@@ -45,8 +46,9 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
 
     private var nextNumberOfCrashes = 0
     private val nodeCount: Int = testCfg.addressResolver.nodeCount
-    private var currentErrorPoint = 0
-    private var previousNumberOfPoints = 0
+    private val currentErrorPoint = Array(testCfg.addressResolver.nodeCount) { 0 }
+    private val previousNumberOfPoints = Array(testCfg.addressResolver.nodeCount) { 0 }
+    private val addressResolver = testCfg.addressResolver
 
     /**
      * Returns how many times the message should be sent (from 0 to 2).
@@ -72,7 +74,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
      * Returns if the message should be sent.
      */
     private fun messageIsSent(): Boolean {
-        if (testCfg.isNetworkReliable) {
+        if (testCfg.messageLoss) {
             return true
         }
         return rand.nextDouble(1.0) < MESSAGE_SENT_PROBABILITY
@@ -81,14 +83,14 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     /**
      * Returns if the node should fail.
      */
-    fun nodeFailed(): Boolean {
-        currentErrorPoint++
+    fun nodeFailed(iNode: Int): Boolean {
+        currentErrorPoint[iNode]++
         if (nextNumberOfCrashes > 0) {
             nextNumberOfCrashes--
             return true
         }
         val r = rand.nextDouble(1.0)
-        val p = nodeFailProbability()
+        val p = nodeFailProbability(iNode)
         if (r >= p) return false
         nextNumberOfCrashes = rand.nextInt(0, SIMULTANEOUS_CRASH_COUNT)
         return true
@@ -102,27 +104,27 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     /**
      * Generates node fail probability.
      */
-    private fun nodeFailProbability(): Double {
-        return if (previousNumberOfPoints == 0) {
+    private fun nodeFailProbability(iNode: Int): Double {
+        return if (previousNumberOfPoints[iNode] == 0) {
             0.0
         } else {
-            val q = failedNodesExpectation.toDouble() / previousNumberOfPoints
-            return q
-            /*return if (testCfg.supportRecovery == CrashMode.NO_RECOVER) {
-                q / (previousNumberOfPoints - (currentErrorPoint - 1) * q)
+            val q =
+                failedNodesExpectation.toDouble() / addressResolver.size(iNode)
+            return if (addressResolver.crashTypeForNode(iNode) == FINISH_ON_CRASH) {
+                q / (previousNumberOfPoints[iNode] - (currentErrorPoint[iNode] - 1) * q)
             } else {
-                q / previousNumberOfPoints
-            }*/
+                q / previousNumberOfPoints[iNode]
+            }
         }
     }
 
     /**
      * Returns if the network partition should be added here.
      */
-    fun isNetworkPartition(): Boolean {
-        if (previousNumberOfPoints == 0) return false
+    fun isNetworkPartition(iNode: Int): Boolean {
+        if (previousNumberOfPoints[iNode] == 0) return false
         val q = networkPartitionsExpectation.toDouble() / nodeCount
-        val p = q / previousNumberOfPoints
+        val p = q / previousNumberOfPoints[iNode]
         val r = rand.nextDouble(1.0)
         return r < p
     }
@@ -141,8 +143,10 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
      */
     fun reset(failedNodesExp: Int = 0) {
         if (failedNodesExpectation == -1) failedNodesExpectation = failedNodesExp
-        previousNumberOfPoints = max(previousNumberOfPoints, currentErrorPoint)
-        currentErrorPoint = 0
+        previousNumberOfPoints.indices.forEach {
+            previousNumberOfPoints[it] = max(previousNumberOfPoints[it], currentErrorPoint[it])
+        }
+        currentErrorPoint.fill(0)
     }
 
     /**

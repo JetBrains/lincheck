@@ -71,8 +71,8 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
-    private val req = IntArray(env.numberOfNodes) { inf } // time of last REQ message
-    private val ok = IntArray(env.numberOfNodes) // time of last OK message
+    private val req = IntArray(env.nodes) { inf } // time of last REQ message
+    private val ok = IntArray(env.nodes) // time of last OK message
     private val signal = Signal()
 
     override fun onMessage(message: MutexMessage, sender: Int) {
@@ -97,7 +97,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
         if (myReqTime == inf || inCS) {
             return
         }
-        for (i in 0 until env.numberOfNodes) {
+        for (i in 0 until env.nodes) {
             if (i == env.nodeId) continue
             if (req[i] < myReqTime || req[i] == myReqTime && i < env.nodeId) return
             if (ok[i] <= myReqTime) return
@@ -114,7 +114,7 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
         val myReqTime = ++clock
         req[env.nodeId] = myReqTime
         env.broadcast(Req(++clock, myReqTime))
-        if (env.numberOfNodes == 1) {
+        if (env.nodes == 1) {
             inCS = true
             return
         }

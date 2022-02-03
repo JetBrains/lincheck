@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
 
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import java.lang.Integer.max
 import java.lang.Integer.min
 import kotlin.random.Random
 
@@ -44,15 +43,15 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
     private var status = Status.FOLLOWER
     private var commitIndex = -1
     private var lastApplied = -1
-    private val nextIndices = Array(env.numberOfNodes) {
+    private val nextIndices = Array(env.nodes) {
         env.database.logSize
     }
     private var receivedHeartbeatCount = 0L
     private val random = Random(env.nodeId)
     private val majority = nodeCount / 2 + 1
-    private var receivedOks = Array(env.numberOfNodes) { false }
+    private var receivedOks = Array(env.nodes) { false }
     private var leaderId: Int? = null
-    private val matchIndices = Array(env.numberOfNodes) { 0 }
+    private val matchIndices = Array(env.nodes) { 0 }
     private val stateMachine = StateMachine()
 
     override fun onStart() {

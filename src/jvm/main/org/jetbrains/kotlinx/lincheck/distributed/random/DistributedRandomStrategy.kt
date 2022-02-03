@@ -75,7 +75,7 @@ internal class DistributedRandomStrategy<Message, DB>(
      */
     override fun tryCrash(iNode: Int) {
         if (testCfg.addressResolver.crashTypeForNode(iNode) != CrashMode.NO_CRASH
-            && probability.nodeFailed()
+            && probability.nodeFailed(iNode)
             && failureManager.canCrash(iNode) // can be time-consuming
         ) {
             failureManager.crashNode(iNode)
@@ -155,7 +155,7 @@ internal class DistributedRandomStrategy<Message, DB>(
      */
     override fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean {
         if (testCfg.addressResolver.partitionTypeForNode(sender) != NetworkPartitionMode.NONE
-            && probability.isNetworkPartition()
+            && probability.isNetworkPartition(sender)
             && failureManager.canAddPartition(sender, receiver)
         ) {
             val partitionResult = failureManager.partition(sender, receiver)

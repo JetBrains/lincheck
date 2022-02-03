@@ -20,27 +20,26 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 
-class SimpleStorage {
+class IncorrectStorage {
     var opId = 0
     val keyValues = mutableMapOf<String, String>()
 }
 
-class ShardMultiplePutToLog(val env: Environment<KVMessage, SimpleStorage>) : Node<KVMessage, SimpleStorage> {
+class ShardMultiplePutToLog(val env: Environment<KVMessage, IncorrectStorage>) : Node<KVMessage, IncorrectStorage> {
     private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null
-    private var appliedOperations = Array(env.numberOfNodes) {
+    private var appliedOperations = Array(env.nodes) {
         mutableMapOf<Int, KVMessage>()
     }
 
     private fun getNodeForKey(key: String) =
-        ((key.hashCode() % env.numberOfNodes) + env.numberOfNodes) % env.numberOfNodes
+        ((key.hashCode() % env.nodes) + env.nodes) % env.nodes
 
     private fun saveToLog(key: String, value: String): String? {
         return env.database.keyValues.put(key, value)

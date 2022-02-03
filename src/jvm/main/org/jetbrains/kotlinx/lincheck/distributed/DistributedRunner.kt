@@ -84,7 +84,7 @@ internal open class DistributedRunner<Message, DB>(
 
     override fun initialize() {
         super.initialize()
-        testNodeExecutions = Array(testCfg.addressResolver.nodesWithScenario) { t ->
+        testNodeExecutions = Array(testCfg.addressResolver.scenarioSize) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
         executor = DistributedExecutor(this)
@@ -186,7 +186,7 @@ internal open class DistributedRunner<Message, DB>(
         repeat(nodeCount) { i ->
             taskManager.addActionTask(i) {
                 nodeInstances[i].onStart()
-                if (i >= testCfg.addressResolver.nodesWithScenario) return@addActionTask
+                if (i >= testCfg.addressResolver.scenarioSize) return@addActionTask
                 taskManager.addSuspendedTask(i) {
                     runNode(i)
                 }
@@ -285,7 +285,7 @@ internal open class DistributedRunner<Message, DB>(
      * Runs the operations for node.
      */
     private suspend fun runNode(iNode: Int) {
-        if (iNode >= testCfg.addressResolver.nodesWithScenario) {
+        if (iNode >= testCfg.addressResolver.scenarioSize) {
             return
         }
         val testNodeExecution = testNodeExecutions[iNode]

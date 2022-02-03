@@ -29,7 +29,7 @@ import java.util.*
 
 class KVStorageServerIncorrect(private val env: Environment<Command, Unit>) : Node<Command, Unit> {
     private val storage = HashMap<Int, Int>()
-    private val commandResults = Array<HashMap<Int, Command>>(env.numberOfNodes) {
+    private val commandResults = Array<HashMap<Int, Command>>(env.nodes) {
         HashMap()
     }
 

@@ -34,7 +34,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     private val currentSum = atomic(100)
     private val semaphore = Signal()
     private var token = 0
-    private val replies = Array<Reply?>(env.numberOfNodes) { null }
+    private val replies = Array<Reply?>(env.nodes) { null }
 
     @Volatile
     private var gotSnapshot = false
@@ -56,7 +56,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
 
 
     private fun checkAllRepliesReceived() {
-        if (replies.filterNotNull().size == env.numberOfNodes - 1) {
+        if (replies.filterNotNull().size == env.nodes - 1) {
             gotSnapshot = true
             semaphore.signal()
         }
@@ -64,7 +64,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
 
     @Operation
     fun transaction(to: Int, sum: Int) {
-        val receiver = abs(to) % env.numberOfNodes
+        val receiver = abs(to) % env.nodes
         if (to == env.nodeId) return
         currentSum.getAndAdd(-sum)
         env.send(Transaction(sum), receiver)
@@ -88,6 +88,6 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
         val res = replies.filterNotNull().sumOf { it.state } + state
         gotSnapshot = false
         replies.fill(null)
-        return res / env.numberOfNodes + res % env.numberOfNodes
+        return res / env.nodes + res % env.nodes
     }
 }

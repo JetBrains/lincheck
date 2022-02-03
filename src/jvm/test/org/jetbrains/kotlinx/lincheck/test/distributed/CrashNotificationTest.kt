@@ -50,7 +50,7 @@ class CrashingNode(private val env: Environment<Int, Unit>) : Node<Int, Unit> {
                 is NodeCrashEvent -> {
                     expectedNotifications.removeIf { it.to == e.iNode }
                     crashes.add(e.iNode)
-                    (0 until env.numberOfNodes).filter { it !in crashes }
+                    (0 until env.nodes).filter { it !in crashes }
                         .forEach { expectedNotifications.add(ExpectedNotification(e.iNode, it)) }
                 }
                 is CrashNotificationEvent -> {

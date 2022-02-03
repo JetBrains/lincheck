@@ -81,7 +81,7 @@ abstract class AbstractPeer(protected val env: Environment<Message, MutableList<
         }
         // If some process sent m1 before m2, every process which delivered m2 delivered m1.
         //For each store the order in which messages were sent
-        val localMessagesOrder = Array(env.numberOfNodes) { i ->
+        val localMessagesOrder = Array(env.nodes) { i ->
             databases[env.nodeId].filter { it.from == i }
                 .map { m ->
                     events.sentMessages<Message>(i).filter { it.from == i }.distinctBy { it.id }.indexOf(m)
@@ -95,12 +95,12 @@ abstract class AbstractPeer(protected val env: Environment<Message, MutableList<
 }
 
 class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
-    private val messageCount = Array<MutableMap<Int, Int>>(env.numberOfNodes) { mutableMapOf() }
+    private val messageCount = Array<MutableMap<Int, Int>>(env.nodes) { mutableMapOf() }
     private var messageId = 0
-    private val undeliveredMessages = Array<PriorityQueue<Message>>(env.numberOfNodes) {
+    private val undeliveredMessages = Array<PriorityQueue<Message>>(env.nodes) {
         PriorityQueue { x, y -> x.id - y.id }
     }
-    private val lastDeliveredId = Array(env.numberOfNodes) { -1 }
+    private val lastDeliveredId = Array(env.nodes) { -1 }
 
     override fun stateRepresentation(): String {
         return "Received messages=${messageCount.toList()}, undelivered ${undeliveredMessages.toList()}, " +
@@ -111,7 +111,7 @@ class Peer(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) 
         while (undeliveredMessages[sender].isNotEmpty()) {
             val lastMessage = undeliveredMessages[sender].peek()
             if (lastMessage.id != lastDeliveredId[sender] + 1
-                || messageCount[sender][lastMessage.id]!! < (env.numberOfNodes + 1) / 2) {
+                || messageCount[sender][lastMessage.id]!! < (env.nodes + 1) / 2) {
                 return
             }
             undeliveredMessages[sender].remove()

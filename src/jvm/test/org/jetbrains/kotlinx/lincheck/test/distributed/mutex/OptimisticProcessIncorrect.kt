@@ -37,7 +37,7 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
         private var optimisticIncorrect = 0
     }
 
-    private val requested = BooleanArray(env.numberOfNodes)
+    private val requested = BooleanArray(env.nodes)
     private var inCS = false
     private val semaphore = Semaphore(1, 1)
 
@@ -70,7 +70,7 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
         requested[env.nodeId] = true
         env.broadcast(Req(0, 0))
         checkCSEnter()
-        if (env.numberOfNodes != 1) {
+        if (env.nodes != 1) {
             semaphore.acquire()
         } else {
             inCS = true

@@ -33,21 +33,18 @@ private data class CrashInfoForType(
  */
 class NodeAddressResolver<Message, DB>(
     testClass: Class<out Node<Message, DB>>,
-    val nodesWithScenario: Int,
+    val scenarioSize: Int,
     nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
 ) {
     val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
-    val nodeCount =
-        if (testClass in nodeTypes) nodeTypes.values.sumOf { it.nodes } else nodeTypes.values.sumOf { it.nodes } + nodesWithScenario
+    val nodeCount = nodeTypes.values.sumOf { it.nodes }
     private val nodes = mutableListOf<Class<out Node<Message, DB>>>()
     private val crashes = mutableMapOf<Class<out Node<Message, DB>>, CrashInfoForType>()
 
     init {
-        repeat(nodesWithScenario) { nodes.add(testClass) }
-        if (nodeTypes.containsKey(testClass)) {
-            repeat(nodeTypes[testClass]!!.nodes - nodesWithScenario) {
-                nodes.add(testClass)
-            }
+        repeat(scenarioSize) { nodes.add(testClass) }
+        repeat(nodeTypes[testClass]!!.nodes - scenarioSize) {
+            nodes.add(testClass)
         }
         for ((cls, info) in nodeTypes) {
             if (cls == testClass) continue
@@ -74,6 +71,11 @@ class NodeAddressResolver<Message, DB>(
      * Returns a class for a specified id [iNode].
      */
     operator fun get(iNode: Int) = nodes[iNode]
+
+    /**
+     * Returns number of node
+     */
+    fun size(iNode: Int) = nodeTypeToRange[nodes[iNode]]!!.size
 
     /**
      * Returns the crash mode for [iNode].
