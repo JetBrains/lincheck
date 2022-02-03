@@ -45,7 +45,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
                 currentSum.getAndAdd(message.amount)
             }
             is SnapshotRequest -> {
-                env.send(SnapshotPart(currentSum.value, message.token), sender)
+                env.send(SnapshotPart(currentSum.value), sender)
             }
             is SnapshotPart -> {
                 replies[sender] = message
@@ -80,7 +80,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun snapshot(): Int {
         val state = currentSum.value
-        val marker = SnapshotRequest(env.nodeId, token++)
+        val marker = SnapshotRequest(env.nodeId)
         env.broadcast(marker)
         while (!gotSnapshot) {
             semaphore.await()

@@ -36,7 +36,7 @@ import kotlin.math.abs
 sealed class Message
 
 /**
- * A transaction between two nodes.
+ * Amount of money sent between nodes.
  */
 data class Transaction(val amount: Int) : Message()
 
@@ -50,76 +50,95 @@ data class SnapshotRequest(val requestedBy: Int) : Message()
  */
 data class SnapshotPart(val amount: Int) : Message()
 
-/**
- * Stored in the channels while snapshot is taken.
- */
-sealed class State
-
-/**
- * The value which was received.
- */
-data class Value(val sum: Int) : State()
-
-/**
- * Indicates that writing to this channel is finished.
- */
-object Empty : State()
-
 private class SnapshotOperation(
-    amountOnSnapshotStart: Int
+    amountOnSnapshotStart: Int,
+    val requestedBy: Int,
+    val nodes: Int
 ) : Signal() {
-    var receivedSnapshotParts = 0
+    private var receivedSnapshotParts = 0
     var snapshot = amountOnSnapshotStart
+    private val receivedRequests = mutableSetOf<Int>()
+
+    /**
+     * If the snapshot for this node is collected.
+     */
+    val finishPart: Boolean
+        get() = receivedRequests.size == nodes - 1
+
+    /**
+     * Adds [amount] to snapshot if request wasn't receive from [sender] before.
+     */
+    fun addAmount(amount: Int, sender: Int) {
+        if (receivedRequests.contains(sender)) return
+        snapshot += amount
+    }
+
+    /**
+     * Marks that the request was received from [sender].
+     */
+    fun addRequest(sender: Int) {
+        receivedRequests.add(sender)
+    }
+
+    /**
+     * Adds the snapshot part from other node.
+     */
+    fun addSnapshotPart(amount: Int) {
+        receivedSnapshotParts++
+        snapshot += amount
+        // Checks that all parts are received.
+        // The collection of the own snapshot is finished because of the FIFO message order.
+        if (receivedSnapshotParts == nodes - 1) {
+            signal()
+        }
+    }
+
+    override fun toString(): String {
+        return "Snapshot=$snapshot, receivedRequest=$receivedRequests, receivedParts=$receivedSnapshotParts"
+    }
 }
 
+/**
+ * Chandy Lamport algorithm.
+ * 1. Snapshot initializer saves its current state and sends request to other nodes.
+ * 2. When node receives request from another node it initializes the snapshot by its current amount,
+ * broadcasts the request.
+ * 3. If the snapshot is initialized on node A, and node A received the amount S from node B, and didn't receive the snapshot request from node B,
+ * the S is added to snapshot of A.
+ * 4. If node A, which didn't initialize the snapshot, received the request (n - 1) times,
+ * it sends the resulting snapshot to initializer and clears the snapshot.
+ * 5. If initializer receives snapshot parts from all other nodes it returns the result.
+ */
 @OpGroupConfig(name = "observer", nonParallel = true)
 class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message, Unit> {
     private var currentAmount = 0
-    private var snapshotRequest: SnapshotOperation? = null
-    private var marker: SnapshotRequest? = null
-    private val channels = Array<MutableList<State>>(env.nodes) { mutableListOf() }
+    private var snapshotOperation: SnapshotOperation? = null
 
     override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Transaction -> {
                 currentAmount += message.amount
-                if (marker != null && (channels[sender].isEmpty() || channels[sender].last() !is Empty)) {
-                    channels[sender].add(Value(message.amount))
-                }
+                // Adds amount to snapshot if necessary.
+                snapshotOperation?.addAmount(message.amount, sender)
             }
             is SnapshotRequest -> {
-                channels[sender].add(Empty)
-                receivedSnapshotParts++
-                if (marker == null) {
-                    amountOnSnapshotStart = currentAmount
-                    marker = message
+                // When the request is received for the first time, the snapshot is initialized and
+                // request is broadcast to other nodes.
+                if (snapshotOperation == null) {
+                    snapshotOperation = SnapshotOperation(currentAmount, message.requestedBy, env.nodes)
                     env.broadcast(message)
                 }
-                if (receivedSnapshotParts == env.nodes - 1) {
-                    val res = finishSnapshot()
-                    env.send(SnapshotPart(res, marker!!.token), marker!!.requestedBy)
-                    marker = null
+                // Messages from sender will not be added to snapshot anymore.
+                snapshotOperation!!.addRequest(sender)
+                // Send the result to initializer and clear the snapshot if necessary.
+                if (snapshotOperation!!.finishPart && snapshotOperation!!.requestedBy != env.nodeId) {
+                    env.send(SnapshotPart(snapshotOperation!!.snapshot), snapshotOperation!!.requestedBy)
+                    snapshotOperation = null
                 }
             }
             is SnapshotPart -> {
-                replies[sender] = message
-                checkAllRepliesReceived()
+                snapshotOperation!!.addSnapshotPart(message.amount)
             }
-        }
-    }
-
-    private fun finishSnapshot(): Int {
-        val stored =
-            channels.sumOf { it.filterIsInstance(Value::class.java).sumOf { v -> v.sum } }
-        val res = amountOnSnapshotStart + stored
-        receivedSnapshotParts = 0
-        channels.forEach { it.clear() }
-        return res
-    }
-
-    private fun checkAllRepliesReceived() {
-        if (replies.filterNotNull().size == env.nodes) {
-            signal.signal()
         }
     }
 
@@ -131,35 +150,27 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
         env.send(Transaction(amount), receiver)
     }
 
-    override fun stateRepresentation(): String {
-        val res = StringBuilder()
-        res.append("[${env.nodeId}]: Current sum ${currentAmount}\n")
-        res.append("[${env.nodeId}]: State $amountOnSnapshotStart\n")
-        channels.forEachIndexed { i, c -> res.append("[${env.nodeId}]: channel[$i] $c\n") }
-        replies.forEachIndexed { i, c -> res.append("[${env.nodeId}]: reply[$i] $c\n") }
-        return res.toString()
-    }
-
     @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun totalBalance(): Int {
-        amountOnSnapshotStart = currentAmount
-        marker = SnapshotRequest(env.nodeId, token++)
-        env.broadcast(marker!!)
-        if (env.nodes == 1) {
-            return amountOnSnapshotStart
-        }
-        signal.await()
-        val res = replies.map { it as SnapshotPart }.sumOf { it.state }
-        marker = null
-        replies.fill(null)
+        snapshotOperation = SnapshotOperation(currentAmount, env.nodeId, env.nodes)
+        val message = SnapshotRequest(env.nodeId)
+        env.broadcast(message)
+        snapshotOperation!!.await()
+        val res = snapshotOperation!!.snapshot
+        snapshotOperation = null
         return res
+    }
+
+    override fun stateRepresentation(): String {
+        return snapshotOperation.toString()
     }
 }
 
 class SequentialSnapshotAlgorithm : VerifierState() {
-    fun transaction(to: Int, sum: Int) {}
+    fun sendMoney(to: Int, sum: Int) {}
+
     // TODO: allow non-suspend implementations in sequential specifications
-    suspend fun snapshot() = 0 // never changes
+    suspend fun totalBalance() = 0 // never changes
     override fun extractState() = Unit
 }
 
@@ -167,12 +178,13 @@ class SnapshotAlgorithmTest {
     private fun commonOptions() = createDistributedOptions<Message>()
         .sequentialSpecification(SequentialSnapshotAlgorithm::class.java)
         .actorsPerThread(3) // please rename; e.g., to "operations/request per node"
-        .invocationsPerIteration(30_000)
+        .invocationsPerIteration(300_000)
         .iterations(10)
 
     @Test
     fun `correct algorithm`() = commonOptions()
-        .addNodes<ChandyLamport>(nodes = 4, minNodes = 2)
+        .addNodes<ChandyLamport>(nodes = 3, minNodes = 2)
+        .storeLogsForFailedScenario("chandylamport.txt")
         .check(ChandyLamport::class.java)
 
     @Test
