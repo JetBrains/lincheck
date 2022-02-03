@@ -5,7 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 /**
  * Environment interface for communication with other processes.
  */
-interface Environment<Message, DB> {
+interface Environment<Message> {
     /**
      * Identifier of this node (from 0 to [nodes]).
      */
@@ -19,7 +19,6 @@ interface Environment<Message, DB> {
     /**
      * Returns identifiers of nodes of the exact class [cls].
      **/
-    fun getAddressesForClass(cls: Class<out Node<Message, DB>>): List<Int>?
 
     /**
      * Sends the specified [message] to the process [receiver] (from 0 to [nodes]).
@@ -80,4 +79,8 @@ interface Environment<Message, DB> {
      * Can store any object as [attachment].
      */
     fun recordInternalEvent(attachment: Any)
+}
+
+inline fun <reified NodeType, Message> Environment<Message>.getAddresses(): List<Int> {
+    TODO()
 }

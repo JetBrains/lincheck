@@ -1,6 +1,6 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.examples.naiveconsensus
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
@@ -64,10 +64,27 @@ class NaiveConsensus(private val env: Environment<Offer, MutableMap<OfferId, Int
      * Starts new election. The values are generated randomly. The results are stored in the database.
      */
     @Operation
-    fun startElection() {
-        val offer = Offer(nextValue(), initializer = env.nodeId, internalId = id++)
-        offers[offer.identifier] = mutableListOf<Offer>().apply { add(offer) }
-        env.broadcast(offer)
+    fun consensus(value: Int): Int {
+        if (consensus != null) return consensus
+        if (proposeValue == null) {
+            proposeValue = value
+        }
+        propose()
+        return consensus!!
+    }
+
+    class Propose(val value: Int)
+
+    fun onMsg(msg: Propose) {
+        if (proposeValue == null) proposeValue = msg.value
+        env.broadcast(Propose(proposeValue))
+    }
+
+    var proposeValue: Int? = null
+    var consensus: Int? = null
+
+    private fun propose() {
+
     }
 
     private fun nextValue() = rand.nextInt()

@@ -5,6 +5,12 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.*
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
+import java.lang.reflect.*
+import kotlin.reflect.*
+import kotlin.reflect.full.*
+import kotlin.reflect.jvm.*
 
 /**
  * Represents the guarantees on message order.
@@ -77,6 +83,28 @@ data class NodeTypeInfo(
     }
 }
 
+abstract class NNode(
+    val env: Environment
+) {
+
+}
+
+abstract class NodeWithStorage<Storage> : NNode() {
+    private var _storage: Storage? = null
+    val storage: Storage
+        get() {
+            if (_storage == null) _storage = createStorage()
+            return _storage!!
+        }
+
+    // called by Lincheck
+    private fun onRecovery(oldStorage: Storage) {
+        _storage = oldStorage
+    }
+
+    abstract fun createStorage(): Storage
+}
+
 /**
  * Options for distributed algorithms.
  */
@@ -120,6 +148,10 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     ): DistributedOptions<Message, DB> {
         addNodes(N::class.java, nodes, minNodes, crashMode, networkPartition, maxUnavailableNodes)
         return this
+    }
+
+    inline fun <reified N : Node<Message, DB>> operations(vararg operations: (KFunction<*>)) {
+
     }
 
     // TODO: internal/private

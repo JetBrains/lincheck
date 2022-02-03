@@ -74,17 +74,8 @@ class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderChe
         }
     }
 
-    override fun stateRepresentation(): String {
-        val sb = StringBuilder()
-        sb.append("clock=$clock, ")
-        sb.append("messages=")
-        sb.append(messages)
-        sb.append(", replies=")
-        sb.append(replyTimes)
-        sb.append(", log=")
-        sb.append(env.database)
-        return sb.toString()
-    }
+    override fun stateRepresentation() =
+        "clock=$clock, messages=$messages, replies=$replyTimes, log=${env.database}"
 
     private fun deliver() {
         while (true) {
@@ -97,7 +88,7 @@ class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderChe
         }
     }
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation(cancellableOnSuspension = false) // TODO: please make `cancellableOnSuspension = false` by default
     suspend fun broadcast() {
         if (env.nodes == 1) return
         replyTimes.clear()
@@ -130,6 +121,7 @@ class SkeenTest {
     fun `incorrect algorithm`() {
         val failure = commonOptions()
             .addNodes<SkeenAlgorithmIncorrect>(nodes = 3, minNodes = 1)
+            .operation(SkeenAlgorithm::broadcast)
             .minimizeFailedScenario(false)
             .checkImpl(SkeenAlgorithmIncorrect::class.java)
         assert(failure != null)
