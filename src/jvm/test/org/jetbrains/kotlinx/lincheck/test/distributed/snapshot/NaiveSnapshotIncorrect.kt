@@ -34,7 +34,7 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     private val currentSum = atomic(100)
     private val semaphore = Signal()
     private var token = 0
-    private val replies = Array<Reply?>(env.nodes) { null }
+    private val replies = Array<SnapshotPart?>(env.nodes) { null }
 
     @Volatile
     private var gotSnapshot = false
@@ -42,12 +42,12 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Transaction -> {
-                currentSum.getAndAdd(message.sum)
+                currentSum.getAndAdd(message.amount)
             }
-            is Marker -> {
-                env.send(Reply(currentSum.value, message.token), sender)
+            is SnapshotRequest -> {
+                env.send(SnapshotPart(currentSum.value, message.token), sender)
             }
-            is Reply -> {
+            is SnapshotPart -> {
                 replies[sender] = message
             }
         }
@@ -80,12 +80,12 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun snapshot(): Int {
         val state = currentSum.value
-        val marker = Marker(env.nodeId, token++)
+        val marker = SnapshotRequest(env.nodeId, token++)
         env.broadcast(marker)
         while (!gotSnapshot) {
             semaphore.await()
         }
-        val res = replies.filterNotNull().sumOf { it.state } + state
+        val res = replies.filterNotNull().sumOf { it.amount } + state
         gotSnapshot = false
         replies.fill(null)
         return res / env.nodes + res % env.nodes

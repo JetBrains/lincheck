@@ -38,17 +38,17 @@ sealed class Message
 /**
  * A transaction between two nodes.
  */
-data class Transaction(val sum: Int) : Message()
+data class Transaction(val amount: Int) : Message()
 
 /**
  * A marker which indicates that the snapshot of the system is taken.
  */
-data class Marker(val initializer: Int, val token: Int) : Message()
+data class SnapshotRequest(val requestedBy: Int) : Message()
 
 /**
  * When the node state is stored, it is sent to the snapshot initializer.
  */
-data class Reply(val state: Int, val token: Int) : Message()
+data class SnapshotPart(val amount: Int) : Message()
 
 /**
  * Stored in the channels while snapshot is taken.
@@ -65,41 +65,43 @@ data class Value(val sum: Int) : State()
  */
 object Empty : State()
 
+private class SnapshotOperation(
+    amountOnSnapshotStart: Int
+) : Signal() {
+    var receivedSnapshotParts = 0
+    var snapshot = amountOnSnapshotStart
+}
+
 @OpGroupConfig(name = "observer", nonParallel = true)
 class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message, Unit> {
-    private var currentSum = 100
-    private var semaphore = Signal()
-    private var state = 0
-    private var token = 0
-    private var markerCount = 0
-    private var marker: Marker? = null
-    private val replies = Array<Reply?>(env.nodes) { null }
+    private var currentAmount = 0
+    private var snapshotRequest: SnapshotOperation? = null
+    private var marker: SnapshotRequest? = null
     private val channels = Array<MutableList<State>>(env.nodes) { mutableListOf() }
-    private var gotSnapshot = false
 
     override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Transaction -> {
-                currentSum += message.sum
+                currentAmount += message.amount
                 if (marker != null && (channels[sender].isEmpty() || channels[sender].last() !is Empty)) {
-                    channels[sender].add(Value(message.sum))
+                    channels[sender].add(Value(message.amount))
                 }
             }
-            is Marker -> {
+            is SnapshotRequest -> {
                 channels[sender].add(Empty)
-                markerCount++
+                receivedSnapshotParts++
                 if (marker == null) {
-                    state = currentSum
+                    amountOnSnapshotStart = currentAmount
                     marker = message
                     env.broadcast(message)
                 }
-                if (markerCount == env.nodes - 1) {
+                if (receivedSnapshotParts == env.nodes - 1) {
                     val res = finishSnapshot()
-                    env.send(Reply(res, marker!!.token), marker!!.initializer)
+                    env.send(SnapshotPart(res, marker!!.token), marker!!.requestedBy)
                     marker = null
                 }
             }
-            is Reply -> {
+            is SnapshotPart -> {
                 replies[sender] = message
                 checkAllRepliesReceived()
             }
@@ -109,69 +111,62 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
     private fun finishSnapshot(): Int {
         val stored =
             channels.sumOf { it.filterIsInstance(Value::class.java).sumOf { v -> v.sum } }
-        val res = state + stored
-        markerCount = 0
+        val res = amountOnSnapshotStart + stored
+        receivedSnapshotParts = 0
         channels.forEach { it.clear() }
         return res
     }
 
     private fun checkAllRepliesReceived() {
         if (replies.filterNotNull().size == env.nodes) {
-            gotSnapshot = true
-            semaphore.signal()
+            signal.signal()
         }
     }
 
     @Operation(cancellableOnSuspension = false)
-    fun transaction(to: Int, sum: Int) {
+    fun sendMoney(to: Int, amount: Int) {
         val receiver = abs(to) % env.nodes
         if (receiver == env.nodeId) return
-        currentSum -= sum
-        env.send(Transaction(sum), receiver)
+        currentAmount -= amount
+        env.send(Transaction(amount), receiver)
     }
 
     override fun stateRepresentation(): String {
         val res = StringBuilder()
-        res.append("[${env.nodeId}]: Current sum ${currentSum}\n")
-        res.append("[${env.nodeId}]: State $state\n")
+        res.append("[${env.nodeId}]: Current sum ${currentAmount}\n")
+        res.append("[${env.nodeId}]: State $amountOnSnapshotStart\n")
         channels.forEachIndexed { i, c -> res.append("[${env.nodeId}]: channel[$i] $c\n") }
         replies.forEachIndexed { i, c -> res.append("[${env.nodeId}]: reply[$i] $c\n") }
         return res.toString()
     }
 
     @Operation(group = "observer", cancellableOnSuspension = false)
-    suspend fun snapshot(): Int {
-        state = currentSum
-        marker = Marker(env.nodeId, token++)
+    suspend fun totalBalance(): Int {
+        amountOnSnapshotStart = currentAmount
+        marker = SnapshotRequest(env.nodeId, token++)
         env.broadcast(marker!!)
         if (env.nodes == 1) {
-            return state
+            return amountOnSnapshotStart
         }
-        while (!gotSnapshot) {
-            semaphore.await()
-        }
-        val res = replies.map { it as Reply }.sumOf { it.state }
+        signal.await()
+        val res = replies.map { it as SnapshotPart }.sumOf { it.state }
         marker = null
-        gotSnapshot = false
         replies.fill(null)
-        return res / env.nodes + res % env.nodes
+        return res
     }
 }
 
-class MockSnapshot() : VerifierState() {
-    @Operation()
-    fun transaction(to: Int, sum: Int) {
-    }
-
-    @Operation
-    suspend fun snapshot() = 100
-    override fun extractState(): Any = 100
+class SequentialSnapshotAlgorithm : VerifierState() {
+    fun transaction(to: Int, sum: Int) {}
+    // TODO: allow non-suspend implementations in sequential specifications
+    suspend fun snapshot() = 0 // never changes
+    override fun extractState() = Unit
 }
 
-class SnapshotTest {
+class SnapshotAlgorithmTest {
     private fun commonOptions() = createDistributedOptions<Message>()
-        .sequentialSpecification(MockSnapshot::class.java)
-        .actorsPerThread(3)
+        .sequentialSpecification(SequentialSnapshotAlgorithm::class.java)
+        .actorsPerThread(3) // please rename; e.g., to "operations/request per node"
         .invocationsPerIteration(30_000)
         .iterations(10)
 
@@ -194,7 +189,7 @@ class SnapshotTest {
     fun `incorrect algorithm`() {
         val failure = commonOptions()
             .addNodes<NaiveSnapshotIncorrect>(nodes = 4, minNodes = 2)
-            .sequentialSpecification(MockSnapshot::class.java)
+            .sequentialSpecification(SequentialSnapshotAlgorithm::class.java)
             .minimizeFailedScenario(false)
             .checkImpl(NaiveSnapshotIncorrect::class.java)
         assert(failure is IncorrectResultsFailure)

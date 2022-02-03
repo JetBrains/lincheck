@@ -28,7 +28,7 @@ import kotlin.coroutines.resume
  * Simple wait() / notify() mechanism for coroutines.
  * It is not thread-safe and can be used only for coroutines running in one thread.
  */
-class Signal {
+open class Signal {
     private var continuation: CancellableContinuation<Unit>? = null
 
     /**

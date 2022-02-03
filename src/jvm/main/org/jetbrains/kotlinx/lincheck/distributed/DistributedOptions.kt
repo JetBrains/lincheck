@@ -111,14 +111,14 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Adds node type and information about it.
      */
-    inline fun <reified T : Node<Message, DB>> addNodes(
+    inline fun <reified N : Node<Message, DB>> addNodes(
         nodes: Int,
         minNodes: Int = 1,
         crashMode: CrashMode = NO_CRASH,
         networkPartition: NetworkPartitionMode = NONE,
         noinline maxUnavailableNodes: (Int) -> Int = { it }
     ): DistributedOptions<Message, DB> {
-        addNodes(T::class.java, nodes, minNodes, crashMode, networkPartition, maxUnavailableNodes)
+        addNodes(N::class.java, nodes, minNodes, crashMode, networkPartition, maxUnavailableNodes)
         return this
     }
 
