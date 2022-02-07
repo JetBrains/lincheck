@@ -20,30 +20,26 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.paramgen.NodeIdGen
 import org.junit.Test
 import java.util.*
 import kotlin.coroutines.suspendCoroutine
 
 
-class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
+class SyncCoordinateMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
     private val coordinatorId = 0
-    private val isCoordinator = env.nodeId == coordinatorId
+    private val isCoordinator = env.id == coordinatorId
     private val queue = ArrayDeque<Int>()
     private var inCS = -1
-    private val condition = Semaphore(1, 1)
-
-    fun signal() {
-        if (condition.availablePermits == 0) {
-            condition.release()
-        }
-    }
+    private val condition = Signal()
 
     override fun onMessage(message: MutexMessage, sender: Int) {
         when (message) {
@@ -54,8 +50,8 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Mu
             }
             is Ok -> {
                 check(!isCoordinator)
-                inCS = env.nodeId
-                signal()
+                inCS = env.id
+                condition.signal()
             }
             is Rel -> {
                 check(isCoordinator)
@@ -73,13 +69,13 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Mu
         if (id != coordinatorId) {
             env.send(Ok(0), id)
         } else {
-            signal()
+            condition.signal()
         }
     }
 
     @Operation(cancellableOnSuspension = false, blocking = true)
-    suspend fun lock() {
-        if (inCS == env.nodeId) {
+    suspend fun lock(@Param(gen = NodeIdGen::class) nodeId: Int) {
+        if (inCS == env.id) {
             suspendCoroutine<Unit> { }
         }
         if (isCoordinator) {
@@ -88,14 +84,14 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Mu
         } else {
             env.send(Req(0, 0), coordinatorId)
         }
-        if (inCS != env.nodeId) {
-            condition.acquire()
+        if (inCS != env.id) {
+            condition.await()
         }
     }
 
     @Operation
-    fun unlock() {
-        if (inCS != env.nodeId) return
+    fun unlock(@Param(gen = NodeIdGen::class) nodeId: Int) {
+        if (inCS != env.id) return
         inCS = -1
         if (isCoordinator) {
             checkCSEnter()
@@ -107,12 +103,12 @@ class SyncCoordinateMutex(private val env: Environment<MutexMessage, Unit>) : Mu
 
 class SyncCoordinateMutexTest {
     private fun commonOptions() =
-        createDistributedOptions<MutexMessage>()
+        DistributedOptions<MutexMessage>()
             .addNodes<SyncCoordinateMutex>(nodes = 3, minNodes = 2)
             .invocationsPerIteration(30_000)
             .iterations(10)
             .actorsPerThread(3)
-            .verifier(EpsilonVerifier::class.java)
+            .sequentialSpecification(MutexSpecification::class.java)
 
     @Test
     fun `algorithm with FIFO`() = commonOptions().check(SyncCoordinateMutex::class.java)

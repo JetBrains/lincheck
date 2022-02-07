@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class Node1(env: Environment<Unit, Unit>) : Node<Unit, Unit> {
+class Node1(env: Environment<Unit>) : Node<Unit> {
     override fun onMessage(message: Unit, sender: Int) {
         TODO("Not yet implemented")
     }
@@ -37,14 +37,14 @@ class Node1(env: Environment<Unit, Unit>) : Node<Unit, Unit> {
     }
 }
 
-class Node2(env: Environment<Unit, Unit>) : Node<Unit, Unit> {
+class Node2(env: Environment<Unit>) : Node<Unit> {
     override fun onMessage(message: Unit, sender: Int) {
         TODO("Not yet implemented")
     }
 }
 
-internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
-    createDistributedOptions<Unit>().addNodes<Node1>(nodes = 1).createTestConfigurations(Node1::class.java),
+internal class MockDistributedStrategy() : DistributedStrategy<Unit>(
+    DistributedOptions<Unit>().addNodes<Node1>(nodes = 1).createTestConfigurations(Node1::class.java),
     Node1::class.java,
     ExecutionScenario(emptyList(), emptyList(), emptyList()),
     emptyList(),
@@ -108,7 +108,7 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit, Unit>(
 }
 
 class NodeCrashTest {
-    private fun createCrashInfo(): FailureManagerComponent<Unit, Unit> {
+    private fun createCrashInfo(): FailureManagerComponent<Unit> {
         val typeInfo = mapOf(Node1::class.java to NodeTypeInfo(
             3,
             4,
@@ -119,7 +119,7 @@ class NodeCrashTest {
         return FailureManagerComponent(NodeAddressResolver(Node1::class.java, 2, typeInfo), MockDistributedStrategy())
     }
 
-    private fun checkClique(nodes: Iterable<Int>, crashInfo: FailureManager<Unit, Unit>) {
+    private fun checkClique(nodes: Iterable<Int>, crashInfo: FailureManager<Unit>) {
         for (i in nodes) {
             for (j in nodes) {
                 check(crashInfo.canSend(i, j))

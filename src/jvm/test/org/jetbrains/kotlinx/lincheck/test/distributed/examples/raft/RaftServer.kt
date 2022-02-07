@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
 
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.NodeWithStorage
 import java.lang.Integer.min
 import kotlin.random.Random
 
@@ -31,23 +31,23 @@ enum class Status {
     FOLLOWER
 }
 
-class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) : Node<RaftMessage, PersistentStorage> {
+class RaftServer(env: Environment<RaftMessage>) : NodeWithStorage<RaftMessage, PersistentStorage>(env) {
     companion object {
         const val HEARTBEAT_RATE = 50
         const val MIN_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 10
         const val MAX_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 20
     }
 
-    private val nodeCount = env.getAddressesForClass(RaftServer::class.java)!!.count()
+    private val nodeCount = env.getAddresses<RaftServer>().count()
 
     private var status = Status.FOLLOWER
     private var commitIndex = -1
     private var lastApplied = -1
     private val nextIndices = Array(env.nodes) {
-        env.database.logSize
+        0 //TODO: cannot use storage in initialization
     }
     private var receivedHeartbeatCount = 0L
-    private val random = Random(env.nodeId)
+    private val random = Random(env.id)
     private val majority = nodeCount / 2 + 1
     private var receivedOks = Array(env.nodes) { false }
     private var leaderId: Int? = null
@@ -59,6 +59,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
     }
 
     override fun recover() {
+        nextIndices.fill(storage.logSize)
         setCheckLeaderTimer()
     }
 
@@ -81,19 +82,19 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
      */
     private fun startElection() {
         leaderId = null
-        env.database.currentTerm++
+        storage.currentTerm++
         status = Status.CANDIDATE
-        env.database.votedFor = env.nodeId
+        storage.votedFor = env.id
         receivedOks.fill(false)
-        receivedOks[env.nodeId] = true
+        receivedOks[env.id] = true
         env.recordInternalEvent("Start election")
-        env.broadcastToGroup(
+        env.broadcastToGroup<RaftServer>(
             RequestVote(
-                env.database.currentTerm,
-                env.nodeId,
-                lastLogIndex = env.database.lastLogIndex,
-                lastLogTerm = env.database.lastLogTerm
-            ), RaftServer::class.java
+                storage.currentTerm,
+                env.id,
+                lastLogIndex = storage.lastLogIndex,
+                lastLogTerm = storage.lastLogTerm
+            )
         )
     }
 
@@ -103,14 +104,14 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
      * least as up-to-date as this log, grant vote
      */
     private fun onRequestVote(message: RequestVote, sender: Int) {
-        if (env.database.currentTerm > message.term
-            || env.database.votedFor != null && env.database.votedFor != sender
-            || env.database.isMoreUpToDate(message.lastLogIndex, message.lastLogTerm)
+        if (storage.currentTerm > message.term
+            || storage.votedFor != null && storage.votedFor != sender
+            || storage.isMoreUpToDate(message.lastLogIndex, message.lastLogTerm)
         ) {
-            env.send(RequestVoteResponse(env.database.currentTerm, false), sender)
+            env.send(RequestVoteResponse(storage.currentTerm, false), sender)
             return
         }
-        env.database.votedFor = sender
+        storage.votedFor = sender
         env.send(RequestVoteResponse(message.term, true), sender)
     }
 
@@ -125,7 +126,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
 
     private fun onElectionSuccess() {
         status = Status.LEADER
-        leaderId = env.nodeId
+        leaderId = env.id
         env.recordInternalEvent("Election success")
         onNewEntry(null)
         env.setTimer("HEARTBEAT", HEARTBEAT_RATE) {
@@ -136,28 +137,28 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
 
     private fun broadcastEntries() {
         if (status != Status.LEADER) return
-        for (i in env.getAddressesForClass(RaftServer::class.java)!!) {
-            if (i == env.nodeId) continue
+        for (i in env.getAddresses<RaftServer>()) {
+            if (i == env.id) continue
             env.send(
                 AppendEntries(
-                    term = env.database.currentTerm,
+                    term = storage.currentTerm,
                     leaderCommit = commitIndex,
                     prevLogIndex = nextIndices[i] - 1,
-                    prevLogTerm = env.database.prevTermForIndex(nextIndices[i]),
-                    entries = env.database.getEntriesFromIndex(nextIndices[i])
+                    prevLogTerm = storage.prevTermForIndex(nextIndices[i]),
+                    entries = storage.getEntriesFromIndex(nextIndices[i])
                 ), i
             )
         }
     }
 
     private fun isLastLogReplicated(): Boolean {
-        return status == Status.LEADER && matchIndices.count { it == env.database.lastLogIndex } >= majority
+        return status == Status.LEADER && matchIndices.count { it == storage.lastLogIndex } >= majority
     }
 
     private fun onNewEntry(command: Command?) {
         if (status != Status.LEADER) return
-        env.database.appendEntry(command)
-        matchIndices[env.nodeId] = env.database.lastLogIndex
+        storage.appendEntry(command)
+        matchIndices[env.id] = storage.lastLogIndex
         broadcastEntries()
     }
 
@@ -170,40 +171,40 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
      * 6. Reply true to sender.
      */
     private fun onAppendEntries(message: AppendEntries, sender: Int) {
-        if (env.database.currentTerm > message.term) {
-            env.send(OutdatedTermResponse(env.database.currentTerm), sender)
+        if (storage.currentTerm > message.term) {
+            env.send(OutdatedTermResponse(storage.currentTerm), sender)
             return
         }
         receivedHeartbeatCount++
         leaderId = sender
-        if (!env.database.containsEntry(message.prevLogIndex, message.prevLogTerm)) {
+        if (!storage.containsEntry(message.prevLogIndex, message.prevLogTerm)) {
             env.send(
-                AppendEntriesResponse(message.term, false, env.database.lastLogIndex, message.prevLogIndex),
+                AppendEntriesResponse(message.term, false, storage.lastLogIndex, message.prevLogIndex),
                 sender
             )
             return
         }
         message.entries.forEachIndexed { index, entry ->
-            env.database.appendEntry(
+            storage.appendEntry(
                 command = entry.command,
                 index = message.prevLogIndex + index + 1,
                 term = entry.term
             )
         }
         if (message.leaderCommit > commitIndex) {
-            commitIndex = min(message.leaderCommit, env.database.lastLogIndex)
+            commitIndex = min(message.leaderCommit, storage.lastLogIndex)
         }
         applyEntries()
-        env.send(AppendEntriesResponse(message.term, true, env.database.lastLogIndex, message.prevLogIndex), sender)
+        env.send(AppendEntriesResponse(message.term, true, storage.lastLogIndex, message.prevLogIndex), sender)
     }
 
     private fun onAppendEntriesResponse(message: AppendEntriesResponse, sender: Int) {
-        if (message.term < env.database.currentTerm || status != Status.LEADER) return
+        if (message.term < storage.currentTerm || status != Status.LEADER) return
         if (message.success) {
             matchIndices[sender] = message.lastLogIndex
             nextIndices[sender] = message.lastLogIndex + 1
             if (isLastLogReplicated()) {
-                commitIndex = env.database.lastLogIndex
+                commitIndex = storage.lastLogIndex
                 applyEntries()
             }
             return
@@ -214,10 +215,10 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
         }
         env.send(
             AppendEntries(
-                term = env.database.currentTerm,
+                term = storage.currentTerm,
                 prevLogIndex = nextIndices[sender] - 1,
-                prevLogTerm = env.database.prevTermForIndex(nextIndices[sender]),
-                entries = env.database.getEntriesFromIndex(nextIndices[sender]),
+                prevLogTerm = storage.prevTermForIndex(nextIndices[sender]),
+                entries = storage.getEntriesFromIndex(nextIndices[sender]),
                 leaderCommit = commitIndex
             ),
             sender
@@ -230,7 +231,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
      */
     private fun applyEntries() {
         if (commitIndex > lastApplied) {
-            val applied = stateMachine.applyEntries(env.database.getEntriesSlice(lastApplied + 1, commitIndex))
+            val applied = stateMachine.applyEntries(storage.getEntriesSlice(lastApplied + 1, commitIndex))
             lastApplied = commitIndex
             if (status == Status.LEADER) applied.forEach {
                 env.send(
@@ -253,7 +254,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
             env.send(ClientResult(stateMachine.getResult(message.command.id), message.command.id), sender)
             return
         }
-        if (!isLastLogReplicated() || env.database.containsCommandId(message.command.id)) {
+        if (!isLastLogReplicated() || storage.containsCommandId(message.command.id)) {
             env.send(RejectOperation(), sender)
             return
         }
@@ -265,9 +266,9 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
             onClientRequest(message, sender)
             return
         }
-        if (env.database.currentTerm < message.term) {
-            env.database.currentTerm = message.term
-            env.database.votedFor = null
+        if (storage.currentTerm < message.term) {
+            storage.currentTerm = message.term
+            storage.votedFor = null
             if (status == Status.LEADER) {
                 env.cancelTimer("HEARTBEAT")
             }
@@ -275,7 +276,7 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
         }
         when (message) {
             is RequestVoteResponse -> {
-                if (env.database.currentTerm > message.term) return
+                if (storage.currentTerm > message.term) return
                 onRequestVoteResponse(message, sender)
             }
             is RequestVote -> {
@@ -288,12 +289,14 @@ class RaftServer(private val env: Environment<RaftMessage, PersistentStorage>) :
                 onAppendEntriesResponse(message, sender)
             }
             is OutdatedTermResponse -> return
-            else -> throw IllegalStateException("Unexpected message $message to server ${env.nodeId}")
+            else -> throw IllegalStateException("Unexpected message $message to server ${env.id}")
         }
     }
 
     override fun stateRepresentation(): String {
-        return "$status, term=${env.database.currentTerm}, leaderId=$leaderId, receivedOksCount=${receivedOks.count { it }}, heartbeats=$receivedHeartbeatCount, nextIndices=${nextIndices.toList()}"
+        return "$status, term=${storage.currentTerm}, leaderId=$leaderId, receivedOksCount=${receivedOks.count { it }}, heartbeats=$receivedHeartbeatCount, nextIndices=${nextIndices.toList()}"
     }
+
+    override fun createStorage(): PersistentStorage = PersistentStorage()
 }
 

@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.random.canCrashBeforeAccessingDatabase
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
-internal class EventFactory<M, DB>(testCfg: DistributedCTestConfiguration<M, DB>) {
+internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
     private var msgId = 0
     private val _events = mutableListOf<Event>()
     val events: List<Event>
@@ -35,7 +35,7 @@ internal class EventFactory<M, DB>(testCfg: DistributedCTestConfiguration<M, DB>
     private val vectorClocks = Array(numberOfNodes) {
         VectorClock(emptyClockArray(numberOfNodes), it)
     }
-    lateinit var nodeInstances: Array<out Node<M, DB>>
+    lateinit var nodeInstances: Array<out Node<M>>
 
     private fun <T> safeDatabaseAccess(f: () -> T): T {
         val prev = canCrashBeforeAccessingDatabase

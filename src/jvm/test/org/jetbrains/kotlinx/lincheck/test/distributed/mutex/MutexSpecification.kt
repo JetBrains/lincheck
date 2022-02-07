@@ -25,22 +25,25 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class MutexSpecification {
-    var locked = false
-    val waiters = ArrayList<Continuation<Unit>>()
+    private var locked: Int? = null
+    private val waiters = mutableListOf<Pair<Int, Continuation<Unit>>>()
 
-    suspend fun lock() {
-        if (!locked) {
-            locked = true
+    suspend fun lock(nodeId: Int) {
+        if (locked == null) {
+            locked = nodeId
             return
         }
-        suspendCoroutine<Unit> { cont -> waiters.add(cont) }
+        suspendCoroutine<Unit> { cont -> waiters.add(nodeId to cont) }
     }
 
-    fun unlock() {
+    fun unlock(nodeId: Int) {
+        if (nodeId != locked) return
         if (waiters.isEmpty()) {
-            locked = false
+            locked = null
             return
         }
-        waiters.removeFirst().resume(Unit)
+        val newLock = waiters.removeFirst()
+        locked = newLock.first
+        newLock.second.resume(Unit)
     }
 }

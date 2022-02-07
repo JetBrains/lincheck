@@ -22,15 +22,15 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.junit.Test
 
-class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+class Pinger(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
     private val signal = Signal()
-    private val pongerAddress = env.getAddressesForClass(Ponger::class.java)!![0]
+    private val pongerAddress = env.getAddresses<Ponger>()[0]
 
     override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
@@ -46,7 +46,7 @@ class Pinger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
     }
 }
 
-class Ponger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+class Ponger(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
     override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
             is Ping -> env.send(Pong, sender)
@@ -58,7 +58,7 @@ class Ponger(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage
 class MultipleNodeTypesTest {
     @Test
     fun test() =
-        createDistributedOptions<PingPongMessage>()
+        DistributedOptions<PingPongMessage>()
             .addNodes<Pinger>(nodes = 2)
             .addNodes<Ponger>(nodes = 1)
             .invocationsPerIteration(30_000)

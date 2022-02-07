@@ -24,10 +24,11 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.event.*
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.junit.Test
 
-class CrashingNode(private val env: Environment<Int, Unit>) : Node<Int, Unit> {
+class CrashingNode(private val env: Environment<Int>) : Node<Int> {
     private val receivedMessages = mutableSetOf<Int>()
     override fun onMessage(message: Int, sender: Int) {
         if (receivedMessages.add(message)) {
@@ -39,8 +40,15 @@ class CrashingNode(private val env: Environment<Int, Unit>) : Node<Int, Unit> {
     fun operation(value: Int) {
         env.broadcast(value)
     }
+}
 
-    override fun validate(events: List<Event>, databases: List<Unit>) {
+class CrashNotificationVerifier : DistributedVerifier {
+    override fun verifyResultsAndStates(
+        nodes: Array<out Node<*>>,
+        scenario: ExecutionScenario,
+        results: ExecutionResult,
+        events: List<Event>
+    ): Boolean {
         data class ExpectedNotification(val from: Int, val to: Int)
 
         val expectedNotifications = mutableListOf<ExpectedNotification>()
@@ -50,12 +58,12 @@ class CrashingNode(private val env: Environment<Int, Unit>) : Node<Int, Unit> {
                 is NodeCrashEvent -> {
                     expectedNotifications.removeIf { it.to == e.iNode }
                     crashes.add(e.iNode)
-                    (0 until env.nodes).filter { it !in crashes }
+                    nodes.indices.filter { it !in crashes }
                         .forEach { expectedNotifications.add(ExpectedNotification(e.iNode, it)) }
                 }
                 is CrashNotificationEvent -> {
                     val index = expectedNotifications.indexOfFirst { it.from == e.crashedNode && e.iNode == it.to }
-                    check(index != -1)
+                    if (index == -1) return false
                     expectedNotifications.removeAt(index)
                 }
                 is NodeRecoveryEvent -> {
@@ -72,20 +80,21 @@ class CrashingNode(private val env: Environment<Int, Unit>) : Node<Int, Unit> {
                 else -> continue
             }
         }
-        check(expectedNotifications.isEmpty())
+        return expectedNotifications.isEmpty()
     }
+
 }
 
 class CrashNotificationTest {
     @Test
-    fun test() = createDistributedOptions<Int>()
+    fun test() = DistributedOptions<Int>()
         .addNodes<CrashingNode>(
             nodes = 4,
             minNodes = 2,
             crashMode = CrashMode.RECOVER_ON_CRASH,
             NetworkPartitionMode.COMPONENTS
         )
-        .verifier(EpsilonVerifier::class.java)
+        .verifier(CrashNotificationVerifier::class.java)
         .iterations(1)
         .invocationsPerIteration(500_000)
         .check(CrashingNode::class.java)

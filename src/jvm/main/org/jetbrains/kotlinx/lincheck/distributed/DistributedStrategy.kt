@@ -28,15 +28,15 @@ import java.lang.reflect.Method
 /**
  * Represents the strategy for executing the distributed algorithm.
  */
-internal abstract class DistributedStrategy<Message, DB>(
-    val testCfg: DistributedCTestConfiguration<Message, DB>,
+internal abstract class DistributedStrategy<Message>(
+    val testCfg: DistributedCTestConfiguration<Message>,
     protected val testClass: Class<*>,
     scenario: ExecutionScenario,
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?,
     protected val verifier: Verifier
 ) : Strategy(scenario) {
-    protected lateinit var failureManager: FailureManager<Message, DB>
+    protected lateinit var failureManager: FailureManager<Message>
 
     fun initialize() {
         failureManager = FailureManager.create(testCfg.addressResolver, this)

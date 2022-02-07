@@ -22,15 +22,15 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.TaskLimitExceededFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class InfinitePinger(private val env: Environment<Unit, Unit>) : Node<Unit, Unit> {
-    private val ponger = env.getAddressesForClass(InfinitePonger::class.java)!![0]
+class InfinitePinger(private val env: Environment<Unit>) : Node<Unit> {
+    private val ponger = env.getAddresses<InfinitePonger>()[0]
 
     @Operation
     fun op() {
@@ -42,7 +42,7 @@ class InfinitePinger(private val env: Environment<Unit, Unit>) : Node<Unit, Unit
     }
 }
 
-class InfinitePonger(private val env: Environment<Unit, Unit>) : Node<Unit, Unit> {
+class InfinitePonger(private val env: Environment<Unit>) : Node<Unit> {
     override fun onMessage(message: Unit, sender: Int) {
         env.send(Unit, sender)
     }
@@ -51,7 +51,7 @@ class InfinitePonger(private val env: Environment<Unit, Unit>) : Node<Unit, Unit
 class TaskLimitExceededFailureTest {
     @Test
     fun test() {
-        val failure = createDistributedOptions<Unit>()
+        val failure = DistributedOptions<Unit>()
             .addNodes<InfinitePinger>(nodes = 2)
             .addNodes<InfinitePonger>(nodes = 1)
             .verifier(EpsilonVerifier::class.java)

@@ -27,51 +27,75 @@ import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 /**
  * Implementation of the environment.
  */
-internal class EnvironmentImpl<Message, DB>(
-    override val nodeId: Int,
-    override val nodes: Int,
-    private val _database: DB,
-    private val eventFactory: EventFactory<Message, DB>,
-    private val strategy: DistributedStrategy<Message, DB>,
+class Environment<Message> internal constructor(
+    val id: Int,
+    val nodes: Int,
+    private val eventFactory: EventFactory<Message>,
+    private val strategy: DistributedStrategy<Message>,
     private val taskManager: TaskManager,
-) : Environment<Message, DB> {
-    override val database: DB
-        get() {
-            strategy.beforeDatabaseAccess(nodeId)
-            return _database
-        }
+) {
+    internal fun beforeDatabaseAccess() = strategy.beforeDatabaseAccess(id)
 
     private val timers = mutableSetOf<String>()
 
-    override fun getAddressesForClass(cls: Class<out Node<Message, DB>>): List<Int>? =
+    inline fun <reified NodeType : Node<Message>> getAddresses(): List<Int> {
+        return getAddressesForClass(NodeType::class.java)
+    }
+
+    //TODO: make private
+    fun getAddressesForClass(cls: Class<out Node<Message>>): List<Int> =
         strategy.testCfg.addressResolver[cls]
 
-    override fun send(message: Message, receiver: Int) {
-        val e = eventFactory.createMessageEvent(message, nodeId, receiver)
-        val rate = strategy.crashOrReturnRate(nodeId, receiver, e.id)
+    fun send(message: Message, receiver: Int) {
+        val e = eventFactory.createMessageEvent(message, id, receiver)
+        val rate = strategy.crashOrReturnRate(id, receiver, e.id)
         repeat(rate) {
             taskManager.addMessageReceiveTask(
                 to = receiver,
-                from = nodeId
+                from = id
             ) {
                 eventFactory.createMessageReceiveEvent(e)
                 //TODO: better way to access node instances
-                eventFactory.nodeInstances[receiver].onMessage(message, nodeId)
+                eventFactory.nodeInstances[receiver].onMessage(message, id)
             }
         }
-        if (rate > 0) strategy.onMessageSent(nodeId, receiver, e.id)
+        if (rate > 0) strategy.onMessageSent(id, receiver, e.id)
+    }
+
+    /**
+     * Sends the specified [message] to all processes (from 0 to [nodes]).
+     * If [skipItself] is true, doesn't send the message to itself.
+     */
+    fun broadcast(message: Message, skipItself: Boolean = true) {
+        for (i in 0 until nodes) {
+            if (i == id && skipItself) {
+                continue
+            }
+            send(message, i)
+        }
+    }
+
+    inline fun <reified NodeType : Node<Message>> broadcastToGroup(message: Message, skipItself: Boolean = true) {
+        broadcastToGroup(message, NodeType::class.java, skipItself)
+    }
+
+    fun broadcastToGroup(message: Message, cls: Class<out Node<Message>>, skipItself: Boolean) {
+        for (i in getAddressesForClass(cls)) {
+            if (i == id && skipItself) continue
+            send(message, i)
+        }
     }
 
     @OptIn(InternalCoroutinesApi::class)
     @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-    override suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T): T? {
+    suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T): T? {
         if (ticks <= 0) return null
         var coroutine: TimeoutCoroutine<T?, T?>? = null
         try {
             return suspendCoroutineUninterceptedOrReturn { uCont ->
                 val timeoutCoroutine = TimeoutCoroutine(ticks, uCont)
                 coroutine = timeoutCoroutine
-                val task = taskManager.addTimeout(nodeId, ticks) {
+                val task = taskManager.addTimeout(id, ticks) {
                     timeoutCoroutine.run()
                 }
                 val handle = DisposableHandle {
@@ -88,11 +112,11 @@ internal class EnvironmentImpl<Message, DB>(
         }
     }
 
-    override suspend fun sleep(ticks: Int) {
+    suspend fun sleep(ticks: Int) {
         suspendCancellableCoroutine<Unit> { cont ->
             taskManager.addTimeout(
                 ticks = ticks,
-                iNode = nodeId
+                iNode = id
             ) {
                 cont.resumeWith(Result.success(Unit))
             }
@@ -101,39 +125,43 @@ internal class EnvironmentImpl<Message, DB>(
 
     private fun timerTick(name: String, ticks: Int, f: () -> Unit) {
         if (name !in timers) return
-        eventFactory.createTimerTickEvent(name, nodeId)
+        eventFactory.createTimerTickEvent(name, id)
         f()
         taskManager.addTimer(
             ticks = ticks,
-            iNode = nodeId
+            iNode = id
         ) {
             timerTick(name, ticks, f)
         }
     }
 
-    override fun setTimer(name: String, ticks: Int, f: () -> Unit) {
+    fun setTimer(name: String, ticks: Int, f: () -> Unit) {
         if (name in timers) {
             throw IllegalArgumentException("Timer with name $name already exists")
         }
-        eventFactory.createSetTimerEvent(nodeId, name)
+        eventFactory.createSetTimerEvent(id, name)
         timers.add(name)
         taskManager.addTimer(
             ticks = ticks,
-            iNode = nodeId
+            iNode = id
         ) {
             timerTick(name, ticks, f)
         }
     }
 
-    override fun cancelTimer(name: String) {
+    fun cancelTimer(name: String) {
         if (name !in timers) {
             throw IllegalArgumentException("Timer with name $name does not exist")
         }
-        eventFactory.createCancelTimerEvent(nodeId, name)
+        eventFactory.createCancelTimerEvent(id, name)
         timers.remove(name)
     }
 
-    override fun recordInternalEvent(attachment: Any) {
-        eventFactory.createInternalEvent(attachment, nodeId)
+    /**
+     * Records an internal event [InternalEvent][org.jetbrains.kotlinx.lincheck.distributed.event.InternalEvent]. Can be used for debugging purposes.
+     * Can store any object as [attachment].
+     */
+    fun recordInternalEvent(attachment: Any) {
+        eventFactory.createInternalEvent(attachment, id)
     }
 }

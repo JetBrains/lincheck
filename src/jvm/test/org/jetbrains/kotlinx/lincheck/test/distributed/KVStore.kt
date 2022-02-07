@@ -26,9 +26,9 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
@@ -39,8 +39,8 @@ data class PutResponse(val prevValue: Int?) : Message()
 data class GetRequest(val key: Int) : Message()
 data class GetResponse(val value: Int?) : Message()
 
-class Client(val env: Environment<Message, Unit>) : Node<Message, Unit> {
-    private val server = env.getAddressesForClass(Server::class.java)!![0]
+class Client(val env: Environment<Message>) : Node<Message> {
+    private val server = env.getAddresses<Server>()[0]
     private val resultsChannel = Channel<Int?>(UNLIMITED)
 
     override fun onMessage(message: Message, sender: Int) {
@@ -63,7 +63,7 @@ class Client(val env: Environment<Message, Unit>) : Node<Message, Unit> {
     }
 }
 
-class Server(val env: Environment<Message, Unit>) : Node<Message, Unit> {
+class Server(val env: Environment<Message>) : Node<Message> {
     private val storage = mutableMapOf<Int, Int>()
 
     override fun onMessage(message: Message, sender: Int) {
@@ -76,18 +76,14 @@ class Server(val env: Environment<Message, Unit>) : Node<Message, Unit> {
 
 class SeqSpec : VerifierState() {
     val storage = mutableMapOf<Int, Int>()
-
-    @Operation
     suspend fun put(key: Int, value: Int) = storage.put(key, value)
-
-    @Operation
     suspend fun get(key: Int) = storage[key]
     override fun extractState(): Any = storage
 }
 
 class KVStoreTest {
     private fun commonOptions() =
-        createDistributedOptions<Message>()
+        DistributedOptions<Message>()
             .sequentialSpecification(SeqSpec::class.java)
             .invocationsPerIteration(30_000)
             .iterations(10)

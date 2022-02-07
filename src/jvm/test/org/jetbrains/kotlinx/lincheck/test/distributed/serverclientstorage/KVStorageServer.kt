@@ -3,16 +3,16 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.junit.Test
 import java.util.*
 
-class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Command, Unit> {
+class KVStorageServer(private val env: Environment<Command>) : Node<Command> {
     private val storage = mutableMapOf<Int, Int>()
     private val commandResults = Array<MutableMap<Int, Command>>(env.nodes) {
         mutableMapOf()
@@ -46,10 +46,10 @@ class KVStorageServer(private val env: Environment<Command, Unit>) : Node<Comman
     }
 }
 
-class KVStorageClient(private val environment: Environment<Command, Unit>) : Node<Command, Unit> {
+class KVStorageClient(private val environment: Environment<Command>) : Node<Command> {
     private var commandId = 0
     private val commandResults = mutableMapOf<Int, Command>()
-    private val serverAddr = environment.getAddressesForClass(KVStorageServer::class.java)!![0]
+    private val serverAddr = environment.getAddresses<KVStorageServer>()[0]
     private val signal = Signal()
     private val queue = LinkedList<Command>()
 
@@ -114,8 +114,8 @@ class KVStorageClient(private val environment: Environment<Command, Unit>) : Nod
 }
 
 class KVStorageServerTestClass {
-    private inline fun <reified S : Node<Command, Unit>, reified C : Node<Command, Unit>> commonOptions() =
-        createDistributedOptions<Command>()
+    private inline fun <reified S : Node<Command>, reified C : Node<Command>> commonOptions() =
+        DistributedOptions<Command>()
             .sequentialSpecification(SingleNode::class.java)
             .invocationsPerIteration(30_000)
             .iterations(10)

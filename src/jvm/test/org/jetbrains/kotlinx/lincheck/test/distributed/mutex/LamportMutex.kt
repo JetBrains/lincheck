@@ -21,17 +21,16 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.event.Event
-import org.jetbrains.kotlinx.lincheck.distributed.event.InternalEvent
+import org.jetbrains.kotlinx.lincheck.paramgen.NodeIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import java.lang.Integer.max
 import kotlin.coroutines.suspendCoroutine
@@ -47,8 +46,8 @@ data class Rel(override val msgTime: Int) : MutexMessage()
 sealed class MutexEvent
 object Lock : MutexEvent()
 object Unlock : MutexEvent()
-
-abstract class MutexNode<Message> : Node<Message, Unit> {
+/*
+abstract class MutexNode<Message> : Node<Message> {
     override fun validate(events: List<Event>, databases: List<Unit>) {
         val locksAndUnlocks = events.filterIsInstance<InternalEvent>()
         for (i in locksAndUnlocks.indices step 2) {
@@ -65,9 +64,9 @@ abstract class MutexNode<Message> : Node<Message, Unit> {
             }
         }
     }
-}
+}*/
 
-class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
+class LamportMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?
@@ -93,13 +92,13 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
     override fun stateRepresentation() = "clock=${clock}, inCS=${inCS}, req=${req.toList()}, ok=${ok.toList()}"
 
     private fun checkInCS() {
-        val myReqTime = req[env.nodeId]
+        val myReqTime = req[env.id]
         if (myReqTime == inf || inCS) {
             return
         }
         for (i in 0 until env.nodes) {
-            if (i == env.nodeId) continue
-            if (req[i] < myReqTime || req[i] == myReqTime && i < env.nodeId) return
+            if (i == env.id) continue
+            if (req[i] < myReqTime || req[i] == myReqTime && i < env.id) return
             if (ok[i] <= myReqTime) return
         }
         inCS = true
@@ -107,12 +106,13 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
     }
 
     @Operation(blocking = true, cancellableOnSuspension = false)
-    suspend fun lock() {
-        if (req[env.nodeId] != inf) {
+    suspend fun lock(@Param(gen = NodeIdGen::class) nodeId: Int) {
+        assert(nodeId == env.id)
+        if (req[env.id] != inf) {
             suspendCoroutine<Unit> { }
         }
         val myReqTime = ++clock
-        req[env.nodeId] = myReqTime
+        req[env.id] = myReqTime
         env.broadcast(Req(++clock, myReqTime))
         if (env.nodes == 1) {
             inCS = true
@@ -125,21 +125,22 @@ class LamportMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode
     }
 
     @Operation
-    fun unlock() {
+    fun unlock(@Param(gen = NodeIdGen::class) nodeId: Int) {
+        assert(env.id == nodeId)
         if (!inCS) {
             return
         }
         inCS = false
-        req[env.nodeId] = inf
+        req[env.id] = inf
         env.recordInternalEvent(Unlock)
         env.broadcast(Rel(++clock))
     }
 }
 
 class LamportMutexTest {
-    private fun commonOptions() = createDistributedOptions<MutexMessage>()
+    private fun commonOptions() = DistributedOptions<MutexMessage>()
         .addNodes<LamportMutex>(nodes = 4, minNodes = 2)
-        .verifier(EpsilonVerifier::class.java)
+        .sequentialSpecification(MutexSpecification::class.java)
         .actorsPerThread(3)
         .invocationsPerIteration(30_000)
         .iterations(10)

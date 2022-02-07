@@ -5,7 +5,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 /**
  * Interface for a single node in a distributed algorithm.
  */
-interface Node<Message, DB> {
+interface Node<Message> {
     /**
      * Called when a new [message][message] from [sender][sender] arrives.
      */
@@ -42,9 +42,34 @@ interface Node<Message, DB> {
      * Called in the end of the execution.
      * Can be used for validation.
      * [events] is the list of all events which occurred in the system during the execution.
-     * [databases] are databases of all nodes in the system.
      */
-    fun validate(events: List<Event>, databases: List<DB>) {}
+    fun validate(events: List<Event>) {}
+}
+
+abstract class NodeWithStorage<Message, Storage>(protected val env: Environment<Message>) : Node<Message> {
+    private var _storage: Storage? = null
+    val storage: Storage
+        get() {
+            if (_storage == null) _storage = createStorage()
+            env.beforeDatabaseAccess()
+            return _storage!!
+        }
+
+    // called by Lincheck
+    //TODO problems with generic parameters
+    internal fun onRecovery(oldStorage: Any?) {
+        _storage = oldStorage as Storage?
+    }
+
+    abstract fun createStorage(): Storage
+
+    /**
+     * Called in the end of the execution.
+     * Can be used for validation.
+     * [events] is the list of all events which occurred in the system during the execution.
+     * [storages] are storages of all nodes in the system.
+     */
+    open fun validate(events: List<Event>, storages: Map<Int, Any>) {}
 }
 
 class CrashError : Exception()

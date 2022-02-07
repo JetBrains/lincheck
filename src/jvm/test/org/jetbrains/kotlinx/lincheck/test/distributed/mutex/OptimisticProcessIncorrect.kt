@@ -20,26 +20,23 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.paramgen.NodeIdGen
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 import kotlin.coroutines.suspendCoroutine
 
 
-class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
-    companion object {
-        @Volatile
-        private var optimisticIncorrect = 0
-    }
-
+class OptimisticMutexIncorrect(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
     private val requested = BooleanArray(env.nodes)
     private var inCS = false
-    private val semaphore = Semaphore(1, 1)
+    private val signal = Signal()
 
     override fun onMessage(message: MutexMessage, sender: Int) {
         when (message) {
@@ -56,22 +53,22 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
 
 
     private fun checkCSEnter() {
-        if (!requested[env.nodeId] || inCS) return
-        for (i in 0 until env.nodeId) if (requested[i]) return // give way for lower numbered
+        if (!requested[env.id] || inCS) return
+        for (i in 0 until env.id) if (requested[i]) return // give way for lower numbered
         inCS = true
-        semaphore.release()
+        signal.signal()
     }
 
     @Operation(cancellableOnSuspension = false, blocking = false)
-    suspend fun lock() {
-        if (requested[env.nodeId]) {
+    suspend fun lock(@Param(gen = NodeIdGen::class) nodeId: Int) {
+        if (requested[env.id]) {
             suspendCoroutine<Unit> { }
         }
-        requested[env.nodeId] = true
+        requested[env.id] = true
         env.broadcast(Req(0, 0))
         checkCSEnter()
         if (env.nodes != 1) {
-            semaphore.acquire()
+            signal.await()
         } else {
             inCS = true
         }
@@ -80,10 +77,10 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
     }
 
     @Operation(cancellableOnSuspension = false)
-    fun unlock() {
+    fun unlock(@Param(gen = NodeIdGen::class) nodeId: Int) {
         if (!inCS) return
         inCS = false
-        requested[env.nodeId] = false
+        requested[env.id] = false
         env.recordInternalEvent(Unlock)
         env.broadcast(Rel(0))
     }
@@ -93,9 +90,9 @@ class OptimisticMutexIncorrect(private val env: Environment<MutexMessage, Unit>)
 class OptimisticMutexIncorrectTest {
     @Test
     fun `incorrect algorithm`() {
-        val failure = createDistributedOptions<MutexMessage>()
+        val failure = DistributedOptions<MutexMessage>()
             .addNodes<OptimisticMutexIncorrect>(nodes = 4, minNodes = 2)
-            .verifier(EpsilonVerifier::class.java)
+            .sequentialSpecification(MutexSpecification::class.java)
             .actorsPerThread(3)
             .invocationsPerIteration(10000)
             .iterations(30)

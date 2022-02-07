@@ -22,43 +22,22 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import java.util.HashMap
 
-sealed class Command(val id : Int)
+sealed class Command {
+    abstract val id: Int
+}
 
-class GetCommand(val key : Int, id : Int) : Command(id) {
-    override fun toString() = "GetCommand(key=$key, id=$id)"
-}
-class PutCommand(val key : Int, val value : Int, id : Int) : Command(id) {
-    override fun toString() = "PutCommand(key=$key, value=$value, id=$id)"
-}
-class AddCommand(val key : Int, val value : Int, id : Int) : Command(id) {
-    override fun toString() = "AddCommand(key=$key, value=$value, id=$id)"
-}
-class ContainsCommand(val key : Int, id : Int) : Command(id) {
-    override fun toString() = "ContainsCommand(key=$key, id=$id)"
-}
-class RemoveCommand(val key : Int, id : Int) : Command(id) {
-    override fun toString() = "RemoveCommand(key=$key, id=$id)"
-}
-class GetResult(val res : Int?, id : Int) : Command(id) {
-    override fun toString() = "GetResult(res=$res, id=$id)"
-}
-class PutResult(val res : Int?, id : Int) : Command(id){
-    override fun toString() = "PutResult(res=$res, id=$id)"
-}
-class AddResult(val res : Int?, id : Int) : Command(id){
-    override fun toString() = "AddResult(res=$res, id=$id)"
-}
-class ContainsResult(val res : Boolean, id : Int) : Command(id) {
-    override fun toString() = "ContainsResult(res=$res, id=$id)"
-}
-class RemoveResult(val res : Int?, id : Int) : Command(id) {
-    override fun toString() = "RemoveResult(res=$res, id=$id)"
-}
-class ErrorResult(val error : Throwable, id : Int) : Command(id) {
-    override fun toString() = "ErrorResult(error=$error, id=$id)"
-}
+data class GetCommand(val key: Int, override val id: Int) : Command()
+data class PutCommand(val key: Int, val value: Int, override val id: Int) : Command()
+data class AddCommand(val key: Int, val value: Int, override val id: Int) : Command()
+data class ContainsCommand(val key: Int, override val id: Int) : Command()
+data class RemoveCommand(val key: Int, override val id: Int) : Command()
+data class GetResult(val res: Int?, override val id: Int) : Command()
+data class PutResult(val res: Int?, override val id: Int) : Command()
+data class AddResult(val res: Int?, override val id: Int) : Command()
+data class ContainsResult(val res: Boolean, override val id: Int) : Command()
+data class RemoveResult(val res: Int?, override val id: Int) : Command()
+data class ErrorResult(val error: Throwable, override val id: Int) : Command()
 
 
 class SingleNode : VerifierState() {

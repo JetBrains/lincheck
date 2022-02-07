@@ -24,9 +24,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -39,7 +39,7 @@ object Pong : PingPongMessage() {
     override fun toString() = "Pong"
 }
 
-class UnreliablePingPongServer(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+class UnreliablePingPongServer(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
     var shouldSkip = true
     override fun onMessage(message: PingPongMessage, sender: Int) {
         check(message is Ping) {
@@ -54,9 +54,9 @@ class UnreliablePingPongServer(val env: Environment<PingPongMessage, Unit>) : No
     }
 }
 
-class PingPongClient(val env: Environment<PingPongMessage, Unit>) : Node<PingPongMessage, Unit> {
+class PingPongClient(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
     private val channel = Channel<PingPongMessage>(UNLIMITED)
-    private val server = env.getAddressesForClass(UnreliablePingPongServer::class.java)!![0]
+    private val server = env.getAddressesForClass(UnreliablePingPongServer::class.java)[0]
     override fun onMessage(message: PingPongMessage, sender: Int) {
         check(message is Pong) {
             "Unexpected message type"
@@ -86,7 +86,7 @@ class PingPongMock : VerifierState() {
 
 class TimeoutTest {
     @Test
-    fun test() = createDistributedOptions<PingPongMessage>()
+    fun test() = DistributedOptions<PingPongMessage>()
         .addNodes<PingPongClient>(nodes = 1)
         .addNodes<UnreliablePingPongServer>(nodes = 1)
         .invocationsPerIteration(600_000)

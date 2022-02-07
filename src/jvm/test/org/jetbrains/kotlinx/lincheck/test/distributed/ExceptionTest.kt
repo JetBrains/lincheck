@@ -20,16 +20,16 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
+import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class NodeThrowsException(val env: Environment<Int, Unit>) : Node<Int, Unit> {
+class NodeThrowsException(val env: Environment<Int>) : Node<Int> {
     override fun onMessage(message: Int, sender: Int) {
         if (message != 0) {
             env.broadcast(0)
@@ -44,12 +44,15 @@ class NodeThrowsException(val env: Environment<Int, Unit>) : Node<Int, Unit> {
 }
 
 class ExceptionTest {
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = createDistributedOptions<Int>()
-        .addNodes<NodeThrowsException>(nodes = 3)
-        .actorsPerThread(2)
-        .invocationsPerIteration(10)
-        .iterations(1)
-        .verifier(EpsilonVerifier::class.java)
-        .check(NodeThrowsException::class.java)
+    @Test
+    fun test() {
+        val failure = DistributedOptions<Int>()
+            .addNodes<NodeThrowsException>(nodes = 3)
+            .actorsPerThread(2)
+            .invocationsPerIteration(10)
+            .iterations(1)
+            .verifier(EpsilonVerifier::class.java)
+            .checkImpl(NodeThrowsException::class.java)
+        assert(failure is UnexpectedExceptionFailure)
+    }
 }

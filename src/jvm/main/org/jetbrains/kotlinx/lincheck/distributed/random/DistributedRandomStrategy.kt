@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
@@ -41,14 +43,14 @@ internal var canCrashBeforeAccessingDatabase = false
  * Represents random strategy.
  * The execution order is generated randomly, and the system faults are introduced in random places.
  */
-internal class DistributedRandomStrategy<Message, DB>(
-    testCfg: DistributedCTestConfiguration<Message, DB>,
+internal class DistributedRandomStrategy<Message>(
+    testCfg: DistributedCTestConfiguration<Message>,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
     verifier: Verifier
-) : DistributedStrategy<Message, DB>(
+) : DistributedStrategy<Message>(
     testCfg,
     testClass,
     scenario,
@@ -129,7 +131,12 @@ internal class DistributedRandomStrategy<Message, DB>(
                 reset()
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
-                        if (!verifier.verifyResults(scenario, ir.results)) {
+                        val verifyResult = if (verifier is DistributedVerifier) {
+                            verifier.verifyResultsAndStates(runner.nodeInstances, scenario, ir.results, runner.events)
+                        } else {
+                            verifier.verifyResults(scenario, ir.results)
+                        }
+                        if (!verifyResult) {
                             return IncorrectResultsFailure(
                                 scenario,
                                 ir.results
@@ -190,3 +197,10 @@ internal class DistributedRandomStrategy<Message, DB>(
         }
     }
 }
+
+private fun Verifier.verifyResultsAndStates(
+    nodes: Array<out Node<*>>,
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    events: List<Event>
+): Boolean = verifyResults(scenario, results)

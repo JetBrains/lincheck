@@ -20,30 +20,43 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
 
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedVerifier
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
-abstract class OrderCheckNode(val env: Environment<Message, MutableList<Message>>) :
-    Node<Message, MutableList<Message>> {
-    override fun validate(events: List<Event>, databases: List<MutableList<Message>>) {
-        // Check total order
-        for (storedMessages in databases) {
-            for (i in storedMessages.indices) {
-                for (j in i + 1 until storedMessages.size) {
-                    check(databases.none {
-                        val first = it.lastIndexOf(storedMessages[i])
-                        val second = it.lastIndexOf(storedMessages[j])
-                        first != -1 && second != -1 && first >= second
-                    })
+abstract class OrderCheckNode(val env: Environment<Message>) :
+    Node<Message> {
+    val delivered = mutableListOf<BroadcastMessage>()
+}
+
+class TotalOrderVerifier : DistributedVerifier {
+    override fun verifyResultsAndStates(
+        nodes: Array<out Node<*>>,
+        scenario: ExecutionScenario,
+        results: ExecutionResult,
+        events: List<Event>
+    ): Boolean {
+        val sent = events.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
+            .filterIsInstance<BroadcastMessage>()
+        val received = nodes.map { (it as OrderCheckNode).delivered }
+        val allDelivered =
+            sent.all { m -> received.filterIndexed { index, _ -> index != m.sender }.all { it.contains(m) } }
+        if (!allDelivered) return false
+        for (messages in received) {
+            for (i in messages.indices) {
+                for (j in i + 1 until messages.size) {
+                    if (received.any {
+                            val firstIndex = it.lastIndexOf(messages[i])
+                            val secondIndex = it.lastIndexOf(messages[j])
+                            firstIndex != -1 && secondIndex != -1 && firstIndex >= secondIndex
+                        }) return false
                 }
             }
         }
-        val sent = events.filterIsInstance<MessageSentEvent<Message>>().map { it.message }
-            .filterIsInstance<RequestMessage>()
-        sent.forEach { m ->
-            check(databases.filterIndexed { index, _ -> index != m.from }.all { it.contains(m) })
-        }
+        return true
     }
 }

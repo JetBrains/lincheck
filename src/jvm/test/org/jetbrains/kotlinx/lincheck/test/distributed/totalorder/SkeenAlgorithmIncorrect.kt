@@ -24,19 +24,18 @@ import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 
-class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) : OrderCheckNode(env) {
+class SkeenAlgorithmIncorrect(env: Environment<Message>) : OrderCheckNode(env) {
     private var clock = 0
     private var opId = 0
     private val resChannel = Channel<Int>(Channel.UNLIMITED)
     private val replyTimes = mutableListOf<Int>()
-    private val messages = mutableSetOf<RequestMessage>()
+    private val messages = mutableSetOf<BroadcastMessage>()
 
     override fun onMessage(message: Message, sender: Int) {
         clock = maxOf(clock, message.clock) + 1
         when (message) {
-            is RequestMessage -> {
-                messages.remove(message)
-                messages.add(message)
+            is BroadcastMessage -> {
+                messages.addOrUpdate(message)
                 if (!message.finalized) env.send(Reply(++clock), sender)
                 deliver()
             }
@@ -57,7 +56,7 @@ class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) :
         sb.append(", replies=")
         sb.append(replyTimes)
         sb.append(", log=")
-        sb.append(env.database)
+        sb.append(delivered)
         return sb.toString()
     }
 
@@ -67,8 +66,8 @@ class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) :
             if (msg?.finalized != true) return
             messages.removeIf { it == msg }
             env.recordInternalEvent("Add message $msg")
-            check(messages.none { it.time == msg.time })
-            env.database.add(msg)
+            check(messages.none { it.time == msg.time && it.finalized })
+            delivered.add(msg)
         }
     }
 
@@ -77,11 +76,11 @@ class SkeenAlgorithmIncorrect(env: Environment<Message, MutableList<Message>>) :
         if (env.nodes == 1) return
         replyTimes.clear()
         ++clock
-        val msg = RequestMessage(from = env.nodeId, id = opId++, clock = clock, finalized = false, time = clock)
+        val msg = BroadcastMessage(sender = env.id, id = opId++, clock = clock, finalized = false, time = clock)
         env.broadcast(msg)
         val maxTime = resChannel.receive()
-        val finalMsg = RequestMessage(
-            from = env.nodeId, id = msg.id, clock = ++clock, finalized = true, time = maxTime
+        val finalMsg = BroadcastMessage(
+            sender = env.id, id = msg.id, clock = ++clock, finalized = true, time = maxTime
         )
         env.broadcast(finalMsg)
     }

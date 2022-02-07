@@ -31,15 +31,15 @@ private data class CrashInfoForType(
  * Maps a node id to the corresponding class and the class to a range of corresponding ids.
  * Keeps information of crash types for each class and maximum number of crashes.
  */
-class NodeAddressResolver<Message, DB>(
-    testClass: Class<out Node<Message, DB>>,
+class NodeAddressResolver<Message>(
+    testClass: Class<out Node<Message>>,
     val scenarioSize: Int,
-    nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
+    nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
 ) {
-    val nodeTypeToRange: Map<Class<out Node<Message, DB>>, List<Int>>
+    val nodeTypeToRange: Map<Class<out Node<Message>>, List<Int>>
     val nodeCount = nodeTypes.values.sumOf { it.nodes }
-    private val nodes = mutableListOf<Class<out Node<Message, DB>>>()
-    private val crashes = mutableMapOf<Class<out Node<Message, DB>>, CrashInfoForType>()
+    private val nodes = mutableListOf<Class<out Node<Message>>>()
+    private val crashes = mutableMapOf<Class<out Node<Message>>, CrashInfoForType>()
 
     init {
         repeat(scenarioSize) { nodes.add(testClass) }
@@ -65,7 +65,7 @@ class NodeAddressResolver<Message, DB>(
     /**
      * Returns a list of ids for a specified class [cls].
      */
-    operator fun get(cls: Class<out Node<Message, DB>>) = nodeTypeToRange[cls]
+    operator fun get(cls: Class<out Node<Message>>) = nodeTypeToRange[cls] ?: emptyList()
 
     /**
      * Returns a class for a specified id [iNode].
@@ -90,17 +90,17 @@ class NodeAddressResolver<Message, DB>(
     /**
      * Returns the crash mode for [cls].
      */
-    fun crashType(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.crashMode
+    fun crashType(cls: Class<out Node<Message>>) = crashes[cls]!!.crashMode
 
     /**
      * Returns the partition mode for [cls].
      */
-    fun partitionType(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.partitionMode
+    fun partitionType(cls: Class<out Node<Message>>) = crashes[cls]!!.partitionMode
 
     /**
      * Returns maximum number of unavailable nodes for [cls].
      */
-    fun maxNumberOfCrashes(cls: Class<out Node<Message, DB>>) = crashes[cls]!!.maxNumberOfCrashes
+    fun maxNumberOfCrashes(cls: Class<out Node<Message>>) = crashes[cls]!!.maxNumberOfCrashes
 
     /**
      * If there are multiple types of nodes in the system.

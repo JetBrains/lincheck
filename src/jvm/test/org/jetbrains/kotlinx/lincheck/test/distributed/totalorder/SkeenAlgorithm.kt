@@ -24,8 +24,8 @@ import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
@@ -33,15 +33,24 @@ sealed class Message {
     abstract val clock: Int
 }
 
-data class RequestMessage(val from: Int, val id: Int, override val clock: Int, val finalized: Boolean, val time: Int) :
+data class BroadcastMessage(
+    val sender: Int,
+    val id: Int,
+    override val clock: Int,
+    val finalized: Boolean,
+    val time: Int
+) :
     Message() {
+    /**
+     * If messages have the same [sender] and [id] they are equal.
+     */
     override fun equals(other: Any?): Boolean {
-        if (other !is RequestMessage) return false
-        return from == other.from && id == other.id
+        if (other !is BroadcastMessage) return false
+        return sender == other.sender && id == other.id
     }
 
     override fun hashCode(): Int {
-        var result = from
+        var result = sender
         result = 31 * result + id
         return result
     }
@@ -49,19 +58,24 @@ data class RequestMessage(val from: Int, val id: Int, override val clock: Int, v
 
 data class Reply(override val clock: Int) : Message()
 
-class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderCheckNode(env) {
+
+fun <E> MutableSet<E>.addOrUpdate(element: E) {
+    remove(element)
+    add(element)
+}
+
+class SkeenAlgorithm(env: Environment<Message>) : OrderCheckNode(env) {
     private var clock = 0
     private var opId = 0
     private val resChannel = Channel<Int>(Channel.UNLIMITED)
     private val replyTimes = mutableListOf<Int>()
-    private val messages = mutableSetOf<RequestMessage>()
+    private val messages = mutableSetOf<BroadcastMessage>()
 
     override fun onMessage(message: Message, sender: Int) {
         clock = maxOf(clock, message.clock) + 1
         when (message) {
-            is RequestMessage -> {
-                messages.remove(message)
-                messages.add(message)
+            is BroadcastMessage -> {
+                messages.addOrUpdate(message)
                 if (!message.finalized) env.send(Reply(++clock), sender)
                 deliver()
             }
@@ -75,29 +89,27 @@ class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderChe
     }
 
     override fun stateRepresentation() =
-        "clock=$clock, messages=$messages, replies=$replyTimes, log=${env.database}"
+        "clock=$clock, messages=$messages, replies=$replyTimes, delivered=${delivered}"
 
     private fun deliver() {
         while (true) {
             var msg = messages.minByOrNull { it.time }
             if (msg?.finalized != true || messages.any { it.time == msg?.time && !it.finalized }) return
-            msg = messages.filter { it.time == msg?.time }.minByOrNull { it.from }
-            messages.removeIf { it == msg }
-            env.recordInternalEvent("Add message $msg")
-            env.database.add(msg!!)
+            msg = messages.filter { it.time == msg?.time }.minByOrNull { it.sender }
+            messages.remove(msg)
+            delivered.add(msg!!)
         }
     }
 
     @Operation(cancellableOnSuspension = false) // TODO: please make `cancellableOnSuspension = false` by default
     suspend fun broadcast() {
-        if (env.nodes == 1) return
         replyTimes.clear()
         ++clock
-        val msg = RequestMessage(from = env.nodeId, id = opId++, clock = clock, finalized = false, time = clock)
+        val msg = BroadcastMessage(sender = env.id, id = opId++, clock = clock, finalized = false, time = clock)
         env.broadcast(msg)
         val maxTime = resChannel.receive()
-        val finalMsg = RequestMessage(
-            from = env.nodeId, id = msg.id, clock = ++clock, finalized = true, time = maxTime
+        val finalMsg = BroadcastMessage(
+            sender = env.id, id = msg.id, clock = ++clock, finalized = true, time = maxTime
         )
         env.broadcast(finalMsg)
     }
@@ -105,7 +117,7 @@ class SkeenAlgorithm(env: Environment<Message, MutableList<Message>>) : OrderChe
 
 class SkeenTest {
     private fun commonOptions() =
-        createDistributedOptions<Message, MutableList<Message>> { mutableListOf() }
+        DistributedOptions<Message>()
             .actorsPerThread(3)
             .invocationsPerIteration(500_000)
             .iterations(1)
@@ -114,14 +126,14 @@ class SkeenTest {
 
     @Test
     fun `correct algorithm`() = commonOptions()
-        .addNodes<SkeenAlgorithm>(nodes = 3, minNodes = 1)
+        .addNodes<SkeenAlgorithm>(nodes = 3, minNodes = 2)
         .check(SkeenAlgorithm::class.java)
 
     @Test
     fun `incorrect algorithm`() {
         val failure = commonOptions()
-            .addNodes<SkeenAlgorithmIncorrect>(nodes = 3, minNodes = 1)
-            .operation(SkeenAlgorithm::broadcast)
+            .addNodes<SkeenAlgorithmIncorrect>(nodes = 3, minNodes = 2)
+            //.operation(SkeenAlgorithm::broadcast)
             .minimizeFailedScenario(false)
             .checkImpl(SkeenAlgorithmIncorrect::class.java)
         assert(failure != null)

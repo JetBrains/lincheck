@@ -22,10 +22,10 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.junit.Test
 
 sealed class TimerMessage
@@ -33,7 +33,7 @@ object TimerPing : TimerMessage()
 object TimerPong : TimerMessage()
 object Heartbeat : TimerMessage()
 
-class TimerNode(private val env: Environment<TimerMessage, Unit>) : Node<TimerMessage, Unit> {
+class TimerNode(private val env: Environment<TimerMessage>) : Node<TimerMessage> {
     companion object {
         const val HEARTBEAT_PING_RATE = 3
     }
@@ -70,7 +70,7 @@ class TimerNode(private val env: Environment<TimerMessage, Unit>) : Node<TimerMe
 
     @Operation
     suspend fun ping() {
-        env.send(TimerPing, 1 - env.nodeId)
+        env.send(TimerPing, 1 - env.id)
         pongSignal.await()
     }
 }
@@ -78,7 +78,7 @@ class TimerNode(private val env: Environment<TimerMessage, Unit>) : Node<TimerMe
 
 class TimerTest {
     @Test
-    fun test() = createDistributedOptions<TimerMessage>()
+    fun test() = DistributedOptions<TimerMessage>()
         .addNodes<TimerNode>(nodes = 2)
         .requireStateEquivalenceImplCheck(false)
         .invocationsPerIteration(10_000)

@@ -21,15 +21,15 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedVerifier
 import org.jetbrains.kotlinx.lincheck.distributed.random.ProbabilityModel
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.reflect.*
+import kotlin.reflect.KClass
 
 /**
  * This class runs concurrent tests.
@@ -103,7 +103,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         while (true) {
             minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
         }
-        if (testCfg is DistributedCTestConfiguration<*, *>) {
+        if (testCfg is DistributedCTestConfiguration<*>) {
             return minimizedFailure.minimizeDSFailure(testCfg)
         }
         return minimizedFailure
@@ -147,7 +147,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         } else null
     }
 
-    private fun LincheckFailure.minimizeDSFailure(testCfg: DistributedCTestConfiguration<*, *>): LincheckFailure {
+    private fun LincheckFailure.minimizeDSFailure(testCfg: DistributedCTestConfiguration<*>): LincheckFailure {
         val queue = LinkedList(testCfg.nextConfigurations())
         var res = this
         while (queue.size != 0) {
@@ -218,19 +218,23 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
 
 
     private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
-        verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
-            if (!checkStateEquivalence) return@also
-            val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
-            if (!stateEquivalenceCorrect) {
-                if (requireStateEquivalenceImplCheck) {
-                    val errorMessage =
-                        StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
-                    error(errorMessage)
-                } else {
-                    reporter.logStateEquivalenceViolation(sequentialSpecification)
-                }
-            }
-        }
+        //TODO: better way
+        if (!DistributedVerifier::class.java.isAssignableFrom(verifierClass))
+            verifierClass.getConstructor(Class::class.java)
+                .newInstance(sequentialSpecification).also {
+                    if (!checkStateEquivalence) return@also
+                    val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
+                    if (!stateEquivalenceCorrect) {
+                        if (requireStateEquivalenceImplCheck) {
+                            val errorMessage =
+                                StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification)
+                                    .toString()
+                            error(errorMessage)
+                        } else {
+                            reporter.logStateEquivalenceViolation(sequentialSpecification)
+                        }
+                    }
+                } else verifierClass.getConstructor().newInstance()
 
     private fun CTestConfiguration.createExecutionGenerator() =
         generatorClass.getConstructor(

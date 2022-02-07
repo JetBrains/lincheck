@@ -20,27 +20,21 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
-import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
+import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.Signal
+import org.jetbrains.kotlinx.lincheck.paramgen.NodeIdGen
 import org.junit.Test
 import kotlin.coroutines.suspendCoroutine
 import kotlin.math.max
 
-fun IntArray.happensBefore(other: IntArray): Boolean {
-    check(size == other.size)
-    for (i in indices) {
-        if (other[i] < this[i]) return false
-    }
-    return true
-}
 
-
-class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : MutexNode<MutexMessage>() {
+class RickartAgrawalaMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
     companion object {
         @Volatile
         private var cnt = 0
@@ -52,7 +46,7 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
     private val req = IntArray(env.nodes) { inf } // time of last REQ message
     private val ok = IntArray(env.nodes) // time of last OK message
     private val pendingOk = BooleanArray(env.nodes)
-    private val semaphore = Semaphore(1, 1)
+    private val signal = Signal()
 
     override fun onMessage(message: MutexMessage, sender: Int) {
         val time = message.msgTime
@@ -61,8 +55,8 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
             is Req -> {
                 val reqTime = message.reqTime
                 req[sender] = reqTime
-                val myReqTime = req[env.nodeId]
-                if (reqTime < myReqTime || reqTime == myReqTime && sender < env.nodeId) {
+                val myReqTime = req[env.id]
+                if (reqTime < myReqTime || reqTime == myReqTime && sender < env.id) {
                     env.send(Ok(++clock), sender)
                 } else {
                     pendingOk[sender] = true
@@ -78,41 +72,41 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
     }
 
     private fun checkInCS() {
-        val myReqTime = req[env.nodeId]
+        val myReqTime = req[env.id]
         if (myReqTime == inf) return // did not request CS, do nothing
         if (inCS) return // already in CS, do nothing
         for (i in 0 until env.nodes) {
-            if (i != env.nodeId) {
-                if (req[i] < myReqTime || req[i] == myReqTime && i < env.nodeId) return // better ticket
+            if (i != env.id) {
+                if (req[i] < myReqTime || req[i] == myReqTime && i < env.id) return // better ticket
                 if (ok[i] <= myReqTime) return // did not Ok our request
             }
         }
         inCS = true
-        semaphore.release()
+        signal.signal()
     }
 
     @Operation(cancellableOnSuspension = false, blocking = true)
-    suspend fun lock() {
+    suspend fun lock(@Param(gen = NodeIdGen::class) nodeId: Int) {
         if (inCS) {
             suspendCoroutine<Unit> { }
         }
         val myReqTime = ++clock
-        req[env.nodeId] = myReqTime
+        req[env.id] = myReqTime
         env.broadcast(Req(++clock, myReqTime))
         if (env.nodes == 1) {
             inCS = true
         } else {
-            semaphore.acquire()
+            signal.signal()
             check(inCS)
         }
         env.recordInternalEvent(Lock)
     }
 
     @Operation
-    fun unlock() {
+    fun unlock(@Param(gen = NodeIdGen::class) nodeId: Int) {
         if (!inCS) return
         inCS = false
-        req[env.nodeId] = inf
+        req[env.id] = inf
         env.recordInternalEvent(Unlock)
         for (i in 0 until env.nodes) {
             if (pendingOk[i]) {
@@ -124,9 +118,9 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage, Unit>) : M
 }
 
 class RickartAgrawalaMutexTest {
-    private fun commonOptions() = createDistributedOptions<MutexMessage>()
+    private fun commonOptions() = DistributedOptions<MutexMessage>()
         .addNodes<RickartAgrawalaMutex>(nodes = 4, minNodes = 2)
-        .verifier(EpsilonVerifier::class.java)
+        .sequentialSpecification(MutexSpecification::class.java)
         .actorsPerThread(3)
         .invocationsPerIteration(50_000)
         .iterations(10)

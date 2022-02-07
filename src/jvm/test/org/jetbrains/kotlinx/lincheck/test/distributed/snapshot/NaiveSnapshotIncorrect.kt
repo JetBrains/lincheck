@@ -30,7 +30,7 @@ import kotlin.math.abs
 
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node<Message, Unit> {
+class NaiveSnapshotIncorrect(private val env: Environment<Message>) : Node<Message> {
     private val currentSum = atomic(100)
     private val semaphore = Signal()
     private var token = 0
@@ -65,22 +65,22 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message, Unit>) : Node
     @Operation
     fun transaction(to: Int, sum: Int) {
         val receiver = abs(to) % env.nodes
-        if (to == env.nodeId) return
+        if (to == env.id) return
         currentSum.getAndAdd(-sum)
         env.send(Transaction(sum), receiver)
     }
 
     override fun stateRepresentation(): String {
         val res = StringBuilder()
-        res.append("[${env.nodeId}]: Cursum ${currentSum.value}\n")
-        replies.forEachIndexed { i, c -> res.append("[${env.nodeId}]: reply[$i] $c\n") }
+        res.append("[${env.id}]: Cursum ${currentSum.value}\n")
+        replies.forEachIndexed { i, c -> res.append("[${env.id}]: reply[$i] $c\n") }
         return res.toString()
     }
 
     @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun snapshot(): Int {
         val state = currentSum.value
-        val marker = SnapshotRequest(env.nodeId)
+        val marker = SnapshotRequest(env.id)
         env.broadcast(marker)
         while (!gotSnapshot) {
             semaphore.await()

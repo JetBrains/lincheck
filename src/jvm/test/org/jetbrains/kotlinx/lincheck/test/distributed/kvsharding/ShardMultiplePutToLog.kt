@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.NodeWithStorage
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 
 class IncorrectStorage {
@@ -30,7 +30,7 @@ class IncorrectStorage {
     val keyValues = mutableMapOf<String, String>()
 }
 
-class ShardMultiplePutToLog(val env: Environment<KVMessage, IncorrectStorage>) : Node<KVMessage, IncorrectStorage> {
+class ShardMultiplePutToLog(env: Environment<KVMessage>) : NodeWithStorage<KVMessage, IncorrectStorage>(env) {
     private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null
@@ -42,16 +42,16 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, IncorrectStorage>) :
         ((key.hashCode() % env.nodes) + env.nodes) % env.nodes
 
     private fun saveToLog(key: String, value: String): String? {
-        return env.database.keyValues.put(key, value)
+        return storage.keyValues.put(key, value)
     }
 
-    private fun getFromLog(key: String): String? = env.database.keyValues[key]
+    private fun getFromLog(key: String): String? = storage.keyValues[key]
 
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
-        val opId = ++(env.database.opId)
+        val opId = ++(storage.opId)
         val node = getNodeForKey(key)
-        if (node == env.nodeId) {
+        if (node == env.id) {
             return saveToLog(key, value)
         }
         val request = PutRequest(key, value, opId)
@@ -71,15 +71,15 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, IncorrectStorage>) :
     }
 
     override fun recover() {
-        env.database.opId++
+        storage.opId++
         env.broadcast(Recover)
     }
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? {
-        val opId = ++(env.database.opId)
+        val opId = ++(storage.opId)
         val node = getNodeForKey(key)
-        if (node == env.nodeId) {
+        if (node == env.id) {
             return getFromLog(key)
         }
         val request = GetRequest(key, opId)
@@ -94,7 +94,7 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, IncorrectStorage>) :
             return
         }
         if (!message.isRequest) {
-            if (message.id != env.database.opId) return
+            if (message.id != storage.opId) return
             if (response == null) {
                 response = message
                 semaphore.signal()
@@ -115,6 +115,10 @@ class ShardMultiplePutToLog(val env: Environment<KVMessage, IncorrectStorage>) :
     }
 
     override fun stateRepresentation(): String {
-        return "opId=${env.database.opId}, response=$response"
+        return "opId=${storage.opId}, response=$response"
+    }
+
+    override fun createStorage(): IncorrectStorage {
+        return IncorrectStorage()
     }
 }

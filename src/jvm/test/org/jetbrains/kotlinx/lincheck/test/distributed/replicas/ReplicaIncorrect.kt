@@ -22,10 +22,10 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.replicas
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
@@ -37,13 +37,13 @@ data class PutKVEntry(val key: Int, val value: Int) : KVMessage()
 data class GetKVRequest(val key: Int) : KVMessage()
 data class GetKVResponse(val value: Int?) : KVMessage()
 
-class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage, Unit> {
+class ReplicaIncorrect(private val env: Environment<KVMessage>) : Node<KVMessage> {
     private val storage = mutableMapOf<Int, Int>()
     override fun onMessage(message: KVMessage, sender: Int) {
         when (message) {
             is PutKVRequest -> {
                 storage[message.key] = message.value
-                env.broadcastToGroup(PutKVEntry(message.key, message.value), ReplicaIncorrect::class.java)
+                env.broadcastToGroup<ReplicaIncorrect>(PutKVEntry(message.key, message.value))
             }
             is PutKVEntry -> storage[message.key] = message.value
             is GetKVRequest -> env.send(GetKVResponse(storage[message.key]), sender)
@@ -52,12 +52,12 @@ class ReplicaIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVM
     }
 }
 
-class ClientIncorrect(private val env: Environment<KVMessage, Unit>) : Node<KVMessage, Unit> {
+class ClientIncorrect(private val env: Environment<KVMessage>) : Node<KVMessage> {
     private val signal = Signal()
     private var res: GetKVResponse? = null
-    private val rand = Random(env.nodeId)
+    private val rand = Random(env.id)
 
-    private fun getRandomReplica() = env.getAddressesForClass(ReplicaIncorrect::class.java)!!.random(rand)
+    private fun getRandomReplica() = env.getAddresses<ReplicaIncorrect>().random(rand)
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: Int): Int? {
@@ -100,7 +100,7 @@ class ReplicaSpecification : VerifierState() {
 class ReplicaIncorrectTest {
     @Test
     fun test() {
-        val failure = createDistributedOptions<KVMessage>()
+        val failure = DistributedOptions<KVMessage>()
             .addNodes<ReplicaIncorrect>(nodes = 4, minNodes = 1)
             .addNodes<ClientIncorrect>(nodes = 3, minNodes = 1)
             .invocationsPerIteration(100_000)

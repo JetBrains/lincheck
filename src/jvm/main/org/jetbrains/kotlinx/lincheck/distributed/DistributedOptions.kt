@@ -5,12 +5,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.*
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
-import java.lang.reflect.*
-import kotlin.reflect.*
-import kotlin.reflect.full.*
-import kotlin.reflect.jvm.*
+import kotlin.collections.set
+import kotlin.reflect.KFunction
 
 /**
  * Represents the guarantees on message order.
@@ -83,34 +79,12 @@ data class NodeTypeInfo(
     }
 }
 
-abstract class NNode(
-    val env: Environment
-) {
-
-}
-
-abstract class NodeWithStorage<Storage> : NNode() {
-    private var _storage: Storage? = null
-    val storage: Storage
-        get() {
-            if (_storage == null) _storage = createStorage()
-            return _storage!!
-        }
-
-    // called by Lincheck
-    private fun onRecovery(oldStorage: Storage) {
-        _storage = oldStorage
-    }
-
-    abstract fun createStorage(): Storage
-}
-
 /**
  * Options for distributed algorithms.
  */
-class DistributedOptions<Message, DB> internal constructor(private val databaseFactory: () -> DB) :
-    Options<DistributedOptions<Message, DB>,
-            DistributedCTestConfiguration<Message, DB>>() {
+class DistributedOptions<Message>() :
+    Options<DistributedOptions<Message>,
+            DistributedCTestConfiguration<Message>>() {
     companion object {
         const val DEFAULT_TIMEOUT_MS: Long = 5000
     }
@@ -119,10 +93,10 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     private var messageOrder: MessageOrder = MessageOrder.FIFO
     private var invocationsPerIteration: Int = DistributedCTestConfiguration.DEFAULT_INVOCATIONS
     private var messageDuplication: Boolean = false
-    private var testClasses = mutableMapOf<Class<out Node<Message, DB>>, NodeTypeInfo>()
+    private var testClasses = mutableMapOf<Class<out Node<Message>>, NodeTypeInfo>()
     private var logFileName: String? = null
     private var crashNotifications = true
-    private var _testClass: Class<out Node<Message, DB>>? = null
+    private var _testClass: Class<out Node<Message>>? = null
 
     init {
         timeoutMs = DEFAULT_TIMEOUT_MS
@@ -131,7 +105,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Sets if messages can be lost.
      */
-    fun messageLoss(messageLoss: Boolean): DistributedOptions<Message, DB> {
+    fun messageLoss(messageLoss: Boolean): DistributedOptions<Message> {
         this.messageLoss = messageLoss
         return this
     }
@@ -139,30 +113,30 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Adds node type and information about it.
      */
-    inline fun <reified N : Node<Message, DB>> addNodes(
+    inline fun <reified N : Node<Message>> addNodes(
         nodes: Int,
         minNodes: Int = 1,
         crashMode: CrashMode = NO_CRASH,
         networkPartition: NetworkPartitionMode = NONE,
         noinline maxUnavailableNodes: (Int) -> Int = { it }
-    ): DistributedOptions<Message, DB> {
+    ): DistributedOptions<Message> {
         addNodes(N::class.java, nodes, minNodes, crashMode, networkPartition, maxUnavailableNodes)
         return this
     }
 
-    inline fun <reified N : Node<Message, DB>> operations(vararg operations: (KFunction<*>)) {
+    inline fun <reified N : Node<Message>> operations(vararg operations: (KFunction<*>)) {
 
     }
 
     // TODO: internal/private
     fun addNodes(
-        cls: Class<out Node<Message, DB>>,
+        cls: Class<out Node<Message>>,
         nodes: Int,
         minNodes: Int,
         crashType: CrashMode,
         networkPartition: NetworkPartitionMode,
         maxNumberOfCrashedNodes: (Int) -> Int
-    ): DistributedOptions<Message, DB> {
+    ): DistributedOptions<Message> {
         this.testClasses[cls] =
             NodeTypeInfo(minNodes, nodes, crashType, networkPartition, maxNumberOfCrashedNodes)
         return this
@@ -171,12 +145,12 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Sets the message order for the system. See [MessageOrder]
      */
-    fun messageOrder(messageOrder: MessageOrder): DistributedOptions<Message, DB> {
+    fun messageOrder(messageOrder: MessageOrder): DistributedOptions<Message> {
         this.messageOrder = messageOrder
         return this
     }
 
-    fun invocationsPerIteration(invocations: Int): DistributedOptions<Message, DB> {
+    fun invocationsPerIteration(invocations: Int): DistributedOptions<Message> {
         this.invocationsPerIteration = invocations
         return this
     }
@@ -184,7 +158,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Sets if messages may be duplicated.
      */
-    fun messageDuplications(duplications: Boolean): DistributedOptions<Message, DB> {
+    fun messageDuplications(duplications: Boolean): DistributedOptions<Message> {
         this.messageDuplication = duplications
         return this
     }
@@ -192,7 +166,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Sets the filename where the logs will be stored in case of failure. See [org.jetbrains.kotlinx.lincheck.distributed.event.Event]
      */
-    fun storeLogsForFailedScenario(fileName: String): DistributedOptions<Message, DB> {
+    fun storeLogsForFailedScenario(fileName: String): DistributedOptions<Message> {
         this.logFileName = fileName
         return this
     }
@@ -200,17 +174,17 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Sets if [Node.onNodeUnavailable] should be called after crash or partition.
      */
-    fun sendCrashNotifications(crashNotifications: Boolean): DistributedOptions<Message, DB> {
+    fun sendCrashNotifications(crashNotifications: Boolean): DistributedOptions<Message> {
         this.crashNotifications = crashNotifications
         return this
     }
 
-    override fun createTestConfigurations(testClass: Class<*>): DistributedCTestConfiguration<Message, DB> =
+    override fun createTestConfigurations(testClass: Class<*>): DistributedCTestConfiguration<Message> =
         DistributedCTestConfiguration(
             testClass, iterations, threads,
             actorsPerThread, executionGenerator,
             verifier, invocationsPerIteration, messageLoss,
-            messageOrder, messageDuplication, testClasses, logFileName, crashNotifications, databaseFactory,
+            messageOrder, messageDuplication, testClasses, logFileName, crashNotifications,
             requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
             chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios
         )
@@ -218,7 +192,7 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
     /**
      * Extracts test class from node types.
      */
-    private val clientClass: Class<out Node<Message, DB>>
+    private val clientClass: Class<out Node<Message>>
         get() {
             if (_testClass == null) {
                 _testClass = testClasses.keys.find {
@@ -252,6 +226,3 @@ class DistributedOptions<Message, DB> internal constructor(private val databaseF
         return LinChecker(clientClass, this).checkImpl()
     }*/
 }
-
-fun <Message> createDistributedOptions() = DistributedOptions<Message, Unit> { }
-fun <Message, DB> createDistributedOptions(factory: () -> DB) = DistributedOptions<Message, DB>(factory)

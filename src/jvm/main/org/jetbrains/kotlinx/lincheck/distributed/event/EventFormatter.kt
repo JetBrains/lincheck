@@ -26,7 +26,7 @@ internal interface EventFormatter {
     fun format(events: List<Event>): List<String>
 }
 
-internal class TextEventFormatter(private val addressResolver: NodeAddressResolver<*, *>) : EventFormatter {
+internal class TextEventFormatter(private val addressResolver: NodeAddressResolver<*>) : EventFormatter {
     private fun formatClockAndState(event: Event) =
         ", clock=${event.clock}" + if (!event.state.isNullOrBlank()) ", state=${event.state}" else ""
 

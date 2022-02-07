@@ -34,14 +34,14 @@ internal data class PartitionResult(
 /**
  * Contains information about node crashes and partitions.
  */
-internal abstract class FailureManager<Message, DB>(
-    protected val addressResolver: NodeAddressResolver<Message, DB>
+internal abstract class FailureManager<Message>(
+    protected val addressResolver: NodeAddressResolver<Message>
 ) {
     companion object {
-        fun <Message, DB> create(
-            addressResolver: NodeAddressResolver<Message, DB>,
-            strategy: DistributedStrategy<Message, DB>
-        ): FailureManager<Message, DB> =
+        fun <Message> create(
+            addressResolver: NodeAddressResolver<Message>,
+            strategy: DistributedStrategy<Message>
+        ): FailureManager<Message> =
             if (addressResolver.singlePartitionType) FailureManagerSingleEdge(addressResolver)
             else FailureManagerComponent(addressResolver, strategy)
     }
@@ -104,13 +104,13 @@ internal abstract class FailureManager<Message, DB>(
     abstract fun reset()
 }
 
-internal class FailureManagerComponent<Message, DB>(
-    addressResolver: NodeAddressResolver<Message, DB>,
-    private val strategy: DistributedStrategy<Message, DB>
+internal class FailureManagerComponent<Message>(
+    addressResolver: NodeAddressResolver<Message>,
+    private val strategy: DistributedStrategy<Message>
 ) :
-    FailureManager<Message, DB>(addressResolver) {
-    private val partitions = mutableMapOf<Class<out Node<Message, DB>>, Pair<MutableSet<Int>, MutableSet<Int>>>()
-    private val unavailableNodeCount = mutableMapOf<Class<out Node<Message, DB>>, Int>()
+    FailureManager<Message>(addressResolver) {
+    private val partitions = mutableMapOf<Class<out Node<Message>>, Pair<MutableSet<Int>, MutableSet<Int>>>()
+    private val unavailableNodeCount = mutableMapOf<Class<out Node<Message>>, Int>()
 
     init {
         reset()
@@ -217,9 +217,9 @@ internal class FailureManagerComponent<Message, DB>(
     }
 }
 
-internal class FailureManagerSingleEdge<Message, DB>(
-    addressResolver: NodeAddressResolver<Message, DB>
-) : FailureManager<Message, DB>(addressResolver) {
+internal class FailureManagerSingleEdge<Message>(
+    addressResolver: NodeAddressResolver<Message>
+) : FailureManager<Message>(addressResolver) {
     private val nodeCount = addressResolver.nodeCount
     private val connections = Array(nodeCount) {
         (0 until nodeCount).toMutableSet()

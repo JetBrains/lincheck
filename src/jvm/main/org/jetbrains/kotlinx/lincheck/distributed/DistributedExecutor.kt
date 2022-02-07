@@ -29,7 +29,7 @@ import java.util.concurrent.RejectedExecutionException
  * Executor for distributed algorithms.
  * Counts the pending tasks and, if no tasks left, launches next task.
  */
-internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) : Executor {
+internal class DistributedExecutor(private val runner: DistributedRunner<*>) : Executor {
     private val executor = Executors.newSingleThreadExecutor()
 
     private val counter = atomic(0)

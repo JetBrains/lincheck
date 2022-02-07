@@ -22,14 +22,14 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.LivelockFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class InfiniteNode(private val env: Environment<Unit, Unit>) : Node<Unit, Unit> {
+class InfiniteNode(private val env: Environment<Unit>) : Node<Unit> {
     override fun onMessage(message: Unit, sender: Int) {
     }
 
@@ -45,7 +45,7 @@ class InfiniteNode(private val env: Environment<Unit, Unit>) : Node<Unit, Unit> 
 class LivelockFailureTest {
     @Test
     fun test() {
-        val failure = createDistributedOptions<Unit>()
+        val failure = DistributedOptions<Unit>()
             .addNodes<InfiniteNode>(nodes = 2)
             .verifier(EpsilonVerifier::class.java)
             .minimizeFailedScenario(false)

@@ -33,7 +33,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
 
-class DistributedCTestConfiguration<Message, DB>(
+class DistributedCTestConfiguration<Message>(
     testClass: Class<*>, iterations: Int,
     threads: Int, actorsPerThread: Int,
     generatorClass: Class<out ExecutionGenerator>,
@@ -42,10 +42,9 @@ class DistributedCTestConfiguration<Message, DB>(
     val messageLoss: Boolean,
     val messageOrder: MessageOrder,
     val messageDuplication: Boolean,
-    private val nodeTypes: Map<Class<out Node<Message, DB>>, NodeTypeInfo>,
+    private val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
     val logFilename: String?,
     val crashNotifications: Boolean,
-    val databaseFactory: () -> DB,
     requireStateEquivalenceCheck: Boolean,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>, timeoutMs: Long,
@@ -58,8 +57,8 @@ class DistributedCTestConfiguration<Message, DB>(
         minimizeFailedScenario, sequentialSpecification, timeoutMs,
         customScenarios
     ) {
-    var addressResolver: NodeAddressResolver<Message, DB> = NodeAddressResolver(
-        testClass as Class<out Node<Message, DB>>,
+    var addressResolver: NodeAddressResolver<Message> = NodeAddressResolver(
+        testClass as Class<out Node<Message>>,
         nodeTypes[testClass]?.nodes ?: threads,
         nodeTypes
     )
@@ -76,7 +75,7 @@ class DistributedCTestConfiguration<Message, DB>(
         verifier: Verifier
     ): Strategy {
         addressResolver = NodeAddressResolver(
-            testClass as Class<out Node<Message, DB>>,
+            testClass as Class<out Node<Message>>,
             scenario.threads, nodeTypes
         )
         return DistributedRandomStrategy(
@@ -92,8 +91,8 @@ class DistributedCTestConfiguration<Message, DB>(
     /**
      *
      */
-    fun nextConfigurations(): List<DistributedCTestConfiguration<Message, DB>> {
-        val res = mutableListOf<DistributedCTestConfiguration<Message, DB>>()
+    fun nextConfigurations(): List<DistributedCTestConfiguration<Message>> {
+        val res = mutableListOf<DistributedCTestConfiguration<Message>>()
         for ((cls, nodeInfo) in nodeTypes) {
             if (nodeInfo.nodes == nodeInfo.minNumberOfInstances) {
                 continue
@@ -110,7 +109,7 @@ class DistributedCTestConfiguration<Message, DB>(
                     messageLoss,
                     messageOrder,
                     messageDuplication,
-                    newNodeTypes, logFilename, crashNotifications, databaseFactory, requireStateEquivalenceImplCheck,
+                    newNodeTypes, logFilename, crashNotifications, requireStateEquivalenceImplCheck,
                     minimizeFailedScenario,
                     sequentialSpecification, timeoutMs, customScenarios
                 )

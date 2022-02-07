@@ -1,7 +1,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.coroutines.CoroutineScope
-
+/*
 /**
  * Environment interface for communication with other processes.
  */
@@ -80,7 +79,7 @@ interface Environment<Message> {
      */
     fun recordInternalEvent(attachment: Any)
 }
-
+*/
 inline fun <reified NodeType, Message> Environment<Message>.getAddresses(): List<Int> {
     TODO()
 }

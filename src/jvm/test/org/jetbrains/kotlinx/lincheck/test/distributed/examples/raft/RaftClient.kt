@@ -26,16 +26,16 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_OR_RECOVER_ON_CRASH
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.COMPONENTS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.TaskLimitExceededFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import kotlin.random.Random
 
-class RaftClient(private val env: Environment<RaftMessage, PersistentStorage>) : Node<RaftMessage, PersistentStorage> {
+class RaftClient(private val env: Environment<RaftMessage>) : Node<RaftMessage> {
     companion object {
         const val OPERATION_TIMEOUT = 200
     }
@@ -43,7 +43,7 @@ class RaftClient(private val env: Environment<RaftMessage, PersistentStorage>) :
     private val servers = env.getAddressesForClass(RaftServer::class.java)!!
     private var opId = 0
     private val responseChannel = Channel<ResponseToClient>(UNLIMITED)
-    private val random = Random(env.nodeId)
+    private val random = Random(env.id)
 
     override fun onMessage(message: RaftMessage, sender: Int) {
         if (message !is ResponseToClient) throw IllegalStateException("Unexpected message to client $message")
@@ -77,11 +77,11 @@ class RaftClient(private val env: Environment<RaftMessage, PersistentStorage>) :
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? =
-        executeOperation { GetCommand(CommandId(client = env.nodeId, opId = opId), key) }
+        executeOperation { GetCommand(CommandId(client = env.id, opId = opId), key) }
 
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? =
-        executeOperation { PutCommand(CommandId(client = env.nodeId, opId = opId), key, value) }
+        executeOperation { PutCommand(CommandId(client = env.id, opId = opId), key, value) }
 }
 
 class RaftSpecification() : VerifierState() {
@@ -92,7 +92,7 @@ class RaftSpecification() : VerifierState() {
 }
 
 class RaftTest {
-    private fun options() = createDistributedOptions<RaftMessage, PersistentStorage>(::PersistentStorage)
+    private fun options() = DistributedOptions<RaftMessage>()
         .addNodes<RaftClient>(nodes = 3)
         .sequentialSpecification(RaftSpecification::class.java)
         .actorsPerThread(3)

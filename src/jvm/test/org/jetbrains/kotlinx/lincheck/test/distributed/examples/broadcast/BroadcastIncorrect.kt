@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
 
-class PeerIncorrect(env: Environment<Message, MutableList<Message>>) : AbstractPeer(env) {
+class PeerIncorrect(env: Environment<Message>) : AbstractPeer(env) {
     private val receivedMessages = Array<MutableSet<Int>>(env.nodes) { mutableSetOf() }
     private var messageId = 0
 
@@ -31,18 +31,18 @@ class PeerIncorrect(env: Environment<Message, MutableList<Message>>) : AbstractP
         val msgId = message.id
         if (!receivedMessages[message.from].contains(msgId)) {
             receivedMessages[message.from].add(msgId)
-            env.database.add(message)
+            delivered[message.from].add(message.body)
             env.broadcast(message)
         }
     }
 
     @Operation
     fun send(msg: String) {
-        val message = Message(body = msg, id = messageId++, from = env.nodeId)
+        val message = Message(body = msg, id = messageId++, from = env.id)
         env.broadcast(message, skipItself = false)
     }
 
     override fun stateRepresentation(): String {
-        return env.database.toString()
+        return delivered.toString()
     }
 }

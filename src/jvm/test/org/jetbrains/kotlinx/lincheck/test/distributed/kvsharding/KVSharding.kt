@@ -25,10 +25,10 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.RECOVER_ON_CRASH
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.distributed.Node
+import org.jetbrains.kotlinx.lincheck.distributed.NodeWithStorage
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
-import org.jetbrains.kotlinx.lincheck.distributed.createDistributedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
@@ -68,49 +68,49 @@ class Storage {
 
 data class KVLog(val request: PutRequest, val prev: String?)
 
-class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage> {
+class Shard(env: Environment<KVMessage>) : NodeWithStorage<KVMessage, Storage>(env) {
     private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null
 
     override fun stateRepresentation(): String {
-        return "opId=${env.database.opId}, delegate=$delegate, response=$response, log=${env.database.keyValues}, hash=${hashCode()}"
+        return "opId=${storage.opId}, delegate=$delegate, response=$response, log=${storage.keyValues}, hash=${hashCode()}"
     }
 
     private fun getNodeForKey(key: String) =
         ((key.hashCode() % env.nodes) + env.nodes) % env.nodes
 
     private fun saveToLog(request: PutRequest): String? {
-        val present = env.database.keyValues.lastOrNull { it.request == request }
+        val present = storage.keyValues.lastOrNull { it.request == request }
         if (present != null) {
             return present.prev
         }
-        val index = env.database.keyValues.indexOfLast { it.request.key == request.key }
+        val index = storage.keyValues.indexOfLast { it.request.key == request.key }
         val prev = if (index == -1) {
             null
         } else {
-            env.database.getPrevValue(index)
+            storage.getPrevValue(index)
         }
-        env.database.keyValues.add(KVLog(request, prev))
+        storage.keyValues.add(KVLog(request, prev))
         return prev
     }
 
     private fun getFromLog(key: String): String? {
-        val index = env.database.keyValues.indexOfLast { it.request.key == key }
+        val index = storage.keyValues.indexOfLast { it.request.key == key }
         return if (index == -1) {
             null
         } else {
-            env.database.getPrevValue(index)
+            storage.getPrevValue(index)
         }
     }
 
     @Operation(cancellableOnSuspension = false)
     suspend fun put(key: String, value: String): String? {
-        val opId = ++(env.database.opId)
+        val opId = ++(storage.opId)
         env.recordInternalEvent("Operation id now is $opId, hash=${hashCode()} " + stateRepresentation())
         val node = getNodeForKey(key)
         val request = PutRequest(key, value, opId)
-        if (node == env.nodeId) {
+        if (node == env.id) {
             return saveToLog(request)
         }
         return (send(request, node) as PutResponse).previousValue
@@ -131,15 +131,15 @@ class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage>
     }
 
     override fun recover() {
-        env.database.opId++
+        storage.opId++
         env.broadcast(Recover)
     }
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: String): String? {
-        val opId = ++(env.database.opId)
+        val opId = ++(storage.opId)
         val node = getNodeForKey(key)
-        if (node == env.nodeId) {
+        if (node == env.id) {
             return getFromLog(key)
         }
         val request = GetRequest(key, opId)
@@ -154,7 +154,7 @@ class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage>
             return
         }
         if (!message.isRequest) {
-            if (message.id != env.database.opId) {
+            if (message.id != storage.opId) {
                 return
             }
             if (response == null) {
@@ -170,6 +170,8 @@ class Shard(val env: Environment<KVMessage, Storage>) : Node<KVMessage, Storage>
         }
         env.send(msg, sender)
     }
+
+    override fun createStorage(): Storage = Storage()
 }
 
 class SingleNode : VerifierState() {
@@ -187,7 +189,7 @@ class SingleNode : VerifierState() {
 }
 
 class KVShardingTest {
-    private fun <T> options(f: () -> T) = createDistributedOptions<KVMessage, T>(f)
+    private fun options() = DistributedOptions<KVMessage>()
         .sequentialSpecification(SingleNode::class.java)
         .invocationsPerIteration(30_000)
         .actorsPerThread(3)
@@ -195,7 +197,7 @@ class KVShardingTest {
         .iterations(10)
 
     @Test
-    fun `correct algorithm`() = options(::Storage)
+    fun `correct algorithm`() = options()
         .addNodes<Shard>(
             nodes = 4,
             crashMode = RECOVER_ON_CRASH,
@@ -203,13 +205,13 @@ class KVShardingTest {
         ).check(Shard::class.java)
 
     @Test
-    fun `incorrect algorithm without crashes`() = options(::IncorrectStorage)
+    fun `incorrect algorithm without crashes`() = options()
         .addNodes<ShardMultiplePutToLog>(nodes = 4)
         .check(ShardMultiplePutToLog::class.java)
 
     @Test
     fun `incorrect algorithm`() {
-        val failure = options(::IncorrectStorage)
+        val failure = options()
             .addNodes<ShardMultiplePutToLog>(
                 nodes = 4,
                 crashMode = RECOVER_ON_CRASH,

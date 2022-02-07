@@ -110,7 +110,7 @@ private class SnapshotOperation(
  * 5. If initializer receives snapshot parts from all other nodes it returns the result.
  */
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message, Unit> {
+class ChandyLamport(private val env: Environment<Message>) : Node<Message> {
     private var currentAmount = 0
     private var snapshotOperation: SnapshotOperation? = null
 
@@ -131,7 +131,7 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
                 // Messages from sender will not be added to snapshot anymore.
                 snapshotOperation!!.addRequest(sender)
                 // Send the result to initializer and clear the snapshot if necessary.
-                if (snapshotOperation!!.finishPart && snapshotOperation!!.requestedBy != env.nodeId) {
+                if (snapshotOperation!!.finishPart && snapshotOperation!!.requestedBy != env.id) {
                     env.send(SnapshotPart(snapshotOperation!!.snapshot), snapshotOperation!!.requestedBy)
                     snapshotOperation = null
                 }
@@ -145,15 +145,15 @@ class ChandyLamport(private val env: Environment<Message, Unit>) : Node<Message,
     @Operation(cancellableOnSuspension = false)
     fun sendMoney(to: Int, amount: Int) {
         val receiver = abs(to) % env.nodes
-        if (receiver == env.nodeId) return
+        if (receiver == env.id) return
         currentAmount -= amount
         env.send(Transaction(amount), receiver)
     }
 
     @Operation(group = "observer", cancellableOnSuspension = false)
     suspend fun totalBalance(): Int {
-        snapshotOperation = SnapshotOperation(currentAmount, env.nodeId, env.nodes)
-        val message = SnapshotRequest(env.nodeId)
+        snapshotOperation = SnapshotOperation(currentAmount, env.id, env.nodes)
+        val message = SnapshotRequest(env.id)
         env.broadcast(message)
         snapshotOperation!!.await()
         val res = snapshotOperation!!.snapshot
@@ -175,7 +175,7 @@ class SequentialSnapshotAlgorithm : VerifierState() {
 }
 
 class SnapshotAlgorithmTest {
-    private fun commonOptions() = createDistributedOptions<Message>()
+    private fun commonOptions() = DistributedOptions<Message>()
         .sequentialSpecification(SequentialSnapshotAlgorithm::class.java)
         .actorsPerThread(3) // please rename; e.g., to "operations/request per node"
         .invocationsPerIteration(300_000)

@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.createExceptionResult
 import org.jetbrains.kotlinx.lincheck.createLincheckResult
+import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import org.jetbrains.kotlinx.lincheck.distributed.random.canCrashBeforeAccessingDatabase
 import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
@@ -43,9 +44,9 @@ import java.util.concurrent.TimeUnit
 /**
  * Executes the distributed algorithms.
  */
-internal open class DistributedRunner<Message, DB>(
-    strategy: DistributedStrategy<Message, DB>,
-    val testCfg: DistributedCTestConfiguration<Message, DB>,
+internal open class DistributedRunner<Message>(
+    strategy: DistributedStrategy<Message>,
+    val testCfg: DistributedCTestConfiguration<Message>,
     testClass: Class<*>,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?
@@ -55,19 +56,12 @@ internal open class DistributedRunner<Message, DB>(
     }
 
     //Note: cast strategy to DistributedStrategy
-    private val distrStrategy: DistributedStrategy<Message, DB> = strategy
+    private val distrStrategy: DistributedStrategy<Message> = strategy
     private val nodeCount = testCfg.addressResolver.nodeCount
-    private lateinit var eventFactory: EventFactory<Message, DB>
+    private lateinit var eventFactory: EventFactory<Message>
 
-    //Note: cannot use array (??)
-    private val databases = mutableListOf<DB>().apply {
-        repeat(nodeCount) {
-            add(testCfg.databaseFactory())
-        }
-    }
-
-    private lateinit var environments: Array<EnvironmentImpl<Message, DB>>
-    private lateinit var nodeInstances: Array<Node<Message, DB>>
+    private lateinit var environments: Array<Environment<Message>>
+    lateinit var nodeInstances: Array<Node<Message>>
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var taskManager: TaskManager
     private var taskCount = 0
@@ -81,6 +75,9 @@ internal open class DistributedRunner<Message, DB>(
 
     @Volatile
     private var exception: Throwable? = null
+
+    val events: List<Event>
+        get() = eventFactory.events
 
     override fun initialize() {
         super.initialize()
@@ -99,12 +96,10 @@ internal open class DistributedRunner<Message, DB>(
         exception = null
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
-        databases.indices.forEach { databases[it] = testCfg.databaseFactory() }
         environments = Array(nodeCount) {
-            EnvironmentImpl(
+            Environment(
                 it,
                 nodeCount,
-                databases[it],
                 eventFactory,
                 distrStrategy,
                 taskManager
@@ -153,7 +148,10 @@ internal open class DistributedRunner<Message, DB>(
         }
         // The validation function exception.
         try {
-            nodeInstances.forEach { n -> n.validate(eventFactory.events, databases) }
+            nodeInstances.forEach { n -> n.validate(eventFactory.events) }
+            val storages = nodeInstances.mapIndexed { index, node -> index to node }
+                .filter { it.second is NodeWithStorage<Message, *> }
+                .associate { it.first to (it.second as NodeWithStorage<Message, *>).storage }
         } catch (e: Throwable) {
             return ValidationFailureInvocationResult(scenario, "validate", e)
         }
@@ -250,11 +248,14 @@ internal open class DistributedRunner<Message, DB>(
         }
         taskManager.addCrashRecoverTask(iNode = iNode, ticks = distrStrategy.getRecoverTimeout(taskManager)) {
             environments[iNode] =
-                EnvironmentImpl(iNode, nodeCount, databases[iNode], eventFactory, distrStrategy, taskManager)
-
-            nodeInstances[iNode] = testCfg.addressResolver[iNode].getConstructor(Environment::class.java)
+                Environment(iNode, nodeCount, eventFactory, distrStrategy, taskManager)
+            val newInstance = testCfg.addressResolver[iNode].getConstructor(Environment::class.java)
                 .newInstance(environments[iNode])
-            testNodeExecutions.getOrNull(iNode)?.testInstance = nodeInstances[iNode]
+            testNodeExecutions.getOrNull(iNode)?.testInstance = newInstance
+            if (newInstance is NodeWithStorage<Message, *>) {
+                newInstance.onRecovery((nodeInstances[iNode] as NodeWithStorage<Message, *>).storage)
+            }
+            nodeInstances[iNode] = newInstance
             distrStrategy.onNodeRecover(iNode)
             eventFactory.createNodeRecoverEvent(iNode)
             nodeInstances[iNode].recover()

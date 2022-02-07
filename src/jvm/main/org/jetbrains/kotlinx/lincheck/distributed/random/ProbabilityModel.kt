@@ -29,7 +29,7 @@ import kotlin.random.Random
 /**
  * Probability model which generates random events which happen during the execution.
  */
-internal class ProbabilityModel(private val testCfg: DistributedCTestConfiguration<*, *>) {
+internal class ProbabilityModel(private val testCfg: DistributedCTestConfiguration<*>) {
     companion object {
         const val MEAN_POISSON_DISTRIBUTION = 0.1
         const val MESSAGE_SENT_PROBABILITY = 0.95
