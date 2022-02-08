@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
-import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
@@ -31,9 +30,8 @@ import kotlin.math.abs
 
 @OpGroupConfig(name = "observer", nonParallel = true)
 class NaiveSnapshotIncorrect(private val env: Environment<Message>) : Node<Message> {
-    private val currentSum = atomic(100)
+    private var currentSum = 0
     private val semaphore = Signal()
-    private var token = 0
     private val replies = Array<SnapshotPart?>(env.nodes) { null }
 
     @Volatile
@@ -42,10 +40,10 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message>) : Node<Messa
     override fun onMessage(message: Message, sender: Int) {
         when (message) {
             is Transaction -> {
-                currentSum.getAndAdd(message.amount)
+                currentSum += message.amount
             }
             is SnapshotRequest -> {
-                env.send(SnapshotPart(currentSum.value), sender)
+                env.send(SnapshotPart(currentSum), sender)
             }
             is SnapshotPart -> {
                 replies[sender] = message
@@ -63,23 +61,23 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message>) : Node<Messa
     }
 
     @Operation
-    fun transaction(to: Int, sum: Int) {
+    fun sendMoney(to: Int, sum: Int) {
         val receiver = abs(to) % env.nodes
         if (to == env.id) return
-        currentSum.getAndAdd(-sum)
+        currentSum -= sum
         env.send(Transaction(sum), receiver)
     }
 
     override fun stateRepresentation(): String {
         val res = StringBuilder()
-        res.append("[${env.id}]: Cursum ${currentSum.value}\n")
+        res.append("[${env.id}]: Cursum ${currentSum}\n")
         replies.forEachIndexed { i, c -> res.append("[${env.id}]: reply[$i] $c\n") }
         return res.toString()
     }
 
     @Operation(group = "observer", cancellableOnSuspension = false)
-    suspend fun snapshot(): Int {
-        val state = currentSum.value
+    suspend fun totalBalance(): Int {
+        val state = currentSum
         val marker = SnapshotRequest(env.id)
         env.broadcast(marker)
         while (!gotSnapshot) {
@@ -88,6 +86,6 @@ class NaiveSnapshotIncorrect(private val env: Environment<Message>) : Node<Messa
         val res = replies.filterNotNull().sumOf { it.amount } + state
         gotSnapshot = false
         replies.fill(null)
-        return res / env.nodes + res % env.nodes
+        return res
     }
 }

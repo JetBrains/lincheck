@@ -20,11 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.mutex
 
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-class MutexSpecification {
+class MutexSpecification : VerifierState() {
     private var locked: Int? = null
     private val waiters = mutableListOf<Pair<Int, Continuation<Unit>>>()
 
@@ -45,5 +46,9 @@ class MutexSpecification {
         val newLock = waiters.removeFirst()
         locked = newLock.first
         newLock.second.resume(Unit)
+    }
+
+    override fun extractState(): Any {
+        return locked to waiters.map { it.first }
     }
 }

@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.Environment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.jetbrains.kotlinx.lincheck.paramgen.NodeIdGen
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.junit.Test
 import kotlin.coroutines.suspendCoroutine
 
@@ -98,6 +98,6 @@ class OptimisticMutexIncorrectTest {
             .iterations(30)
             .minimizeFailedScenario(false)
             .checkImpl(OptimisticMutexIncorrect::class.java)
-        assert(failure is ValidationFailure)
+        assert(failure is IncorrectResultsFailure)
     }
 }

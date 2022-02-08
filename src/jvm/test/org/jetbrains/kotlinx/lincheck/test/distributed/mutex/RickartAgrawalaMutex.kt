@@ -96,7 +96,7 @@ class RickartAgrawalaMutex(private val env: Environment<MutexMessage>) : Node<Mu
         if (env.nodes == 1) {
             inCS = true
         } else {
-            signal.signal()
+            signal.await()
             check(inCS)
         }
         env.recordInternalEvent(Lock)

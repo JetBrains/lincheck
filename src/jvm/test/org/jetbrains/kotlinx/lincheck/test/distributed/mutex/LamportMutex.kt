@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.jetbrains.kotlinx.lincheck.paramgen.NodeIdGen
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.junit.Test
 import java.lang.Integer.max
 import kotlin.coroutines.suspendCoroutine
@@ -107,7 +106,6 @@ class LamportMutex(private val env: Environment<MutexMessage>) : Node<MutexMessa
 
     @Operation(blocking = true, cancellableOnSuspension = false)
     suspend fun lock(@Param(gen = NodeIdGen::class) nodeId: Int) {
-        assert(nodeId == env.id)
         if (req[env.id] != inf) {
             suspendCoroutine<Unit> { }
         }
@@ -126,7 +124,6 @@ class LamportMutex(private val env: Environment<MutexMessage>) : Node<MutexMessa
 
     @Operation
     fun unlock(@Param(gen = NodeIdGen::class) nodeId: Int) {
-        assert(env.id == nodeId)
         if (!inCS) {
             return
         }
@@ -152,7 +149,7 @@ class LamportMutexTest {
     @Test
     fun `correct algorithm without FIFO`() {
         val failure = commonOptions().messageOrder(ASYNCHRONOUS).checkImpl(LamportMutex::class.java)
-        assert(failure is ValidationFailure)
+        assert(failure != null)
     }
 }
 

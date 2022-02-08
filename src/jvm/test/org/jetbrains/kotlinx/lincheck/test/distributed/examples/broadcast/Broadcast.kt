@@ -32,8 +32,7 @@ import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.NodeCrashEvent
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.junit.Test
 import java.util.*
 
@@ -58,8 +57,8 @@ class Peer(env: Environment<Message>) : AbstractPeer(env) {
     private val lastDeliveredId = Array(env.nodes) { -1 }
 
     override fun stateRepresentation(): String {
-        return "Received messages=${messageCount.toList()}, undelivered ${undeliveredMessages.toList()}, " +
-                "delivered=${delivered}"
+        return "{Undelivered=${undeliveredMessages.map { it.toList() }}, " +
+                "delivered=${delivered.map { it.size to it }}, messageCount = ${messageCount.toList()}}"
     }
 
     private fun deliver(sender: Int) {
@@ -72,7 +71,10 @@ class Peer(env: Environment<Message>) : AbstractPeer(env) {
             }
             undeliveredMessages[sender].remove()
             lastDeliveredId[sender]++
-            delivered[lastMessage.id].add(lastMessage.body)
+            env.recordInternalEvent("Try to deliver message $lastMessage, ${delivered[lastMessage.id].size}")
+            delivered[lastMessage.from].add(lastMessage.body)
+            assert(delivered[lastMessage.from].last() == lastMessage.body)
+            env.recordInternalEvent("${delivered[lastMessage.from].last()}, ${delivered[lastMessage.from]}, ${delivered[lastMessage.from].size}")
         }
     }
 
@@ -92,6 +94,7 @@ class Peer(env: Environment<Message>) : AbstractPeer(env) {
     @Operation(cancellableOnSuspension = false)
     fun send(msg: String) {
         val message = Message(body = msg, id = messageId++, from = env.id)
+        env.recordInternalEvent(messageId)
         env.broadcast(message, false)
     }
 }
@@ -103,8 +106,10 @@ class BroadcastVerifier : DistributedVerifier {
         results: ExecutionResult,
         events: List<Event>
     ): Boolean {
-        val sentMessages: List<List<String>> =
-            scenario.parallelExecution.map { it.map { a -> a.arguments[0] as String } }
+        val sentMessages: Array<List<String>> = Array(nodes.size) { emptyList() }
+        scenario.parallelExecution.forEachIndexed { index, operations ->
+            sentMessages[index] = operations.map { a -> a.arguments[0] as String }
+        }
         val deliveredMessages = nodes.map { (it as AbstractPeer).delivered }
         val crashedNodes = events.filterIsInstance<NodeCrashEvent>().map { it.iNode }.toSet()
         val correctNodes = nodes.indices.filter { it !in crashedNodes }.toSet()
@@ -128,9 +133,9 @@ class BroadcastTest {
     private fun commonOptions() = DistributedOptions<Message>()
         .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(3)
-        .invocationsPerIteration(30_000)
+        .invocationsPerIteration(100_000)
         .iterations(1) // we always have the same scenario here
-        .verifier(EpsilonVerifier::class.java)
+        .verifier(BroadcastVerifier::class.java)
 
     @Test
     fun `correct algorithm`() = commonOptions()
@@ -140,6 +145,7 @@ class BroadcastTest {
             crashMode = FINISH_ON_CRASH,
             maxUnavailableNodes = { it / 2 }
         )
+        .storeLogsForFailedScenario("broadcast.txt")
         .check(Peer::class.java)
 
     @Test
@@ -150,16 +156,14 @@ class BroadcastTest {
                 crashMode = FINISH_ON_CRASH,
                 maxUnavailableNodes = { it / 2 + 1 }
             )
-            .invocationsPerIteration(50_000)
             .minimizeFailedScenario(false)
             .checkImpl(Peer::class.java)
-        assert(failure is ValidationFailure)
+        assert(failure is IncorrectResultsFailure)
     }
 
     @Test
     fun `incorrect algorithm without crashes`() = commonOptions()
         .addNodes<PeerIncorrect>(nodes = 3)
-        .invocationsPerIteration(100_000)
         .check(PeerIncorrect::class.java)
 
     @Test
@@ -172,6 +176,6 @@ class BroadcastTest {
             )
             .minimizeFailedScenario(false)
             .checkImpl(PeerIncorrect::class.java)
-        assert(failure is ValidationFailure)
+        assert(failure is IncorrectResultsFailure)
     }
 }

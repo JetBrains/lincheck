@@ -96,7 +96,8 @@ class KVStoreTest {
                 nodes = 3,
                 crashMode = CrashMode.RECOVER_ON_CRASH,
                 maxUnavailableNodes = { it }
-            ).checkImpl(Client::class.java)
+            ).minimizeFailedScenario(false)
+            .checkImpl(Client::class.java)
         assert(failure is IncorrectResultsFailure)
     }
 

@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.Environment
-import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
 sealed class Message {
@@ -121,7 +120,7 @@ class SkeenTest {
             .actorsPerThread(3)
             .invocationsPerIteration(500_000)
             .iterations(1)
-            .verifier(EpsilonVerifier::class.java)
+            .verifier(TotalOrderVerifier::class.java)
             .minimizeFailedScenario(false)
 
     @Test
