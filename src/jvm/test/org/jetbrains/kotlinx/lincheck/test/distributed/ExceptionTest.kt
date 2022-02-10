@@ -23,13 +23,13 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class NodeThrowsException(val env: Environment<Int>) : Node<Int> {
+class NodeThrowsException(val env: NodeEnvironment<Int>) : Node<Int> {
     override fun onMessage(message: Int, sender: Int) {
         if (message != 0) {
             env.broadcast(0)

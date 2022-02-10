@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.junit.Test
 
-class CrashingNode(private val env: Environment<Int>) : Node<Int> {
+class CrashingNode(private val env: NodeEnvironment<Int>) : Node<Int> {
     private val receivedMessages = mutableSetOf<Int>()
     override fun onMessage(message: Int, sender: Int) {
         if (receivedMessages.add(message)) {

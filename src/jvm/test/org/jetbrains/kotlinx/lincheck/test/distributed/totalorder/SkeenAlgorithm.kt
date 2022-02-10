@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.junit.Test
 
 sealed class Message {
@@ -63,7 +63,7 @@ fun <E> MutableSet<E>.addOrUpdate(element: E) {
     add(element)
 }
 
-class SkeenAlgorithm(env: Environment<Message>) : OrderCheckNode(env) {
+class SkeenAlgorithm(env: NodeEnvironment<Message>) : OrderCheckNode(env) {
     private var clock = 0
     private var opId = 0
     private val resChannel = Channel<Int>(Channel.UNLIMITED)

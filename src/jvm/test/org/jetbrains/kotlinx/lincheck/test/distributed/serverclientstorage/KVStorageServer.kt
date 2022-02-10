@@ -4,7 +4,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
@@ -12,7 +12,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.junit.Test
 import java.util.*
 
-class KVStorageServer(private val env: Environment<Command>) : Node<Command> {
+class KVStorageServer(private val env: NodeEnvironment<Command>) : Node<Command> {
     private val storage = mutableMapOf<Int, Int>()
     private val commandResults = Array<MutableMap<Int, Command>>(env.nodes) {
         mutableMapOf()
@@ -46,22 +46,22 @@ class KVStorageServer(private val env: Environment<Command>) : Node<Command> {
     }
 }
 
-class KVStorageClient(private val environment: Environment<Command>) : Node<Command> {
+class KVStorageClient(private val nodeEnvironment: NodeEnvironment<Command>) : Node<Command> {
     private var commandId = 0
     private val commandResults = mutableMapOf<Int, Command>()
-    private val serverAddr = environment.getAddresses<KVStorageServer>()[0]
+    private val serverAddr = nodeEnvironment.getAddresses<KVStorageServer>()[0]
     private val signal = Signal()
     private val queue = LinkedList<Command>()
 
     private suspend fun sendOnce(command: Command): Command {
         while (true) {
-            environment.send(command, serverAddr)
-            environment.recordInternalEvent("Before await")
-            environment.withTimeout(6) {
-                environment.recordInternalEvent("Before suspend")
+            nodeEnvironment.send(command, serverAddr)
+            nodeEnvironment.recordInternalEvent("Before await")
+            nodeEnvironment.withTimeout(6) {
+                nodeEnvironment.recordInternalEvent("Before suspend")
                 signal.await()
             }
-            environment.recordInternalEvent("After await")
+            nodeEnvironment.recordInternalEvent("After await")
             val response = queue.poll()
             if (response != null) {
                 commandResults[response.id] = response
@@ -108,7 +108,7 @@ class KVStorageClient(private val environment: Environment<Command>) : Node<Comm
 
     override fun onMessage(message: Command, sender: Int) {
         queue.add(message)
-        environment.recordInternalEvent("Before resume")
+        nodeEnvironment.recordInternalEvent("Before resume")
         signal.signal()
     }
 }

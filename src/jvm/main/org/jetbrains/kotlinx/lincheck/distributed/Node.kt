@@ -1,7 +1,5 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import org.jetbrains.kotlinx.lincheck.distributed.event.Event
-
 /**
  * Interface for a single node in a distributed algorithm.
  */
@@ -46,7 +44,7 @@ interface Node<Message> {
     fun validate(events: List<Event>) {}
 }
 
-abstract class NodeWithStorage<Message, Storage>(protected val env: Environment<Message>) : Node<Message> {
+abstract class NodeWithStorage<Message, Storage>(protected val env: NodeEnvironment<Message>) : Node<Message> {
     private var _storage: Storage? = null
     val storage: Storage
         get() {

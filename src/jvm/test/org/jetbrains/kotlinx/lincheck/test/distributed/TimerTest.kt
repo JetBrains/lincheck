@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.junit.Test
@@ -33,7 +33,7 @@ object TimerPing : TimerMessage()
 object TimerPong : TimerMessage()
 object Heartbeat : TimerMessage()
 
-class TimerNode(private val env: Environment<TimerMessage>) : Node<TimerMessage> {
+class TimerNode(private val env: NodeEnvironment<TimerMessage>) : Node<TimerMessage> {
     companion object {
         const val HEARTBEAT_PING_RATE = 3
     }

@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed.examples.raft
 
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.NodeWithStorage
 import java.lang.Integer.min
 import kotlin.random.Random
@@ -31,7 +31,7 @@ enum class Status {
     FOLLOWER
 }
 
-class RaftServer(env: Environment<RaftMessage>) : NodeWithStorage<RaftMessage, PersistentStorage>(env) {
+class RaftServer(env: NodeEnvironment<RaftMessage>) : NodeWithStorage<RaftMessage, PersistentStorage>(env) {
     companion object {
         const val HEARTBEAT_RATE = 50
         const val MIN_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 10

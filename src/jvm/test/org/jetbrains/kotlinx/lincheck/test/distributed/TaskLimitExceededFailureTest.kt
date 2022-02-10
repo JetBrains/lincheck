@@ -23,13 +23,13 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.strategy.TaskLimitExceededFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class InfinitePinger(private val env: Environment<Unit>) : Node<Unit> {
+class InfinitePinger(private val env: NodeEnvironment<Unit>) : Node<Unit> {
     private val ponger = env.getAddresses<InfinitePonger>()[0]
 
     @Operation
@@ -42,7 +42,7 @@ class InfinitePinger(private val env: Environment<Unit>) : Node<Unit> {
     }
 }
 
-class InfinitePonger(private val env: Environment<Unit>) : Node<Unit> {
+class InfinitePonger(private val env: NodeEnvironment<Unit>) : Node<Unit> {
     override fun onMessage(message: Unit, sender: Int) {
         env.send(Unit, sender)
     }

@@ -22,14 +22,14 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.snapshot
 
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import kotlin.math.abs
 
 
 @OpGroupConfig(name = "observer", nonParallel = true)
-class NaiveSnapshotIncorrect(private val env: Environment<Message>) : Node<Message> {
+class NaiveSnapshotIncorrect(private val env: NodeEnvironment<Message>) : Node<Message> {
     private var currentSum = 0
     private val semaphore = Signal()
     private val replies = Array<SnapshotPart?>(env.nodes) { null }

@@ -23,7 +23,7 @@ import org.jetbrains.kotlinx.lincheck.*
 
 abstract class TestNodeExecution {
     var actorId = 0
-    var runner: Runner? = null
+    var runner: Runner<*>? = null
     var testInstance: Any? = null
     lateinit var objArgs: Array<Any>
     lateinit var results: Array<Result?>

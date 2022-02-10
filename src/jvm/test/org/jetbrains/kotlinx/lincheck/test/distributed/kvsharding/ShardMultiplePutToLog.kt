@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.kvsharding
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.NodeWithStorage
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 
@@ -30,7 +30,7 @@ class IncorrectStorage {
     val keyValues = mutableMapOf<String, String>()
 }
 
-class ShardMultiplePutToLog(env: Environment<KVMessage>) : NodeWithStorage<KVMessage, IncorrectStorage>(env) {
+class ShardMultiplePutToLog(env: NodeEnvironment<KVMessage>) : NodeWithStorage<KVMessage, IncorrectStorage>(env) {
     private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null

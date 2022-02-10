@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedVerifier
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.NodeCrashEvent
@@ -41,14 +41,14 @@ data class Message(val body: String, val id: Int, val from: Int)
 /**
  * Abstract class for node participating in broadcast which validates the results.
  */
-abstract class AbstractPeer(protected val env: Environment<Message>) :
+abstract class AbstractPeer(protected val env: NodeEnvironment<Message>) :
     Node<Message> {
     val delivered = Array(env.nodes) {
         mutableListOf<String>()
     }
 }
 
-class Peer(env: Environment<Message>) : AbstractPeer(env) {
+class Peer(env: NodeEnvironment<Message>) : AbstractPeer(env) {
     private val messageCount = Array<MutableMap<Int, Int>>(env.nodes) { mutableMapOf() }
     private var messageId = 0
     private val undeliveredMessages = Array<PriorityQueue<Message>>(env.nodes) {

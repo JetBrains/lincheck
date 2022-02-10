@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
@@ -65,7 +65,7 @@ abstract class MutexNode<Message> : Node<Message> {
     }
 }*/
 
-class LamportMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
+class LamportMutex(private val env: NodeEnvironment<MutexMessage>) : Node<MutexMessage> {
     private val inf = Int.MAX_VALUE
     private var clock = 0 // logical time
     private var inCS = false // are we in critical section?

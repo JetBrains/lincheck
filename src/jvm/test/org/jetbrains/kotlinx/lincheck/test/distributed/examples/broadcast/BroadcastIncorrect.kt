@@ -21,9 +21,9 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.examples.broadcast
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 
-class PeerIncorrect(env: Environment<Message>) : AbstractPeer(env) {
+class PeerIncorrect(env: NodeEnvironment<Message>) : AbstractPeer(env) {
     private val receivedMessages = Array<MutableSet<Int>>(env.nodes) { mutableSetOf() }
     private var messageId = 0
 

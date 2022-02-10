@@ -21,13 +21,13 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.serverclientstorage
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import java.util.*
 
 
-class KVStorageServerIncorrect(private val env: Environment<Command>) : Node<Command> {
+class KVStorageServerIncorrect(private val env: NodeEnvironment<Command>) : Node<Command> {
     private val storage = HashMap<Int, Int>()
     private val commandResults = Array<HashMap<Int, Command>>(env.nodes) {
         HashMap()
@@ -61,18 +61,18 @@ class KVStorageServerIncorrect(private val env: Environment<Command>) : Node<Com
 }
 
 
-class KVStorageClientIncorrect(private val environment: Environment<Command>) : Node<Command> {
+class KVStorageClientIncorrect(private val nodeEnvironment: NodeEnvironment<Command>) : Node<Command> {
     private var commandId = 0
     private val commandResults = HashMap<Int, Command>()
-    private val serverAddr = environment.getAddresses<KVStorageServerIncorrect>()[0]
+    private val serverAddr = nodeEnvironment.getAddresses<KVStorageServerIncorrect>()[0]
     private val signal = Signal()
     private val queue = LinkedList<Command>()
 
 
     private suspend fun sendOnce(command: Command): Command {
         while (true) {
-            environment.send(command, serverAddr)
-            environment.withTimeout(1) {
+            nodeEnvironment.send(command, serverAddr)
+            nodeEnvironment.withTimeout(1) {
                 signal.await()
             }
             val response = queue.poll() ?: continue

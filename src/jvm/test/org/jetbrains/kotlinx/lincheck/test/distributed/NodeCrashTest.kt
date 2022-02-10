@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
-class Node1(env: Environment<Unit>) : Node<Unit> {
+class Node1(env: NodeEnvironment<Unit>) : Node<Unit> {
     override fun onMessage(message: Unit, sender: Int) {
         TODO("Not yet implemented")
     }
@@ -37,7 +37,7 @@ class Node1(env: Environment<Unit>) : Node<Unit> {
     }
 }
 
-class Node2(env: Environment<Unit>) : Node<Unit> {
+class Node2(env: NodeEnvironment<Unit>) : Node<Unit> {
     override fun onMessage(message: Unit, sender: Int) {
         TODO("Not yet implemented")
     }

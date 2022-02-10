@@ -44,30 +44,28 @@ import java.util.concurrent.TimeUnit
 /**
  * Executes the distributed algorithms.
  */
-internal open class DistributedRunner<Message>(
-    strategy: DistributedStrategy<Message>,
+internal open class DistributedRunner<S: DistributedStrategy<Message>, Message>(
+    strategy: S,
     val testCfg: DistributedCTestConfiguration<Message>,
     testClass: Class<*>,
-    validationFunctions: List<Method>,
-    stateRepresentationFunction: Method?
-) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
+    validationFunctions: List<Method>
+) : Runner<S>(strategy, testClass, validationFunctions, null) {
     companion object {
         const val TASK_LIMIT = 10_000
     }
 
-    //Note: cast strategy to DistributedStrategy
-    private val distrStrategy: DistributedStrategy<Message> = strategy
     private val nodeCount = testCfg.addressResolver.nodeCount
     private lateinit var eventFactory: EventFactory<Message>
 
-    private lateinit var environments: Array<Environment<Message>>
-    lateinit var nodeInstances: Array<Node<Message>>
+    private lateinit var environments: Array<NodeEnvironment<Message>>
+    lateinit var nodes: Array<Node<Message>>
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
     private lateinit var taskManager: TaskManager
     private var taskCount = 0
     private lateinit var executor: DistributedExecutor
+
     private val lock = ReentrantLock()
-    private val condition = lock.newCondition()
+    private val completionCondition = lock.newCondition()
     private var isSignal = false
 
     @Volatile
@@ -97,25 +95,25 @@ internal open class DistributedRunner<Message>(
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
         environments = Array(nodeCount) {
-            Environment(
+            NodeEnvironment(
                 it,
                 nodeCount,
                 eventFactory,
-                distrStrategy,
+                strategy,
                 taskManager
             )
         }
-        nodeInstances = Array(nodeCount) {
-            testCfg.addressResolver[it].getConstructor(Environment::class.java)
+        nodes = Array(nodeCount) {
+            testCfg.addressResolver[it].getConstructor(NodeEnvironment::class.java)
                 .newInstance(environments[it])
         }
         testNodeExecutions.forEachIndexed { t, ex ->
-            ex.testInstance = nodeInstances[t]
+            ex.testInstance = nodes[t]
             val actors = scenario.parallelExecution[t].size
             ex.results = arrayOfNulls(actors)
             ex.actorId = 0
         }
-        eventFactory.nodeInstances = nodeInstances
+        eventFactory.nodeInstances = nodes
         canCrashBeforeAccessingDatabase = true
     }
 
@@ -127,7 +125,7 @@ internal open class DistributedRunner<Message>(
         addInitialTasks()
         launchNextTask()
         val finishedOnTime = try {
-            lock.withLock { condition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
+            lock.withLock { completionCondition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
         } catch (_: InterruptedException) {
             //TODO (don't know how to handle it correctly)
             false
@@ -167,7 +165,7 @@ internal open class DistributedRunner<Message>(
         }
         testNodeExecutions.zip(scenario.parallelExecution).forEach { it.first.setSuspended(it.second) }
         val parallelResultsWithClock = testNodeExecutions.mapIndexed { i, ex ->
-            //TODO: add real clock. Cannot use it now, because checks in verifier (see org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityContext.hblegal)
+            // TODO: add real clock. Cannot use it now, because checks in verifier (see org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityContext.hblegal)
             ex.results.map { it!!.withEmptyClock(nodeCount) }
         }
         val results = ExecutionResult(
@@ -183,7 +181,7 @@ internal open class DistributedRunner<Message>(
     private fun addInitialTasks() {
         repeat(nodeCount) { i ->
             taskManager.addActionTask(i) {
-                nodeInstances[i].onStart()
+                nodes[i].onStart()
                 if (i >= testCfg.addressResolver.scenarioSize) return@addActionTask
                 taskManager.addSuspendedTask(i) {
                     runNode(i)
@@ -197,7 +195,7 @@ internal open class DistributedRunner<Message>(
      */
     fun launchNextTask(): Boolean {
         if (exception != null) return false
-        val next = distrStrategy.next(taskManager) ?: return false
+        val next = strategy.next(taskManager) ?: return false
         taskCount++
         if (taskCount > TASK_LIMIT) {
             isTaskLimitExceeded = true
@@ -242,23 +240,23 @@ internal open class DistributedRunner<Message>(
         taskManager.removeAllForNode(iNode)
         testNodeExecutions.getOrNull(iNode)?.crash()
         sendCrashNotifications(iNode)
-        if (!distrStrategy.shouldRecover(iNode)) {
+        if (!strategy.shouldRecover(iNode)) {
             testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }
-        taskManager.addCrashRecoverTask(iNode = iNode, ticks = distrStrategy.getRecoverTimeout(taskManager)) {
+        taskManager.addCrashRecoverTask(iNode = iNode, ticks = strategy.getRecoverTimeout(taskManager)) {
             environments[iNode] =
-                Environment(iNode, nodeCount, eventFactory, distrStrategy, taskManager)
-            val newInstance = testCfg.addressResolver[iNode].getConstructor(Environment::class.java)
+                NodeEnvironment(iNode, nodeCount, eventFactory, strategy, taskManager)
+            val newInstance = testCfg.addressResolver[iNode].getConstructor(NodeEnvironment::class.java)
                 .newInstance(environments[iNode])
             testNodeExecutions.getOrNull(iNode)?.testInstance = newInstance
             if (newInstance is NodeWithStorage<Message, *>) {
-                newInstance.onRecovery((nodeInstances[iNode] as NodeWithStorage<Message, *>).storage)
+                newInstance.onRecovery((nodes[iNode] as NodeWithStorage<Message, *>).storage)
             }
-            nodeInstances[iNode] = newInstance
-            distrStrategy.onNodeRecover(iNode)
+            nodes[iNode] = newInstance
+            strategy.onNodeRecover(iNode)
             eventFactory.createNodeRecoverEvent(iNode)
-            nodeInstances[iNode].recover()
+            nodes[iNode].recover()
             taskManager.addSuspendedTask(iNode) {
                 runNode(iNode)
             }
@@ -271,9 +269,9 @@ internal open class DistributedRunner<Message>(
     fun onPartition(firstPart: List<Int>, secondPart: List<Int>, partitionId: Int) {
         eventFactory.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
         sendCrashNotifications(firstPart, secondPart)
-        taskManager.addPartitionRecoverTask(ticks = distrStrategy.getRecoverTimeout(taskManager)) {
+        taskManager.addPartitionRecoverTask(ticks = strategy.getRecoverTimeout(taskManager)) {
             eventFactory.createNetworkRecoverEvent(partitionId)
-            distrStrategy.recoverPartition(firstPart, secondPart)
+            strategy.recoverPartition(firstPart, secondPart)
         }
     }
 
@@ -294,7 +292,7 @@ internal open class DistributedRunner<Message>(
         if (testNodeExecution.actorId == scenarioSize + 1) return
         if (testNodeExecution.actorId == scenarioSize) {
             eventFactory.createScenarioFinishEvent(iNode)
-            nodeInstances[iNode].onScenarioFinish()
+            nodes[iNode].onScenarioFinish()
             return
         }
         val i = testNodeExecution.actorId
@@ -324,10 +322,10 @@ internal open class DistributedRunner<Message>(
      * Sends notification to [iNode] what [crashedNode] is unavailable.
      */
     private fun crashNotification(iNode: Int, crashedNode: Int) {
-        if (!distrStrategy.isCrashed(iNode)) {
+        if (!strategy.isCrashed(iNode)) {
             taskManager.addActionTask(iNode) {
                 eventFactory.createCrashNotificationEvent(iNode, crashedNode)
-                nodeInstances[iNode].onNodeUnavailable(crashedNode)
+                nodes[iNode].onNodeUnavailable(crashedNode)
             }
         }
     }
@@ -362,7 +360,7 @@ internal open class DistributedRunner<Message>(
     fun signal() {
         lock.withLock {
             isSignal = true
-            condition.signal()
+            completionCondition.signal()
         }
     }
 

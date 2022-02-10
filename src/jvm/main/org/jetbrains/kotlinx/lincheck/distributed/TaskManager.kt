@@ -69,7 +69,7 @@ sealed class TimeTask : InstantTask() {
 }
 
 /**
- * Task for a tick of periodic timer. See [Environment.setTimer]
+ * Task for a tick of periodic timer. See [NodeEnvironment.setTimer]
  */
 data class PeriodicTimer(
     override val id: Int,
@@ -79,7 +79,7 @@ data class PeriodicTimer(
 ) : TimeTask(), NodeTask
 
 /**
- * Task for a timeout. See [Environment.withTimeout]
+ * Task for a timeout. See [NodeEnvironment.withTimeout]
  */
 data class Timeout(
     override val id: Int,

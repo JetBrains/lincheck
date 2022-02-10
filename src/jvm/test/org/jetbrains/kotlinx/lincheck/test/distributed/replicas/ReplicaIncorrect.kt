@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.replicas
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
@@ -37,7 +37,7 @@ data class PutKVEntry(val key: Int, val value: Int) : KVMessage()
 data class GetKVRequest(val key: Int) : KVMessage()
 data class GetKVResponse(val value: Int?) : KVMessage()
 
-class ReplicaIncorrect(private val env: Environment<KVMessage>) : Node<KVMessage> {
+class ReplicaIncorrect(private val env: NodeEnvironment<KVMessage>) : Node<KVMessage> {
     private val storage = mutableMapOf<Int, Int>()
     override fun onMessage(message: KVMessage, sender: Int) {
         when (message) {
@@ -52,7 +52,7 @@ class ReplicaIncorrect(private val env: Environment<KVMessage>) : Node<KVMessage
     }
 }
 
-class ClientIncorrect(private val env: Environment<KVMessage>) : Node<KVMessage> {
+class ClientIncorrect(private val env: NodeEnvironment<KVMessage>) : Node<KVMessage> {
     private val signal = Signal()
     private var res: GetKVResponse? = null
     private val rand = Random(env.id)

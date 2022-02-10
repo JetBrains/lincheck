@@ -62,7 +62,7 @@ data class MessageReceivedEvent<Message>(
 
 /**
  * Any event stored by user during the execution.
- * See [org.jetbrains.kotlinx.lincheck.distributed.Environment.recordInternalEvent]
+ * See [org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment.recordInternalEvent]
  */
 data class InternalEvent(
     override val iNode: Int,
@@ -113,7 +113,7 @@ data class CrashNotificationEvent(
 
 /**
  * Indicates that node [iNode] set the timer with name [timerName].
- * See [org.jetbrains.kotlinx.lincheck.distributed.Environment.setTimer]
+ * See [org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment.setTimer]
  */
 data class SetTimerEvent(
     override val iNode: Int,
@@ -137,7 +137,7 @@ data class TimerTickEvent(
 
 /**
  * Indicates that node [iNode] cancelled the timer with name [timerName].
- * See [org.jetbrains.kotlinx.lincheck.distributed.Environment.cancelTimer]
+ * See [org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment.cancelTimer]
  */
 data class CancelTimerEvent(
     override val iNode: Int,

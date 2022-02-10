@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -39,7 +39,7 @@ data class PutResponse(val prevValue: Int?) : Message()
 data class GetRequest(val key: Int) : Message()
 data class GetResponse(val value: Int?) : Message()
 
-class Client(val env: Environment<Message>) : Node<Message> {
+class Client(val env: NodeEnvironment<Message>) : Node<Message> {
     private val server = env.getAddresses<Server>()[0]
     private val resultsChannel = Channel<Int?>(UNLIMITED)
 
@@ -63,7 +63,7 @@ class Client(val env: Environment<Message>) : Node<Message> {
     }
 }
 
-class Server(val env: Environment<Message>) : Node<Message> {
+class Server(val env: NodeEnvironment<Message>) : Node<Message> {
     private val storage = mutableMapOf<Int, Int>()
 
     override fun onMessage(message: Message, sender: Int) {

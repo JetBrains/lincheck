@@ -13,7 +13,7 @@ import org.junit.Test
 /**
  * Consensus in the absence of failures.
  */
-class NaiveConsensus(private val env: Environment<Int>) :
+class NaiveConsensus(private val env: NodeEnvironment<Int>) :
     Node<Int> {
     private val proposals = mutableMapOf<Int, Int>()
     var proposeValue: Int? = null

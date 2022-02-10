@@ -24,7 +24,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.jetbrains.kotlinx.lincheck.paramgen.NodeIdGen
@@ -33,7 +33,7 @@ import org.junit.Test
 import kotlin.coroutines.suspendCoroutine
 
 
-class OptimisticMutexIncorrect(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
+class OptimisticMutexIncorrect(private val env: NodeEnvironment<MutexMessage>) : Node<MutexMessage> {
     private val requested = BooleanArray(env.nodes)
     private var inCS = false
     private val signal = Signal()

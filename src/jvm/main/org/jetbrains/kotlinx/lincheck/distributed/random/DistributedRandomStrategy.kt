@@ -56,7 +56,7 @@ internal class DistributedRandomStrategy<Message>(
     verifier
 ) {
     private val probability = ProbabilityModel(testCfg)
-    private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions, stateRepresentationFunction)
+    private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions)
 
     init {
         try {
@@ -128,7 +128,7 @@ internal class DistributedRandomStrategy<Message>(
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         val verifyResult = if (verifier is DistributedVerifier) {
-                            verifier.verifyResultsAndStates(runner.nodeInstances, scenario, ir.results, runner.events)
+                            verifier.verifyResultsAndStates(runner.nodes, scenario, ir.results, runner.events)
                         } else {
                             verifier.verifyResults(scenario, ir.results)
                         }

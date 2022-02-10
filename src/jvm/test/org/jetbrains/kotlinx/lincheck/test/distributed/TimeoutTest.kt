@@ -25,7 +25,7 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
@@ -39,7 +39,7 @@ object Pong : PingPongMessage() {
     override fun toString() = "Pong"
 }
 
-class UnreliablePingPongServer(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
+class UnreliablePingPongServer(val env: NodeEnvironment<PingPongMessage>) : Node<PingPongMessage> {
     var shouldSkip = true
     override fun onMessage(message: PingPongMessage, sender: Int) {
         check(message is Ping) {
@@ -54,7 +54,7 @@ class UnreliablePingPongServer(val env: Environment<PingPongMessage>) : Node<Pin
     }
 }
 
-class PingPongClient(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
+class PingPongClient(val env: NodeEnvironment<PingPongMessage>) : Node<PingPongMessage> {
     private val channel = Channel<PingPongMessage>(UNLIMITED)
     private val server = env.getAddressesForClass(UnreliablePingPongServer::class.java)[0]
     override fun onMessage(message: PingPongMessage, sender: Int) {

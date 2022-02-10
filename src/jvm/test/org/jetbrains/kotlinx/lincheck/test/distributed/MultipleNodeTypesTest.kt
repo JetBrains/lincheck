@@ -23,12 +23,12 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.junit.Test
 
-class Pinger(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
+class Pinger(val env: NodeEnvironment<PingPongMessage>) : Node<PingPongMessage> {
     private val signal = Signal()
     private val pongerAddress = env.getAddresses<Ponger>()[0]
 
@@ -46,7 +46,7 @@ class Pinger(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
     }
 }
 
-class Ponger(val env: Environment<PingPongMessage>) : Node<PingPongMessage> {
+class Ponger(val env: NodeEnvironment<PingPongMessage>) : Node<PingPongMessage> {
     override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
             is Ping -> env.send(Pong, sender)

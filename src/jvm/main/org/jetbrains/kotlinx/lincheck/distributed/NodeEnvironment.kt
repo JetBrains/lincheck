@@ -27,7 +27,7 @@ import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 /**
  * Implementation of the environment.
  */
-class Environment<Message> internal constructor(
+class NodeEnvironment<Message> internal constructor(
     val id: Int,
     val nodes: Int,
     private val eventFactory: EventFactory<Message>,

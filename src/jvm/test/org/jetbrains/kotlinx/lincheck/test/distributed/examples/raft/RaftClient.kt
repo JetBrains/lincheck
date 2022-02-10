@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_OR_RECOVER_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.COMPONENTS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.strategy.TaskLimitExceededFailure
@@ -35,7 +35,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import kotlin.random.Random
 
-class RaftClient(private val env: Environment<RaftMessage>) : Node<RaftMessage> {
+class RaftClient(private val env: NodeEnvironment<RaftMessage>) : Node<RaftMessage> {
     companion object {
         const val OPERATION_TIMEOUT = 200
     }

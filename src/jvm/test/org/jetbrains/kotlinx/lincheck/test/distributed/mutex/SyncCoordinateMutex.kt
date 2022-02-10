@@ -24,7 +24,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
@@ -34,7 +34,7 @@ import java.util.*
 import kotlin.coroutines.suspendCoroutine
 
 
-class SyncCoordinateMutex(private val env: Environment<MutexMessage>) : Node<MutexMessage> {
+class SyncCoordinateMutex(private val env: NodeEnvironment<MutexMessage>) : Node<MutexMessage> {
     private val coordinatorId = 0
     private val isCoordinator = env.id == coordinatorId
     private val queue = ArrayDeque<Int>()

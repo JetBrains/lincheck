@@ -110,7 +110,7 @@ private class SnapshotOperation(
  * 5. If initializer receives snapshot parts from all other nodes it returns the result.
  */
 @OpGroupConfig(name = "observer", nonParallel = true)
-class ChandyLamport(private val env: Environment<Message>) : Node<Message> {
+class ChandyLamport(private val env: NodeEnvironment<Message>) : Node<Message> {
     private var currentAmount = 0
     private var snapshotOperation: SnapshotOperation? = null
 

@@ -22,9 +22,9 @@ package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
 
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 
-class SkeenAlgorithmIncorrect(env: Environment<Message>) : OrderCheckNode(env) {
+class SkeenAlgorithmIncorrect(env: NodeEnvironment<Message>) : OrderCheckNode(env) {
     private var clock = 0
     private var opId = 0
     private val resChannel = Channel<Int>(Channel.UNLIMITED)

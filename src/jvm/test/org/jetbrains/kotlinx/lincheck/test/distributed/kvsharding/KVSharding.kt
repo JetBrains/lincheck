@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.RECOVER_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.NodeWithStorage
 import org.jetbrains.kotlinx.lincheck.distributed.Signal
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
@@ -68,7 +68,7 @@ class Storage {
 
 data class KVLog(val request: PutRequest, val prev: String?)
 
-class Shard(env: Environment<KVMessage>) : NodeWithStorage<KVMessage, Storage>(env) {
+class Shard(env: NodeEnvironment<KVMessage>) : NodeWithStorage<KVMessage, Storage>(env) {
     private val semaphore = Signal()
     private var response: KVMessage? = null
     private var delegate: Int? = null

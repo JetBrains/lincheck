@@ -21,14 +21,14 @@
 package org.jetbrains.kotlinx.lincheck.test.distributed.totalorder
 
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedVerifier
-import org.jetbrains.kotlinx.lincheck.distributed.Environment
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.MessageSentEvent
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
-abstract class OrderCheckNode(val env: Environment<Message>) :
+abstract class OrderCheckNode(val env: NodeEnvironment<Message>) :
     Node<Message> {
     val delivered = mutableListOf<BroadcastMessage>()
 }
