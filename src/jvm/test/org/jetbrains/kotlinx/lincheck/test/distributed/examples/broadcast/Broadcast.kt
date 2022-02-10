@@ -131,7 +131,6 @@ class BroadcastVerifier : DistributedVerifier {
 
 class BroadcastTest {
     private fun commonOptions() = DistributedOptions<Message>()
-        .requireStateEquivalenceImplCheck(false)
         .actorsPerThread(3)
         .invocationsPerIteration(100_000)
         .iterations(1) // we always have the same scenario here
