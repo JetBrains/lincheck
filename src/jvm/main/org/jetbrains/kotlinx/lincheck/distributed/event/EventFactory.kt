@@ -22,8 +22,8 @@ package org.jetbrains.kotlinx.lincheck.distributed.event
 
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.DistributedStateHolder
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.distributed.random.canCrashBeforeAccessingDatabase
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
 internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
@@ -38,9 +38,9 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
     lateinit var nodeInstances: Array<out Node<M>>
 
     private fun <T> safeDatabaseAccess(f: () -> T): T {
-        val prev = canCrashBeforeAccessingDatabase
-        canCrashBeforeAccessingDatabase = false
-        return f().also { canCrashBeforeAccessingDatabase = prev }
+        val prev = DistributedStateHolder.canCrashBeforeAccessingDatabase
+        DistributedStateHolder.canCrashBeforeAccessingDatabase = false
+        return f().also { DistributedStateHolder.canCrashBeforeAccessingDatabase = prev }
     }
 
     fun createMessageEvent(msg: M, sender: Int, receiver: Int): MessageSentEvent<M> = safeDatabaseAccess {

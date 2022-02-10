@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.createExceptionResult
 import org.jetbrains.kotlinx.lincheck.createLincheckResult
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
-import org.jetbrains.kotlinx.lincheck.distributed.random.canCrashBeforeAccessingDatabase
 import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -44,7 +43,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Executes the distributed algorithms.
  */
-internal open class DistributedRunner<S: DistributedStrategy<Message>, Message>(
+internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>(
     strategy: S,
     val testCfg: DistributedCTestConfiguration<Message>,
     testClass: Class<*>,
@@ -79,6 +78,7 @@ internal open class DistributedRunner<S: DistributedStrategy<Message>, Message>(
 
     override fun initialize() {
         super.initialize()
+        DistributedStateHolder.setState(classLoader, DistributedState())
         testNodeExecutions = Array(testCfg.addressResolver.scenarioSize) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
@@ -114,7 +114,7 @@ internal open class DistributedRunner<S: DistributedStrategy<Message>, Message>(
             ex.actorId = 0
         }
         eventFactory.nodeInstances = nodes
-        canCrashBeforeAccessingDatabase = true
+        DistributedStateHolder.canCrashBeforeAccessingDatabase = true
     }
 
     /**
@@ -130,7 +130,7 @@ internal open class DistributedRunner<S: DistributedStrategy<Message>, Message>(
             //TODO (don't know how to handle it correctly)
             false
         }
-        canCrashBeforeAccessingDatabase = false
+        DistributedStateHolder.canCrashBeforeAccessingDatabase = false
         // The execution didn't finish within the [org.jetbrains.kotlinx.lincheck.Options.timeoutMs]
         if (!finishedOnTime && !lock.withLock { isSignal }) {
             executor.shutdownNow()

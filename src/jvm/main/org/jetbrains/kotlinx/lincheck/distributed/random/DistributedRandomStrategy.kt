@@ -30,11 +30,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.Integer.max
 import java.lang.reflect.Method
 
-/**
- * Indicates if the crash can be added before accessing database.
- * Set to false after the execution is over or than the event is created (see [org.jetbrains.kotlinx.lincheck.distributed.event.Event])
- */
-internal var canCrashBeforeAccessingDatabase = false
 
 /**
  * Represents random strategy.
@@ -87,7 +82,7 @@ internal class DistributedRandomStrategy<Message>(
     }
 
     override fun beforeDatabaseAccess(iNode: Int) {
-        if (!canCrashBeforeAccessingDatabase) return
+        if (!DistributedStateHolder.canCrashBeforeAccessingDatabase) return
         tryCrash(iNode)
     }
 
