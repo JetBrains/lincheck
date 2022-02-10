@@ -21,11 +21,17 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.reflect.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
+import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
+import org.jetbrains.kotlinx.lincheck.runner.Runner
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.reflect.Method
 
 class StressStrategy(
     testCfg: StressCTestConfiguration,
@@ -36,7 +42,7 @@ class StressStrategy(
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: Runner
+    private val runner: Runner<Strategy>
 
     init {
         runner = ParallelThreadsRunner(

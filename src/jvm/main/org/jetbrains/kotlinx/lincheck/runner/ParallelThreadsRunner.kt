@@ -21,20 +21,28 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.Job
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.CANCELLATION_FAILED
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
-import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.objectweb.asm.*
-import java.lang.reflect.*
-import java.util.concurrent.*
-import java.util.concurrent.atomic.*
-import kotlin.coroutines.*
-import kotlin.coroutines.intrinsics.*
-import kotlin.random.*
+import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.ParallelThreadRunnerInterceptor
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks.ALWAYS
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.objectweb.asm.ClassVisitor
+import java.lang.reflect.Method
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.random.Random
 
 private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<kotlin.Result<Any?>, Continuation<Any?>>>
 
@@ -51,7 +59,7 @@ internal open class ParallelThreadsRunner(
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
-) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
+) : Runner<Strategy>(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
 

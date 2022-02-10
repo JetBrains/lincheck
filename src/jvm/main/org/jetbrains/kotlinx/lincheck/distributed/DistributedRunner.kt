@@ -145,15 +145,7 @@ internal open class DistributedRunner<S: DistributedStrategy<Message>, Message>(
             return TaskLimitExceededResult
         }
         // The validation function exception.
-        try {
-            nodeInstances.forEach { n -> n.validate(eventFactory.events) }
-            val storages = nodeInstances.mapIndexed { index, node -> index to node }
-                .filter { it.second is NodeWithStorage<Message, *> }
-                .associate { it.first to (it.second as NodeWithStorage<Message, *>).storage }
-        } catch (e: Throwable) {
-            return ValidationFailureInvocationResult(scenario, "validate", e)
-        }
-        nodeInstances.forEach {
+        nodes.forEach {
             executeValidationFunctions(it, validationFunctions) { functionName, exception ->
                 val s = ExecutionScenario(
                     scenario.initExecution,

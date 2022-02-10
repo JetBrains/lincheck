@@ -35,13 +35,6 @@ interface Node<Message> {
      * Returns a current node state representation.
      */
     fun stateRepresentation(): String = ""
-
-    /**
-     * Called in the end of the execution.
-     * Can be used for validation.
-     * [events] is the list of all events which occurred in the system during the execution.
-     */
-    fun validate(events: List<Event>) {}
 }
 
 abstract class NodeWithStorage<Message, Storage>(protected val env: NodeEnvironment<Message>) : Node<Message> {
@@ -60,14 +53,6 @@ abstract class NodeWithStorage<Message, Storage>(protected val env: NodeEnvironm
     }
 
     abstract fun createStorage(): Storage
-
-    /**
-     * Called in the end of the execution.
-     * Can be used for validation.
-     * [events] is the list of all events which occurred in the system during the execution.
-     * [storages] are storages of all nodes in the system.
-     */
-    open fun validate(events: List<Event>, storages: Map<Int, Any>) {}
 }
 
 class CrashError : Exception()
