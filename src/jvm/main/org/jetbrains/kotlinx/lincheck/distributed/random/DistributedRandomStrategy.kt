@@ -21,8 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
 import org.jetbrains.kotlinx.lincheck.distributed.*
-import org.jetbrains.kotlinx.lincheck.distributed.event.Event
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
@@ -31,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.Integer.max
 import java.lang.reflect.Method
-
 
 /**
  * Indicates if the crash can be added before accessing database.
@@ -119,8 +116,7 @@ internal class DistributedRandomStrategy<Message>(
     }
 
     override fun reset() {
-        val crashExpectation = 3
-        probability.reset(crashExpectation)
+        probability.reset()
         failureManager.reset()
     }
 
@@ -197,10 +193,3 @@ internal class DistributedRandomStrategy<Message>(
         }
     }
 }
-
-private fun Verifier.verifyResultsAndStates(
-    nodes: Array<out Node<*>>,
-    scenario: ExecutionScenario,
-    results: ExecutionResult,
-    events: List<Event>
-): Boolean = verifyResults(scenario, results)

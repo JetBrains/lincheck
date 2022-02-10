@@ -104,7 +104,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
         }
         if (testCfg is DistributedCTestConfiguration<*>) {
-            return minimizedFailure.minimizeDSFailure(testCfg)
+            return minimizedFailure.minimizeDistributedFailure(testCfg)
         }
         return minimizedFailure
     }
@@ -147,7 +147,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         } else null
     }
 
-    private fun LincheckFailure.minimizeDSFailure(testCfg: DistributedCTestConfiguration<*>): LincheckFailure {
+    private fun LincheckFailure.minimizeDistributedFailure(testCfg: DistributedCTestConfiguration<*>): LincheckFailure {
         val queue = LinkedList(testCfg.nextConfigurations())
         var res = this
         while (queue.size != 0) {
@@ -158,17 +158,17 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 queue.addAll(nextTestCfg.nextConfigurations())
             }
         }
-        while (ProbabilityModel.failedNodesExpectation > 0) {
-            ProbabilityModel.failedNodesExpectation--
-            val newFailedIteration = res.scenario.tryMinimize(testCfg)
+        while (ProbabilityModel.crashedNodesExpectation.get() > 0) {
+            ProbabilityModel.crashedNodesExpectation.set(ProbabilityModel.crashedNodesExpectation.get() - 1)
+            val newFailedIteration = res.scenario.run(testCfg, testCfg.createVerifier(checkStateEquivalence = false))
             if (newFailedIteration != null) {
                 res = newFailedIteration
             } else {
-                ProbabilityModel.failedNodesExpectation = -1
+                ProbabilityModel.crashedNodesExpectation.remove()
                 return res
             }
         }
-        ProbabilityModel.failedNodesExpectation = -1
+        ProbabilityModel.crashedNodesExpectation.remove()
         return res
     }
 

@@ -31,15 +31,21 @@ import kotlin.random.Random
  */
 internal class ProbabilityModel(private val testCfg: DistributedCTestConfiguration<*>) {
     companion object {
-        const val MEAN_POISSON_DISTRIBUTION = 0.1
-        const val MESSAGE_SENT_PROBABILITY = 0.95
-        const val MESSAGE_DUPLICATION_PROBABILITY = 0.1
-        const val NODE_RECOVERY_PROBABILITY = 0.7
-        var failedNodesExpectation = -1
-        var networkPartitionsExpectation = 2
-        const val SIMULTANEOUS_CRASH_COUNT = 3
+        private const val MEAN_POISSON_DISTRIBUTION = 0.1
+        private const val MESSAGE_SENT_PROBABILITY = 0.95
+        private const val MESSAGE_DUPLICATION_PROBABILITY = 0.1
+        private const val NODE_RECOVERY_PROBABILITY = 0.7
+        private const val SIMULTANEOUS_CRASH_COUNT = 3
         const val DEFAULT_RECOVER_TIMEOUT = 10
+        private const val DEFAULT_CRASH_EXPECTATION = 4
+        private const val DEFAULT_PARTITION_EXPECTATION = 2
+
+        val crashedNodesExpectation: ThreadLocal<Int> = ThreadLocal.withInitial { DEFAULT_CRASH_EXPECTATION }
+        val networkPartitionExpectation: ThreadLocal<Int> = ThreadLocal.withInitial { DEFAULT_PARTITION_EXPECTATION }
     }
+
+    private val crashExpectation: Int = crashedNodesExpectation.get()
+    private val partitionExpectation: Int = networkPartitionExpectation.get()
 
     val rand = Random(0)
     private val poissonDistribution = PoissonDistribution(MEAN_POISSON_DISTRIBUTION)
@@ -109,7 +115,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
             0.0
         } else {
             val q =
-                failedNodesExpectation.toDouble() / addressResolver.size(iNode)
+                crashExpectation.toDouble() / addressResolver.size(iNode)
             return if (addressResolver.crashTypeForNode(iNode) == FINISH_ON_CRASH) {
                 q / (previousNumberOfPoints[iNode] - (currentErrorPoint[iNode] - 1) * q)
             } else {
@@ -123,7 +129,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
      */
     fun isNetworkPartition(iNode: Int): Boolean {
         if (previousNumberOfPoints[iNode] == 0) return false
-        val q = networkPartitionsExpectation.toDouble() / nodeCount
+        val q = partitionExpectation.toDouble() / nodeCount
         val p = q / previousNumberOfPoints[iNode]
         val r = rand.nextDouble(1.0)
         return r < p
@@ -141,8 +147,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     /**
      * Resets the probability to the initial state.
      */
-    fun reset(failedNodesExp: Int = 0) {
-        if (failedNodesExpectation == -1) failedNodesExpectation = failedNodesExp
+    fun reset() {
         previousNumberOfPoints.indices.forEach {
             previousNumberOfPoints[it] = max(previousNumberOfPoints[it], currentErrorPoint[it])
         }
