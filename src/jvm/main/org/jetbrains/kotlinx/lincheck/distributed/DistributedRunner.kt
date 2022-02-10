@@ -65,7 +65,6 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
 
     private val lock = ReentrantLock()
     private val completionCondition = lock.newCondition()
-    private var isSignal = false
 
     @Volatile
     private var isTaskLimitExceeded = false
@@ -90,7 +89,6 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      */
     private fun reset() {
         taskCount = 0
-        isSignal = false
         exception = null
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
@@ -132,7 +130,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         }
         DistributedStateHolder.canCrashBeforeAccessingDatabase = false
         // The execution didn't finish within the [org.jetbrains.kotlinx.lincheck.Options.timeoutMs]
-        if (!finishedOnTime && !lock.withLock { isSignal }) {
+        if (!finishedOnTime) {
             executor.shutdownNow()
             return LivelockInvocationResult
         }
@@ -351,7 +349,6 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      */
     fun signal() {
         lock.withLock {
-            isSignal = true
             completionCondition.signal()
         }
     }

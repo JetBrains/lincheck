@@ -127,6 +127,9 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
     private val _tasks = mutableListOf<Task>()
     private val _timeTasks = mutableListOf<TimeTask>()
 
+    val taskCount: Int
+        get() = _taskId
+
     /**
      * Returns the list of [MessageReceiveTask] which can be executed next according to FIFO order.
      */
