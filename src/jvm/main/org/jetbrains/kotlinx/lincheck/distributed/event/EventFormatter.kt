@@ -21,9 +21,27 @@
 package org.jetbrains.kotlinx.lincheck.distributed.event
 
 import org.jetbrains.kotlinx.lincheck.distributed.NodeAddressResolver
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import java.io.File
 
 internal interface EventFormatter {
     fun format(events: List<Event>): List<String>
+
+
+    /**
+     * Stores the events to file.
+     */
+    fun storeEventsToFile(failure: LincheckFailure, events: List<Event>, filename: String?) {
+        if (filename == null) return
+        File(filename).printWriter().use { out ->
+            out.println(failure)
+            out.println()
+            val list = format(events)
+            list.take(2000).forEach {
+                out.println(it)
+            }
+        }
+    }
 }
 
 internal class TextEventFormatter(private val addressResolver: NodeAddressResolver<*>) : EventFormatter {
@@ -81,3 +99,4 @@ internal class TextEventFormatter(private val addressResolver: NodeAddressResolv
 
     override fun format(events: List<Event>): List<String> = events.map { e -> formatHeader(e.iNode) + formatEvent(e) }
 }
+

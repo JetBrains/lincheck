@@ -35,8 +35,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.withEmptyClock
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import java.io.File
 import java.lang.reflect.Method
 import java.util.concurrent.TimeUnit
 
@@ -53,19 +51,50 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         const val TASK_LIMIT = 10_000
     }
 
+    /**
+     * Total number of nodes.
+     */
     private val nodeCount = testCfg.addressResolver.nodeCount
+
+    /**
+     * Logs all events which occurred during the execution,
+     */
     private lateinit var eventFactory: EventFactory<Message>
 
+    /**
+     * Node environments.
+     */
     private lateinit var environments: Array<NodeEnvironment<Message>>
+
+    /**
+     * Node instances.
+     */
     lateinit var nodes: Array<Node<Message>>
+
+    /**
+     * Executes operations from the scenario.
+     */
     private lateinit var testNodeExecutions: Array<TestNodeExecution>
+
+    /**
+     * Stores all tasks which occurred during the execution.
+     */
     private lateinit var taskManager: TaskManager
-    private var taskCount = 0
+
+    /**
+     * Executor for the node tasks.
+     */
     private lateinit var executor: DistributedExecutor
 
+    /**
+     * Signals when the execution is over.
+     */
     private val lock = ReentrantLock()
     private val completionCondition = lock.newCondition()
 
+    /**
+     *
+     */
     @Volatile
     private var isTaskLimitExceeded = false
 
@@ -88,8 +117,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Resets the runner to the initial state before next invocation.
      */
     private fun reset() {
-        taskCount = 0
-        exception = null
+        // Create new instances.
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
         environments = Array(nodeCount) {
@@ -105,12 +133,14 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
             testCfg.addressResolver[it].getConstructor(NodeEnvironment::class.java)
                 .newInstance(environments[it])
         }
+        // Set node instances to test node executions
         testNodeExecutions.forEachIndexed { t, ex ->
             ex.testInstance = nodes[t]
             val actors = scenario.parallelExecution[t].size
             ex.results = arrayOfNulls(actors)
             ex.actorId = 0
         }
+        // Set nodes for event factory
         eventFactory.nodeInstances = nodes
         DistributedStateHolder.canCrashBeforeAccessingDatabase = true
     }
@@ -122,6 +152,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         reset()
         addInitialTasks()
         launchNextTask()
+        // Wait until the execution is over or time limit is exceeded.
         val finishedOnTime = try {
             lock.withLock { completionCondition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
         } catch (_: InterruptedException) {
@@ -153,13 +184,14 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
                 return ValidationFailureInvocationResult(s, functionName, exception)
             }
         }
+        // Return the results.
         testNodeExecutions.zip(scenario.parallelExecution).forEach { it.first.setSuspended(it.second) }
-        val parallelResultsWithClock = testNodeExecutions.mapIndexed { i, ex ->
+        val parallelResults = testNodeExecutions.mapIndexed { i, ex ->
             // TODO: add real clock. Cannot use it now, because checks in verifier (see org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityContext.hblegal)
             ex.results.map { it!!.withEmptyClock(nodeCount) }
         }
         val results = ExecutionResult(
-            emptyList(), null, parallelResultsWithClock, super.constructStateRepresentation(),
+            emptyList(), null, parallelResults, super.constructStateRepresentation(),
             emptyList(), null
         )
         return CompletedInvocationResult(results)
@@ -186,8 +218,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     fun launchNextTask(): Boolean {
         if (exception != null) return false
         val next = strategy.next(taskManager) ?: return false
-        taskCount++
-        if (taskCount > TASK_LIMIT) {
+        if (taskManager.taskCount > TASK_LIMIT) {
             isTaskLimitExceeded = true
             return false
         }
@@ -347,28 +378,8 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     /**
      * Signals that the execution is over.
      */
-    fun signal() {
-        lock.withLock {
-            completionCondition.signal()
-        }
-    }
-
-    /**
-     * Stores the events to file.
-     */
-    fun storeEventsToFile(failure: LincheckFailure) {
-        if (testCfg.logFilename == null) return
-        File(testCfg.logFilename).printWriter().use { out ->
-            out.println(failure)
-            out.println()
-            val formatter = testCfg.getFormatter()
-            val events = eventFactory.events.toList()
-            val list = formatter.format(events)
-            list.take(2000).forEach {
-                out.println(it)
-            }
-            //testCfg.getFormatter().format(eventFactory.events).forEach { out.println(it) }
-        }
+    fun signal() = lock.withLock {
+        completionCondition.signal()
     }
 
     override fun close() {

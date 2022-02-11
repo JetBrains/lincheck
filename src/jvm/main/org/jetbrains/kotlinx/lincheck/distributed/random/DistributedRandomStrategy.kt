@@ -132,13 +132,22 @@ internal class DistributedRandomStrategy<Message>(
                                 scenario,
                                 ir.results
                             ).also {
-                                runner.storeEventsToFile(it)
+                                testCfg.getFormatter().storeEventsToFile(
+                                    failure = it,
+                                    filename = testCfg.logFilename,
+                                    //TODO: better way to get events
+                                    events =  runner.events
+                                )
                             }
                         }
                     }
                     else -> {
                         return ir.toLincheckFailure(scenario).also {
-                            runner.storeEventsToFile(it)
+                            testCfg.getFormatter().storeEventsToFile(
+                                failure = it,
+                                filename = testCfg.logFilename,
+                                events =  runner.events
+                            )
                         }
                     }
                 }
