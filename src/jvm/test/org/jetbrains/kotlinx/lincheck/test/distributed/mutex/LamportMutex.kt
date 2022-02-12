@@ -45,25 +45,6 @@ data class Rel(override val msgTime: Int) : MutexMessage()
 sealed class MutexEvent
 object Lock : MutexEvent()
 object Unlock : MutexEvent()
-/*
-abstract class MutexNode<Message> : Node<Message> {
-    override fun validate(events: List<Event>, databases: List<Unit>) {
-        val locksAndUnlocks = events.filterIsInstance<InternalEvent>()
-        for (i in locksAndUnlocks.indices step 2) {
-            check(locksAndUnlocks[i].attachment == Lock)
-            if (i + 1 < locksAndUnlocks.size) {
-                check(
-                    locksAndUnlocks[i + 1].attachment == Unlock
-                            && locksAndUnlocks[i].iNode == locksAndUnlocks[i + 1].iNode
-                            && locksAndUnlocks[i].clock.happensBefore(locksAndUnlocks[i + 1].clock)
-                )
-            }
-            if (i >= 1) {
-                check(locksAndUnlocks[i - 1].clock.happensBefore(locksAndUnlocks[i].clock))
-            }
-        }
-    }
-}*/
 
 class LamportMutex(private val env: NodeEnvironment<MutexMessage>) : Node<MutexMessage> {
     private val inf = Int.MAX_VALUE

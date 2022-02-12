@@ -56,6 +56,7 @@ class CrashMinimizationTest {
             .invocationsPerIteration(500_000)
             .storeLogsForFailedScenario("crash_minimization.txt")
             .checkImpl(CrashingNode::class.java)
+        println(failure)
         assert(failure is IncorrectResultsFailure)
     }
 }

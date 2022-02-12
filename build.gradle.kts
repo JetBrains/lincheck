@@ -1,11 +1,10 @@
-import org.gradle.jvm.tasks.Jar
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
     dependencies {
         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
-        //classpath("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
     }
 }
 apply(plugin = "kotlinx-atomicfu")
@@ -23,9 +22,9 @@ repositories {
     mavenCentral()
     jcenter()
 }
-dependencies {
+/*dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
-}
+}*/
 
 kotlin {
     jvm {

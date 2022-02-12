@@ -91,6 +91,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      */
     private val lock = ReentrantLock()
     private val completionCondition = lock.newCondition()
+    private var completedOnTime = false
 
     /**
      *
@@ -153,15 +154,13 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         addInitialTasks()
         launchNextTask()
         // Wait until the execution is over or time limit is exceeded.
-        val finishedOnTime = try {
+        try {
             lock.withLock { completionCondition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
         } catch (_: InterruptedException) {
-            //TODO (don't know how to handle it correctly)
-            false
         }
         DistributedStateHolder.canCrashBeforeAccessingDatabase = false
         // The execution didn't finish within the [org.jetbrains.kotlinx.lincheck.Options.timeoutMs]
-        if (!finishedOnTime) {
+        if (!lock.withLock { completedOnTime }) {
             executor.shutdownNow()
             return LivelockInvocationResult
         }
@@ -379,6 +378,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Signals that the execution is over.
      */
     fun signal() = lock.withLock {
+        completedOnTime = true
         completionCondition.signal()
     }
 
