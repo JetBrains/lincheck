@@ -22,6 +22,8 @@ package org.jetbrains.kotlinx.lincheck.test.distributed
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.RECOVER_ON_CRASH
+import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
@@ -108,15 +110,25 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit>(
 }
 
 class NodeCrashTest {
-    private fun createCrashInfo(): FailureManagerComponent<Unit> {
+    private fun createFailureManager(): FailureManagerComponent<Unit> {
         val typeInfo = mapOf(Node1::class.java to NodeTypeInfo(
             3,
             4,
-            CrashMode.RECOVER_ON_CRASH,
-            NetworkPartitionMode.COMPONENTS
+            RECOVER_ON_CRASH,
+            COMPONENTS
         ) { it / 2 },
-            Node2::class.java to NodeTypeInfo(1, 3, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 })
+            Node2::class.java to NodeTypeInfo(1, 3, CrashMode.NO_CRASH, NONE) { 0 })
         return FailureManagerComponent(NodeAddressResolver(Node1::class.java, 2, typeInfo), MockDistributedStrategy())
+    }
+
+    private fun createFailureManagerSingleEdge(): FailureManagerSingleEdge<Unit> {
+        val typeInfo: Map<Class<out Node<Unit>>, NodeTypeInfo> = mapOf(Node1::class.java to NodeTypeInfo(
+            3,
+            5,
+            RECOVER_ON_CRASH,
+            SINGLE_EDGE
+        ) { 0 })
+        return FailureManagerSingleEdge(NodeAddressResolver(Node1::class.java, 2, typeInfo))
     }
 
     private fun checkClique(nodes: Iterable<Int>, crashInfo: FailureManager<Unit>) {
@@ -129,13 +141,13 @@ class NodeCrashTest {
 
     @Test
     fun testCanSendInitially() {
-        val crashInfo = createCrashInfo()
+        val crashInfo = createFailureManager()
         checkClique(0..6, crashInfo)
     }
 
     @Test
     fun testCanCrashInitially() {
-        val crashInfo = createCrashInfo()
+        val crashInfo = createFailureManager()
         for (i in 0..3) {
             check(crashInfo.canCrash(i) && !crashInfo[i])
         }
@@ -146,7 +158,7 @@ class NodeCrashTest {
 
     @Test
     fun testCanAddPartitionInitially() {
-        val crashInfo = createCrashInfo()
+        val crashInfo = createFailureManager()
         for (i in 0..6) {
             for (j in 0..6) {
                 if (i < 4) {
@@ -160,7 +172,7 @@ class NodeCrashTest {
 
     @Test
     fun testCrash() {
-        val crashInfo = createCrashInfo()
+        val crashInfo = createFailureManager()
         crashInfo.crashNode(0)
         check(crashInfo[0])
         crashInfo.crashNode(1)
@@ -170,7 +182,7 @@ class NodeCrashTest {
 
     @Test
     fun testRecover() {
-        val crashInfo = createCrashInfo()
+        val crashInfo = createFailureManager()
         crashInfo.crashNode(0)
         crashInfo.crashNode(1)
         crashInfo.recoverNode(0)
@@ -179,7 +191,7 @@ class NodeCrashTest {
 
     @Test
     fun testPartitionSameType() {
-        val crashInfo = createCrashInfo()
+        val crashInfo = createFailureManager()
         crashInfo.partition(0, 1)
         val partition = listOf(0, 2)
         val available = listOf(1, 3, 4, 5, 6)
@@ -190,5 +202,22 @@ class NodeCrashTest {
         }
         checkClique(partition, crashInfo)
         checkClique(available, crashInfo)
+    }
+
+    @Test
+    fun testPartitionSingleEdge() {
+        val failureManager = createFailureManagerSingleEdge()
+        assert(!failureManager.canCrash(0))
+        failureManager.partition(0, 1)
+        assert(!failureManager.canSend(1, 0))
+        failureManager.partition(0, 2)
+        failureManager.partition(3, 0)
+        assert(!failureManager.canAddPartition(4, 0))
+        failureManager.partition(4, 1)
+        failureManager.partition(2, 4)
+        assert(!failureManager.canAddPartition(3, 4))
+        assert(failureManager.canSend(4, 3))
+        failureManager.removePartition(listOf(0), listOf(3))
+        assert(failureManager.canAddPartition(3, 4))
     }
 }

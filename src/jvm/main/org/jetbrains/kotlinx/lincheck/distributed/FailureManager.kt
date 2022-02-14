@@ -172,7 +172,7 @@ internal class FailureManagerComponent<Message>(
         val cls = addressResolver[firstNode]
         val nodes = addressResolver.nodeTypeToRange[cls]!!.filter { it != firstNode && it != secondNode }
         val limit =
-            min(addressResolver.maxNumberOfCrashes(cls) - unavailableNodeCount[cls]!!, addressResolver[cls]!!.size / 2)
+            min(addressResolver.maxNumberOfCrashes(cls) - unavailableNodeCount[cls]!!, addressResolver[cls].size / 2)
         val nodesForPartition = strategy.choosePartitionComponent(nodes, limit)
         for (node in nodes) {
             if (node in nodesForPartition) {
