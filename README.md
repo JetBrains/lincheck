@@ -474,7 +474,7 @@ public class MyConcurrentTest {
         .iterations(10)
         .threads(3)
         .logLevel(LoggingLevel.INFO);
-    LinChecker.check(StressOptionsTest.class, opts);
+    LinChecker.check(MyConcurrentTest.class, opts);
   }
 }
 ```
