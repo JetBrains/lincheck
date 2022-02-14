@@ -89,9 +89,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     /**
      * Signals when the execution is over.
      */
-    private val lock = ReentrantLock()
-    private val completionCondition = lock.newCondition()
-    private var completedOnTime = false
+    private val completionCondition = CompletionCondition(testCfg.timeoutMs)
 
     /**
      *
@@ -118,6 +116,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Resets the runner to the initial state before next invocation.
      */
     private fun reset() {
+        completionCondition.reset()
         // Create new instances.
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
@@ -154,13 +153,10 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         addInitialTasks()
         launchNextTask()
         // Wait until the execution is over or time limit is exceeded.
-        try {
-            lock.withLock { completionCondition.await(testCfg.timeoutMs, TimeUnit.MILLISECONDS) }
-        } catch (_: InterruptedException) {
-        }
+        val finishedOnTime = completionCondition.await()
         DistributedStateHolder.canCrashBeforeAccessingDatabase = false
         // The execution didn't finish within the [org.jetbrains.kotlinx.lincheck.Options.timeoutMs]
-        if (!lock.withLock { completedOnTime }) {
+        if (!finishedOnTime) {
             executor.shutdownNow()
             return LivelockInvocationResult
         }
@@ -197,101 +193,55 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     }
 
     /**
-     * Add initial tasks to task manager.
-     */
-    private fun addInitialTasks() {
-        repeat(nodeCount) { i ->
-            taskManager.addActionTask(i) {
-                nodes[i].onStart()
-                if (i >= testCfg.addressResolver.scenarioSize) return@addActionTask
-                taskManager.addSuspendedTask(i) {
-                    runNode(i)
-                }
-            }
-        }
-    }
-
-    /**
      * Returns true if the next task was executed successfully, false if the execution should be stopped.
      */
     fun launchNextTask(): Boolean {
         if (exception != null) return false
-        val next = strategy.next(taskManager) ?: return false
         if (taskManager.taskCount > TASK_LIMIT) {
             isTaskLimitExceeded = true
             return false
         }
-        //TODO remove code duplication. Can be solved by updating Kotlin version.
-        if (next is InstantTask) {
-            executor.execute {
-                try {
-                    next.action()
-                } catch (e: CrashError) {
-                    onNodeCrash((next as NodeTask).iNode)
-                } catch (e: Throwable) {
-                    if (exception == null) {
-                        exception = e
-                    }
-                }
-            }
-        }
-        if (next is SuspendedTask) {
-            GlobalScope.launch(executor.asCoroutineDispatcher()) {
-                try {
-                    next.action()
-                } catch (e: CrashError) {
-                    onNodeCrash(next.iNode)
-                } catch (e: Throwable) {
-                    if (exception == null) {
-                        exception = e
-                    }
-                }
-            }
-        }
+        val next = strategy.next(taskManager) ?: return false
+        executeTask(next)
         return true
     }
 
     /**
-     * Removes all remained tasks for [iNode], sends crash notifications to other nodes,
-     * add recover task if necessary.
+     * Executes the [task].
      */
-    private fun onNodeCrash(iNode: Int) {
-        eventFactory.createNodeCrashEvent(iNode)
-        taskManager.removeAllForNode(iNode)
-        testNodeExecutions.getOrNull(iNode)?.crash()
-        sendCrashNotifications(iNode)
-        if (!strategy.shouldRecover(iNode)) {
-            testNodeExecutions.getOrNull(iNode)?.crashRemained()
-            return
-        }
-        taskManager.addCrashRecoverTask(iNode = iNode, ticks = strategy.getRecoverTimeout(taskManager)) {
-            environments[iNode] =
-                NodeEnvironment(iNode, nodeCount, eventFactory, strategy, taskManager)
-            val newInstance = testCfg.addressResolver[iNode].getConstructor(NodeEnvironment::class.java)
-                .newInstance(environments[iNode])
-            testNodeExecutions.getOrNull(iNode)?.testInstance = newInstance
-            if (newInstance is NodeWithStorage<Message, *>) {
-                newInstance.onRecovery((nodes[iNode] as NodeWithStorage<Message, *>).storage)
+    private fun executeTask(task: Task) {
+        //TODO: don't know how to remove code duplication
+        when (task) {
+            // If the task is suspending, the new coroutine is launched using executor as dispatcher.
+            is SuspendedTask -> GlobalScope.launch(executor.asCoroutineDispatcher()) {
+                try {
+                    task.action()
+                } catch (e: CrashError) {
+                    onNodeCrash(task.iNode)
+                } catch (e: Throwable) {
+                    setException(e)
+                }
             }
-            nodes[iNode] = newInstance
-            strategy.onNodeRecover(iNode)
-            eventFactory.createNodeRecoverEvent(iNode)
-            nodes[iNode].recover()
-            taskManager.addSuspendedTask(iNode) {
-                runNode(iNode)
+            // If the task is not suspending, it executed directly in the executor,
+            // because launching new coroutine each time is time-consuming.
+            is InstantTask -> executor.execute {
+                try {
+                    task.action()
+                } catch (e: CrashError) {
+                    onNodeCrash((task as NodeTask).iNode)
+                } catch (e: Throwable) {
+                    setException(e)
+                }
             }
         }
     }
 
     /**
-     * Sends crash notifications between nodes from different parts and creates partition recover task.
+     * Stores the first exception which occurred during the execution.
      */
-    fun onPartition(firstPart: List<Int>, secondPart: List<Int>, partitionId: Int) {
-        eventFactory.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
-        sendCrashNotifications(firstPart, secondPart)
-        taskManager.addPartitionRecoverTask(ticks = strategy.getRecoverTimeout(taskManager)) {
-            eventFactory.createNetworkRecoverEvent(partitionId)
-            strategy.recoverPartition(firstPart, secondPart)
+    private fun setException(e: Throwable) {
+        if (exception == null) {
+            exception = e
         }
     }
 
@@ -300,41 +250,138 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      */
     fun hasAllResults() = testNodeExecutions.all { it.results.none { r -> r == null } }
 
+    override fun close() {
+        executor.close()
+    }
+
+    /**
+     * Signals that the execution is over.
+     */
+    fun signal() = completionCondition.signal()
+
+    /**
+     * Add initial tasks to task manager.
+     */
+    private fun addInitialTasks() {
+        repeat(nodeCount) { i ->
+            // For each node 'onStart' is called.
+            taskManager.addActionTask(i) {
+                nodes[i].onStart()
+                // Return if the node has no operations.
+                if (i >= testCfg.addressResolver.scenarioSize) return@addActionTask
+                // Task to execute node's operations.
+                taskManager.addSuspendedTask(i) {
+                    runOperations(i)
+                }
+            }
+        }
+    }
+
     /**
      * Runs the operations for node.
      */
-    private suspend fun runNode(iNode: Int) {
-        if (iNode >= testCfg.addressResolver.scenarioSize) {
-            return
-        }
+    private suspend fun runOperations(iNode: Int) {
         val testNodeExecution = testNodeExecutions[iNode]
         val scenarioSize = scenario.parallelExecution[iNode].size
-        if (testNodeExecution.actorId == scenarioSize + 1) return
-        if (testNodeExecution.actorId == scenarioSize) {
-            eventFactory.createScenarioFinishEvent(iNode)
-            nodes[iNode].onScenarioFinish()
+        when (val actorId = testNodeExecution.actorId) {
+            // All operations and 'onScenarioFinished' are completed
+            scenarioSize + 1 -> return
+            scenarioSize -> {
+                testNodeExecution.actorId++
+                eventFactory.createScenarioFinishEvent(iNode)
+                // Call 'onScenarioFinish'.
+                nodes[iNode].onScenarioFinish()
+            }
+            else -> {
+                val actor = scenario.parallelExecution[iNode][actorId]
+                eventFactory.createOperationEvent(actor, iNode)
+                try {
+                    testNodeExecution.actorId++
+                    val res = testNodeExecution.runOperation(actorId)
+                    // Store operation result.
+                    testNodeExecution.results[actorId] = if (actor.method.returnType == Void.TYPE) {
+                        VoidResult
+                    } else {
+                        createLincheckResult(res)
+                    }
+                } catch (e: Throwable) {
+                    // Check if exception is expected.
+                    if (e.javaClass in actor.handledExceptions) {
+                        testNodeExecutions[iNode].results[actorId] = createExceptionResult(e.javaClass)
+                    } else {
+                        throw e
+                    }
+                }
+                // Launch next operation.
+                taskManager.addSuspendedTask(iNode) {
+                    runOperations(iNode)
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes all remained tasks for [iNode], sends crash notifications to other nodes,
+     * add recover task if necessary.
+     */
+    private fun onNodeCrash(iNode: Int) {
+        eventFactory.createNodeCrashEvent(iNode)
+        // Remove all pending tasks for iNode.
+        taskManager.removeAllForNode(iNode)
+        // Set current operation result to CRASHED
+        testNodeExecutions.getOrNull(iNode)?.crash()
+        // Send crash notifications to other nodes.
+        sendCrashNotifications(iNode)
+        if (!strategy.shouldRecover(iNode)) {
+            // Set all remaining operations result to 'NoResult'
+            testNodeExecutions.getOrNull(iNode)?.crashRemained()
             return
         }
-        val i = testNodeExecution.actorId
-        val actor = scenario.parallelExecution[iNode][i]
-        eventFactory.createOperationEvent(actor, iNode)
-        try {
-            testNodeExecution.actorId++
-            val res = testNodeExecution.runOperation(i)
-            testNodeExecution.results[i] = if (actor.method.returnType == Void.TYPE) {
-                VoidResult
-            } else {
-                createLincheckResult(res)
-            }
-        } catch (e: Throwable) {
-            if (e.javaClass in actor.handledExceptions) {
-                testNodeExecutions[iNode].results[i] = createExceptionResult(e.javaClass)
-            } else {
-                throw e
-            }
+        // Add task for node recovering.
+        taskManager.addCrashRecoverTask(iNode = iNode, ticks = strategy.getRecoverTimeout(taskManager)) {
+            recover(iNode)
         }
-        taskManager.addSuspendedTask(iNode) {
-            runNode(iNode)
+    }
+
+    /**
+     * [iNode] recovery.
+     */
+    private fun recover(iNode: Int) {
+        // Create new instances of NodeEnvironment and Node
+        environments[iNode] =
+            NodeEnvironment(iNode, nodeCount, eventFactory, strategy, taskManager)
+        val newInstance = testCfg.addressResolver[iNode].getConstructor(NodeEnvironment::class.java)
+            .newInstance(environments[iNode])
+        // Change the instance for testNodeExecution if necessary
+        testNodeExecutions.getOrNull(iNode)?.testInstance = newInstance
+        // If the node has a storage, set it.
+        if (newInstance is NodeWithStorage<Message, *>) {
+            newInstance.onRecovery((nodes[iNode] as NodeWithStorage<Message, *>).storage)
+        }
+        nodes[iNode] = newInstance
+        // Remove crashed mark from iNode.
+        strategy.onNodeRecover(iNode)
+        eventFactory.createNodeRecoverEvent(iNode)
+        // Call recover method.
+        nodes[iNode].recover()
+        // If node has the scenario, continue to execute the remaining operations.
+        if (iNode < testCfg.addressResolver.scenarioSize) taskManager.addSuspendedTask(iNode) {
+            runOperations(iNode)
+        }
+    }
+
+    /**
+     * Sends crash notifications between nodes from different parts and creates partition recover task.
+     */
+    fun onPartition(firstPart: List<Int>, secondPart: List<Int>, partitionId: Int) {
+        eventFactory.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
+        // Sends notifications between parts that nodes are unavailable for each other.
+        sendCrashNotifications(firstPart, secondPart)
+        // Add partition recover task.
+        taskManager.addPartitionRecoverTask(ticks = strategy.getRecoverTimeout(taskManager)) {
+            eventFactory.createNetworkRecoverEvent(partitionId)
+            // Remove partition.
+            strategy.recoverPartition(firstPart, secondPart)
         }
     }
 
@@ -342,11 +389,11 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Sends notification to [iNode] what [crashedNode] is unavailable.
      */
     private fun crashNotification(iNode: Int, crashedNode: Int) {
-        if (!strategy.isCrashed(iNode)) {
-            taskManager.addActionTask(iNode) {
-                eventFactory.createCrashNotificationEvent(iNode, crashedNode)
-                nodes[iNode].onNodeUnavailable(crashedNode)
-            }
+        // Do not send notification to crashed node.
+        if (strategy.isCrashed(iNode)) return
+        taskManager.addActionTask(iNode) {
+            eventFactory.createCrashNotificationEvent(iNode, crashedNode)
+            nodes[iNode].onNodeUnavailable(crashedNode)
         }
     }
 
@@ -355,9 +402,8 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      */
     private fun sendCrashNotifications(iNode: Int) {
         if (!testCfg.crashNotifications) return
-        for (i in 0 until nodeCount) {
-            if (i == iNode) continue
-            crashNotification(i, iNode)
+        repeat(nodeCount) { i ->
+            if (i != iNode) crashNotification(i, iNode)
         }
     }
 
@@ -375,14 +421,46 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     }
 
     /**
-     * Signals that the execution is over.
+     * Wrapper around [java.util.concurrent.locks.Condition] to wait until the signal is called or [timeoutMs] is exceeded.
      */
-    fun signal() = lock.withLock {
-        completedOnTime = true
-        completionCondition.signal()
-    }
+    private class CompletionCondition(private val timeoutMs: Long) {
+        private val lock = ReentrantLock()
+        private val completionCondition = lock.newCondition()
+        private var completed = false
 
-    override fun close() {
-        executor.close()
+        /**
+         * Awaits until the execution is over or [timeoutMs] is exceeded.
+         * Returns false if timeout was exceeded.
+         */
+        fun await(): Boolean {
+            // Time when timeout exceeds.
+            val timeoutExceededTime = System.currentTimeMillis() + timeoutMs
+            lock.withLock {
+                // Helps to overcome spurious wakeups and situation when signal is called before await.
+                while (!completed) {
+                    val timeout = timeoutExceededTime - System.currentTimeMillis()
+                    // Timeout is exceeded.
+                    if (timeout <= 0) return false
+                    // Await remaining timeout.
+                    completionCondition.await(timeout, TimeUnit.MILLISECONDS)
+                }
+            }
+            return true
+        }
+
+        /**
+         * Signals that the execution is over.
+         */
+        fun signal() = lock.withLock {
+            completed = true
+            completionCondition.signal()
+        }
+
+        /**
+         * Sets [completed] to false for a new invocation.
+         */
+        fun reset() {
+            completed = false
+        }
     }
 }

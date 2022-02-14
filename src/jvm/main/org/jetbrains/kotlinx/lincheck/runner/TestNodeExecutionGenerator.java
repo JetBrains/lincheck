@@ -90,14 +90,6 @@ public class TestNodeExecutionGenerator {
         generateConstructor(cca);
         generateMethod(cca, testClassType, actors, objArgs);
         cca.visitEnd();
-        String outputFile = "LamportMutex" + iThread + ".class";
-        //System.out.println(cw.toByteArray().length);
-        /*try (OutputStream outputStream = new FileOutputStream(outputFile)) {
-            outputStream.write(cw.toByteArray());
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }*/
-       // throw new RuntimeException();
         return cw.toByteArray();
     }
 

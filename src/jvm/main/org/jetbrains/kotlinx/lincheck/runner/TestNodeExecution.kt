@@ -39,7 +39,7 @@ abstract class TestNodeExecution {
     fun crashRemained() {
         for (i in results.indices) {
             if (results[i] == null) {
-                results[i] = CrashResult
+                results[i] = NoResult
             }
         }
         actorId = results.size + 1
