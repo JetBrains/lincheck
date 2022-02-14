@@ -139,7 +139,7 @@ class NodeEnvironment<Message> internal constructor(
                 }
                 setupTimeout<T?, T?>(timeoutCoroutine, block, handle)
             }
-        } catch (e: TimeoutCancellationException) {
+        } catch (e: TimeoutExceededException) {
             // Return null if it's our exception, otherwise propagate it upstream (e.g. in case of nested withTimeouts)
             if (e.coroutine === coroutine) {
                 return null
@@ -244,12 +244,12 @@ internal class TimeoutCoroutine<U, in T : U>(
     uCont: Continuation<U> // unintercepted continuation
 ) : ScopeCoroutine<T>(uCont.context, uCont), Runnable {
     override fun run() {
-        cancelCoroutine(TimeoutCancellationException(time.toLong(), this))
+        cancelCoroutine(TimeoutExceededException(this))
     }
 }
 
 class TimeoutExceededException(@JvmField internal val coroutine: Job?) : Exception() {
     override fun fillInStackTrace(): Throwable {
-        return super.fillInStackTrace()
+        return this
     }
 }
