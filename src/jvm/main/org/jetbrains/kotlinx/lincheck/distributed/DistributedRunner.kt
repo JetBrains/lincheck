@@ -47,10 +47,6 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     testClass: Class<*>,
     validationFunctions: List<Method>
 ) : Runner<S>(strategy, testClass, validationFunctions, null) {
-    companion object {
-        const val TASK_LIMIT = 10_000
-    }
-
     /**
      * Total number of nodes.
      */
@@ -90,12 +86,6 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Signals when the execution is over.
      */
     private val completionCondition = CompletionCondition(testCfg.timeoutMs)
-
-    /**
-     *
-     */
-    @Volatile
-    private var isTaskLimitExceeded = false
 
     @Volatile
     private var exception: Throwable? = null
@@ -165,7 +155,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
             return UnexpectedExceptionInvocationResult(exception!!)
         }
         // The number of tasks is exceeded.
-        if (isTaskLimitExceeded) {
+        if (taskManager.taskLimitExceeded) {
             return TaskLimitExceededResult
         }
         // The validation function exception.
@@ -197,8 +187,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      */
     fun launchNextTask(): Boolean {
         if (exception != null) return false
-        if (taskManager.taskCount > TASK_LIMIT) {
-            isTaskLimitExceeded = true
+        if (taskManager.taskLimitExceeded) {
             return false
         }
         val next = strategy.next(taskManager) ?: return false

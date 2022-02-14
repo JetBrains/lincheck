@@ -87,6 +87,7 @@ class DistributedOptions<Message>() :
             DistributedCTestConfiguration<Message>>() {
     companion object {
         const val DEFAULT_TIMEOUT_MS: Long = 5000
+        const val TASK_LIMIT = 10_000
     }
 
     private var messageLoss: Boolean = true

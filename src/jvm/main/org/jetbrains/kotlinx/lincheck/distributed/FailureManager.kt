@@ -272,6 +272,9 @@ internal class FailureManagerComponent<Message>(
     }
 }
 
+/**
+ * Failure manager for [NetworkPartitionMode.SINGLE_EDGE] type.
+ */
 internal class FailureManagerSingleEdge<Message>(
     addressResolver: NodeAddressResolver<Message>
 ) : FailureManager<Message>(addressResolver) {
