@@ -71,7 +71,7 @@ internal abstract class DistributedStrategy<Message>(
      * Called before the database of node [iNode] is accessed.
      * Could cause the crash of the node.
      */
-    abstract fun beforeDatabaseAccess(iNode: Int)
+    abstract fun beforeStorageAccess(iNode: Int)
 
     /**
      * Called when the node [iNode] recovers.

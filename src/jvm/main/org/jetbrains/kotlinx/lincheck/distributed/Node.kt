@@ -42,7 +42,7 @@ abstract class NodeWithStorage<Message, Storage>(protected val env: NodeEnvironm
     val storage: Storage
         get() {
             if (_storage == null) _storage = createStorage()
-            env.beforeDatabaseAccess()
+            env.beforeStorageAccess()
             return _storage!!
         }
 

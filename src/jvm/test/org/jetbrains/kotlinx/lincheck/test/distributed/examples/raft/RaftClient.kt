@@ -98,7 +98,7 @@ class RaftTest {
         .actorsPerThread(3)
         .sendCrashNotifications(false)
         .invocationsPerIteration(30_000)
-        .minimizeFailedScenario(false)
+        .minimizeFailedScenario(true)
         .iterations(10)
 
     @Test
@@ -109,6 +109,7 @@ class RaftTest {
             crashMode = FINISH_OR_RECOVER_ON_CRASH,
             networkPartition = COMPONENTS,
             maxUnavailableNodes = { (it + 1) / 2 - 1 })
+        .storeLogsForFailedScenario("raft.txt")
         .check(RaftClient::class.java)
 
     @Test

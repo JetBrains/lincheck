@@ -55,7 +55,7 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit>(
 ) {
     private var callCount = 0
 
-    override fun beforeDatabaseAccess(iNode: Int) {
+    override fun beforeStorageAccess(iNode: Int) {
         TODO("Not yet implemented")
     }
 

@@ -34,10 +34,19 @@ class NodeEnvironment<Message> internal constructor(
     private val strategy: DistributedStrategy<Message>,
     private val taskManager: TaskManager,
 ) {
-    internal fun beforeDatabaseAccess() = strategy.beforeDatabaseAccess(id)
+    /**
+     * Called before accessing storage and can cause node crash.
+     */
+    internal fun beforeStorageAccess() = strategy.beforeStorageAccess(id)
 
+    /**
+     * Stores timer names for this node.
+     */
     private val timers = mutableSetOf<String>()
 
+    /**
+     * Returns the list of ids for the specified node type.
+     */
     inline fun <reified NodeType : Node<Message>> getAddresses(): List<Int> {
         return getAddressesForClass(NodeType::class.java)
     }
@@ -46,10 +55,16 @@ class NodeEnvironment<Message> internal constructor(
     fun getAddressesForClass(cls: Class<out Node<Message>>): List<Int> =
         strategy.testCfg.addressResolver[cls]
 
+    /**
+     * Sends [message] to [receiver].
+     */
     fun send(message: Message, receiver: Int) {
         val e = eventFactory.createMessageEvent(message, id, receiver)
+        // How many times the message will be delivered to receiver (including message loss, duplications or network partitions).
+        // Can cause node crash.
         val rate = strategy.crashOrReturnRate(id, receiver, e.id)
         repeat(rate) {
+            // Add MessageReceiveTask to TaskManager.
             taskManager.addMessageReceiveTask(
                 to = receiver,
                 from = id
@@ -59,11 +74,12 @@ class NodeEnvironment<Message> internal constructor(
                 eventFactory.nodeInstances[receiver].onMessage(message, id)
             }
         }
+        // Can crash if message was sent.
         if (rate > 0) strategy.onMessageSent(id, receiver, e.id)
     }
 
     /**
-     * Sends the specified [message] to all processes (from 0 to [nodes]).
+     * Sends the specified [message] to all nodes (from 0 to [nodes]).
      * If [skipItself] is true, doesn't send the message to itself.
      */
     fun broadcast(message: Message, skipItself: Boolean = true) {
@@ -75,10 +91,15 @@ class NodeEnvironment<Message> internal constructor(
         }
     }
 
+    /**
+     * Sends the [message] to all nodes of the specified node type.
+     * If [skipItself] is true, doesn't send the message to itself.
+     */
     inline fun <reified NodeType : Node<Message>> broadcastToGroup(message: Message, skipItself: Boolean = true) {
         broadcastToGroup(message, NodeType::class.java, skipItself)
     }
 
+    //TODO: make private
     fun broadcastToGroup(message: Message, cls: Class<out Node<Message>>, skipItself: Boolean) {
         for (i in getAddressesForClass(cls)) {
             if (i == id && skipItself) continue
@@ -88,16 +109,23 @@ class NodeEnvironment<Message> internal constructor(
 
     @OptIn(InternalCoroutinesApi::class)
     @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+    /**
+     * Replacement for [kotlinx.coroutines.withTimeout].
+     * Returns the result of [block] or null if the coroutine was resumed because the timeout exceeded.
+     */
     suspend fun <T> withTimeout(ticks: Int, block: suspend CoroutineScope.() -> T): T? {
+        //The logic of implementation is the same as for kotlinx.coroutines.withTimeout
         if (ticks <= 0) return null
         var coroutine: TimeoutCoroutine<T?, T?>? = null
         try {
             return suspendCoroutineUninterceptedOrReturn { uCont ->
                 val timeoutCoroutine = TimeoutCoroutine(ticks, uCont)
                 coroutine = timeoutCoroutine
+                // Add timeout task to resume the coroutine.
                 val task = taskManager.addTimeout(id, ticks) {
                     timeoutCoroutine.run()
                 }
+                // Remove the task if the coroutine was already resumed.
                 val handle = DisposableHandle {
                     taskManager.removeTask(task)
                 }
@@ -112,8 +140,12 @@ class NodeEnvironment<Message> internal constructor(
         }
     }
 
-    suspend fun sleep(ticks: Int) {
+    /**
+     * Replacement of [kotlinx.coroutines.delay].
+     */
+    suspend fun delay(ticks: Int) {
         suspendCancellableCoroutine<Unit> { cont ->
+            // Add timeout task to resume the coroutine.
             taskManager.addTimeout(
                 ticks = ticks,
                 iNode = id
@@ -123,38 +155,50 @@ class NodeEnvironment<Message> internal constructor(
         }
     }
 
+    /**
+     * Single timer tick.
+     */
     private fun timerTick(name: String, ticks: Int, f: () -> Unit) {
-        if (name !in timers) return
+        // Check timer is not removed (internal bug).
+        check(name in timers)
         eventFactory.createTimerTickEvent(name, id)
         f()
+        // Add next tick to task manager.
         taskManager.addTimer(
             ticks = ticks,
-            iNode = id
+            iNode = id,
+            name = name
         ) {
             timerTick(name, ticks, f)
         }
     }
 
     fun setTimer(name: String, ticks: Int, f: () -> Unit) {
+        // Check timer with such name doesn't exist.
         if (name in timers) {
             throw IllegalArgumentException("Timer with name $name already exists")
         }
         eventFactory.createSetTimerEvent(id, name)
         timers.add(name)
+        // Add task to TaskManager.
         taskManager.addTimer(
             ticks = ticks,
-            iNode = id
+            iNode = id,
+            name = name
         ) {
             timerTick(name, ticks, f)
         }
     }
 
     fun cancelTimer(name: String) {
+        // Check timer with such name exists.
         if (name !in timers) {
             throw IllegalArgumentException("Timer with name $name does not exist")
         }
         eventFactory.createCancelTimerEvent(id, name)
         timers.remove(name)
+        // Remove timer task from task manager.
+        taskManager.removeTimer(name, id)
     }
 
     /**

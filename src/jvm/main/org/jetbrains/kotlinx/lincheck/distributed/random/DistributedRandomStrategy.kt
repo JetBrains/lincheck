@@ -81,7 +81,7 @@ internal class DistributedRandomStrategy<Message>(
         tryCrash(sender)
     }
 
-    override fun beforeDatabaseAccess(iNode: Int) {
+    override fun beforeStorageAccess(iNode: Int) {
         if (!DistributedStateHolder.canCrashBeforeAccessingDatabase) return
         tryCrash(iNode)
     }

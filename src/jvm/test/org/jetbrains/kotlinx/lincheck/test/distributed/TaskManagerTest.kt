@@ -20,7 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.test.distributed
 
-import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder
+import org.jetbrains.kotlinx.lincheck.distributed.TaskManager
 import org.junit.Test
 
 
@@ -32,10 +33,12 @@ class TaskManagerTest {
         manager.addActionTask(iNode) {}.also { check(it.id == expectedId) }
 
     private fun addTimer(manager: TaskManager, ticks: Int, iNode: Int, expectedId: Int, expectedTime: Int) =
-        manager.addTimer(iNode = iNode, ticks = ticks) {}.also { check(it.id == expectedId && it.time == expectedTime) }
+        manager.addTimer(iNode = iNode, ticks = ticks, name = "timer") {}
+            .also { check(it.id == expectedId && it.time == expectedTime) }
 
     private fun addTimeout(manager: TaskManager, ticks: Int, iNode: Int, expectedId: Int, expectedTime: Int) =
-        manager.addTimeout(iNode = iNode, ticks = ticks) {}.also { check(it.id == expectedId && it.time == expectedTime) }
+        manager.addTimeout(iNode = iNode, ticks = ticks) {}
+            .also { check(it.id == expectedId && it.time == expectedTime) }
 
     @Test
     fun testFifoMessageOrder() {

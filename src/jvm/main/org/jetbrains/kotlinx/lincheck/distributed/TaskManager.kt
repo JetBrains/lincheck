@@ -74,6 +74,7 @@ sealed class TimeTask : InstantTask() {
 data class PeriodicTimer(
     override val id: Int,
     override val time: Int,
+    val name: String,
     override val iNode: Int,
     override val action: () -> Unit
 ) : TimeTask(), NodeTask
@@ -175,6 +176,13 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
     }
 
     /**
+     * Remove [PeriodicTimer] with name [name] for [iNode].
+     */
+    fun removeTimer(name: String, iNode: Int) {
+        _timeTasks.removeIf { it is PeriodicTimer && it.name == name && it.iNode == iNode }
+    }
+
+    /**
      * Removes [task] and increments the time.
      */
     fun removeTask(task: Task) {
@@ -218,10 +226,11 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
      * Creates [PeriodicTimer].
      * [ticks] is the approximate time before the task should be completed.
      */
-    fun addTimer(iNode: Int, ticks: Int, action: () -> Unit): PeriodicTimer {
+    fun addTimer(iNode: Int, ticks: Int, name: String, action: () -> Unit): PeriodicTimer {
         val task = PeriodicTimer(
             id = _taskId++,
             time = _time + ticks,
+            name = name,
             iNode = iNode,
             action = action
         )
