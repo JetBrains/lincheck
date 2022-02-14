@@ -173,6 +173,10 @@ class NodeEnvironment<Message> internal constructor(
         }
     }
 
+    /**
+     * Sets periodic timer with name [name], function [f] to be executed each time and approximate number of [ticks] between two executions.
+     * @throws [IllegalArgumentException] if timer with such name already exists.
+     */
     fun setTimer(name: String, ticks: Int, f: () -> Unit) {
         // Check timer with such name doesn't exist.
         if (name in timers) {
@@ -190,6 +194,10 @@ class NodeEnvironment<Message> internal constructor(
         }
     }
 
+    /**
+     * Removes periodic timer with name [name].
+     * @throws [IllegalArgumentException] if timer with such name doesn't exist.
+     */
     fun cancelTimer(name: String) {
         // Check timer with such name exists.
         if (name !in timers) {

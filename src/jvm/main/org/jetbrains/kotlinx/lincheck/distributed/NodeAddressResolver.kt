@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.SINGLE_EDGE
+
 private data class CrashInfoForType(
     val crashMode: CrashMode,
     val partitionMode: NetworkPartitionMode,
@@ -42,23 +44,24 @@ class NodeAddressResolver<Message>(
     private val crashes = mutableMapOf<Class<out Node<Message>>, CrashInfoForType>()
 
     init {
-        repeat(scenarioSize) { nodes.add(testClass) }
-        repeat(nodeTypes[testClass]!!.nodes - scenarioSize) {
+        // Nodes with scenario goes first.
+        repeat(nodeTypes[testClass]!!.nodes) {
             nodes.add(testClass)
         }
+        // Add other node types.
         for ((cls, info) in nodeTypes) {
             if (cls == testClass) continue
             else repeat(info.nodes) { nodes.add(cls) }
         }
+        // Store range for each class.
         nodeTypeToRange = nodes.mapIndexed { i, cls -> cls to i }.groupBy({ it.first }, { it.second })
-        if (nodeTypeToRange.size > 1 && nodeTypes.values.any { it.networkPartition == NetworkPartitionMode.SINGLE_EDGE }) {
+        // Check if configuration is correct (cannot use SINGLE_EDGE with multiple node types).
+        if (nodeTypeToRange.size > 1 && nodeTypes.values.any { it.networkPartition == SINGLE_EDGE }) {
             throw IllegalArgumentException("Cannot use this type of network partition with multiple types of nodes. Use 'isNetworkReliable' parameter for message loss instead.")
         }
+        // Store crash info for each type.
         nodeTypes.forEach { (cls, info) ->
             crashes[cls] = CrashInfoForType(info.crashType, info.networkPartition, info.maxNumberOfCrashes)
-        }
-        if (testClass !in crashes) {
-            crashes[testClass] = CrashInfoForType(CrashMode.NO_CRASH, NetworkPartitionMode.NONE, 0)
         }
     }
 
@@ -111,5 +114,5 @@ class NodeAddressResolver<Message>(
      * If the partition type is [NetworkPartitionMode.SINGLE_EDGE] (it is possible if there is only one type of node).
      */
     val singlePartitionType =
-        nodeTypes.size == 1 && crashes.all { it.value.partitionMode == NetworkPartitionMode.SINGLE_EDGE }
+        nodeTypes.size == 1 && crashes.all { it.value.partitionMode == SINGLE_EDGE }
 }
