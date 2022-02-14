@@ -23,6 +23,14 @@ package org.jetbrains.kotlinx.lincheck.distributed
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
+import kotlinx.coroutines.internal.*
+import kotlinx.coroutines.internal.resumeCancellableWith
+import kotlinx.coroutines.intrinsics.*
+import java.lang.Runnable
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.intrinsics.intercepted
+
 
 /**
  * Implementation of the environment.
@@ -215,5 +223,33 @@ class NodeEnvironment<Message> internal constructor(
      */
     fun recordInternalEvent(attachment: Any) {
         eventFactory.createInternalEvent(attachment, id)
+    }
+}
+
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+internal fun <U, T : U> setupTimeout(
+    coroutine: TimeoutCoroutine<U, T>,
+    block: suspend CoroutineScope.() -> T,
+    handle: DisposableHandle
+): Any? {
+    coroutine.disposeOnCompletion(handle)
+    // restart the block using a new coroutine with a new job,
+    // however, start it undispatched, because we already are in the proper context
+    return coroutine.startUndispatchedOrReturnIgnoreTimeout(coroutine, block)
+}
+
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+internal class TimeoutCoroutine<U, in T : U>(
+    @JvmField val time: Int,
+    uCont: Continuation<U> // unintercepted continuation
+) : ScopeCoroutine<T>(uCont.context, uCont), Runnable {
+    override fun run() {
+        cancelCoroutine(TimeoutCancellationException(time.toLong(), this))
+    }
+}
+
+class TimeoutExceededException(@JvmField internal val coroutine: Job?) : Exception() {
+    override fun fillInStackTrace(): Throwable {
+        return super.fillInStackTrace()
     }
 }

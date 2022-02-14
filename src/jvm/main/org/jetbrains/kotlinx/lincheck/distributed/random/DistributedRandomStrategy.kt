@@ -50,7 +50,7 @@ internal class DistributedRandomStrategy<Message>(
     stateRepresentationFunction,
     verifier
 ) {
-    private val probability = ProbabilityModel(testCfg)
+    private var probability = ProbabilityModel(testCfg)
     private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions)
 
     init {

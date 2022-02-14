@@ -109,7 +109,6 @@ class RaftTest {
             crashMode = FINISH_OR_RECOVER_ON_CRASH,
             networkPartition = COMPONENTS,
             maxUnavailableNodes = { (it + 1) / 2 - 1 })
-        .storeLogsForFailedScenario("raft.txt")
         .check(RaftClient::class.java)
 
     @Test

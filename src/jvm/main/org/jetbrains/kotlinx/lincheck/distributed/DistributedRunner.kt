@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
-import kotlinx.atomicfu.locks.ReentrantLock
-import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
@@ -36,6 +34,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.withEmptyClock
 import org.jetbrains.kotlinx.lincheck.runner.*
 import java.lang.reflect.Method
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 /**
@@ -85,7 +84,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     /**
      * Signals when the execution is over.
      */
-    private val completionCondition = CompletionCondition(testCfg.timeoutMs)
+    private val completionCondition = Semaphore(1)
 
     @Volatile
     private var exception: Throwable? = null
@@ -106,7 +105,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Resets the runner to the initial state before next invocation.
      */
     private fun reset() {
-        completionCondition.reset()
+        completionCondition.tryAcquire()
         // Create new instances.
         eventFactory = EventFactory(testCfg)
         taskManager = TaskManager(testCfg.messageOrder)
@@ -143,7 +142,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         addInitialTasks()
         launchNextTask()
         // Wait until the execution is over or time limit is exceeded.
-        val finishedOnTime = completionCondition.await()
+        val finishedOnTime = completionCondition.tryAcquire(testCfg.timeoutMs, TimeUnit.MILLISECONDS)
         DistributedStateHolder.canCrashBeforeAccessingDatabase = false
         // The execution didn't finish within the [org.jetbrains.kotlinx.lincheck.Options.timeoutMs]
         if (!finishedOnTime) {
@@ -199,7 +198,6 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Executes the [task].
      */
     private fun executeTask(task: Task) {
-        //TODO: don't know how to remove code duplication
         when (task) {
             // If the task is suspending, the new coroutine is launched using executor as dispatcher.
             is SuspendedTask -> GlobalScope.launch(executor.asCoroutineDispatcher()) {
@@ -246,7 +244,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     /**
      * Signals that the execution is over.
      */
-    fun signal() = completionCondition.signal()
+    fun signal() = completionCondition.release()
 
     /**
      * Add initial tasks to task manager.
@@ -406,50 +404,6 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
                 crashNotification(firstNode, secondNode)
                 crashNotification(secondNode, firstNode)
             }
-        }
-    }
-
-    /**
-     * Wrapper around [java.util.concurrent.locks.Condition] to wait until the signal is called or [timeoutMs] is exceeded.
-     */
-    private class CompletionCondition(private val timeoutMs: Long) {
-        private val lock = ReentrantLock()
-        private val completionCondition = lock.newCondition()
-        private var completed = false
-
-        /**
-         * Awaits until the execution is over or [timeoutMs] is exceeded.
-         * Returns false if timeout was exceeded.
-         */
-        fun await(): Boolean {
-            // Time when timeout exceeds.
-            val timeoutExceededTime = System.currentTimeMillis() + timeoutMs
-            lock.withLock {
-                // Helps to overcome spurious wakeups and situation when signal is called before await.
-                while (!completed) {
-                    val timeout = timeoutExceededTime - System.currentTimeMillis()
-                    // Timeout is exceeded.
-                    if (timeout <= 0) return false
-                    // Await remaining timeout.
-                    completionCondition.await(timeout, TimeUnit.MILLISECONDS)
-                }
-            }
-            return true
-        }
-
-        /**
-         * Signals that the execution is over.
-         */
-        fun signal() = lock.withLock {
-            completed = true
-            completionCondition.signal()
-        }
-
-        /**
-         * Sets [completed] to false for a new invocation.
-         */
-        fun reset() {
-            completed = false
         }
     }
 }
