@@ -1,10 +1,12 @@
-## Check the algorithm for progress guarantees
+[//]: # (title: Progress guarantees)
 
-An algorithm without explicit synchronization may still be blocking and checking for liveness bugs is a non-trivial task.
+An algorithm without explicit synchronization may still be blocking, and checking for liveness bugs is a non-trivial task.
+Lincheck can help you check your algorithm for liveness bugs using model checking.
 
-Consider a simple example: you have some data, with non-atomic reads and writes.
-One thread is updating the current data calling `data.write(newData)` and several threads are calling `data.read()`.
-To make reads and writes atomic without using locks, we use versions of the data and get the following algorithm:
+Consider an example when you have some data with non-atomic reads and writes. One thread is updating the current data
+calling `data.write(newData)` and several threads are calling `data.read()`.
+
+To make reads and writes atomic without using locks, you can use versions of the data and get the following algorithm:
 
 ```kotlin
 class DataHolder {
@@ -34,11 +36,15 @@ class DataHolder {
 }
 ```
 
-Let's check if this algorithm is actually non-blocking:
+Check if this algorithm is non-blocking:
 
-1. To check progress guarantees of the algorithm set the `checkObstructionFreedom` option in `ModelCheckingOptions()`:
-   `ModelCheckingOptions().checkObstructionFreedom(true)`.
-2. Also note that according to the contract there is only one writer, so add `write(first, second)` operation to the non-parallel 
+1. To check progress guarantees of the algorithm, set the `checkObstructionFreedom` option in `ModelCheckingOptions()`:
+
+   ```kotlin
+   `ModelCheckingOptions().checkObstructionFreedom(true)`
+   ```
+   
+2. Also note that according to the contract, there is only one writer, so add `write(first, second)` operation to the non-parallel 
    operations group.
 
 Here is the resulting test:
@@ -87,25 +93,27 @@ Parallel part trace:
 |                                                                |     version.READ: 1 at DataHolder.read(DataHolderTest.kt:44)    |
 ```
 
-Model checking found the following blocking interleaving:  
-**T1:** The 1st thread (the writer) incremented the version and before writing the new values switched it's execution to the 2nd thread.    
-**T2:** The 2nd thread (the reader) read the `version == 1` and started to spin in a loop waiting for the concurrently running update of the values to complete.  
+Model checking found the following blocking interleaving:
 
-If the 1st thread halts the 2nd thread will stay in an active loop with no progress, thus the blocking state was detected.
+1. **T1:** The first thread (the writer) increments the version and switches its execution to the second thread before writing new values.    
+2. **T2:** The second thread (the reader) reads the `version == 1` and starts to spin in a loop, waiting for the concurrently running update of the values to complete.
+
+If the first thread halts, the second thread will stay in an active loop with no progress. Thus, the blocking state was detected.
 
 The common progress guarantees of non-blocking algorithms are (in the order of weakening):
-- _wait-freedom_: operation may be completed in a bounded number of steps no matter what other processes do
-- _lock-freedom_: some process always makes progress, while a concrete operation may be stuck
-- _obstruction-freedom_: any operation may be completed in a bounded number of steps if all the other processes stop
 
-For now, `Lincheck` may only test the algorithm for obstruction-freedom violation. However, as most of the practical liveness bugs
+* _wait-freedom_ – operation may be completed in a bounded number of steps no matter what other processes do
+* _lock-freedom_ – some process always makes progress, while a concrete operation may be stuck
+* _obstruction-freedom_ – any operation may be completed in a bounded number of steps if all the other processes stop
+
+For now, Lincheck may only test the algorithm for obstruction-freedom violation. However, as most of the practical liveness bugs
 add an unexpected blocking code, obstruction-freedom check is very useful.
 
-## To sum up
+> Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/DataHolderTest.kt).
+>
+{type="note"}
 
-In this section you have learnt how you can check your algorithm for liveness bugs using model checking.
+## What's next
 
-> Get the full code of the example [here](../src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/DataHolderTest.kt).
-
-By this moment you have learnt about different testing strategies, their applications and various ways to configure a test.
-In [the next section](verification.md) we will cover some tips on the `Lincheck` verification stage.
+Learn how Lincheck [verifies execution results](verification.md) for correctness, how to check the sequential
+behavior of the algorithm and make verification faster.

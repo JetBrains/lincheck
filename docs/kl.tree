@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE product-profile
+        SYSTEM "https://resources.jetbrains.com/stardust/product-profile.dtd">
+
+<product-profile id="kl"
+                 name="kotlinx-lincheck"
+                 start-page="lincheck-guide.md">
+
+    <chunk include-id="lincheck">
+        <toc-element id="lincheck-guide.md"/>
+        <toc-element id="introduction.md"/>
+        <toc-element id="testing-strategies.md" toc-title="Testing strategies"/>
+        <toc-element id="parameter-generation.md"/>
+        <toc-element id="modular-testing.md"/>
+        <toc-element id="constraints.md"/>
+        <toc-element id="progress-guarantees.md"/>
+        <toc-element id="verification.md"/>
+        <toc-element id="blocking-data-structures.md"/>
+    </chunk>
+</product-profile>
