@@ -1,0 +1,170 @@
+[//]: # (title: Result verification)
+
+When the scenario is executed, the outcome should be verified relative to the specified correctness contract. By
+default, Lincheck checks the results for _linearizability_, the standard correctness property for thread-safety.
+
+To check if the results satisfy linearizability, Lincheck tries to explain them with some sequential execution, which
+doesn't reorder operations in threads and doesn't violate the previous order constructed during the execution.
+
+Lincheck defines the sequential semantics using building a transition graph: the states represent the data structure
+states, and the transitions are labeled with operations and the corresponding results. According to the sequential
+semantics, a sequence of operations application is valid  
+if there's a finite path of the transitions labeled by these operations in this graph.
+
+For example, consider checking if the results of one of the possible executions of the stack are linearizable. On the
+left of the scheme, you can see the execution results, and on the right, there is the transition graph built by Lincheck
+to explain those results. Here are the steps of verification:
+
+1. **T2:** Apply `push(2)` from the second thread to the empty stack (the initial state).
+2. **T2:** Try to complete the second thread, but the following `pop()` invocation returns the previously pushed `2`
+   instead of `1` from the results.
+3. **T1:** Switch to the first thread and apply `push(1)`.
+4. **T2:** Switch back to the second thread and execute `pop()`, which now returns `1` as expected.
+
+![Stress execution of the Counter](stack_lts.png){width=700}
+
+This way, Lincheck successfully found a sequential history that produces the given results, showing that they are
+correct. At the same time, if none of the explored sequential histories explains the given result, Lincheck reports an
+error.
+
+### Sequential specification
+
+During verification, you sequentially apply operations of the tested algorithm by default.
+
+To be sure that the algorithm provides correct sequential behavior, you can define its _sequential specification_
+by writing a simple sequential implementation of the algorithm.
+
+> This also allows writing a single test instead of writing sequential and concurrent tests separately.
+>
+{type="tip"}
+
+To provide a sequential specification of the algorithm for verification:
+
+1. Implement a sequential version of all the testing methods.
+2. Pass the class with sequential implementation to the `sequentialSpecification` option:
+   `StressOptions().sequentialSpecification(SequentialStack::class)`.
+
+For example, provide a sequential specification for the stack:
+
+```kotlin
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.junit.Test
+
+//sampleStart
+class StackTest {
+    private val s = Stack<Int>()
+
+    @Operation
+    fun push(value: Int) = s.push(value)
+
+    @Operation
+    fun pop() = s.pop()
+
+    @Operation
+    fun size() = s.size
+
+    // sequential implementation
+    class SequentialStack {
+        val s = LinkedList<Int>()
+
+        fun push(x: Int) = s.push(x)
+        fun pop() = s.pop()
+        fun size() = s.size
+    }
+
+    @Test
+    fun stressTest() = StressOptions()
+        .sequentialSpecification(SequentialStack::class.java)
+        .check(this::class)
+}
+//sampleEnd
+```
+
+### State equivalency
+
+Before the output of every test, you can see advice to specify the state equivalence relation on your sequential
+specification to make the verification faster.
+
+To make verification faster, Lincheck builds a transition graph, invoking operations of the provided sequential
+implementation, and several transition sequences may lead to the same state. For example, applying `pop()` after the
+first `push(2)` leads back to the initial state.
+
+So if you define the equivalency relation between the states of a data structure by implementing `equals()`
+and `hashCode()` methods on the test class, the number of states in the transition graph will decrease, which will speed
+up verification.
+
+Lincheck provides the following way to do that:
+
+1. Make the test class extend `VerifierState`.
+2. Override `extractState()` function: it should define the state of a data structure
+
+> `extractState()` is called once and can modify the data structure.
+>
+{type="note"}
+
+`extractState()` for the stack looks like this:
+
+```kotlin
+class StackTest : VerifierState() {
+    private val s = Stack<Int>()
+
+    //...
+    override fun extractState(): List<Int> {
+        val elements = mutableListOf<Int>()
+        while (s.size != 0) {
+            elements.add(s.pop())
+        }
+        return elements
+    }
+}
+```
+
+### Handling exception as a result
+
+Your implementation may throw an exception according to the contract. You can define potentially thrown exceptions as
+legal results via listing them in the `handleExceptionsAsResult` option of the `@Operation` annotation over the
+corresponding operation.
+
+For example `pop()` operation on the stack may throw `NoSuchElementException`. Define this exception as a legal result
+of `pop()` invocation the following way:
+
+```kotlin
+@Operation(handleExceptionsAsResult = [NoSuchElementException::class])
+fun pop() = s.pop()
+```
+
+### Validation of invariants
+
+It's also possible to validate the data structure invariants, implemented with functions that can be executed multiple
+times during execution when there is no running operation in an intermediate state. For example, they are invoked in the
+stress mode at the beginning and end of the parallel execution).
+
+Validation functions are marked with a special `@Validate` annotation, have no argument, and do not return anything. In
+case the testing data structure is in an invalid state, they should throw an exception.
+
+Consider, for example, the part of the test for a linked list, which supports concurrent removals. A typical invariant
+is that "removed nodes should not be reachable when all the operations are completed". The validation
+function `checkNoRemovedNodes` checks this invariant, throwing an exception if violated.
+
+```kotlin
+class MyLockFreeListTest {
+    private val list = MyLockFreeList<Int>()
+
+    @Validate
+    fun checkNoRemovedNodesInTheList() = check(!list.hasRemovedNodes()) {
+        "The list contains logically removed nodes while all the operations are completed: $list"
+    }
+    //...
+}
+```
+
+> Get the full code of the examples [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/StackTest.kt).
+>
+{type="note"}
+
+## What's next
+
+Learn how to use Lincheck for testing [blocking data structures](blocking-data-structures.md) implemented with suspending
+functions in Kotlin.
