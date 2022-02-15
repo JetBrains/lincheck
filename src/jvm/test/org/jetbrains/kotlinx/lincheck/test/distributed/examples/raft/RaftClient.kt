@@ -84,7 +84,7 @@ class RaftClient(private val env: NodeEnvironment<RaftMessage>) : Node<RaftMessa
         executeOperation { PutCommand(CommandId(client = env.id, opId = opId), key, value) }
 }
 
-class RaftSpecification() : VerifierState() {
+class RaftSpecification : VerifierState() {
     private val storage = mutableMapOf<String, String>()
     suspend fun get(key: String) = storage[key]
     suspend fun put(key: String, value: String) = storage.put(key, value)

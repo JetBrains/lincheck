@@ -34,8 +34,6 @@ internal interface EventFormatter {
     fun storeEventsToFile(failure: LincheckFailure, events: List<Event>, filename: String?) {
         if (filename == null) return
         File(filename).printWriter().use { out ->
-            out.println(failure)
-            out.println()
             val list = format(events)
             list.take(2000).forEach {
                 out.println(it)

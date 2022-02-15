@@ -129,24 +129,25 @@ internal class DistributedRandomStrategy<Message>(
                         }
                         if (!verifyResult) {
                             return IncorrectResultsFailure(
-                                scenario,
-                                ir.results
+                                scenario = scenario,
+                                results = ir.results,
+                                logFilename = testCfg.logFilename
                             ).also {
                                 testCfg.getFormatter().storeEventsToFile(
                                     failure = it,
                                     filename = testCfg.logFilename,
                                     //TODO: better way to get events
-                                    events =  runner.events
+                                    events = runner.events
                                 )
                             }
                         }
                     }
                     else -> {
-                        return ir.toLincheckFailure(scenario).also {
+                        return ir.toLincheckFailure(scenario, logFilename = testCfg.logFilename).also {
                             testCfg.getFormatter().storeEventsToFile(
                                 failure = it,
                                 filename = testCfg.logFilename,
-                                events =  runner.events
+                                events = runner.events
                             )
                         }
                     }

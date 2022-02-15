@@ -22,13 +22,17 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
-import org.jetbrains.kotlinx.lincheck.distributed.Timeout
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.LoggingLevel.INFO
+import org.jetbrains.kotlinx.lincheck.LoggingLevel.WARN
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import java.io.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.appendTrace
+import java.io.PrintStream
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.nio.file.Path
 
 class Reporter constructor(val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -180,6 +184,15 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
             append("All threads are in deadlock")
         }
     }
+    if (failure.logFilename != null) {
+        appendPath(failure.logFilename)
+    }
+    return this
+}
+
+private fun StringBuilder.appendPath(logFilename: String): StringBuilder {
+    val path = Path.of(logFilename).toAbsolutePath()
+    appendLine("\n\nSee full log at: $path")
     return this
 }
 
