@@ -103,7 +103,7 @@ internal class DistributedRandomStrategy<Message>(
         var tasksToProcess: List<Task>
         do {
             tasksToProcess =
-                timeTasks.filter { time > it.time || probability.poissonProbability(it.time - time) } + tasks
+                timeTasks.filter { it.time < time || probability.geometricProbability(it.time - time) } + tasks
         } while (tasksToProcess.isEmpty())
         val task = tasksToProcess.random(probability.rand)
         taskManager.removeTask(task)

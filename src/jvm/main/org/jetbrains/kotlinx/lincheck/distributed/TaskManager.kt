@@ -20,6 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed
 
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.ASYNCHRONOUS
+import org.jetbrains.kotlinx.lincheck.distributed.MessageOrder.FIFO
+import java.util.*
+
 /**
  * Task which belongs to specified [iNode].
  */
@@ -117,38 +121,89 @@ data class SuspendedTask(
     val action: suspend () -> Unit
 ) : Task(), NodeTask
 
+private interface TaskStorage {
+    val available: List<Task>
+
+    fun add(task: Task)
+
+    fun remove(task: Task)
+
+    fun removeAll(iNode: Int)
+
+    fun isEmpty() = available.isEmpty()
+}
+
+private class FifoStorage(val nodeCount: Int) : TaskStorage {
+    override val available = mutableListOf<Task>()
+    private val pendingMessages = Array(nodeCount * nodeCount) { LinkedList<MessageReceiveTask>() }
+
+    override fun add(task: Task) {
+        if (task !is MessageReceiveTask) {
+            available.add(task)
+            return
+        }
+        val id = task.iNode * nodeCount + task.from
+        if (pendingMessages[id].isEmpty()) {
+            available.add(task)
+        }
+        pendingMessages[id].add(task)
+    }
+
+    override fun remove(task: Task) {
+        available.remove(task)
+        if (task !is MessageReceiveTask) return
+        val id = task.iNode * nodeCount + task.from
+        pendingMessages[id].remove()
+        val next = pendingMessages[id].peek() ?: return
+        available.add(next)
+    }
+
+    override fun removeAll(iNode: Int) {
+        repeat(nodeCount) {
+            pendingMessages[iNode * nodeCount + it].clear()
+        }
+        available.removeAll { it is NodeTask && it.iNode == iNode }
+    }
+}
+
+private class AsynchronousStorage : TaskStorage {
+    override val available = mutableListOf<Task>()
+
+    override fun add(task: Task) {
+        available.add(task)
+    }
+
+    override fun remove(task: Task) {
+        available.remove(task)
+    }
+
+    override fun removeAll(iNode: Int) {
+        available.removeAll { it is NodeTask && it.iNode == iNode }
+    }
+}
+
 /**
  * Stores the tasks which arise during the execution and the logical time.
  * The time is incremented when the task is taken for execution. If there are only time tasks left,
  * the time is set to the minimum time of the time tasks.
  */
-internal class TaskManager(private val messageOrder: MessageOrder) {
+internal class TaskManager(messageOrder: MessageOrder, nodeCount: Int) {
     private var _taskId: Int = 0
     private var _time: Int = 0
-    private val _tasks = mutableListOf<Task>()
+    private val _tasks: TaskStorage = when (messageOrder) {
+        FIFO -> FifoStorage(nodeCount)
+        ASYNCHRONOUS -> AsynchronousStorage()
+    }
     private val _timeTasks = mutableListOf<TimeTask>()
 
     val taskLimitExceeded: Boolean
         get() = DistributedOptions.TASK_LIMIT < _taskId
 
     /**
-     * Returns the list of [MessageReceiveTask] which can be executed next according to FIFO order.
-     */
-    private fun nextMessagesForFifoOrder(): List<Task> {
-        val senderReceiverPairs = mutableSetOf<Pair<Int, Int>>()
-        return _tasks.filterIsInstance<MessageReceiveTask>().filter { senderReceiverPairs.add(it.iNode to it.from) }
-    }
-
-    /**
      * Returns the list of tasks which can be executed next. Doesn't include time tasks.
      */
     val tasks: List<Task>
-        get() = when (messageOrder) {
-            MessageOrder.ASYNCHRONOUS -> _tasks
-            MessageOrder.FIFO -> {
-                _tasks.filter { it !is MessageReceiveTask } + nextMessagesForFifoOrder()
-            }
-        }
+        get() = _tasks.available
 
     /**
      * Returns the list of time tasks.
@@ -171,7 +226,7 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
      * Removes all tasks for [iNode] after crash.
      */
     fun removeAllForNode(iNode: Int) {
-        _tasks.removeAll { it is NodeTask && it.iNode == iNode }
+        _tasks.removeAll(iNode)
         _timeTasks.removeAll { it is NodeTask && it.iNode == iNode }
     }
 
@@ -179,7 +234,7 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
      * Remove [PeriodicTimer] with name [name] for [iNode].
      */
     fun removeTimer(name: String, iNode: Int) {
-        _timeTasks.removeIf { it is PeriodicTimer && it.name == name && it.iNode == iNode }
+        _timeTasks.removeAll { it is PeriodicTimer && it.name == name && it.iNode == iNode }
     }
 
     /**
@@ -187,10 +242,11 @@ internal class TaskManager(private val messageOrder: MessageOrder) {
      */
     fun removeTask(task: Task) {
         _time++
-        if (task is TimeTask) {
-            _timeTasks.remove(task)
-        } else {
-            _tasks.remove(task)
+        when (task) {
+            is TimeTask -> _timeTasks.remove(task)
+            else -> {
+                _tasks.remove(task)
+            }
         }
     }
 

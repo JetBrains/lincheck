@@ -42,19 +42,19 @@ class TaskManagerTest {
 
     @Test
     fun testFifoMessageOrder() {
-        val manager = TaskManager(MessageOrder.FIFO)
+        val manager = TaskManager(MessageOrder.FIFO, 3)
         val operation = addActionTask(manager, 0, 0)
         val message1 = addMessageTask(manager, 0, 1, 1)
         val message2 = addMessageTask(manager, 0, 1, 2)
         val message3 = addMessageTask(manager, 0, 0, 3)
         check(manager.tasks == listOf(operation, message1, message3))
         manager.removeTask(message1)
-        check(manager.tasks == listOf(operation, message2, message3))
+        check(manager.tasks == listOf(operation, message3, message2))
     }
 
     @Test
     fun testAsynchronousOrder() {
-        val manager = TaskManager(MessageOrder.ASYNCHRONOUS)
+        val manager = TaskManager(MessageOrder.ASYNCHRONOUS, 2)
         val operation = addActionTask(manager, 0, 0)
         val message1 = addMessageTask(manager, 0, 1, 1)
         val message2 = addMessageTask(manager, 0, 1, 2)
@@ -64,7 +64,7 @@ class TaskManagerTest {
 
     @Test
     fun testTimeTasks() {
-        val manager = TaskManager(MessageOrder.FIFO)
+        val manager = TaskManager(MessageOrder.FIFO, 4)
         val timer = addTimer(manager, ticks = 10, iNode = 1, expectedId = 0, expectedTime = 10)
         val operation = addActionTask(manager, iNode = 2, expectedId = 1)
         check(manager.timeTasks == listOf(timer))
@@ -77,7 +77,7 @@ class TaskManagerTest {
 
     @Test
     fun testTime() {
-        val manager = TaskManager(MessageOrder.FIFO)
+        val manager = TaskManager(MessageOrder.FIFO, 3)
         val operation = addActionTask(manager, iNode = 1, expectedId = 0)
         val timer = addTimer(manager, iNode = 1, ticks = 10, expectedId = 1, expectedTime = 10)
         addTimer(manager, iNode = 0, ticks = 20, expectedId = 2, expectedTime = 20)

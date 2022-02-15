@@ -36,7 +36,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import java.lang.reflect.Method
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-
 /**
  * Executes the distributed algorithms.
  */
@@ -108,7 +107,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         completionCondition.tryAcquire()
         // Create new instances.
         eventFactory = EventFactory(testCfg)
-        taskManager = TaskManager(testCfg.messageOrder)
+        taskManager = TaskManager(testCfg.messageOrder, nodeCount)
         environments = Array(nodeCount) {
             NodeEnvironment(
                 it,

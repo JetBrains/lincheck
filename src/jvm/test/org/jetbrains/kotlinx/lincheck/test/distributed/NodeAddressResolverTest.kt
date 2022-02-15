@@ -48,27 +48,6 @@ class NodeAddressResolverTest {
     }
 
     @Test
-    fun testIdToClass() {
-        val nodeInfo = mapOf(
-            BClass::class.java to NodeTypeInfo(4, 4, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 },
-            CClass::class.java to NodeTypeInfo(5, 5, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 }
-        )
-        val addressResolver = NodeAddressResolver(
-            AClass::class.java,
-            3,
-            nodeInfo
-        )
-        repeat(3) { check(addressResolver[it] == AClass::class.java) }
-        repeat(4) { check(addressResolver[it + 3] == BClass::class.java) }
-        repeat(5) { check(addressResolver[it + 7] == CClass::class.java) }
-        check(addressResolver[AClass::class.java] == listOf(0, 1, 2))
-        check(addressResolver[BClass::class.java] == listOf(3, 4, 5, 6))
-        check(addressResolver[CClass::class.java] == listOf(7, 8, 9, 10, 11))
-        check(addressResolver.nodeCount == 12)
-        check(addressResolver.scenarioSize == 3)
-    }
-
-    @Test
     fun testIdToClassWithTestClassInfo() {
         val nodeInfo = mapOf(
             AClass::class.java to NodeTypeInfo(4, 5, CrashMode.NO_CRASH, NetworkPartitionMode.NONE) { 0 },

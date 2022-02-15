@@ -113,7 +113,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
     }
 
     fun createNodeCrashEvent(iNode: Int) = safeDatabaseAccess {
-        _events.add(NodeCrashEvent(iNode, vectorClocks[iNode].copy(), nodeInstances[iNode].stateRepresentation()))
+        _events.add(NodeCrashEvent(iNode, vectorClocks[iNode].copy(), ""/*nodeInstances[iNode].stateRepresentation()*/))
     }
 
     fun createScenarioFinishEvent(iNode: Int) = safeDatabaseAccess {

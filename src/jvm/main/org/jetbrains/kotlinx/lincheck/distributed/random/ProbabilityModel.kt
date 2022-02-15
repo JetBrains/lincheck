@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
-import org.apache.commons.math3.distribution.PoissonDistribution
+import org.apache.commons.math3.distribution.GeometricDistribution
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import kotlin.math.max
@@ -31,7 +31,7 @@ import kotlin.random.Random
  */
 internal class ProbabilityModel(private val testCfg: DistributedCTestConfiguration<*>) {
     companion object {
-        private const val MEAN_POISSON_DISTRIBUTION = 0.1
+        private const val MEAN_GEOMETRIC_DISTRIBUTION = 0.9
         private const val MESSAGE_SENT_PROBABILITY = 0.95
         private const val MESSAGE_DUPLICATION_PROBABILITY = 0.1
         private const val NODE_RECOVERY_PROBABILITY = 0.7
@@ -48,7 +48,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     private val partitionExpectation: Int = networkPartitionExpectation.get()
 
     val rand = Random(0)
-    private val poissonDistribution = PoissonDistribution(MEAN_POISSON_DISTRIBUTION)
+    private val geometricDistribution = GeometricDistribution(MEAN_GEOMETRIC_DISTRIBUTION)
 
     private var nextNumberOfCrashes = 0
     private val nodeCount: Int = testCfg.addressResolver.nodeCount
@@ -74,7 +74,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
      * It used in [DistributedRandomStrategy][DistributedRandomStrategy] to decide which [time tasks][org.jetbrains.kotlinx.lincheck.distributed.TimeTask]
      * will be considered to be chosen for the next iteration.
      */
-    fun poissonProbability(x: Int) = poissonDistribution.probability(x) >= rand.nextDouble(1.0)
+    fun geometricProbability(x: Int) = geometricDistribution.probability(x) >= rand.nextDouble(1.0)
 
     /**
      * Returns if the message should be sent.

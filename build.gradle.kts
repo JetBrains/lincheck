@@ -101,7 +101,9 @@ tasks {
         maxParallelForks = 1
         jvmArgs(
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED"
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
+            "-Dkotlinx.coroutines.stacktrace.recovery=off",
+            "-Dkotlinx.coroutines.debug=off"
         )
     }
 
