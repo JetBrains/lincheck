@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.random.ProbabilityModel
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -125,7 +124,6 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             val failure = tryMinimize(threads + 1, j, testCfg)
             if (failure != null) return failure
         }
-
         return null
     }
 
@@ -147,29 +145,48 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         } else null
     }
 
-    private fun LincheckFailure.minimizeDistributedFailure(testCfg: DistributedCTestConfiguration<*>): LincheckFailure {
-        val queue = LinkedList(testCfg.nextConfigurations())
-        var res = this
-        while (queue.size != 0) {
-            val nextTestCfg = queue.poll()
-            val newFailedIteration = res.scenario.tryMinimize(nextTestCfg)
-            if (newFailedIteration != null) {
-                res = newFailedIteration
-                queue.addAll(nextTestCfg.nextConfigurations())
+    private fun LincheckFailure.minimizeDistributedFailure(
+        distributedTestCfg: DistributedCTestConfiguration<*>
+    ): LincheckFailure {
+        var minimizedFailure = this
+        var testCfg = distributedTestCfg
+        var minimizedOnIteration: Boolean
+        do {
+            minimizedOnIteration = false
+            for (nextCfg in testCfg.nextConfigurations(minimizedFailure.scenario)) {
+                val failure =
+                    minimizedFailure.scenario.run(nextCfg, nextCfg.createVerifier(checkStateEquivalence = false))
+                if (failure != null) {
+                    testCfg = nextCfg
+                    minimizedFailure = failure
+                    minimizedOnIteration = true
+                    break
+                }
+            }
+        } while (minimizedOnIteration)
+        while (minimizedFailure.crashes > 0) {
+            ProbabilityModel.crashedNodesExpectation.set(minimizedFailure.crashes - 1)
+            val failure =
+                minimizedFailure.scenario.run(testCfg, testCfg.createVerifier(checkStateEquivalence = false))
+            if (failure != null && failure.crashes < minimizedFailure.crashes) {
+                minimizedFailure = failure
+            } else {
+                break
             }
         }
-        while (ProbabilityModel.crashedNodesExpectation.get() > 0) {
-            ProbabilityModel.crashedNodesExpectation.set(ProbabilityModel.crashedNodesExpectation.get() - 1)
-            val newFailedIteration = res.scenario.run(testCfg, testCfg.createVerifier(checkStateEquivalence = false))
-            if (newFailedIteration != null) {
-                res = newFailedIteration
+        while (minimizedFailure.partitions > 0) {
+            ProbabilityModel.networkPartitionExpectation.set(minimizedFailure.partitions - 1)
+            val failure =
+                minimizedFailure.scenario.run(testCfg, testCfg.createVerifier(checkStateEquivalence = false))
+            if (failure != null && failure.partitions < minimizedFailure.partitions) {
+                minimizedFailure = failure
             } else {
-                ProbabilityModel.crashedNodesExpectation.remove()
-                return res
+                break
             }
         }
         ProbabilityModel.crashedNodesExpectation.remove()
-        return res
+        ProbabilityModel.networkPartitionExpectation.remove()
+        return minimizedFailure
     }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =

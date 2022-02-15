@@ -46,8 +46,13 @@ internal abstract class FailureManager<Message>(
             else FailureManagerComponent(addressResolver, strategy)
     }
 
+    abstract val crashes : Int
+
     protected val crashedNodes = Array(addressResolver.nodeCount) { false }
-    protected var partitionCount: Int = 0
+    protected var partitionId: Int = 0
+
+    val partitionCount: Int
+        get() = partitionId
 
     /**
      * Returns if the message can be sent from [sender] to [receiver].
@@ -83,7 +88,7 @@ internal abstract class FailureManager<Message>(
      * Adds partition between [firstNode] and [secondNode] and returns the [PartitionResult]
      */
     fun partition(firstNode: Int, secondNode: Int): PartitionResult {
-        val id = partitionCount++
+        val id = partitionId++
         val parts = addPartition(firstNode, secondNode)
         return PartitionResult(id, parts.first, parts.second)
     }
@@ -118,6 +123,11 @@ internal class FailureManagerComponent<Message>(
 
     // Number of unavailable nodes for each type. Node is unavailable if it is crashed or belongs to the smaller partition.
     private val unavailableNodeCount = mutableMapOf<Class<out Node<Message>>, Int>()
+
+    private var crashCount = 0
+
+    override val crashes: Int
+        get() = crashCount
 
     init {
         reset()
@@ -168,6 +178,7 @@ internal class FailureManagerComponent<Message>(
         check(!crashedNodes[iNode])
         incrementCrashedNodes(iNode)
         crashedNodes[iNode] = true
+        crashCount++
     }
 
     override fun canCrash(iNode: Int): Boolean {
@@ -263,7 +274,8 @@ internal class FailureManagerComponent<Message>(
     }
 
     override fun reset() {
-        partitionCount = 0
+        partitionId = 0
+        crashCount = 0
         crashedNodes.fill(false)
         addressResolver.nodeTypeToRange.forEach { (cls, range) ->
             partitions[cls] = mutableSetOf<Int>() to range.toMutableSet()
@@ -282,6 +294,8 @@ internal class FailureManagerSingleEdge<Message>(
     private val connections = Array(nodeCount) {
         (0 until nodeCount).toMutableSet()
     }
+
+    private var crashCount = 0
 
     private fun findMaxComponentSize(): Int {
         val visited = Array(nodeCount) { false }
@@ -310,6 +324,7 @@ internal class FailureManagerSingleEdge<Message>(
             connections[node].remove(iNode)
         }
         connections[iNode].clear()
+        crashCount++
     }
 
     override fun canAddPartition(firstNode: Int, secondNode: Int): Boolean {
@@ -354,10 +369,14 @@ internal class FailureManagerSingleEdge<Message>(
     }
 
     override fun reset() {
-        partitionCount = 0
+        partitionId = 0
+        crashCount = 0
         crashedNodes.fill(false)
         for (i in 0 until nodeCount) {
             connections[i] = (0 until nodeCount).toMutableSet()
         }
     }
+
+    override val crashes: Int
+        get() = crashCount
 }

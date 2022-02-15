@@ -131,19 +131,25 @@ internal class DistributedRandomStrategy<Message>(
                             return IncorrectResultsFailure(
                                 scenario = scenario,
                                 results = ir.results,
+                                crashes = failureManager.crashes,
+                                partitions = failureManager.partitionCount,
                                 logFilename = testCfg.logFilename
                             ).also {
                                 testCfg.getFormatter().storeEventsToFile(
                                     failure = it,
                                     filename = testCfg.logFilename,
-                                    //TODO: better way to get events
                                     events = runner.events
                                 )
                             }
                         }
                     }
                     else -> {
-                        return ir.toLincheckFailure(scenario, logFilename = testCfg.logFilename).also {
+                        return ir.toLincheckFailure(
+                            scenario = scenario,
+                            crashes = failureManager.crashes,
+                            partitions = failureManager.partitionCount,
+                            logFilename = testCfg.logFilename
+                        ).also {
                             testCfg.getFormatter().storeEventsToFile(
                                 failure = it,
                                 filename = testCfg.logFilename,

@@ -49,14 +49,16 @@ class CrashMinimizationTest {
                 nodes = 4,
                 minNodes = 2,
                 crashMode = CrashMode.RECOVER_ON_CRASH,
-                NetworkPartitionMode.COMPONENTS
+                networkPartition = NetworkPartitionMode.COMPONENTS
             )
             .verifier(CrashMinimizationVerifier::class.java)
             .iterations(1)
             .invocationsPerIteration(500_000)
             .storeLogsForFailedScenario("crash_minimization.txt")
             .checkImpl(CrashingNode::class.java)
-        println(failure)
         assert(failure is IncorrectResultsFailure)
+        assert(failure!!.crashes == 1)
+        assert(failure.partitions == 0)
+        assert(failure.scenario.threads == 1 && failure.scenario.parallelExecution[0].size == 1)
     }
 }

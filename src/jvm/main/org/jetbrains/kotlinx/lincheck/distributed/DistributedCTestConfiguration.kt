@@ -42,7 +42,7 @@ class DistributedCTestConfiguration<Message>(
     val messageLoss: Boolean,
     val messageOrder: MessageOrder,
     val messageDuplication: Boolean,
-    private val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
+    val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
     val logFilename: String?,
     val crashNotifications: Boolean,
     requireStateEquivalenceCheck: Boolean,
@@ -91,32 +91,33 @@ class DistributedCTestConfiguration<Message>(
     /**
      *
      */
-    fun nextConfigurations(): List<DistributedCTestConfiguration<Message>> {
-        val res = mutableListOf<DistributedCTestConfiguration<Message>>()
-        for ((cls, nodeInfo) in nodeTypes) {
-            if (nodeInfo.nodes == nodeInfo.minNumberOfInstances) {
-                continue
-            }
-            val newNodeTypes = nodeTypes.toMutableMap()
-            newNodeTypes[cls] = nodeInfo.minimize()
-            res.add(
-                DistributedCTestConfiguration(
-                    testClass, iterations,
-                    threads, actorsPerThread,
-                    generatorClass,
-                    verifierClass,
-                    invocationsPerIteration,
-                    messageLoss,
-                    messageOrder,
-                    messageDuplication,
-                    newNodeTypes, logFilename, crashNotifications, requireStateEquivalenceImplCheck,
-                    minimizeFailedScenario,
-                    sequentialSpecification, timeoutMs, customScenarios
+    fun nextConfigurations(scenario: ExecutionScenario): Iterable<DistributedCTestConfiguration<Message>> = Iterable {
+        iterator {
+            for ((cls, nodeInfo) in nodeTypes) {
+                if (nodeInfo.nodes == nodeInfo.minNumberOfInstances || cls == testClass && nodeInfo.nodes == scenario.threads) {
+                    continue
+                }
+                val newNodeTypes = nodeTypes.toMutableMap()
+                newNodeTypes[cls] = nodeInfo.minimize()
+                yield(
+                    DistributedCTestConfiguration(
+                        testClass, iterations,
+                        threads, actorsPerThread,
+                        generatorClass,
+                        verifierClass,
+                        invocationsPerIteration,
+                        messageLoss,
+                        messageOrder,
+                        messageDuplication,
+                        newNodeTypes, logFilename, crashNotifications, requireStateEquivalenceImplCheck,
+                        minimizeFailedScenario,
+                        sequentialSpecification, timeoutMs, customScenarios
+                    )
                 )
-            )
+            }
         }
-        return res
     }
+
 
     internal fun getFormatter(): EventFormatter = TextEventFormatter(addressResolver)
 }
