@@ -24,9 +24,14 @@ import org.jetbrains.kotlinx.lincheck.distributed.NodeAddressResolver
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.io.File
 
-internal interface EventFormatter {
+/**
+ * Defines how to format the events.
+ */
+interface EventFormatter {
+    /**
+     * Returns string representation of the events.
+     */
     fun format(events: List<Event>): List<String>
-
 
     /**
      * Stores the events to file.
@@ -42,7 +47,11 @@ internal interface EventFormatter {
     }
 }
 
-internal class TextEventFormatter(private val addressResolver: NodeAddressResolver<*>) : EventFormatter {
+/**
+ * Interface which formats events in human-readable format.
+ * The vector clock are not included in the formatting.
+ */
+class TextEventFormatter(private val addressResolver: NodeAddressResolver<*>) : EventFormatter {
     private fun formatState(event: Event) =
         if (!event.state.isNullOrBlank()) ", state=${event.state}" else ""
 
@@ -84,6 +93,9 @@ internal class TextEventFormatter(private val addressResolver: NodeAddressResolv
         }
     }
 
+    /**
+     * Represent to which node the event belongs.
+     */
     private fun formatHeader(iNode: Int?): String {
         if (iNode == null) {
             return "[-]: "

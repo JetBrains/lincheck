@@ -96,7 +96,7 @@ class DistributedOptions<Message>() :
     private var messageDuplication: Boolean = false
     private var testClasses = mutableMapOf<Class<out Node<Message>>, NodeTypeInfo>()
     private var logFileName: String? = null
-    private var crashNotifications = true
+    private var crashNotifications = false
     private var _testClass: Class<out Node<Message>>? = null
 
     init {

@@ -24,12 +24,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedOptions
-import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.distributed.Node
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.distributed.NodeEnvironment
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -97,8 +95,9 @@ class KVStoreTest {
                 crashMode = CrashMode.RECOVER_ON_CRASH,
                 maxUnavailableNodes = { it }
             )//.minimizeFailedScenario(false)
-            .checkImpl(Client::class.java)
-        assert(failure is IncorrectResultsFailure)
+            .storeLogsForFailedScenario("kvstore.txt")
+            .check(Client::class.java)
+        //assert(failure is IncorrectResultsFailure)
     }
 
     @Test

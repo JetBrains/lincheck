@@ -31,7 +31,7 @@ import java.util.concurrent.RejectedExecutionException
  */
 internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) : Executor {
     private val executor = Executors.newSingleThreadExecutor()
-    private val taskNumber = atomic(0)
+    private val pendingTasks = atomic(0)
 
     fun close() {
         executor.shutdown()
@@ -42,13 +42,16 @@ internal class DistributedExecutor(private val runner: DistributedRunner<*, *>) 
     }
 
     override fun execute(command: Runnable) {
-        taskNumber.incrementAndGet()
+        // Increment number of pending tasks
+        pendingTasks.incrementAndGet()
         try {
             executor.submit {
                 command.run()
-                val counter = taskNumber.decrementAndGet()
+                val counter = pendingTasks.decrementAndGet()
+                // If no pending tasks left, try to launch next task.
                 if (counter == 0) {
                     if (!runner.launchNextTask()) {
+                        // Signal that the execution is over.
                         runner.signal()
                     }
                 }

@@ -36,7 +36,7 @@ sealed class Event {
 }
 
 /**
- * Indicates that [message][message] with [id][id] was sent by node [iNode] to node [receiver].
+ * Indicates that [message] with id [id] was sent by node [iNode] to node [receiver].
  */
 data class MessageSentEvent<Message>(
     override val iNode: Int,
@@ -48,7 +48,7 @@ data class MessageSentEvent<Message>(
 ) : Event()
 
 /**
- * Indicates that [message][message] with id [id] from node [sender]
+ * Indicates that [message] with id [id] from node [sender]
  * was received by node [iNode].
  */
 data class MessageReceivedEvent<Message>(
@@ -84,7 +84,7 @@ data class NodeRecoveryEvent(override val iNode: Int, override val clock: Vector
     Event()
 
 /**
- * Indicates that operation with [actor][actor] has started.
+ * Indicates that operation with [actor] has started.
  */
 data class OperationStartEvent(
     override val iNode: Int,
@@ -124,9 +124,8 @@ data class SetTimerEvent(
     Event()
 
 /**
- *
+ * Indicates that timer [timerName] on [iNode] alarmed.
  */
-//TODO translate таймер сработал
 data class TimerTickEvent(
     override val iNode: Int,
     val timerName: String,

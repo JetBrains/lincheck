@@ -42,7 +42,7 @@ class DistributedCTestConfiguration<Message>(
     val messageLoss: Boolean,
     val messageOrder: MessageOrder,
     val messageDuplication: Boolean,
-    val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
+    private val nodeTypes: Map<Class<out Node<Message>>, NodeTypeInfo>,
     val logFilename: String?,
     val crashNotifications: Boolean,
     requireStateEquivalenceCheck: Boolean,

@@ -97,5 +97,6 @@ class CrashNotificationTest {
         .verifier(CrashNotificationVerifier::class.java)
         .iterations(1)
         .invocationsPerIteration(500_000)
+        .sendCrashNotifications(true)
         .check(CrashingNode::class.java)
 }

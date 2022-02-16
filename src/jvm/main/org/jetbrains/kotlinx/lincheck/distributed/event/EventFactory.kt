@@ -26,17 +26,22 @@ import org.jetbrains.kotlinx.lincheck.distributed.DistributedStateHolder
 import org.jetbrains.kotlinx.lincheck.distributed.Node
 import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 
+/**
+ * Creates and stores the events which happen during the execution.
+ */
 internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
     private var msgId = 0
     private val _events = mutableListOf<Event>()
     val events: List<Event>
         get() = _events
-    val numberOfNodes = testCfg.addressResolver.nodeCount
-    private val vectorClocks = Array(numberOfNodes) {
-        VectorClock(emptyClockArray(numberOfNodes), it)
+    private val vectorClocks = Array(testCfg.addressResolver.nodeCount) {
+        VectorClock(emptyClockArray(testCfg.addressResolver.nodeCount), it)
     }
+
+    // To access `stateRepresentation`
     lateinit var nodeInstances: Array<out Node<M>>
 
+    // Guarantees that crash won't happen while the state representation is collected.
     private fun <T> safeDatabaseAccess(f: () -> T): T {
         val prev = DistributedStateHolder.canCrashBeforeAccessingDatabase
         DistributedStateHolder.canCrashBeforeAccessingDatabase = false
