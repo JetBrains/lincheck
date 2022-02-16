@@ -51,7 +51,6 @@ public class TestNodeExecutionGenerator {
     private static final Type CONTINUATION_TYPE = getType(Continuation.class);
     private static final Type ILLEGAL_ARGUMENT_EXCEPTION_TYPE = getType(IllegalArgumentException.class);
 
-    // private static final
     private static int generatedClassNumber = 0;
 
     static {

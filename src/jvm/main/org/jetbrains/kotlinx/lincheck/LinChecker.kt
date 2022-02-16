@@ -102,6 +102,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         while (true) {
             minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
         }
+        // For distributed algorithms number of nodes and number of crashes and partitions can be minimized as well.
         if (testCfg is DistributedCTestConfiguration<*>) {
             return minimizedFailure.minimizeDistributedFailure(testCfg)
         }
@@ -151,6 +152,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         var minimizedFailure = this
         var testCfg = distributedTestCfg
         var minimizedOnIteration: Boolean
+        // While possible, tries to decrease number of nodes for each type.
         do {
             minimizedOnIteration = false
             for (nextCfg in testCfg.nextConfigurations(minimizedFailure.scenario)) {
@@ -164,6 +166,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 }
             }
         } while (minimizedOnIteration)
+        // Minimizes number of crashes
         while (minimizedFailure.crashes > 0) {
             ProbabilityModel.crashedNodesExpectation.set(minimizedFailure.crashes - 1)
             val failure =
@@ -174,6 +177,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 break
             }
         }
+        // Minimizes number of partitions.
         while (minimizedFailure.partitions > 0) {
             ProbabilityModel.networkPartitionExpectation.set(minimizedFailure.partitions - 1)
             val failure =
