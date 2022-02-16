@@ -21,8 +21,10 @@
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
 import org.jetbrains.kotlinx.lincheck.distributed.*
+import org.jetbrains.kotlinx.lincheck.distributed.EventLogMode.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
+import org.jetbrains.kotlinx.lincheck.runner.InvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
@@ -50,8 +52,10 @@ internal class DistributedRandomStrategy<Message>(
     stateRepresentationFunction,
     verifier
 ) {
-    private var probability = ProbabilityModel(testCfg)
-    private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions)
+    private var probability: DecisionModel = ProbabilisticModel(testCfg)
+    private val initialLogMode = if (verifier is DistributedVerifier) WITHOUT_STATE else OFF
+    private var runner = DistributedRunner(this, testCfg, testClass, validationFunctions, FULL)
+    private var interleaving: List<Int>? = null
 
     init {
         try {
@@ -69,7 +73,7 @@ internal class DistributedRandomStrategy<Message>(
      */
     override fun tryCrash(iNode: Int) {
         if (testCfg.addressResolver.crashTypeForNode(iNode) != CrashMode.NO_CRASH
-            && probability.nodeFailed(iNode)
+            && probability.nodeCrashed(iNode)
             && failureManager.canCrash(iNode) // can be time-consuming
         ) {
             failureManager.crashNode(iNode)
@@ -77,7 +81,7 @@ internal class DistributedRandomStrategy<Message>(
         }
     }
 
-    override fun onMessageSent(sender: Int, receiver: Int, messageId: Int) {
+    override fun onMessageSent(sender: Int, receiver: Int) {
         tryCrash(sender)
     }
 
@@ -105,7 +109,7 @@ internal class DistributedRandomStrategy<Message>(
             tasksToProcess =
                 timeTasks.filter { it.time < time || probability.geometricProbability(it.time - time) } + tasks
         } while (tasksToProcess.isEmpty())
-        val task = tasksToProcess.random(probability.rand)
+        val task = probability.chooseTask(tasksToProcess)
         taskManager.removeTask(task)
         return task
     }
@@ -167,9 +171,9 @@ internal class DistributedRandomStrategy<Message>(
      * Tries to add partition, and if succeed calls [org.jetbrains.kotlinx.lincheck.distributed.DistributedRunner.onPartition]
      * to add it.
      */
-    override fun tryAddPartition(sender: Int, receiver: Int, messageId: Int): Boolean {
+    override fun tryAddPartition(sender: Int, receiver: Int): Boolean {
         if (testCfg.addressResolver.partitionTypeForNode(sender) != NetworkPartitionMode.NONE
-            && probability.isNetworkPartition(sender)
+            && probability.isPartition(sender)
             && failureManager.canAddPartition(sender, receiver)
         ) {
             val partitionResult = failureManager.partition(sender, receiver)
@@ -179,15 +183,15 @@ internal class DistributedRandomStrategy<Message>(
         return false
     }
 
-    override fun getMessageRate(sender: Int, receiver: Int, messageId: Int): Int = probability.duplicationRate()
+    override fun getMessageRate(sender: Int, receiver: Int): Int = probability.messageRate()
 
     override fun choosePartitionComponent(nodes: List<Int>, limit: Int): List<Int> =
-        probability.partition(nodes, limit)
+        probability.choosePartition(nodes, limit)
 
     override fun getRecoverTimeout(taskManager: TaskManager): Int {
         val time = taskManager.time
         val maxTimeout =
-            max(taskManager.timeTasks.maxOfOrNull { it.time - time } ?: 0, ProbabilityModel.DEFAULT_RECOVER_TIMEOUT)
+            max(taskManager.timeTasks.maxOfOrNull { it.time - time } ?: 0, ProbabilisticModel.DEFAULT_RECOVER_TIMEOUT)
         return probability.recoverTimeout(maxTimeout)
     }
 
@@ -202,5 +206,11 @@ internal class DistributedRandomStrategy<Message>(
             CrashMode.FINISH_OR_RECOVER_ON_CRASH -> probability.nodeRecovered()
             else -> throw IllegalArgumentException()
         }
+    }
+
+    private fun runFailingInterleaving(): InvocationResult {
+        probability = DeterministicModel((probability as ProbabilisticModel).decisionInfo)
+        runner = DistributedRunner(this, testCfg, testClass, validationFunctions, FULL)
+        return runner.run()
     }
 }

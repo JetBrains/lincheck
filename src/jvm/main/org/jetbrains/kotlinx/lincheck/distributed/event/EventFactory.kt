@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.execution.emptyClockArray
 /**
  * Creates and stores the events which happen during the execution.
  */
-internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
+internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>, val storeStates: Boolean) {
     private var msgId = 0
     private val _events = mutableListOf<Event>()
     val events: List<Event>
@@ -48,6 +48,10 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
         return f().also { DistributedStateHolder.canCrashBeforeAccessingDatabase = prev }
     }
 
+    private fun getState(iNode: Int) = if (storeStates) {
+        nodeInstances[iNode].stateRepresentation()
+    } else ""
+
     fun createMessageEvent(msg: M, sender: Int, receiver: Int): MessageSentEvent<M> = safeDatabaseAccess {
         val event = MessageSentEvent(
             iNode = sender,
@@ -55,7 +59,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
             receiver = receiver,
             id = msgId++,
             vectorClocks[sender].incAndCopy(),
-            nodeInstances[sender].stateRepresentation()
+            getState(sender)
         )
         _events.add(event)
         event
@@ -67,7 +71,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
                 iNode,
                 actor,
                 vectorClocks[iNode].incAndCopy(),
-                nodeInstances[iNode].stateRepresentation()
+                getState(iNode)
             )
         _events.add(event)
     }
@@ -77,7 +81,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
             NodeRecoveryEvent(
                 iNode,
                 vectorClocks[iNode].copy(),
-                nodeInstances[iNode].stateRepresentation()
+                getState(iNode)
             )
         )
     }
@@ -90,7 +94,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
             sender = sentEvent.iNode,
             id = sentEvent.id,
             clock = vectorClocks[receiver].maxClock(sentEvent.clock),
-            state = nodeInstances[receiver].stateRepresentation()
+            state = getState(receiver)
         )
         _events.add(event)
     }
@@ -101,7 +105,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
                 iNode = iNode,
                 timerName = name,
                 clock = vectorClocks[iNode].copy(),
-                state = nodeInstances[iNode].stateRepresentation()
+                state = getState(iNode)
             )
         )
     }
@@ -112,13 +116,13 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
                 iNode,
                 attachment,
                 vectorClocks[iNode].copy(),
-                nodeInstances[iNode].stateRepresentation()
+                getState(iNode)
             )
         )
     }
 
     fun createNodeCrashEvent(iNode: Int) = safeDatabaseAccess {
-        _events.add(NodeCrashEvent(iNode, vectorClocks[iNode].copy(), ""/*nodeInstances[iNode].stateRepresentation()*/))
+        _events.add(NodeCrashEvent(iNode, vectorClocks[iNode].copy(), getState(iNode)))
     }
 
     fun createScenarioFinishEvent(iNode: Int) = safeDatabaseAccess {
@@ -126,7 +130,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
             ScenarioFinishEvent(
                 iNode,
                 vectorClocks[iNode].copy(),
-                nodeInstances[iNode].stateRepresentation()
+                getState(iNode)
             )
         )
     }
@@ -135,7 +139,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
         _events.add(
             CrashNotificationEvent(
                 iNode, crashedNode, vectorClocks[iNode].copy(),
-                nodeInstances[iNode].stateRepresentation()
+                getState(iNode)
             )
         )
     }
@@ -146,7 +150,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
                 iNode,
                 timerName,
                 vectorClocks[iNode].copy(),
-                nodeInstances[iNode].stateRepresentation()
+                getState(iNode)
             )
         )
     }
@@ -157,7 +161,7 @@ internal class EventFactory<M>(testCfg: DistributedCTestConfiguration<M>) {
                 iNode,
                 timerName,
                 vectorClocks[iNode].copy(),
-                nodeInstances[iNode].stateRepresentation()
+                getState(iNode)
             )
         )
     }

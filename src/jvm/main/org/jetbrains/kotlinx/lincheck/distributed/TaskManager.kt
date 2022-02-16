@@ -133,6 +133,12 @@ private interface TaskStorage {
     fun isEmpty() = available.isEmpty()
 }
 
+private fun <E> MutableList<E>.removeAndReturn(predicate: (E) -> Boolean): E? {
+    val index = indexOfFirst { predicate(it) }
+    if (index != -1) return removeAt(index)
+    return null
+}
+
 private class FifoStorage(val nodeCount: Int) : TaskStorage {
     override val available = mutableListOf<Task>()
     private val pendingMessages = Array(nodeCount * nodeCount) { LinkedList<MessageReceiveTask>() }
@@ -195,6 +201,7 @@ internal class TaskManager(messageOrder: MessageOrder, nodeCount: Int) {
         ASYNCHRONOUS -> AsynchronousStorage()
     }
     private val _timeTasks = mutableListOf<TimeTask>()
+    private val _interleaving = mutableListOf<Int>()
 
     val taskLimitExceeded: Boolean
         get() = DistributedOptions.TASK_LIMIT < _taskId
@@ -242,6 +249,7 @@ internal class TaskManager(messageOrder: MessageOrder, nodeCount: Int) {
      */
     fun removeTask(task: Task) {
         _time++
+        _interleaving.add(task.id)
         when (task) {
             is TimeTask -> _timeTasks.remove(task)
             else -> {

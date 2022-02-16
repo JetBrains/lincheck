@@ -38,10 +38,11 @@ import kotlin.coroutines.intrinsics.intercepted
 class NodeEnvironment<Message> internal constructor(
     val id: Int,
     val nodes: Int,
-    private val eventFactory: EventFactory<Message>,
+    private val eventFactory: EventFactory<Message>?,
     private val strategy: DistributedStrategy<Message>,
     private val taskManager: TaskManager,
 ) {
+    internal lateinit var nodeInstances: Array<out Node<Message>>
     /**
      * Called before accessing storage and can cause node crash.
      */
@@ -67,23 +68,22 @@ class NodeEnvironment<Message> internal constructor(
      * Sends [message] to [receiver].
      */
     fun send(message: Message, receiver: Int) {
-        val e = eventFactory.createMessageEvent(message, id, receiver)
+        val e = eventFactory?.createMessageEvent(message, id, receiver)
         // How many times the message will be delivered to receiver (including message loss, duplications or network partitions).
         // Can cause node crash.
-        val rate = strategy.crashOrReturnRate(id, receiver, e.id)
+        val rate = strategy.crashOrReturnRate(id, receiver)
         repeat(rate) {
             // Add MessageReceiveTask to TaskManager.
             taskManager.addMessageReceiveTask(
                 to = receiver,
                 from = id
             ) {
-                eventFactory.createMessageReceiveEvent(e)
-                //TODO: better way to access node instances
-                eventFactory.nodeInstances[receiver].onMessage(message, id)
+                eventFactory?.createMessageReceiveEvent(e!!)
+                nodeInstances[receiver].onMessage(message, id)
             }
         }
         // Can crash if message was sent.
-        if (rate > 0) strategy.onMessageSent(id, receiver, e.id)
+        if (rate > 0) strategy.onMessageSent(id, receiver)
     }
 
     /**
@@ -169,7 +169,7 @@ class NodeEnvironment<Message> internal constructor(
     private fun timerTick(name: String, ticks: Int, f: () -> Unit) {
         // Check timer is not removed (internal bug).
         check(name in timers)
-        eventFactory.createTimerTickEvent(name, id)
+        eventFactory?.createTimerTickEvent(name, id)
         f()
         // Add next tick to task manager.
         taskManager.addTimer(
@@ -190,7 +190,7 @@ class NodeEnvironment<Message> internal constructor(
         if (name in timers) {
             throw IllegalArgumentException("Timer with name $name already exists")
         }
-        eventFactory.createSetTimerEvent(id, name)
+        eventFactory?.createSetTimerEvent(id, name)
         timers.add(name)
         // Add task to TaskManager.
         taskManager.addTimer(
@@ -211,7 +211,7 @@ class NodeEnvironment<Message> internal constructor(
         if (name !in timers) {
             throw IllegalArgumentException("Timer with name $name does not exist")
         }
-        eventFactory.createCancelTimerEvent(id, name)
+        eventFactory?.createCancelTimerEvent(id, name)
         timers.remove(name)
         // Remove timer task from task manager.
         taskManager.removeTimer(name, id)
@@ -222,7 +222,7 @@ class NodeEnvironment<Message> internal constructor(
      * Can store any object as [attachment].
      */
     fun recordInternalEvent(attachment: Any) {
-        eventFactory.createInternalEvent(attachment, id)
+        eventFactory?.createInternalEvent(attachment, id)
     }
 }
 

@@ -92,7 +92,7 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit>(
         TODO("Not yet implemented")
     }
 
-    override fun onMessageSent(sender: Int, receiver: Int, messageId: Int) {
+    override fun onMessageSent(sender: Int, receiver: Int) {
         TODO("Not yet implemented")
     }
 
@@ -100,11 +100,11 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit>(
         TODO("Not yet implemented")
     }
 
-    override fun getMessageRate(sender: Int, receiver: Int, messageId: Int): Int {
+    override fun getMessageRate(sender: Int, receiver: Int): Int {
         TODO("Not yet implemented")
     }
 
-    override fun tryAddPartition(sender: Int, receiver: Int, messageId: Int): Boolean {
+    override fun tryAddPartition(sender: Int, receiver: Int): Boolean {
         TODO("Not yet implemented")
     }
 }

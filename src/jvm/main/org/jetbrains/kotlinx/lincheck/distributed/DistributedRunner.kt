@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.createExceptionResult
 import org.jetbrains.kotlinx.lincheck.createLincheckResult
+import org.jetbrains.kotlinx.lincheck.distributed.EventLogMode.FULL
+import org.jetbrains.kotlinx.lincheck.distributed.EventLogMode.OFF
 import org.jetbrains.kotlinx.lincheck.distributed.event.Event
 import org.jetbrains.kotlinx.lincheck.distributed.event.EventFactory
 import org.jetbrains.kotlinx.lincheck.executeValidationFunctions
@@ -37,6 +39,12 @@ import java.lang.reflect.Method
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
+internal enum class EventLogMode {
+    FULL,
+    WITHOUT_STATE,
+    OFF
+}
+
 /**
  * Executes the distributed algorithms.
  */
@@ -44,7 +52,8 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     strategy: S,
     val testCfg: DistributedCTestConfiguration<Message>,
     testClass: Class<*>,
-    validationFunctions: List<Method>
+    validationFunctions: List<Method>,
+    val logMode: EventLogMode
 ) : Runner<S>(strategy, testClass, validationFunctions, null) {
     /**
      * Total number of nodes.
@@ -54,7 +63,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     /**
      * Logs all events which occurred during the execution,
      */
-    private lateinit var eventFactory: EventFactory<Message>
+    private var eventFactory: EventFactory<Message>? = null
 
     /**
      * Node environments.
@@ -90,7 +99,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     private var exception: Throwable? = null
 
     val events: List<Event>
-        get() = eventFactory.events
+        get() = eventFactory?.events ?: emptyList()
 
     override fun initialize() {
         super.initialize()
@@ -107,7 +116,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     private fun reset() {
         completionCondition.tryAcquire()
         // Create new instances.
-        eventFactory = EventFactory(testCfg)
+        if (logMode != OFF) eventFactory = EventFactory(testCfg, storeStates = logMode == FULL)
         taskManager = TaskManager(testCfg.messageOrder, nodeCount)
         environments = Array(nodeCount) {
             NodeEnvironment(
@@ -122,6 +131,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
             testCfg.addressResolver[it].getConstructor(NodeEnvironment::class.java)
                 .newInstance(environments[it])
         }
+        environments.forEach { it.nodeInstances = nodes }
         // Set node instances to test node executions
         testNodeExecutions.forEachIndexed { t, ex ->
             ex.testInstance = nodes[t]
@@ -130,7 +140,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
             ex.actorId = 0
         }
         // Set nodes for event factory
-        eventFactory.nodeInstances = nodes
+        eventFactory?.nodeInstances = nodes
         DistributedStateHolder.canCrashBeforeAccessingDatabase = true
     }
 
@@ -275,13 +285,13 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
             scenarioSize + 1 -> return
             scenarioSize -> {
                 testNodeExecution.actorId++
-                eventFactory.createScenarioFinishEvent(iNode)
+                eventFactory?.createScenarioFinishEvent(iNode)
                 // Call 'onScenarioFinish'.
                 nodes[iNode].onScenarioFinish()
             }
             else -> {
                 val actor = scenario.parallelExecution[iNode][actorId]
-                eventFactory.createOperationEvent(actor, iNode)
+                eventFactory?.createOperationEvent(actor, iNode)
                 try {
                     testNodeExecution.actorId++
                     val res = testNodeExecution.runOperation(actorId)
@@ -312,7 +322,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * add recover task if necessary.
      */
     private fun onNodeCrash(iNode: Int) {
-        eventFactory.createNodeCrashEvent(iNode)
+        eventFactory?.createNodeCrashEvent(iNode)
         // Remove all pending tasks for iNode.
         taskManager.removeAllForNode(iNode)
         // Set current operation result to CRASHED
@@ -336,7 +346,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
     private fun recover(iNode: Int) {
         // Create new instances of NodeEnvironment and Node
         environments[iNode] =
-            NodeEnvironment(iNode, nodeCount, eventFactory, strategy, taskManager)
+            NodeEnvironment(iNode, nodeCount, eventFactory, strategy, taskManager).also { it.nodeInstances = nodes }
         val newInstance = testCfg.addressResolver[iNode].getConstructor(NodeEnvironment::class.java)
             .newInstance(environments[iNode])
         // Change the instance for testNodeExecution if necessary
@@ -348,7 +358,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         nodes[iNode] = newInstance
         // Remove crashed mark from iNode.
         strategy.onNodeRecover(iNode)
-        eventFactory.createNodeRecoverEvent(iNode)
+        eventFactory?.createNodeRecoverEvent(iNode)
         // Call recover method.
         nodes[iNode].recover()
         // If node has the scenario, continue to execute the remaining operations.
@@ -361,12 +371,12 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
      * Sends crash notifications between nodes from different parts and creates partition recover task.
      */
     fun onPartition(firstPart: List<Int>, secondPart: List<Int>, partitionId: Int) {
-        eventFactory.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
+        eventFactory?.createNetworkPartitionEvent(firstPart, secondPart, partitionId)
         // Sends notifications between parts that nodes are unavailable for each other.
         sendCrashNotifications(firstPart, secondPart)
         // Add partition recover task.
         taskManager.addPartitionRecoverTask(ticks = strategy.getRecoverTimeout(taskManager)) {
-            eventFactory.createNetworkRecoverEvent(partitionId)
+            eventFactory?.createNetworkRecoverEvent(partitionId)
             // Remove partition.
             strategy.recoverPartition(firstPart, secondPart)
         }
@@ -379,7 +389,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
         // Do not send notification to crashed node.
         if (strategy.isCrashed(iNode)) return
         taskManager.addActionTask(iNode) {
-            eventFactory.createCrashNotificationEvent(iNode, crashedNode)
+            eventFactory?.createCrashNotificationEvent(iNode, crashedNode)
             nodes[iNode].onNodeUnavailable(crashedNode)
         }
     }

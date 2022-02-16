@@ -6,7 +6,6 @@ import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.*
 import org.jetbrains.kotlinx.lincheck.distributed.NetworkPartitionMode.*
 import kotlin.collections.set
-import kotlin.reflect.KFunction
 
 /**
  * Represents the guarantees on message order.
@@ -123,10 +122,6 @@ class DistributedOptions<Message>() :
     ): DistributedOptions<Message> {
         addNodes(N::class.java, nodes, minNodes, crashMode, networkPartition, maxUnavailableNodes)
         return this
-    }
-
-    inline fun <reified N : Node<Message>> operations(vararg operations: (KFunction<*>)) {
-
     }
 
     // TODO: internal/private

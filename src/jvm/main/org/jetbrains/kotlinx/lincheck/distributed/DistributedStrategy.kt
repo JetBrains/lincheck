@@ -54,18 +54,18 @@ internal abstract class DistributedStrategy<Message>(
      * If the strategy decides to crash the sender, [CrashError] will be thrown.
      * The result considers possible message loss and duplication, and can initialize the network partition.
      */
-    fun crashOrReturnRate(sender: Int, receiver: Int, messageId: Int): Int {
+    fun crashOrReturnRate(sender: Int, receiver: Int): Int {
         tryCrash(sender)
-        tryAddPartition(sender, receiver, messageId)
+        tryAddPartition(sender, receiver)
         if (!failureManager.canSend(sender, receiver)) return 0
-        return getMessageRate(sender, receiver, messageId)
+        return getMessageRate(sender, receiver)
     }
 
     /**
-     * Called when the message from [sender] to [receiver] with id [messageId] was sent.
+     * Called when the message from [sender] to [receiver] was sent.
      * Could cause the crash of the node.
      */
-    abstract fun onMessageSent(sender: Int, receiver: Int, messageId: Int)
+    abstract fun onMessageSent(sender: Int, receiver: Int)
 
     /**
      * Called before the database of node [iNode] is accessed.
@@ -119,11 +119,11 @@ internal abstract class DistributedStrategy<Message>(
      * Returns how much times the message from [sender] should be delivered to the receiver.
      * It is guaranteed that it is possible to send message from [sender] to [receiver].
      */
-    protected abstract fun getMessageRate(sender: Int, receiver: Int, messageId: Int): Int
+    protected abstract fun getMessageRate(sender: Int, receiver: Int): Int
 
     /**
      * Adds the network partition if it is possible according to [test configuration][DistributedCTestConfiguration]
      * and if it should be added according to strategy.
      */
-    protected abstract fun tryAddPartition(sender: Int, receiver: Int, messageId: Int): Boolean
+    protected abstract fun tryAddPartition(sender: Int, receiver: Int): Boolean
 }

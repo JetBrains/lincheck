@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedVerifier
-import org.jetbrains.kotlinx.lincheck.distributed.random.ProbabilityModel
+import org.jetbrains.kotlinx.lincheck.distributed.random.ProbabilisticModel
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
@@ -168,7 +168,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         } while (minimizedOnIteration)
         // Minimizes number of crashes
         while (minimizedFailure.crashes > 0) {
-            ProbabilityModel.crashedNodesExpectation.set(minimizedFailure.crashes - 1)
+            ProbabilisticModel.crashedNodesExpectation.set(minimizedFailure.crashes - 1)
             val failure =
                 minimizedFailure.scenario.run(testCfg, testCfg.createVerifier(checkStateEquivalence = false))
             if (failure != null && failure.crashes < minimizedFailure.crashes) {
@@ -179,7 +179,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         }
         // Minimizes number of partitions.
         while (minimizedFailure.partitions > 0) {
-            ProbabilityModel.networkPartitionExpectation.set(minimizedFailure.partitions - 1)
+            ProbabilisticModel.networkPartitionExpectation.set(minimizedFailure.partitions - 1)
             val failure =
                 minimizedFailure.scenario.run(testCfg, testCfg.createVerifier(checkStateEquivalence = false))
             if (failure != null && failure.partitions < minimizedFailure.partitions) {
@@ -188,8 +188,8 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 break
             }
         }
-        ProbabilityModel.crashedNodesExpectation.remove()
-        ProbabilityModel.networkPartitionExpectation.remove()
+        ProbabilisticModel.crashedNodesExpectation.remove()
+        ProbabilisticModel.networkPartitionExpectation.remove()
         return minimizedFailure
     }
 

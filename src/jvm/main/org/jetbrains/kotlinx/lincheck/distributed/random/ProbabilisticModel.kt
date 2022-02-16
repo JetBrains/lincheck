@@ -23,13 +23,103 @@ package org.jetbrains.kotlinx.lincheck.distributed.random
 import org.apache.commons.math3.distribution.GeometricDistribution
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.distributed.Task
 import kotlin.math.max
 import kotlin.random.Random
+
+
+interface DecisionModel {
+    fun messageRate(): Int
+
+    fun geometricProbability(x: Int): Boolean
+
+    fun nodeCrashed(iNode: Int): Boolean
+
+    fun nodeRecovered(): Boolean
+
+    fun isPartition(iNode: Int): Boolean
+
+    fun choosePartition(nodes: List<Int>, limit: Int): List<Int>
+
+    fun recoverTimeout(maxTimeout: Int): Int
+
+    fun chooseTask(tasks: List<Task>): Task
+
+    fun reset()
+}
+
+internal class DecisionInfo {
+    private var messageRateCall = 0
+    private val messageRate = mutableMapOf<Int, Int>()
+    private var crashCall = 0
+    private val crashes = mutableSetOf<Int>()
+    private var recoverCall = 0
+    private val recovers = mutableSetOf<Int>()
+    private var partitionCall = 0
+    private val partitions = mutableSetOf<Int>()
+    private val partitionChoices = mutableListOf<List<Int>>()
+    private var partitionChoicePointer = 0
+
+    fun setMessageRate(rate: Int) {
+        messageRateCall++
+        if (rate != 1) messageRate[messageRateCall] = rate
+    }
+
+    fun setCrash(isCrash: Boolean) {
+        crashCall++
+        if (isCrash) crashes.add(crashCall)
+    }
+
+    fun setRecover(isRecover: Boolean) {
+        recoverCall++
+        if (isRecover) recovers.add(recoverCall)
+    }
+
+    fun setPartition(isPartition: Boolean) {
+        partitionCall++
+        if (isPartition) partitions.add(partitionCall)
+    }
+
+    fun setPartitionChoice(partition: List<Int>) {
+        partitionChoices.add(partition)
+    }
+
+    fun resetCounters() {
+        messageRateCall = 0
+        crashCall = 0
+        recoverCall = 0
+        partitionCall = 0
+    }
+
+    fun getMessageRate(): Int {
+        messageRateCall++
+        return messageRate.getOrDefault(messageRateCall, 1)
+    }
+
+    fun getCrash(): Boolean {
+        crashCall++
+        return crashCall in crashes
+    }
+
+    fun getRecover(): Boolean {
+        recoverCall++
+        return recoverCall in recovers
+    }
+
+    fun getPartition(): Boolean {
+        partitionCall++
+        return partitionCall in partitions
+    }
+
+    fun getPartitionChoice(): List<Int> {
+        return partitionChoices[partitionChoicePointer++]
+    }
+}
 
 /**
  * Probability model which generates random events which happen during the execution.
  */
-internal class ProbabilityModel(private val testCfg: DistributedCTestConfiguration<*>) {
+internal class ProbabilisticModel(private val testCfg: DistributedCTestConfiguration<*>) : DecisionModel {
     companion object {
         private const val MEAN_GEOMETRIC_DISTRIBUTION = 0.9
         private const val MESSAGE_SENT_PROBABILITY = 0.95
@@ -47,7 +137,7 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     private val crashExpectation: Int = crashedNodesExpectation.get()
     private val partitionExpectation: Int = networkPartitionExpectation.get()
 
-    val rand = Random(0)
+    private val rand = Random(0)
     private val geometricDistribution = GeometricDistribution(MEAN_GEOMETRIC_DISTRIBUTION)
 
     private var nextNumberOfCrashes = 0
@@ -56,16 +146,19 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     private val previousNumberOfPoints = Array(testCfg.addressResolver.nodeCount) { 0 }
     private val addressResolver = testCfg.addressResolver
 
+    var decisionInfo = DecisionInfo()
+
+    override fun messageRate(): Int = run {
+        if (!isMessageSent()) 0
+        else duplicationRate()
+    }.also { decisionInfo.setMessageRate(it) }
+
+
     /**
      * Returns how many times the message should be sent (from 0 to 2).
      */
-    fun duplicationRate(): Int {
-        if (!messageIsSent()) {
-            return 0
-        }
-        if (!testCfg.messageDuplication) {
-            return 1
-        }
+    private fun duplicationRate(): Int {
+        if (!testCfg.messageDuplication) return 1
         return if (rand.nextDouble(1.0) > MESSAGE_DUPLICATION_PROBABILITY) 1 else 2
     }
 
@@ -74,12 +167,12 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
      * It used in [DistributedRandomStrategy][DistributedRandomStrategy] to decide which [time tasks][org.jetbrains.kotlinx.lincheck.distributed.TimeTask]
      * will be considered to be chosen for the next iteration.
      */
-    fun geometricProbability(x: Int) = geometricDistribution.probability(x) >= rand.nextDouble(1.0)
+    override fun geometricProbability(x: Int) = geometricDistribution.probability(x) >= rand.nextDouble(1.0)
 
     /**
      * Returns if the message should be sent.
      */
-    private fun messageIsSent(): Boolean {
+    private fun isMessageSent(): Boolean {
         if (testCfg.messageLoss) {
             return true
         }
@@ -89,23 +182,24 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     /**
      * Returns if the node should fail.
      */
-    fun nodeFailed(iNode: Int): Boolean {
+    override fun nodeCrashed(iNode: Int) = run {
         currentErrorPoint[iNode]++
         if (nextNumberOfCrashes > 0) {
             nextNumberOfCrashes--
-            return true
+            return@run true
         }
         val r = rand.nextDouble(1.0)
         val p = nodeFailProbability(iNode)
-        if (r >= p) return false
+        if (r >= p) return@run false
         nextNumberOfCrashes = rand.nextInt(0, SIMULTANEOUS_CRASH_COUNT)
-        return true
-    }
+        return@run true
+    }.also { decisionInfo.setCrash(it) }
 
     /**
      * Returns if the node should be recovered.
      */
-    fun nodeRecovered(): Boolean = rand.nextDouble(1.0) < NODE_RECOVERY_PROBABILITY
+    override fun nodeRecovered(): Boolean =
+        run { rand.nextDouble(1.0) < NODE_RECOVERY_PROBABILITY }.also { decisionInfo.setRecover(it) }
 
     /**
      * Generates node fail probability.
@@ -127,35 +221,62 @@ internal class ProbabilityModel(private val testCfg: DistributedCTestConfigurati
     /**
      * Returns if the network partition should be added here.
      */
-    fun isNetworkPartition(iNode: Int): Boolean {
+    override fun isPartition(iNode: Int): Boolean = run {
         if (previousNumberOfPoints[iNode] == 0) return false
         val q = partitionExpectation.toDouble() / nodeCount
         val p = q / previousNumberOfPoints[iNode]
         val r = rand.nextDouble(1.0)
-        return r < p
-    }
+        r < p
+    }.also { decisionInfo.setPartition(it) }
 
     /**
      * Chooses randomly nodes which will be included in the partition.
      */
-    fun partition(nodes: List<Int>, limit: Int): List<Int> {
+    override fun choosePartition(nodes: List<Int>, limit: Int): List<Int> = run {
         if (limit == 0) return emptyList()
         val count = rand.nextInt(limit)
-        return nodes.shuffled(rand).take(count)
-    }
+        nodes.shuffled(rand).take(count)
+    }.also { decisionInfo.setPartitionChoice(it) }
 
     /**
      * Resets the probability to the initial state.
      */
-    fun reset() {
+    override fun reset() {
         previousNumberOfPoints.indices.forEach {
             previousNumberOfPoints[it] = max(previousNumberOfPoints[it], currentErrorPoint[it])
         }
         currentErrorPoint.fill(0)
+        decisionInfo = DecisionInfo()
     }
 
     /**
      * Returns the recover timeout for the node crash or network partition.
      */
-    fun recoverTimeout(maxTimeout: Int): Int = rand.nextInt(1, maxTimeout * 2)
+    override fun recoverTimeout(maxTimeout: Int): Int = rand.nextInt(1, maxTimeout * 2)
+    override fun chooseTask(tasks: List<Task>): Task = tasks.random(rand)
+}
+
+internal class DeterministicModel(private val decisionInfo: DecisionInfo) : DecisionModel {
+    init {
+        decisionInfo.resetCounters()
+    }
+
+    override fun messageRate(): Int = decisionInfo.getMessageRate()
+
+    override fun geometricProbability(x: Int): Boolean = error("Should not be called")
+
+    override fun nodeCrashed(iNode: Int): Boolean = decisionInfo.getCrash()
+
+    override fun nodeRecovered(): Boolean = decisionInfo.getRecover()
+
+    override fun isPartition(iNode: Int): Boolean = decisionInfo.getPartition()
+
+    override fun choosePartition(nodes: List<Int>, limit: Int): List<Int> = decisionInfo.getPartitionChoice()
+
+    override fun recoverTimeout(maxTimeout: Int): Int = error("Should not be called")
+
+    override fun chooseTask(tasks: List<Task>): Task = error("Should not be called")
+
+    override fun reset() {
+    }
 }
