@@ -56,7 +56,7 @@ internal abstract class DistributedStrategy<Message>(
      */
     fun crashOrReturnRate(sender: Int, receiver: Int, messageId: Int): Int {
         tryCrash(sender)
-        tryAddPartitionBeforeSend(sender, receiver, messageId)
+        tryAddPartition(sender, receiver, messageId)
         if (!failureManager.canSend(sender, receiver)) return 0
         return getMessageRate(sender, receiver, messageId)
     }
@@ -125,5 +125,5 @@ internal abstract class DistributedStrategy<Message>(
      * Adds the network partition if it is possible according to [test configuration][DistributedCTestConfiguration]
      * and if it should be added according to strategy.
      */
-    protected abstract fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean
+    protected abstract fun tryAddPartition(sender: Int, receiver: Int, messageId: Int): Boolean
 }

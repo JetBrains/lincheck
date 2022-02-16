@@ -46,11 +46,13 @@ internal abstract class FailureManager<Message>(
             else FailureManagerComponent(addressResolver, strategy)
     }
 
-    abstract val crashes : Int
+    // Number of crashes during the invocation.
+    abstract val crashes: Int
 
     protected val crashedNodes = Array(addressResolver.nodeCount) { false }
     protected var partitionId: Int = 0
 
+    // Number of partitions during the invocation.
     val partitionCount: Int
         get() = partitionId
 

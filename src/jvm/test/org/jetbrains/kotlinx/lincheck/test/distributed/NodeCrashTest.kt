@@ -104,7 +104,7 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit>(
         TODO("Not yet implemented")
     }
 
-    override fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean {
+    override fun tryAddPartition(sender: Int, receiver: Int, messageId: Int): Boolean {
         TODO("Not yet implemented")
     }
 }

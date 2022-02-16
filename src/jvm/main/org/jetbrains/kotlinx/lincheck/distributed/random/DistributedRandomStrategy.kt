@@ -167,7 +167,7 @@ internal class DistributedRandomStrategy<Message>(
      * Tries to add partition, and if succeed calls [org.jetbrains.kotlinx.lincheck.distributed.DistributedRunner.onPartition]
      * to add it.
      */
-    override fun tryAddPartitionBeforeSend(sender: Int, receiver: Int, messageId: Int): Boolean {
+    override fun tryAddPartition(sender: Int, receiver: Int, messageId: Int): Boolean {
         if (testCfg.addressResolver.partitionTypeForNode(sender) != NetworkPartitionMode.NONE
             && probability.isNetworkPartition(sender)
             && failureManager.canAddPartition(sender, receiver)
