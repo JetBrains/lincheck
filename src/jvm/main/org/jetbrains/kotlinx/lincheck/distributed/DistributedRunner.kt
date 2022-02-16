@@ -103,7 +103,9 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
 
     override fun initialize() {
         super.initialize()
-        DistributedStateHolder.setState(classLoader, DistributedState())
+        val previousProperty = System.getProperties()["kotlinx.coroutines.debug"] as String?
+        System.setProperty("kotlinx.coroutines.debug", "off")
+        DistributedStateHolder.setState(classLoader, DistributedState(previousProperty))
         testNodeExecutions = Array(testCfg.addressResolver.scenarioSize) { t ->
             TestNodeExecutionGenerator.create(this, t, scenario.parallelExecution[t])
         }
@@ -249,6 +251,7 @@ internal open class DistributedRunner<S : DistributedStrategy<Message>, Message>
 
     override fun close() {
         executor.close()
+        DistributedStateHolder.resetProperty()
     }
 
     /**

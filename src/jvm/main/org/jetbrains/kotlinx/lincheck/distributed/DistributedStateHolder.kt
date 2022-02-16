@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.distributed
 
 
-class DistributedState {
+class DistributedState(val previousDebugMode: String?) {
     /**
      * Indicates if the crash can be added before accessing database.
      * Set to false after the execution is over or than the event is created (see [org.jetbrains.kotlinx.lincheck.distributed.event.Event])
@@ -49,5 +49,11 @@ object DistributedStateHolder {
         set(value) {
             state!!.canCrashBeforeAccessingDatabase = value
         }
+
+    fun resetProperty() {
+        if (state == null) return
+        if (state!!.previousDebugMode != null) System.setProperty("kotlinx.coroutines.debug", state!!.previousDebugMode!!)
+        else System.clearProperty("kotlinx.coroutines.debug")
+    }
 }
 
