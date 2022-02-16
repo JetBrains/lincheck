@@ -83,7 +83,6 @@ class DistributedCTestConfiguration<Message>(
             testClass,
             scenario,
             validationFunctions,
-            stateRepresentationMethod,
             verifier
         ).also { it.initialize() }
     }

@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.distributed.*
 import org.jetbrains.kotlinx.lincheck.distributed.EventLogMode.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.CompletedInvocationResult
-import org.jetbrains.kotlinx.lincheck.runner.InvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
@@ -42,19 +41,18 @@ internal class DistributedRandomStrategy<Message>(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
-    stateRepresentationFunction: Method?,
     verifier: Verifier
 ) : DistributedStrategy<Message>(
     testCfg,
     testClass,
     scenario,
     validationFunctions,
-    stateRepresentationFunction,
+    null,
     verifier
 ) {
-    private var probability: DecisionModel = ProbabilisticModel(testCfg)
+    private val probability = ProbabilisticModel(testCfg)
     private val initialLogMode = if (verifier is DistributedVerifier) WITHOUT_STATE else OFF
-    private var runner = DistributedRunner(this, testCfg, testClass, validationFunctions, FULL)
+    private val runner = DistributedRunner(this, testCfg, testClass, validationFunctions, FULL)
     private var interleaving: List<Int>? = null
 
     init {
@@ -207,10 +205,68 @@ internal class DistributedRandomStrategy<Message>(
             else -> throw IllegalArgumentException()
         }
     }
+}
 
-    private fun runFailingInterleaving(): InvocationResult {
-        probability = DeterministicModel((probability as ProbabilisticModel).decisionInfo)
-        runner = DistributedRunner(this, testCfg, testClass, validationFunctions, FULL)
-        return runner.run()
+internal class DistributedInterleavingStrategy<Message>(
+    testCfg: DistributedCTestConfiguration<Message>,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunctions: List<Method>,
+    verifier: Verifier
+) : DistributedStrategy<Message>(
+    testCfg,
+    testClass,
+    scenario,
+    validationFunctions,
+    null,
+    verifier
+) {
+    override fun reset() {
+        TODO("Not yet implemented")
     }
+
+    override fun next(taskManager: TaskManager): Task? {
+        TODO("Not yet implemented")
+    }
+
+    override fun onMessageSent(sender: Int, receiver: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun beforeStorageAccess(iNode: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun choosePartitionComponent(nodes: List<Int>, limit: Int): List<Int> {
+        TODO("Not yet implemented")
+    }
+
+    override fun getRecoverTimeout(taskManager: TaskManager): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun recoverPartition(firstPart: List<Int>, secondPart: List<Int>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun shouldRecover(iNode: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun tryCrash(iNode: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getMessageRate(sender: Int, receiver: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun tryAddPartition(sender: Int, receiver: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun run(): LincheckFailure? {
+        TODO("Not yet implemented")
+    }
+
 }

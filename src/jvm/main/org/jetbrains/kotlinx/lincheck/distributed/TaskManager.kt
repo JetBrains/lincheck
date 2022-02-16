@@ -206,6 +206,9 @@ internal class TaskManager(messageOrder: MessageOrder, nodeCount: Int) {
     val taskLimitExceeded: Boolean
         get() = DistributedOptions.TASK_LIMIT < _taskId
 
+    val interleaving: List<Int>
+        get() = _interleaving
+
     /**
      * Returns the list of tasks which can be executed next. Doesn't include time tasks.
      */
