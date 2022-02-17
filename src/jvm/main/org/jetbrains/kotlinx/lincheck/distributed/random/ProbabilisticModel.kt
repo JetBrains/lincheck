@@ -24,7 +24,7 @@ import org.apache.commons.math3.distribution.GeometricDistribution
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.Task
-import kotlin.math.max
+import kotlin.math.*
 import kotlin.random.Random
 
 
@@ -138,7 +138,6 @@ internal class ProbabilisticModel(private val testCfg: DistributedCTestConfigura
     private val partitionExpectation: Int = networkPartitionExpectation.get()
 
     private val rand = Random(0)
-    private val geometricDistribution = GeometricDistribution(MEAN_GEOMETRIC_DISTRIBUTION)
 
     private var nextNumberOfCrashes = 0
     private val nodeCount: Int = testCfg.addressResolver.nodeCount
@@ -167,7 +166,10 @@ internal class ProbabilisticModel(private val testCfg: DistributedCTestConfigura
      * It used in [DistributedRandomStrategy][DistributedRandomStrategy] to decide which [time tasks][org.jetbrains.kotlinx.lincheck.distributed.TimeTask]
      * will be considered to be chosen for the next iteration.
      */
-    override fun geometricProbability(x: Int) = geometricDistribution.probability(x) >= rand.nextDouble(1.0)
+    override fun geometricProbability(x: Int): Boolean {
+        val n = rand.nextInt(Int.MAX_VALUE)
+        return 1f / x > -(log2(n.toFloat() / Int.MAX_VALUE))
+    }
 
     /**
      * Returns if the message should be sent.
