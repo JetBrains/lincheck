@@ -5,7 +5,7 @@ package org.jetbrains.kotlinx.lincheck.distributed
  */
 interface Node<Message> {
     /**
-     * Called when a new [message][message] from [sender][sender] arrives.
+     * Called when a new [message] from [sender] arrives.
      */
     fun onMessage(message: Message, sender: Int)
 

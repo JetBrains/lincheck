@@ -33,7 +33,6 @@ internal abstract class DistributedStrategy<Message>(
     protected val testClass: Class<*>,
     scenario: ExecutionScenario,
     protected val validationFunctions: List<Method>,
-    protected val stateRepresentationFunction: Method?,
     protected val verifier: Verifier
 ) : Strategy(scenario) {
     protected lateinit var failureManager: FailureManager<Message>

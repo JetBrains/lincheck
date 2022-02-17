@@ -38,7 +38,7 @@ class RaftServer(env: NodeEnvironment<RaftMessage>) : NodeWithStorage<RaftMessag
         const val MAX_ELECTION_TIMEOUT: Int = HEARTBEAT_RATE * 20
     }
 
-    private val nodeCount = env.getAddresses<RaftServer>().count()
+    private val nodeCount = env.getIds<RaftServer>().count()
 
     private var status = Status.FOLLOWER
     private var commitIndex = -1
@@ -137,7 +137,7 @@ class RaftServer(env: NodeEnvironment<RaftMessage>) : NodeWithStorage<RaftMessag
 
     private fun broadcastEntries() {
         if (status != Status.LEADER) return
-        for (i in env.getAddresses<RaftServer>()) {
+        for (i in env.getIds<RaftServer>()) {
             if (i == env.id) continue
             env.send(
                 AppendEntries(

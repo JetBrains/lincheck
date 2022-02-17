@@ -49,7 +49,7 @@ class KVStorageServer(private val env: NodeEnvironment<Command>) : Node<Command>
 class KVStorageClient(private val nodeEnvironment: NodeEnvironment<Command>) : Node<Command> {
     private var commandId = 0
     private val commandResults = mutableMapOf<Int, Command>()
-    private val serverAddr = nodeEnvironment.getAddresses<KVStorageServer>()[0]
+    private val serverAddr = nodeEnvironment.getIds<KVStorageServer>()[0]
     private val signal = Signal()
     private val queue = LinkedList<Command>()
 

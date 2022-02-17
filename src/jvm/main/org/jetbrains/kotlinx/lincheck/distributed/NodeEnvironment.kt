@@ -56,7 +56,7 @@ class NodeEnvironment<Message> internal constructor(
     /**
      * Returns the list of ids for the specified node type.
      */
-    inline fun <reified NodeType : Node<Message>> getAddresses(): List<Int> {
+    inline fun <reified NodeType : Node<Message>> getIds(): List<Int> {
         return getAddressesForClass(NodeType::class.java)
     }
 

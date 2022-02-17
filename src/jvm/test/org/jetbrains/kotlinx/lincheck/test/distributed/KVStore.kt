@@ -40,7 +40,7 @@ data class GetRequest(val key: Int) : Message()
 data class GetResponse(val value: Int?) : Message()
 
 class Client(val env: NodeEnvironment<Message>) : Node<Message> {
-    private val server = env.getAddresses<Server>()[0]
+    private val server = env.getIds<Server>()[0]
     private val resultsChannel = Channel<Int?>(UNLIMITED)
 
     override fun onMessage(message: Message, sender: Int) {

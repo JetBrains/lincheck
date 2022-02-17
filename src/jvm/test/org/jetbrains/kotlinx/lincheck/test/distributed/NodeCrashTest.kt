@@ -50,7 +50,6 @@ internal class MockDistributedStrategy() : DistributedStrategy<Unit>(
     Node1::class.java,
     ExecutionScenario(emptyList(), emptyList(), emptyList()),
     emptyList(),
-    null,
     EpsilonVerifier(Unit::class.java)
 ) {
     private var callCount = 0

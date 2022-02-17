@@ -64,7 +64,7 @@ class KVStorageServerIncorrect(private val env: NodeEnvironment<Command>) : Node
 class KVStorageClientIncorrect(private val nodeEnvironment: NodeEnvironment<Command>) : Node<Command> {
     private var commandId = 0
     private val commandResults = HashMap<Int, Command>()
-    private val serverAddr = nodeEnvironment.getAddresses<KVStorageServerIncorrect>()[0]
+    private val serverAddr = nodeEnvironment.getIds<KVStorageServerIncorrect>()[0]
     private val signal = Signal()
     private val queue = LinkedList<Command>()
 

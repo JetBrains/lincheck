@@ -25,6 +25,9 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
+/**
+ * Interface for custom distributed verifier.
+ */
 interface DistributedVerifier : Verifier {
     fun verifyResultsAndStates(
         nodes: Array<out Node<*>>,

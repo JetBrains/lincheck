@@ -57,7 +57,7 @@ class ClientIncorrect(private val env: NodeEnvironment<KVMessage>) : Node<KVMess
     private var res: GetKVResponse? = null
     private val rand = Random(env.id)
 
-    private fun getRandomReplica() = env.getAddresses<ReplicaIncorrect>().random(rand)
+    private fun getRandomReplica() = env.getIds<ReplicaIncorrect>().random(rand)
 
     @Operation(cancellableOnSuspension = false)
     suspend fun get(key: Int): Int? {

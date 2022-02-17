@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 import org.junit.Test
 
 class InfinitePinger(private val env: NodeEnvironment<Unit>) : Node<Unit> {
-    private val ponger = env.getAddresses<InfinitePonger>()[0]
+    private val ponger = env.getIds<InfinitePonger>()[0]
 
     @Operation
     fun op() {

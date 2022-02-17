@@ -47,7 +47,6 @@ internal class DistributedRandomStrategy<Message>(
     testClass,
     scenario,
     validationFunctions,
-    null,
     verifier
 ) {
     private val probability = ProbabilisticModel(testCfg)
@@ -212,13 +211,14 @@ internal class DistributedInterleavingStrategy<Message>(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
-    verifier: Verifier
+    verifier: Verifier,
+    val interleaving: List<Int>,
+    val decisionModel: DecisionModel
 ) : DistributedStrategy<Message>(
     testCfg,
     testClass,
     scenario,
     validationFunctions,
-    null,
     verifier
 ) {
     override fun reset() {
@@ -268,5 +268,4 @@ internal class DistributedInterleavingStrategy<Message>(
     override fun run(): LincheckFailure? {
         TODO("Not yet implemented")
     }
-
 }

@@ -30,7 +30,7 @@ import org.junit.Test
 
 class Pinger(val env: NodeEnvironment<PingPongMessage>) : Node<PingPongMessage> {
     private val signal = Signal()
-    private val pongerAddress = env.getAddresses<Ponger>()[0]
+    private val pongerAddress = env.getIds<Ponger>()[0]
 
     override fun onMessage(message: PingPongMessage, sender: Int) {
         when (message) {
