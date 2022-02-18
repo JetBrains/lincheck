@@ -20,11 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.distributed.random
 
-import org.apache.commons.math3.distribution.GeometricDistribution
 import org.jetbrains.kotlinx.lincheck.distributed.CrashMode.FINISH_ON_CRASH
 import org.jetbrains.kotlinx.lincheck.distributed.DistributedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.distributed.Task
-import kotlin.math.*
+import kotlin.math.max
 import kotlin.random.Random
 
 
@@ -116,6 +115,26 @@ internal class DecisionInfo {
     }
 }
 
+private class GeometricProbability(private val p: Double) {
+    private val precalculated = mutableMapOf<Int, Double>()
+
+    fun probability(x: Int) : Double {
+        if (x in precalculated) return precalculated[x]!! * p
+        if (x == 0) {
+            precalculated[x] = 1.0
+            return p
+        }
+        val prev = probability(x / 2)
+        val res = if (x % 2 == 0) {
+            prev * prev
+        } else {
+            prev * prev * (1 - p)
+        }
+        precalculated[x] = res
+        return res * p
+    }
+}
+
 /**
  * Probability model which generates random events which happen during the execution.
  */
@@ -133,7 +152,7 @@ internal class ProbabilisticModel(private val testCfg: DistributedCTestConfigura
         val crashedNodesExpectation: ThreadLocal<Int> = ThreadLocal.withInitial { DEFAULT_CRASH_EXPECTATION }
         val networkPartitionExpectation: ThreadLocal<Int> = ThreadLocal.withInitial { DEFAULT_PARTITION_EXPECTATION }
     }
-
+    private val geometricProbability = GeometricProbability(MEAN_GEOMETRIC_DISTRIBUTION)
     private val crashExpectation: Int = crashedNodesExpectation.get()
     private val partitionExpectation: Int = networkPartitionExpectation.get()
 
@@ -167,8 +186,11 @@ internal class ProbabilisticModel(private val testCfg: DistributedCTestConfigura
      * will be considered to be chosen for the next iteration.
      */
     override fun geometricProbability(x: Int): Boolean {
-        val n = rand.nextInt(Int.MAX_VALUE)
-        return 1f / x > -(log2(n.toFloat() / Int.MAX_VALUE))
+        /*val n = rand.nextInt(Int.MAX_VALUE)
+        println("$x, $n, ${-(log2(n.toFloat() / Int.MAX_VALUE))}, ${log2(Int.MAX_VALUE.toFloat()) - log2(n.toFloat())}")
+        // f(2) = 1/2 > -(log2(
+        return 1f / x > -(log2(n.toFloat() / Int.MAX_VALUE))*/
+        return geometricProbability.probability(x) >= rand.nextDouble(1.0)
     }
 
     /**

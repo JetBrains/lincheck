@@ -78,11 +78,6 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-tasks.withType<Test> {
-    minHeapSize = "10g"
-    maxHeapSize = "10g"
-}
-
 sourceSets.main {
     java.srcDirs("src/jvm/main")
 }
