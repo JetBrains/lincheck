@@ -6,5 +6,5 @@
         <browser-edits-url>https://github.com/Kotlin/kotlinx-lincheck/edit/master/</browser-edits-url>
         <allow-indexable-eaps>true</allow-indexable-eaps>
     </variables>
-    <build-profile product="kc"/>
+    <build-profile product="kl"/>
 </buildprofiles>

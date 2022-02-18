@@ -51,6 +51,7 @@ For this, configure the generator for a `key: Int` parameter:
    import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
+   //sampleStart
    @Param(name = "key", gen = IntGen::class, conf = "1:2")
    class MultiMapTest {
        private val map = MultiMap()
@@ -64,6 +65,7 @@ For this, configure the generator for a `key: Int` parameter:
       @Test
       fun stressTest() = StressOptions().check(this::class)
    }
+   //sampleEnd
    ```
 
 5. Run the `stressTest()` and see the following output:

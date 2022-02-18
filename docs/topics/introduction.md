@@ -29,19 +29,41 @@ Add Lincheck as a dependency to your project:
 1. Open the `build.gradle(.kts)` file and make sure that you have `mavenCentral()` in the list of repositories.
 2. Add the following dependencies to the Gradle configuration:
 
-```groovy
+<tabs group="build-script">
+<tab title="Kotlin" group-key="kotlin">
+
+```kotlin
 repositories {
     mavenCentral()
 }
 
 dependencies {
     // Lincheck dependency
-    testImplementation "org.jetbrains.kotlinx:lincheck:2.13"
+    testImplementation("org.jetbrains.kotlinx:lincheck:2.13")
+
+    // This dependency will allow you to work with kotlin.test and JUnit:
+    testImplementation("junit:junit:4.12")
+}
+```
+
+</tab>
+<tab title="Groovy" group-key="groovy">
+
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+   // Lincheck dependency
+   testImplementation "org.jetbrains.kotlinx:lincheck:2.13"
 
     // This dependency will allow you to work with kotlin.test and JUnit:
     testImplementation "junit:junit:4.12"
 }
 ```
+</tab>
+</tabs>
 
 ## Write and run the test
 
