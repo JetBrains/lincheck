@@ -35,6 +35,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
+//sampleStart
 class CounterTest {
     private val c = Counter() // initial state
 
@@ -48,6 +49,7 @@ class CounterTest {
     @Test // run the test
     fun stressTest() = StressOptions().check(this::class)
 }
+//sampleEnd
 ```
 
 ### How stress testing works
