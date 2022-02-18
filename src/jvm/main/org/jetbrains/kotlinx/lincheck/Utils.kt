@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCa
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
@@ -301,7 +300,7 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
  */
-internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
+internal fun collectThreadDump(runner: Runner<*>) = Thread.getAllStackTraces().filter { (t, _) ->
     t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
 }
 

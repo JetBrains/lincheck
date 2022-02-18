@@ -31,6 +31,8 @@ package org.jetbrains.kotlinx.lincheck.paramgen
  *
  * Note, that this API is unstable and is subject to change.
  */
+typealias NodeIdGen = ThreadIdGen
+
 class ThreadIdGen(configuration: String) : ParameterGenerator<Any> {
     override fun generate() = THREAD_ID_TOKEN
 }

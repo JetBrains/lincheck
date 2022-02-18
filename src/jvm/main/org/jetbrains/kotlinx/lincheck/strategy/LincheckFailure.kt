@@ -21,14 +21,18 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.appendFailure
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
-    val trace: Trace?
+    val trace: Trace?,
+    val crashes: Int = 0,
+    val partitions: Int = 0,
+    val logFilename: String?
 ) {
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
@@ -36,38 +40,105 @@ sealed class LincheckFailure(
 internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     val results: ExecutionResult,
-    trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+    trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) : LincheckFailure(scenario, trace, crashes, partitions, logFilename)
 
 internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
     val threadDump: Map<Thread, Array<StackTraceElement>>,
-    trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+    trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) : LincheckFailure(scenario, trace, crashes, partitions, logFilename)
 
 internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     val exception: Throwable,
-    trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+    trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) : LincheckFailure(scenario, trace, crashes, partitions, logFilename)
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
     val functionName: String,
     val exception: Throwable,
-    trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+    trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) : LincheckFailure(scenario, trace, crashes, partitions, logFilename)
 
 internal class ObstructionFreedomViolationFailure(
     scenario: ExecutionScenario,
     val reason: String,
-    trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+    trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) : LincheckFailure(scenario, trace, crashes, partitions, logFilename)
 
-internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
-    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
-    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
-    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, trace)
-    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)
+internal class LivelockFailure(
+    scenario: ExecutionScenario,
+    trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) : LincheckFailure(scenario, trace, crashes, partitions, logFilename)
+
+internal class TaskLimitExceededFailure(
+    scenario: ExecutionScenario,
+    trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) : LincheckFailure(scenario, trace, crashes, partitions, logFilename)
+
+internal fun InvocationResult.toLincheckFailure(
+    scenario: ExecutionScenario, trace: Trace? = null,
+    crashes: Int = 0,
+    partitions: Int = 0,
+    logFilename: String? = null
+) = when (this) {
+    is DeadlockInvocationResult -> DeadlockWithDumpFailure(
+        scenario,
+        threadDump,
+        trace,
+        crashes,
+        partitions,
+        logFilename
+    )
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(
+        scenario,
+        exception,
+        trace,
+        crashes,
+        partitions,
+        logFilename
+    )
+    is ValidationFailureInvocationResult -> ValidationFailure(
+        scenario,
+        functionName,
+        exception,
+        trace,
+        crashes,
+        partitions,
+        logFilename
+    )
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(
+        scenario,
+        reason,
+        trace,
+        crashes,
+        partitions,
+        logFilename
+    )
+    is LivelockInvocationResult -> LivelockFailure(scenario, trace, crashes, partitions, logFilename)
+    is TaskLimitExceededResult -> TaskLimitExceededFailure(scenario, trace, crashes, partitions, logFilename)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

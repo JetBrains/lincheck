@@ -21,7 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
 /**
  * Represents results for invocations, see [Runner.run].
@@ -67,3 +68,7 @@ class ValidationFailureInvocationResult(
 class ObstructionFreedomViolationInvocationResult(
     val reason: String
 ) : InvocationResult()
+
+object LivelockInvocationResult : InvocationResult()
+
+object TaskLimitExceededResult : InvocationResult()

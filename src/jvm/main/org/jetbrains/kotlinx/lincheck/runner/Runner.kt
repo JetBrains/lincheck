@@ -34,8 +34,8 @@ import java.io.*
  * like fibers, it may require code transformation, so that [createTransformer] should
  * provide the corresponding transformer and [needsTransformation] should return `true`.
  */
-abstract class Runner protected constructor(
-    protected val strategy: Strategy,
+abstract class Runner<S: Strategy> protected constructor(
+    protected val strategy: S,
     private val _testClass: Class<*>, // will be transformed later
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?

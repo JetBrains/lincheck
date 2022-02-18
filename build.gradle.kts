@@ -1,4 +1,4 @@
-import org.gradle.jvm.tasks.Jar
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // atomicfu
 buildscript {
@@ -15,12 +15,16 @@ plugins {
     id("maven-publish")
     id("maven")
     id("kotlinx.team.infra") version "0.2.0-dev-55"
+    kotlin("plugin.serialization") version "1.5.31"
 }
 
 repositories {
     mavenCentral()
     jcenter()
 }
+/*dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
+}*/
 
 kotlin {
     jvm {
@@ -43,6 +47,7 @@ kotlin {
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
             val reflectionsVersion: String by project
+            val apacheCommonsVersion: String by project
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -51,6 +56,7 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+                api("org.apache.commons:commons-math3:$apacheCommonsVersion")
             }
         }
 
@@ -88,17 +94,20 @@ tasks {
 
     withType<Test> {
         maxParallelForks = 1
-        jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-                "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
+        jvmArgs(
+            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED"
+        )
     }
 
     withType<Jar> {
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
-            attributes("Copyright" to
-                "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
-                "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
+            attributes(
+                "Copyright" to
+                        "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
+                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
             )
         }
     }

@@ -21,16 +21,21 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import kotlinx.coroutines.CancellableContinuation
+import org.jetbrains.kotlinx.lincheck.CancellationResult
+import org.jetbrains.kotlinx.lincheck.CancellationResult.CANCELLATION_FAILED
+import org.jetbrains.kotlinx.lincheck.collectThreadDump
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.objectweb.asm.*
-import java.io.*
-import java.lang.reflect.*
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.strategy.toLincheckFailure
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.kotlinx.lincheck.wrapInvalidAccessFromUnnamedModuleExceptionWithDescription
+import org.objectweb.asm.ClassVisitor
+import java.io.Closeable
+import java.lang.reflect.Method
 import java.util.*
 import kotlin.collections.set
 
@@ -54,7 +59,7 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.parallelExecution.size
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    private var runner: Runner
+    private var runner: Runner<Strategy>
     // Shares location ids between class transformers in order
     // to keep them different in different code locations.
     private val codeLocationIdProvider = CodeLocationIdProvider()
@@ -114,7 +119,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun createRunner(): Runner =
+    private fun createRunner(): Runner<Strategy> =
         ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
     private fun initializeManagedState() {
