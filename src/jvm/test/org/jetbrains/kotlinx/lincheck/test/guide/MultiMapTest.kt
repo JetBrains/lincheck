@@ -20,9 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
@@ -56,7 +57,7 @@ class MultiMap<K, V> {
     fun get(key: K): List<V> = map[key] ?: emptyList()
 }
 
-@Param(name = "key", gen = IntGen::class, conf = "1:2")
+@Param(name = "key", gen = IntGen::class, conf = "1:1")
 class MultiMapTest {
     private val map = MultiMap<Int, Int>()
 
@@ -69,17 +70,25 @@ class MultiMapTest {
     @Operation
     fun get(@Param(name = "key") key: Int) = map.get(key)
 
-    @Test // TODO expect failing result
-    fun stressTest() = StressOptions().check(this::class)
+    @Test
+    fun stressTest() {
+        StressOptions().checkImpl(this::class.java).also {
+            assert(it is IncorrectResultsFailure)
+        }
+    }
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .addGuarantee(forClasses(ConcurrentHashMap::class.qualifiedName!!).allMethods().treatAsAtomic())
-        // Note, that with atomicity guarantees set, all possible interleaving in the MultiMap can be examined,
-        // you can ensure the test to pass when the number of invocations is set to the max value.
-        // Otherwise, if you try to examine all interleaving without atomic guarantees for ConcurrentHashMap,
-        // the test will most probably fail with the lack of memory
-        // because of the huge amount of possible context switches to be checked.
-        .invocationsPerIteration(Int.MAX_VALUE)
-        .check(this::class)
+    fun modelCheckingTest() {
+        ModelCheckingOptions()
+            .addGuarantee(forClasses(ConcurrentHashMap::class.qualifiedName!!).allMethods().treatAsAtomic())
+            // Note, that with atomicity guarantees set, all possible interleaving in the MultiMap can be examined,
+            // you can ensure the test to pass when the number of invocations is set to the max value.
+            // Otherwise, if you try to examine all interleaving without atomic guarantees for ConcurrentHashMap,
+            // the test will most probably fail with the lack of memory
+            // because of the huge amount of possible context switches to be checked.
+            .invocationsPerIteration(Int.MAX_VALUE)
+            .checkImpl(this::class.java).also {
+                assert(it is IncorrectResultsFailure)
+            }
+    }
 }

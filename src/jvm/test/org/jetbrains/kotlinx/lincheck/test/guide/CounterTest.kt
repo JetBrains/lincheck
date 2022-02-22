@@ -20,9 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -49,14 +50,22 @@ class CounterTest : VerifierState() {
     fun counterRepresentation() = c.get().toString()
 
     @Test
-    fun stressTest() = StressOptions()
-        .actorsBefore(2) // Init part
-        .threads(2).actorsPerThread(2)
-        .actorsAfter(1) // Post part
-        .minimizeFailedScenario(true)
-        .check(this::class)
+    fun stressTest() {
+        StressOptions()
+            .actorsBefore(2) // Init part
+            .threads(2).actorsPerThread(2)
+            .actorsAfter(1) // Post part
+            .minimizeFailedScenario(true)
+            .checkImpl(this::class.java).also {
+                assert(it is IncorrectResultsFailure)
+            }
+    }
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+    fun modelCheckingTest() {
+        ModelCheckingOptions().checkImpl(this::class.java).also {
+            assert(it is IncorrectResultsFailure)
+        }
+    }
 }
 
