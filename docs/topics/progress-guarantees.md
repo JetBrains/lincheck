@@ -40,9 +40,9 @@ Check if this algorithm is non-blocking:
 
 1. To check progress guarantees of the algorithm, set the `checkObstructionFreedom` option in `ModelCheckingOptions()`:
 
-   ```kotlin
-   `ModelCheckingOptions().checkObstructionFreedom(true)`
-   ```
+```kotlin
+   ModelCheckingOptions().checkObstructionFreedom(true)
+```
    
 2. Also note that according to the contract, there is only one writer, so add `write(first, second)` operation to the non-parallel 
    operations group.
@@ -53,24 +53,49 @@ Here is the resulting test:
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
+
+class DataHolder {
+   var first: Int = 42
+   var second: Int = 7
+   @Volatile var version = 0
+
+   fun write(newFirst: Int, newSecond: Int) { // single thread updater
+      version++ // lock the holder for reads
+      first = newFirst
+      second = newSecond
+      version++ // release the holder for reads
+   }
+
+   fun read(): Pair<Int, Int> {
+      while(true) {
+         val curVersion = version
+         // Is there a concurrent update?
+         if (curVersion % 2 == 1) continue
+         // Read the data
+         val first = this.first
+         val second = this.second
+         // Return if version is the same
+         if (curVersion == version) return first to second
+      }
+   }
+}
 
 //sampleStart
 @OpGroupConfig(name = "writer", nonParallel = true)
 class DataHolderTest {
-    private val dataHolder = DataHolder()
+   private val dataHolder = DataHolder()
 
-    @Operation(group = "writer") // single thread writer
-    fun write(first: Int, second: Int) = dataHolder.write(first, second)
+   @Operation(group = "writer") // single thread writer
+   fun write(first: Int, second: Int) = dataHolder.write(first, second)
 
-    @Operation
-    fun read() = dataHolder.read()
-    
-    @Test
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .check(this::class)
+   @Operation
+   fun read() = dataHolder.read()
+
+   @Test
+   fun runModelCheckingTest() = ModelCheckingOptions()
+      .checkObstructionFreedom(true)
+      .check(this::class)
 }
 //sampleEnd
 ```

@@ -42,19 +42,34 @@ It will handle suspensions automatically.
 Here is the test example for a basic communication primitive, a [rendezvous channel](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.channels/-channel/index.html):
 
 ```kotlin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ClosedSendChannelException
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.junit.Test
+
+//sampleStart
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class RendezvousChannelTest {
-    private val ch = Channel<Int>()
+  private val ch = Channel<Int>()
 
-    @Operation // suspending operation
-    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+  @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
+  suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
 
-    @Operation // suspending operation
-    suspend fun receive() = ch.receive()
+  @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+  suspend fun receive() = ch.receive()
 
-    @Test
-    fun stressTest() = StressOptions().check(this::class)
+  @Operation
+  fun close() = ch.close()
+
+  @Test
+  fun stressTest() = StressOptions().check(this::class)
 }
+//sampleEnd
 ```
 
 ### State equivalency
