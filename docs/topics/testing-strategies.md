@@ -141,7 +141,7 @@ Model checking strategy controls the execution. Therefore, Lincheck can provide 
 interleaving, and it's extremely helpful in practice.
 
 You can see the example of trace for the incorrect execution of the `Counter` in
-the [Write your first test](introduction.md#Trace-the-invalid-execution) tutorial.
+the [Write your first test](introduction.md#trace-the-invalid-execution) tutorial.
 
 ## Which testing strategy to choose?
 

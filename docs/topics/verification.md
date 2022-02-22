@@ -285,7 +285,7 @@ class StackTest1 : VerifierState() {
 
 It's also possible to validate the data structure invariants, implemented with functions that can be executed multiple
 times during execution when there is no running operation in an intermediate state. For example, they are invoked in the
-stress mode at the beginning and end of the parallel execution).
+stress mode at the beginning and end of the parallel execution.
 
 Validation functions are marked with a special `@Validate` annotation, have no argument, and do not return anything. In
 case the testing data structure is in an invalid state, they should throw an exception.
