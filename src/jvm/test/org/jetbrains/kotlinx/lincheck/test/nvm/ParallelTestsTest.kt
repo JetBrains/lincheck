@@ -20,18 +20,29 @@
 
 package org.jetbrains.kotlinx.lincheck.test.nvm
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.test.nvm.nrl.CounterTest
 import org.junit.Test
 
 internal class ParallelTestsTest {
     @Test
     fun test() {
-        val aTest = Runnable { CounterTest().testWithStressStrategy() }
+        val aTest = Runnable { SmallCounterTest().testWithStressStrategy() }
         val executors = List(2) { Thread(aTest) }
         var er: Throwable? = null
         executors.forEach { it.setUncaughtExceptionHandler { _, e -> er = e } }
         executors.forEach { it.start() }
         executors.forEach { it.join() }
         er?.also { throw it }
+    }
+}
+
+internal class SmallCounterTest : CounterTest() {
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(2)
+        actorsPerThread(2)
+        actorsAfter(2)
+        threads(2)
+        iterations(10)
     }
 }

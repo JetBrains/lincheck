@@ -41,7 +41,7 @@ internal interface Counter {
 /**
  * @see  <a href="https://www.cs.bgu.ac.il/~hendlerd/papers/NRL.pdf">Nesting-Safe Recoverable Linearizability</a>
  */
-internal class CounterTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialCounter::class), Counter {
+internal open class CounterTest : AbstractNVMLincheckTest(Recover.NRL, THREADS_NUMBER, SequentialCounter::class), Counter {
     private val counter = NRLCounter(THREADS_NUMBER + 2)
 
     @Operation
