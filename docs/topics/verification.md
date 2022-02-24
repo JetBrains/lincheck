@@ -42,9 +42,10 @@ To provide a sequential specification of the algorithm for verification:
 
 1. Implement a sequential version of all the testing methods.
 2. Pass the class with sequential implementation to the `sequentialSpecification` option:
-```kotlin
-StressOptions().sequentialSpecification(SequentialStack::class)
-```
+
+   ```kotlin
+   StressOptions().sequentialSpecification(SequentialStack::class)
+   ```
 
 For example, provide a sequential specification for the concurrent stack implementation with non-linearizable `size`:
 
@@ -132,14 +133,16 @@ Lincheck provides the following way to do that:
 
 1. Make the test class extend `VerifierState`.
 2. Override `extractState()` function: it should define the state of a data structure.
-3. Turn on the `requireStateEquivalenceImplCheck` option:
-```kotlin
-StressOptions().requireStateEquivalenceImplCheck(true)
-```
 
-> `extractState()` is called once and can modify the data structure.
->
-{type="note"}
+   > `extractState()` is called once and can modify the data structure.
+   >
+   {type="note"}
+
+3. Turn on the `requireStateEquivalenceImplCheck` option:
+
+   ```kotlin
+   StressOptions().requireStateEquivalenceImplCheck(true)
+   ```
 
 Defining state equivalence for `StackTest` looks like this:
 

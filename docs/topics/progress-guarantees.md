@@ -40,9 +40,9 @@ Check if this algorithm is non-blocking:
 
 1. To check progress guarantees of the algorithm, set the `checkObstructionFreedom` option in `ModelCheckingOptions()`:
 
-```kotlin
-   ModelCheckingOptions().checkObstructionFreedom(true)
-```
+   ```kotlin
+      ModelCheckingOptions().checkObstructionFreedom(true)
+   ```
    
 2. Also note that according to the contract, there is only one writer, so add `write(first, second)` operation to the non-parallel 
    operations group.

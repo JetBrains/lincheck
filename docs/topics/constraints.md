@@ -15,6 +15,8 @@ and set `nonParallel` parameter to true.
 
 2. Specify the group name in the `@Operation` annotation to add all non-parallel operations to this group.
 
+Here is the resulting test:
+
 ```kotlin
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.annotations.*

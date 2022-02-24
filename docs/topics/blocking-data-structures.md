@@ -1,13 +1,13 @@
 [//]: # (title: Testing blocking data structures)
 
 Lincheck supports testing blocking data structures implemented with [suspending functions](https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md#coroutines-overview)
-from the Kotlin language. The examples of such data structures from the `kotlinx.coroutines` library are mutexes, semaphores, and channels
+from the Kotlin language. The examples of such data structures from the `kotlinx.coroutines` library are mutexes, semaphores, and channels.
 
 For more information on these data structures, see the [Coroutines guide](https://kotlinlang.org/docs/reference/coroutines/coroutines-guide.html).
 
 ### Dual data structures
 
-Some data structures are blocking by design. Consider the synchronous queues (also known as channels in coroutines libraries),
+Some data structures are blocking by design. Consider the synchronous queues (also known as channels in coroutine libraries),
 where senders and receivers perform a rendezvous handshake as a part of their protocol when senders wait for receivers
 and vice versa.
 
@@ -79,9 +79,10 @@ defining the equivalency relation on the states of a channel.
 See the [Result verification](verification.md) section for details.
 
 For a buffered channel, the externally observable state may include:
-* elements from the buffer
-* waiting `send` operations
-* whether the channel is closed
+
+* Elements from the buffer
+* Waiting `send` operations
+* Information on whether the channel is closed
 
 Here is the example of the buffered channel external state definition:
 
