@@ -42,7 +42,6 @@ class Counter {
     fun get() = value
 }
 
-//sampleStart
 class CounterTest {
     private val c = Counter() // initial state
 
@@ -56,7 +55,6 @@ class CounterTest {
     @Test // run the test
     fun stressTest() = StressOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 ### How stress testing works
@@ -99,7 +97,6 @@ class Counter {
     fun get() = value
 }
 
-//sampleStart
 class CounterTest {
     private val c = Counter() // initial state
 
@@ -113,7 +110,6 @@ class CounterTest {
     @Test // run the test
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 > To use model checking strategy for Java 9 and later, add the following JVM properties:
@@ -174,7 +170,6 @@ class Counter {
     fun get() = value
 }
 
-//sampleStart
 class CounterTest {
     private val c = Counter()
 
@@ -193,7 +188,6 @@ class CounterTest {
         .invocationsPerIteration(1000) // Run each scenario 1000 times
         .check(this::class)
 }
-//sampleEnd
 ```
 
 If you run `stressTest()` again, the output will look like this:
@@ -262,10 +256,8 @@ class CounterTest {
     @Operation
     fun get() = c.get()
     
-    //sampleStart
     @StateRepresentation
     fun counterReperesentation() = c.get().toString()
-    //sampleEnd
     
     @Test // run the test
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)

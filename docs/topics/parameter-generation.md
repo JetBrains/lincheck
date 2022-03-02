@@ -6,7 +6,6 @@ class backed with `ConcurrentHashMap` that contains a race bug:
 ```kotlin
 import java.util.concurrent.ConcurrentHashMap
 
-//sampleStart
 class MultiMap {
     val map = ConcurrentHashMap<Int, List<Int>>()
 
@@ -23,7 +22,6 @@ class MultiMap {
 
     fun get(key: Int) = map.get(key)
 }
-//sampleEnd
 ```
 
 Consider testing concurrent execution of `add(key, value)` and `get(key)` operations. The incorrect interleaving is more 
@@ -66,7 +64,6 @@ For this, configure the generator for a `key: Int` parameter:
        fun get(key: Int) = map.get(key)
    }
    
-   //sampleStart
    @Param(name = "key", gen = IntGen::class, conf = "1:2")
    class MultiMapTest {
        private val map = MultiMap()
@@ -80,7 +77,6 @@ For this, configure the generator for a `key: Int` parameter:
        @Test
        fun stressTest() = StressOptions().check(this::class)
    }
-   //sampleEnd
    ```
 
 5. Run the `stressTest()` and see the following output:

@@ -11,7 +11,6 @@ Consider the `MultiMap` class backed with a `java.util.concurrent.ConcurrentHash
 ```kotlin
 import java.util.concurrent.ConcurrentHashMap
 
-//sampleStart
 class MultiMap {
     val map = ConcurrentHashMap<Int, List<Int>>()
 
@@ -28,7 +27,6 @@ class MultiMap {
 
     fun get(key: Int) = map.get(key)
 }
-//sampleEnd
 ```
 
 It's guaranteed that `java.util.concurrent.ConcurrentHashMap` is linearizable, and all its operations are atomic. You
@@ -70,7 +68,6 @@ class MultiMapTest {
     @Operation
     fun get(@Param(name = "key") key: Int) = map.get(key)
 
-    //sampleStart
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .addGuarantee(forClasses(ConcurrentHashMap::class.qualifiedName!!).allMethods().treatAsAtomic())
@@ -81,7 +78,6 @@ class MultiMapTest {
         // because of the huge amount of possible context switches to be checked.
         .invocationsPerIteration(Int.MAX_VALUE)
         .check(this::class)
-    //sampleEnd
 }
 ```
 

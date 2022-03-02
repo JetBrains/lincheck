@@ -81,7 +81,6 @@ class DataHolder {
    }
 }
 
-//sampleStart
 @OpGroupConfig(name = "writer", nonParallel = true)
 class DataHolderTest {
    private val dataHolder = DataHolder()
@@ -97,7 +96,6 @@ class DataHolderTest {
       .checkObstructionFreedom(true)
       .check(this::class)
 }
-//sampleEnd
 ```
 
 The test is failing with the following output:

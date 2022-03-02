@@ -52,7 +52,6 @@ import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
 
-//sampleStart
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class RendezvousChannelTest {
   private val ch = Channel<Int>()
@@ -69,7 +68,6 @@ class RendezvousChannelTest {
   @Test
   fun stressTest() = StressOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 ### State equivalency
@@ -107,7 +105,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-//sampleStart
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class BufferedChannelTest : VerifierState() {
     private val ch = Channel<Int>(3)
@@ -131,7 +128,6 @@ class BufferedChannelTest : VerifierState() {
     @Test
     fun stressTest() = StressOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 >Get the full code of the tests for the [rendezvous](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/RendezvousChannelTest.kt)

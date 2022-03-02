@@ -87,7 +87,6 @@ class Stack<T> {
 }
 class Node<T>(val next: Node<T>?, val value: T)
 
-//sampleStart
 class StackTest {
    private val s = Stack<Int>()
 
@@ -113,7 +112,6 @@ class StackTest {
       .sequentialSpecification(SequentialStack::class.java)
       .check(this::class)
 }
-//sampleEnd
 ```
 
 ### State equivalency
@@ -195,8 +193,7 @@ class StackTest : VerifierState() {
 
    @Operation
    fun size() = s.size
-
-   //sampleStart
+   
    override fun extractState(): String {
       val elements = mutableListOf<Int>()
       while(s.size != 0) {
@@ -209,7 +206,6 @@ class StackTest : VerifierState() {
    fun stressTest() = StressOptions()
       .requireStateEquivalenceImplCheck(true)
       .check(this::class)
-   //sampleEnd
 }
 ```
 
@@ -265,11 +261,9 @@ class StackTest1 : VerifierState() {
 
    @Operation
    fun push(value: Int) = s.push(value)
-
-   //sampleStart
+   
    @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
    fun pop() = s.pop()
-   //sampleEnd
 
    override fun extractState(): String {
       val elements = mutableListOf<Int>()

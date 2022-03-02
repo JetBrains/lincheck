@@ -76,7 +76,6 @@ Add Lincheck as a dependency to your project:
    import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
-   //sampleStart
    class CounterTest {
        private val c = Counter() // initial state
    
@@ -90,7 +89,6 @@ Add Lincheck as a dependency to your project:
        @Test // JUnit
        fun test() = StressOptions().check(this::class) // the magic button
    }
-   //sampleEnd
    ```
 
    This is a basic Lincheck test that automatically:
@@ -126,7 +124,6 @@ number of context switches.
    import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
-   //sampleStart
    class CounterTest {
        private val c = Counter()
    
@@ -139,7 +136,6 @@ number of context switches.
        @Test
        fun test() = ModelCheckingOptions().check(this::class)
    }
-   //sampleEnd
    ```
 
 2. Re-run the test. You will get the execution trace leading to incorrect results:

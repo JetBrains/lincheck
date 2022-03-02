@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
 
-//sampleStart
 // declare a group of operations that should not be executed in parallel
 @OpGroupConfig(name = "consumer", nonParallel = true)
 class MpscQueueTest {
@@ -42,7 +41,6 @@ class MpscQueueTest {
     @Test
     fun stressTest() = StressOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 Here is an example of the scenario generated for this test:
