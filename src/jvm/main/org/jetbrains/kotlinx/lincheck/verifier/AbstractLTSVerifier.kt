@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import java.util.ArrayList
 
 /**
  * An abstraction for verifiers which use the labeled transition system (LTS) under the hood.
@@ -46,8 +45,9 @@ abstract class AbstractLTSVerifier(protected val sequentialSpecification: Class<
         // Traverse through next possible transitions using depth-first search (DFS). Note that
         // initial and post parts are represented as threads with ids `0` and `threads + 1` respectively.
         for (threadId in threads) {
-            val nextContext = nextContext(threadId)
-            if (nextContext !== null && nextContext.verify()) return true
+            nextContext(threadId).forEach { nextContext ->
+                if (nextContext.verify()) return true
+            }
         }
         return false
     }
@@ -93,7 +93,7 @@ abstract class VerifierContext(
     /**
      * Counts next possible states and the corresponding contexts if the specified thread is executed.
      */
-    abstract fun nextContext(threadId: Int): VerifierContext?
+    internal abstract fun nextContext(threadId: Int): ContextsList
 
     /**
      * Returns `true` if all actors in the specified thread are executed.
@@ -134,4 +134,40 @@ abstract class VerifierContext(
      * Returns the number of completed scenario threads.
      */
     private val completedThreads: Int get() = completedThreads(threads)
+}
+
+internal typealias ContextsList = InlineList<VerifierContext>
+
+internal fun emptyContextsList() = ContextsList()
+
+/**
+ * This is a list optimized to store and iterate 0, 1 or 2 elements.
+ */
+@Suppress("UNCHECKED_CAST")
+internal inline class InlineList<E>(private val holder: Any? = null) {
+    operator fun plus(e: E): InlineList<E> = when (holder) {
+        null -> InlineList(e)
+        is Pair<*, *> -> InlineList(mutableListOf(holder.first, holder.second, e))
+        is List<*> -> this.also { (holder as MutableList<E>).add(e) }
+        else -> InlineList(holder to e)
+    }
+
+    inline fun forEach(action: (E) -> Unit) {
+        when (holder) {
+            null -> {}
+            is Pair<*, *> -> {
+                action(holder.first as E)
+                action(holder.second as E)
+            }
+            is List<*> -> (holder as List<E>).forEach(action)
+            else -> action(holder as E)
+        }
+    }
+
+    inline fun firstOrNull(predicate: (E) -> Boolean): E? {
+        forEach { e ->
+            if (predicate(e)) return e
+        }
+        return null
+    }
 }

@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
 class LockFreeSetTest {
@@ -46,9 +46,9 @@ class LockFreeSetTest {
             }
         }
 
-        StressOptions()
+        ModelCheckingOptions()
             .addCustomScenario(scenario)
-            .invocationsPerIteration(1000000)
+            .invocationsPerIteration(10000000)
             .iterations(0)
             .requireStateEquivalenceImplCheck(false)
             .check(LockFreeSet::class)

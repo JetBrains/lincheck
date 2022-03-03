@@ -37,7 +37,9 @@ public abstract class CachedVerifier implements Verifier {
 
     @Override
     public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
-        boolean newResult = previousResults.computeIfAbsent(scenario, s -> new HashSet<>()).add(results);
+        // some information in ExecutionResult is not used in verification, but may take a lot of memory
+        ExecutionResult essentialResult = ExecutionResultKt.getWithoutVerificationIrrelevantInformation(results);
+        boolean newResult = previousResults.computeIfAbsent(scenario, s -> new HashSet<>()).add(essentialResult);
         if (!newResult) return true;
         return verifyResultsImpl(scenario, results);
     }

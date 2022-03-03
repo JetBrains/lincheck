@@ -23,6 +23,9 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.NoRecoverModel
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
+import org.jetbrains.kotlinx.lincheck.nvm.StrategyRecoveryOptions
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
@@ -44,13 +47,16 @@ abstract class CTestConfiguration(
     val actorsBefore: Int,
     val actorsAfter: Int,
     val generatorClass: Class<out ExecutionGenerator>,
-    val verifierClass: Class<out Verifier>,
+    _verifierClass: Class<out Verifier>,
     val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: Class<*>,
     val timeoutMs: Long,
-    val customScenarios: List<ExecutionScenario>
+    val customScenarios: List<ExecutionScenario>,
+    val recoverabilityModel: RecoverabilityModel
 ) {
+    val verifierClass = if (recoverabilityModel is NoRecoverModel) _verifierClass else recoverabilityModel.verifierClass
+
     abstract fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
     companion object {
@@ -74,7 +80,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
                 ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
                 chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                DEFAULT_TIMEOUT_MS, emptyList()
+                DEFAULT_TIMEOUT_MS, emptyList(), ann.recover.createModel(StrategyRecoveryOptions.STRESS)
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
@@ -84,7 +90,8 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
                 ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
                 ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE, emptyList()
+                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE, emptyList(),
+                ann.recover.createModel(StrategyRecoveryOptions.MANAGED)
             )
         }
     return stressConfigurations + modelCheckingConfigurations

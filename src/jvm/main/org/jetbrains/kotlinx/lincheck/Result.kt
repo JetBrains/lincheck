@@ -1,5 +1,6 @@
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.nvm.NVMStateHolder
 import java.io.Serializable
 import kotlin.coroutines.*
 
@@ -111,6 +112,7 @@ data class ExceptionResult private constructor(val tClazz: Class<out Throwable>,
         fun create(tClazz: Class<out Throwable>, wasSuspended: Boolean = false) = ExceptionResult(tClazz.normalize(), wasSuspended)
     }
 }
+
 // for byte-code generation
 @JvmSynthetic
 fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
@@ -139,3 +141,21 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
     lateinit var resumedActor: Actor
     lateinit var by: Actor
 }
+
+
+class CrashResult : Result() {
+    lateinit var crashedActors: IntArray
+    override val wasSuspended get() = false
+    override fun toString() = "CRASH${crashedActors.joinToString(",", "(", ")") { s -> if (s == -1) "-" else s.toString() }}"
+
+    override fun hashCode() = crashedActors.contentHashCode()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CrashResult) return false
+        return crashedActors.contentEquals(other.crashedActors)
+    }
+}
+
+// for byte-code generation
+@JvmSynthetic
+fun createCrashResult() = CrashResult()

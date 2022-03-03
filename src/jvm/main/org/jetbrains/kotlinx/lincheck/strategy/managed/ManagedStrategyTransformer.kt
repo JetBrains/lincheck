@@ -37,7 +37,7 @@ import kotlin.reflect.jvm.*
 /**
  * This transformer inserts [ManagedStrategy] methods invocations.
  */
-internal class ManagedStrategyTransformer(
+internal open class ManagedStrategyTransformer(
     cv: ClassVisitor?,
     private val tracePointConstructors: MutableList<TracePointConstructor>,
     private val guarantees: List<ManagedStrategyGuarantee>,
@@ -91,12 +91,17 @@ internal class ManagedStrategyTransformer(
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = createTransformerBeforeSharedVariableVisitor(mv, mname, access, desc)
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
+
+    protected open fun createTransformerBeforeSharedVariableVisitor(
+        mv: MethodVisitor?, methodName: String, access: Int, desc: String
+    ) = mv
 
 
 
@@ -1124,7 +1129,7 @@ internal class ManagedStrategyTransformer(
         }
     }
 
-    private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+    protected open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
         private var lineNumber = 0
 
         protected fun invokeBeforeIgnoredSectionEntering() {

@@ -25,6 +25,8 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.ExecutionCallback
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -50,7 +52,8 @@ internal open class ParallelThreadsRunner(
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
-    private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
+    private val useClocks: UseClocks, // specifies whether `HBClock`-s should always be used or with some probability
+    private val recoverModel: RecoverabilityModel = RecoverabilityModel.default
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
@@ -78,11 +81,15 @@ internal open class ParallelThreadsRunner(
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
+    private lateinit var executionCallback: ExecutionCallback
 
     override fun initialize() {
+        recoverModel.reset(classLoader, scenario)
         super.initialize()
+        recoverModel.checkTestClass(testClass)
+        executionCallback = recoverModel.getExecutionCallback()
         testThreadExecutions = Array(scenario.threads) { t ->
-            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
+            TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors(), recoverModel.createActorCrashHandlerGenerator())
         }
         testThreadExecutions.forEach { it.allThreadExecutions = testThreadExecutions }
     }
@@ -245,6 +252,7 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
+        executionCallback.beforeInit(recoverModel)
         reset()
         val initResults = scenario.initExecution.mapIndexed { i, initActor ->
             executeActor(testInstance, initActor).also {
@@ -259,6 +267,7 @@ internal open class ParallelThreadsRunner(
             }
         }
         val afterInitStateRepresentation = constructStateRepresentation()
+        executionCallback.beforeParallel()
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
@@ -281,6 +290,7 @@ internal open class ParallelThreadsRunner(
         val afterParallelStateRepresentation = constructStateRepresentation()
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
+        executionCallback.beforePost()
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
             // no actors are executed after suspension of a post part
             val result = if (postPartSuspended) {
@@ -305,13 +315,33 @@ internal open class ParallelThreadsRunner(
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,
-            postResults, afterPostStateRepresentation
+            postResults, afterPostStateRepresentation, executionCallback.getCrashes()
         )
+        executionCallback.afterPost()
         return CompletedInvocationResult(results)
+    }
+
+    protected open fun beforeStart(iThread: Int) = executionCallback.onStart(iThread)
+    override fun onEnterActorBody(iThread: Int, iActor: Int) = executionCallback.onEnterActorBody(iThread, iActor)
+    override fun onExitActorBody(iThread: Int, iActor: Int) = executionCallback.onExitActorBody(iThread, iActor)
+    override fun onActorStart(iThread: Int) {
+        super.onActorStart(iThread)
+        executionCallback.onActorStart(iThread)
+    }
+
+    override fun onFailure(iThread: Int, e: Throwable) {
+        super.onFailure(iThread, e)
+        executionCallback.onFinish(iThread)
+    }
+
+    override fun onFinish(iThread: Int) {
+        super.onFinish(iThread)
+        executionCallback.onFinish(iThread)
     }
 
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
+        beforeStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1

@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
@@ -66,6 +67,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         val exGen = createExecutionGenerator()
         val verifier = createVerifier(checkStateEquivalence = true)
         for (i in customScenarios.indices) {
+            iterationId.set(-(i + 1))
             val scenario = customScenarios[i]
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
@@ -73,6 +75,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             if (failure != null) return failure
         }
         repeat(iterations) { i ->
+            iterationId.set(i)
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
@@ -97,12 +100,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         reporter.logScenarioMinimization(scenario)
         var minimizedFailure = this
         while (true) {
-            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
+            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg, minimizedFailure) ?: break
         }
         return minimizedFailure
     }
 
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration, currentFailure: LincheckFailure): LincheckFailure? {
         // Reversed indices to avoid conflicts with in-loop removals
         for (i in parallelExecution.indices.reversed()) {
             for (j in parallelExecution[i].indices.reversed()) {
@@ -118,21 +121,53 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val failure = tryMinimize(threads + 1, j, testCfg)
             if (failure != null) return failure
         }
+        if (testCfg is StressCTestConfiguration
+            && testCfg.recoverabilityModel.crashes
+            && currentFailure is IncorrectResultsFailure)
+            return minimizeCrashes(testCfg, currentFailure)
         return null
     }
 
     private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
-        val newScenario = this.copy()
-        val actors = newScenario[threadId] as MutableList<Actor>
-        actors.removeAt(position)
-        if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
-            // Also remove the empty thread
-            newScenario.parallelExecution.removeAt(threadId - 1)
-        }
+        val newScenario = this.copyWithRemovedActor(threadId, position)
         return if (newScenario.isValid) {
-            val verifier = testCfg.createVerifier(checkStateEquivalence = false)
-            newScenario.run(testCfg, verifier)
+            newScenario.runTryMinimize(testCfg)
         } else null
+    }
+
+    private fun ExecutionScenario.runTryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
+        val verifier = testCfg.createVerifier(checkStateEquivalence = false)
+        return run(testCfg, verifier)
+    }
+
+    private fun IncorrectResultsFailure.crashesNumber() = results.crashes.sumBy { it.size }
+
+    /**
+     * Run the scenario at most [testCfg.iterations] times with maximum crashes allowed decreased to minimize the number of crashes.
+     */
+    private fun ExecutionScenario.minimizeCrashes(testCfg: CTestConfiguration, failure: IncorrectResultsFailure): LincheckFailure? {
+        var scenario = this
+        var crashes = failure.crashesNumber()
+        var result: LincheckFailure? = null
+        var iterations = testCfg.iterations
+        useProxyCrash.set(false)
+        while (iterations > 0) {
+            crashesMinimization.set(crashes - 1)
+            val newFailure = scenario.runTryMinimize(testCfg)
+            if (newFailure != null
+                && newFailure is IncorrectResultsFailure
+                && newFailure.crashesNumber() < crashes
+            ) {
+                result = newFailure
+                scenario = newFailure.scenario
+                crashes = newFailure.crashesNumber()
+                continue
+            }
+            iterations--
+        }
+        crashesMinimization.remove()
+        useProxyCrash.remove()
+        return result
     }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
@@ -143,12 +178,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
         ).run()
-
-    private fun ExecutionScenario.copy() = ExecutionScenario(
-        ArrayList(initExecution),
-        parallelExecution.map { ArrayList(it) },
-        ArrayList(postExecution)
-    )
 
     private val ExecutionScenario.isValid: Boolean
         get() = !isParallelPartEmpty &&
@@ -209,6 +238,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
             LinChecker(testClass, options).check()
         }
+
+        /** A test-local setting of the maximum number of crashes allowed. */
+        internal val crashesMinimization = ThreadLocal.withInitial<Int?> { null }
+
+        /** A test-local setting whether to use crash proxy. Proxy is not used during the minimization only. */
+        internal val useProxyCrash = ThreadLocal.withInitial { true }
+
+        /** A test-local storage for the current iteration number. */
+        internal val iterationId = ThreadLocal.withInitial { 0 }
     }
 }
 

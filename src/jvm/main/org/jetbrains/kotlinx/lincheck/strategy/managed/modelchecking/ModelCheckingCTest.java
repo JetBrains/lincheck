@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.kotlinx.lincheck.nvm.Recover;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
 
@@ -135,6 +136,15 @@ public @interface ModelCheckingCTest {
      * By default, the provided concurrent implementation is used in a sequential way.
      */
     Class<?> sequentialSpecification() default DummySequentialSpecification.class;
+
+    /**
+     * Set the recovery model. [Recover.NO_RECOVER] is used by default.
+     * With any other recovery option enables non-volatile memory testing
+     * in the specified model.
+     *
+     * @see Recover
+     */
+    Recover recover() default Recover.NO_RECOVER;
 
     /**
      * Holder annotation for {@link ModelCheckingCTest}.

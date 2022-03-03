@@ -25,6 +25,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.RecoverabilityModel
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -43,12 +44,13 @@ import kotlin.collections.set
  * and class loading problems.
  */
 abstract class ManagedStrategy(
-    private val testClass: Class<*>,
+    protected val testClass: Class<*>,
     scenario: ExecutionScenario,
     private val verifier: Verifier,
-    private val validationFunctions: List<Method>,
+    protected val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    protected val testCfg: ManagedCTestConfiguration,
+    protected val recoverModel: RecoverabilityModel
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.parallelExecution.size
@@ -57,7 +59,7 @@ abstract class ManagedStrategy(
     private var runner: Runner
     // Shares location ids between class transformers in order
     // to keep them different in different code locations.
-    private val codeLocationIdProvider = CodeLocationIdProvider()
+    internal val codeLocationIdProvider = CodeLocationIdProvider()
 
     // == EXECUTION CONTROL FIELDS ==
 
@@ -84,14 +86,15 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether an additional information requires for the trace construction should be collected.
-    private var collectTrace = false
+    protected var collectTrace = false
     // Whether state representations (see `@StateRepresentation`) should be collected after interleaving events.
-    private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
+    protected val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
     // Trace point constructors, where `tracePointConstructors[id]`
     // stores a constructor for the corresponding code location.
-    private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
+    internal val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
     // Collector of all events in the execution such as thread switches.
-    private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+    internal var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+        private set
     // Stores the currently execuring methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
     // Stores the global number of method calls.
@@ -115,7 +118,7 @@ abstract class ManagedStrategy(
     }
 
     private fun createRunner(): Runner =
-        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
+        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS, recoverModel)
 
     private fun initializeManagedState() {
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
@@ -188,7 +191,7 @@ abstract class ManagedStrategy(
     protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
         is CompletedInvocationResult -> {
             if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
+            else IncorrectResultsFailure(scenario, result.results.withoutCrashes, collectTrace(result))
         }
         else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
@@ -282,7 +285,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
+    protected open fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (!isTestThread(iThread)) return // can switch only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
@@ -357,7 +360,7 @@ abstract class ManagedStrategy(
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
      */
-    private fun awaitTurn(iThread: Int) {
+    protected fun awaitTurn(iThread: Int) {
         // Wait actively until the thread is allowed to continue
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
@@ -370,6 +373,7 @@ abstract class ManagedStrategy(
      * A regular context thread switch to another thread.
      */
     private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+        check(iThread == currentThread)
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
@@ -402,13 +406,13 @@ abstract class ManagedStrategy(
      */
     protected fun switchableThreads(iThread: Int) = (0 until nThreads).filter { it != iThread && isActive(it) }
 
-    private fun isTestThread(iThread: Int) = iThread < nThreads
+    protected fun isTestThread(iThread: Int) = iThread < nThreads
 
     /**
      * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
      * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
      */
-    private fun inIgnoredSection(iThread: Int): Boolean =
+    protected fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
 
     // == LISTENING METHODS ==
@@ -703,12 +707,16 @@ abstract class ManagedStrategy(
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
-    private inner class TraceCollector {
+    internal inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
+        }
+
+        fun newCrash(iThread: Int, reason: CrashReason) {
+            _trace += CrashTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread].toList(), reason)
         }
 
         fun finishThread(iThread: Int) {
@@ -726,24 +734,51 @@ abstract class ManagedStrategy(
             _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace)
         }
     }
+
+    // == NVM related ==
+
+    /**
+     * This method is invoked by a test thread before each interesting crash point.
+     * For example, flush.
+     * @param iThread number of invoking thread
+     */
+    internal fun beforeCrashPoint(iThread: Int) = newCrashPoint(iThread)
+
+    /**
+     * This method is invoked by a test thread before each read/write operation into NVM.
+     * @param iThread number of invoking thread
+     */
+    internal fun beforeNVMOperation(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint?) =
+        newSwitchPoint(iThread, codeLocation, tracePoint)
+
+    /**
+     * Create a new crash point, where a crash can occur.
+     */
+    protected open fun newCrashPoint(iThread: Int) {}
+
+    // == NVM related ==
 }
 
 /**
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
  * to the strategy so that it can known about some required events.
  */
-private class ManagedStrategyRunner(
+internal class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
-    stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
+    stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks, recoverModel: RecoverabilityModel
+) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks, recoverModel) {
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         managedStrategy.onStart(iThread)
+        super.beforeStart(iThread)
+    }
+
+    override fun beforeStart(iThread: Int) {
     }
 
     override fun onFinish(iThread: Int) {
-        managedStrategy.onFinish(iThread)
         super.onFinish(iThread)
+        managedStrategy.onFinish(iThread)
     }
 
     override fun onFailure(iThread: Int, e: Throwable) {

@@ -42,9 +42,12 @@ abstract class Runner protected constructor(
 ) : Closeable {
     protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     protected lateinit var testClass: Class<*> // not available before `initialize` call
-    @Suppress("LeakingThis")
-    val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
-                                            else ExecutionClassLoader()
+
+    // lazy initialization is used to avoid calling abstract members before derived classes init is done
+    val classLoader: ExecutionClassLoader by lazy {
+        if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
+        else ExecutionClassLoader()
+    }
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 
     /**
@@ -138,9 +141,24 @@ abstract class Runner protected constructor(
      * Is invoked before each actor execution from the specified thread.
      * The invocations are inserted into the generated code.
      */
-    fun onActorStart(iThread: Int) {
+    open fun onActorStart(iThread: Int) {
         strategy.onActorStart(iThread)
     }
+
+    /**
+     * This method is invoked before the actor's execution body starts.
+     * This method may be called several time for one actor if it is re-executed.
+     * @param iThread number of invoking thread
+     * @param iActor the number of executing actor
+     */
+    open fun onEnterActorBody(iThread: Int, iActor: Int) {}
+
+    /**
+     * This method is invoked after the actor finishes.
+     * if no exception has been thrown.
+     * @param iThread number of invoking thread
+     */
+    open fun onExitActorBody(iThread: Int, iActor: Int) {}
 
     /**
      * Closes the resources used in this runner.

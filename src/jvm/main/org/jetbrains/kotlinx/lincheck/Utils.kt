@@ -25,10 +25,9 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
 import java.lang.ref.*
@@ -247,7 +246,8 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
                 blocking = a.blocking,
                 causesBlocking = a.causesBlocking,
                 promptCancellation = a.promptCancellation,
-                isSuspendable = a.isSuspendable
+                isSuspendable = a.isSuspendable,
+                threadIdArgsIndices = a.threadIdArgsIndices
             )
         }
     },
@@ -305,13 +305,9 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
     t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
 }
 
-/**
- * This method helps to encapsulate remapper logic from strategy interface.
- * The remapper is determined based on the used transformers.
- */
-internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
-    when {
-        classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
+internal fun getRemapperByStrategy(strategy: Strategy): Remapper? =
+    when (strategy) {
+        is ManagedStrategy -> JavaUtilRemapper()
         else -> null
     }
 
@@ -329,3 +325,28 @@ private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses
     "Please add the following lines to your test running configuration:\n" +
     "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
     "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+
+internal fun interface BinarySearchSolver {
+    /**
+     *  A monotonically increasing function.
+     */
+    fun f(x: Double): Double
+
+    /**
+     * Find x such that f(x) = 0. x in [[a], [b]].
+     */
+    fun solve(a: Double, b: Double, eps: Double): Double {
+        var l = a
+        var r = b
+        while (r - l > eps) {
+            val x = (r + l) / 2
+            val fValue = f(x)
+            when {
+                fValue > 0 -> r = x
+                fValue < 0 -> l = x
+                else -> return x
+            }
+        }
+        return l
+    }
+}

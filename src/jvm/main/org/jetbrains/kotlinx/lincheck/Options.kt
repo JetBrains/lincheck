@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.nvm.Recover
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -42,6 +43,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
+    protected var recover: Recover = Recover.NO_RECOVER
 
     /**
      * Number of different test scenarios to be executed
@@ -156,6 +158,17 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun addCustomScenario(scenario: ExecutionScenario) = applyAndCast {
         customScenarios.add(scenario)
+    }
+
+    /**
+     * Set the recovery model. [Recover.NO_RECOVER] is used by default.
+     * With any other recovery option enables non-volatile memory testing
+     * in the specified model.
+     *
+     * @see Recover
+     */
+    fun recover(recoverModel: Recover): OPT = applyAndCast {
+        recover = recoverModel
     }
 
     /**
