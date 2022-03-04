@@ -91,6 +91,10 @@ Add Lincheck as a dependency to your project:
    }
    ```
 
+```kotlin
+```
+{src="CounterTest.kt" lines=""}
+
    This is a basic Lincheck test that automatically:
 
    * Generates several random concurrent scenarios

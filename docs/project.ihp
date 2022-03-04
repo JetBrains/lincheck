@@ -4,6 +4,7 @@
 <ihp version="2.0">
     <!-- <categories src="c.list"/> -->
     <module name="lincheck"/>
+    <snippets src="snippets"/>
     <topics dir="topics"/>
     <images dir="images"/>
     <!-- <vars src="v.list"/> -->
