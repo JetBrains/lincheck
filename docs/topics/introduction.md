@@ -93,7 +93,7 @@ Add Lincheck as a dependency to your project:
 
 ```kotlin
 ```
-{src="CounterTest.kt" lines=""}
+{src="CounterTest.kt" lines="3-8,17-29" kotlin-runnable="true"}
 
    This is a basic Lincheck test that automatically:
 
