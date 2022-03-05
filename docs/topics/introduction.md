@@ -70,14 +70,24 @@ Add Lincheck as a dependency to your project:
 1. In the `src/test/kotlin` directory, create a `CounterTest.kt` file and add the following code:
 
    ```kotlin
+   package org.jetbrains.kotlinx.lincheck.test.guide
+
    import org.jetbrains.kotlinx.lincheck.annotations.Operation
    import org.jetbrains.kotlinx.lincheck.check
    import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
    import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
+   class Counter {
+   @Volatile
+   private var value = 0
+   
+       fun inc(): Int = ++value
+       fun get() = value
+   }
+   
    class CounterTest {
-       private val c = Counter() // initial state
+   private val c = Counter() // initial state
    
        // operations on the Counter
        @Operation
@@ -90,10 +100,7 @@ Add Lincheck as a dependency to your project:
        fun test() = StressOptions().check(this::class) // the magic button
    }
    ```
-
-```kotlin
-```
-{src="CounterTest.kt" lines="3-8,17-29" kotlin-runnable="true"}
+   {kotlin-runnable="true"}
 
    This is a basic Lincheck test that automatically:
 
