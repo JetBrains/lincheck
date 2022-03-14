@@ -16,7 +16,7 @@ We highly recommend exploring the Lincheck features step-by-step:
 
 1. [Write your first test with Lincheck](introduction.md)
 2. [Stress testing and model checking](testing-strategies.md)
-3. [How to generate operation arguments](parameter-generation.md)
+3. [How to generate operation arguments](operation-arguments.md)
 4. [Modular testing in the model checking mode](modular-testing.md) 
 5. [Popular algorithm constraints](constraints.md)
 6. [Checking for non-blocking progress guarantees](progress-guarantees.md)

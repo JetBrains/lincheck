@@ -1,17 +1,18 @@
-[//]: # (title: Parameter generation)
+[//]: # (title: How to generate operation arguments)
 
-Learn how to configure the generation of arguments for test operations using this implementation of the custom `MultiMap`
-class backed with `ConcurrentHashMap` that contains a race bug:
+In this guide section, we will learn how to configure the operation arguments.
+Consider the straightforward `MultiMap` implementation below. 
+Essentially, it bases on the `ConcurrentHashMap`, storing a list of values internally.
 
 ```kotlin
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.*
 
-class MultiMap {
-    val map = ConcurrentHashMap<Int, List<Int>>()
-
-    // adds the value to the list by the given key
-    // contains the race :(
-    fun add(key: Int, value: Int) {
+class MultiMap<K, V> {
+    private val map = ConcurrentHashMap<K, List<V>>()
+   
+    // Maintains a list of values 
+    // associated with the specified key.
+    fun add(key: K, value: V) {
         val list = map[key]
         if (list == null) {
             map[key] = listOf(value)
@@ -20,7 +21,7 @@ class MultiMap {
         }
     }
 
-    fun get(key: Int) = map.get(key)
+    fun get(key: K): List<V> = map[key]
 }
 ```
 
@@ -92,7 +93,7 @@ For this, configure the generator for a `key: Int` parameter:
 Due to the small range of keys, Lincheck quickly revealed the race bug: when two values are being added concurrently by the same key, 
 one of the values may be overwritten and lost.
 
-> Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
+> See the source code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
 >
 {type="note"}
 

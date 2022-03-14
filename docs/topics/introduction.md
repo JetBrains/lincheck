@@ -69,10 +69,10 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
 1. Create a `CounterTest.kt` file in the `src/test/kotlin` directory and insert the following code:
 
    ```kotlin
-   import org.jetbrains.kotlinx.lincheck.annotations.Operation
-   import org.jetbrains.kotlinx.lincheck.check
-   import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-   import org.junit.Test
+   import org.jetbrains.kotlinx.lincheck.annotations.*
+   import org.jetbrains.kotlinx.lincheck.*
+   import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+   import org.junit.*
    
    class CounterTest {
        private val c = Counter() // initial state
@@ -174,4 +174,4 @@ that examines numerous executions with a bounded number of context switches.
 
 ## What's next
 
-Choose [your testing strategy and configure test execution](testing-strategies.md).
+[Stress testing and model checking strategies](testing-strategies.md).

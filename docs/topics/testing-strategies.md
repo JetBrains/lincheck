@@ -297,6 +297,6 @@ Parallel part trace:
 
 ## What's next
 
-* Learn how to [configure arguments passed to test operations](parameter-generation.md) and when it may be useful.
+* Learn how to [configure arguments passed to test operations](operation-arguments.md) and when it may be useful.
 * See how to optimize and increase coverage of the model checking strategy using [modular testing](modular-testing.md).
 * Learn how to use Lincheck for testing [blocking data structures](blocking-data-structures.md).
