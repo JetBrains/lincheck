@@ -48,7 +48,7 @@ class LongAdderTest : VerifierState() {
         .iterations(100000)
         .check(this::class.java)
 
-    @Test
+    @Test(expected = AssertionError::class)
     fun runModelCheckingTest() = ModelCheckingOptions()
         .threads(3)
         .check(this::class.java)

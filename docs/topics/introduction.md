@@ -1,13 +1,15 @@
-[//]: # (title: Write your first test — tutorial)
+[//]: # (title: Write your first test with Lincheck)
 
-This tutorial demonstrates how to use IntelliJ IDEA for creating a test using basic Lincheck API. You'll learn how to set
-up a project and try out different testing modes.
+This tutorial demonstrates how to set up the Lincheck framework and use its basic API.  
+You will create a new IntelliJ IDEA project with an incorrect concurrent counter implementation 
+and write your first Lincheck test for it, finding and analyzing the bug after that.
+
 
 ## Create a project
 
-1. Open a Kotlin project in IntelliJ IDEA. If you don't have one, [create a new project](https://kotlinlang.org/docs/jvm-get-started.html).
+1. Open an existing Kotlin project in IntelliJ IDEA or [create a new one](https://kotlinlang.org/docs/jvm-get-started.html).
 
-2. In the `src/main/kotlin` directory, open the `main.kt` file.
+2. Open the `main.kt` file in the `src/main/kotlin` directory.
 
 3. Replace the code in `main.kt` with the following counter implementation:
 
@@ -20,13 +22,12 @@ up a project and try out different testing modes.
         fun get() = value
    }
     ```
-   Your new Lincheck test will check whether this counter is thread-safe.
+   Further, your will write a Lincheck test to check whether the counter is thread-safe.
 
 ## Add required dependencies
 
-Add Lincheck as a dependency to your project:
+1. Open the `build.gradle(.kts)` file and make sure that `mavenCentral()` is added to the repository list.
 
-1. Open the `build.gradle(.kts)` file and make sure that you have `mavenCentral()` in the list of repositories.
 2. Add the following dependencies to the Gradle configuration:
 
    <tabs group="build-script">
@@ -39,10 +40,9 @@ Add Lincheck as a dependency to your project:
    
    dependencies {
        // Lincheck dependency
-       testImplementation("org.jetbrains.kotlinx:lincheck:2.13")
-   
-       // This dependency will allow you to work with kotlin.test and JUnit:
-       testImplementation("junit:junit:4.12")
+       testImplementation("org.jetbrains.kotlinx:lincheck:2.14.1")
+       // This dependency will allow you to work with kotlin.test and JUnit
+       testImplementation("junit:junit:4.13")
    }
    ```
    
@@ -56,24 +56,22 @@ Add Lincheck as a dependency to your project:
    
    dependencies {
        // Lincheck dependency
-       testImplementation "org.jetbrains.kotlinx:lincheck:2.13"
-   
-       // This dependency will allow you to work with kotlin.test and JUnit:
-       testImplementation "junit:junit:4.12"
+       testImplementation "org.jetbrains.kotlinx:lincheck:2.14.1"
+       // This dependency will allow you to work with kotlin.test and JUnit
+       testImplementation "junit:junit:4.13"
    }
    ```
    </tab>
    </tabs>
 
-## Write and run the test
+## Write a Lincheck test
 
-1. In the `src/test/kotlin` directory, create a `CounterTest.kt` file and add the following code:
+1. Create a `CounterTest.kt` file in the `src/test/kotlin` directory and insert the following code:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.Operation
    import org.jetbrains.kotlinx.lincheck.check
    import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-   import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
    class CounterTest {
@@ -91,13 +89,16 @@ Add Lincheck as a dependency to your project:
    }
    ```
 
-   This is a basic Lincheck test that automatically:
+2. Congratulations! This is your first Lincheck test for the counter implementation above. 
+   In short, it automatically 
+   (1) generates several random concurrent scenarios with the specified `inc()` and `dec()` operations,
+   (2) performs a lot of invocations for each generated scenario, and
+   (3) verifies that each of the invocation results is correct.
 
-   * Generates several random concurrent scenarios
-   * Examines each of them performing a lot of scenario invocations
-   * Verifies that each of the observed invocation results is correct
-   
-2. Run the test above, and you will see the following error:
+
+## Run the test
+
+Now it is time to run the test. When you do it, you will see the following error:
 
    ```text
    = Invalid execution results =
@@ -105,17 +106,18 @@ Add Lincheck as a dependency to your project:
    | inc(): 1 | inc(): 1 |
    ```
 
-Here, Lincheck found an execution that violates atomicity of the `Counter` — two concurrent increments ended
-with the same result `1`. It means that one increment was lost, and the behavior of the counter is incorrect.
+   Lincheck found an execution that violates the counter atomicity — two concurrent increments ended
+   with the same result `1`, showing that one of the increment has been lost.
 
 ## Trace the invalid execution
 
-Besides the invalid execution results, it is also possible to find the exact interleaving that leads to the error. This
-feature is accessible with the [model checking](testing-strategies.md#model-checking) testing strategy, which examines many different interleavings with a bounded
-number of context switches.
+In addition to the invalid execution results, finding the exact interleaving that leads to the error is also possible with Lincheck.
+The feature is accessible with the [model checking](testing-strategies.md#model-checking) testing mode 
+that examines numerous executions with a bounded number of context switches.
 
-1. To switch the testing strategy, replace the `options` type from `StressOptions()` to `ModelCheckingOptions()`.
-   The updated `CounterTest` class will look like this:
+1. To switch the testing strategy from stress testing to model checking, 
+   replace `StressOptions()` with `ModelCheckingOptions()`.
+   The updated `CounterTest` implementation is presented below:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -138,7 +140,7 @@ number of context switches.
    }
    ```
 
-2. Re-run the test. You will get the execution trace leading to incorrect results:
+2. Run the test again and get the execution trace that leads to the incorrect results:
 
    ```text
    = Invalid execution results =
@@ -158,14 +160,15 @@ number of context switches.
    |                      |   thread is finished                                  |
    ```
 
-   In this trace, the following list of events have occurred:
+   According to the trace, the following events occur:
 
-   1. **T2:** The second thread reads the current value of the counter (`value.READ: 0`) and pauses.
-   2. **T1:** The first thread executes `inc()`, which returns `1`, and finishes.  
-   3. **T2:** The second thread increments the previously read value of the counter and incorrectly updates it to `1`,
-  returning `1` as a result.
+   **T2:** The second thread starts the `inc()` operation, reading the current counter value (`value.READ: 0`) and pausing.
 
-> Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/CounterTest.kt).
+   **T1:** The first thread executes `inc()`, which returns `1`, and finishes.  
+
+   **T2:** The second thread resumes and increments the previously obtained counter value, incorrectly updating the counter to `1`.
+
+> See the full source code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/CounterTest.kt).
 >
 {type="note"}
 
