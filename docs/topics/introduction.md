@@ -29,41 +29,41 @@ Add Lincheck as a dependency to your project:
 1. Open the `build.gradle(.kts)` file and make sure that you have `mavenCentral()` in the list of repositories.
 2. Add the following dependencies to the Gradle configuration:
 
-<tabs group="build-script">
-<tab title="Kotlin" group-key="kotlin">
-
-```kotlin
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    // Lincheck dependency
-    testImplementation("org.jetbrains.kotlinx:lincheck:2.13")
-
-    // This dependency will allow you to work with kotlin.test and JUnit:
-    testImplementation("junit:junit:4.12")
-}
-```
-
-</tab>
-<tab title="Groovy" group-key="groovy">
-
-```groovy
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-   // Lincheck dependency
-   testImplementation "org.jetbrains.kotlinx:lincheck:2.13"
-
-    // This dependency will allow you to work with kotlin.test and JUnit:
-    testImplementation "junit:junit:4.12"
-}
-```
-</tab>
-</tabs>
+   <tabs group="build-script">
+   <tab title="Kotlin" group-key="kotlin">
+   
+   ```kotlin
+   repositories {
+       mavenCentral()
+   }
+   
+   dependencies {
+       // Lincheck dependency
+       testImplementation("org.jetbrains.kotlinx:lincheck:2.13")
+   
+       // This dependency will allow you to work with kotlin.test and JUnit:
+       testImplementation("junit:junit:4.12")
+   }
+   ```
+   
+   </tab>
+   <tab title="Groovy" group-key="groovy">
+   
+   ```groovy
+   repositories {
+       mavenCentral()
+   }
+   
+   dependencies {
+       // Lincheck dependency
+       testImplementation "org.jetbrains.kotlinx:lincheck:2.13"
+   
+       // This dependency will allow you to work with kotlin.test and JUnit:
+       testImplementation "junit:junit:4.12"
+   }
+   ```
+   </tab>
+   </tabs>
 
 ## Write and run the test
 
@@ -76,7 +76,6 @@ dependencies {
    import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
-   //sampleStart
    class CounterTest {
        private val c = Counter() // initial state
    
@@ -90,7 +89,6 @@ dependencies {
        @Test // JUnit
        fun test() = StressOptions().check(this::class) // the magic button
    }
-   //sampleEnd
    ```
 
    This is a basic Lincheck test that automatically:
@@ -126,7 +124,6 @@ number of context switches.
    import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
-   //sampleStart
    class CounterTest {
        private val c = Counter()
    
@@ -139,7 +136,6 @@ number of context switches.
        @Test
        fun test() = ModelCheckingOptions().check(this::class)
    }
-   //sampleEnd
    ```
 
 2. Re-run the test. You will get the execution trace leading to incorrect results:

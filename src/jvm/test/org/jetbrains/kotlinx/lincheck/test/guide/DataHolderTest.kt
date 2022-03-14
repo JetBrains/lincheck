@@ -20,8 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
@@ -74,11 +75,11 @@ class DataHolderTest {
     fun read() = dataHolder.read()
 
     @Test
-    fun runStressTest() = StressOptions()
-        .check(this::class.java)
-
-    @Test
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .check(this::class.java)
+    fun modelCheckingTest() {
+        ModelCheckingOptions()
+            .checkObstructionFreedom(true)
+            .checkImpl(this::class.java).also {
+                assert(it is ObstructionFreedomViolationFailure)
+            }
+    }
 }

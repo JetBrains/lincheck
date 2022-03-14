@@ -2,8 +2,8 @@
 
 Lincheck provides two testing strategies: stress testing and model checking. They are preferable for different use-cases.
 
-Learn about the test structure and what happens under the hood for both testing strategies using this example of
-the `Counter`:
+Learn about the test structure and what happens under the hood for both testing strategies using the example of
+the `Counter` from the previous section:
 
 ```kotlin
 class Counter {
@@ -32,10 +32,16 @@ The full code of the test will look like this:
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-//sampleStart
+class Counter {
+    @Volatile
+    private var value = 0
+
+    fun inc(): Int = ++value
+    fun get() = value
+}
+
 class CounterTest {
     private val c = Counter() // initial state
 
@@ -49,7 +55,6 @@ class CounterTest {
     @Test // run the test
     fun stressTest() = StressOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 ### How stress testing works
@@ -76,11 +81,35 @@ strategy.
 A model checking test is constructed the same way as the stress test. Just replace the `StressOptions()`
 that specify the testing strategy with `ModelCheckingOptions()`.
 
-Find below the `modelCheckingTest()` function that will run the test using the model checking strategy:
+The full code of the test that uses model checking strategy will look like this:
 
 ```kotlin
-@Test
-fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.Test
+
+class Counter {
+    @Volatile
+    private var value = 0
+
+    fun inc(): Int = ++value
+    fun get() = value
+}
+
+class CounterTest {
+    private val c = Counter() // initial state
+
+    // operations on the Counter
+    @Operation
+    fun inc() = c.inc()
+
+    @Operation
+    fun get() = c.get()
+
+    @Test // run the test
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+}
 ```
 
 > To use model checking strategy for Java 9 and later, add the following JVM properties:
@@ -108,7 +137,7 @@ Model checking strategy controls the execution. Therefore, Lincheck can provide 
 interleaving, and it's extremely helpful in practice.
 
 You can see the example of trace for the incorrect execution of the `Counter` in
-the [Write your first test](introduction.md#Trace-the-invalid-execution) tutorial.
+the [Write your first test](introduction.md#trace-the-invalid-execution) tutorial.
 
 ## Which testing strategy to choose?
 
@@ -133,7 +162,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-//sampleStart
+class Counter {
+    @Volatile
+    private var value = 0
+
+    fun inc(): Int = ++value
+    fun get() = value
+}
+
 class CounterTest {
     private val c = Counter()
 
@@ -152,7 +188,6 @@ class CounterTest {
         .invocationsPerIteration(1000) // Run each scenario 1000 times
         .check(this::class)
 }
-//sampleEnd
 ```
 
 If you run `stressTest()` again, the output will look like this:
@@ -198,8 +233,35 @@ representation of the data structure marked with `@StateRepresentation` in the t
 The `String` representation of the `Counter` is just its value. Add the following code to the `CounterTest`:
 
 ```kotlin
-@StateRepresentation
-fun counterReperesentation() = c.get().toString()
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.Test
+
+class Counter {
+    @Volatile
+    private var value = 0
+
+    fun inc(): Int = ++value
+    fun get() = value
+}
+
+class CounterTest {
+    private val c = Counter() // initial state
+
+    // operations on the Counter
+    @Operation
+    fun inc() = c.inc()
+
+    @Operation
+    fun get() = c.get()
+    
+    @StateRepresentation
+    fun counterReperesentation() = c.get().toString()
+    
+    @Test // run the test
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+}
 ```
 
 For stress testing, the state representation is requested after the init, post-execution, and parallel parts. For model checking, the state representation may be printed after each read or write event.

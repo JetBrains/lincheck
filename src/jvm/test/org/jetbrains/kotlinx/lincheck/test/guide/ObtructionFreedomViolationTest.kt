@@ -20,9 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
@@ -71,10 +72,11 @@ class ObstructionFreedomViolationTest  {
     fun dequeue(): Int? = q.dequeue()
 
     @Test
-    fun runStressTest() = StressOptions().check(this::class)
-
-    @Test
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .check(this::class)
+    fun runModelCheckingTest() {
+        ModelCheckingOptions()
+            .checkObstructionFreedom(true)
+            .checkImpl(this::class.java).also {
+                assert(it is ObstructionFreedomViolationFailure)
+            }
+    }
 }

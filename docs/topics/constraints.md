@@ -15,6 +15,8 @@ and set `nonParallel` parameter to true.
 
 2. Specify the group name in the `@Operation` annotation to add all non-parallel operations to this group.
 
+Here is the resulting test:
+
 ```kotlin
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.annotations.*
@@ -22,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
 
-//sampleStart
 // declare a group of operations that should not be executed in parallel
 @OpGroupConfig(name = "consumer", nonParallel = true)
 class MpscQueueTest {
@@ -40,7 +41,6 @@ class MpscQueueTest {
     @Test
     fun stressTest() = StressOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 Here is an example of the scenario generated for this test:

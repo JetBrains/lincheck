@@ -23,8 +23,6 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ClosedSendChannelException
-import kotlinx.coroutines.channels.receiveOrNull
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
@@ -46,7 +44,5 @@ class RendezvousChannelTest {
     fun close() = ch.close()
 
     @Test
-    fun stressTest() = StressOptions()
-        .logLevel(LoggingLevel.INFO)
-        .check(this::class)
+    fun stressTest() = StressOptions().check(this::class)
 }

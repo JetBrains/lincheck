@@ -20,11 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -104,14 +105,22 @@ class StackTest : VerifierState() {
     }
 
     @Test
-    fun runStressTest() = StressOptions()
-        .sequentialSpecification(SequentialStack::class.java)
-        .check(this::class)
+    fun stressTest() {
+        StressOptions()
+            .sequentialSpecification(SequentialStack::class.java)
+            .checkImpl(this::class.java).also {
+                assert(it is IncorrectResultsFailure)
+            }
+    }
 
     @Test
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .actorsBefore(5)
-        .actorsAfter(5)
-        .threads(2).actorsPerThread(2)
-        .check(this::class.java)
+    fun modelCheckingTest() {
+        ModelCheckingOptions()
+            .actorsBefore(5)
+            .actorsAfter(5)
+            .threads(2).actorsPerThread(2)
+            .checkImpl(this::class.java).also {
+                assert(it is IncorrectResultsFailure)
+            }
+    }
 }

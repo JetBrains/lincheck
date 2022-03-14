@@ -21,7 +21,7 @@ to explain those results. Here are the steps of verification:
 3. **T1:** Switch to the first thread and apply `push(1)`.
 4. **T2:** Switch back to the second thread and execute `pop()`, which now returns `1` as expected.
 
-![Stress execution of the Counter](stack_lts.png){width=700}
+![Execution results of the Stack](stack_lts.png){width=700}
 
 This way, Lincheck successfully found a sequential history that produces the given results, showing that they are
 correct. At the same time, if none of the explored sequential histories explains the given result, Lincheck reports an
@@ -42,44 +42,76 @@ To provide a sequential specification of the algorithm for verification:
 
 1. Implement a sequential version of all the testing methods.
 2. Pass the class with sequential implementation to the `sequentialSpecification` option:
-   `StressOptions().sequentialSpecification(SequentialStack::class)`.
 
-For example, provide a sequential specification for the stack:
+   ```kotlin
+   StressOptions().sequentialSpecification(SequentialStack::class)
+   ```
+
+For example, provide a sequential specification for the concurrent stack implementation with non-linearizable `size`:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.junit.*
+import java.util.*
+import java.util.concurrent.atomic.*
+import kotlin.NoSuchElementException
 
-//sampleStart
-class StackTest {
-    private val s = Stack<Int>()
+class Stack<T> {
+   private val top  = AtomicReference<Node<T>?>(null)
+   private val _size = AtomicInteger(0)
 
-    @Operation
-    fun push(value: Int) = s.push(value)
+   fun push(value: T) {
+      while (true) {
+         val cur = top.get()
+         val newTop = Node(cur, value)
+         if (top.compareAndSet(cur, newTop)) { // try to add
+            _size.incrementAndGet() // <-- INCREMENT SIZE
+            return
+         }
+      }
+   }
 
-    @Operation
-    fun pop() = s.pop()
+   fun pop(): T? {
+      while (true) {
+         val cur = top.get() ?: return null // is stack empty?
+         if (top.compareAndSet(cur, cur.next)) { // try to retrieve
+            _size.decrementAndGet() // <-- DECREMENT SIZE
+            return cur.value
+         }
+      }
+   }
 
-    @Operation
-    fun size() = s.size
-
-    // sequential implementation
-    class SequentialStack {
-        val s = LinkedList<Int>()
-
-        fun push(x: Int) = s.push(x)
-        fun pop() = s.pop()
-        fun size() = s.size
-    }
-
-    @Test
-    fun stressTest() = StressOptions()
-        .sequentialSpecification(SequentialStack::class.java)
-        .check(this::class)
+   val size: Int get() = _size.get()
 }
-//sampleEnd
+class Node<T>(val next: Node<T>?, val value: T)
+
+class StackTest {
+   private val s = Stack<Int>()
+
+   @Operation
+   fun push(value: Int) = s.push(value)
+
+   @Operation
+   fun pop() = s.pop()
+
+   @Operation
+   fun size() = s.size
+
+   class SequentialStack {
+      val s = LinkedList<Int>()
+
+      fun push(x: Int) = s.push(x)
+      fun pop() = s.pollFirst()
+      fun size() = s.size
+   }
+
+   @Test
+   fun stressTest() = StressOptions()
+      .sequentialSpecification(SequentialStack::class.java)
+      .check(this::class)
+}
 ```
 
 ### State equivalency
@@ -98,26 +130,82 @@ up verification.
 Lincheck provides the following way to do that:
 
 1. Make the test class extend `VerifierState`.
-2. Override `extractState()` function: it should define the state of a data structure
+2. Override `extractState()` function: it should define the state of a data structure.
 
-> `extractState()` is called once and can modify the data structure.
->
-{type="note"}
+   > `extractState()` is called once and can modify the data structure.
+   >
+   {type="note"}
 
-`extractState()` for the stack looks like this:
+3. Turn on the `requireStateEquivalenceImplCheck` option:
+
+   ```kotlin
+   StressOptions().requireStateEquivalenceImplCheck(true)
+   ```
+
+Defining state equivalence for `StackTest` looks like this:
 
 ```kotlin
-class StackTest : VerifierState() {
-    private val s = Stack<Int>()
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
+import java.util.concurrent.atomic.*
+import kotlin.NoSuchElementException
 
-    //...
-    override fun extractState(): List<Int> {
-        val elements = mutableListOf<Int>()
-        while (s.size != 0) {
-            elements.add(s.pop())
-        }
-        return elements
-    }
+class Stack<T> {
+   private val top  = AtomicReference<Node<T>?>(null)
+   private val _size = AtomicInteger(0)
+
+   fun push(value: T) {
+      while (true) {
+         val cur = top.get()
+         val newTop = Node(cur, value)
+         if (top.compareAndSet(cur, newTop)) { // try to add
+            _size.incrementAndGet() // <-- INCREMENT SIZE
+            return
+         }
+      }
+   }
+
+   fun pop(): T? {
+      while (true) {
+         val cur = top.get() ?: return null // is stack empty?
+         if (top.compareAndSet(cur, cur.next)) { // try to retrieve
+            _size.decrementAndGet() // <-- DECREMENT SIZE
+            return cur.value
+         }
+      }
+   }
+
+   val size: Int get() = _size.get()
+}
+class Node<T>(val next: Node<T>?, val value: T)
+
+class StackTest : VerifierState() {
+   private val s = Stack<Int>()
+
+   @Operation
+   fun push(value: Int) = s.push(value)
+
+   @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
+   fun pop() = s.pop()
+
+   @Operation
+   fun size() = s.size
+   
+   override fun extractState(): String {
+      val elements = mutableListOf<Int>()
+      while(s.size != 0) {
+         elements.add(s.pop()!!)
+      }
+      return elements.toString()
+   }
+
+   @Test
+   fun stressTest() = StressOptions()
+      .requireStateEquivalenceImplCheck(true)
+      .check(this::class)
 }
 ```
 
@@ -131,15 +219,70 @@ For example `pop()` operation on the stack may throw `NoSuchElementException`. D
 of `pop()` invocation the following way:
 
 ```kotlin
-@Operation(handleExceptionsAsResult = [NoSuchElementException::class])
-fun pop() = s.pop()
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
+import java.util.concurrent.atomic.*
+import kotlin.NoSuchElementException
+
+class Stack<T> {
+   private val top  = AtomicReference<Node<T>?>(null)
+   private val _size = AtomicInteger(0)
+
+   fun push(value: T) {
+      while (true) {
+         val cur = top.get()
+         val newTop = Node(cur, value)
+         if (top.compareAndSet(cur, newTop)) { // try to add
+            _size.incrementAndGet() // <-- INCREMENT SIZE
+            return
+         }
+      }
+   }
+
+   fun pop(): T? {
+      while (true) {
+         val cur = top.get() ?: throw NoSuchElementException() // is stack empty?
+         if (top.compareAndSet(cur, cur.next)) { // try to retrieve
+            _size.decrementAndGet() // <-- DECREMENT SIZE
+            return cur.value
+         }
+      }
+   }
+
+   val size: Int get() = _size.get()
+}
+class Node<T>(val next: Node<T>?, val value: T)
+
+class StackTest1 : VerifierState() {
+   private val s = Stack<Int>()
+
+   @Operation
+   fun push(value: Int) = s.push(value)
+   
+   @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
+   fun pop() = s.pop()
+
+   override fun extractState(): String {
+      val elements = mutableListOf<Int>()
+      while(s.size != 0) {
+         elements.add(s.pop()!!)
+      }
+      return elements.toString()
+   }
+
+   @Test
+   fun stressTest() = StressOptions().check(this::class)
+}
 ```
 
 ### Validation of invariants
 
 It's also possible to validate the data structure invariants, implemented with functions that can be executed multiple
 times during execution when there is no running operation in an intermediate state. For example, they are invoked in the
-stress mode at the beginning and end of the parallel execution).
+stress mode at the beginning and end of the parallel execution.
 
 Validation functions are marked with a special `@Validate` annotation, have no argument, and do not return anything. In
 case the testing data structure is in an invalid state, they should throw an exception.

@@ -6,7 +6,6 @@ class backed with `ConcurrentHashMap` that contains a race bug:
 ```kotlin
 import java.util.concurrent.ConcurrentHashMap
 
-//sampleStart
 class MultiMap {
     val map = ConcurrentHashMap<Int, List<Int>>()
 
@@ -23,7 +22,6 @@ class MultiMap {
 
     fun get(key: Int) = map.get(key)
 }
-//sampleEnd
 ```
 
 Consider testing concurrent execution of `add(key, value)` and `get(key)` operations. The incorrect interleaving is more 
@@ -42,16 +40,30 @@ For this, configure the generator for a `key: Int` parameter:
    range of `[1..2]`: 
    
    ```kotlin
+   import java.util.concurrent.ConcurrentHashMap
    import org.jetbrains.kotlinx.lincheck.annotations.*
    import org.jetbrains.kotlinx.lincheck.check
    import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-   import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
-   import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
    import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-   import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
    import org.junit.Test
    
-   //sampleStart
+   class MultiMap {
+       val map = ConcurrentHashMap<Int, List<Int>>()
+   
+       // adds the value to the list by the given key
+       // contains the race :(
+       fun add(key: Int, value: Int) {
+           val list = map[key]
+           if (list == null) {
+               map[key] = listOf(value)
+           } else {
+               map[key] = list + value
+           }
+       }
+   
+       fun get(key: Int) = map.get(key)
+   }
+   
    @Param(name = "key", gen = IntGen::class, conf = "1:2")
    class MultiMapTest {
        private val map = MultiMap()
@@ -62,10 +74,9 @@ For this, configure the generator for a `key: Int` parameter:
        @Operation
        fun get(@Param(name = "key") key: Int) = map.get(key)
    
-      @Test
-      fun stressTest() = StressOptions().check(this::class)
+       @Test
+       fun stressTest() = StressOptions().check(this::class)
    }
-   //sampleEnd
    ```
 
 5. Run the `stressTest()` and see the following output:

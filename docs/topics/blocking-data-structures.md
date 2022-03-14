@@ -1,13 +1,13 @@
 [//]: # (title: Testing blocking data structures)
 
 Lincheck supports testing blocking data structures implemented with [suspending functions](https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md#coroutines-overview)
-from the Kotlin language. The examples of such data structures from the `kotlinx.coroutines` library are mutexes, semaphores, and channels
+from the Kotlin language. The examples of such data structures from the `kotlinx.coroutines` library are mutexes, semaphores, and channels.
 
 For more information on these data structures, see the [Coroutines guide](https://kotlinlang.org/docs/reference/coroutines/coroutines-guide.html).
 
 ### Dual data structures
 
-Some data structures are blocking by design. Consider the synchronous queues (also known as channels in coroutines libraries),
+Some data structures are blocking by design. Consider the synchronous queues (also known as channels in coroutine libraries),
 where senders and receivers perform a rendezvous handshake as a part of their protocol when senders wait for receivers
 and vice versa.
 
@@ -42,18 +42,31 @@ It will handle suspensions automatically.
 Here is the test example for a basic communication primitive, a [rendezvous channel](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.channels/-channel/index.html):
 
 ```kotlin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ClosedSendChannelException
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.junit.Test
+
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class RendezvousChannelTest {
-    private val ch = Channel<Int>()
+  private val ch = Channel<Int>()
 
-    @Operation // suspending operation
-    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+  @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
+  suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
 
-    @Operation // suspending operation
-    suspend fun receive() = ch.receive()
+  @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+  suspend fun receive() = ch.receive()
 
-    @Test
-    fun stressTest() = StressOptions().check(this::class)
+  @Operation
+  fun close() = ch.close()
+
+  @Test
+  fun stressTest() = StressOptions().check(this::class)
 }
 ```
 
@@ -64,9 +77,10 @@ defining the equivalency relation on the states of a channel.
 See the [Result verification](verification.md) section for details.
 
 For a buffered channel, the externally observable state may include:
-* elements from the buffer
-* waiting `send` operations
-* whether the channel is closed
+
+* Elements from the buffer
+* Waiting `send` operations
+* Information on whether the channel is closed
 
 Here is the example of the buffered channel external state definition:
 
@@ -91,7 +105,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-//sampleStart
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class BufferedChannelTest : VerifierState() {
     private val ch = Channel<Int>(3)
@@ -115,7 +128,6 @@ class BufferedChannelTest : VerifierState() {
     @Test
     fun stressTest() = StressOptions().check(this::class)
 }
-//sampleEnd
 ```
 
 >Get the full code of the tests for the [rendezvous](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/RendezvousChannelTest.kt)
