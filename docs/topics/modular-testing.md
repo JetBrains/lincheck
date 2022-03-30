@@ -1,12 +1,14 @@
 [//]: # (title: Modular testing)
 
-It is common to use linearizable data structures as building blocks in the implementation of other data structures.
-The number of all possible interleavings for non-trivial algorithms is usually enormous.
+When constructing new algorithms, it is common to use linearizable data structures as building blocks.
+However, these linearizable data structures are typically non-trivial, significantly increasing
+the number of possible interleavings. Intuitively, it would be better to treat the operations of
+such already correct underlying data structures as atomic ones, checking only meaningful interleavings
+and increasing the testing quality. Lincheck makes it is possible by providing the *modular testing* feature
+for the model checking.
 
-To reduce the number of redundant interleavings, you can use the modular testing option supported by the model checking mode.
-Modular testing allows treatment operations of the internal data structures to be atomic.
-
-Consider the `MultiMap` class backed with a `java.util.concurrent.ConcurrentHashMap` example:
+Consider the `MultiMap` implementation below, 
+which bases on top of the state-of-the-art `j.u.c.ConcurrentHashMap`:
 
 ```kotlin
 import java.util.concurrent.ConcurrentHashMap
@@ -29,8 +31,8 @@ class MultiMap {
 }
 ```
 
-It's guaranteed that `java.util.concurrent.ConcurrentHashMap` is linearizable, and all its operations are atomic. You
-can specify this guarantee by setting the `addGuarantee` option in the `ModelCheckingOptions()` of your test:
+It is already guaranteed that `j.u.c.ConcurrentHashMap` is linearizable, so its operations can be considered as atomic. 
+You can specify this guarantee via the `addGuarantee` option in the `ModelCheckingOptions()` in your test:
 
 ```kotlin
 import java.util.concurrent.ConcurrentHashMap
@@ -71,11 +73,9 @@ class MultiMapTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .addGuarantee(forClasses(ConcurrentHashMap::class.qualifiedName!!).allMethods().treatAsAtomic())
-        // Note, that with atomicity guarantees set, all possible interleaving in the MultiMap can be examined,
-        // you can ensure the test to pass when the number of invocations is set to the max value.
-        // Otherwise, if you try to examine all interleaving without atomic guarantees for ConcurrentHashMap,
-        // the test will most probably fail with the lack of memory
-        // because of the huge amount of possible context switches to be checked.
+        // Note that with the atomicity guarantees set, Lincheck can examine all possible interleavings,
+        // so the test successfully passes when the number of invocations is set to `Int.MAX_VALUE`
+        // If you comment the line above, the test takes a lot of time and likely fails with `OutOfMemoryError`.
         .invocationsPerIteration(Int.MAX_VALUE)
         .check(this::class)
 }
@@ -87,5 +87,5 @@ class MultiMapTest {
 
 ## What's next
 
-Learn how to configure test execution if the contract of the data structure sets some [constraints](constraints.md),
-for example, single-consumer queues.
+Learn how to test data structures that set access [constraints](constraints.md) on the execution, 
+such as single-producer single-consumer queues.
