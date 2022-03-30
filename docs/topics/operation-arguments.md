@@ -2,7 +2,7 @@
 
 In this guide section, we will learn how to configure the operation arguments.
 Consider the straightforward `MultiMap` implementation below. 
-Essentially, it bases on the `ConcurrentHashMap`, storing a list of values internally.
+It bases on the `ConcurrentHashMap`, storing a list of values internally.
 
 ```kotlin
 import java.util.concurrent.*
@@ -26,7 +26,7 @@ class MultiMap<K, V> {
 ```
 
 Consider testing concurrent execution of `add(key, value)` and `get(key)` operations. The incorrect interleaving is more 
-likely to be detected if you increase the contention to access the small range of keys.
+likely to be detected if you increase the contention by accessing a small range of keys.
 
 For this, configure the generator for a `key: Int` parameter:
 
@@ -37,7 +37,7 @@ For this, configure the generator for a `key: Int` parameter:
 3. Define the range of values generated with the string configuration: `@Param(conf = "1:2")`.
 4. Specify the parameter configuration name (`@Param(name = "key")`) to share it for several operations.
 
-   Below is the stress test for `MultiMap` that will generate keys for `add(key, value)` and `get(key)` operations in the
+   Below is the stress test for `MultiMap` that generates keys for `add(key, value)` and `get(key)` operations in the
    range of `[1..2]`: 
    
    ```kotlin
@@ -49,11 +49,11 @@ For this, configure the generator for a `key: Int` parameter:
    import org.junit.Test
    
    class MultiMap {
-       val map = ConcurrentHashMap<Int, List<Int>>()
+       private val map = ConcurrentHashMap<K, List<V>>()
    
-       // adds the value to the list by the given key
-       // contains the race :(
-       fun add(key: Int, value: Int) {
+       // Maintains a list of values 
+       // associated with the specified key.
+       fun add(key: K, value: V) {
            val list = map[key]
            if (list == null) {
                map[key] = listOf(value)
@@ -61,8 +61,8 @@ For this, configure the generator for a `key: Int` parameter:
                map[key] = list + value
            }
        }
-   
-       fun get(key: Int) = map.get(key)
+
+       fun get(key: K): List<V> = map[key]
    }
    
    @Param(name = "key", gen = IntGen::class, conf = "1:2")
@@ -99,8 +99,9 @@ one of the values may be overwritten and lost.
 
 ## What's next
 
-`MultiMap` implementation uses `java.util.concurrent.ConcurrentHashMap` as a building block, and testing using the model
-checking strategy may take a while due to the significant number of interleavings to check.
+`MultiMap` implementation uses a complex `j.u.c.ConcurrentHashMap` data structure as a building block, 
+the internal synchronization of which significantly increases the number of possible interleavings, 
+so it may take a while to find a bug.
 
-If you consider the implementation of the `ConcurrentHashMap` to be correct, you can optimize and increase coverage of model
-checking using [modular testing](modular-testing.md).
+Considering the `ConcurrentHashMaap` implementation correct, you can speed up the testing 
+and increase the coverage with the [modular testing](modular-testing.md) feature for the model checking mode.
