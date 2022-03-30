@@ -1,4 +1,4 @@
-[//]: # (title: Testing strategies: stress testing and model checking)
+[//]: # (title: Stress testing and model checking)
 
 Lincheck provides two testing strategies: stress testing and model checking. They are preferable for different use-cases.
 

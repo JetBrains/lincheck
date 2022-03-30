@@ -1,14 +1,15 @@
 [//]: # (title: Data structure constraints)
 
-The contract of a data structure may set execution restrictions for some operations, such as _non-parallel_ execution.
-Lincheck allows considering data structure constraints in tests.
+Some data structures may require some operations to be never executed concurrently, 
+such as single-producer single-consumer queues. Lincheck provides an out-of-the-box support
+for such contracts, generating concurrent scenarios according to the restrictions.
 
 Consider the [single-consumer queue](https://github.com/JCTools/JCTools/blob/66e6cbc9b88e1440a597c803b7df9bd1d60219f6/jctools-core/src/main/java/org/jctools/queues/atomic/MpscLinkedAtomicQueue.java)
-from the  [JCTools library](https://github.com/JCTools/JCTools). Write a test and check correctness of concurrent
-execution of `poll()`, `peek()` and `offer(x)` operations.
+from the  [JCTools library](https://github.com/JCTools/JCTools). 
+Let's write a test to check correctness of `poll()`, `peek()` and `offer(x)` operations.
 
-To meet the contract of the single-consumer queue, ensure that all `poll()` and `peek()` consuming operations
-are performed from a single thread. Declare a group of operations for _non-parallel_ execution:
+To meet the single-consumer restriction, ensure that all `poll()` and `peek()` consuming operations
+are called from a single thread. For that, declare a group of operations for _non-parallel_ execution:
 
 1. Declare `@OpGroupConfig` annotation to create a group of operations for non-parallel execution, name the group,
 and set `nonParallel` parameter to true.
@@ -26,24 +27,27 @@ import org.junit.Test
 
 // declare a group of operations that should not be executed in parallel
 @OpGroupConfig(name = "consumer", nonParallel = true)
-class MpscQueueTest {
+class MPSCQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
 
     @Operation
-    public fun offer(x: Int) = queue.offer(x)
+    fun offer(x: Int) = queue.offer(x)
 
-    @Operation(group = "consumer") // all poll() invocations will be performed from the single thread
-    public fun poll(): Int? = queue.poll()
+    @Operation(group = "consumer") 
+    fun poll(): Int? = queue.poll()
 
-    @Operation(group = "consumer") // all peek() invocations will be performed from the single thread
-    public fun peek(): Int? = queue.peek()
+    @Operation(group = "consumer")
+    fun peek(): Int? = queue.peek()
 
     @Test
     fun stressTest() = StressOptions().check(this::class)
 }
 ```
 
-Here is an example of the scenario generated for this test:
+Below is an example of the scenario generated for this test. 
+Note that all consuming `poll()` and `peek()` operations are called from a single thread; 
+thus, satisfying the "single-consumer" contract.
+
 
 ```text
 = Iteration 15 / 100 =
@@ -60,7 +64,6 @@ Execution scenario (post part):
 
 ```
 
-Note that all consuming `poll()` and `peek()` invocations are performed from a single thread satisfying the queue contract.
 
 > Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MpscQueueTest.kt).
 >
@@ -68,4 +71,4 @@ Note that all consuming `poll()` and `peek()` invocations are performed from a s
 
 ## What's next
 
-Learn how to check your algorithm for [progress guarantees](progress-guarantees.md) using model checking.
+Learn how to check your algorithm for [progress guarantees](progress-guarantees.md) with the model checking mode.

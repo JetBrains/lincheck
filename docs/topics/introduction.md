@@ -9,7 +9,7 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
 
 1. Open an existing Kotlin project in IntelliJ IDEA or [create a new one](https://kotlinlang.org/docs/jvm-get-started.html).
 
-2. Open the `main.kt` file in the `src/main/kotlin` directory.
+2. In the `src/main/kotlin` directory, open the `main.kt` file.
 
 3. Replace the code in `main.kt` with the following counter implementation:
 
@@ -66,7 +66,7 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
 
 ## Write a Lincheck test
 
-1. Create a `CounterTest.kt` file in the `src/test/kotlin` directory and insert the following code:
+1. In the `src/test/kotlin` directory, create a `CounterTest.kt` file and add the following code:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.*
