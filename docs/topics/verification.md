@@ -1,10 +1,18 @@
-[//]: # (title: Result verification)
+[//]: # (title: Results verification)
 
-When the scenario is executed, the outcome should be verified relative to the specified correctness contract. By
-default, Lincheck checks the results for _linearizability_, the standard correctness property for thread-safety.
+After each scenario invocation, Lincheck verifies outcome results for correctness.
+The standard safety property for concurrent algorithms is _linearizability_, 
+which implies that each operation in the execution takes place 
+atomically, in some order consistent with the "happens-before" relation. 
+Essentially, Lincheck tries to find such an order.
 
-To check if the results satisfy linearizability, Lincheck tries to explain them with some sequential execution, which
-doesn't reorder operations in threads and doesn't violate the previous order constructed during the execution.
+Instead of generating all possible sequential histories, Lincheck constructs
+a transition graph for the testing data structure. The graph nodes represent 
+the data structure states, while each transition is labeled with the operation 
+and its result according to the sequential semantics.
+As an example, consider the figure below with a transition graph for a _stack_ 
+data structure, constructed to verify the execution on the left. 
+To check whether the linearizability is satisfied, TODO
 
 Lincheck defines the sequential semantics using building a transition graph: the states represent the data structure
 states, and the transitions are labeled with operations and the corresponding results. According to the sequential
@@ -309,5 +317,4 @@ class MyLockFreeListTest {
 
 ## What's next
 
-Learn how to use Lincheck for testing [blocking data structures](blocking-data-structures.md) implemented with suspending
-functions in Kotlin.
+Learn how to use Lincheck for testing [blocking data structures](blocking-data-structures.md) for Kotlin Coroutines.

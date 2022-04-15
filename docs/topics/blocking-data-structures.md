@@ -1,6 +1,6 @@
 [//]: # (title: Testing blocking data structures)
 
-Lincheck supports testing blocking data structures implemented with [suspending functions](https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md#coroutines-overview)
+Lincheck supports testing blocking data structures implemented via [suspending functions](https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md#coroutines-overview)
 from the Kotlin language. The examples of such data structures from the `kotlinx.coroutines` library are mutexes, semaphores, and channels.
 
 For more information on these data structures, see the [Coroutines guide](https://kotlinlang.org/docs/reference/coroutines/coroutines-guide.html).
@@ -74,7 +74,7 @@ class RendezvousChannelTest {
 
 Write a test for a [buffered channel](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.channels/-channel/index.html)
 defining the equivalency relation on the states of a channel.
-See the [Result verification](verification.md) section for details.
+See the [Results verification](verification.md) section for details.
 
 For a buffered channel, the externally observable state may include:
 
@@ -137,7 +137,10 @@ class BufferedChannelTest : VerifierState() {
 
 ## What's next
 
-* For more information on dual data structures formalism, used to extend linearizability for blocking data structures, see
-  W.N. Scherer III and M.L. Scott. Nonblocking concurrent objects with condition synchronization (Proceedings of the 18th
-  International Symposium on Distributed Computing, pages 2121–2128, 2004).
-* For more details on verification of dual data structures, see this [talk at the Hydra conference](https://nkoval.com/talks/#lincheck-hydra-2019)
+* For more information on the dual data structures formalism, 
+  which extends linearizability with blocking behaviour, 
+  see the corresponding ["Nonblocking concurrent objects with condition synchronization"](https://www.cs.rochester.edu/~scott/papers/2004_DISC_dual_DS.pdf)
+  paper by W. Scherer and M. Scott published at DISC'04.
+  
+* Check [this talk](https://nkoval.com/talks/#lincheck-hydra-2019) 
+  at Hydra for more details on the dual data structures verification.
