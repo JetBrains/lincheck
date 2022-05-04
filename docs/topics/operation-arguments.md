@@ -41,14 +41,14 @@ For this, configure the generator for a `key: Int` parameter:
    range of `[1..2]`: 
    
    ```kotlin
-   import java.util.concurrent.ConcurrentHashMap
+   import java.util.concurrent.*
    import org.jetbrains.kotlinx.lincheck.annotations.*
    import org.jetbrains.kotlinx.lincheck.check
-   import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-   import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+   import org.jetbrains.kotlinx.lincheck.paramgen.*
+   import org.jetbrains.kotlinx.lincheck.strategy.stress.*
    import org.junit.Test
    
-   class MultiMap {
+   class MultiMap<K, V> {
        private val map = ConcurrentHashMap<K, List<V>>()
    
        // Maintains a list of values 
@@ -67,7 +67,7 @@ For this, configure the generator for a `key: Int` parameter:
    
    @Param(name = "key", gen = IntGen::class, conf = "1:2")
    class MultiMapTest {
-       private val map = MultiMap()
+       private val map = MultiMap<Int, Int>()
    
        @Operation
        fun add(@Param(name = "key") key: Int, value: Int) = map.add(key, value)

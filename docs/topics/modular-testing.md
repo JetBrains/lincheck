@@ -11,14 +11,14 @@ Consider the `MultiMap` implementation below,
 which bases on top of the state-of-the-art `j.u.c.ConcurrentHashMap`:
 
 ```kotlin
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.*
 
-class MultiMap {
-    val map = ConcurrentHashMap<Int, List<Int>>()
+class MultiMap<K, V> {
+    val map = ConcurrentHashMap<K, List<V>>()
 
     // adds the value to the list by the given key
     // contains the race :(
-    fun add(key: Int, value: Int) {
+    fun add(key: K, value: V) {
         val list = map[key]
         if (list == null) {
             map[key] = listOf(value)
@@ -27,7 +27,7 @@ class MultiMap {
         }
     }
 
-    fun get(key: Int) = map.get(key)
+    fun get(key: K) = map.get(key)
 }
 ```
 
@@ -35,20 +35,20 @@ It is already guaranteed that `j.u.c.ConcurrentHashMap` is linearizable, so its 
 You can specify this guarantee via the `addGuarantee` option in the `ModelCheckingOptions()` in your test:
 
 ```kotlin
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.Test
+import org.junit.*
 
-class MultiMap {
-    val map = ConcurrentHashMap<Int, List<Int>>()
+class MultiMap<K,V> {
+    val map = ConcurrentHashMap<K, List<V>>()
 
     // adds the value to the list by the given key
     // contains the race :(
-    fun add(key: Int, value: Int) {
+    fun add(key: K, value: V) {
         val list = map[key]
         if (list == null) {
             map[key] = listOf(value)
@@ -57,12 +57,12 @@ class MultiMap {
         }
     }
 
-    fun get(key: Int) = map.get(key)
+    fun get(key: K) = map.get(key)
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:2")
 class MultiMapTest {
-    private val map = MultiMap()
+    private val map = MultiMap<Int, Int>()
 
     @Operation
     fun add(@Param(name = "key") key: Int, value: Int) = map.add(key, value)

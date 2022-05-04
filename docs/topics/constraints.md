@@ -19,11 +19,11 @@ and set `nonParallel` parameter to true.
 Here is the resulting test:
 
 ```kotlin
-import org.jctools.queues.atomic.MpscLinkedAtomicQueue
+import org.jctools.queues.atomic.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.junit.*
 
 // declare a group of operations that should not be executed in parallel
 @OpGroupConfig(name = "consumer", nonParallel = true)
@@ -41,6 +41,9 @@ class MPSCQueueTest {
 
     @Test
     fun stressTest() = StressOptions().check(this::class)
+
+    @Test
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }
 ```
 
@@ -65,7 +68,7 @@ Execution scenario (post part):
 ```
 
 
-> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MpscQueueTest.kt).
+> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MPSCQueueTest.kt).
 >
 {type="note"}
 

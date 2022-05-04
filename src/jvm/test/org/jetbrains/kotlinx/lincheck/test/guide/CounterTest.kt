@@ -21,13 +21,13 @@
 package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 class Counter {
     @Volatile
@@ -40,14 +40,15 @@ class Counter {
 class CounterTest : VerifierState() {
     private val c = Counter()
 
-    @Operation fun inc() = c.inc()
+    @Operation
+    fun inc() = c.inc()
 
     @Operation fun get() = c.get()
 
     override fun extractState(): Any = c.get()
 
     @StateRepresentation
-    fun counterRepresentation() = c.get().toString()
+    fun stateRepresentation() = c.get().toString()
 
     @Test
     fun stressTest() {

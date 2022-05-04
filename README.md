@@ -11,7 +11,7 @@ Use `org.jetbrains.kotlinx:lincheck:<version>` artifact path in Gradle
 and `org.jetbrains.kotlinx:lincheck-jvm:<version>` in Maven.
 
 ##### Guide:
-Please read [the following tutorial](/docs/topics/lincheck-guide.md) that explains how to use Lincheck and presents most of the features step-by-step.
+Please read [the tutorial](/docs/topics/lincheck-guide.md) that explains how to use Lincheck and presents most of the features step-by-step.
 
 ##### Given talks:
  *  [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019, RU)

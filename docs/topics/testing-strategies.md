@@ -28,10 +28,10 @@ Follow this structure of the stress test for the `Counter`:
 The code is presented below:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.junit.*
 
 class Counter {
     @Volatile
@@ -79,10 +79,10 @@ you simply need to replace `StressOptions()` with `ModelCheckingOptions()`.
 See the full code of the resulting test below.
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.Test
+import org.junit.*
 
 class Counter {
     @Volatile
@@ -160,11 +160,11 @@ To configure the testing strategy, set options in the `<TestingMode>Options` cla
 Set the options for scenario generation and execution for the `CounterTest`:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 class Counter {
     @Volatile

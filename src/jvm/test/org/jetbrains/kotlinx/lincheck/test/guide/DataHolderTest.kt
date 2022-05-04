@@ -23,16 +23,15 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.*
 
 class DataHolder {
     var first: Int = 42
     var second: Int = 7
     @Volatile var version = 0
 
-    fun write(newFirst: Int, newSecond: Int) { // single thread updater
+    fun update(newFirst: Int, newSecond: Int) { // single thread updater
         version++ // lock the holder for reads
         first = newFirst
         second = newSecond
@@ -69,7 +68,7 @@ class DataHolderTest {
     private val dataHolder = DataHolder()
 
     @Operation(group = "writer")
-    fun write(first: Int, second: Int) = dataHolder.write(first, second)
+    fun update(first: Int, second: Int) = dataHolder.update(first, second)
 
     @Operation
     fun read() = dataHolder.read()

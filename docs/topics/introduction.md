@@ -31,22 +31,6 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
 2. Add the following dependencies to the Gradle configuration:
 
    <tabs group="build-script">
-   <tab title="Kotlin" group-key="kotlin">
-   
-   ```kotlin
-   repositories {
-       mavenCentral()
-   }
-   
-   dependencies {
-       // Lincheck dependency
-       testImplementation("org.jetbrains.kotlinx:lincheck:2.14.1")
-       // This dependency will allow you to work with kotlin.test and JUnit
-       testImplementation("junit:junit:4.13")
-   }
-   ```
-   
-   </tab>
    <tab title="Groovy" group-key="groovy">
    
    ```groovy

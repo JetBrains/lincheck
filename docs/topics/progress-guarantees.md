@@ -51,7 +51,7 @@ Let's check whether the algorithm is non-blocking:
       ModelCheckingOptions().checkObstructionFreedom(true)
    ```
    
-2. Also note that according to the contract, there is only one writer, so add `write(first, second)` operation 
+2. Also note that according to the contract, there is only one writer, so add `update(first, second)` operation 
    to a non-parallel operations group.
 
 See the resulting test below:
@@ -59,8 +59,8 @@ See the resulting test below:
 ```kotlin
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.*
 
 class DataHolder {
    private var first: Int = 42
