@@ -30,5 +30,5 @@ We highly recommend exploring the Lincheck features step-by-step:
 * [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019,
   RU)
 * [Testing concurrent algorithms with Lincheck](https://nkoval.com/talks/#lincheck-joker-2019) (Joker 2019, RU)
-* [Lincheck: testing concurrent data structures on Java](https://nkoval.com/talks/#lincheck-hydra-2019) (Hydra 2019, RU)
-* [Lock-free algorithms testing](https://nkoval.com/talks/#lock_free_algorithms_testing) (Joker 2017, RU)
+* [Lincheck: testing concurrent data structures on Java](https://www.youtube.com/watch?v=hwbpUEGHvvY) (Hydra 2019, RU)
+* [Lock-free algorithms testing](https://www.youtube.com/watch?v=_0_HOnTSS0E&t=1s) (Joker 2017, RU)
