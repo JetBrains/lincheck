@@ -27,9 +27,9 @@ import org.junit.*
 import java.util.concurrent.atomic.*
 
 class MSQueueBlocking {
-    private val DUMMY = Node(0)
-    private val head = AtomicReference(DUMMY)
-    private val tail = AtomicReference(DUMMY)
+    private val DUMMY_NODE = Node(0)
+    private val head = AtomicReference(DUMMY_NODE)
+    private val tail = AtomicReference(DUMMY_NODE)
 
     fun enqueue(x: Int) {
         val newTail = Node(x)
@@ -40,7 +40,7 @@ class MSQueueBlocking {
                 tail.compareAndSet(curTail, newTail)
                 break
             } else {
-                // help other enqueue operations to move tail forward
+                // TODO: helping part is missing now, uncomment the line below to help other enqueue operations to move tail forward
                 //tail.compareAndSet(curTail, curTail.next.get())
             }
         }
@@ -56,7 +56,10 @@ class MSQueueBlocking {
         }
     }
 
-    class Node(val value: Int, val next: AtomicReference<Node?> = AtomicReference(null))
+    class Node(
+        val value: Int,
+        val next: AtomicReference<Node?> = AtomicReference(null)
+    )
 }
 
 class ObstructionFreedomViolationTest  {

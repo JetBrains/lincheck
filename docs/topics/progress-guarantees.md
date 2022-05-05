@@ -147,7 +147,8 @@ For now, Lincheck supports only the _obstruction-freedom_ progress guarantee.
 As most the real-world liveness bugs introduce unexpected blocking code,
 obstruction-freedom check is beneficial for lock-free and wait-free algorithms.
 
-> Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/DataHolderTest.kt).
+> * Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/DataHolderTest.kt).
+> * Get another example where we test Michael-Scott queue implementation for progress guarantees [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ObstructionFreedomViolationTest.kt).
 >
 {type="note"}
 

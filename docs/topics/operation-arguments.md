@@ -93,7 +93,7 @@ For this, configure the generator for a `key: Int` parameter:
 Due to the small range of keys, Lincheck quickly revealed the race bug: when two values are being added concurrently by the same key, 
 one of the values may be overwritten and lost.
 
-> See the source code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
+> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
 >
 {type="note"}
 

@@ -152,7 +152,7 @@ that examines numerous executions with a bounded number of context switches.
 
    **T2:** The second thread resumes and increments the previously obtained counter value, incorrectly updating the counter to `1`.
 
-> See the full source code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/BasicCounterTest.kt).
+> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/BasicCounterTest.kt).
 >
 {type="note"}
 
