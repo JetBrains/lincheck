@@ -15,6 +15,5 @@
         <toc-element id="constraints.md"/>
         <toc-element id="progress-guarantees.md"/>
         <toc-element id="verification.md"/>
-        <toc-element id="blocking-data-structures.md"/>
     </chunk>
 </product-profile>

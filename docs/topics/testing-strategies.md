@@ -316,4 +316,3 @@ right before and after the parallel part of the scenario as well as at its very 
 
 * Learn how to [configure arguments passed to the operations](operation-arguments.md) and when it is useful.
 * See how to optimize and increase coverage of the model checking strategy via [modular testing](modular-testing.md).
-* Learn how to use Lincheck for testing [blocking data structures](blocking-data-structures.md) for Kotlin Coroutines.

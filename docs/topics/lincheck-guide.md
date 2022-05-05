@@ -21,7 +21,6 @@ We highly recommend exploring the Lincheck features step-by-step:
 5. [Popular algorithm constraints](constraints.md)
 6. [Checking for non-blocking progress guarantees](progress-guarantees.md)
 7. [Verifying execution results](verification.md)
-8. [Testing blocking data structures for Kotlin Coroutines](blocking-data-structures.md)
 
 ## Additional references
 * [Workshop. Lincheck: Testing concurrency on the JVM (Part 1)](https://www.youtube.com/watch?v=YNtUK9GK4pA) (Hydra

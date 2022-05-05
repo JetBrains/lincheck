@@ -309,7 +309,3 @@ class MyLockFreeListTest {
 > Get the full code of the examples [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/StackTest.kt).
 >
 {type="note"}
-
-## What's next
-
-Learn how to use Lincheck for testing [blocking data structures](blocking-data-structures.md) for Kotlin Coroutines.
