@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -50,23 +49,17 @@ class CounterTest : VerifierState() {
     @StateRepresentation
     fun stateRepresentation() = c.get().toString()
 
-    @Test
-    fun stressTest() {
-        StressOptions()
-            .actorsBefore(2) // Init part
-            .threads(2).actorsPerThread(2)
-            .actorsAfter(1) // Post part
-            .minimizeFailedScenario(true)
-            .checkImpl(this::class.java).also {
-                assert(it is IncorrectResultsFailure)
-            }
-    }
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun stressTest() = StressOptions()
+        .actorsBefore(2) // Init part
+        .threads(2).actorsPerThread(2)
+        .actorsAfter(1) // Post part
+        .minimizeFailedScenario(true)
+        .check(this::class)
 
-    @Test
-    fun modelCheckingTest() {
-        ModelCheckingOptions().checkImpl(this::class.java).also {
-            assert(it is IncorrectResultsFailure)
-        }
-    }
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }
 

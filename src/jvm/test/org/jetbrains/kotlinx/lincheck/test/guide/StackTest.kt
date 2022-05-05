@@ -102,23 +102,19 @@ class StackTest : VerifierState() {
         fun size() = s.size
     }
 
-    @Test
-    fun stressTest() {
-        StressOptions()
-            .sequentialSpecification(SequentialStack::class.java)
-            .checkImpl(this::class.java).also {
-                assert(it is IncorrectResultsFailure)
-            }
-    }
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun stressTest() = StressOptions()
+        .sequentialSpecification(SequentialStack::class.java)
+        .check(this::class)
 
-    @Test
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
     fun modelCheckingTest() {
         ModelCheckingOptions()
             .actorsBefore(5)
             .actorsAfter(5)
             .threads(2).actorsPerThread(2)
-            .checkImpl(this::class.java).also {
-                assert(it is IncorrectResultsFailure)
-            }
+            .check(this::class)
     }
 }

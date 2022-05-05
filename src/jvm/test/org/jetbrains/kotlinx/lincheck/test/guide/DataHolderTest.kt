@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
@@ -51,7 +50,7 @@ class DataHolder {
         }
     }
 
-    fun writeBlocking(newFirst: Int, newSecond: Int) = synchronized(this) {
+    fun updateBlocking(newFirst: Int, newSecond: Int) = synchronized(this) {
         first = newFirst
         second = newSecond
     }
@@ -73,12 +72,9 @@ class DataHolderTest {
     @Operation
     fun read() = dataHolder.read()
 
-    @Test
-    fun modelCheckingTest() {
-        ModelCheckingOptions()
-            .checkObstructionFreedom(true)
-            .checkImpl(this::class.java).also {
-                assert(it is ObstructionFreedomViolationFailure)
-            }
-    }
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .checkObstructionFreedom(true)
+        .check(this::class)
 }

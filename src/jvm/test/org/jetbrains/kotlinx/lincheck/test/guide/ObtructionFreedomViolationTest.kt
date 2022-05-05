@@ -68,8 +68,9 @@ class ObstructionFreedomViolationTest  {
     @Operation
     fun dequeue(): Int? = q.dequeue()
 
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun runModelCheckingTest() = ModelCheckingOptions()
-            .checkObstructionFreedom(true)
-            .check(this::class.java)
+        .checkObstructionFreedom(true)
+        .check(this::class)
 }

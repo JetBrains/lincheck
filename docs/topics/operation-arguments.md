@@ -103,5 +103,5 @@ one of the values may be overwritten and lost.
 the internal synchronization of which significantly increases the number of possible interleavings, 
 so it may take a while to find a bug.
 
-Considering the `ConcurrentHashMaap` implementation correct, you can speed up the testing 
+Considering the `j.u.c.ConcurrentHashMap` implementation correct, you can speed up the testing 
 and increase the coverage with the [modular testing](modular-testing.md) feature for the model checking mode.
