@@ -79,19 +79,19 @@ class StackTest {
     @Operation
     fun size() = s.size
 
-    class SequentialStack {
-        val s = LinkedList<Int>()
-
-        fun push(x: Int) = s.push(x)
-        fun popOrNull() = s.pollFirst()
-        fun size() = s.size
-    }
-
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun stressTest() = StressOptions()
         .sequentialSpecification(SequentialStack::class.java)
         .check(this::class)
+}
+
+class SequentialStack {
+    val s = LinkedList<Int>()
+
+    fun push(x: Int) = s.push(x)
+    fun popOrNull() = s.pollFirst()
+    fun size() = s.size
 }
 
 class StackTest1 : VerifierState() {
