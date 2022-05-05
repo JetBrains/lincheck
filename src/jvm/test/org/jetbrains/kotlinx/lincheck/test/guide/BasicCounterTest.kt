@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2021 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2022 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,30 +20,35 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
-import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import org.junit.Test
-import java.util.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.junit.*
 
-@OpGroupConfig(name = "consumer", nonParallel = true)
-class MPSCQueueTest {
-    private val queue = MpscLinkedAtomicQueue<Int>()
+class Counter {
+    @Volatile
+    private var value = 0
+
+    fun inc(): Int = ++value
+    fun get() = value
+}
+
+class BasicCounterTest {
+    private val c = Counter() // initial state
+
+    // operations on the Counter
+    @Operation
+    fun inc() = c.inc()
 
     @Operation
-    public fun offer(x: Int) = queue.offer(x)
+    fun get() = c.get()
 
-    @Operation(group = "consumer")
-    public fun poll(): Int? = queue.poll()
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun stressTest() = StressOptions().check(this::class) // the magic button
 
-    @Operation(group = "consumer")
-    public fun peek(): Int? = queue.peek()
-
-    @Test
-    fun stressTest() = StressOptions().check(this::class)
-
-    @Test
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }

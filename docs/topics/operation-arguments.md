@@ -21,7 +21,7 @@ class MultiMap<K, V> {
         }
     }
 
-    fun get(key: K): List<V> = map[key]
+    fun get(key: K): List<V> = map[key] ?: emptyList()
 }
 ```
 
@@ -46,7 +46,7 @@ For this, configure the generator for a `key: Int` parameter:
    import org.jetbrains.kotlinx.lincheck.check
    import org.jetbrains.kotlinx.lincheck.paramgen.*
    import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-   import org.junit.Test
+   import org.junit.*
    
    class MultiMap<K, V> {
        private val map = ConcurrentHashMap<K, List<V>>()
@@ -62,7 +62,7 @@ For this, configure the generator for a `key: Int` parameter:
            }
        }
 
-       fun get(key: K): List<V> = map[key]
+       fun get(key: K): List<V> = map[key] ?: emptyList()
    }
    
    @Param(name = "key", gen = IntGen::class, conf = "1:2")

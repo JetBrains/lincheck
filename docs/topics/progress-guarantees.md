@@ -101,7 +101,7 @@ class DataHolderTest {
    fun read() = dataHolder.read()
 
    @Test
-   fun runModelCheckingTest() = ModelCheckingOptions()
+   fun modelCheckingTest() = ModelCheckingOptions()
       .checkObstructionFreedom(true)
       .check(this::class)
 }
@@ -117,12 +117,12 @@ Execution scenario (parallel part):
 = The following interleaving leads to the error =
 Parallel part trace:
 | update(-4, -8)                                                   |                                                              |
-|   update(-4,-8) at DataHolderTest.update(DataHolderTest.kt:72)   |                                                              |
+|   update(-4,-8) at DataHolderTest.update(DataHolderTest.kt:61)   |                                                              |
 |     version.READ: 0 at DataHolder.update(DataHolderTest.kt:36)   |                                                              |
 |     version.WRITE(1) at DataHolder.update(DataHolderTest.kt:36)  |                                                              |
 |     switch                                                       |                                                              |
 |                                                                  | read()                                                       |
-|                                                                  |   read() at DataHolderTest.read(DataHolderTest.kt:75)        |
+|                                                                  |   read() at DataHolderTest.read(DataHolderTest.kt:64)        |
 |                                                                  |     version.READ: 1 at DataHolder.read(DataHolderTest.kt:44) |
 |                                                                  |     version.READ: 1 at DataHolder.read(DataHolderTest.kt:44) |
 ```

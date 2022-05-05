@@ -50,7 +50,7 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
 
 ## Write a Lincheck test
 
-1. In the `src/test/kotlin` directory, create a `CounterTest.kt` file and add the following code:
+1. In the `src/test/kotlin` directory, create a `BasicCounterTest.kt` file and add the following code:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.*
@@ -58,7 +58,7 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
    import org.jetbrains.kotlinx.lincheck.strategy.stress.*
    import org.junit.*
    
-   class CounterTest {
+   class BasicCounterTest {
        private val c = Counter() // initial state
    
        // operations on the Counter
@@ -69,7 +69,7 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
        fun get() = c.get()
    
        @Test // JUnit
-       fun test() = StressOptions().check(this::class) // the magic button
+       fun stressTest() = StressOptions().check(this::class) // the magic button
    }
    ```
 
@@ -101,16 +101,16 @@ that examines numerous executions with a bounded number of context switches.
 
 1. To switch the testing strategy from stress testing to model checking, 
    replace `StressOptions()` with `ModelCheckingOptions()`.
-   The updated `CounterTest` implementation is presented below:
+   The updated `BasicCounterTest` implementation is presented below:
 
    ```kotlin
-   import org.jetbrains.kotlinx.lincheck.annotations.Operation
+   import org.jetbrains.kotlinx.lincheck.annotations.*
    import org.jetbrains.kotlinx.lincheck.check
-   import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-   import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-   import org.junit.Test
+   import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+   import org.jetbrains.kotlinx.lincheck.verifier.*
+   import org.junit.*
    
-   class CounterTest {
+   class BasicCounterTest {
        private val c = Counter()
    
        @Operation
@@ -120,7 +120,7 @@ that examines numerous executions with a bounded number of context switches.
        fun get() = c.get()
    
        @Test
-       fun test() = ModelCheckingOptions().check(this::class)
+       fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
    }
    ```
 
@@ -133,7 +133,7 @@ that examines numerous executions with a bounded number of context switches.
    = The following interleaving leads to the error =
    Parallel part trace:
    |                      | inc()                                                 |
-   |                      |   inc(): 1 at CounterTest.inc(CounterTest.kt:11)     |
+   |                      |   inc(): 1 at BasicCounterTest.inc(BasicCounterTest.kt:11)     |
    |                      |     value.READ: 0 at Counter.inc(Counter.kt:5)  |
    |                      |     switch                                            |
    | inc(): 1             |                                                       |
@@ -152,7 +152,7 @@ that examines numerous executions with a bounded number of context switches.
 
    **T2:** The second thread resumes and increments the previously obtained counter value, incorrectly updating the counter to `1`.
 
-> See the full source code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/CounterTest.kt).
+> See the full source code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/BasicCounterTest.kt).
 >
 {type="note"}
 

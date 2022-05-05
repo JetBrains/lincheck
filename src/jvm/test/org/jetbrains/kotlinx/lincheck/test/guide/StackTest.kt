@@ -21,17 +21,12 @@
 package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.util.*
 import java.util.concurrent.atomic.*
-import kotlin.NoSuchElementException
 
 class Stack<T> {
     private val top  = AtomicReference<Node<T>?>(null)
@@ -48,7 +43,7 @@ class Stack<T> {
         }
     }
 
-    fun pop(): T? {
+    fun popOrNull(): T? {
         while (true) {
             val cur = top.get() ?: return null // is stack empty?
             if (top.compareAndSet(cur, cur.next)) { // try to retrieve
@@ -58,47 +53,37 @@ class Stack<T> {
         }
     }
 
-    override fun toString() =
-        buildString {
-            append("[")
-            var node = top.get()
-            while (node != null) {
-                append(node.value)
-                node = node.next
-                if (node != null) append(",")
+    fun pop(): T? {
+        while (true) {
+            val cur = top.get() ?: throw NoSuchElementException() // is stack empty?
+            if (top.compareAndSet(cur, cur.next)) { // try to retrieve
+                _size.decrementAndGet() // <-- DECREMENT SIZE
+                return cur.value
             }
-            append("]")
         }
+    }
 
     val size: Int get() = _size.get()
 }
 class Node<T>(val next: Node<T>?, val value: T)
 
-@Param(name = "value", gen = IntGen::class, conf = "1:10") // values are ints in 1..10 range
-class StackTest : VerifierState() {
+class StackTest {
     private val s = Stack<Int>()
 
-    @Operation fun push(@Param(name = "value") value: Int) = s.push(value)
-    @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
-    fun pop() = s.pop()
-    @Operation fun size() = s.size
+    @Operation
+    fun push(value: Int) = s.push(value)
 
-    @StateRepresentation
-    fun stackreperesentation() = s.toString()
+    @Operation
+    fun popOrNull() = s.popOrNull()
 
-    override fun extractState(): List<Int> {
-        val elements = mutableListOf<Int>()
-        while(s.size != 0) {
-            elements.add(s.pop()!!)
-        }
-        return elements
-    }
+    @Operation
+    fun size() = s.size
 
     class SequentialStack {
         val s = LinkedList<Int>()
 
         fun push(x: Int) = s.push(x)
-        fun pop() = s.pop()
+        fun popOrNull() = s.pollFirst()
         fun size() = s.size
     }
 
@@ -107,14 +92,48 @@ class StackTest : VerifierState() {
     fun stressTest() = StressOptions()
         .sequentialSpecification(SequentialStack::class.java)
         .check(this::class)
+}
+
+class StackTest1 : VerifierState() {
+    private val s = Stack<Int>()
+
+    @Operation
+    fun push(value: Int) = s.push(value)
+
+    @Operation
+    fun popOrNull() = s.popOrNull()
+
+    @Operation
+    fun size() = s.size
+
+    override fun extractState(): String {
+        val elements = mutableListOf<Int>()
+        while(s.size != 0) {
+            elements.add(s.popOrNull()!!)
+        }
+        return elements.toString()
+    }
 
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun modelCheckingTest() {
-        ModelCheckingOptions()
-            .actorsBefore(5)
-            .actorsAfter(5)
-            .threads(2).actorsPerThread(2)
-            .check(this::class)
-    }
+    fun stressTest() = StressOptions()
+        .requireStateEquivalenceImplCheck(true)
+        .check(this::class)
+}
+
+class StackTest2 {
+    private val s = Stack<Int>()
+
+    @Operation
+    fun push(value: Int) = s.push(value)
+
+    @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
+    fun pop() = s.pop()
+
+    @Operation
+    fun size() = s.size
+
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun stressTest() = StressOptions().check(this::class)
 }

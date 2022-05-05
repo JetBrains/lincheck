@@ -59,7 +59,7 @@ For example, provide a sequential specification for the concurrent stack impleme
 
 ```kotlin
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 import java.util.*
@@ -81,7 +81,7 @@ class Stack<T> {
       }
    }
 
-   fun pop(): T? {
+   fun popOrNull(): T? {
       while (true) {
          val cur = top.get() ?: return null // is stack empty?
          if (top.compareAndSet(cur, cur.next)) { // try to retrieve
@@ -102,7 +102,7 @@ class StackTest {
    fun push(value: Int) = s.push(value)
 
    @Operation
-   fun pop() = s.pop()
+   fun popOrNull() = s.popOrNull()
 
    @Operation
    fun size() = s.size
@@ -111,7 +111,7 @@ class StackTest {
       val s = LinkedList<Int>()
 
       fun push(x: Int) = s.push(x)
-      fun pop() = s.pollFirst()
+      fun popOrNull() = s.pollFirst()
       fun size() = s.size
    }
 
@@ -150,7 +150,7 @@ Lincheck provides the following way to do that:
    StressOptions().requireStateEquivalenceImplCheck(true)
    ```
 
-Defining state equivalence for `StackTest` looks like this:
+Defining state equivalence for `StackTest1` looks like this:
 
 ```kotlin
 import org.jetbrains.kotlinx.lincheck.*
@@ -176,7 +176,7 @@ class Stack<T> {
       }
    }
 
-   fun pop(): T? {
+   fun popOrNull(): T? {
       while (true) {
          val cur = top.get() ?: return null // is stack empty?
          if (top.compareAndSet(cur, cur.next)) { // try to retrieve
@@ -190,18 +190,18 @@ class Stack<T> {
 }
 class Node<T>(val next: Node<T>?, val value: T)
 
-class StackTest : VerifierState() {
+class StackTest1 : VerifierState() {
    private val s = Stack<Int>()
 
    @Operation
    fun push(value: Int) = s.push(value)
 
-   @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
-   fun pop() = s.pop()
+   @Operation
+   fun popOrNull() = s.popOrNull()
 
    @Operation
    fun size() = s.size
-   
+
    override fun extractState(): String {
       val elements = mutableListOf<Int>()
       while(s.size != 0) {
@@ -209,7 +209,7 @@ class StackTest : VerifierState() {
       }
       return elements.toString()
    }
-
+   
    @Test
    fun stressTest() = StressOptions()
       .requireStateEquivalenceImplCheck(true)
@@ -264,22 +264,17 @@ class Stack<T> {
 }
 class Node<T>(val next: Node<T>?, val value: T)
 
-class StackTest1 : VerifierState() {
+class StackTest2 {
    private val s = Stack<Int>()
 
    @Operation
    fun push(value: Int) = s.push(value)
-   
+
    @Operation(handleExceptionsAsResult = [NoSuchElementException::class])
    fun pop() = s.pop()
 
-   override fun extractState(): String {
-      val elements = mutableListOf<Int>()
-      while(s.size != 0) {
-         elements.add(s.pop()!!)
-      }
-      return elements.toString()
-   }
+   @Operation
+   fun size() = s.size
 
    @Test
    fun stressTest() = StressOptions().check(this::class)

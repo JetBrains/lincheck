@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
@@ -33,9 +32,9 @@ import java.util.concurrent.*
 class MultiMap<K, V> {
     private val map = ConcurrentHashMap<K, List<V>>()
 
-    // adds the value to the list by the given key
-    // contains the race :(
-    fun addBroken(key: K, value: V) {
+    // Maintains a list of values associated with the specified key.
+    // Contains the race :(
+    fun add(key: K, value: V) {
         val list = map[key]
         if (list == null) {
             map[key] = listOf(value)
@@ -44,8 +43,8 @@ class MultiMap<K, V> {
         }
     }
 
-    // correct implementation
-    fun add(key: K, value: V) {
+    // Correct implementation.
+    fun addCorrect(key: K, value: V) {
         map.compute(key) { _, list ->
             if (list == null) listOf(value) else list + value
         }
@@ -58,11 +57,11 @@ class MultiMap<K, V> {
 class MultiMapTest {
     private val map = MultiMap<Int, Int>()
 
-    // @Operation TODO: Please, uncomment me and comment the @Operation annotation above the `addBroken` function to make the test pass
+    @Operation
     fun add(@Param(name = "key") key: Int, value: Int) = map.add(key, value) // correct add implementation
 
-    @Operation
-    fun addBroken(@Param(name = "key") key: Int, value: Int) = map.addBroken(key, value)
+    // @Operation TODO: Please, uncomment me and comment the @Operation annotation above the `add` function to make the test pass
+    fun addCorrect(@Param(name = "key") key: Int, value: Int) = map.addCorrect(key, value)
 
     @Operation
     fun get(@Param(name = "key") key: Int) = map.get(key)
@@ -75,11 +74,9 @@ class MultiMapTest {
     @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions()
         .addGuarantee(forClasses(ConcurrentHashMap::class.qualifiedName!!).allMethods().treatAsAtomic())
-        // Note, that with atomicity guarantees set, all possible interleaving in the MultiMap can be examined,
-        // you can ensure the test to pass when the number of invocations is set to the max value.
-        // Otherwise, if you try to examine all interleaving without atomic guarantees for ConcurrentHashMap,
-        // the test will most probably fail with the lack of memory
-        // because of the huge amount of possible context switches to be checked.
+        // Note that with the atomicity guarantees set, Lincheck can examine all possible interleavings,
+        // so the test successfully passes when the number of invocations is set to `Int.MAX_VALUE`
+        // If you comment the line above, the test takes a lot of time and likely fails with `OutOfMemoryError`.
         .invocationsPerIteration(Int.MAX_VALUE)
         .check(this::class.java)
 }

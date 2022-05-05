@@ -26,11 +26,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
 class DataHolder {
-    var first: Int = 42
-    var second: Int = 7
-    @Volatile var version = 0
+    private var first: Int = 42
+    private var second: Int = 7
+    @Volatile
+    private var version = 0 // we use it for synchronization
 
-    fun update(newFirst: Int, newSecond: Int) { // single thread updater
+    // Invoked by a single thread
+    fun update(newFirst: Int, newSecond: Int) {
         version++ // lock the holder for reads
         first = newFirst
         second = newSecond
@@ -49,24 +51,13 @@ class DataHolder {
             if (curVersion == version) return first to second
         }
     }
-
-    fun updateBlocking(newFirst: Int, newSecond: Int) = synchronized(this) {
-        first = newFirst
-        second = newSecond
-    }
-
-    fun readBlocking(): Pair<Int, Int> = synchronized(this) {
-        val first = this.first
-        val second = this.second
-        return first to second
-    }
 }
 
-@OpGroupConfig(name = "writer", nonParallel = true)
+@OpGroupConfig(name = "updater", nonParallel = true)
 class DataHolderTest {
     private val dataHolder = DataHolder()
 
-    @Operation(group = "writer")
+    @Operation(group = "updater")
     fun update(first: Int, second: Int) = dataHolder.update(first, second)
 
     @Operation
