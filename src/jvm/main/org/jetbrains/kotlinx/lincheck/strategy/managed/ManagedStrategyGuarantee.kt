@@ -21,10 +21,21 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlin.reflect.*
+
 /**
  * ManagedGuarantee will be constructed for classes with a name listed in [fullClassNames].
  */
 fun forClasses(vararg fullClassNames: String) = forClasses { it in fullClassNames }
+
+/**
+ * ManagedGuarantee will be constructed for all [classes].
+ */
+fun forClasses(vararg classes: KClass<*>) = forClasses {
+    it in classes.map { kClass ->
+        kClass.qualifiedName ?: error("The class $it is local or a it is class of an anonymous object")
+    }
+}
 
 /**
  * ManagedGuarantee will be constructed for all classes satisfying [classPredicate].

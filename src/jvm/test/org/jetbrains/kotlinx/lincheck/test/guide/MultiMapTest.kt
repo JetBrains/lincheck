@@ -73,7 +73,7 @@ class MultiMapTest {
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions()
-        .addGuarantee(forClasses(ConcurrentHashMap::class.qualifiedName!!).allMethods().treatAsAtomic())
+        .addGuarantee(forClasses(ConcurrentHashMap::class).allMethods().treatAsAtomic())
         // Note that with the atomicity guarantees set, Lincheck can examine all possible interleavings,
         // so the test successfully passes when the number of invocations is set to `Int.MAX_VALUE`
         // If you comment the line above, the test takes a lot of time and likely fails with `OutOfMemoryError`.
