@@ -6,22 +6,19 @@ which implies that each operation in the execution takes place
 atomically, in some order consistent with the "happens-before" relation. 
 Essentially, Lincheck tries to find such an order.
 
-Instead of generating all possible sequential histories, Lincheck constructs
-a transition graph for the testing data structure. The graph nodes represent 
-the data structure states, while each transition is labeled with the operation 
-and its result according to the sequential semantics.
-As an example, consider the figure below with a transition graph for a _stack_ 
-data structure, constructed to verify the execution on the left. 
-To check whether the linearizability is satisfied, TODO
+In order to check whether the results satisfy linearizability, Lincheck tries 
+to explain them with some sequential execution which does not reorder operations in threads 
+and does not violate the happens-before order constructed during the execution.
 
-Lincheck defines the sequential semantics using building a transition graph: the states represent the data structure
-states, and the transitions are labeled with operations and the corresponding results. According to the sequential
-semantics, a sequence of operations application is valid  
-if there's a finite path of the transitions labeled by these operations in this graph.
+Lincheck defines the sequential semantics via building a transition graph: 
+the states represent the data structure states and the transitions are labeled 
+with operations and the corresponding results. 
+A sequence of operations application is valid according to the sequential semantics 
+iff there exists a finite path of the transitions labeled by these operations in the transition graph.
 
-For example, consider checking if the results of one of the possible executions of the stack are linearizable. On the
-left of the scheme, you can see the execution results, and on the right, there is the transition graph built by Lincheck
-to explain those results. Here are the steps of verification:
+For example, consider checking if results of one of the possible executions of the stack are linearizable. On the
+left of the scheme, you can see the execution results, and on the right, there is a part of the LTS for the stack 
+that is built to verify those results. Here are the steps of verification:
 
 1. **T2:** Apply `push(2)` from the second thread to the empty stack (the initial state).
 2. **T2:** Try to complete the second thread, but the following `pop()` invocation returns the previously pushed `2`
