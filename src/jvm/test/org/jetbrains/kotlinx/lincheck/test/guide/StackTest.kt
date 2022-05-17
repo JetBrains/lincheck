@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -122,6 +123,28 @@ class StackTest1 : VerifierState() {
 }
 
 class StackTest2 {
+    private val s = Stack<Int>()
+
+    @Operation
+    fun push(value: Int) = s.push(value)
+
+    @Operation
+    fun popOrNull() = s.popOrNull()
+
+    @Operation
+    fun size() = s.size
+
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun modelCheckinglTest() = ModelCheckingOptions()
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .actorsPerThread(3)
+        .minimizeFailedScenario(false)
+        .check(this::class)
+}
+
+class StackTest3 {
     private val s = Stack<Int>()
 
     @Operation
