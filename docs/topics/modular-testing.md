@@ -71,7 +71,7 @@ class MultiMapTest {
     fun get(@Param(name = "key") key: Int) = map.get(key)
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
+    fun modularTest() = ModelCheckingOptions()
         .addGuarantee(forClasses(ConcurrentHashMap::class).allMethods().treatAsAtomic())
         // Note that with the atomicity guarantees set, Lincheck can examine all possible interleavings,
         // so the test successfully passes when the number of invocations is set to `Int.MAX_VALUE`

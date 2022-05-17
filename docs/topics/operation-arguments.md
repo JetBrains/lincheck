@@ -77,6 +77,9 @@ For this, configure the generator for a `key: Int` parameter:
    
        @Test
        fun stressTest() = StressOptions().check(this::class)
+   
+       @Test
+       fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
    }
    ```
 
@@ -88,6 +91,27 @@ For this, configure the generator for a `key: Int` parameter:
    | add(1, 1): void | add(1, 4): void |
    Post part:
    [get(1): [4]]
+   ```
+
+6. Run the `modelCheckingTest()` and see the following output:
+
+   ```text
+   = Invalid execution results =
+   Parallel part:
+   | add(1, 6): void | add(1, -8): void |
+   Post part:
+   [get(1): [-8]]
+   = The following interleaving leads to the error =
+   Parallel part trace:
+   |                      | add(1, -8)                                               |
+   |                      |   add(1,-8) at MultiMapTest.add(MultiMapTest.kt:61)      |
+   |                      |     get(1): null at MultiMap.add(MultiMapTest.kt:38)     |
+   |                      |     switch                                               |
+   | add(1, 6): void      |                                                          |
+   |   thread is finished |                                                          |
+   |                      |     put(1,[-8]): [6] at MultiMap.add(MultiMapTest.kt:40) |
+   |                      |   result: void                                           |
+   |                      |   thread is finished                                     |
    ```
 
 Due to the small range of keys, Lincheck quickly revealed the race bug: when two values are being added concurrently by the same key, 
