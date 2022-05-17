@@ -33,7 +33,7 @@ fun forClasses(vararg fullClassNames: String) = forClasses { it in fullClassName
  */
 fun forClasses(vararg classes: KClass<*>) = forClasses {
     it in classes.map { kClass ->
-        kClass.qualifiedName ?: error("The class $it is local or a it is class of an anonymous object")
+        kClass.qualifiedName ?: error("The class $it is local or is a class of an anonymous object")
     }
 }
 
