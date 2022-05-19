@@ -91,9 +91,9 @@ internal class ManagedStrategyTransformer(
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
@@ -128,54 +128,120 @@ internal class ManagedStrategyTransformer(
                 GETSTATIC -> {
                     val tracePointLocal = newTracePointLocal()
                     invokeBeforeSharedVariableRead(name, tracePointLocal)
-                    super.visitFieldInsn(opcode, owner, name, desc)
+
+                    loadStrategy() // STACK: strategy
+                    loadCurrentThreadNumber() // STACK: strategy, threadId
+
+                    // Get memory location id
+                    loadMemoryLocationLabeler()
+                    push(owner)
+                    push(name)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_STATIC_FIELD)
+                    // STACK: strategy, threadId, memoryLocation
+
+                    push(desc)
+                    invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
+
+                    // Get rid of boxes
+                    if (Type.getType(desc).isPrimitive())
+                        unbox(Type.getType(desc))
+                    else
+                        checkCast(Type.getType(desc))
+
+                    // This call is replaced with the result of `onSharedVariableRead`
+                    // super.visitFieldInsn(opcode, owner, name, desc)
+
                     captureReadValue(desc, tracePointLocal)
                 }
                 GETFIELD -> {
-                    val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
-                    val skipCodeLocationBefore = newLabel()
                     val tracePointLocal = newTracePointLocal()
-                    dup()
-                    invokeIsLocalObject()
-                    copyLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
-                    // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead(name, tracePointLocal)
-                    visitLabel(skipCodeLocationBefore)
 
-                    super.visitFieldInsn(opcode, owner, name, desc)
+                    val objectLocal = newLocal(OBJECT_TYPE)
+                    storeLocal(objectLocal)
 
-                    val skipCodeLocationAfter = newLabel()
-                    loadLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
-                    // initialize ReadCodeLocation only if is not a local object
+                    loadStrategy() // STACK: strategy
+                    loadCurrentThreadNumber() // STACK: strategy, threadId
+
+                    // Get memory location id
+                    loadMemoryLocationLabeler()
+                    loadLocal(objectLocal)
+                    push(name)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_OBJECT_FIELD)
+                    // STACK: strategy, threadId, memoryLocation
+
+                    push(desc)
+                    invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
+
+                    // Get rid of boxes
+                    if (Type.getType(desc).isPrimitive())
+                        unbox(Type.getType(desc))
+                    else
+                        checkCast(Type.getType(desc))
+
                     captureReadValue(desc, tracePointLocal)
-                    visitLabel(skipCodeLocationAfter)
                 }
                 PUTSTATIC -> {
                     beforeSharedVariableWrite(name, desc)
+
+                    // STACK: value
+                    val valueType = Type.getType(desc)
+                    val valueLocal = newLocal(valueType)
+                    storeLocal(valueLocal)
+                    // STACK: <empty>
+
+                    loadStrategy() // STACK: strategy
+                    loadCurrentThreadNumber() // STACK: strategy, threadId
+
+                    // Get memory location id
+                    loadMemoryLocationLabeler()
+                    push(owner)
+                    push(name)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_STATIC_FIELD)
+                    // STACK: strategy, threadId, memoryLocation
+
+                    loadLocal(valueLocal)
+                    box(valueType)
+                    // STACK: strategy, threadId, memoryLocation, value
+
+                    invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
+
                     super.visitFieldInsn(opcode, owner, name, desc)
                     invokeMakeStateRepresentation()
                 }
                 PUTFIELD -> {
-                    val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
-                    val skipCodeLocationBefore = newLabel()
-                    dupOwnerOnPutField(desc)
-                    invokeIsLocalObject()
-                    copyLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
-                    // add strategy invocation only if is not a local object
                     beforeSharedVariableWrite(name, desc)
-                    visitLabel(skipCodeLocationBefore)
 
+                    // STACK: object value
+                    val valueType = Type.getType(desc)
+                    val valueLocal = newLocal(valueType)
+                    storeLocal(valueLocal)
+                    dup()
+                    val objectLocal = newLocal(OBJECT_TYPE)
+                    storeLocal(objectLocal)
+
+                    // STACK: <empty>
+                    loadStrategy() // STACK: strategy
+                    loadCurrentThreadNumber() // STACK: strategy, threadId
+
+                    // Get memory location id
+                    loadMemoryLocationLabeler()
+                    loadLocal(objectLocal)
+                    push(name)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_OBJECT_FIELD)
+                    // STACK: strategy, threadId, memoryLocation
+
+                    loadLocal(valueLocal)
+                    box(valueType)
+                    // STACK: strategy, threadId, memoryLocation, value
+
+                    invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
+                    // STACK: <empty>
+
+                    // Restore stack and invoke write
+                    loadLocal(valueLocal)
                     super.visitFieldInsn(opcode, owner, name, desc)
-
-                    val skipCodeLocationAfter = newLabel()
-                    loadLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
-                    // make state representation only if is not a local object
                     invokeMakeStateRepresentation()
-                    visitLabel(skipCodeLocationAfter)
                 }
                 else -> throw IllegalArgumentException("Unknown field opcode")
             }
@@ -184,45 +250,81 @@ internal class ManagedStrategyTransformer(
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
                 AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-                    val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
-                    val skipCodeLocationBefore = adapter.newLabel()
                     val tracePointLocal = newTracePointLocal()
-                    dup2() // arr, ind
-                    pop() // arr, ind -> arr
-                    invokeIsLocalObject()
-                    copyLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead(null, tracePointLocal)
-                    visitLabel(skipCodeLocationBefore)
 
+                    // STACK: array, index
+                    val arrayLocal = newLocal(OBJECT_TYPE)
+                    val indexLocal = newLocal(Type.INT_TYPE)
+                    dup2()
+                    storeLocal(indexLocal)
+                    storeLocal(arrayLocal)
+                    // STACK: <empty>
+
+                    loadStrategy() // STACK: strategy
+                    loadCurrentThreadNumber() // STACK: strategy, threadId
+
+                    // Get memory location id
+                    loadMemoryLocationLabeler()
+                    loadLocal(arrayLocal)
+                    loadLocal(indexLocal)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_ARRAY_ELEMENT)
+                    // STACK: strategy, threadId, memoryLocation
+
+                    push(getArrayLoadType(opcode).descriptor)
+                    invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
+
+                    // Get rid of boxes
+                    if (getArrayLoadType(opcode).isPrimitive())
+                        unbox(getArrayLoadType(opcode))
+                    else
+                        checkCast(getArrayLoadType(opcode))
+                    val resultLocal = newLocal(getArrayLoadType(opcode))
+                    storeLocal(resultLocal)
+
+                    // TODO: Something strange happens with byte-code without this
                     super.visitInsn(opcode)
+                    val resultLocal2 = newLocal(getArrayLoadType(opcode))
+                    storeLocal(resultLocal2)
+                    // TODO: learn why byte-code is incorrect if the result of `onSharedVariableRead` is used
+                    loadLocal(resultLocal2)
 
-                    val skipCodeLocationAfter = newLabel()
-                    loadLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
                     captureReadValue(getArrayLoadType(opcode).descriptor, tracePointLocal)
-                    visitLabel(skipCodeLocationAfter)
                 }
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                    val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
-                    val skipCodeLocationBefore = adapter.newLabel()
-                    dupArrayOnArrayStore(opcode)
-                    invokeIsLocalObject()
-                    copyLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     beforeSharedVariableWrite(null, getArrayStoreType(opcode).descriptor)
-                    visitLabel(skipCodeLocationBefore)
 
+                    // STACK: array, index, value
+                    val valueType = getArrayStoreType(opcode)
+                    val valueLocal = newLocal(valueType)
+                    val indexLocal = newLocal(Type.INT_TYPE)
+                    val arrayLocal = newLocal(OBJECT_TYPE)
+                    storeLocal(valueLocal)
+                    dup2()
+                    storeLocal(indexLocal)
+                    storeLocal(arrayLocal)
+                    loadLocal(valueLocal)
+                    // STACK: array, index, value
+
+                    loadStrategy() // STACK: array, index, value, strategy
+                    loadCurrentThreadNumber() // STACK: array, index, value, strategy, threadId
+
+                    // Get memory location id
+                    loadMemoryLocationLabeler()
+                    loadLocal(arrayLocal)
+                    loadLocal(indexLocal)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_ARRAY_ELEMENT)
+                    // STACK: array, index, value, strategy, threadId, memoryLocation
+                    loadLocal(valueLocal)
+                    box(valueType)
+
+                    invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
                     super.visitInsn(opcode)
 
-                    val skipCodeLocationAfter = newLabel()
-                    loadLocal(isLocalObject)
-                    ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
                     // initialize make state representation only if is not a local object
                     invokeMakeStateRepresentation()
-                    visitLabel(skipCodeLocationAfter)
                 }
                 else -> super.visitInsn(opcode)
             }
@@ -1151,6 +1253,10 @@ internal class ManagedStrategyTransformer(
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
         }
 
+        protected fun loadMemoryLocationLabeler() {
+            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::memoryLocationLabeler.name, MEMORY_LOCATION_LABELER_TYPE)
+        }
+
         protected fun loadObjectManager() {
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::objectManager.name, OBJECT_MANAGER_TYPE)
         }
@@ -1296,6 +1402,7 @@ private val OBJECT_TYPE = Type.getType(Any::class.java)
 private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
 private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStrategyStateHolder::class.java)
 private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
+private val MEMORY_LOCATION_LABELER_TYPE = Type.getType(MemoryLocationLabeler::class.java)
 private val OBJECT_MANAGER_TYPE = Type.getType(ObjectManager::class.java)
 private val RANDOM_TYPE = Type.getType(Random::class.java)
 private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
@@ -1316,6 +1423,8 @@ private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
 private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
+private val ON_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::onSharedVariableRead.javaMethod)
+private val ON_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::onSharedVariableWrite.javaMethod)
 private val BEFORE_LOCK_ACQUIRE_METHOD = Method.getMethod(ManagedStrategy::beforeLockAcquire.javaMethod)
 private val BEFORE_LOCK_RELEASE_METHOD = Method.getMethod(ManagedStrategy::beforeLockRelease.javaMethod)
 private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.javaMethod)
@@ -1344,6 +1453,9 @@ private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTrac
 private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
+private val LABEL_STATIC_FIELD = Method.getMethod(MemoryLocationLabeler::labelStaticField.javaMethod)
+private val LABEL_OBJECT_FIELD = Method.getMethod(MemoryLocationLabeler::labelObjectField.javaMethod)
+private val LABEL_ARRAY_ELEMENT = Method.getMethod(MemoryLocationLabeler::labelArrayElement.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 
@@ -1502,5 +1614,31 @@ internal object UnsafeHolder {
             }
         }
         return theUnsafe!!
+    }
+}
+
+private fun Type.isPrimitive() = sort in Type.BOOLEAN..Type.DOUBLE
+
+
+private val BOXED_BYTE_TYPE = Type.getObjectType("java/lang/Byte")
+private val BOXED_BOOLEAN_TYPE = Type.getObjectType("java/lang/Boolean")
+private val BOXED_SHORT_TYPE = Type.getObjectType("java/lang/Short")
+private val BOXED_CHARACTER_TYPE = Type.getObjectType("java/lang/Character")
+private val BOXED_INTEGER_TYPE = Type.getObjectType("java/lang/Integer")
+private val BOXED_FLOAT_TYPE = Type.getObjectType("java/lang/Float")
+private val BOXED_LONG_TYPE = Type.getObjectType("java/lang/Long")
+private val BOXED_DOUBLE_TYPE = Type.getObjectType("java/lang/Double")
+
+private fun Type.getBoxedType(): Type {
+    return when (sort) {
+        Type.BYTE -> BOXED_BYTE_TYPE
+        Type.BOOLEAN -> BOXED_BOOLEAN_TYPE
+        Type.SHORT -> BOXED_SHORT_TYPE
+        Type.CHAR -> BOXED_CHARACTER_TYPE
+        Type.INT -> BOXED_INTEGER_TYPE
+        Type.FLOAT -> BOXED_FLOAT_TYPE
+        Type.LONG -> BOXED_LONG_TYPE
+        Type.DOUBLE -> BOXED_DOUBLE_TYPE
+        else -> throw IllegalStateException()
     }
 }

@@ -101,6 +101,7 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+    private lateinit var memoryTracker: MemoryTracker
 
     init {
         runner = createRunner()
@@ -125,7 +126,7 @@ abstract class ManagedStrategy(
         cv = cv,
         tracePointConstructors = tracePointConstructors,
         guarantees = testCfg.guarantees,
-        eliminateLocalObjects = testCfg.eliminateLocalObjects,
+        eliminateLocalObjects = false, // TODO: fix local object elimination when tracking all the writes and reads
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
         codeLocationIdProvider = codeLocationIdProvider
@@ -171,6 +172,7 @@ abstract class ManagedStrategy(
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
+        memoryTracker = MemoryTracker()
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
@@ -429,6 +431,27 @@ abstract class ManagedStrategy(
      */
     internal fun beforeSharedVariableWrite(iThread: Int, codeLocation: Int, tracePoint: WriteTracePoint?) {
         newSwitchPoint(iThread, codeLocation, tracePoint)
+    }
+
+    /**
+     * This method is executed upon a shared variable read operation.
+     * Its result replaces the real read value.
+     * [typeDescriptor] is used only to determine default, initial value.
+     * TODO: remove [typeDescriptor] from the interface.
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param memoryLocation the memory location identifier.
+     */
+    internal fun onSharedVariableRead(iThread: Int, memoryLocation: Int, typeDescriptor: String): Any? =
+        memoryTracker.readValue(memoryLocation, typeDescriptor)
+
+    /**
+     * This method is executed upon a shared variable write operation.
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param memoryLocation the memory location identifier.
+     * @param value the value to be written.
+     */
+    internal fun onSharedVariableWrite(iThread: Int, memoryLocation: Int, value: Any?) {
+        memoryTracker.writeValue(memoryLocation, value)
     }
 
     /**
