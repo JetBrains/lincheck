@@ -24,23 +24,24 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 
-class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
-    @Volatile
-    var canEnterForbiddenSection = false
-
-    @InternalCoroutinesApi
-    @Operation(cancellableOnSuspension = true)
-    suspend fun cancelledOp(): Int {
-        if (canEnterForbiddenSection)
-            return 42
-        suspendCancellableCoroutine<Unit> { cont ->
-            cont.invokeOnCancellation {
-                canEnterForbiddenSection = true
-                canEnterForbiddenSection = false
-            }
-        }
-        return 0
-    }
-
-    override fun extractState(): Any = 0 // constant state
-}
+// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
+//class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+//    @Volatile
+//    var canEnterForbiddenSection = false
+//
+//    @InternalCoroutinesApi
+//    @Operation(cancellableOnSuspension = true)
+//    suspend fun cancelledOp(): Int {
+//        if (canEnterForbiddenSection)
+//            return 42
+//        suspendCancellableCoroutine<Unit> { cont ->
+//            cont.invokeOnCancellation {
+//                canEnterForbiddenSection = true
+//                canEnterForbiddenSection = false
+//            }
+//        }
+//        return 0
+//    }
+//
+//    override fun extractState(): Any = 0 // constant state
+//}

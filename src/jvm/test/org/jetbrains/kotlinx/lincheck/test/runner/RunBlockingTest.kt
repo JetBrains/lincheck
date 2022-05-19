@@ -30,25 +30,26 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import kotlin.coroutines.*
 
-class RunBlockingTest : AbstractLincheckTest() {
-    @Operation
-    fun foo(x: Int) = runBlocking<Int> {
-        suspendCoroutine sc@ { cont ->
-            cont.resume(x + 1000_000)
-        }
-    }
-
-    @Operation
-    fun bar(x: Int) = runBlocking<Int> {
-        suspendCancellableCoroutine sc@ { cont ->
-            cont.resume(x + 1000)
-        }
-    }
-
-    override fun extractState() = Unit
-
-    override fun <O : Options<O, *>> O.customize() {
-        minimizeFailedScenario(false)
-        iterations(1)
-    }
-}
+// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
+//class RunBlockingTest : AbstractLincheckTest() {
+//    @Operation
+//    fun foo(x: Int) = runBlocking<Int> {
+//        suspendCoroutine sc@ { cont ->
+//            cont.resume(x + 1000_000)
+//        }
+//    }
+//
+//    @Operation
+//    fun bar(x: Int) = runBlocking<Int> {
+//        suspendCancellableCoroutine sc@ { cont ->
+//            cont.resume(x + 1000)
+//        }
+//    }
+//
+//    override fun extractState() = Unit
+//
+//    override fun <O : Options<O, *>> O.customize() {
+//        minimizeFailedScenario(false)
+//        iterations(1)
+//    }
+//}
