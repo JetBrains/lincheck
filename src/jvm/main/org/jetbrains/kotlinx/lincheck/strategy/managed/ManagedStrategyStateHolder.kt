@@ -37,6 +37,8 @@ internal object ManagedStrategyStateHolder {
     var objectManager: ObjectManager? = null
     @JvmField
     var random: Random? = null
+    @JvmField
+    var memoryLocationLabeler: MemoryLocationLabeler? = null
 
     /**
      * Sets the strategy and its initial state for the specified class loader.
@@ -44,11 +46,13 @@ internal object ManagedStrategyStateHolder {
     fun setState(loader: ClassLoader, strategy: ManagedStrategy?, testClass: Class<out Any>) {
         try {
             val clazz = loader.loadClass(ManagedStrategyStateHolder::class.java.canonicalName)
-            clazz.getField("strategy")[null] = strategy
-            clazz.getField("objectManager")[null] = ObjectManager(testClass)
+            clazz.getField(ManagedStrategyStateHolder::strategy.name)[null] = strategy
+            clazz.getField(ManagedStrategyStateHolder::objectManager.name)[null] = ObjectManager(testClass)
             // load transformed java.util.Random class
             val randomClass = loader.loadClass(Random::class.java.canonicalName)
-            clazz.getField("random")[null] = randomClass.getConstructor().newInstance()
+            clazz.getField(ManagedStrategyStateHolder::random.name)[null] = randomClass.getConstructor().newInstance()
+            // set new memory location labeler
+            clazz.getField(ManagedStrategyStateHolder::memoryLocationLabeler.name)[null] = MemoryLocationLabeler()
         } catch (e: Throwable) {
             throw IllegalStateException("Cannot set state to ManagedStateHolder", e)
         }
@@ -60,7 +64,7 @@ internal object ManagedStrategyStateHolder {
     fun resetState(loader: ClassLoader, testClass: Class<out Any>) {
         try {
             val clazz = loader.loadClass(ManagedStrategyStateHolder::class.java.canonicalName)
-            clazz.getMethod("resetStateImpl", Class::class.java).invoke(null, testClass)
+            clazz.getMethod(ManagedStrategyStateHolder::resetStateImpl.name, Class::class.java).invoke(null, testClass)
         } catch (e: Exception) {
             throw IllegalStateException("Cannot set state to ManagedStateHolder", e)
         }
@@ -70,6 +74,7 @@ internal object ManagedStrategyStateHolder {
     fun resetStateImpl(testClass: Class<out Any>) {
         random!!.setSeed(INITIAL_SEED)
         objectManager = ObjectManager(testClass)
+        memoryLocationLabeler = MemoryLocationLabeler()
     }
 }
 
