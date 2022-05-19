@@ -30,51 +30,51 @@ import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
-
-class SuspendTraceReportingTest : VerifierState() {
-    private val lock = Mutex()
-    private var canEnterForbiddenBlock: Boolean = false
-    private var barStarted: Boolean = false
-    private var counter: Int = 0
-
-    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
-    suspend fun foo() {
-        if (barStarted) canEnterForbiddenBlock = true
-        lock.withLock {
-            counter++
-        }
-        canEnterForbiddenBlock = false
-    }
-
-    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
-    suspend fun bar(): Int {
-        barStarted = true
-        lock.withLock {
-            counter++
-        }
-        if (canEnterForbiddenBlock) return -1
-        return 0
-    }
-
-    override fun extractState(): Any = counter
-
-    @Test
-    fun test() {
-        val failure = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .checkImpl(this::class.java)
-        checkNotNull(failure) { "the test should fail" }
-        val log = failure.toString()
-        check("label" !in log) { "suspend state machine related fields should not be reported" }
-        check("L$0" !in log) { "suspend state machine related fields should not be reported" }
-        check(log.numberOfOccurrences("foo()") == 2) {
-            "suspended function should be mentioned exactly twice (once in parallel and once in parallel execution)"
-        }
-        check("barStarted.READ: true" in log) { "this code location after suspension should be reported" }
-        checkTraceHasNoLincheckEvents(log)
-    }
-
-    private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
-}
+// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
+//class SuspendTraceReportingTest : VerifierState() {
+//    private val lock = Mutex()
+//    private var canEnterForbiddenBlock: Boolean = false
+//    private var barStarted: Boolean = false
+//    private var counter: Int = 0
+//
+//    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
+//    suspend fun foo() {
+//        if (barStarted) canEnterForbiddenBlock = true
+//        lock.withLock {
+//            counter++
+//        }
+//        canEnterForbiddenBlock = false
+//    }
+//
+//    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
+//    suspend fun bar(): Int {
+//        barStarted = true
+//        lock.withLock {
+//            counter++
+//        }
+//        if (canEnterForbiddenBlock) return -1
+//        return 0
+//    }
+//
+//    override fun extractState(): Any = counter
+//
+//    @Test
+//    fun test() {
+//        val failure = ModelCheckingOptions()
+//            .actorsPerThread(1)
+//            .actorsBefore(0)
+//            .actorsAfter(0)
+//            .checkImpl(this::class.java)
+//        checkNotNull(failure) { "the test should fail" }
+//        val log = failure.toString()
+//        check("label" !in log) { "suspend state machine related fields should not be reported" }
+//        check("L$0" !in log) { "suspend state machine related fields should not be reported" }
+//        check(log.numberOfOccurrences("foo()") == 2) {
+//            "suspended function should be mentioned exactly twice (once in parallel and once in parallel execution)"
+//        }
+//        check("barStarted.READ: true" in log) { "this code location after suspension should be reported" }
+//        checkTraceHasNoLincheckEvents(log)
+//    }
+//
+//    private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
+//}

@@ -28,30 +28,31 @@ import org.jetbrains.kotlinx.lincheck.annotations.*;
 
 import java.util.*;
 
-@OpGroupConfig(name = "producer", nonParallel = true)
-@OpGroupConfig(name = "consumer", nonParallel = true)
-public class NonParallelOpGroupTest extends AbstractLincheckTest {
-    private final SpscLinkedAtomicQueue<Integer> queue = new SpscLinkedAtomicQueue<>();
-
-    @Operation(group = "producer")
-    public void offer(Integer x) {
-        queue.offer(x);
-    }
-
-    @Operation(group = "consumer")
-    public Integer poll() {
-        return queue.poll();
-    }
-
-    @NotNull
-    @Override
-    protected Object extractState() {
-        List<Integer> elements = new ArrayList<>();
-        while (true) {
-            Integer el = poll();
-            if (el == null) break;
-            elements.add(el);
-        }
-        return elements;
-    }
-}
+// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
+//@OpGroupConfig(name = "producer", nonParallel = true)
+//@OpGroupConfig(name = "consumer", nonParallel = true)
+//public class NonParallelOpGroupTest extends AbstractLincheckTest {
+//    private final SpscLinkedAtomicQueue<Integer> queue = new SpscLinkedAtomicQueue<>();
+//
+//    @Operation(group = "producer")
+//    public void offer(Integer x) {
+//        queue.offer(x);
+//    }
+//
+//    @Operation(group = "consumer")
+//    public Integer poll() {
+//        return queue.poll();
+//    }
+//
+//    @NotNull
+//    @Override
+//    protected Object extractState() {
+//        List<Integer> elements = new ArrayList<>();
+//        while (true) {
+//            Integer el = poll();
+//            if (el == null) break;
+//            elements.add(el);
+//        }
+//        return elements;
+//    }
+//}

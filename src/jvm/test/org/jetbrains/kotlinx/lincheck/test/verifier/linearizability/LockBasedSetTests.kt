@@ -43,7 +43,9 @@ abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
 }
 
 class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet())
-class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet())
+
+// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
+//class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet())
 class SynchronizedLockSetTest : AbstractSetTest(SynchronizedBlockBasedSet())
 class SynchronizedMethodSetTest : AbstractSetTest(SynchronizedMethodBasedSet())
 
