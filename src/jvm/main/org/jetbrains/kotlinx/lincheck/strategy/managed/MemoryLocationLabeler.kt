@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
  * TODO: support accessing memory locations via Unsafe/AFU/VarHandle.
  */
 class MemoryLocationLabeler {
+    // TODO: make a typealias `MemoryLocationID = Int` ?
     private val memoryLocations = ConcurrentHashMap<MemoryLocation, Int>()
 
     fun labelStaticField(className: String, fieldName: String): Int =
