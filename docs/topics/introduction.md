@@ -58,6 +58,14 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
    import org.jetbrains.kotlinx.lincheck.strategy.stress.*
    import org.junit.*
    
+   class Counter {
+        @Volatile
+        private var value = 0
+   
+        fun inc(): Int = ++value
+        fun get() = value
+   }
+   
    class BasicCounterTest {
        private val c = Counter() // initial state
    
@@ -109,6 +117,14 @@ that examines numerous executions with a bounded number of context switches.
    import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
    import org.jetbrains.kotlinx.lincheck.verifier.*
    import org.junit.*
+   
+   class Counter {
+        @Volatile
+        private var value = 0
+   
+        fun inc(): Int = ++value
+        fun get() = value
+   }
    
    class BasicCounterTest {
        private val c = Counter()
