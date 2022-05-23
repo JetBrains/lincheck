@@ -214,108 +214,6 @@ class StackTest1 : VerifierState() {
 }
 ```
 
-### Happens-before relation
-
-During execution Lincheck constructs the happens-before order of operations: 
-it tracks the number of completed operations in each of the parallel threads 
-seen at the beginning of the current operation.
-You can see these numbers in brackets against the operation. Run the following test.
-
-```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
-import java.util.concurrent.atomic.*
-import kotlin.NoSuchElementException
-
-class Stack<T> {
-   private val top  = AtomicReference<Node<T>?>(null)
-   private val _size = AtomicInteger(0)
-
-   fun push(value: T) {
-      while (true) {
-         val cur = top.get()
-         val newTop = Node(cur, value)
-         if (top.compareAndSet(cur, newTop)) { // try to add
-            _size.incrementAndGet() // <-- INCREMENT SIZE
-            return
-         }
-      }
-   }
-
-   fun popOrNull(): T? {
-      while (true) {
-         val cur = top.get() ?: return null // is stack empty?
-         if (top.compareAndSet(cur, cur.next)) { // try to retrieve
-            _size.decrementAndGet() // <-- DECREMENT SIZE
-            return cur.value
-         }
-      }
-   }
-
-   val size: Int get() = _size.get()
-}
-class Node<T>(val next: Node<T>?, val value: T)
-
-class StackTest2 {
-   private val s = Stack<Int>()
-
-   @Operation
-   fun push(value: Int) = s.push(value)
-
-   @Operation
-   fun popOrNull() = s.popOrNull()
-
-   @Operation
-   fun size() = s.size
-   
-   @Test
-   fun modelCheckinglTest() = ModelCheckingOptions()
-      .actorsBefore(0)
-      .actorsAfter(0)
-      .actorsPerThread(3)
-      .check(this::class)
-}
-```
-
-You will get the output like this:
-
-```text 
-= Invalid execution results =
-Parallel part:
-| popOrNull(): 2          | push(2): void       |
-| push(6):     void [1,-] |                     |
-| size():      0    [2,-] |                     |
----
-values in "[..]" brackets indicate the number of completed operations 
-in each of the parallel threads seen at the beginning of the current operation
----
-
-= The following interleaving leads to the error =
-Parallel part trace:
-|                      | push(2)                                                             |
-|                      |   push(2) at StackTest2.push(StackTest.kt:75)                       |
-|                      |     get(): null at Stack.push(StackTest.kt:38)                      |
-|                      |     compareAndSet(null,Node@1): true at Stack.push(StackTest.kt:40) |
-|                      |     switch                                                          |
-| popOrNull(): 2       |                                                                     |
-| push(6): void        |                                                                     |
-| size(): 0            |                                                                     |
-|   thread is finished |                                                                     |
-|                      |     incrementAndGet(): 1 at Stack.push(StackTest.kt:41)             |
-|                      |   result: void                                                      |
-|                      |   thread is finished                                                |
-```
-
-1. **T2:** The second thread pushes `2` on the stack and switches its execution
-   to the first thread before incrementing the size.
-2. **T1:** The first thread pops the element `2` and decrements the size, `size == -1`.
-2. **T1:** The first thread pushes `6` and increments the size, `size == 0`.
-2. **T1:** The values in brackets against `size()` operation `[2, -]` indicate that by the time of `size()` invocation
-   no operations from the second thread have completed yet, so it returns `0`.
-
 ### Handling exception as a result
 
 Your implementation may throw an exception according to the contract. You can define potentially thrown exceptions as
@@ -363,7 +261,7 @@ class Stack<T> {
 }
 class Node<T>(val next: Node<T>?, val value: T)
 
-class StackTest3 {
+class StackTest2 {
    private val s = Stack<Int>()
 
    @Operation
