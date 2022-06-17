@@ -20,35 +20,35 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct
 
-abstract class BinaryRelation<T> {
+abstract class Relation<T> {
     abstract operator fun invoke(x: T, y: T): Boolean
 
-    infix fun or(r: BinaryRelation<T>): BinaryRelation<T> {
+    infix fun or(r: Relation<T>): Relation<T> {
         return UnionRelation(this, r)
     }
 
-    infix fun and(r: BinaryRelation<T>): BinaryRelation<T> {
+    infix fun and(r: Relation<T>): Relation<T> {
         return IntersectionRelation(this, r)
     }
 }
 
-fun<T> rel(r: (T, T) -> Boolean): BinaryRelation<T> {
+fun<T> rel(r: (T, T) -> Boolean): Relation<T> {
     return LambdaRelation(r)
 }
 
-class UnionRelation<T>(val r1 : BinaryRelation<T>, val r2: BinaryRelation<T>): BinaryRelation<T>() {
+class UnionRelation<T>(val r1 : Relation<T>, val r2: Relation<T>): Relation<T>() {
     override fun invoke(x: T, y: T): Boolean {
         return r1(x, y) || r2(x, y)
     }
 }
 
-class IntersectionRelation<T>(val r1 : BinaryRelation<T>, val r2: BinaryRelation<T>): BinaryRelation<T>() {
+class IntersectionRelation<T>(val r1 : Relation<T>, val r2: Relation<T>): Relation<T>() {
     override fun invoke(x: T, y: T): Boolean {
         return r1(x, y) && r2(x, y)
     }
 }
 
-class LambdaRelation<T>(val rel: (T, T) -> Boolean): BinaryRelation<T>() {
+class LambdaRelation<T>(val rel: (T, T) -> Boolean): Relation<T>() {
     override fun invoke(x: T, y: T): Boolean {
         return rel(x, y)
     }
