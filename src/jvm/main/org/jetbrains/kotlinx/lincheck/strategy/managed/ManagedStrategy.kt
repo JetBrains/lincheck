@@ -74,6 +74,9 @@ abstract class ManagedStrategy(
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // Detector of loops or hangs (i.e. active locks).
     private lateinit var loopDetector: LoopDetector
+
+    // Tracker of shared memory accesses.
+    private lateinit var memoryTracker: MemoryTracker
     // Tracker of acquisitions and releases of monitors.
     private lateinit var monitorTracker: MonitorTracker
 
@@ -101,7 +104,6 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
-    private lateinit var memoryTracker: MemoryTracker
 
     init {
         runner = createRunner()
@@ -170,9 +172,9 @@ abstract class ManagedStrategy(
         isSuspended.fill(false)
         currentActorId.fill(-1)
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
-        monitorTracker = MonitorTracker(nThreads)
+        memoryTracker = SeqCstMemoryTracker()
+        monitorTracker = SeqCstMonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
-        memoryTracker = MemoryTracker()
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
@@ -855,9 +857,71 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
 }
 
 /**
- * Tracks synchronization operations with monitors (acquire/release, wait/notify) to maintain a set of active threads.
+ * Tracks memory operations with shared variables.
  */
-private class MonitorTracker(nThreads: Int) {
+abstract class MemoryTracker {
+
+    abstract fun writeValue(memoryLocationId: Int, value: Any?): Unit
+
+    abstract fun readValue(memoryLocationId: Int, typeDescriptor: String): Any?
+}
+
+/**
+ * Sequentially consistent memory tracking.
+ * Represents the shared memory as a map MemoryLocation -> Value.
+ *
+ * TODO: do not use this class for interleaving-based model checking?.
+ * TODO: move to interleaving-based model checking directory?
+ */
+class SeqCstMemoryTracker : MemoryTracker() {
+    private val values = HashMap<Int, Any?>()
+
+    override fun writeValue(memoryLocationId: Int, value: Any?) =
+            values.set(memoryLocationId, value)
+
+    override fun readValue(memoryLocationId: Int, typeDescriptor: String): Any? =
+            values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDescriptor) }
+}
+
+private fun defaultValueByDescriptor(descriptor: String): Any? = when (descriptor) {
+    "I" -> 0
+    "Z" -> false
+    "B" -> 0.toByte()
+    "C" -> 0.toChar()
+    "S" -> 0.toShort()
+    "J" -> 0.toLong()
+    "D" -> 0.toDouble()
+    "F" -> 0.toFloat()
+    else -> null
+}
+
+/**
+ * Tracks synchronization operations with monitors (acquire/release, wait/notify).
+ */
+abstract class MonitorTracker {
+
+    abstract fun acquireMonitor(iThread: Int, monitor: Any): Boolean
+
+    abstract fun releaseMonitor(monitor: Any)
+
+    abstract fun isWaiting(iThread: Int): Boolean
+
+    protected abstract fun canAcquireMonitor(iThread: Int, monitor: Any): Boolean
+
+    abstract fun waitOnMonitor(iThread: Int, monitor: Any)
+
+    abstract fun notify(monitor: Any)
+
+    abstract fun notifyAll(monitor: Any): Unit
+}
+
+/**
+ * Sequentially consistent monitor tracking.
+ * Represents the set of acquired monitors as a map Monitor -> ThreadId.
+ *
+ * TODO: move to interleaving-based model checking directory?
+ */
+private class SeqCstMonitorTracker(nThreads: Int) : MonitorTracker() {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
@@ -873,7 +937,7 @@ private class MonitorTracker(nThreads: Int) {
     /**
      * Performs a logical acquisition.
      */
-    fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
+    override fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
         // Increment the reentrant depth and store the
         // acquisition info if needed.
         val ai = acquiredMonitors.computeIfAbsent(monitor) { MonitorAcquiringInfo(iThread, 0) }
@@ -889,7 +953,7 @@ private class MonitorTracker(nThreads: Int) {
     /**
      * Performs a logical release.
      */
-    fun releaseMonitor(monitor: Any) {
+    override fun releaseMonitor(monitor: Any) {
         // Decrement the reentrancy depth and remove the acquisition info
         // if the monitor becomes free to acquire by another thread.
         val ai = acquiredMonitors[monitor]!!
@@ -900,7 +964,7 @@ private class MonitorTracker(nThreads: Int) {
     /**
      * Returns `true` if the corresponding threads is waiting on some monitor.
      */
-    fun isWaiting(iThread: Int): Boolean {
+    override fun isWaiting(iThread: Int): Boolean {
         val monitor = acquiringMonitors[iThread] ?: return false
         return waitForNotify[iThread] || !canAcquireMonitor(iThread, monitor)
     }
@@ -909,7 +973,7 @@ private class MonitorTracker(nThreads: Int) {
      * Returns `true` if the monitor is already acquired by
      * the thread [iThread], or if this monitor is free to acquire.
      */
-    private fun canAcquireMonitor(iThread: Int, monitor: Any) =
+    override fun canAcquireMonitor(iThread: Int, monitor: Any) =
         acquiredMonitors[monitor]?.iThread?.equals(iThread) ?: true
 
     /**
@@ -917,7 +981,7 @@ private class MonitorTracker(nThreads: Int) {
      * returns `true` until the corresponding [notify] or [notifyAll]
      * is invoked.
      */
-    fun waitOnMonitor(iThread: Int, monitor: Any) {
+    override fun waitOnMonitor(iThread: Int, monitor: Any) {
         // TODO: we can add spurious wakeups here
         check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
         releaseMonitor(monitor)
@@ -928,12 +992,12 @@ private class MonitorTracker(nThreads: Int) {
     /**
      * Just notify all thread. Odd threads will have a spurious wakeup
      */
-    fun notify(monitor: Any) = notifyAll(monitor)
+    override fun notify(monitor: Any) = notifyAll(monitor)
 
     /**
      * Performs the logical `notifyAll`.
      */
-    fun notifyAll(monitor: Any): Unit = acquiringMonitors.forEachIndexed { iThread, m ->
+    override fun notifyAll(monitor: Any): Unit = acquiringMonitors.forEachIndexed { iThread, m ->
         if (monitor === m) waitForNotify[iThread] = false
     }
 
