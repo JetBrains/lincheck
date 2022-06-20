@@ -26,17 +26,43 @@ abstract class EventLabel
 
 class EmptyLabel: EventLabel()
 
-data class ReadLabel(
-        val typeDesc: String,
-        val memId: Int,
-        val value: Any?
+enum class MemoryAccessKind { Read, Write }
+
+data class MemoryAccessLabel(
+    val kind: MemoryAccessKind,
+    val typeDesc: String,
+    val memId: Int,
+    val value: Any?
 ): EventLabel()
 
-data class WriteLabel(
-        val typeDesc: String,
-        val memId: Int,
-        val value: Any?
-) : EventLabel()
+/**
+ * Synchronizes event label with another label passed as a parameter.
+ * Note that the label on which method is called is the synchronized label,
+ * i.e. non-null return value to the call `A.synchronize(B)` means that `B >> A` (B synchronizes with A).
+ * For example a write label `wlab = W(x, v)` synchronizes with a read-unknown label `rlab = R(x, null)`
+ * and produces the read label `lab = R(x, v)`. That is a call `rlab.synchronize(wlab)` returns `lab`.
+ * TODO: the reversed order of arguments is reserved for the future, for the case when
+ *   synchronized label might depend on several labels - in this case the argument to the function
+ *   becomes the list of event labels. An example of such case is barrier synchronization when
+ *   `wait` event might depend on several `notify` events.
+ * TODO: make this method an abstract method of `EventLabel` class?
+ */
+fun EventLabel.synchronize(lab: EventLabel): EventLabel? {
+    return when {
+        (this is MemoryAccessLabel) && (lab is MemoryAccessLabel)
+            && (kind == MemoryAccessKind.Read)
+            && (lab.kind == MemoryAccessKind.Write)
+            && (memId == lab.memId) && (value == null) ->
+                // TODO: perform dynamic type-check here?
+                // require(typeDesc == lab.typeDesc) { "" }
+                copy(value = lab.value)
+        else -> null
+    }
+}
+
+fun EventLabel.synchronize(event: Event): Pair<Event, EventLabel>? {
+    return synchronize(event.label)?.let { event to it }
+}
 
 class Event private constructor(
         val id: EventID,
@@ -72,19 +98,20 @@ class Event private constructor(
         private var nextId: EventID = 0
 
         fun create(
-                threadId: Int,
-                threadPos: Int,
-                label: EventLabel,
-                pred: Event?,
-                deps: List<Event>
+            threadId: Int,
+            label: EventLabel,
+            pred: Event?,
+            deps: List<Event>
         ): Event {
             val id = nextId++
-            return Event(id,
-                    threadId = threadId,
-                    threadPos = threadPos,
-                    label = label,
-                    pred = pred,
-                    deps = deps,
+            val threadPos = pred?.let { it.threadPos + 1 } ?: 0
+            return Event(
+                id,
+                threadId = threadId,
+                threadPos = threadPos,
+                label = label,
+                pred = pred,
+                deps = deps,
             )
         }
     }

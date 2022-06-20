@@ -444,7 +444,7 @@ abstract class ManagedStrategy(
      * @param memoryLocation the memory location identifier.
      */
     internal fun onSharedVariableRead(iThread: Int, memoryLocation: Int, typeDescriptor: String): Any? =
-        memoryTracker.readValue(memoryLocation, typeDescriptor)
+        memoryTracker.readValue(iThread, memoryLocation, typeDescriptor)
 
     /**
      * This method is executed upon a shared variable write operation.
@@ -452,9 +452,9 @@ abstract class ManagedStrategy(
      * @param memoryLocation the memory location identifier.
      * @param value the value to be written.
      */
-    internal fun onSharedVariableWrite(iThread: Int, memoryLocation: Int, value: Any?) {
-        memoryTracker.writeValue(memoryLocation, value)
-    }
+    internal fun onSharedVariableWrite(iThread: Int, memoryLocation: Int, value: Any?) =
+        memoryTracker.writeValue(iThread, value, memoryLocation)
+
 
     /**
      * This method is executed before an atomic method call.
@@ -861,9 +861,9 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
  */
 abstract class MemoryTracker {
 
-    abstract fun writeValue(memoryLocationId: Int, value: Any?): Unit
+    abstract fun writeValue(iThread: Int, value: Any?, memoryLocationId: Int): Unit
 
-    abstract fun readValue(memoryLocationId: Int, typeDescriptor: String): Any?
+    abstract fun readValue(iThread: Int, memoryLocationId: Int, typeDesc: String): Any?
 }
 
 /**
@@ -876,11 +876,11 @@ abstract class MemoryTracker {
 class SeqCstMemoryTracker : MemoryTracker() {
     private val values = HashMap<Int, Any?>()
 
-    override fun writeValue(memoryLocationId: Int, value: Any?) =
-            values.set(memoryLocationId, value)
+    override fun writeValue(iThread: Int, value: Any?, memoryLocationId: Int) =
+        values.set(memoryLocationId, value)
 
-    override fun readValue(memoryLocationId: Int, typeDescriptor: String): Any? =
-            values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDescriptor) }
+    override fun readValue(iThread: Int, memoryLocationId: Int, typeDesc: String): Any? =
+        values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDesc) }
 }
 
 private fun defaultValueByDescriptor(descriptor: String): Any? = when (descriptor) {
