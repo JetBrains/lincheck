@@ -60,18 +60,18 @@ class EventStructure {
 }
 
 class EventStructMemoryTracker(val eventStructure: EventStructure): MemoryTracker() {
-    override fun writeValue(iThread: Int, value: Any?, memoryLocationId: Int) {
+    override fun writeValue(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) {
         // TODO: fix typeDesc
-        val lab = MemoryAccessLabel(MemoryAccessKind.Write, "", memoryLocationId, value)
+        val lab = MemoryAccessLabel(MemoryAccessKind.Write, typeDescriptor, memoryLocationId, value)
         eventStructure.addEvent(iThread, lab, listOf())
     }
 
-    override fun readValue(iThread: Int, memoryLocationId: Int, typeDesc: String): Any? {
+    override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? {
         // we first create read label with unknown (null) value, it will be filled in later
         // TODO: as a possible optimization we can avoid one allocation of temporarily label object here
         //   by refactoring EventLabel.synchronize function. However, current design with
         //   EventLabel.synchronize taking just two labels is more clear and concise.
-        val preLab = MemoryAccessLabel(MemoryAccessKind.Read, typeDesc, memoryLocationId, null)
+        val preLab = MemoryAccessLabel(MemoryAccessKind.Read, typeDescriptor, memoryLocationId, null)
         // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
         // TODO: check consistency of reads!
         val labs = eventStructure.events.mapNotNull {

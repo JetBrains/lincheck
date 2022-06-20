@@ -204,6 +204,7 @@ internal class ManagedStrategyTransformer(
                     box(valueType)
                     // STACK: strategy, threadId, memoryLocation, value
 
+                    push(desc)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -235,6 +236,7 @@ internal class ManagedStrategyTransformer(
                     box(valueType)
                     // STACK: strategy, threadId, memoryLocation, value
 
+                    push(desc)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
                     // STACK: <empty>
 
@@ -320,6 +322,7 @@ internal class ManagedStrategyTransformer(
                     loadLocal(valueLocal)
                     box(valueType)
 
+                    push(getArrayStoreType(opcode).descriptor)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
                     super.visitInsn(opcode)
 

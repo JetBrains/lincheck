@@ -452,8 +452,8 @@ abstract class ManagedStrategy(
      * @param memoryLocation the memory location identifier.
      * @param value the value to be written.
      */
-    internal fun onSharedVariableWrite(iThread: Int, memoryLocation: Int, value: Any?) =
-        memoryTracker.writeValue(iThread, value, memoryLocation)
+    internal fun onSharedVariableWrite(iThread: Int, memoryLocation: Int, value: Any?, typeDescriptor: String) =
+        memoryTracker.writeValue(iThread, memoryLocation, value, typeDescriptor)
 
 
     /**
@@ -861,9 +861,9 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
  */
 abstract class MemoryTracker {
 
-    abstract fun writeValue(iThread: Int, value: Any?, memoryLocationId: Int): Unit
+    abstract fun writeValue(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String)
 
-    abstract fun readValue(iThread: Int, memoryLocationId: Int, typeDesc: String): Any?
+    abstract fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any?
 }
 
 /**
@@ -876,11 +876,11 @@ abstract class MemoryTracker {
 class SeqCstMemoryTracker : MemoryTracker() {
     private val values = HashMap<Int, Any?>()
 
-    override fun writeValue(iThread: Int, value: Any?, memoryLocationId: Int) =
+    override fun writeValue(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) =
         values.set(memoryLocationId, value)
 
-    override fun readValue(iThread: Int, memoryLocationId: Int, typeDesc: String): Any? =
-        values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDesc) }
+    override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? =
+        values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDescriptor) }
 }
 
 private fun defaultValueByDescriptor(descriptor: String): Any? = when (descriptor) {
