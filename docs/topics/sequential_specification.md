@@ -1,40 +1,44 @@
-[//]: # (title: Results verification)
+[//]: # (title: Sequential specification)
 
-After each scenario invocation, Lincheck verifies outcome results for correctness.
-The standard safety property for concurrent algorithms is _linearizability_, 
-which implies that each operation in the execution takes place 
-atomically, in some order consistent with the "happens-before" relation. 
-Essentially, Lincheck tries to find such an order.
+[comment]: <> (After each scenario invocation, Lincheck verifies outcome results for correctness.
+The standard safety property for concurrent algorithms is _linearizability_,
+which implies that each operation in the execution takes place
+atomically, in some order consistent with the "happens-before" relation.
+Essentially, Lincheck tries to find such an order.)
 
-In order to check whether the results satisfy linearizability, Lincheck tries 
+[comment]: <> (In order to check whether the results satisfy linearizability, Lincheck tries 
 to explain them with some sequential execution which does not reorder operations in threads 
-and does not violate the happens-before order constructed during the execution.
+and does not violate the happens-before order constructed during the execution.)
 
-Lincheck defines the sequential semantics via building a transition graph: 
+[comment]: <> (Lincheck defines the sequential semantics via building a transition graph: 
 the states represent the data structure states and the transitions are labeled 
 with operations and the corresponding results. 
 A sequence of operations application is valid according to the sequential semantics 
-iff there exists a finite path of the transitions labeled by these operations in the transition graph.
+iff there exists a finite path of the transitions labeled by these operations in the transition graph.)
 
-For example, consider checking if results of one of the possible executions of the stack are linearizable. On the
+[comment]: <> (For example, consider checking if results of one of the possible executions of the stack are linearizable. On the
 left of the scheme, you can see the execution results, and on the right, there is a part of the LTS for the stack 
-that is built to verify those results. Here are the steps of verification:
+that is built to verify those results. Here are the steps of verification:)
 
-1. **T2:** Apply `push(2)` from the second thread to the empty stack (the initial state).
-2. **T2:** Try to complete the second thread, but the following `pop()` invocation returns the previously pushed `2`
-   instead of `1` from the results.
-3. **T1:** Switch to the first thread and apply `push(1)`.
-4. **T2:** Switch back to the second thread and execute `pop()`, which now returns `1` as expected.
+[comment]: <> (1. **T2:** Apply `push&#40;2&#41;` from the second thread to the empty stack &#40;the initial state&#41;.)
 
-![Execution results of the Stack](stack_lts.png){width=700}
+[comment]: <> (2. **T2:** Try to complete the second thread, but the following `pop&#40;&#41;` invocation returns the previously pushed `2`)
 
-This way, Lincheck successfully found a sequential history that produces the given results, showing that they are
+[comment]: <> (   instead of `1` from the results.)
+
+[comment]: <> (3. **T1:** Switch to the first thread and apply `push&#40;1&#41;`.)
+
+[comment]: <> (4. **T2:** Switch back to the second thread and execute `pop&#40;&#41;`, which now returns `1` as expected.)
+
+[comment]: <> (![Execution results of the Stack]&#40;stack_lts.png&#41;{width=700})
+
+[comment]: <> (This way, Lincheck successfully found a sequential history that produces the given results, showing that they are
 correct. At the same time, if none of the explored sequential histories explains the given result, Lincheck reports an
-error.
+error.)
 
 ### Sequential specification
 
-During verification, you sequentially apply operations of the tested algorithm by default.
+[comment]: <> (During verification, you sequentially apply operations of the tested algorithm by default.)
 
 To be sure that the algorithm provides correct sequential behavior, you can define its _sequential specification_
 by writing a simple sequential implementation of the algorithm.
@@ -49,73 +53,33 @@ To provide a sequential specification of the algorithm for verification:
 2. Pass the class with sequential implementation to the `sequentialSpecification` option:
 
    ```kotlin
-   StressOptions().sequentialSpecification(SequentialStack::class)
+   StressOptions().sequentialSpecification(SequentialQueue::class)
    ```
 
-For example, provide a sequential specification for the concurrent stack implementation with non-linearizable `size`:
+For example, here is the test to check correctness of `j.u.c.ConcurrentLinkedQueue` 
+from the Java standard library.
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
-import java.util.*
-import java.util.concurrent.atomic.*
-import kotlin.NoSuchElementException
-
-class Stack<T> {
-   private val top  = AtomicReference<Node<T>?>(null)
-   private val _size = AtomicInteger(0)
-
-   fun push(value: T) {
-      while (true) {
-         val cur = top.get()
-         val newTop = Node(cur, value)
-         if (top.compareAndSet(cur, newTop)) { // try to add
-            _size.incrementAndGet() // <-- INCREMENT SIZE
-            return
-         }
-      }
-   }
-
-   fun popOrNull(): T? {
-      while (true) {
-         val cur = top.get() ?: return null // is stack empty?
-         if (top.compareAndSet(cur, cur.next)) { // try to retrieve
-            _size.decrementAndGet() // <-- DECREMENT SIZE
-            return cur.value
-         }
-      }
-   }
-
-   val size: Int get() = _size.get()
-}
-class Node<T>(val next: Node<T>?, val value: T)
-
-class StackTest {
-   private val s = Stack<Int>()
+class ConcurrentLinkedQueueTest {
+   private val s = ConcurrentLinkedQueue<Int>()
 
    @Operation
-   fun push(value: Int) = s.push(value)
+   fun add(value: Int) = s.add(value)
 
    @Operation
-   fun popOrNull() = s.popOrNull()
-
-   @Operation
-   fun size() = s.size
-
-   class SequentialStack {
-      val s = LinkedList<Int>()
-
-      fun push(x: Int) = s.push(x)
-      fun popOrNull() = s.pollFirst()
-      fun size() = s.size
-   }
-
+   fun poll(): Int? = s.poll()
+   
    @Test
    fun stressTest() = StressOptions()
-      .sequentialSpecification(SequentialStack::class.java)
+      .sequentialSpecification(SequentialQueue::class.java)
       .check(this::class)
+}
+
+class SequentialQueue {
+   val s = LinkedList<Int>()
+
+   fun add(x: Int) = s.add(x)
+   fun poll(): Int? = s.poll()
 }
 ```
 
@@ -275,31 +239,6 @@ class StackTest2 {
 
    @Test
    fun stressTest() = StressOptions().check(this::class)
-}
-```
-
-### Validation of invariants
-
-It's also possible to validate the data structure invariants, implemented with functions that can be executed multiple
-times during execution when there is no running operation in an intermediate state. For example, they are invoked in the
-stress mode at the beginning and end of the parallel execution.
-
-Validation functions are marked with a special `@Validate` annotation, have no argument, and do not return anything. In
-case the testing data structure is in an invalid state, they should throw an exception.
-
-Consider, for example, the part of the test for a linked list, which supports concurrent removals. A typical invariant
-is that "removed nodes should not be reachable when all the operations are completed". The validation
-function `checkNoRemovedNodes` checks this invariant, throwing an exception if violated.
-
-```kotlin
-class MyLockFreeListTest {
-    private val list = MyLockFreeList<Int>()
-
-    @Validate
-    fun checkNoRemovedNodesInTheList() = check(!list.hasRemovedNodes()) {
-        "The list contains logically removed nodes while all the operations are completed: $list"
-    }
-    //...
 }
 ```
 

@@ -95,5 +95,5 @@ obstruction-freedom check is beneficial for lock-free and wait-free algorithms.
 
 ## What's next
 
-Learn how Lincheck [verifies execution results](verification.md) for correctness and 
+Learn how Lincheck [verifies execution results](sequential_specification.md) for correctness and 
 how to specify the sequential specification of the algorithm explicitly, making the testing more robust.
