@@ -21,8 +21,9 @@
 package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*
@@ -36,16 +37,24 @@ class ConcurrentLinkedQueueTest {
     @Operation
     fun poll(): Int? = s.poll()
 
-    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
+    @Test
     fun stressTest() = StressOptions()
         .sequentialSpecification(SequentialQueue::class.java)
+        .requireStateEquivalenceImplCheck(true)
         .check(this::class)
 }
 
-class SequentialQueue {
-    val s = LinkedList<Int>()
+class SequentialQueue : VerifierState() {
+    val q = LinkedList<Int>()
 
-    fun add(x: Int) = s.add(x)
-    fun poll(): Int? = s.poll()
+    fun add(x: Int) = q.add(x)
+    fun poll(): Int? = q.poll()
+
+    override fun extractState(): Any {
+        val elements = mutableListOf<Int>()
+        while(q.size != 0) {
+            elements.add(q.poll())
+        }
+        return elements.toString()
+    }
 }
