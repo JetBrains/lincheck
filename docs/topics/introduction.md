@@ -172,6 +172,90 @@ that examines numerous executions with a bounded number of context switches.
 >
 {type="note"}
 
-## What's next
+## Find the bug in the Java standard library
 
+You can use Lincheck to find a known bug in Java's `ConcurrentLinkedDeque`: a race between removing and adding an element to the head.
+For that you just need to write a simple test:
+
+```kotln
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.*
+import java.util.concurrent.*
+
+class ConcurrentDequeTest {
+    private val deque = ConcurrentLinkedDeque<Int>()
+
+    @Operation
+    fun addFirst(e: Int) = deque.addFirst(e)
+
+    @Operation
+    fun addLast(e: Int) = deque.addLast(e)
+
+    @Operation
+    fun pollFirst() = deque.pollFirst()
+
+    @Operation
+    fun pollLast() = deque.pollLast()
+
+    @Operation
+    fun peekFirst() = deque.peekFirst()
+
+    @Operation
+    fun peekLast() = deque.peekLast()
+
+    @Test
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+}
+```
+
+Run `modelCheckingTest()` and the test will fail with the following output:
+
+```text
+= Invalid execution results =
+Init part:
+[addLast(4): void]
+Parallel part:
+| pollFirst(): 4 | addFirst(-4): void       |
+|                | peekLast():   4    [-,1] |
+---
+values in "[..]" brackets indicate the number of completed operations 
+in each of the parallel threads seen at the beginning of the current operation
+---
+
+= The following interleaving leads to the error =
+Parallel part trace:
+| pollFirst()                                                                                               |                      |
+|   pollFirst(): 4 at ConcurrentDequeTest.pollFirst(ConcurrentDequeTest.kt:39)                              |                      |
+|     first(): Node@1 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:915)                    |                      |
+|     item.READ: null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                    |                      |
+|     next.READ: Node@2 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:925)                  |                      |
+|     item.READ: 4 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                       |                      |
+|     prev.READ: null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:919)                    |                      |
+|     switch                                                                                                |                      |
+|                                                                                                           | addFirst(-4): void   |
+|                                                                                                           | peekLast(): 4        |
+|                                                                                                           |   thread is finished |
+|     compareAndSet(Node@2,4,null): true at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:920) |                      |
+|     unlink(Node@2) at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:921)                     |                      |
+|   result: 4                                                                                               |                      |
+|   thread is finished                                                                                      |                      |
+```
+
+> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedDequeTest.kt).
+>
+{type="note"}
+
+## What's next
 [Stress testing and model checking strategies](testing-strategies.md).
+
+[How to generate operation arguments](operation-arguments.md)
+
+[Popular algorithm constraints](constraints.md)
+
+[Modular testing in the model checking mode](modular-testing.md)
+
+[Checking for non-blocking progress guarantees](progress-guarantees.md)
+
+[Define sequential specification of the algorithm](sequential_specification.md)
