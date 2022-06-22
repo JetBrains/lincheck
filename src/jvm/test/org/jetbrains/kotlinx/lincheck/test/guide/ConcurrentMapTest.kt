@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.*
@@ -33,7 +32,8 @@ class ConcurrentHashMapTest {
     @Operation
     public fun put(key: Int, value: Int) = map.put(key, value)
 
-    @Test
+    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions()
         .actorsBefore(1)
         .actorsPerThread(1)
