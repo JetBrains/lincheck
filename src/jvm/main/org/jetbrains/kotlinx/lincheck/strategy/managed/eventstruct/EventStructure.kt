@@ -182,4 +182,15 @@ class EventStructureMemoryTracker(val eventStructure: EventStructure): MemoryTra
     override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? =
         eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor)
 
+    override fun compareAndSet(iThread: Int, memoryLocationId: Int, expectedValue: Any?, newValue: Any?, typeDescriptor: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
+        TODO("Not yet implemented")
+    }
 }
