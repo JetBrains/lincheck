@@ -51,6 +51,20 @@ class Event private constructor(
      */
     val children: MutableList<Event> = mutableListOf()
 
+    val threadId: Int = label.threadId
+
+    fun predNth(n: Int): Event? {
+        var e = this
+        // current implementation has O(N) complexity,
+        // as an optimization, we can implement binary lifting and get O(lgN) complexity
+        // https://cp-algorithms.com/graph/lca_binary_lifting.html;
+        // since `predNth` is used to compute programOrder
+        // this optimization might be crucial for performance
+        for (i in 0 until n)
+            e = e.pred ?: return null
+        return e
+    }
+
     companion object {
         private var nextId: EventID = 0
 
@@ -89,6 +103,16 @@ class EventStructure {
      */
     val events: List<Event> = _events
 
+    val programOrder: Relation<Event> = relation { x, y ->
+        if ((x.threadId != y.threadId) || x.threadPos >= y.threadPos)
+            false
+        else (x == y.predNth(y.threadPos - x.threadPos))
+    }
+
+    val causalityOrder: Relation<Event> = relation { x, y ->
+        TODO()
+    }
+
     /**
      * Program counter - a mapping `ThreadID -> Event` from the thread id
      * to the last executed event in this thread during current exploration.
@@ -97,26 +121,39 @@ class EventStructure {
      */
     private val programCounter: MutableMap<Int, Event> = mutableMapOf()
 
-    private fun createEvent(lab: EventLabel, deps: List<Event>): Event {
+    fun inCurrentExploration(e: Event): Boolean {
+        val pc = programCounter[e.threadId] ?: return false
+        return programOrder(e, pc)
+    }
+
+    private fun createEvent(lab: EventLabel, deps: List<Event>): Event? {
         // TODO: check that the given thread is initialized
-        val pred = programCounter[lab.threadId]!!
-        // we remove dependencies which coincide with program order predecessor of the new event,
-        // because we assume that as a result of synchronization the resulting event
-        // has the same threadId as one of the operands and should be put immediately after it in program order.
-        return Event.create(lab, pred, deps.filter { it != pred })
+        // We assume that as a result of synchronization at least one of the
+        // labels participating into synchronization has same thread id as the resulting label.
+        // We take the maximal (by position in a thread) dependency event and
+        // consider it as immediate predecessor of the newly created event.
+        // If event has no dependencies, we choose as its predecessor maximal event
+        // of the given thread in current exploration.
+        val pred = deps
+            .filter { it.threadId == lab.threadId }
+            .maxWithOrNull { x, y -> x.threadPos.compareTo(y.threadPos) }
+            ?: programCounter[lab.threadId]!!
+        // We also remove predecessor from the list of dependencies.
+        val deps = deps.filter { it != pred }
+        // To prevent causality cycles to appear we check that
+        // dependencies do not causally depend on predecessor.
+        if (deps.any { dep -> causalityOrder(pred, dep) })
+            return null
+        return Event.create(lab, pred, deps)
     }
 
-    private fun addEvent(lab: EventLabel, deps: List<Event>): Event {
-        val event = createEvent(lab, deps)
-        _events.add(event)
-        return event
-    }
+    private fun addEvent(lab: EventLabel, deps: List<Event>): Event? =
+        createEvent(lab, deps)?.also { _events.add(it) }
 
-    private fun addEvents(labsWithDeps: Collection<Pair<EventLabel, List<Event>>>): List<Event> {
-        val events = labsWithDeps.map { (lab, deps) -> createEvent(lab, deps) }
-        _events.addAll(events)
-        return events
-    }
+    private fun addEvents(labsWithDeps: Collection<Pair<EventLabel, List<Event>>>): List<Event> =
+        labsWithDeps
+            .mapNotNull { (lab, deps) -> createEvent(lab, deps) }
+            .also { _events.addAll(it) }
 
     fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) {
         val writeLabel = MemoryAccessLabel(
@@ -126,18 +163,15 @@ class EventStructure {
             memId = memoryLocationId,
             value = value
         )
-        val writeEvent = addEvent(writeLabel, listOf())
+        val writeEvent = addEvent(writeLabel, listOf())!!
         programCounter[iThread] = writeEvent
-        // TODO: check porf-acyclicity
-        // TODO: check consistency of reads!
-        // TODO: filter conflicting events!
         val readLabelsWithDeps = getSynchronizedLabelsWithDeps(writeEvent)
-        // TODO: sort candidate events according to some strategy?
         addEvents(readLabelsWithDeps)
     }
 
     fun addReadEvent(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? {
-        // we first create read-request event with unknown (null) value, it will be filled in later
+        // we first create read-request event with unknown (null) value,
+        // value will be filled later in read-response event
         val readRequestLabel = MemoryAccessLabel(
             threadId = iThread,
             kind = MemoryAccessKind.ReadRequest,
@@ -145,33 +179,33 @@ class EventStructure {
             memId = memoryLocationId,
             value = null
         )
-        val readRequestEvent = addEvent(readRequestLabel, listOf())
+        val readRequestEvent = addEvent(readRequestLabel, listOf())!!
         programCounter[iThread] = readRequestEvent
-        // TODO: check consistency of reads!
-        // TODO: filter conflicting events!
         val readLabelsWithDeps = getSynchronizedLabelsWithDeps(readRequestEvent)
-        // TODO: sort candidate events according to some strategy?
         val readEvents = addEvents(readLabelsWithDeps)
         // TODO: use some other strategy to select the next event in the current exploration?
         val chosenRead = readEvents.lastOrNull()?.also { programCounter[iThread] = it }
+        // TODO: check consistency of chosen read!
         return chosenRead?.let { (it.label as MemoryAccessLabel).value }
     }
 
     /**
      * Returns a list of labels obtained as a result of synchronizing given event [event]
-     * with the events contained in the event structure, along with the list of dependencies.
+     * with the events contained in the current exploration, along with the list of dependencies.
      * That is, if `e1 @ A` is the passed event labeled by `A` and
-     * `e @ B` is some event in the event structures labeled by `B`, then the resulting list
-     * will contain pair `(C = A \+ B, listOf(A, B))` if `C` is defined (i.e. not null).
+     * `e2 @ B` is some event in the event structures labeled by `B`, then the resulting list
+     * will contain pair `(C = A \+ B, listOf(e1, e2))` if `C` is defined (i.e. not null).
      */
     private fun getSynchronizedLabelsWithDeps(event: Event): Collection<Pair<EventLabel, List<Event>>> =
         // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
-        events.mapNotNull {
-            val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
-            val deps = listOf(event, it)
-            syncLab to deps
-        }
-
+        events
+            .filter { inCurrentExploration(it) }
+            .mapNotNull {
+                val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
+                val deps = listOf(event, it)
+                syncLab to deps
+            }
+            // TODO: sort candidate events according to some strategy?
 }
 
 class EventStructureMemoryTracker(val eventStructure: EventStructure): MemoryTracker() {
