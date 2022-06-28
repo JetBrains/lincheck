@@ -32,7 +32,7 @@ abstract class Relation<T> {
     }
 }
 
-fun<T> rel(r: (T, T) -> Boolean): Relation<T> {
+fun<T> relation(r: (T, T) -> Boolean): Relation<T> {
     return LambdaRelation(r)
 }
 
