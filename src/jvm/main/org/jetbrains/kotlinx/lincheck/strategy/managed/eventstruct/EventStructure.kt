@@ -42,15 +42,12 @@ class Event private constructor(
      * List of event's dependencies
      * (e.g. reads-from write for a read event).
      */
-    val deps: List<Event> = listOf()
-) {
+    val deps: List<Event> = listOf(),
     /**
-     * List of event's children in program order.
-     *
-     * TODO: this should be carefully garbage collected upon restriction of event structure!
+     * Vector clock to track causality relation.
      */
-    val children: MutableList<Event> = mutableListOf()
-
+    val causalityClock: VectorClock<Int, Event>
+) {
     val threadId: Int = label.threadId
 
     fun predNth(n: Int): Event? {
@@ -71,15 +68,27 @@ class Event private constructor(
         fun create(label: EventLabel, pred: Event?, deps: List<Event>): Event {
             val id = nextId++
             val threadPos = pred?.let { it.threadPos + 1 } ?: 0
-            val event = Event(id,
+            val causalityClock = deps.fold(pred?.causalityClock ?: emptyClock) { clock, event ->
+                clock + event.causalityClock
+            }
+            return Event(id,
                 threadPos = threadPos,
                 label = label,
                 pred = pred,
                 deps = deps,
-            )
-            pred?.also { it.children.add(event) }
-            return event
+                causalityClock = causalityClock,
+            ).apply {
+                causalityClock.update(threadId, this)
+            }
         }
+
+        val programOrder: Relation<Event> = Relation { x, y ->
+            if (x.threadId != y.threadId || x.threadPos >= y.threadPos)
+                false
+            else (x == y.predNth(y.threadPos - x.threadPos))
+        }
+
+        val emptyClock = VectorClock<Int, Event>(PartialOrder.ofLessThan(programOrder))
     }
 
     override fun equals(other: Any?): Boolean {
@@ -102,14 +111,10 @@ class EventStructure {
      */
     val events: List<Event> = _events
 
-    val programOrder: Relation<Event> = Relation { x, y ->
-        if (x.threadId != y.threadId || x.threadPos >= y.threadPos)
-            false
-        else (x == y.predNth(y.threadPos - x.threadPos))
-    }
+    val programOrder: Relation<Event> = Event.programOrder
 
     val causalityOrder: Relation<Event> = Relation { x, y ->
-        TODO()
+        y.causalityClock.observes(x.threadId, x)
     }
 
     /**
