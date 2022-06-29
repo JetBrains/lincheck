@@ -30,6 +30,9 @@ class VectorClock<P, T>(val partialOrder: PartialOrder<T>) {
 
     operator fun plus(other: VectorClock<P, T>) = merge(other)
 
+    fun observes(part: P, timestamp: T): Boolean =
+        clock[part]?.let { partialOrder.lessOrEqual(timestamp, it) } ?: false
+
     fun update(part: P, timestamp: T) {
         clock.update(part, default = timestamp) { oldTimestamp ->
             require(partialOrder.lessOrEqual(oldTimestamp, timestamp)) {
