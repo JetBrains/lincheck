@@ -20,14 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct
 
-fun interface Relation<T> {
-    operator fun invoke(x: T, y: T): Boolean
-
-    infix fun or(relation: Relation<T>) = Relation<T> { x, y ->
-        this(x, y) || relation(x, y)
-    }
-
-    infix fun and(relation: Relation<T>) = Relation<T> { x, y ->
-        this(x, y) && relation(x, y)
-    }
+fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
+    // TODO: could it be done with a single lookup in a map?
+    put(key, get(key)?.let(transform) ?: default)
 }
+
+fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): MutableMap<K, V> =
+    toMutableMap().apply { other.forEach {(key, value) ->
+        update(key, default = value) { reduce(it, value) }
+    }}

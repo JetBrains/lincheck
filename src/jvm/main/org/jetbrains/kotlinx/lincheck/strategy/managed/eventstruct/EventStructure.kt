@@ -93,7 +93,6 @@ class Event private constructor(
 
 class EventStructure {
 
-
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
     private val _events: ArrayList<Event> = arrayListOf()
@@ -103,13 +102,13 @@ class EventStructure {
      */
     val events: List<Event> = _events
 
-    val programOrder: Relation<Event> = relation { x, y ->
-        if ((x.threadId != y.threadId) || x.threadPos >= y.threadPos)
+    val programOrder: Relation<Event> = Relation { x, y ->
+        if (x.threadId != y.threadId || x.threadPos >= y.threadPos)
             false
         else (x == y.predNth(y.threadPos - x.threadPos))
     }
 
-    val causalityOrder: Relation<Event> = relation { x, y ->
+    val causalityOrder: Relation<Event> = Relation { x, y ->
         TODO()
     }
 
