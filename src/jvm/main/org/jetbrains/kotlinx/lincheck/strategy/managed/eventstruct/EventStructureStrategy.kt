@@ -39,11 +39,14 @@ internal class EventStructureStrategy(
     // The number of already used invocations.
     private var usedInvocations = 0
 
+    private val eventStructure: EventStructure = EventStructure((0 until nThreads).toList())
+
     override fun runImpl(): LincheckFailure? {
+        // TODO: move invocation counting logic to ManagedStrategy class
         while (usedInvocations < maxInvocations) {
-            // TODO: fix
+            if (!eventStructure.startNextExploration())
+                return null
             usedInvocations++
-            // run invocation and check its results
             checkResult(runInvocation())?.let { return it }
         }
         return null
