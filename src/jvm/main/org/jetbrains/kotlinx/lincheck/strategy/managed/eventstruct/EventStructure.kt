@@ -46,9 +46,16 @@ class Event private constructor(
     /**
      * Vector clock to track causality relation.
      */
-    val causalityClock: VectorClock<Int, Event>
+    val causalityClock: VectorClock<Int, Event>,
+    /**
+     * State of the program counter at the point when event is created.
+     */
+    val programCounter: Map<Int, Event>,
 ) {
     val threadId: Int = label.threadId
+
+    var visited: Boolean = false
+        private set
 
     fun predNth(n: Int): Event? {
         var e = this
@@ -62,10 +69,16 @@ class Event private constructor(
         return e
     }
 
+    // should only be called from EventStructure
+    // TODO: enforce this invariant!
+    fun visit() {
+        visited = true
+    }
+
     companion object {
         private var nextId: EventID = 0
 
-        fun create(label: EventLabel, pred: Event?, deps: List<Event>): Event {
+        fun create(label: EventLabel, pred: Event?, deps: List<Event>, programCounter: Map<Int, Event>): Event {
             val id = nextId++
             val threadPos = pred?.let { it.threadPos + 1 } ?: 0
             val causalityClock = deps.fold(pred?.causalityClock ?: emptyClock) { clock, event ->
@@ -77,6 +90,7 @@ class Event private constructor(
                 pred = pred,
                 deps = deps,
                 causalityClock = causalityClock,
+                programCounter = programCounter
             ).apply {
                 causalityClock.update(threadId, this)
             }
@@ -100,11 +114,18 @@ class Event private constructor(
     }
 }
 
-class EventStructure {
+class EventStructure(initThreads: List<Int>) {
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
-    private val _events: ArrayList<Event> = arrayListOf()
+    private val _events: ArrayList<Event> = ArrayList(
+        initThreads.map { iThread ->
+            // we mark all thread start events except the last one as visited;
+            // this is just a trick to make first call to `startNextExploration`
+            // to pick this last thread start event as the next event to explore from.
+            addThreadStartEvent(iThread, visit = (iThread != initThreads.last()))
+        }
+    )
 
     /**
      * List of events of the event structure.
@@ -118,20 +139,49 @@ class EventStructure {
     }
 
     /**
-     * Program counter - a mapping `ThreadID -> Event` from the thread id
+     * Stores a mapping `ThreadID -> Event` from the thread id
+     * to the root event of the thread. It is guaranteed that this root event
+     * has label of type [ThreadLabel] with kind [ThreadLabelKind.ThreadStart].
+     *
+     * TODO: use array instead of map?
+     */
+    private var threadRoots: MutableMap<Int, Event> = mutableMapOf()
+
+    /**
+     * Program counter is a mapping `ThreadID -> Event` from the thread id
      * to the last executed event in this thread during current exploration.
      *
      * TODO: use array instead of map?
      */
-    private val programCounter: MutableMap<Int, Event> = mutableMapOf()
+    private var programCounter: MutableMap<Int, Event> = mutableMapOf()
 
     fun inCurrentExploration(e: Event): Boolean {
         val pc = programCounter[e.threadId] ?: return false
         return programOrder(e, pc)
     }
 
+    fun startNextExploration(): Boolean {
+        val eventIdx = _events.indexOfLast { !it.visited }
+        _events.subList(eventIdx + 1, _events.size).clear()
+        if (_events.isEmpty())
+            return false
+        val event = _events.last().apply { visit() }
+        programCounter = event.programCounter.toMutableMap()
+        programCounter[event.threadId] = event
+        return true
+    }
+
+    fun getThreadStartEvent(iThread: Int): Event? {
+        return threadRoots[iThread]
+    }
+
+    fun isInitializedThread(iThread: Int): Boolean =
+        threadRoots.contains(iThread)
+
     private fun createEvent(lab: EventLabel, deps: List<Event>): Event? {
-        // TODO: check that the given thread is initialized
+        check(isInitializedThread(lab.threadId)) {
+            "Thread ${lab.threadId} should be initialized before new events can be added to it."
+        }
         // We assume that as a result of synchronization at least one of the
         // labels participating into synchronization has same thread id as the resulting label.
         // We take the maximal (by position in a thread) dependency event and
@@ -148,7 +198,7 @@ class EventStructure {
         // dependencies do not causally depend on predecessor.
         if (deps.any { dep -> causalityOrder(pred, dep) })
             return null
-        return Event.create(lab, pred, deps)
+        return Event.create(lab, pred, deps, programCounter.toMutableMap())
     }
 
     private fun addEvent(lab: EventLabel, deps: List<Event>): Event? =
@@ -159,7 +209,22 @@ class EventStructure {
             .mapNotNull { (lab, deps) -> createEvent(lab, deps) }
             .also { _events.addAll(it) }
 
-    fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) {
+    fun addThreadStartEvent(iThread: Int, visit: Boolean): Event {
+        check(!isInitializedThread(iThread)) {
+            "Thread ${iThread} is already initialized."
+        }
+        val threadStartLabel = ThreadLabel(
+            threadId = iThread,
+            kind = ThreadLabelKind.ThreadStart
+        )
+        val threadStartEvent = addEvent(threadStartLabel, listOf())!!
+        if (visit) { threadStartEvent.visit() }
+        threadRoots[iThread] = threadStartEvent
+        programCounter[iThread] = threadStartEvent
+        return threadStartEvent
+    }
+
+    fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String): Event {
         val writeLabel = MemoryAccessLabel(
             threadId = iThread,
             kind = MemoryAccessKind.Write,
@@ -168,12 +233,14 @@ class EventStructure {
             value = value
         )
         val writeEvent = addEvent(writeLabel, listOf())!!
+        writeEvent.visit()
         programCounter[iThread] = writeEvent
         val readLabelsWithDeps = getSynchronizedLabelsWithDeps(writeEvent)
         addEvents(readLabelsWithDeps)
+        return writeEvent
     }
 
-    fun addReadEvent(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? {
+    fun addReadEvent(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Event? {
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
         val readRequestLabel = MemoryAccessLabel(
@@ -188,9 +255,11 @@ class EventStructure {
         val readLabelsWithDeps = getSynchronizedLabelsWithDeps(readRequestEvent)
         val readEvents = addEvents(readLabelsWithDeps)
         // TODO: use some other strategy to select the next event in the current exploration?
-        val chosenRead = readEvents.lastOrNull()?.also { programCounter[iThread] = it }
         // TODO: check consistency of chosen read!
-        return chosenRead?.let { (it.label as MemoryAccessLabel).value }
+        return readEvents.lastOrNull()?.also {
+            it.visit()
+            programCounter[iThread] = it
+        }
     }
 
     /**
@@ -214,10 +283,14 @@ class EventStructure {
 
 class EventStructureMemoryTracker(val eventStructure: EventStructure): MemoryTracker() {
 
-    override fun writeValue(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) =
+    override fun writeValue(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) {
         eventStructure.addWriteEvent(iThread, memoryLocationId, value, typeDescriptor)
+    }
 
-    override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? =
-        eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor)
+    override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? {
+        return eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor)?.let {
+            (it.label as MemoryAccessLabel).value
+        }
+    }
 
 }

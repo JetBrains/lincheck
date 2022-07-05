@@ -42,6 +42,23 @@ data class EmptyLabel(override val threadId: Int = 0): EventLabel(threadId) {
     override fun synchronize(lab: EventLabel) = lab
 }
 
+// TODO: currently we use only `ThreadStart` to denote thread initialization event,
+//  because it is convenient to have for each thread a root event in the event structure;
+//  `ThreadFinish`, `ThreadFork`, and `ThreadJoin` are reserved for future.
+enum class ThreadLabelKind { ThreadStart, ThreadFinish, ThreadFork, ThreadJoin }
+
+data class ThreadLabel(
+    override val threadId: Int,
+    val kind: ThreadLabelKind,
+): EventLabel(threadId) {
+    override fun synchronize(lab: EventLabel): EventLabel? {
+        return when {
+            (lab is EmptyLabel) -> this
+            else -> null
+        }
+    }
+}
+
 enum class MemoryAccessKind { ReadRequest, ReadResponse, Write }
 
 data class MemoryAccessLabel(
