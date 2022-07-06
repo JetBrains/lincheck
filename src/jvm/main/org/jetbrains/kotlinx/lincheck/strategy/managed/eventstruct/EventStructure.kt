@@ -29,7 +29,7 @@ class Event private constructor(
      * Event's position in a thread
      * (i.e. number of its program-order predecessors).
      */
-    val threadPos : Int = 0,
+    val threadPos: Int = 0,
     /**
      * Event's label.
      */
@@ -175,12 +175,6 @@ class EventStructure(initThreadId: Int) {
         threadRoots.contains(iThread) || iThread == ROOT_THREAD_ID
 
     private fun createEvent(lab: EventLabel, deps: List<Event>): Event? {
-        check(lab.isThreadInitEvent() implies !isInitializedThread(lab.threadId)) {
-            "Thread ${lab.threadId} is already initialized."
-        }
-        check(!lab.isThreadInitEvent() implies isInitializedThread(lab.threadId)) {
-            "Thread ${lab.threadId} should be initialized before new events can be added to it."
-        }
         // We assume that as a result of synchronization at least one of the
         // labels participating into synchronization has same thread id as the resulting label.
         // We take the maximal (by position in a thread) dependency event and
@@ -191,26 +185,29 @@ class EventStructure(initThreadId: Int) {
             .filter { it.threadId == lab.threadId }
             .maxWithOrNull { x, y -> x.threadPos.compareTo(y.threadPos) }
             ?: programCounter[lab.threadId]
-        check(!deps.isEmpty() implies (pred != null))
+        check(deps.isNotEmpty() implies (pred != null))
         // We also remove predecessor from the list of dependencies.
         val deps = deps.filter { it != pred }
         // To prevent causality cycles to appear we check that
         // dependencies do not causally depend on predecessor.
         if (deps.any { dep -> causalityOrder(pred!!, dep) })
             return null
-        return Event.create(lab, pred, deps, programCounter.toMutableMap()).also {
-            if (lab.isThreadInitEvent())
+        return Event.create(lab, pred, deps, programCounter.toMutableMap())
+    }
+
+    private fun addEvent(lab: EventLabel, deps: List<Event>): Event? {
+        check(lab.isThreadInitializer implies !isInitializedThread(lab.threadId)) {
+            "Thread ${lab.threadId} is already initialized."
+        }
+        check(!lab.isThreadInitializer implies isInitializedThread(lab.threadId)) {
+            "Thread ${lab.threadId} should be initialized before new events can be added to it."
+        }
+        return createEvent(lab, deps)?.also {
+            _events.add(it)
+            if (lab.isThreadInitializer)
                 threadRoots[lab.threadId] = it
         }
     }
-
-    private fun addEvent(lab: EventLabel, deps: List<Event>): Event? =
-        createEvent(lab, deps)?.also { _events.add(it) }
-
-    private fun addEvents(labsWithDeps: Collection<Pair<EventLabel, List<Event>>>): List<Event> =
-        labsWithDeps
-            .mapNotNull { (lab, deps) -> createEvent(lab, deps) }
-            .also { _events.addAll(it) }
 
     private fun addRootEvent(initThreadId: Int): Event {
         // we do not mark root event as visited purposefully;
@@ -223,6 +220,51 @@ class EventStructure(initThreadId: Int) {
         return addEvent(label, listOf())!!
     }
 
+    /**
+     * Adds to the event structure a list of events obtained as a result of synchronizing given [event]
+     * with the events contained in the current exploration. For example, if
+     * `e1 @ A` is the given event labeled by `A` and `e2 @ B` is some event in the event structure labeled by `B`,
+     * then the resulting list will contain event labeled by `C = A \+ B` if `C` is defined (i.e. not null),
+     * and the list of dependencies of this new event will be equal to `listOf(e1, e2)`.
+     *
+     * @return list of added events
+     */
+    private fun addSynchronizedEvents(event: Event): List<Event> {
+        // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
+        val candidateEvents = events.filter { inCurrentExploration(it) }
+        return when (event.label.synchKind) {
+            SynchronizationKind.Binary ->
+                addBinarySynchronizedEvents(event, candidateEvents)
+            SynchronizationKind.Barrier ->
+                addBarrierSynchronizedEvents(event, candidateEvents)?.let { listOf(it) } ?: emptyList()
+        }
+    }
+
+    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: List<Event>): List<Event> {
+        require(event.label.isBinarySynchronizing)
+        // TODO: sort resulting events according to some strategy?
+        return candidateEvents.mapNotNull {
+            val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
+            val deps = listOf(event, it)
+            addEvent(syncLab, deps)
+        }
+    }
+
+    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: List<Event>): Event? {
+        require(event.label.isBarrierSynchronizing)
+        val (syncLab, deps) = candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
+            val resultLabel = candidateEvent.label.synchronize(lab)
+            if (resultLabel != null)
+                (resultLabel to deps + candidateEvent)
+            else (lab to deps)
+        }
+        val syncEvent = addEvent(syncLab, deps)
+        return when {
+            syncLab.isCompetedResponse -> syncEvent
+            else -> null
+        }
+    }
+
     private fun addRequestEvent(lab: EventLabel): Event {
         require(lab.isRequest)
         return addEvent(lab, listOf())!!.also {
@@ -233,7 +275,7 @@ class EventStructure(initThreadId: Int) {
 
     private fun addResponseEvents(requestEvent: Event): Pair<Event?, List<Event>> {
         require(requestEvent.label.isRequest)
-        val responseEvents = addEvents(getSynchronizedLabelsWithDeps(requestEvent))
+        val responseEvents = addSynchronizedEvents(requestEvent)
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
         val chosenEvent = responseEvents.lastOrNull()?.also {
@@ -248,7 +290,7 @@ class EventStructure(initThreadId: Int) {
         return addEvent(lab, listOf())!!.also {
             it.visit()
             programCounter[lab.threadId] = it
-            addEvents(getSynchronizedLabelsWithDeps(it))
+            addSynchronizedEvents(it)
         }
     }
 
@@ -293,42 +335,8 @@ class EventStructure(initThreadId: Int) {
             value = null
         )
         val requestEvent = addRequestEvent(label)
-        val (responseEvent, responseEvents) = addResponseEvents(requestEvent)
+        val (responseEvent, _) = addResponseEvents(requestEvent)
         return responseEvent
-    }
-
-    /**
-     * Returns a list of labels obtained as a result of synchronizing given event [event]
-     * with the events contained in the current exploration, along with the list of dependencies.
-     * That is, if `e1 @ A` is the passed event labeled by `A` and
-     * `e2 @ B` is some event in the event structures labeled by `B`, then the resulting list
-     * will contain pair `(C = A \+ B, listOf(e1, e2))` if `C` is defined (i.e. not null).
-     */
-    private fun getSynchronizedLabelsWithDeps(event: Event): Collection<Pair<EventLabel, List<Event>>> {
-        // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
-        val candidateEvents = events.filter { inCurrentExploration(it) }
-        when (event.label.synchKind) {
-            SynchronizationKind.Binary -> {
-                // TODO: sort candidate labels according to some strategy?
-                return candidateEvents.mapNotNull {
-                    val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
-                    val deps = listOf(event, it)
-                    syncLab to deps
-                }
-            }
-            SynchronizationKind.Barrier -> {
-                val (syncLab, deps) = candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
-                    val resultLabel = candidateEvent.label.synchronize(lab)
-                    if (resultLabel != null)
-                        (resultLabel to deps + candidateEvent)
-                    else (lab to deps)
-                }
-                return when {
-                    syncLab.isCompetedResponse -> listOf(syncLab to deps)
-                    else -> emptyList()
-                }
-            }
-        }
     }
 }
 

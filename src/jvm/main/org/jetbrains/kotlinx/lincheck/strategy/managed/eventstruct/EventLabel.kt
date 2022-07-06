@@ -65,7 +65,14 @@ abstract class EventLabel(
     val isCompetedResponse: Boolean
         get() = isCompleted && isResponse
 
-    fun isThreadInitEvent() = isRequest && (this is ThreadStartLabel)
+    val isBinarySynchronizing: Boolean
+        get() = (synchKind == SynchronizationKind.Binary)
+
+    val isBarrierSynchronizing: Boolean
+        get() = (synchKind == SynchronizationKind.Barrier)
+
+    val isThreadInitializer: Boolean
+        get() = isRequest && (this is ThreadStartLabel)
 }
 
 // TODO: rename to BarrierRaceException?
