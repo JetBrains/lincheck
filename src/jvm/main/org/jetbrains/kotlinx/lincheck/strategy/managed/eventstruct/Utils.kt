@@ -29,3 +29,5 @@ fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): Mutable
     toMutableMap().apply { other.forEach {(key, value) ->
         update(key, default = value) { reduce(it, value) }
     }}
+
+infix fun Boolean.implies(other: Boolean): Boolean = !this || other
