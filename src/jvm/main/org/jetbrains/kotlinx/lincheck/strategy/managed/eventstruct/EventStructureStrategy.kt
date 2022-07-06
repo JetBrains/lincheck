@@ -39,7 +39,7 @@ internal class EventStructureStrategy(
     // The number of already used invocations.
     private var usedInvocations = 0
 
-    private val eventStructure: EventStructure = EventStructure((0 until nThreads).toList())
+    private val eventStructure: EventStructure = EventStructure(nThreads)
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
