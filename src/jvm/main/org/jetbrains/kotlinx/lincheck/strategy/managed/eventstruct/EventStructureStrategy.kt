@@ -41,6 +41,12 @@ internal class EventStructureStrategy(
 
     private val eventStructure: EventStructure = EventStructure((0 until nThreads).toList())
 
+    // Tracker of shared memory accesses.
+    override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
+    // Tracker of acquisitions and releases of monitors.
+    // TODO: change to EventStructureMonitorTracker
+    override var monitorTracker: MonitorTracker = SeqCstMonitorTracker(nThreads)
+
     override fun runImpl(): LincheckFailure? {
         // TODO: move invocation counting logic to ManagedStrategy class
         while (usedInvocations < maxInvocations) {
@@ -53,12 +59,26 @@ internal class EventStructureStrategy(
     }
 
     override fun shouldSwitch(iThread: Int): Boolean {
-        // TODO: fix
-        return true
+        // For event structure strategy enforcing context switches is not necessary,
+        // because it is guaranteed that the strategy will explore all
+        // executions anyway, no matter of the order of context switches.
+        // Therefore we explore threads in fixed static order,
+        // and thus this method always returns false.
+        // In practice, however, the order of context switches may influence performance
+        // of the model checking, and time-to-first-bug-discovered metric.
+        // Thus we might want to customize scheduling strategy.
+        // TODO: make scheduling strategy configurable
+        return false
     }
 
     override fun chooseThread(iThread: Int): Int {
-        // TODO: think about other switch strategies
+        // see comment in `shouldSwitch` method
+        // TODO: make scheduling strategy configurable
         return switchableThreads(iThread).first()
+    }
+
+    override fun initializeInvocation() {
+        monitorTracker = SeqCstMonitorTracker(nThreads)
+        super.initializeInvocation()
     }
 }
