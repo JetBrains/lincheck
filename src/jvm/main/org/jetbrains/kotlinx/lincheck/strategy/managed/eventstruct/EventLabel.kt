@@ -32,7 +32,7 @@ abstract class EventLabel(
     open val threadId: Int = 0,
     open val kind: LabelKind = LabelKind.Total,
 ) {
-    open val synchKind: SynchronizationKind = SynchronizationKind.Binary
+    open val syncKind: SynchronizationKind = SynchronizationKind.Binary
 
     /**
      * Synchronizes event label with another label passed as a parameter.
@@ -45,9 +45,9 @@ abstract class EventLabel(
      * means that `A \+ B = C` and consequently `A >> C` and `B >> C`
      * (read as A synchronizes with B into C, and A/B synchronizes with C respectively).
      */
-    open infix fun synchronize(lab: EventLabel): EventLabel? =
+    open infix fun synchronize(label: EventLabel): EventLabel? =
         when {
-            (lab is EmptyLabel) -> this
+            (label is EmptyLabel) -> this
             else -> null
         }
 
@@ -66,10 +66,10 @@ abstract class EventLabel(
         get() = isCompleted && isResponse
 
     val isBinarySynchronizing: Boolean
-        get() = (synchKind == SynchronizationKind.Binary)
+        get() = (syncKind == SynchronizationKind.Binary)
 
     val isBarrierSynchronizing: Boolean
-        get() = (synchKind == SynchronizationKind.Barrier)
+        get() = (syncKind == SynchronizationKind.Barrier)
 
     val isThreadInitializer: Boolean
         get() = isRequest && (this is ThreadStartLabel)
@@ -79,7 +79,7 @@ abstract class EventLabel(
 class InvalidBarrierSynchronizationException(message: String): Exception(message)
 
 data class EmptyLabel(override val threadId: Int = 0): EventLabel(threadId) {
-    override fun synchronize(lab: EventLabel) = lab
+    override fun synchronize(label: EventLabel) = label
 }
 
 abstract class ThreadLabel(threadId: Int, kind: LabelKind = LabelKind.Total): EventLabel(threadId, kind)
@@ -88,13 +88,13 @@ data class ThreadForkLabel(
     override val threadId: Int,
     val forkThreadIds: Set<Int>,
 ): ThreadLabel(threadId) {
-    override fun synchronize(lab: EventLabel): EventLabel? {
-        if (lab is ThreadStartLabel && lab.isRequest && lab.threadId in forkThreadIds)
+    override fun synchronize(label: EventLabel): EventLabel? {
+        if (label is ThreadStartLabel && label.isRequest && label.threadId in forkThreadIds)
             return ThreadStartLabel(
-                threadId = lab.threadId,
+                threadId = label.threadId,
                 kind = LabelKind.Response
             )
-        return super.synchronize(lab)
+        return super.synchronize(label)
     }
 }
 
@@ -107,10 +107,10 @@ data class ThreadStartLabel(
         require(isRequest || isResponse)
     }
 
-    override fun synchronize(lab: EventLabel): EventLabel? {
-        if (lab is ThreadForkLabel)
-            return lab.synchronize(this)
-        return super.synchronize(lab)
+    override fun synchronize(label: EventLabel): EventLabel? {
+        if (label is ThreadForkLabel)
+            return label.synchronize(this)
+        return super.synchronize(label)
     }
 }
 
@@ -118,26 +118,26 @@ data class ThreadFinishLabel(
     override val threadId: Int,
     val finishedThreadIds: Set<Int> = setOf(threadId)
 ): ThreadLabel(threadId) {
-    override val synchKind: SynchronizationKind = SynchronizationKind.Barrier
+    override val syncKind: SynchronizationKind = SynchronizationKind.Barrier
 
-    override fun synchronize(lab: EventLabel): EventLabel? {
+    override fun synchronize(label: EventLabel): EventLabel? {
         // TODO: handle cases of invalid synchronization:
         //  - when there are multiple ThreadFinish labels with the same thread id
         //  - when thread finishes outside of matching ThreadFork/ThreadJoin scope
         //  In order to handle the last case we need to add `scope` parameter to Thread labels?.
         //  Throw `InvalidBarrierSynchronizationException` in these cases.
-        if (lab is ThreadJoinLabel && lab.joinThreadIds.containsAll(finishedThreadIds))
+        if (label is ThreadJoinLabel && label.joinThreadIds.containsAll(finishedThreadIds))
             return ThreadJoinLabel(
-                threadId = lab.threadId,
+                threadId = label.threadId,
                 kind = LabelKind.Response,
-                joinThreadIds = lab.joinThreadIds - finishedThreadIds,
+                joinThreadIds = label.joinThreadIds - finishedThreadIds,
             )
-        if (lab is ThreadFinishLabel)
+        if (label is ThreadFinishLabel)
             return ThreadFinishLabel(
                 threadId = threadId,
-                finishedThreadIds = finishedThreadIds + lab.finishedThreadIds
+                finishedThreadIds = finishedThreadIds + label.finishedThreadIds
             )
-        return super.synchronize(lab)
+        return super.synchronize(label)
     }
 }
 
@@ -151,12 +151,12 @@ data class ThreadJoinLabel(
         require(isRequest || isResponse)
     }
 
-    override val synchKind: SynchronizationKind = SynchronizationKind.Barrier
+    override val syncKind: SynchronizationKind = SynchronizationKind.Barrier
 
-    override fun synchronize(lab: EventLabel): EventLabel? {
-        if (lab is ThreadFinishLabel)
-            return lab.synchronize(this)
-        return super.synchronize(lab)
+    override fun synchronize(label: EventLabel): EventLabel? {
+        if (label is ThreadFinishLabel)
+            return label.synchronize(this)
+        return super.synchronize(label)
     }
 
     override val isCompleted: Boolean =
@@ -179,9 +179,9 @@ data class MemoryAccessLabel(
     val memId: Int,
     val value: Any?
 ): EventLabel(threadId, accessKind.toLabelKind()) {
-    override fun synchronize(lab: EventLabel): EventLabel? {
+    override fun synchronize(label: EventLabel): EventLabel? {
         return when {
-            (lab is MemoryAccessLabel) && (memId == lab.memId) -> {
+            (label is MemoryAccessLabel) && (memId == label.memId) -> {
                 // TODO: perform dynamic type-check of `typeDesc`
                 val writeReadSync = { writeLabel : MemoryAccessLabel, readLabel : MemoryAccessLabel ->
                     MemoryAccessLabel(
@@ -193,14 +193,14 @@ data class MemoryAccessLabel(
                     )
                 }
                 return when {
-                    (accessKind == MemoryAccessKind.Write) && (lab.accessKind == MemoryAccessKind.ReadRequest) ->
-                        writeReadSync(this, lab)
-                    (accessKind == MemoryAccessKind.ReadRequest) && (lab.accessKind == MemoryAccessKind.Write) ->
-                        writeReadSync(lab, this)
+                    (accessKind == MemoryAccessKind.Write) && (label.accessKind == MemoryAccessKind.ReadRequest) ->
+                        writeReadSync(this, label)
+                    (accessKind == MemoryAccessKind.ReadRequest) && (label.accessKind == MemoryAccessKind.Write) ->
+                        writeReadSync(label, this)
                     else -> null
                 }
             }
-            (lab is EmptyLabel) -> this
+            (label is EmptyLabel) -> this
             else -> null
         }
     }

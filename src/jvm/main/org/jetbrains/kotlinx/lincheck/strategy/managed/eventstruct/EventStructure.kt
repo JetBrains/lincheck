@@ -29,20 +29,20 @@ class Event private constructor(
      * Event's position in a thread
      * (i.e. number of its program-order predecessors).
      */
-    val threadPos: Int = 0,
+    val threadPosition: Int = 0,
     /**
      * Event's label.
      */
     val label: EventLabel = EmptyLabel(),
     /**
-     * Event's predecessor in program order.
+     * Event's parent in program order.
      */
-    val pred: Event? = null,
+    val parent: Event? = null,
     /**
      * List of event's dependencies
      * (e.g. reads-from write for a read event).
      */
-    val deps: List<Event> = listOf(),
+    val dependencies: List<Event> = listOf(),
     /**
      * Vector clock to track causality relation.
      */
@@ -65,7 +65,7 @@ class Event private constructor(
         // since `predNth` is used to compute programOrder
         // this optimization might be crucial for performance
         for (i in 0 until n)
-            e = e.pred ?: return null
+            e = e.parent ?: return null
         return e
     }
 
@@ -78,17 +78,22 @@ class Event private constructor(
     companion object {
         private var nextId: EventID = 0
 
-        fun create(label: EventLabel, pred: Event?, deps: List<Event>, programCounter: Map<Int, Event>): Event {
+        fun create(
+            label: EventLabel,
+            parent: Event?,
+            dependencies: List<Event>,
+            programCounter: Map<Int, Event>
+        ): Event {
             val id = nextId++
-            val threadPos = pred?.let { it.threadPos + 1 } ?: 0
-            val causalityClock = deps.fold(pred?.causalityClock ?: emptyClock) { clock, event ->
+            val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
+            val causalityClock = dependencies.fold(parent?.causalityClock ?: emptyClock) { clock, event ->
                 clock + event.causalityClock
             }
             return Event(id,
-                threadPos = threadPos,
+                threadPosition = threadPosition,
                 label = label,
-                pred = pred,
-                deps = deps,
+                parent = parent,
+                dependencies = dependencies,
                 causalityClock = causalityClock,
                 programCounter = programCounter
             ).apply {
@@ -97,9 +102,9 @@ class Event private constructor(
         }
 
         val programOrder: Relation<Event> = Relation { x, y ->
-            if (x.threadId != y.threadId || x.threadPos >= y.threadPos)
+            if (x.threadId != y.threadId || x.threadPosition >= y.threadPosition)
                 false
-            else (x == y.predNth(y.threadPos - x.threadPos))
+            else (x == y.predNth(y.threadPosition - x.threadPosition))
         }
 
         val emptyClock = VectorClock<Int, Event>(PartialOrder.ofLessThan(programOrder))
@@ -114,9 +119,9 @@ class Event private constructor(
     }
 }
 
-class EventStructure(initThreadId: Int) {
+class EventStructure(initialThreadId: Int) {
 
-    val root: Event = addRootEvent(initThreadId)
+    val root: Event = addRootEvent(initialThreadId)
 
     /**
      * Stores a mapping `ThreadID -> Event` from the thread id
@@ -150,9 +155,9 @@ class EventStructure(initThreadId: Int) {
         y.causalityClock.observes(x.threadId, x)
     }
 
-    fun inCurrentExploration(e: Event): Boolean {
-        val pc = programCounter[e.threadId] ?: return false
-        return programOrder(e, pc)
+    fun inCurrentExploration(event: Event): Boolean {
+        val pc = programCounter[event.threadId] ?: return false
+        return programOrder(event, pc)
     }
 
     fun startNextExploration(): Boolean {
@@ -167,57 +172,59 @@ class EventStructure(initThreadId: Int) {
         return true
     }
 
-    fun getThreadStartEvent(iThread: Int): Event? {
-        return threadRoots[iThread]
-    }
+    fun getThreadRoot(iThread: Int): Event? =
+        when (iThread) {
+            ROOT_THREAD_ID -> root
+            else -> threadRoots[iThread]
+        }
 
     fun isInitializedThread(iThread: Int): Boolean =
         threadRoots.contains(iThread) || iThread == ROOT_THREAD_ID
 
-    private fun createEvent(lab: EventLabel, deps: List<Event>): Event? {
+    private fun createEvent(label: EventLabel, dependencies: List<Event>): Event? {
         // We assume that as a result of synchronization at least one of the
         // labels participating into synchronization has same thread id as the resulting label.
         // We take the maximal (by position in a thread) dependency event and
         // consider it as immediate predecessor of the newly created event.
         // If event has no dependencies, we choose as its predecessor maximal event
         // of the given thread in current exploration.
-        val pred = deps
-            .filter { it.threadId == lab.threadId }
-            .maxWithOrNull { x, y -> x.threadPos.compareTo(y.threadPos) }
-            ?: programCounter[lab.threadId]
-        check(deps.isNotEmpty() implies (pred != null))
+        val parent = dependencies
+            .filter { it.threadId == label.threadId }
+            .maxWithOrNull { x, y -> x.threadPosition.compareTo(y.threadPosition) }
+            ?: programCounter[label.threadId]
+        check(dependencies.isNotEmpty() implies (parent != null))
         // We also remove predecessor from the list of dependencies.
-        val deps = deps.filter { it != pred }
+        val dependenciesWithoutParent = dependencies.filter { it != parent }
         // To prevent causality cycles to appear we check that
         // dependencies do not causally depend on predecessor.
-        if (deps.any { dep -> causalityOrder(pred!!, dep) })
+        if (dependenciesWithoutParent.any { dependency -> causalityOrder(parent!!, dependency) })
             return null
-        return Event.create(lab, pred, deps, programCounter.toMutableMap())
+        return Event.create(label, parent, dependenciesWithoutParent, programCounter.toMutableMap())
     }
 
-    private fun addEvent(lab: EventLabel, deps: List<Event>): Event? {
-        check(lab.isThreadInitializer implies !isInitializedThread(lab.threadId)) {
-            "Thread ${lab.threadId} is already initialized."
+    private fun addEvent(label: EventLabel, dependencies: List<Event>): Event? {
+        check(label.isThreadInitializer implies !isInitializedThread(label.threadId)) {
+            "Thread ${label.threadId} is already initialized."
         }
-        check(!lab.isThreadInitializer implies isInitializedThread(lab.threadId)) {
-            "Thread ${lab.threadId} should be initialized before new events can be added to it."
+        check(!label.isThreadInitializer implies isInitializedThread(label.threadId)) {
+            "Thread ${label.threadId} should be initialized before new events can be added to it."
         }
-        return createEvent(lab, deps)?.also {
+        return createEvent(label, dependencies)?.also {
             _events.add(it)
-            if (lab.isThreadInitializer)
-                threadRoots[lab.threadId] = it
+            if (label.isThreadInitializer)
+                threadRoots[label.threadId] = it
         }
     }
 
-    private fun addRootEvent(initThreadId: Int): Event {
+    private fun addRootEvent(initialThreadId: Int): Event {
         // we do not mark root event as visited purposefully;
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
         val label = ThreadForkLabel(
             threadId = ROOT_THREAD_ID,
-            setOf(initThreadId)
+            setOf(initialThreadId)
         )
-        return addEvent(label, listOf())!!
+        return addEvent(label, emptyList())!!
     }
 
     /**
@@ -232,7 +239,7 @@ class EventStructure(initThreadId: Int) {
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
         val candidateEvents = events.filter { inCurrentExploration(it) }
-        return when (event.label.synchKind) {
+        return when (event.label.syncKind) {
             SynchronizationKind.Binary ->
                 addBinarySynchronizedEvents(event, candidateEvents)
             SynchronizationKind.Barrier ->
@@ -245,31 +252,32 @@ class EventStructure(initThreadId: Int) {
         // TODO: sort resulting events according to some strategy?
         return candidateEvents.mapNotNull {
             val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
-            val deps = listOf(event, it)
-            addEvent(syncLab, deps)
+            val dependencies = listOf(event, it)
+            addEvent(syncLab, dependencies)
         }
     }
 
     private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: List<Event>): Event? {
         require(event.label.isBarrierSynchronizing)
-        val (syncLab, deps) = candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
-            val resultLabel = candidateEvent.label.synchronize(lab)
-            if (resultLabel != null)
-                (resultLabel to deps + candidateEvent)
-            else (lab to deps)
-        }
-        val syncEvent = addEvent(syncLab, deps)
+        val (syncLab, dependencies) =
+            candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
+                val resultLabel = candidateEvent.label.synchronize(lab)
+                if (resultLabel != null)
+                    (resultLabel to deps + candidateEvent)
+                else (lab to deps)
+            }
+        val syncEvent = addEvent(syncLab, dependencies)
         return when {
             syncLab.isCompetedResponse -> syncEvent
             else -> null
         }
     }
 
-    private fun addRequestEvent(lab: EventLabel): Event {
-        require(lab.isRequest)
-        return addEvent(lab, listOf())!!.also {
+    private fun addRequestEvent(label: EventLabel): Event {
+        require(label.isRequest)
+        return addEvent(label, emptyList())!!.also {
             it.visit()
-            programCounter[lab.threadId] = it
+            programCounter[label.threadId] = it
         }
     }
 
@@ -285,11 +293,11 @@ class EventStructure(initThreadId: Int) {
         return (chosenEvent to responseEvents)
     }
 
-    private fun addTotalEvent(lab: EventLabel): Event {
-        require(lab.isTotal)
-        return addEvent(lab, listOf())!!.also {
+    private fun addTotalEvent(label: EventLabel): Event {
+        require(label.isTotal)
+        return addEvent(label, emptyList())!!.also {
             it.visit()
-            programCounter[lab.threadId] = it
+            programCounter[label.threadId] = it
             addSynchronizedEvents(it)
         }
     }
@@ -340,7 +348,7 @@ class EventStructure(initThreadId: Int) {
     }
 }
 
-class EventStructureMemoryTracker(val eventStructure: EventStructure): MemoryTracker() {
+class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
 
     override fun writeValue(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) {
         eventStructure.addWriteEvent(iThread, memoryLocationId, value, typeDescriptor)
