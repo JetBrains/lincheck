@@ -81,4 +81,14 @@ internal class EventStructureStrategy(
         monitorTracker = SeqCstMonitorTracker(nThreads)
         super.initializeInvocation()
     }
+
+    override fun onStart(iThread: Int) {
+        super.onStart(iThread)
+        eventStructure.addThreadStartEvent(iThread)
+    }
+
+    override fun onFinish(iThread: Int) {
+        super.onFinish(iThread)
+        eventStructure.addThreadFinishEvent(iThread)
+    }
 }

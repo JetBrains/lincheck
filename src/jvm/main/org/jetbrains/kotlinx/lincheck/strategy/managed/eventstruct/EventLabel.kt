@@ -25,11 +25,15 @@ typealias EventID = Int
 // TODO: maybe call it DualLabelKind?
 enum class LabelKind { Request, Response, Total }
 
+enum class SynchronizationKind { Binary, Barrier }
+
 // TODO: make a constant for default thread ID
 abstract class EventLabel(
     open val threadId: Int = 0,
     open val kind: LabelKind = LabelKind.Total,
 ) {
+    open val synchKind: SynchronizationKind = SynchronizationKind.Binary
+
     /**
      * Synchronizes event label with another label passed as a parameter.
      * For example a write label `wlab = W(x, v)` synchronizes with a read-request label `rlab = R^{req}(x)`
@@ -47,14 +51,25 @@ abstract class EventLabel(
             else -> null
         }
 
-    fun isRequest() = (kind == LabelKind.Request)
+    val isRequest: Boolean
+        get() = (kind == LabelKind.Request)
 
-    fun isResponse() = (kind == LabelKind.Response)
+    val isResponse: Boolean
+        get() = (kind == LabelKind.Response)
 
-    fun isTotal() = (kind == LabelKind.Total)
+    val isTotal: Boolean
+        get() = (kind == LabelKind.Total)
 
-    fun isThreadInitEvent() = isRequest() && (this is ThreadStartLabel)
+    open val isCompleted: Boolean = true
+
+    val isCompetedResponse: Boolean
+        get() = isCompleted && isResponse
+
+    fun isThreadInitEvent() = isRequest && (this is ThreadStartLabel)
 }
+
+// TODO: rename to BarrierRaceException?
+class InvalidBarrierSynchronizationException(message: String): Exception(message)
 
 data class EmptyLabel(override val threadId: Int = 0): EventLabel(threadId) {
     override fun synchronize(lab: EventLabel) = lab
@@ -67,7 +82,7 @@ data class ThreadForkLabel(
     val forkThreadIds: Set<Int>,
 ): ThreadLabel(threadId) {
     override fun synchronize(lab: EventLabel): EventLabel? {
-        if (lab is ThreadStartLabel && lab.isRequest() && lab.threadId in forkThreadIds)
+        if (lab is ThreadStartLabel && lab.isRequest && lab.threadId in forkThreadIds)
             return ThreadStartLabel(
                 threadId = lab.threadId,
                 kind = LabelKind.Response
@@ -80,6 +95,11 @@ data class ThreadStartLabel(
     override val threadId: Int,
     override val kind: LabelKind
 ): ThreadLabel(threadId, kind) {
+
+    init {
+        require(isRequest || isResponse)
+    }
+
     override fun synchronize(lab: EventLabel): EventLabel? {
         if (lab is ThreadForkLabel)
             return lab.synchronize(this)
@@ -91,7 +111,14 @@ data class ThreadFinishLabel(
     override val threadId: Int,
     val finishedThreadIds: Set<Int> = setOf(threadId)
 ): ThreadLabel(threadId) {
+    override val synchKind: SynchronizationKind = SynchronizationKind.Barrier
+
     override fun synchronize(lab: EventLabel): EventLabel? {
+        // TODO: handle cases of invalid synchronization:
+        //  - when there are multiple ThreadFinish labels with the same thread id
+        //  - when thread finishes outside of matching ThreadFork/ThreadJoin scope
+        //  In order to handle the last case we need to add `scope` parameter to Thread labels?.
+        //  Throw `InvalidBarrierSynchronizationException` in these cases.
         if (lab is ThreadJoinLabel && lab.joinThreadIds.containsAll(finishedThreadIds))
             return ThreadJoinLabel(
                 threadId = lab.threadId,
@@ -111,15 +138,22 @@ data class ThreadJoinLabel(
     override val threadId: Int,
     override val kind: LabelKind,
     val joinThreadIds: Set<Int>,
-): ThreadLabel(threadId) {
+): ThreadLabel(threadId, kind) {
+
+    init {
+        require(isRequest || isResponse)
+    }
+
+    override val synchKind: SynchronizationKind = SynchronizationKind.Barrier
+
     override fun synchronize(lab: EventLabel): EventLabel? {
         if (lab is ThreadFinishLabel)
             return lab.synchronize(this)
         return super.synchronize(lab)
     }
 
-    fun isComplete() =
-        isResponse() && joinThreadIds.isEmpty()
+    override val isCompleted: Boolean =
+        isRequest || (isResponse && joinThreadIds.isEmpty())
 }
 
 enum class MemoryAccessKind { ReadRequest, ReadResponse, Write }
