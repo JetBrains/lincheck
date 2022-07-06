@@ -76,9 +76,9 @@ abstract class ManagedStrategy(
     private lateinit var loopDetector: LoopDetector
 
     // Tracker of shared memory accesses.
-    private lateinit var memoryTracker: MemoryTracker
+    protected abstract val memoryTracker: MemoryTracker
     // Tracker of acquisitions and releases of monitors.
-    private lateinit var monitorTracker: MonitorTracker
+    protected abstract val monitorTracker: MonitorTracker
 
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
@@ -172,8 +172,6 @@ abstract class ManagedStrategy(
         isSuspended.fill(false)
         currentActorId.fill(-1)
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
-        memoryTracker = SeqCstMemoryTracker()
-        monitorTracker = SeqCstMonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
@@ -919,7 +917,7 @@ abstract class MonitorTracker {
  *
  * TODO: move to interleaving-based model checking directory?
  */
-private class SeqCstMonitorTracker(nThreads: Int) : MonitorTracker() {
+class SeqCstMonitorTracker(nThreads: Int) : MonitorTracker() {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()

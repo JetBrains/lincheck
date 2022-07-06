@@ -65,6 +65,11 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
+    // Tracker of shared memory accesses.
+    override var memoryTracker: MemoryTracker = SeqCstMemoryTracker()
+    // Tracker of acquisitions and releases of monitors.
+    override var monitorTracker: MonitorTracker = SeqCstMonitorTracker(nThreads)
+
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {
             // get new unexplored interleaving
@@ -96,6 +101,8 @@ internal class ModelCheckingStrategy(
 
     override fun initializeInvocation() {
         currentInterleaving.initialize()
+        memoryTracker = SeqCstMemoryTracker()
+        monitorTracker = SeqCstMonitorTracker(nThreads)
         super.initializeInvocation()
     }
 
