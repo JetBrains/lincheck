@@ -224,7 +224,7 @@ class EventStructure(initThreadId: Int) {
     }
 
     private fun addRequestEvent(lab: EventLabel): Event {
-        require(lab.isRequest())
+        require(lab.isRequest)
         return addEvent(lab, listOf())!!.also {
             it.visit()
             programCounter[lab.threadId] = it
@@ -232,7 +232,7 @@ class EventStructure(initThreadId: Int) {
     }
 
     private fun addResponseEvents(requestEvent: Event): Pair<Event?, List<Event>> {
-        require(requestEvent.label.isRequest())
+        require(requestEvent.label.isRequest)
         val responseEvents = addEvents(getSynchronizedLabelsWithDeps(requestEvent))
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
@@ -244,7 +244,7 @@ class EventStructure(initThreadId: Int) {
     }
 
     private fun addTotalEvent(lab: EventLabel): Event {
-        require(lab.isTotal())
+        require(lab.isTotal)
         return addEvent(lab, listOf())!!.also {
             it.visit()
             programCounter[lab.threadId] = it
@@ -262,6 +262,13 @@ class EventStructure(initThreadId: Int) {
         checkNotNull(responseEvent)
         check(responseEvents.size == 1)
         return responseEvent
+    }
+
+    fun addThreadFinishEvent(iThread: Int): Event {
+        val label = ThreadFinishLabel(
+            threadId = iThread,
+        )
+        return addTotalEvent(label)
     }
 
     fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String): Event {
@@ -297,16 +304,32 @@ class EventStructure(initThreadId: Int) {
      * `e2 @ B` is some event in the event structures labeled by `B`, then the resulting list
      * will contain pair `(C = A \+ B, listOf(e1, e2))` if `C` is defined (i.e. not null).
      */
-    private fun getSynchronizedLabelsWithDeps(event: Event): Collection<Pair<EventLabel, List<Event>>> =
+    private fun getSynchronizedLabelsWithDeps(event: Event): Collection<Pair<EventLabel, List<Event>>> {
         // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
-        events
-            .filter { inCurrentExploration(it) }
-            .mapNotNull {
-                val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
-                val deps = listOf(event, it)
-                syncLab to deps
+        val candidateEvents = events.filter { inCurrentExploration(it) }
+        when (event.label.synchKind) {
+            SynchronizationKind.Binary -> {
+                // TODO: sort candidate labels according to some strategy?
+                return candidateEvents.mapNotNull {
+                    val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
+                    val deps = listOf(event, it)
+                    syncLab to deps
+                }
             }
-            // TODO: sort candidate events according to some strategy?
+            SynchronizationKind.Barrier -> {
+                val (syncLab, deps) = candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
+                    val resultLabel = candidateEvent.label.synchronize(lab)
+                    if (resultLabel != null)
+                        (resultLabel to deps + candidateEvent)
+                    else (lab to deps)
+                }
+                return when {
+                    syncLab.isCompetedResponse -> listOf(syncLab to deps)
+                    else -> emptyList()
+                }
+            }
+        }
+    }
 }
 
 class EventStructureMemoryTracker(val eventStructure: EventStructure): MemoryTracker() {
