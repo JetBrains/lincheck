@@ -39,7 +39,9 @@ internal class EventStructureStrategy(
     // The number of already used invocations.
     private var usedInvocations = 0
 
-    private val eventStructure: EventStructure = EventStructure(nThreads)
+    private val initialThreadId = nThreads
+
+    private val eventStructure: EventStructure = EventStructure(initialThreadId)
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
@@ -78,8 +80,20 @@ internal class EventStructureStrategy(
     }
 
     override fun initializeInvocation() {
-        monitorTracker = SeqCstMonitorTracker(nThreads)
         super.initializeInvocation()
+        // TODO: fix monitorTracker
+        monitorTracker = SeqCstMonitorTracker(nThreads)
+        eventStructure.addThreadStartEvent(initialThreadId)
+    }
+
+    override fun beforeParallelPart() {
+        super.beforeParallelPart()
+        eventStructure.addThreadForkEvent(initialThreadId, (0 until nThreads).toSet())
+    }
+
+    override fun afterParallelPart() {
+        super.afterParallelPart()
+        eventStructure.addThreadJoinEvent(initialThreadId, (0 until nThreads).toSet())
     }
 
     override fun onStart(iThread: Int) {

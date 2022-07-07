@@ -321,6 +321,28 @@ class EventStructure(initialThreadId: Int) {
         return addTotalEvent(label)
     }
 
+    fun addThreadForkEvent(iThread: Int, forkThreadIds: Set<Int>): Event {
+        val label = ThreadForkLabel(
+            threadId = iThread,
+            forkThreadIds = forkThreadIds
+        )
+        return addTotalEvent(label)
+    }
+
+    fun addThreadJoinEvent(iThread: Int, joinThreadIds: Set<Int>): Event {
+        val label = ThreadJoinLabel(
+            threadId = iThread,
+            kind = LabelKind.Request,
+            joinThreadIds = joinThreadIds,
+        )
+        val requestEvent = addRequestEvent(label)
+        val (responseEvent, responseEvents) = addResponseEvents(requestEvent)
+        // TODO: handle case when ThreadJoin is not ready yet
+        checkNotNull(responseEvent)
+        check(responseEvents.size == 1)
+        return responseEvent
+    }
+
     fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String): Event {
         val label = MemoryAccessLabel(
             threadId = iThread,
