@@ -48,10 +48,10 @@ class Event private constructor(
      */
     val causalityClock: VectorClock<Int, Event>,
     /**
-     * State of the program counter at the point when event is created.
+     * State of the execution frontier at the point when event is created.
      */
-    val programCounter: Map<Int, Event>,
-) {
+    val frontier: ExecutionFrontier,
+) : Comparable<Event> {
     val threadId: Int = label.threadId
 
     var visited: Boolean = false
@@ -82,7 +82,7 @@ class Event private constructor(
             label: EventLabel,
             parent: Event?,
             dependencies: List<Event>,
-            programCounter: Map<Int, Event>
+            frontier: ExecutionFrontier
         ): Event {
             val id = nextId++
             val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
@@ -95,19 +95,20 @@ class Event private constructor(
                 parent = parent,
                 dependencies = dependencies,
                 causalityClock = causalityClock,
-                programCounter = programCounter
-            ).apply {
-                causalityClock.update(threadId, this)
+                frontier = frontier
+            ).also {
+                causalityClock.update(it.threadId, it)
+                frontier.update(it)
             }
         }
 
-        val programOrder: Relation<Event> = Relation { x, y ->
+        val programOrder: PartialOrder<Event> = PartialOrder.ofLessThan { x, y ->
             if (x.threadId != y.threadId || x.threadPosition >= y.threadPosition)
                 false
             else (x == y.predNth(y.threadPosition - x.threadPosition))
         }
 
-        val emptyClock = VectorClock<Int, Event>(PartialOrder.ofLessThan(programOrder))
+        val emptyClock = VectorClock<Int, Event>(programOrder)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -117,6 +118,95 @@ class Event private constructor(
     override fun hashCode(): Int {
         return id.hashCode()
     }
+
+    override fun compareTo(other: Event): Int {
+        return id.compareTo(other.id)
+    }
+}
+
+/**
+ * Execution represents a set of events belonging to single program's execution.
+ */
+class Execution(threadEvents: Map<Int, List<Event>> = emptyMap()) {
+    /**
+     * Execution is encoded as a mapping `ThreadID -> List<Event>`
+     * from thread id to a list of events belonging to this thread ordered by program-order.
+     * We also assume that program order is compatible with execution order,
+     * and thus events within the same thread are also ordered by execution order.
+     *
+     * TODO: use array instead of map?
+     */
+    private val threadsEvents: MutableMap<Int, ArrayList<Event>> =
+        threadEvents.map { (threadId, events) -> threadId to ArrayList(events) }.toMap().toMutableMap()
+
+    fun addEvent(event: Event) {
+        val threadEvents = threadsEvents.getOrPut(event.threadId) { arrayListOf() }
+        check(event.parent == threadEvents.lastOrNull())
+        threadEvents.add(event)
+    }
+
+    fun getThreadSize(iThread: Int): Int =
+        threadsEvents[iThread]?.size ?: 0
+
+    fun firstEvent(iThread: Int): Event? =
+        threadsEvents[iThread]?.firstOrNull()
+
+    fun lastEvent(iThread: Int): Event? =
+        threadsEvents[iThread]?.lastOrNull()
+
+    operator fun get(iThread: Int, Position: Int): Event? =
+        threadsEvents[iThread]?.getOrNull(Position)
+
+    operator fun contains(event: Event): Boolean =
+        threadsEvents[event.threadId]?.let { events -> events.binarySearch(event) >= 0 } ?: false
+
+}
+
+/**
+ * ExecutionFrontier represents a frontier of an execution,
+ * that is the set of program-order maximal events of the execution.
+ */
+class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
+
+    /**
+     * Frontier is encoded as a mapping `ThreadID -> Event` from the thread id
+     * to the last executed event in this thread in the given execution.
+     *
+     * TODO: use array instead of map?
+     */
+    private val frontier: MutableMap<Int, Event> = frontier.toMutableMap()
+
+    fun update(event: Event) {
+        check(event.parent == frontier[event.threadId])
+        frontier[event.threadId] = event
+    }
+
+    fun getPosition(iThread: Int): Int =
+        frontier[iThread]?.threadPosition ?: 0
+
+    operator fun get(iThread: Int): Event? =
+        frontier[iThread]
+
+    operator fun contains(event: Event): Boolean {
+        val lastEvent = frontier[event.threadId] ?: return false
+        return Event.programOrder.lessOrEqual(event, lastEvent)
+    }
+
+    fun copy(): ExecutionFrontier =
+        ExecutionFrontier(frontier)
+
+    fun toExecution(): Execution {
+        return Execution(frontier.map {(threadId, lastEvent) ->
+            var event: Event? = lastEvent
+            val events = arrayListOf<Event>()
+            while (event != null) {
+                events.add(event)
+                event = event.parent
+            }
+            threadId to events.apply { reverse() }
+        }.toMap())
+    }
+
 }
 
 class EventStructure(initialThreadId: Int) {
@@ -141,23 +231,14 @@ class EventStructure(initialThreadId: Int) {
      */
     val events: List<Event> = _events
 
-    /**
-     * Program counter is a mapping `ThreadID -> Event` from the thread id
-     * to the last executed event in this thread during current exploration.
-     *
-     * TODO: use array instead of map?
-     */
-    private var programCounter: MutableMap<Int, Event> = mutableMapOf()
+    private var currentExecution: Execution = Execution()
 
-    val programOrder: Relation<Event> = Event.programOrder
+    private var currentFrontier: ExecutionFrontier = ExecutionFrontier()
+
+    val programOrder: PartialOrder<Event> = Event.programOrder
 
     val causalityOrder: Relation<Event> = Relation { x, y ->
         y.causalityClock.observes(x.threadId, x)
-    }
-
-    fun inCurrentExploration(event: Event): Boolean {
-        val pc = programCounter[event.threadId] ?: return false
-        return programOrder(event, pc)
     }
 
     fun startNextExploration(): Boolean {
@@ -166,9 +247,8 @@ class EventStructure(initialThreadId: Int) {
         if (_events.isEmpty())
             return false
         val event = _events.last().apply { visit() }
-        programCounter = event.programCounter.toMutableMap()
-        if (event != root)
-            programCounter[event.threadId] = event
+        currentExecution = event.frontier.toExecution()
+        currentFrontier = ExecutionFrontier()
         return true
     }
 
@@ -191,7 +271,7 @@ class EventStructure(initialThreadId: Int) {
         val parent = dependencies
             .filter { it.threadId == label.threadId }
             .maxWithOrNull { x, y -> x.threadPosition.compareTo(y.threadPosition) }
-            ?: programCounter[label.threadId]
+            ?: currentFrontier[label.threadId]
         check(dependencies.isNotEmpty() implies (parent != null))
         // We also remove predecessor from the list of dependencies.
         val dependenciesWithoutParent = dependencies.filter { it != parent }
@@ -199,7 +279,7 @@ class EventStructure(initialThreadId: Int) {
         // dependencies do not causally depend on predecessor.
         if (dependenciesWithoutParent.any { dependency -> causalityOrder(parent!!, dependency) })
             return null
-        return Event.create(label, parent, dependenciesWithoutParent, programCounter.toMutableMap())
+        return Event.create(label, parent, dependenciesWithoutParent, currentFrontier.copy())
     }
 
     private fun addEvent(label: EventLabel, dependencies: List<Event>): Event? {
@@ -209,11 +289,34 @@ class EventStructure(initialThreadId: Int) {
         check(!label.isThreadInitializer implies isInitializedThread(label.threadId)) {
             "Thread ${label.threadId} should be initialized before new events can be added to it."
         }
+        if (inReplayMode(label.threadId)) {
+
+        }
         return createEvent(label, dependencies)?.also {
             _events.add(it)
             if (label.isThreadInitializer)
                 threadRoots[label.threadId] = it
         }
+    }
+
+    private fun addEventToCurrentExecution(event: Event) {
+        if (!inReplayMode(event.threadId))
+            currentExecution.addEvent(event)
+        currentFrontier.update(event)
+        event.visit()
+    }
+
+    private fun inReplayMode(iThread: Int): Boolean {
+        val frontEvent = currentFrontier[iThread]?.also { check(it in currentExecution) }
+        return (frontEvent != currentExecution.lastEvent(iThread))
+    }
+
+    private fun tryReplayEvent(iThread: Int): Event? {
+        return if (inReplayMode(iThread)) {
+            val position = currentFrontier.getPosition(iThread)
+            check(position < currentExecution.getThreadSize(iThread))
+            currentExecution[iThread, position]!!.also { addEventToCurrentExecution(it) }
+        } else null
     }
 
     private fun addRootEvent(initialThreadId: Int): Event {
@@ -238,7 +341,7 @@ class EventStructure(initialThreadId: Int) {
      */
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
-        val candidateEvents = events.filter { inCurrentExploration(it) }
+        val candidateEvents = events.filter { it in currentExecution }
         return when (event.label.syncKind) {
             SynchronizationKind.Binary ->
                 addBinarySynchronizedEvents(event, candidateEvents)
@@ -275,29 +378,40 @@ class EventStructure(initialThreadId: Int) {
 
     private fun addRequestEvent(label: EventLabel): Event {
         require(label.isRequest)
+        tryReplayEvent(label.threadId)?.let { event ->
+            check(label == event.label)
+            return event
+        }
         return addEvent(label, emptyList())!!.also {
-            it.visit()
-            programCounter[label.threadId] = it
+            addEventToCurrentExecution(it)
         }
     }
 
     private fun addResponseEvents(requestEvent: Event): Pair<Event?, List<Event>> {
         require(requestEvent.label.isRequest)
+        tryReplayEvent(requestEvent.threadId)?.let { event ->
+            check(event.label.isResponse)
+            // TODO: check that response label is compatible with request label
+            // check(label == event.label)
+            return event to listOf(event)
+        }
         val responseEvents = addSynchronizedEvents(requestEvent)
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
         val chosenEvent = responseEvents.lastOrNull()?.also {
-            it.visit()
-            programCounter[requestEvent.threadId] = it
+            addEventToCurrentExecution(it)
         }
         return (chosenEvent to responseEvents)
     }
 
     private fun addTotalEvent(label: EventLabel): Event {
         require(label.isTotal)
+        tryReplayEvent(label.threadId)?.let { event ->
+            check(label == event.label)
+            return event
+        }
         return addEvent(label, emptyList())!!.also {
-            it.visit()
-            programCounter[label.threadId] = it
+            addEventToCurrentExecution(it)
             addSynchronizedEvents(it)
         }
     }
