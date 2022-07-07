@@ -261,6 +261,7 @@ internal open class ParallelThreadsRunner(
             }
         }
         val afterInitStateRepresentation = constructStateRepresentation()
+        beforeParallelPart()
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
@@ -281,6 +282,7 @@ internal open class ParallelThreadsRunner(
             return ValidationFailureInvocationResult(s, functionName, exception)
         }
         val afterParallelStateRepresentation = constructStateRepresentation()
+        afterParallelPart()
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
