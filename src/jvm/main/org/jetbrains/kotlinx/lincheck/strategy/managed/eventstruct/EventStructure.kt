@@ -211,7 +211,7 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
 
 class EventStructure(initialThreadId: Int) {
 
-    val root: Event = addRootEvent(initialThreadId)
+    val root: Event
 
     /**
      * Stores a mapping `ThreadID -> Event` from the thread id
@@ -224,7 +224,7 @@ class EventStructure(initialThreadId: Int) {
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
-    private val _events: ArrayList<Event> = arrayListOf(root)
+    private val _events: ArrayList<Event> = arrayListOf()
 
     /**
      * List of events of the event structure.
@@ -239,6 +239,10 @@ class EventStructure(initialThreadId: Int) {
 
     val causalityOrder: Relation<Event> = Relation { x, y ->
         y.causalityClock.observes(x.threadId, x)
+    }
+
+    init {
+        root = addRootEvent(initialThreadId)
     }
 
     fun startNextExploration(): Boolean {
@@ -259,7 +263,7 @@ class EventStructure(initialThreadId: Int) {
         }
 
     fun isInitializedThread(iThread: Int): Boolean =
-        threadRoots.contains(iThread) || iThread == ROOT_THREAD_ID
+        iThread == ROOT_THREAD_ID || threadRoots.contains(iThread)
 
     private fun createEvent(label: EventLabel, dependencies: List<Event>): Event? {
         // We assume that as a result of synchronization at least one of the
