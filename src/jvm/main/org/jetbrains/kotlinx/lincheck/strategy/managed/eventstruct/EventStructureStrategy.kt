@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
-internal class EventStructureStrategy(
+class EventStructureStrategy(
         testCfg: EventStructureCTestConfiguration,
         testClass: Class<*>,
         scenario: ExecutionScenario,

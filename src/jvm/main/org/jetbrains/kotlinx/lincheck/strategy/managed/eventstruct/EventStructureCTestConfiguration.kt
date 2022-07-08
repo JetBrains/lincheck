@@ -21,9 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct
 
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -45,6 +43,6 @@ class EventStructureCTestConfiguration(
         customScenarios
 ) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-                                stateRepresentationMethod: Method?, verifier: Verifier): Strategy
+                                stateRepresentationMethod: Method?, verifier: Verifier): EventStructureStrategy
             = EventStructureStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
 }
