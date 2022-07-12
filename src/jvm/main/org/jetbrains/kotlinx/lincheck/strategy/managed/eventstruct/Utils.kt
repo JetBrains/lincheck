@@ -26,7 +26,7 @@ fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
 }
 
 fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): MutableMap<K, V> =
-    toMutableMap().apply { other.forEach {(key, value) ->
+    toMutableMap().apply { other.forEach { (key, value) ->
         update(key, default = value) { reduce(it, value) }
     }}
 

@@ -50,4 +50,7 @@ class VectorClock<P, T>(val partialOrder: PartialOrder<T>) {
         return VectorClock<P, T>(partialOrder).apply { this.clock += clock }
     }
 
+    fun copy(): VectorClock<P, T> =
+        VectorClock<P, T>(partialOrder).also { it.clock += clock }
+
 }
