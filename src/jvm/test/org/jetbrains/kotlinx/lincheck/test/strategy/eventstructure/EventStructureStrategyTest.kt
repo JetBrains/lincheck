@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.Test
@@ -51,6 +52,9 @@ class EventStructureStrategyTest {
     @Test
     fun testWRW() {
         val testScenario = scenario {
+            initial {
+                actor(write, 0)
+            }
             parallel {
                 thread {
                     actor(write, 1)
@@ -64,7 +68,7 @@ class EventStructureStrategyTest {
             }
         }
 
-        val expectedReadResults = setOf(1, 2, 3)
+        val expectedReadResults = setOf(0, 1, 2)
         val readResults: MutableSet<Int> = mutableSetOf()
         val verifier = object : Verifier {
 
@@ -83,6 +87,9 @@ class EventStructureStrategyTest {
 
         val strategy = createStrategy(testScenario, verifier)
         val failure = strategy.run()
+//        if (failure != null && failure is UnexpectedExceptionFailure) {
+//            throw failure.exception
+//        }
         assert(failure == null)
         assert(readResults == expectedReadResults)
     }

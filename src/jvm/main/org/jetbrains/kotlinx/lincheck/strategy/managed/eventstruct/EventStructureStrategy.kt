@@ -81,6 +81,7 @@ class EventStructureStrategy(
 
     override fun initializeInvocation() {
         super.initializeInvocation()
+        eventStructure.resetCurrentExecution()
         // TODO: fix monitorTracker
         monitorTracker = SeqCstMonitorTracker(nThreads)
         eventStructure.addThreadStartEvent(initialThreadId)
@@ -102,7 +103,9 @@ class EventStructureStrategy(
     }
 
     override fun onFinish(iThread: Int) {
-        super.onFinish(iThread)
+        // TODO: recheck `currentThread` bookkeeping in ManagedStrategy
+        //  to avoid data-races
         eventStructure.addThreadFinishEvent(iThread)
+        super.onFinish(iThread)
     }
 }

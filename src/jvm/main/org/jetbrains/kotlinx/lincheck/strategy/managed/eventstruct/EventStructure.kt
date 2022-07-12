@@ -86,7 +86,7 @@ class Event private constructor(
         ): Event {
             val id = nextId++
             val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
-            val causalityClock = dependencies.fold(parent?.causalityClock ?: emptyClock) { clock, event ->
+            val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
                 clock + event.causalityClock
             }
             return Event(id,
@@ -98,7 +98,7 @@ class Event private constructor(
                 frontier = frontier
             ).also {
                 causalityClock.update(it.threadId, it)
-                frontier.update(it)
+                frontier[it.threadId] = it
             }
         }
 
@@ -108,7 +108,7 @@ class Event private constructor(
             else (x == y.predNth(y.threadPosition - x.threadPosition))
         }
 
-        val emptyClock = VectorClock<Int, Event>(programOrder)
+        fun emptyClock() = VectorClock<Int, Event>(programOrder)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -182,10 +182,18 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
     }
 
     fun getPosition(iThread: Int): Int =
-        frontier[iThread]?.threadPosition ?: 0
+        frontier[iThread]?.threadPosition ?: -1
 
     operator fun get(iThread: Int): Event? =
         frontier[iThread]
+
+    operator fun set(iThread: Int, event: Event) {
+        check(iThread == event.threadId)
+        // TODO: properly document this precondition
+        //  (i.e. we expect frontier to be updated to some offspring of frontier's execution)
+        check(Event.programOrder.nullOrLessOrEqual(event.parent, frontier[iThread]))
+        frontier[iThread] = event
+    }
 
     operator fun contains(event: Event): Boolean {
         val lastEvent = frontier[event.threadId] ?: return false
@@ -246,14 +254,23 @@ class EventStructure(initialThreadId: Int) {
     }
 
     fun startNextExploration(): Boolean {
-        val eventIdx = _events.indexOfLast { !it.visited }
-        _events.subList(eventIdx + 1, _events.size).clear()
-        if (_events.isEmpty())
-            return false
-        val event = _events.last().apply { visit() }
+        val event = rollbackToEvent { !it.visited } ?: return false
         currentExecution = event.frontier.toExecution()
-        currentFrontier = ExecutionFrontier()
+        event.visit()
         return true
+    }
+
+    fun resetCurrentExecution() {
+        // TODO: move frontier reset to initializeInvocation
+        currentFrontier = ExecutionFrontier()
+    }
+
+    private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {
+        val eventIdx = _events.indexOfLast(predicate)
+        _events.subList(eventIdx + 1, _events.size).clear()
+        // TODO: make a function to search for event in the execution-order sorted list
+        threadRoots.entries.retainAll { (_, event) -> events.binarySearch(event) >= 0 }
+        return events.lastOrNull()
     }
 
     fun getThreadRoot(iThread: Int): Event? =
@@ -293,9 +310,6 @@ class EventStructure(initialThreadId: Int) {
         check(!label.isThreadInitializer implies isInitializedThread(label.threadId)) {
             "Thread ${label.threadId} should be initialized before new events can be added to it."
         }
-        if (inReplayMode(label.threadId)) {
-
-        }
         return createEvent(label, dependencies)?.also {
             _events.add(it)
             if (label.isThreadInitializer)
@@ -303,11 +317,11 @@ class EventStructure(initialThreadId: Int) {
         }
     }
 
-    private fun addEventToCurrentExecution(event: Event) {
+    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true) {
+        if (visit) { event.visit() }
         if (!inReplayMode(event.threadId))
             currentExecution.addEvent(event)
         currentFrontier.update(event)
-        event.visit()
     }
 
     private fun inReplayMode(iThread: Int): Boolean {
@@ -317,7 +331,7 @@ class EventStructure(initialThreadId: Int) {
 
     private fun tryReplayEvent(iThread: Int): Event? {
         return if (inReplayMode(iThread)) {
-            val position = currentFrontier.getPosition(iThread)
+            val position = 1 + currentFrontier.getPosition(iThread)
             check(position < currentExecution.getThreadSize(iThread))
             currentExecution[iThread, position]!!.also { addEventToCurrentExecution(it) }
         } else null
@@ -331,7 +345,9 @@ class EventStructure(initialThreadId: Int) {
             threadId = ROOT_THREAD_ID,
             setOf(initialThreadId)
         )
-        return addEvent(label, emptyList())!!
+        return addEvent(label, emptyList())!!.also {
+            addEventToCurrentExecution(it, visit = false)
+        }
     }
 
     /**
@@ -345,7 +361,7 @@ class EventStructure(initialThreadId: Int) {
      */
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
-        val candidateEvents = events.filter { it in currentExecution }
+        val candidateEvents = events.filter { it in currentExecution || it == root }
         return when (event.label.syncKind) {
             SynchronizationKind.Binary ->
                 addBinarySynchronizedEvents(event, candidateEvents)
@@ -373,9 +389,8 @@ class EventStructure(initialThreadId: Int) {
                     (resultLabel to deps + candidateEvent)
                 else (lab to deps)
             }
-        val syncEvent = addEvent(syncLab, dependencies)
         return when {
-            syncLab.isCompetedResponse -> syncEvent
+            syncLab.isCompetedResponse -> addEvent(syncLab, dependencies)
             else -> null
         }
     }
