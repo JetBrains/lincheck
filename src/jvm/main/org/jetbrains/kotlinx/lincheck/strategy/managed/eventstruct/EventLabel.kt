@@ -180,7 +180,8 @@ data class MemoryAccessLabel(
     val accessKind: MemoryAccessKind,
     val typeDesc: String,
     val memId: Int,
-    val value: Any?
+    val value: Any?,
+    val isExclusive: Boolean = false
 ): EventLabel(threadId, accessKind.toLabelKind()) {
     override fun synchronize(label: EventLabel): EventLabel? {
         return when {
@@ -193,6 +194,7 @@ data class MemoryAccessLabel(
                         typeDesc = writeLabel.typeDesc,
                         memId = writeLabel.memId,
                         value = writeLabel.value,
+                        isExclusive = readLabel.isExclusive,
                     )
                 }
                 return when {

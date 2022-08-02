@@ -477,18 +477,19 @@ class EventStructure(val initialThreadId: Int) {
         return responseEvent
     }
 
-    fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String): Event {
+    fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String, isExclusive: Boolean = false): Event {
         val label = MemoryAccessLabel(
             threadId = iThread,
             accessKind = MemoryAccessKind.Write,
             typeDesc = typeDescriptor,
             memId = memoryLocationId,
-            value = value
+            value = value,
+            isExclusive = false,
         )
         return addTotalEvent(label)
     }
 
-    fun addReadEvent(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Event? {
+    fun addReadEvent(iThread: Int, memoryLocationId: Int, typeDescriptor: String, isExclusive: Boolean = false): Event {
         // we lazily initialize memory location upon first read to this location
         initializeMemoryLocation(memoryLocationId, typeDescriptor)
         // we first create read-request event with unknown (null) value,
@@ -498,10 +499,15 @@ class EventStructure(val initialThreadId: Int) {
             accessKind = MemoryAccessKind.ReadRequest,
             typeDesc = typeDescriptor,
             memId = memoryLocationId,
-            value = null
+            value = null,
+            isExclusive = isExclusive,
         )
         val requestEvent = addRequestEvent(label)
         val (responseEvent, _) = addResponseEvents(requestEvent)
+        // TODO: think again --- is it possible that there is no write to read-from?
+        //  Probably not, because in Kotlin variables are always initialized by default?
+        //  What about initialization-related issues?
+        checkNotNull(responseEvent)
         return responseEvent
     }
 
@@ -524,13 +530,17 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
     }
 
     override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? {
-        return eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor)?.let {
-            (it.label as MemoryAccessLabel).value
-        }
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor)
+        return (readEvent.label as MemoryAccessLabel).value
     }
 
     override fun compareAndSet(iThread: Int, memoryLocationId: Int, expectedValue: Any?, newValue: Any?, typeDescriptor: String): Boolean {
-        TODO("Not yet implemented")
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor, isExclusive = true)
+        val readValue = (readEvent.label as MemoryAccessLabel).value
+        if (readValue != expectedValue) return false
+        eventStructure.addWriteEvent(iThread, memoryLocationId, newValue, typeDescriptor, isExclusive = true)
+        // TODO: check atomicity!
+        return true
     }
 
     override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
