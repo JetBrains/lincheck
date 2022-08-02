@@ -187,10 +187,13 @@ abstract class ManagedStrategy(
      * but the verification fails, and return the corresponding failure.
      * Returns `null` if the result is correct.
      */
-    protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
+    protected fun checkResult(result: InvocationResult, shouldCollectTrace: Boolean = true): LincheckFailure? = when (result) {
         is CompletedInvocationResult -> {
             if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
+            else {
+                val trace = if (shouldCollectTrace) collectTrace(result) else null
+                IncorrectResultsFailure(scenario, result.results, trace)
+            }
         }
         else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
