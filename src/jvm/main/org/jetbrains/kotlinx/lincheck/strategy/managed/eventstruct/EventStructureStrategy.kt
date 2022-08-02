@@ -55,7 +55,7 @@ class EventStructureStrategy(
             if (!eventStructure.startNextExploration())
                 return null
             usedInvocations++
-            checkResult(runInvocation())?.let { return it }
+            checkResult(runInvocation(), shouldCollectTrace = false)?.let { return it }
         }
         return null
     }
