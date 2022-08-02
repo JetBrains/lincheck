@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryTracker
+import org.jetbrains.kotlinx.lincheck.strategy.managed.defaultValueByDescriptor
 import kotlin.collections.set
 
 class Event private constructor(
@@ -96,9 +97,9 @@ class Event private constructor(
                 dependencies = dependencies,
                 causalityClock = causalityClock,
                 frontier = frontier
-            ).also {
-                causalityClock.update(it.threadId, it)
-                frontier[it.threadId] = it
+            ).apply {
+                causalityClock.update(threadId, this)
+                frontier[threadId] = this
             }
         }
 
@@ -217,7 +218,7 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
 
 }
 
-class EventStructure(initialThreadId: Int) {
+class EventStructure(val initialThreadId: Int) {
 
     val root: Event
 
@@ -261,8 +262,8 @@ class EventStructure(initialThreadId: Int) {
     }
 
     fun resetCurrentExecution() {
-        // TODO: move frontier reset to initializeInvocation
         currentFrontier = ExecutionFrontier()
+        currentFrontier[GHOST_THREAD_ID] = root
     }
 
     private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {
@@ -275,12 +276,12 @@ class EventStructure(initialThreadId: Int) {
 
     fun getThreadRoot(iThread: Int): Event? =
         when (iThread) {
-            ROOT_THREAD_ID -> root
+            GHOST_THREAD_ID -> root
             else -> threadRoots[iThread]
         }
 
     fun isInitializedThread(iThread: Int): Boolean =
-        iThread == ROOT_THREAD_ID || threadRoots.contains(iThread)
+        iThread == GHOST_THREAD_ID || threadRoots.contains(iThread)
 
     private fun createEvent(label: EventLabel, dependencies: List<Event>): Event? {
         // We assume that as a result of synchronization at least one of the
@@ -342,7 +343,7 @@ class EventStructure(initialThreadId: Int) {
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
         val label = ThreadForkLabel(
-            threadId = ROOT_THREAD_ID,
+            threadId = GHOST_THREAD_ID,
             setOf(initialThreadId)
         )
         return addEvent(label, emptyList())!!.also {
@@ -488,6 +489,8 @@ class EventStructure(initialThreadId: Int) {
     }
 
     fun addReadEvent(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Event? {
+        // we lazily initialize memory location upon first read to this location
+        initializeMemoryLocation(memoryLocationId, typeDescriptor)
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
         val label = MemoryAccessLabel(
@@ -500,6 +503,17 @@ class EventStructure(initialThreadId: Int) {
         val requestEvent = addRequestEvent(label)
         val (responseEvent, _) = addResponseEvents(requestEvent)
         return responseEvent
+    }
+
+    private fun initializeMemoryLocation(memoryLocationId: Int, typeDescriptor: String) {
+        // if there exists a write event to this location in the initialization thread,
+        // (or the ghost thread, in which case memory location was already initialized)
+        // then there is no need to add initialization write
+        events.find {
+            (it.threadId == GHOST_THREAD_ID || it.threadId == initialThreadId)
+                && it.label.isMemoryAccessTo(memoryLocationId)
+        }?.let { return }
+        addWriteEvent(GHOST_THREAD_ID, memoryLocationId, defaultValueByDescriptor(typeDescriptor), typeDescriptor)
     }
 }
 
@@ -517,5 +531,6 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
 
 }
 
-// auxiliary ghost thread used only to create root event of the event structure
-private const val ROOT_THREAD_ID = -1
+// auxiliary ghost thread containing root event of the event structure
+// and initialization events (e.g. initialization writes of memory locations)
+private const val GHOST_THREAD_ID = -1

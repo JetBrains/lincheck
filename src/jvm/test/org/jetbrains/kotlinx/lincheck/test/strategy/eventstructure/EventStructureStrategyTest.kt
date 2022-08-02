@@ -52,9 +52,6 @@ class EventStructureStrategyTest {
     @Test
     fun testWRW() {
         val testScenario = scenario {
-            initial {
-                actor(write, 0)
-            }
             parallel {
                 thread {
                     actor(write, 1)

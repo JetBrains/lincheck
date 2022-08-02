@@ -73,6 +73,9 @@ abstract class EventLabel(
 
     val isThreadInitializer: Boolean
         get() = isRequest && (this is ThreadStartLabel)
+
+    fun isMemoryAccessTo(memoryLocationId: Int): Boolean =
+        this is MemoryAccessLabel && memId == memoryLocationId
 }
 
 // TODO: rename to BarrierRaceException?

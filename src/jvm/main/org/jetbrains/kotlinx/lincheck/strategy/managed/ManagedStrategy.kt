@@ -879,7 +879,8 @@ class SeqCstMemoryTracker : MemoryTracker() {
         values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDescriptor) }
 }
 
-private fun defaultValueByDescriptor(descriptor: String): Any? = when (descriptor) {
+// TODO: move to appropriate place
+fun defaultValueByDescriptor(descriptor: String): Any? = when (descriptor) {
     "I" -> 0
     "Z" -> false
     "B" -> 0.toByte()
