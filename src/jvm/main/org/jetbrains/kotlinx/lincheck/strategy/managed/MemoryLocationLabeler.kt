@@ -40,6 +40,9 @@ class MemoryLocationLabeler {
     fun labelArrayElement(array: Any, position: Int): Int =
         label(array, position)
 
+    fun labelAtomicPrimitive(primitive: Any): Int =
+        label(primitive, NO_MARKER)
+
     private fun label(owner: Any?, marker: Any): Int = memoryLocations.computeIfAbsent(MemoryLocation(owner, marker)) { memoryLocations.size }
 
     /**
@@ -56,3 +59,5 @@ class MemoryLocationLabeler {
         }
     }
 }
+
+private val NO_MARKER = Any()

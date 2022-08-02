@@ -439,20 +439,51 @@ abstract class ManagedStrategy(
      * [typeDescriptor] is used only to determine default, initial value.
      * TODO: remove [typeDescriptor] from the interface.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocation the memory location identifier.
+     * @param memoryLocationId the memory location identifier.
      */
-    internal fun onSharedVariableRead(iThread: Int, memoryLocation: Int, typeDescriptor: String): Any? =
-        memoryTracker.readValue(iThread, memoryLocation, typeDescriptor)
+    internal fun onSharedVariableRead(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? =
+        memoryTracker.readValue(iThread, memoryLocationId, typeDescriptor)
 
     /**
      * This method is executed upon a shared variable write operation.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocation the memory location identifier.
+     * @param memoryLocationId the memory location identifier.
      * @param value the value to be written.
      */
-    internal fun onSharedVariableWrite(iThread: Int, memoryLocation: Int, value: Any?, typeDescriptor: String) =
-        memoryTracker.writeValue(iThread, memoryLocation, value, typeDescriptor)
+    internal fun onSharedVariableWrite(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) =
+        memoryTracker.writeValue(iThread, memoryLocationId, value, typeDescriptor)
 
+
+    /**
+     * This method is executed upon `compareAndSet` invocation using atomic primitives.
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param memoryLocationId the memory location identifier.
+     * @param expectedValue expected value for CAS.
+     * @param newValue next value if CAS is successful.
+     * @return result of this operation, replacing the "real" result.
+     */
+    internal fun onCompareAndSet(iThread: Int, memoryLocationId: Int, expectedValue: Any?, newValue: Any?, typeDescriptor: String): Boolean =
+        memoryTracker.compareAndSet(iThread, memoryLocationId, expectedValue, newValue, typeDescriptor)
+
+    /**
+     * This method is executed upon `compareAndSet` invocation using atomic primitives.
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param memoryLocationId the memory location identifier.
+     * @param delta value change. Int or Long depending on atomic primitive type.
+     * @return result of this operation, replacing the "real" result.
+     */
+    internal fun onAddAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number =
+        memoryTracker.addAndGet(iThread, memoryLocationId, delta, typeDescriptor)
+
+    /**
+     * This method is executed upon `compareAndSet` invocation using atomic primitives.
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param memoryLocationId the memory location identifier.
+     * @param delta value change. Int or Long depending on atomic primitive type.
+     * @return result of this operation, replacing the "real" result.
+     */
+    internal fun onGetAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number =
+        memoryTracker.getAndAdd(iThread, memoryLocationId, delta, typeDescriptor)
 
     /**
      * This method is executed before an atomic method call.
@@ -862,6 +893,12 @@ abstract class MemoryTracker {
     abstract fun writeValue(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String)
 
     abstract fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any?
+
+    abstract fun compareAndSet(iThread: Int, memoryLocationId: Int, expectedValue: Any?, newValue: Any?, typeDescriptor: String): Boolean
+
+    abstract fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number
+
+    abstract fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number
 }
 
 /**
@@ -879,6 +916,56 @@ class SeqCstMemoryTracker : MemoryTracker() {
 
     override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? =
         values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDescriptor) }
+
+    override fun compareAndSet(iThread: Int, memoryLocationId: Int, expectedValue: Any?, newValue: Any?, typeDescriptor: String): Boolean {
+        val oldValue = readValue(iThread, memoryLocationId, typeDescriptor)
+        return when {
+            typeDescriptor.startsWith("L") -> {
+                // Compare objects by reference.
+                if (oldValue === expectedValue) {
+                    writeValue(iThread, memoryLocationId, newValue, typeDescriptor)
+                    true
+                } else false
+            }
+            else -> {
+                // Compare primitive types by values.
+                if (oldValue == expectedValue) {
+                    writeValue(iThread, memoryLocationId, newValue, typeDescriptor)
+                    true
+                } else false
+            }
+        }
+    }
+
+    override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
+        val oldValue = readValue(iThread, memoryLocationId, typeDescriptor)
+        return when (typeDescriptor) {
+            "I" -> {
+                writeValue(iThread, memoryLocationId, oldValue as Int + delta as Int, typeDescriptor)
+                oldValue + delta
+            }
+            "J" -> {
+                writeValue(iThread, memoryLocationId, oldValue as Long + delta as Long, typeDescriptor)
+                oldValue + delta
+            }
+            else -> throw IllegalStateException()
+        }
+    }
+
+    override fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
+        val oldValue = readValue(iThread, memoryLocationId, typeDescriptor)
+        return when (typeDescriptor) {
+            "I" -> {
+                writeValue(iThread, memoryLocationId, oldValue as Int + 1, typeDescriptor)
+                oldValue
+            }
+            "J" -> {
+                writeValue(iThread, memoryLocationId, oldValue as Long + 1, typeDescriptor)
+                oldValue
+            }
+            else -> throw IllegalStateException()
+        }
+    }
 }
 
 // TODO: move to appropriate place
