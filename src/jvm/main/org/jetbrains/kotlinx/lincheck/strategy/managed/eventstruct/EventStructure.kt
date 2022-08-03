@@ -123,6 +123,31 @@ class Event private constructor(
     override fun compareTo(other: Event): Int {
         return id.compareTo(other.id)
     }
+
+    fun getReadsFrom(): Event {
+        require(label is MemoryAccessLabel && label.accessKind == MemoryAccessKind.ReadResponse)
+        require(dependencies.isNotEmpty())
+        return dependencies.first().also {
+            // TODO: make `isSynchronized` method to check for labels' compatibility
+            //  according to synchronization algebra (e.g. write/read reads-from compatibility)
+            check(it.label is MemoryAccessLabel
+                && it.label.accessKind == MemoryAccessKind.Write
+                && it.label.memId == label.memId
+            )
+        }
+    }
+
+    fun getExclusiveReadPart(): Event {
+        require(label is MemoryAccessLabel && label.accessKind == MemoryAccessKind.Write && label.isExclusive)
+        require(parent != null)
+        return parent.also {
+            check(it.label is MemoryAccessLabel
+                && it.label.accessKind == MemoryAccessKind.ReadResponse
+                && it.label.memId == label.memId
+                && it.label.isExclusive
+            )
+        }
+    }
 }
 
 /**
@@ -218,7 +243,38 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
 
 }
 
-class EventStructure(val initialThreadId: Int) {
+abstract class Inconsistency
+
+class InconsistentExecutionException(reason: Inconsistency): Exception(reason.toString())
+
+interface IncrementalConsistencyChecker {
+
+    /**
+     * Checks whether adding the given [event] to the current execution retains execution's consistency.
+     *
+     * @return `null` if execution remains consistent,
+     *   otherwise returns non-null [Inconsitency] object
+     *   representing the reason of inconsistency.
+     */
+    fun check(event: Event): Inconsistency?
+
+    /**
+     * Resets the internal state of consistency checker to [execution]
+     * with [event] being the next event to start exploration from.
+     *
+     * @return `null` if the given execution is consistent,
+     *   otherwise returns non-null [Inconsitency] object
+     *   representing the reason of inconsistency.
+     *
+     * TODO: split resetting and consistency checking logic!
+     */
+    fun reset(event: Event, execution: Execution): Inconsistency?
+}
+
+class EventStructure(
+    val initialThreadId: Int,
+    val incrementalCheckers: List<IncrementalConsistencyChecker> = listOf()
+) {
 
     val root: Event
 
@@ -244,6 +300,11 @@ class EventStructure(val initialThreadId: Int) {
 
     private var currentFrontier: ExecutionFrontier = ExecutionFrontier()
 
+    // TODO: rename?
+    val currentExecutionEvents: List<Event>
+        // TODO: just make an iterator for Execution class
+        get() = events.filter { it in currentExecution }
+
     val programOrder: PartialOrder<Event> = Event.programOrder
 
     val causalityOrder: Relation<Event> = Relation { x, y ->
@@ -255,10 +316,16 @@ class EventStructure(val initialThreadId: Int) {
     }
 
     fun startNextExploration(): Boolean {
-        val event = rollbackToEvent { !it.visited } ?: return false
-        currentExecution = event.frontier.toExecution()
-        event.visit()
-        return true
+        loop@while (true) {
+            val event = rollbackToEvent { !it.visited } ?: return false
+            event.visit()
+            currentExecution = event.frontier.toExecution()
+            for (checker in incrementalCheckers) {
+                if (checker.reset(event, currentExecution) != null)
+                    continue@loop
+            }
+            return true
+        }
     }
 
     fun resetCurrentExecution() {
@@ -311,10 +378,13 @@ class EventStructure(val initialThreadId: Int) {
         check(!label.isThreadInitializer implies isInitializedThread(label.threadId)) {
             "Thread ${label.threadId} should be initialized before new events can be added to it."
         }
-        return createEvent(label, dependencies)?.also {
-            _events.add(it)
+        return createEvent(label, dependencies)?.also { event ->
+            _events.add(event)
             if (label.isThreadInitializer)
-                threadRoots[label.threadId] = it
+                threadRoots[label.threadId] = event
+            for (checker in incrementalCheckers) {
+                checker.check(event)?.let { throw InconsistentExecutionException(it) }
+            }
         }
     }
 
@@ -361,8 +431,10 @@ class EventStructure(val initialThreadId: Int) {
      * @return list of added events
      */
     private fun addSynchronizedEvents(event: Event): List<Event> {
-        // TODO: instead of linear scan we should maintain an index of read/write accesses to specific memory location
-        val candidateEvents = events.filter { it in currentExecution || it == root }
+        // TODO: we should maintain an index of read/write accesses to specific memory location
+        // TODO: pre-filter some trivially inconsistent candidates
+        //  (e.g. write synchronizing with program-order preceding read)
+        val candidateEvents = currentExecutionEvents
         return when (event.label.syncKind) {
             SynchronizationKind.Binary ->
                 addBinarySynchronizedEvents(event, candidateEvents)
@@ -484,7 +556,7 @@ class EventStructure(val initialThreadId: Int) {
             typeDesc = typeDescriptor,
             memId = memoryLocationId,
             value = value,
-            isExclusive = false,
+            isExclusive = isExclusive,
         )
         return addTotalEvent(label)
     }
@@ -539,7 +611,6 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
         val readValue = (readEvent.label as MemoryAccessLabel).value
         if (readValue != expectedValue) return false
         eventStructure.addWriteEvent(iThread, memoryLocationId, newValue, typeDescriptor, isExclusive = true)
-        // TODO: check atomicity!
         return true
     }
 

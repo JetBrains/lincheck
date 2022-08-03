@@ -21,7 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct
 
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
@@ -41,7 +42,10 @@ class EventStructureStrategy(
 
     private val initialThreadId = nThreads
 
-    private val eventStructure: EventStructure = EventStructure(initialThreadId)
+    private val atomicityChecker: AtomicityChecker = AtomicityChecker()
+
+    private val eventStructure: EventStructure =
+        EventStructure(initialThreadId, listOf(atomicityChecker))
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
@@ -49,13 +53,24 @@ class EventStructureStrategy(
     // TODO: change to EventStructureMonitorTracker
     override var monitorTracker: MonitorTracker = SeqCstMonitorTracker(nThreads)
 
+    init {
+        atomicityChecker.initialize(eventStructure)
+    }
+
     override fun runImpl(): LincheckFailure? {
         // TODO: move invocation counting logic to ManagedStrategy class
-        while (usedInvocations < maxInvocations) {
-            if (!eventStructure.startNextExploration())
-                return null
-            usedInvocations++
-            checkResult(runInvocation(), shouldCollectTrace = false)?.let { return it }
+        outer@while (usedInvocations < maxInvocations) {
+            inner@while (eventStructure.startNextExploration()) {
+                val result = runInvocation()
+                if (result is UnexpectedExceptionInvocationResult &&
+                    result.exception is InconsistentExecutionException) {
+                    continue@inner
+                }
+                usedInvocations++
+                checkResult(result, shouldCollectTrace = false)?.let { return it }
+                continue@outer
+            }
+            return null
         }
         return null
     }
