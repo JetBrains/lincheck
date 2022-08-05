@@ -17,15 +17,13 @@ We highly recommend exploring the Lincheck features step-by-step:
 1. [Write your first test with Lincheck](introduction.md)
 2. [Stress testing and model checking](testing-strategies.md)
 3. [How to generate operation arguments](operation-arguments.md)
-4. [Modular testing in the model checking mode](modular-testing.md) 
+4. [Modular testing in model checking](modular-testing.md) 
 5. [Popular algorithm constraints](constraints.md)
 6. [Checking for non-blocking progress guarantees](progress-guarantees.md)
 7. [Define sequential specification of the algorithm](sequential_specification.md)
 
 ## Additional references
-* [Workshop. Lincheck: Testing concurrency on the JVM (Part 1)](https://www.youtube.com/watch?v=YNtUK9GK4pA) (Hydra
-  2021, EN)
-* [Workshop. Lincheck: Testing concurrency on the JVM (Part 2)](https://www.youtube.com/watch?v=EW7mkAOErWw) (Hydra
+* Workshop. Lincheck: Testing concurrency on the JVM: [Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw) (Hydra
   2021, EN)
 * [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019,
   RU)

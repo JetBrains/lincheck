@@ -1,11 +1,11 @@
 [//]: # (title: Modular testing)
 
-When constructing new algorithms, it is common to use linearizable data structures as building blocks.
-However, these linearizable data structures are typically non-trivial, significantly increasing
+When constructing new algorithms, it is common to use existing data structures as building blocks.
+As these data structures are typically non-trivial, they significantly increase
 the number of possible interleavings. Intuitively, it would be better to treat the operations of
 such already correct underlying data structures as atomic ones, checking only meaningful interleavings
-and increasing the testing quality. Lincheck makes it is possible by providing the *modular testing* feature
-for the model checking.
+and, thus, increasing the testing quality. 
+Lincheck makes it is possible by providing the *modular testing* feature for the model checking.
 
 Consider the `MultiMap` implementation below, 
 which bases on top of the state-of-the-art `j.u.c.ConcurrentHashMap`:

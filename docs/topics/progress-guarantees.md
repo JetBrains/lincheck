@@ -3,11 +3,11 @@ Many concurrent algorithms provide non-blocking progress guarantees, such as loc
 As they are usually non-trivial, it is easy to add a bug that makes the algorithm blocking. 
 Fortunately, Lincheck is able to find liveness bugs in the model checking mode.
 
-To check the progress guarantee of the algorithm, you just set the `checkObstructionFreedom`
+To check the progress guarantee of the algorithm, you need to turn on the `checkObstructionFreedom`
 option in `ModelCheckingOptions()`:
 
 ```kotlin
-ModelCheckingOptions().checkObstructionFreedom(true)
+ModelCheckingOptions().checkObstructionFreedom()
 ```
 
 As an example, let's consider `ConcurrentHashMap<K, V>` from the Java standard library.
@@ -26,7 +26,7 @@ class ConcurrentHashMapTest {
         .actorsPerThread(1)
         .actorsAfter(0)
         .minimizeFailedScenario(false)
-        .checkObstructionFreedom(true)
+        .checkObstructionFreedom()
         .check(this::class)
 }
 ```
@@ -72,21 +72,21 @@ class ConcurrentSkipListMapTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
+        .checkObstructionFreedom()
         .check(this::class)
 }
 ```
 
-The common non-blocking progress guarantees are (in order to weaken):
+The common non-blocking progress guarantees are (from strongest to weakest):
 
 * **wait-freedom:** each operation completes in a bounded number of steps no matter what other threads do;
 * **lock-freedom:** guarantees system-wide progress, so that at least one operation completes in a bounded number of steps, 
                     while a particular operation may be stuck;
 * **obstruction-freedom:** – any operation can complete in a bounded number of steps if all the other threads pause.
 
-For now, Lincheck supports only the _obstruction-freedom_ progress guarantee.
-As most the real-world liveness bugs introduce unexpected blocking code,
-obstruction-freedom check is beneficial for lock-free and wait-free algorithms.
+At the moment, Lincheck supports only the _obstruction-freedom_ progress guarantee.
+However, as most the real-world liveness bugs introduce unexpected blocking code,
+obstruction-freedom check is extremely helpful for lock-free and wait-free algorithms as well.
 
 > * Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentMapTest.kt).
 > * Get another example where we test Michael-Scott queue implementation for progress guarantees [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ObstructionFreedomViolationTest.kt).
@@ -95,5 +95,5 @@ obstruction-freedom check is beneficial for lock-free and wait-free algorithms.
 
 ## What's next
 
-Learn how Lincheck [verifies execution results](sequential_specification.md) for correctness and 
-how to specify the sequential specification of the algorithm explicitly, making the testing more robust.
+Learn [how to specify the sequential specification](sequential_specification.md) 
+of the testing algorithm explicitly, improving the Lincheck tests robustness.

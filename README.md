@@ -15,7 +15,7 @@ Please read [the tutorial](/docs/topics/lincheck-guide.md) that explains how to 
 
 ##### Given talks:
  *  [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019, RU)
- *  [Testing concurrent algorithms with Lincheck](https://nkoval.com/talks/#lincheck-joker-2019) (Joker 2019, RU)
+ *  [Testing concurrent algorithms with Lincheck](https://www.youtube.com/watch?v=cdpQMDgQP8Y) (JPoint 2019, RU)
  *  [Lincheck: testing concurrent data structures on Java](https://www.youtube.com/watch?v=hwbpUEGHvvY) (Hydra 2019, RU)
  *  [Lock-free algorithms testing](https://www.youtube.com/watch?v=_0_HOnTSS0E&t=1s) (Joker 2017, RU)
 

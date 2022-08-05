@@ -1,8 +1,7 @@
 [//]: # (title: Stress testing and model checking)
 
 Lincheck provides two testing strategies: stress testing and model checking.
-Learn what happens under the hood of both the testing strategies 
-and the test structure in general with the `Counter` example from the previous section:
+Learn what happens under the hood of both the testing strategies with the `Counter` example from the previous section:
 
 ```kotlin
 class Counter {
@@ -18,14 +17,15 @@ class Counter {
 
 ### Write a stress test
 
-Follow this structure of the stress test for the `Counter`:
+Follow the steps below to create a concurrent stress test for the `Counter` implementation:
 
-1. Create a new `Counter` instance as an initial state.
-2. List operations on the `Counter` and mark them with the `@Operation` annotation.
-3. Specify the stress testing strategy using the corresponding `StressOptions()` class.
-4. Invoke the `StressOptions.check(..)` function to start the testing.
+1. Create a `CounterTest` class.
+2. In this class, add a new field `c` of the `Counter` type, creating a new instance in the constructor.
+3. List the counter operations and mark them with the `@Operation` annotation, delegating the implementations to `c`.
+4. Specify the stress testing strategy via `StressOptions()`.
+5. Invoke the `StressOptions.check(..)` function to run the test.
 
-The code is presented below:
+The resulting code is presented below:
 
 ```kotlin
 import org.jetbrains.kotlinx.lincheck.annotations.*
@@ -58,24 +58,23 @@ class CounterTest {
 ### How the stress testing works
 
 First, Lincheck generates a set of concurrent scenarios using the operations marked with `@Operation`.
-After that, it launches native threads, synchronizing them at the start to guarantee that they start simultaneously,
+After that, it launches native threads, synchronizing them at the beginning to guarantee that they start simultaneously,
 and executes each of the scenarios on these native threads multiple times in the hope to hit an interleaving that produces
 incorrect results.
 
-The figure below shows a high-level scheme of how a generated scenarios may execute.
+The figure below shows a high-level scheme of how a generated scenario may execute.
 
 ![Stress execution of the Counter](counter-stress.png){width=700}
 
 ## Model checking
 The main practical concern regarding stress testing is that you may spend 
 countless hours trying to understand how to reproduce the discovered bug.
-To help with this procedure, Lincheck supports bounded model checking, which
+To help with that, Lincheck supports bounded model checking, which
 automatically provides an interleaving that reproduces the found bug.
 
 ### Write a model checking test
-
 To change the stress testing strategy to the model checking one, 
-you simply need to replace `StressOptions()` with `ModelCheckingOptions()`.
+you need to replace `StressOptions()` with `ModelCheckingOptions()`.
 See the full code of the resulting test below.
 
 ```kotlin
@@ -120,24 +119,20 @@ class CounterTest {
 {type="tip"}
 
 ### How the model checking works
-In our experience, most bugs in complicated concurrent algorithms can be reproduced using the sequential consistency memory model. 
-Simultaneously, the model-checking approaches for weak memory models are very complicated, so Lincheck uses a bounded model checking 
-under the _sequential consistency memory model_. 
+In our experience, most bugs in complicated concurrent algorithms can be reproduced with classic interleavings, 
+switching the execution from one thread to another. Simultaneously, model checkers for weak memory models are very complicated, 
+so Lincheck uses a bounded model checking under the _sequential consistency memory model_. 
 
-In short, Lincheck starts by studying all interleavings with one context switch but does this evenly, 
-trying to explore a variety of interleavings simultaneously. This way, we increase the total coverage 
-if the number of available invocations is not sufficient to cover all the interleavings. Once all the 
-interleavings with one context switch have been reviewed, Lincheck starts examining interleavings with 
-two context switches, and repeats the process, increasing the number of context switches each time, 
-until the available invocations exceed the maximum or all possible interleavings are covered. 
-This strategy increases the testing coverage and allows you to find an incorrect schedule with 
-the lowest number of context switches possible, marking a significant improvement for bug investigation. 
+In short, Lincheck starts by studying all interleavings with one context switch, then with two of them, 
+continuing the process until the specified number of interleaving is examined. 
+This strategy allows you to find an incorrect schedule with the lowest number of context switches possible,
+making the further bug investigation easier. 
 
-Lincheck inserts switch points into the testing code to control the execution. These points identify 
-where a context switch can be performed. The interesting switch point locations are shared memory accesses, 
+To control the execution, Lincheck inserts special switch points into the testing code. These points identify 
+where a context switch can be performed, which, essentially, are are shared memory accesses, 
 such as field and array element reads or updates in the JVM, as well as `wait/notify` and `park/unpark` calls.
-To insert a switch point, Lincheck transforms the testing code via the ASM framework and adds internal function 
-invocations before each access. The transformation is performed on the fly.
+To insert a switch point, Lincheck transforms the testing code on the fly via the ASM framework, adding internal function 
+invocations to the existing code.
 
 As the model checking strategy fully controls the execution, Lincheck is able to provide a trace 
 that leads to the invalid interleaving, which is extremely helpful in practice.
@@ -147,11 +142,10 @@ Please see the example of such a trace for the incorrect execution of the `Count
 ## Which testing strategy is better?
 The _model checking strategy_ is preferable for finding bugs under the sequentially consistent memory model since it
 ensures better coverage and provides a failing execution trace if an error is found.
-
 Although _stress testing_ does not guarantee any coverage, it is still helpful to check algorithms for bugs introduced by
 low-level effects, such as a missed `volatile` modifier. Stress testing is also a great help in discovering very rare
-bugs that require many context switches to reproduce, and it is not possible to analyze all of them due to the current
-restrictions in the model checking strategy.
+bugs that require many context switches to reproduce, as it is not possible to analyze all of them due to the current
+limitations in the model checking strategy.
 
 ## Configure the testing strategy
 
@@ -226,15 +220,15 @@ Parallel part:
 ```
 
 To turn off the scenario minimization feature, add `minimizeFailedScenario(false)`
-to the `[Stress,ModelChecking]Options` configuration. It is easier to analyze
-smaller scenarios, so minimization is enabled by default.
+to the `[Stress,ModelChecking]Options` configuration. We find it easier to analyze
+smaller scenarios, so the minimization is enabled by default.
 
 
 ## Logging data structure states
 Another feature that is extremely useful for debugging is _state logging_.
 When analyzing an interleaving that leads to an error, you usually draw
 how the data structure changes on a sheet of paper, re-drawing the state
-after each two-three of events. To automize the procedure, you can provide
+after each event. To automize the procedure, you can provide
 a special method that returns a `String` representation of the data structure,
 so Lincheck prints the state representation after each event in the interleaving
 that modifies the data structure. The corresponding method should not take arguments
@@ -305,10 +299,10 @@ Parallel part trace:
 ```
 
 In case of stress testing, Lincheck prints the state representation
-right before and after the parallel part of the scenario as well as at its very end.
+right before and after the parallel part of the scenario as well as at the end.
 
 > * Get the full code of the examples [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/CounterTest.kt)
-> * Get more test examples [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/StackTest.kt)
+> * Get more test examples [there](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/StackTest.kt)
 >
 {type="note"}
 

@@ -2,7 +2,7 @@
 
 This tutorial demonstrates how to set up the Lincheck framework and use its basic API.  
 You will create a new IntelliJ IDEA project with an incorrect concurrent counter implementation 
-and write your first Lincheck test for it, finding and analyzing the bug after that.
+and write your first Lincheck test for it, finding and analyzing the bug afterward.
 
 
 ## Create a project
@@ -84,13 +84,13 @@ and write your first Lincheck test for it, finding and analyzing the bug after t
 2. Congratulations! This is your first Lincheck test for the counter implementation above. 
    In short, it automatically 
    (1) generates several random concurrent scenarios with the specified `inc()` and `dec()` operations,
-   (2) performs a lot of invocations for each generated scenario, and
-   (3) verifies that each of the invocation results is correct.
+   (2) performs a lot of invocations for each of the generated scenario, and
+   (3) verifies that each invocation result is correct.
 
 
 ## Run the test
 
-Now it is time to run the test. When you do it, you will see the following error:
+Now it is time to run the test! It should fail with the following error:
 
    ```text
    = Invalid execution results =
@@ -103,9 +103,9 @@ Now it is time to run the test. When you do it, you will see the following error
 
 ## Trace the invalid execution
 
-In addition to the invalid execution results, finding the exact interleaving that leads to the error is also possible with Lincheck.
-The feature is accessible with the [model checking](testing-strategies.md#model-checking) testing mode 
-that examines numerous executions with a bounded number of context switches.
+In addition to the invalid execution results, Lincheck also can provide an interleaving that leads to the error.
+This feature is accessible with the [model checking](testing-strategies.md#model-checking) testing mode, 
+which examines numerous executions with a bounded number of context switches.
 
 1. To switch the testing strategy from stress testing to model checking, 
    replace `StressOptions()` with `ModelCheckingOptions()`.
@@ -148,16 +148,16 @@ that examines numerous executions with a bounded number of context switches.
    | inc(): 1 | inc(): 1 |
    = The following interleaving leads to the error =
    Parallel part trace:
-   |                      | inc()                                                 |
-   |                      |   inc(): 1 at BasicCounterTest.inc(BasicCounterTest.kt:11)     |
-   |                      |     value.READ: 0 at Counter.inc(Counter.kt:5)  |
-   |                      |     switch                                            |
-   | inc(): 1             |                                                       |
-   |   thread is finished |                                                       |
-   |                      |     value.WRITE(1) at Counter.inc(Counter.kt:5) |
-   |                      |     value.READ: 1 at Counter.inc(Counter.kt:5)  |
-   |                      |   result: 1                                           |
-   |                      |   thread is finished                                  |
+   |                      | inc()                                                      |
+   |                      |   inc(): 1 at BasicCounterTest.inc(BasicCounterTest.kt:11) |
+   |                      |     value.READ: 0 at Counter.inc(Counter.kt:5)             |
+   |                      |     switch                                                 |
+   | inc(): 1             |                                                            |
+   |   thread is finished |                                                            |
+   |                      |     value.WRITE(1) at Counter.inc(Counter.kt:5)            |
+   |                      |     value.READ: 1 at Counter.inc(Counter.kt:5)             |
+   |                      |   result: 1                                                |
+   |                      |   thread is finished                                       |
    ```
 
    According to the trace, the following events occur:
@@ -174,8 +174,8 @@ that examines numerous executions with a bounded number of context switches.
 
 ## Find the bug in the Java standard library
 
-You can use Lincheck to find a known bug in Java's `ConcurrentLinkedDeque`: a race between removing and adding an element to the head.
-For that you just need to write a simple test:
+Let's now find a bug in the standard Java's `ConcurrentLinkedDeque` collection. 
+The Lincheck test below finds a race between removing and adding an element to the head of deque.
 
 ```kotln
 import org.jetbrains.kotlinx.lincheck.*
@@ -210,7 +210,7 @@ class ConcurrentDequeTest {
 }
 ```
 
-Run `modelCheckingTest()` and the test will fail with the following output:
+Run `modelCheckingTest()`, and the test fails with the following output:
 
 ```text
 = Invalid execution results =
@@ -254,7 +254,7 @@ Parallel part trace:
 
 [Popular algorithm constraints](constraints.md)
 
-[Modular testing in the model checking mode](modular-testing.md)
+[Modular testing in model checking](modular-testing.md)
 
 [Checking for non-blocking progress guarantees](progress-guarantees.md)
 

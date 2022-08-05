@@ -1,12 +1,12 @@
 [//]: # (title: Data structure constraints)
 
-Some data structures may require some operations to be never executed concurrently, 
+Some data structures may require a part of operations to be never executed concurrently, 
 such as single-producer single-consumer queues. Lincheck provides an out-of-the-box support
 for such contracts, generating concurrent scenarios according to the restrictions.
 
 Consider the [single-consumer queue](https://github.com/JCTools/JCTools/blob/66e6cbc9b88e1440a597c803b7df9bd1d60219f6/jctools-core/src/main/java/org/jctools/queues/atomic/MpscLinkedAtomicQueue.java)
 from the  [JCTools library](https://github.com/JCTools/JCTools). 
-Let's write a test to check correctness of `poll()`, `peek()` and `offer(x)` operations.
+Let's write a test to check correctness of its `poll()`, `peek()`, and `offer(x)` operations.
 
 To meet the single-consumer restriction, ensure that all `poll()` and `peek()` consuming operations
 are called from a single thread. For that, declare a group of operations for _non-parallel_ execution:
@@ -49,7 +49,7 @@ class MPSCQueueTest {
 
 Below is an example of the scenario generated for this test. 
 Note that all consuming `poll()` and `peek()` operations are called from a single thread; 
-thus, satisfying the "single-consumer" contract.
+thus, satisfying the "single-consumer" restriction.
 
 
 ```text

@@ -1,4 +1,4 @@
-[//]: # (title: How to generate operation arguments)
+Н[//]: # (title: How to generate operation arguments)
 
 In this guide section, we will learn how to configure the operation arguments.
 Consider the straightforward `MultiMap` implementation below. 
@@ -25,8 +25,8 @@ class MultiMap<K, V> {
 }
 ```
 
-Consider testing concurrent execution of `add(key, value)` and `get(key)` operations. The incorrect interleaving is more 
-likely to be detected if you increase the contention by accessing a small range of keys.
+Is this `MultiMap` implementation linearizable? If not, an incorrect interleaving is more likely to be detected 
+when accessing a small range of keys, thus, increasing the possibility to process the same key concurrently.
 
 For this, configure the generator for a `key: Int` parameter:
 
@@ -93,7 +93,7 @@ For this, configure the generator for a `key: Int` parameter:
    [get(1): [4]]
    ```
 
-6. Run the `modelCheckingTest()` and see the following output:
+6. Finally, run `modelCheckingTest()`; it fails with the output below:
 
    ```text
    = Invalid execution results =
@@ -114,7 +114,7 @@ For this, configure the generator for a `key: Int` parameter:
    |                      |   thread is finished                                     |
    ```
 
-Due to the small range of keys, Lincheck quickly revealed the race bug: when two values are being added concurrently by the same key, 
+Due to the small range of keys, Lincheck quickly reveals the race: when two values are being added concurrently by the same key, 
 one of the values may be overwritten and lost.
 
 > Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
@@ -127,7 +127,7 @@ one of the values may be overwritten and lost.
 the internal synchronization of which significantly increases the number of possible interleavings, 
 so it may take a while to find a bug. 
 Considering the `j.u.c.ConcurrentHashMap` implementation correct, you can speed up the testing 
-and increase the coverage with the [modular testing](modular-testing.md) feature for the model checking mode.
+and increase the coverage with the [modular testing](modular-testing.md) feature for the model checking.
 
 * Learn how to test data structures that set access [constraints](constraints.md) on the execution,
-such as single-producer single-consumer queues.
+such as the single-writer one.

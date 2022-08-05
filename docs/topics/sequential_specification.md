@@ -3,9 +3,9 @@
 ### Sequential specification
 
 To be sure that the algorithm provides correct sequential behavior, you can define its _sequential specification_
-by writing a simple sequential implementation of the algorithm.
+by writing a straightforward sequential implementation of the testing data structure.
 
-> This also allows writing a single test instead of writing sequential and concurrent tests separately.
+> This feature also allows writing a single test instead of writing sequential and concurrent tests separately.
 >
 {type="tip"}
 
@@ -56,19 +56,19 @@ class SequentialQueue {
 
 ### State equivalency
 
-Before the output of every test, you can see advice to specify the state equivalence relation on your sequential
-specification to make the verification faster.
+In the beginning of the test output, you are likely see an advice to specify the state equivalence relation on your sequential
+specification in order to make the verification faster.
 
-During verification Lincheck builds a transition graph, invoking operations of the provided sequential
+The reason is that during verification, Lincheck builds a transition graph, invoking operations of the provided sequential
 implementation: the states represent the data structure states and the transitions are labeled
 with operations and the corresponding results. Several transition sequences may lead to the same state. 
-For example, applying `poll()` after the first `add(2)` leads back to the initial state of the queue.
+For example, applying `poll()` after `add(2)` leads back to the initial state of the queue.
 
-So if you define the equivalency relation between the states of a data structure by implementing `equals()`
-and `hashCode()` methods on the test class, the number of states in the transition graph will decrease, which will speed
-up verification.
+When you define the equivalency relation between the states of the data structure by implementing `equals()`
+and `hashCode()` methods on its sequential implementation (by default, the testing data structure serves its purpose), 
+the number of states in the transition graph decrease significantly, speeding up the verification process.
 
-Lincheck provides the following way to do that:
+Lincheck provides the following API to do that:
 
 1. Make the test class extend `VerifierState`.
 2. Override `extractState()` function: it should define the state of a data structure.
