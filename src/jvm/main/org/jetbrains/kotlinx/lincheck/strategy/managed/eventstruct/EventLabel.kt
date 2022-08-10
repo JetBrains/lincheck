@@ -30,9 +30,9 @@ enum class SynchronizationKind { Binary, Barrier }
 // TODO: make a constant for default thread ID
 abstract class EventLabel(
     open val threadId: Int = 0,
-    open val kind: LabelKind = LabelKind.Total,
+    open val kind: LabelKind,
+    open val syncKind: SynchronizationKind,
 ) {
-    open val syncKind: SynchronizationKind = SynchronizationKind.Binary
 
     /**
      * Synchronizes event label with another label passed as a parameter.
@@ -50,6 +50,16 @@ abstract class EventLabel(
             (label is EmptyLabel) -> this
             else -> null
         }
+
+    // TODO: rename?
+    open infix fun aggregate(label: EventLabel): EventLabel? =
+        when {
+            (label is EmptyLabel) -> this
+            else -> null
+        }
+
+    fun aggregatesWith(label: EventLabel): Boolean =
+        aggregate(label) != null
 
     val isRequest: Boolean
         get() = (kind == LabelKind.Request)
@@ -81,16 +91,22 @@ abstract class EventLabel(
 // TODO: rename to BarrierRaceException?
 class InvalidBarrierSynchronizationException(message: String): Exception(message)
 
-data class EmptyLabel(override val threadId: Int = 0): EventLabel(threadId) {
+data class EmptyLabel(
+    override val threadId: Int = 0
+): EventLabel(threadId, LabelKind.Total, SynchronizationKind.Binary) {
     override fun synchronize(label: EventLabel) = label
 }
 
-abstract class ThreadLabel(threadId: Int, kind: LabelKind = LabelKind.Total): EventLabel(threadId, kind)
+abstract class ThreadLabel(
+    threadId: Int,
+    kind: LabelKind,
+    syncKind: SynchronizationKind
+): EventLabel(threadId, kind, syncKind)
 
 data class ThreadForkLabel(
     override val threadId: Int,
     val forkThreadIds: Set<Int>,
-): ThreadLabel(threadId) {
+): ThreadLabel(threadId, LabelKind.Total, SynchronizationKind.Binary) {
     override fun synchronize(label: EventLabel): EventLabel? {
         if (label is ThreadStartLabel && label.isRequest && label.threadId in forkThreadIds)
             return ThreadStartLabel(
@@ -104,24 +120,26 @@ data class ThreadForkLabel(
 data class ThreadStartLabel(
     override val threadId: Int,
     override val kind: LabelKind
-): ThreadLabel(threadId, kind) {
-
-    init {
-        require(isRequest || isResponse)
-    }
+): ThreadLabel(threadId, kind, SynchronizationKind.Binary) {
 
     override fun synchronize(label: EventLabel): EventLabel? {
         if (label is ThreadForkLabel)
             return label.synchronize(this)
         return super.synchronize(label)
     }
+
+    override fun aggregate(label: EventLabel): EventLabel? {
+        if (isRequest && label.isResponse &&
+            label is ThreadStartLabel && threadId == label.threadId)
+            return ThreadStartLabel(threadId, LabelKind.Total)
+        return super.aggregate(label)
+    }
 }
 
 data class ThreadFinishLabel(
     override val threadId: Int,
     val finishedThreadIds: Set<Int> = setOf(threadId)
-): ThreadLabel(threadId) {
-    override val syncKind: SynchronizationKind = SynchronizationKind.Barrier
+): ThreadLabel(threadId, LabelKind.Total, SynchronizationKind.Barrier) {
 
     override fun synchronize(label: EventLabel): EventLabel? {
         // TODO: handle cases of invalid synchronization:
@@ -148,13 +166,7 @@ data class ThreadJoinLabel(
     override val threadId: Int,
     override val kind: LabelKind,
     val joinThreadIds: Set<Int>,
-): ThreadLabel(threadId, kind) {
-
-    init {
-        require(isRequest || isResponse)
-    }
-
-    override val syncKind: SynchronizationKind = SynchronizationKind.Barrier
+): ThreadLabel(threadId, kind, SynchronizationKind.Barrier) {
 
     override fun synchronize(label: EventLabel): EventLabel? {
         if (label is ThreadFinishLabel)
@@ -163,50 +175,74 @@ data class ThreadJoinLabel(
     }
 
     override val isCompleted: Boolean =
-        isRequest || (isResponse && joinThreadIds.isEmpty())
+        isResponse implies joinThreadIds.isEmpty()
+
+    override fun aggregate(label: EventLabel): EventLabel? {
+        if (isRequest && label.isResponse &&
+            label is ThreadJoinLabel && threadId == label.threadId &&
+            label.joinThreadIds.isEmpty())
+            return ThreadJoinLabel(threadId, LabelKind.Total, setOf())
+        return super.aggregate(label)
+    }
 }
 
-enum class MemoryAccessKind { ReadRequest, ReadResponse, Write }
-
-fun MemoryAccessKind.toLabelKind(): LabelKind =
-    when (this) {
-        MemoryAccessKind.ReadRequest -> LabelKind.Request
-        MemoryAccessKind.ReadResponse -> LabelKind.Response
-        MemoryAccessKind.Write -> LabelKind.Total
-    }
+enum class MemoryAccessKind { Read, Write }
 
 data class MemoryAccessLabel(
     override val threadId: Int,
+    override val kind: LabelKind,
     val accessKind: MemoryAccessKind,
     val typeDesc: String,
     val memId: Int,
     val value: Any?,
     val isExclusive: Boolean = false
-): EventLabel(threadId, accessKind.toLabelKind()) {
+): EventLabel(threadId, kind, SynchronizationKind.Binary) {
+
+    val isRead: Boolean = (accessKind == MemoryAccessKind.Read)
+
+    val isWrite: Boolean = (accessKind == MemoryAccessKind.Write)
+
+    init {
+        require((isRead && isRequest) implies (value == null))
+        require(isWrite implies isTotal)
+    }
+
     override fun synchronize(label: EventLabel): EventLabel? {
-        return when {
-            (label is MemoryAccessLabel) && (memId == label.memId) -> {
-                // TODO: perform dynamic type-check of `typeDesc`
-                val writeReadSync = { writeLabel : MemoryAccessLabel, readLabel : MemoryAccessLabel ->
-                    MemoryAccessLabel(
-                        threadId = readLabel.threadId,
-                        accessKind = MemoryAccessKind.ReadResponse,
-                        typeDesc = writeLabel.typeDesc,
-                        memId = writeLabel.memId,
-                        value = writeLabel.value,
-                        isExclusive = readLabel.isExclusive,
-                    )
-                }
-                return when {
-                    (accessKind == MemoryAccessKind.Write) && (label.accessKind == MemoryAccessKind.ReadRequest) ->
-                        writeReadSync(this, label)
-                    (accessKind == MemoryAccessKind.ReadRequest) && (label.accessKind == MemoryAccessKind.Write) ->
-                        writeReadSync(label, this)
-                    else -> null
-                }
-            }
-            (label is EmptyLabel) -> this
-            else -> null
+        // TODO: perform dynamic type-check of `typeDesc`
+        val writeReadSync = { writeLabel : MemoryAccessLabel, readLabel : MemoryAccessLabel ->
+            MemoryAccessLabel(
+                threadId = readLabel.threadId,
+                kind = LabelKind.Response,
+                accessKind = MemoryAccessKind.Read,
+                typeDesc = writeLabel.typeDesc,
+                memId = writeLabel.memId,
+                value = writeLabel.value,
+                isExclusive = readLabel.isExclusive,
+            )
         }
+        if ((label is MemoryAccessLabel) && (memId == label.memId)) {
+            if (isWrite && label.isRead && label.isRequest)
+                return writeReadSync(this, label)
+            if (label.isWrite && isRead && isRequest)
+                return writeReadSync(label, this)
+        }
+        return super.synchronize(label)
+    }
+
+    override fun aggregate(label: EventLabel): EventLabel? {
+        // TODO: perform dynamic type-check of `typeDesc`
+        if (isRead && isRequest && value == null
+            && label is MemoryAccessLabel && label.isRead && label.isResponse
+            && threadId == label.threadId && memId == label.memId && isExclusive == label.isExclusive)
+            return MemoryAccessLabel(
+                threadId = threadId,
+                kind = LabelKind.Total,
+                accessKind = MemoryAccessKind.Read,
+                typeDesc = typeDesc,
+                memId = memId,
+                value = label.value,
+                isExclusive = isExclusive
+            )
+        return super.aggregate(label)
     }
 }
