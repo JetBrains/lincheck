@@ -620,13 +620,37 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
         return true
     }
 
-    override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
-        TODO("Not yet implemented")
+    private enum class IncrementKind { Pre, Post }
+
+    private fun fetchAndAdd(iThread: Int, memoryLocationId: Int, delta: Number,
+                            typeDescriptor: String, incKind: IncrementKind): Number {
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor, isExclusive = true)
+        val readLabel = readEvent.label as MemoryAccessLabel
+        // TODO: should we use some sub-type check instead of equality check?
+        check(readLabel.typeDesc == typeDescriptor)
+        val oldValue: Number = readLabel.value as Number
+        val newValue: Number = when (typeDescriptor) {
+            // check `Int` and `Long` types
+            "I" -> (oldValue as Int) + (delta as Int)
+            "J" -> (oldValue as Long) + (delta as Long)
+            // TODO: should we also check for other types?
+            else -> unreachable()
+        }
+        eventStructure.addWriteEvent(iThread, memoryLocationId, newValue, typeDescriptor, isExclusive = true)
+        return when (incKind) {
+            IncrementKind.Pre -> oldValue
+            IncrementKind.Post -> newValue
+        }
     }
 
     override fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
-        TODO("Not yet implemented")
+        return fetchAndAdd(iThread, memoryLocationId, delta, typeDescriptor, IncrementKind.Pre)
     }
+
+    override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
+        return fetchAndAdd(iThread, memoryLocationId, delta, typeDescriptor, IncrementKind.Post)
+    }
+
 }
 
 // auxiliary ghost thread containing root event of the event structure
