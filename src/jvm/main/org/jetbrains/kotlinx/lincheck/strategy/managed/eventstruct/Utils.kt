@@ -31,3 +31,9 @@ fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): Mutable
     }}
 
 infix fun Boolean.implies(other: Boolean): Boolean = !this || other
+
+class UnreachableException: Exception()
+
+fun unreachable(): Nothing {
+    throw UnreachableException()
+}
