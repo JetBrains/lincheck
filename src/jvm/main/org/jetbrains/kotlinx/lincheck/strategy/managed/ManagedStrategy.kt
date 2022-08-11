@@ -940,14 +940,13 @@ class SeqCstMemoryTracker : MemoryTracker() {
 
     override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
         val oldValue = readValue(iThread, memoryLocationId, typeDescriptor)
+        // TODO: make a wrapper class around typeDescriptor and implement this logic there
         return when (typeDescriptor) {
-            "I" -> {
-                writeValue(iThread, memoryLocationId, oldValue as Int + delta as Int, typeDescriptor)
-                oldValue + delta
+            "I" -> (oldValue as Int + delta as Int).also { newValue ->
+                writeValue(iThread, memoryLocationId, newValue, typeDescriptor)
             }
-            "J" -> {
-                writeValue(iThread, memoryLocationId, oldValue as Long + delta as Long, typeDescriptor)
-                oldValue + delta
+            "J" -> (oldValue as Long + delta as Long).also { newValue ->
+                writeValue(iThread, memoryLocationId, newValue, typeDescriptor)
             }
             else -> throw IllegalStateException()
         }
@@ -956,17 +955,18 @@ class SeqCstMemoryTracker : MemoryTracker() {
     override fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
         val oldValue = readValue(iThread, memoryLocationId, typeDescriptor)
         return when (typeDescriptor) {
-            "I" -> {
-                writeValue(iThread, memoryLocationId, oldValue as Int + 1, typeDescriptor)
-                oldValue
+            "I" -> (oldValue as Int).also {
+                writeValue(iThread, memoryLocationId, it + (delta as Int), typeDescriptor)
             }
-            "J" -> {
-                writeValue(iThread, memoryLocationId, oldValue as Long + 1, typeDescriptor)
-                oldValue
+            "J" -> (oldValue as Long).also {
+                writeValue(iThread, memoryLocationId, it + (delta as Long), typeDescriptor)
             }
             else -> throw IllegalStateException()
         }
     }
+
+    fun copy(): SeqCstMemoryTracker =
+        SeqCstMemoryTracker().also { it.values += values }
 }
 
 // TODO: move to appropriate place
