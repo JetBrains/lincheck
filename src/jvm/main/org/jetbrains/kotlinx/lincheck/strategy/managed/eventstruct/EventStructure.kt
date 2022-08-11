@@ -169,6 +169,9 @@ class Execution(threadEvents: Map<Int, List<Event>> = emptyMap()) {
     private val threadsEvents: MutableMap<Int, ArrayList<Event>> =
         threadEvents.map { (threadId, events) -> threadId to ArrayList(events) }.toMap().toMutableMap()
 
+    val threads: Set<Int>
+        get() = threadsEvents.keys
+
     fun addEvent(event: Event) {
         val threadEvents = threadsEvents.getOrPut(event.threadId) { arrayListOf() }
         check(event.parent == threadEvents.lastOrNull())
@@ -250,6 +253,10 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
 abstract class Inconsistency
 
 class InconsistentExecutionException(reason: Inconsistency): Exception(reason.toString())
+
+interface ConsistencyChecker {
+    fun check(execution: Execution): Boolean
+}
 
 interface IncrementalConsistencyChecker {
 
