@@ -40,7 +40,6 @@ class ConcurrentLinkedQueueTest {
     @Test
     fun stressTest() = StressOptions()
         .sequentialSpecification(SequentialQueue::class.java)
-        .requireStateEquivalenceImplCheck(true)
         .check(this::class)
 }
 
