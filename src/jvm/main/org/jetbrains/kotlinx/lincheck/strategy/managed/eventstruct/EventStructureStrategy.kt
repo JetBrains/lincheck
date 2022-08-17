@@ -42,10 +42,12 @@ class EventStructureStrategy(
 
     private val initialThreadId = nThreads
 
+    private val seqCstChecker: SequentialConsistencyChecker = SequentialConsistencyChecker()
+
     private val atomicityChecker: AtomicityChecker = AtomicityChecker()
 
     private val eventStructure: EventStructure =
-        EventStructure(initialThreadId, listOf(atomicityChecker))
+        EventStructure(initialThreadId, listOf(seqCstChecker), listOf(atomicityChecker))
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
@@ -62,10 +64,16 @@ class EventStructureStrategy(
         outer@while (usedInvocations < maxInvocations) {
             inner@while (eventStructure.startNextExploration()) {
                 val result = runInvocation()
+                // check that there were no inconsistencies detected during the run
                 if (result is UnexpectedExceptionInvocationResult &&
                     result.exception is InconsistentExecutionException) {
                     continue@inner
                 }
+                // check that the final execution is consistent
+                if (eventStructure.checkConsistency() != null) {
+                    continue@inner
+                }
+                // TODO: should we count failed inconsistent executions as used invocations?
                 usedInvocations++
                 checkResult(result, shouldCollectTrace = false)?.let { return it }
                 continue@outer
@@ -96,7 +104,7 @@ class EventStructureStrategy(
 
     override fun initializeInvocation() {
         super.initializeInvocation()
-        eventStructure.resetCurrentExecution()
+        eventStructure.initializeExploration()
         // TODO: fix monitorTracker
         monitorTracker = SeqCstMonitorTracker(nThreads)
         eventStructure.addThreadStartEvent(initialThreadId)
