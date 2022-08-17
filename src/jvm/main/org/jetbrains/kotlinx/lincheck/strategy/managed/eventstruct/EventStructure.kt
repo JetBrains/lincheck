@@ -197,6 +197,24 @@ class Execution(threadEvents: Map<Int, List<Event>> = emptyMap()) {
     operator fun contains(event: Event): Boolean =
         threadsEvents[event.threadId]?.let { events -> events.binarySearch(event) >= 0 } ?: false
 
+    // TODO: do not use it, not ready yet!
+    fun aggregated(): Execution = Execution(
+        // TODO: most likely, we should also compute remapping of events ---
+        //   a function from an old atomic event to new compound event
+        threadsEvents.mapValues { (_, events) -> events.squash { event1, event2 ->
+            event1.label.aggregate(event2.label)?.let { label ->
+                Event.create(
+                    label = label,
+                    parent = event1.parent,
+                    // TODO: we should remap dependencies to their new compound counterparts at the end
+                    dependencies = event1.dependencies + event2.dependencies,
+                    // TODO: think again what frontier to pick
+                    ExecutionFrontier(),
+                )
+            }
+        }}
+    )
+
 }
 
 /**
@@ -463,12 +481,18 @@ class EventStructure(
             event.label.isTotal -> currentExecutionEvents.filterNot { causalityOrder.lessThan(it, event) }
             else -> currentExecutionEvents
         }
-        return when (event.label.syncKind) {
-            SynchronizationKind.Binary ->
-                addBinarySynchronizedEvents(event, candidateEvents)
-            SynchronizationKind.Barrier ->
-                addBarrierSynchronizedEvents(event, candidateEvents)?.let { listOf(it) } ?: emptyList()
+        val syncEvents = arrayListOf<Event>()
+        if (event.label.isBinarySynchronizing) {
+            addBinarySynchronizedEvents(event, candidateEvents).let {
+                syncEvents.addAll(it)
+            }
         }
+        if (event.label.isBarrierSynchronizing) {
+            addBarrierSynchronizedEvents(event, candidateEvents)?.let {
+                syncEvents.add(it)
+            }
+        }
+        return syncEvents
     }
 
     private fun addBinarySynchronizedEvents(event: Event, candidateEvents: List<Event>): List<Event> {
@@ -491,7 +515,7 @@ class EventStructure(
                 else (lab to deps)
             }
         return when {
-            syncLab.isCompetedResponse -> addEvent(syncLab, dependencies)
+            syncLab.isCompleted -> addEvent(syncLab, dependencies)
             else -> null
         }
     }
@@ -621,7 +645,8 @@ class EventStructure(
         // then there is no need to add initialization write
         events.find {
             (it.threadId == GHOST_THREAD_ID || it.threadId == initialThreadId)
-                && it.label.isMemoryAccessTo(memoryLocationId)
+                && it.label is MemoryAccessLabel
+                && it.label.memId == memoryLocationId
         }?.let { return }
         addWriteEvent(GHOST_THREAD_ID, memoryLocationId, defaultValueByDescriptor(typeDescriptor), typeDescriptor)
     }
