@@ -30,6 +30,25 @@ fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): Mutable
         update(key, default = value) { reduce(it, value) }
     }}
 
+fun <T> List<T>.squash(combine: (T, T) -> T?): List<T> {
+    if (isEmpty()) return emptyList()
+    val squashed = arrayListOf<T>()
+    var accumulator = first()
+    var position = 1
+    for (i in 1 until size) {
+        val element = get(i)
+        val combined = combine(accumulator, element)
+        if (combined == null) {
+            squashed.add(accumulator)
+            accumulator = element
+            continue
+        }
+        accumulator = combined
+    }
+    squashed.add(accumulator)
+    return squashed
+}
+
 infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 class UnreachableException: Exception()
