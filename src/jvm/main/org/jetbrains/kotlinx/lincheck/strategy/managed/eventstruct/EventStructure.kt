@@ -152,6 +152,10 @@ val causalityOrder: PartialOrder<Event> = PartialOrder.ofLessOrEqual { x, y ->
     y.causalityClock.observes(x.threadId, x)
 }
 
+val causalityCovering: Covering<Event> = Covering { y ->
+    y.dependencies + (y.parent?.let { listOf(it) } ?: listOf())
+}
+
 fun emptyClock() = VectorClock<Int, Event>(programOrder)
 
 /**
@@ -255,7 +259,7 @@ abstract class Inconsistency
 class InconsistentExecutionException(reason: Inconsistency): Exception(reason.toString())
 
 interface ConsistencyChecker {
-    fun check(execution: Execution): Boolean
+    fun check(execution: Execution): Inconsistency?
 }
 
 interface IncrementalConsistencyChecker {
@@ -264,7 +268,7 @@ interface IncrementalConsistencyChecker {
      * Checks whether adding the given [event] to the current execution retains execution's consistency.
      *
      * @return `null` if execution remains consistent,
-     *   otherwise returns non-null [Inconsitency] object
+     *   otherwise returns non-null [Inconsistency] object
      *   representing the reason of inconsistency.
      */
     fun check(event: Event): Inconsistency?
@@ -274,7 +278,7 @@ interface IncrementalConsistencyChecker {
      * with [event] being the next event to start exploration from.
      *
      * @return `null` if the given execution is consistent,
-     *   otherwise returns non-null [Inconsitency] object
+     *   otherwise returns non-null [Inconsistency] object
      *   representing the reason of inconsistency.
      *
      * TODO: split resetting and consistency checking logic!
@@ -284,6 +288,7 @@ interface IncrementalConsistencyChecker {
 
 class EventStructure(
     val initialThreadId: Int,
+    val checkers: List<ConsistencyChecker> = listOf(),
     val incrementalCheckers: List<IncrementalConsistencyChecker> = listOf()
 ) {
 
@@ -322,18 +327,14 @@ class EventStructure(
 
     fun startNextExploration(): Boolean {
         loop@while (true) {
-            val event = rollbackToEvent { !it.visited } ?: return false
-            event.visit()
-            currentExecution = event.frontier.toExecution()
-            for (checker in incrementalCheckers) {
-                if (checker.reset(event, currentExecution) != null)
-                    continue@loop
-            }
+            val event = rollbackToEvent { !it.visited }?.apply { visit() } ?: return false
+            if (resetExecution(event) != null)
+                continue@loop
             return true
         }
     }
 
-    fun resetCurrentExecution() {
+    fun initializeExploration() {
         currentFrontier = ExecutionFrontier()
         currentFrontier[GHOST_THREAD_ID] = root
     }
@@ -344,6 +345,24 @@ class EventStructure(
         // TODO: make a function to search for event in the execution-order sorted list
         threadRoots.entries.retainAll { (_, event) -> events.binarySearch(event) >= 0 }
         return events.lastOrNull()
+    }
+
+    private fun resetExecution(event: Event): Inconsistency? {
+        currentExecution = event.frontier.toExecution()
+        for (checker in checkers) {
+            checker.check(currentExecution)?.let { return it }
+        }
+        for (checker in incrementalCheckers) {
+            checker.reset(event, currentExecution)?.let { return it }
+        }
+        return null
+    }
+
+    fun checkConsistency(): Inconsistency? {
+        for (checker in checkers) {
+            checker.check(currentExecution)?.let { return it }
+        }
+        return null
     }
 
     fun getThreadRoot(iThread: Int): Event? =

@@ -20,18 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct
 
-fun interface Relation<T> {
-    operator fun invoke(x: T, y: T): Boolean
-
-    infix fun or(relation: Relation<T>) = Relation<T> { x, y ->
-        this(x, y) || relation(x, y)
-    }
-
-    infix fun and(relation: Relation<T>) = Relation<T> { x, y ->
-        this(x, y) && relation(x, y)
-    }
-}
-
-fun interface Covering<T> {
-    operator fun invoke(x: T): List<T>
+fun interface AdjacencyList<T, L> {
+    operator fun invoke(x: T): List<Pair<L, T>>
 }
