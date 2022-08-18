@@ -104,18 +104,6 @@ class Event private constructor(
         }
     }
 
-    override fun equals(other: Any?): Boolean {
-        return (other is Event) && (id == other.id)
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
-    }
-
-    override fun compareTo(other: Event): Int {
-        return id.compareTo(other.id)
-    }
-
     fun getReadsFrom(): Event {
         require(label is MemoryAccessLabel && label.isRead && (label.isResponse || label.isTotal))
         require(dependencies.isNotEmpty())
@@ -152,6 +140,21 @@ class Event private constructor(
             )
         }
 
+    override fun equals(other: Any?): Boolean {
+        return (other is Event) && (id == other.id)
+    }
+
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
+
+    override fun compareTo(other: Event): Int {
+        return id.compareTo(other.id)
+    }
+
+    override fun toString(): String {
+        return "#${id}: $label"
+    }
 }
 
 val programOrder: PartialOrder<Event> = PartialOrder.ofLessThan { x, y ->

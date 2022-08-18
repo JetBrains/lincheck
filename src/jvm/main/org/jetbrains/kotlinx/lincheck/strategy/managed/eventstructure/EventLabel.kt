@@ -115,9 +115,13 @@ data class EmptyLabel(
     syncKind = SynchronizationKind.Binary,
     isCompleted = true
 ) {
+
     override fun synchronize(label: EventLabel) = label
 
     override fun aggregate(label: EventLabel) = label
+
+    override fun toString(): String = "Empty"
+
 }
 
 abstract class ThreadEventLabel(
@@ -144,6 +148,10 @@ data class ThreadForkLabel(
             )
         return super.synchronize(label)
     }
+
+    override fun toString(): String =
+        "ThreadFork(${forkThreadIds})"
+
 }
 
 data class ThreadStartLabel(
@@ -168,6 +176,10 @@ data class ThreadStartLabel(
             return ThreadStartLabel(threadId, LabelKind.Total)
         return super.aggregate(label)
     }
+
+    override fun toString(): String =
+        "ThreadStart"
+
 }
 
 data class ThreadFinishLabel(
@@ -199,6 +211,10 @@ data class ThreadFinishLabel(
             )
         return super.synchronize(label)
     }
+
+    override fun toString(): String =
+        "ThreadFinish"
+
 }
 
 data class ThreadJoinLabel(
@@ -225,6 +241,9 @@ data class ThreadJoinLabel(
             return ThreadJoinLabel(threadId, LabelKind.Total, setOf())
         return super.aggregate(label)
     }
+
+    override fun toString(): String =
+        "ThreadJoin(${joinThreadIds})"
 }
 
 enum class MemoryAccessKind { Read, Write }
@@ -295,6 +314,17 @@ data class MemoryAccessLabel(
             return ReadModifyWriteMemoryAccessLabel(this, label)
         return super.aggregate(label)
     }
+
+    override fun toString(): String {
+        val kindString = when (kind) {
+            LabelKind.Request -> "^req"
+            LabelKind.Response -> "^rsp"
+            LabelKind.Total -> ""
+        }
+        val exclString = if (isExclusive) "_ex" else ""
+        return "${accessKind}${kindString}${exclString}(${memId}, ${value})"
+    }
+
 }
 
 // TODO: rename?
@@ -354,5 +384,8 @@ data class ReadModifyWriteMemoryAccessLabel(
     override fun aggregate(label: EventLabel): EventLabel? {
         return super.aggregate(label)
     }
+
+    override fun toString(): String =
+        "Update(${memId}, ${readValue}, ${writeValue})"
 
 }
