@@ -25,240 +25,328 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.util.concurrent.atomic.*
+
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.experimental.runners.Enclosed
 
-class ReadWriteRegister {
 
-    private var register : Int = 0
-
-    fun write(value: Int) {
-        register = value
-    }
-
-    fun read(): Int {
-        return register
-    }
-
-}
-
-class AtomicReadWriteRegister {
-
-    private val register = AtomicInteger()
-
-    fun write(value: Int) {
-        register.set(value)
-    }
-
-    fun read(): Int {
-        return register.get()
-    }
-
-    fun compareAndSet(expected: Int, desired: Int): Boolean {
-        return register.compareAndSet(expected, desired)
-    }
-
-    fun addAndGet(delta: Int): Int {
-        return register.addAndGet(delta)
-    }
-
-    fun getAndAdd(delta: Int): Int {
-        return register.getAndAdd(delta)
-    }
-}
-
+// TODO: looks like junit5 has better support for nested test classes
+@RunWith(Enclosed::class)
 class EventStructureStrategyTest {
 
-    private val read = ReadWriteRegister::read
-    private val write = ReadWriteRegister::write
+    class RegisterTest {
 
-    private val atomicRead = AtomicReadWriteRegister::read
-    private val atomicWrite = AtomicReadWriteRegister::write
+        class Register {
 
-    private val compareAndSet = AtomicReadWriteRegister::compareAndSet
+            private var register : Int = 0
 
-    private val addAndGet = AtomicReadWriteRegister::addAndGet
-    private val getAndAdd = AtomicReadWriteRegister::getAndAdd
+            fun write(value: Int) {
+                register = value
+            }
 
-    private fun getReadValue(result: Result): Int =
-        (result as ValueResult).value as Int
+            fun read(): Int {
+                return register
+            }
 
-    private fun getCASResult(result: Result): Boolean =
-        (result as ValueResult).value as Boolean
+        }
 
-    private fun getFAIResult(result: Result): Int =
-        (result as ValueResult).value as Int
+        private val read = Register::read
+        private val write = Register::write
 
-    @Test
-    fun testWRW() {
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(write, 1)
+        @Test
+        fun testWRW() {
+            val testScenario = scenario {
+                parallel {
+                    thread {
+                        actor(write, 1)
+                    }
+                    thread {
+                        actor(read)
+                    }
+                    thread {
+                        actor(write, 2)
+                    }
                 }
-                thread {
+            }
+
+            val expectedReadResults = setOf(0, 1, 2)
+            val readResults: MutableSet<Int> = mutableSetOf()
+            val verifier = createVerifier(testScenario) { results ->
+                val readResult = getReadValue(results.parallelResults[1][0])
+                readResults.add(readResult)
+                readResult in expectedReadResults
+            }
+
+            val strategy = createStrategy(Register::class.java, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
+            assert(readResults == expectedReadResults)
+        }
+
+    }
+
+    class AtomicRegisterTest {
+
+        class AtomicRegister {
+
+            private val register = AtomicInteger()
+
+            fun write(value: Int) {
+                register.set(value)
+            }
+
+            fun read(): Int {
+                return register.get()
+            }
+
+            fun compareAndSet(expected: Int, desired: Int): Boolean {
+                return register.compareAndSet(expected, desired)
+            }
+
+            fun addAndGet(delta: Int): Int {
+                return register.addAndGet(delta)
+            }
+
+            fun getAndAdd(delta: Int): Int {
+                return register.getAndAdd(delta)
+            }
+
+        }
+
+        private val read = AtomicRegister::read
+        private val write = AtomicRegister::write
+        private val compareAndSet = AtomicRegister::compareAndSet
+        private val addAndGet = AtomicRegister::addAndGet
+        private val getAndAdd = AtomicRegister::getAndAdd
+
+        @Test
+        fun testAtomicWRW() {
+            val testScenario = scenario {
+                parallel {
+                    thread {
+                        actor(write, 1)
+                    }
+                    thread {
+                        actor(read)
+                    }
+                    thread {
+                        actor(write, 2)
+                    }
+                }
+            }
+
+            val expectedReadResults = setOf(0, 1, 2)
+            val readResults: MutableSet<Int> = mutableSetOf()
+            val verifier = createVerifier(testScenario) { results ->
+                val readResult = getReadValue(results.parallelResults[1][0])
+                readResults.add(readResult)
+                readResult in expectedReadResults
+            }
+
+            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
+            assert(readResults == expectedReadResults)
+        }
+
+        @Test
+        fun testAtomicCAS() {
+            val testScenario = scenario {
+                parallel {
+                    thread {
+                        actor(compareAndSet, 0, 1)
+                    }
+                    thread {
+                        actor(compareAndSet, 0, 1)
+                    }
+                }
+                post {
                     actor(read)
                 }
-                thread {
-                    actor(write, 2)
+            }
+
+            val verifier = createVerifier(testScenario) { results ->
+                var succeededCAS = 0
+                if (getCASResult(results.parallelResults[0][0])) succeededCAS++
+                if (getCASResult(results.parallelResults[1][0])) succeededCAS++
+                val readResult = getReadValue(results.postResults[0])
+                (succeededCAS == 1) && (readResult == 1)
+            }
+
+            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
+        }
+
+        @Test
+        fun testAtomicFAI() {
+            val testScenario = scenario {
+                parallel {
+                    thread {
+                        actor(getAndAdd, 1)
+                    }
+                    thread {
+                        actor(getAndAdd, 1)
+                    }
+                }
+                post {
+                    actor(read)
                 }
             }
+
+            val verifier = createVerifier(testScenario) { results ->
+                val r1 = getFAIResult(results.parallelResults[0][0])
+                val r2 = getFAIResult(results.parallelResults[1][0])
+                val r3 = getReadValue(results.postResults[0])
+                ((r1 == 0 && r2 == 1) || (r1 == 1 && r2 == 0)) && (r3 == 2)
+            }
+
+            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
         }
 
-        val expectedReadResults = setOf(0, 1, 2)
-        val readResults: MutableSet<Int> = mutableSetOf()
-        val verifier = createVerifier(testScenario) { results ->
-            val readResult = getReadValue(results.parallelResults[1][0])
-            readResults.add(readResult)
-            readResult in expectedReadResults
+        @Test
+        fun testAtomicIAF() {
+            val testScenario = scenario {
+                parallel {
+                    thread {
+                        actor(addAndGet, 1)
+                    }
+                    thread {
+                        actor(addAndGet, 1)
+                    }
+                }
+                post {
+                    actor(read)
+                }
+            }
+
+            val verifier = createVerifier(testScenario) { results ->
+                val r1 = getFAIResult(results.parallelResults[0][0])
+                val r2 = getFAIResult(results.parallelResults[1][0])
+                val r3 = getReadValue(results.postResults[0])
+                ((r1 == 1 && r2 == 2) || (r1 == 2 && r2 == 1)) && (r3 == 2)
+            }
+
+            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
         }
 
-        val strategy = createStrategy(ReadWriteRegister::class.java, testScenario, verifier)
-        val failure = strategy.run()
-        assert(failure == null) { failure.toString() }
-        assert(readResults == expectedReadResults)
     }
 
-    @Test
-    fun testAtomicWRW() {
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(atomicWrite, 1)
-                }
-                thread {
-                    actor(atomicRead)
-                }
-                thread {
-                    actor(atomicWrite, 2)
+    class SharedMemoryTest {
+
+        class SharedMemory {
+
+            private val memory: Array<AtomicInteger> = Array(3) { AtomicInteger() }
+
+            fun write(location: Int, value: Int) {
+                require(location in memory.indices)
+                memory[location].set(value)
+            }
+
+            fun read(location: Int): Int {
+                require(location in memory.indices)
+                return memory[location].get()
+            }
+
+            fun compareAndSet(location: Int, expected: Int, desired: Int): Boolean {
+                require(location in memory.indices)
+                return memory[location].compareAndSet(expected, desired)
+            }
+
+            fun addAndGet(location: Int, delta: Int): Int {
+                require(location in memory.indices)
+                return memory[location].addAndGet(delta)
+            }
+
+            fun getAndAdd(location: Int, delta: Int): Int {
+                require(location in memory.indices)
+                return memory[location].getAndAdd(delta)
+            }
+
+        }
+
+        val x = 0
+        val y = 1
+        val z = 2
+
+        private val read = SharedMemory::read
+        private val write = SharedMemory::write
+        private val compareAndSet = SharedMemory::compareAndSet
+        private val addAndGet = SharedMemory::addAndGet
+        private val getAndAdd = SharedMemory::getAndAdd
+
+        @Test
+        fun testAtomicSB() {
+            val testScenario = scenario {
+                parallel {
+                    thread {
+                        actor(write, x, 1)
+                        actor(read, y)
+                    }
+                    thread {
+                        actor(write, y, 1)
+                        actor(read, x)
+                    }
                 }
             }
+
+            val verifier = createVerifier(testScenario) { results ->
+                val r1 = getReadValue(results.parallelResults[0][1])
+                val r2 = getReadValue(results.parallelResults[1][1])
+                (r1 to r2) in listOf(
+                    (0 to 1),
+                    (1 to 0),
+                    (1 to 1)
+                )
+            }
+
+            val strategy = createStrategy(SharedMemory::class.java, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
         }
 
-        val expectedReadResults = setOf(0, 1, 2)
-        val readResults: MutableSet<Int> = mutableSetOf()
-        val verifier = createVerifier(testScenario) { results ->
-            val readResult = getReadValue(results.parallelResults[1][0])
-            readResults.add(readResult)
-            readResult in expectedReadResults
-        }
-
-        val strategy = createStrategy(ReadWriteRegister::class.java, testScenario, verifier)
-        val failure = strategy.run()
-        assert(failure == null) { failure.toString() }
-        assert(readResults == expectedReadResults)
     }
-
-    @Test
-    fun testAtomicCAS() {
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(compareAndSet, 0, 1)
-                }
-                thread {
-                    actor(compareAndSet, 0, 1)
-                }
-            }
-            post {
-                actor(atomicRead)
-            }
-        }
-
-        val verifier = createVerifier(testScenario) { results ->
-            var succeededCAS = 0
-            if (getCASResult(results.parallelResults[0][0])) succeededCAS++
-            if (getCASResult(results.parallelResults[1][0])) succeededCAS++
-             val readResult = getReadValue(results.postResults[0])
-            (succeededCAS == 1) && (readResult == 1)
-        }
-
-        val strategy = createStrategy(AtomicReadWriteRegister::class.java, testScenario, verifier)
-        val failure = strategy.run()
-        assert(failure == null) { failure.toString() }
-    }
-
-    @Test
-    fun testAtomicFAI() {
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(getAndAdd, 1)
-                }
-                thread {
-                    actor(getAndAdd, 1)
-                }
-            }
-            post {
-                actor(atomicRead)
-            }
-        }
-
-        val verifier = createVerifier(testScenario) { results ->
-            val r1 = getFAIResult(results.parallelResults[0][0])
-            val r2 = getFAIResult(results.parallelResults[1][0])
-             val r3 = getReadValue(results.postResults[0])
-            ((r1 == 0 && r2 == 1) || (r1 == 1 && r2 == 0)) && (r3 == 2)
-        }
-
-        val strategy = createStrategy(AtomicReadWriteRegister::class.java, testScenario, verifier)
-        val failure = strategy.run()
-        assert(failure == null) { failure.toString() }
-    }
-
-    @Test
-    fun testAtomicIAF() {
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(addAndGet, 1)
-                }
-                thread {
-                    actor(addAndGet, 1)
-                }
-            }
-            post {
-                actor(atomicRead)
-            }
-        }
-
-        val verifier = createVerifier(testScenario) { results ->
-            val r1 = getFAIResult(results.parallelResults[0][0])
-            val r2 = getFAIResult(results.parallelResults[1][0])
-            val r3 = getReadValue(results.postResults[0])
-            ((r1 == 1 && r2 == 2) || (r1 == 2 && r2 == 1)) && (r3 == 2)
-        }
-
-        val strategy = createStrategy(AtomicReadWriteRegister::class.java, testScenario, verifier)
-        val failure = strategy.run()
-        assert(failure == null) { failure.toString() }
-    }
-
-    private fun createConfiguration(testClass: Class<*>) =
-        EventStructureOptions().createTestConfigurations(testClass)
-
-    private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, verifier: Verifier): EventStructureStrategy {
-        return createConfiguration(testClass).createStrategy(
-            testClass = testClass,
-            scenario = scenario,
-            verifier = verifier,
-            validationFunctions = listOf(),
-            stateRepresentationMethod = null,
-        )
-    }
-
-    private fun createVerifier(testScenario: ExecutionScenario?, verify: (ExecutionResult) -> Boolean): Verifier =
-        object : Verifier {
-
-            override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
-                require(testScenario == scenario)
-                require(results != null)
-                return verify(results)
-            }
-
-            override fun checkStateEquivalenceImplementation(): Boolean {
-                return true
-            }
-
-        }
 
 }
+
+private fun getReadValue(result: Result): Int =
+    (result as ValueResult).value as Int
+
+private fun getCASResult(result: Result): Boolean =
+    (result as ValueResult).value as Boolean
+
+private fun getFAIResult(result: Result): Int =
+    (result as ValueResult).value as Int
+
+private fun createConfiguration(testClass: Class<*>) =
+    EventStructureOptions().createTestConfigurations(testClass)
+
+private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, verifier: Verifier): EventStructureStrategy {
+    return createConfiguration(testClass).createStrategy(
+        testClass = testClass,
+        scenario = scenario,
+        verifier = verifier,
+        validationFunctions = listOf(),
+        stateRepresentationMethod = null,
+    )
+}
+
+private fun createVerifier(testScenario: ExecutionScenario?, verify: (ExecutionResult) -> Boolean): Verifier =
+    object : Verifier {
+
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            require(testScenario == scenario)
+            require(results != null)
+            return verify(results)
+        }
+
+        override fun checkStateEquivalenceImplementation(): Boolean {
+            return true
+        }
+
+    }
