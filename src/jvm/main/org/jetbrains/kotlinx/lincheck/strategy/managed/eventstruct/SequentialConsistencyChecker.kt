@@ -39,6 +39,7 @@ private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? 
             copy().takeIf {
                 compareAndSet(label.threadId, label.memId, label.readValue, label.writeValue, label.typeDesc)
             }
+        label is ThreadEventLabel -> this
         else -> unreachable()
     }
 }
@@ -71,6 +72,9 @@ class SequentialConsistencyChecker : ConsistencyChecker {
         fun coverable(event: Event): Boolean =
             covering(event).all { covered(it) }
 
+        fun coverable(events: List<Event>): Boolean =
+            events.all { event -> covering(event).all { covered(it) || it in events } }
+
         val isTerminal: Boolean
             get() = counter.all { (threadId, position) ->
                 position == execution.getThreadSize(threadId)
@@ -80,15 +84,15 @@ class SequentialConsistencyChecker : ConsistencyChecker {
     private val transitions = AdjacencyList<State, EventLabel> { state ->
         state.counter.mapNotNull { (threadId, position) ->
             val (event, aggregated) = state.execution.getAggregatedEvent(threadId, position)
-                ?.takeIf { (_, events) -> events.all { state.coverable(it) } }
+                ?.takeIf { (_, events) -> state.coverable(events) }
                 ?: return@mapNotNull null
             val memoryTracker = state.memoryTracker.replay(event.label)
                 ?: return@mapNotNull null
             event.label to State(
                 execution = state.execution,
                 covering = state.covering,
-                counter = state.counter.toMutableMap().also { counter ->
-                    counter.update(event.threadId, default = 0) { it + aggregated.size }
+                counter = state.counter.toMutableMap().apply {
+                    update(event.threadId, default = 0) { it + aggregated.size }
                 },
                 memoryTracker
             )
@@ -113,7 +117,7 @@ class SequentialConsistencyChecker : ConsistencyChecker {
     }
 
     override fun check(execution: Execution): Inconsistency? {
-        return if (checkByReplaying(execution, causalityCovering))
+        return if (!checkByReplaying(execution, causalityCovering))
             SequentialConsistencyViolation()
             else null
     }
