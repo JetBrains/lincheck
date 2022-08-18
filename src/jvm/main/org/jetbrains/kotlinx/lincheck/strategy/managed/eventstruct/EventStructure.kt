@@ -148,7 +148,7 @@ class Event private constructor(
                 parent = parent,
                 dependencies = dependencies + event.dependencies,
                 // TODO: think again what frontier to pick
-                frontier = ExecutionFrontier(),
+                frontier = event.frontier.copy(),
             )
         }
 
@@ -328,7 +328,7 @@ class EventStructure(
     /**
      * Stores a mapping `ThreadID -> Event` from the thread id
      * to the root event of the thread. It is guaranteed that this root event
-     * has label of type [ThreadLabel] with kind [ThreadLabelKind.ThreadStart].
+     * has label of type [ThreadEventLabel] with kind [ThreadLabelKind.ThreadStart].
      *
      * TODO: use array instead of map?
      */
@@ -528,7 +528,8 @@ class EventStructure(
                 else (lab to deps)
             }
         return when {
-            syncLab.isCompleted -> addEvent(syncLab, dependencies)
+            // TODO: think again whether we need `isResponse` check here
+            syncLab.isResponse && syncLab.isCompleted -> addEvent(syncLab, dependencies)
             else -> null
         }
     }

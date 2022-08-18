@@ -87,20 +87,20 @@ abstract class AtomicEventLabel(
     override val isCompleted: Boolean,
 ): EventLabel(threadId) {
 
-    override val isRequest: Boolean =
-        (kind == LabelKind.Request)
+    override val isRequest: Boolean
+        get() = (kind == LabelKind.Request)
 
-    override val isResponse: Boolean =
-        (kind == LabelKind.Response)
+    override val isResponse: Boolean
+        get() = (kind == LabelKind.Response)
 
-    override val isTotal: Boolean =
-        (kind == LabelKind.Total)
+    override val isTotal: Boolean
+        get() = (kind == LabelKind.Total)
 
-    override val isBinarySynchronizing: Boolean =
-        (syncKind == SynchronizationKind.Binary)
+    override val isBinarySynchronizing: Boolean
+        get() = (syncKind == SynchronizationKind.Binary)
 
-    override val isBarrierSynchronizing: Boolean =
-        (syncKind == SynchronizationKind.Barrier)
+    override val isBarrierSynchronizing: Boolean
+        get() = (syncKind == SynchronizationKind.Barrier)
 
 }
 
@@ -120,7 +120,7 @@ data class EmptyLabel(
     override fun aggregate(label: EventLabel) = label
 }
 
-abstract class ThreadLabel(
+abstract class ThreadEventLabel(
     threadId: Int,
     kind: LabelKind,
     syncKind: SynchronizationKind,
@@ -130,7 +130,7 @@ abstract class ThreadLabel(
 data class ThreadForkLabel(
     override val threadId: Int,
     val forkThreadIds: Set<Int>,
-): ThreadLabel(
+): ThreadEventLabel(
     threadId = threadId,
     kind = LabelKind.Total,
     syncKind = SynchronizationKind.Binary,
@@ -149,7 +149,7 @@ data class ThreadForkLabel(
 data class ThreadStartLabel(
     override val threadId: Int,
     override val kind: LabelKind
-): ThreadLabel(
+): ThreadEventLabel(
     threadId = threadId,
     kind = kind,
     syncKind = SynchronizationKind.Binary,
@@ -173,7 +173,7 @@ data class ThreadStartLabel(
 data class ThreadFinishLabel(
     override val threadId: Int,
     val finishedThreadIds: Set<Int> = setOf(threadId)
-): ThreadLabel(
+): ThreadEventLabel(
     threadId = threadId,
     kind = LabelKind.Total,
     syncKind = SynchronizationKind.Barrier,
@@ -205,7 +205,7 @@ data class ThreadJoinLabel(
     override val threadId: Int,
     override val kind: LabelKind,
     val joinThreadIds: Set<Int>,
-): ThreadLabel(
+): ThreadEventLabel(
     threadId = threadId,
     kind = kind,
     syncKind = SynchronizationKind.Barrier,
@@ -303,23 +303,23 @@ abstract class CompoundEventLabel(
     val labels: List<AtomicEventLabel>,
 ) : EventLabel(threadId) {
 
-    override val isRequest: Boolean =
-        labels.any { it.isRequest }
+    override val isRequest: Boolean
+        get() = labels.any { it.isRequest }
 
-    override val isResponse: Boolean =
-        labels.any { it.isResponse }
+    override val isResponse: Boolean
+        get() = labels.any { it.isResponse }
 
-    override val isTotal: Boolean =
-        labels.any { it.isTotal }
+    override val isTotal: Boolean
+        get() = labels.any { it.isTotal }
 
-    override val isCompleted: Boolean =
-        labels.all { it.isCompleted }
+    override val isCompleted: Boolean
+        get() = labels.all { it.isCompleted }
 
-    override val isBinarySynchronizing: Boolean =
-        labels.any { it.isBinarySynchronizing }
+    override val isBinarySynchronizing: Boolean
+        get() = labels.any { it.isBinarySynchronizing }
 
-    override val isBarrierSynchronizing: Boolean =
-        labels.any { it.isBinarySynchronizing }
+    override val isBarrierSynchronizing: Boolean
+        get() = labels.any { it.isBinarySynchronizing }
 
 }
 

@@ -55,8 +55,7 @@ class PartialOrder<T>(val lessOrEqual: Relation<T>, val lessThan: Relation<T>) {
     }
 
     val nullOrLessOrEqual = Relation<T?> { x, y ->
-        if (x == null) y == null
-        else lessOrEqual(x, y ?: return@Relation false)
+        (x == null) || lessOrEqual(x, y ?: return@Relation false)
     }
 
     fun lessOrEqualWithDefault(x: T?, y: T?, default: T) =
