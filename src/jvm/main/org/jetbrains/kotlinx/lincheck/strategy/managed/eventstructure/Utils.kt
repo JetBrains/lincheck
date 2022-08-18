@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct
+package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
     // TODO: could it be done with a single lookup in a map?
