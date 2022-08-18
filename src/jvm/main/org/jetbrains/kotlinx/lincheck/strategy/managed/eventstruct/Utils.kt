@@ -30,22 +30,24 @@ fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): Mutable
         update(key, default = value) { reduce(it, value) }
     }}
 
+fun <T> List<T>.getSquashed(position: Int, combine: (T, T) -> T?): Pair<T, Int>? {
+    var i = position
+    var accumulator = getOrNull(position) ?: return null
+    while (++i < size) {
+        accumulator = combine(accumulator, get(i)) ?: break
+    }
+    return accumulator to i
+}
+
 fun <T> List<T>.squash(combine: (T, T) -> T?): List<T> {
     if (isEmpty()) return emptyList()
     val squashed = arrayListOf<T>()
-    var accumulator = first()
-    var position = 1
-    for (i in 1 until size) {
-        val element = get(i)
-        val combined = combine(accumulator, element)
-        if (combined == null) {
-            squashed.add(accumulator)
-            accumulator = element
-            continue
-        }
-        accumulator = combined
+    var position = 0
+    while (position < size) {
+        val (element, nextPosition) = getSquashed(position, combine)!!
+        squashed.add(element)
+        position = nextPosition
     }
-    squashed.add(accumulator)
     return squashed
 }
 

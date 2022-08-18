@@ -140,6 +140,18 @@ class Event private constructor(
             )
         }
     }
+
+    fun aggregate(event: Event): Event? =
+        label.aggregate(event.label)?.let { label ->
+            create(
+                label = label,
+                parent = parent,
+                dependencies = dependencies + event.dependencies,
+                // TODO: think again what frontier to pick
+                frontier = ExecutionFrontier(),
+            )
+        }
+
 }
 
 val programOrder: PartialOrder<Event> = PartialOrder.ofLessThan { x, y ->
@@ -197,22 +209,23 @@ class Execution(threadEvents: Map<Int, List<Event>> = emptyMap()) {
     operator fun contains(event: Event): Boolean =
         threadsEvents[event.threadId]?.let { events -> events.binarySearch(event) >= 0 } ?: false
 
+    fun getAggregatedEvent(iThread: Int, position: Int): Pair<Event, List<Event>>? {
+        val threadEvents = threadsEvents[iThread] ?: return null
+        val (event, nextPosition) = threadEvents.getSquashed(position, Event::aggregate) ?: return null
+        return event to threadEvents.subList(position, nextPosition)
+    }
+
     // TODO: do not use it, not ready yet!
     fun aggregated(): Execution = Execution(
         // TODO: most likely, we should also compute remapping of events ---
         //   a function from an old atomic event to new compound event
-        threadsEvents.mapValues { (_, events) -> events.squash { event1, event2 ->
-            event1.label.aggregate(event2.label)?.let { label ->
-                Event.create(
-                    label = label,
-                    parent = event1.parent,
-                    // TODO: we should remap dependencies to their new compound counterparts at the end
-                    dependencies = event1.dependencies + event2.dependencies,
-                    // TODO: think again what frontier to pick
-                    ExecutionFrontier(),
-                )
-            }
-        }}
+        threadsEvents.mapValues { (_, events) ->
+            // TODO: usage of `squash` function here most likely
+            //   violates an invariant that events are sorted in the list
+            //   according to the order of their IDs.
+            events.squash(Event::aggregate)
+            // TODO: we should remap dependencies to their new compound counterparts at the end
+        }
     )
 
 }
@@ -259,7 +272,7 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
         ExecutionFrontier(frontier)
 
     fun toExecution(): Execution {
-        return Execution(frontier.map {(threadId, lastEvent) ->
+        return Execution(frontier.map { (threadId, lastEvent) ->
             var event: Event? = lastEvent
             val events = arrayListOf<Event>()
             while (event != null) {

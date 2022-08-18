@@ -77,6 +77,9 @@ abstract class EventLabel(
 
 }
 
+// TODO: use of word `Atomic` here is perhaps misleading?
+//   Maybe rename it to `SingletonEventLabel` or something similar?
+//   At least document the meaning of `Atomic` here.
 abstract class AtomicEventLabel(
     threadId: Int,
     open val kind: LabelKind,
@@ -320,6 +323,8 @@ abstract class CompoundEventLabel(
 
 }
 
+// TODO: MemoryAccessLabel and ReadModifyWriteMemoryAccessLabel likely
+//   should have common ancestor in the hierarchy?
 data class ReadModifyWriteMemoryAccessLabel(
     val readLabel: MemoryAccessLabel,
     val writeLabel: MemoryAccessLabel,
@@ -333,6 +338,14 @@ data class ReadModifyWriteMemoryAccessLabel(
         // TODO: also check types
         require(readLabel.isTotal && writeLabel.isTotal)
     }
+
+    val typeDesc: String = readLabel.typeDesc
+
+    val memId: Int = readLabel.memId
+
+    val readValue: Any? = readLabel.value
+
+    val writeValue: Any? = writeLabel.value
 
     override fun synchronize(label: EventLabel): EventLabel? {
         return if (label is EmptyLabel) this else writeLabel.synchronize(label)
