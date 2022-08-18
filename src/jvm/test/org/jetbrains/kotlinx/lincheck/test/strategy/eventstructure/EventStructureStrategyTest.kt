@@ -22,8 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstruct.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.util.concurrent.atomic.*
 import org.junit.Test
@@ -169,8 +168,8 @@ class EventStructureStrategyTest {
             var succeededCAS = 0
             if (getCASResult(results.parallelResults[0][0])) succeededCAS++
             if (getCASResult(results.parallelResults[1][0])) succeededCAS++
-            // val readResult = getReadValue(results.postResults[0])
-            (succeededCAS == 1) // && (readResult == 1)
+             val readResult = getReadValue(results.postResults[0])
+            (succeededCAS == 1) && (readResult == 1)
         }
 
         val strategy = createStrategy(AtomicReadWriteRegister::class.java, testScenario, verifier)
@@ -197,8 +196,8 @@ class EventStructureStrategyTest {
         val verifier = createVerifier(testScenario) { results ->
             val r1 = getFAIResult(results.parallelResults[0][0])
             val r2 = getFAIResult(results.parallelResults[1][0])
-            // val r3 = getReadValue(results.postResults[0])
-            ((r1 == 0 && r2 == 1) || (r1 == 1 && r2 == 0)) // && (r3 == 2)
+             val r3 = getReadValue(results.postResults[0])
+            ((r1 == 0 && r2 == 1) || (r1 == 1 && r2 == 0)) && (r3 == 2)
         }
 
         val strategy = createStrategy(AtomicReadWriteRegister::class.java, testScenario, verifier)
@@ -225,8 +224,8 @@ class EventStructureStrategyTest {
         val verifier = createVerifier(testScenario) { results ->
             val r1 = getFAIResult(results.parallelResults[0][0])
             val r2 = getFAIResult(results.parallelResults[1][0])
-            // val r3 = getReadValue(results.postResults[0])
-            ((r1 == 1 && r2 == 2) || (r1 == 2 && r2 == 1)) // && (r3 == 2)
+            val r3 = getReadValue(results.postResults[0])
+            ((r1 == 1 && r2 == 2) || (r1 == 2 && r2 == 1)) && (r3 == 2)
         }
 
         val strategy = createStrategy(AtomicReadWriteRegister::class.java, testScenario, verifier)
