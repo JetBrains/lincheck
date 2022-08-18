@@ -25,14 +25,20 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.SeqCstMemoryTracker
 private typealias ExecutionCounter = MutableMap<Int, Int>
 
 private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? {
+    check(label.isTotal)
     return when {
+        label is MemoryAccessLabel && label.isRead ->
+            this.takeIf {
+                readValue(label.threadId, label.memId, label.typeDesc) == label.value
+            }
         label is MemoryAccessLabel && label.isWrite ->
-            copy().apply { writeValue(label.threadId, label.memId, label.value, label.typeDesc) }
-        label is MemoryAccessLabel && label.isRead && label.isRequest ->
-            this
-        label is MemoryAccessLabel && label.isRead && (label.isResponse || label.isTotal) ->
-            this.takeIf { readValue(label.threadId, label.memId, label.typeDesc) == label.value }
-        // TODO: handle RMWs
+            copy().apply {
+                writeValue(label.threadId, label.memId, label.value, label.typeDesc)
+            }
+        label is ReadModifyWriteMemoryAccessLabel ->
+            copy().takeIf {
+                compareAndSet(label.threadId, label.memId, label.readValue, label.writeValue, label.typeDesc)
+            }
         else -> unreachable()
     }
 }
@@ -73,8 +79,8 @@ class SequentialConsistencyChecker : ConsistencyChecker {
 
     private val transitions = AdjacencyList<State, EventLabel> { state ->
         state.counter.mapNotNull { (threadId, position) ->
-            val event = state.execution[threadId, position]
-                ?.takeIf { state.coverable(it) }
+            val (event, aggregated) = state.execution.getAggregatedEvent(threadId, position)
+                ?.takeIf { (_, events) -> events.all { state.coverable(it) } }
                 ?: return@mapNotNull null
             val memoryTracker = state.memoryTracker.replay(event.label)
                 ?: return@mapNotNull null
@@ -82,7 +88,7 @@ class SequentialConsistencyChecker : ConsistencyChecker {
                 execution = state.execution,
                 covering = state.covering,
                 counter = state.counter.toMutableMap().also { counter ->
-                    counter.update(event.threadId, default = 0) { it + 1 }
+                    counter.update(event.threadId, default = 0) { it + aggregated.size }
                 },
                 memoryTracker
             )
