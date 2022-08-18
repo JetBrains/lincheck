@@ -73,7 +73,7 @@ class EventStructureStrategyTest {
             val expectedReadResults = setOf(0, 1, 2)
             val readResults: MutableSet<Int> = mutableSetOf()
             val verifier = createVerifier(testScenario) { results ->
-                val readResult = getReadValue(results.parallelResults[1][0])
+                val readResult = getReadResult(results.parallelResults[1][0])
                 readResults.add(readResult)
                 readResult in expectedReadResults
             }
@@ -121,7 +121,7 @@ class EventStructureStrategyTest {
         private val getAndAdd = AtomicRegister::getAndAdd
 
         @Test
-        fun testAtomicWRW() {
+        fun testWRW() {
             val testScenario = scenario {
                 parallel {
                     thread {
@@ -139,7 +139,7 @@ class EventStructureStrategyTest {
             val expectedReadResults = setOf(0, 1, 2)
             val readResults: MutableSet<Int> = mutableSetOf()
             val verifier = createVerifier(testScenario) { results ->
-                val readResult = getReadValue(results.parallelResults[1][0])
+                val readResult = getReadResult(results.parallelResults[1][0])
                 readResults.add(readResult)
                 readResult in expectedReadResults
             }
@@ -151,7 +151,7 @@ class EventStructureStrategyTest {
         }
 
         @Test
-        fun testAtomicCAS() {
+        fun testCAS() {
             val testScenario = scenario {
                 parallel {
                     thread {
@@ -170,7 +170,7 @@ class EventStructureStrategyTest {
                 var succeededCAS = 0
                 if (getCASResult(results.parallelResults[0][0])) succeededCAS++
                 if (getCASResult(results.parallelResults[1][0])) succeededCAS++
-                val readResult = getReadValue(results.postResults[0])
+                val readResult = getReadResult(results.postResults[0])
                 (succeededCAS == 1) && (readResult == 1)
             }
 
@@ -180,7 +180,7 @@ class EventStructureStrategyTest {
         }
 
         @Test
-        fun testAtomicFAI() {
+        fun testFAI() {
             val testScenario = scenario {
                 parallel {
                     thread {
@@ -198,7 +198,7 @@ class EventStructureStrategyTest {
             val verifier = createVerifier(testScenario) { results ->
                 val r1 = getFAIResult(results.parallelResults[0][0])
                 val r2 = getFAIResult(results.parallelResults[1][0])
-                val r3 = getReadValue(results.postResults[0])
+                val r3 = getReadResult(results.postResults[0])
                 ((r1 == 0 && r2 == 1) || (r1 == 1 && r2 == 0)) && (r3 == 2)
             }
 
@@ -208,7 +208,7 @@ class EventStructureStrategyTest {
         }
 
         @Test
-        fun testAtomicIAF() {
+        fun testIAF() {
             val testScenario = scenario {
                 parallel {
                     thread {
@@ -226,7 +226,7 @@ class EventStructureStrategyTest {
             val verifier = createVerifier(testScenario) { results ->
                 val r1 = getFAIResult(results.parallelResults[0][0])
                 val r2 = getFAIResult(results.parallelResults[1][0])
-                val r3 = getReadValue(results.postResults[0])
+                val r3 = getReadResult(results.postResults[0])
                 ((r1 == 1 && r2 == 2) || (r1 == 2 && r2 == 1)) && (r3 == 2)
             }
 
@@ -244,35 +244,32 @@ class EventStructureStrategyTest {
             private val memory: Array<AtomicInteger> = Array(3) { AtomicInteger() }
 
             fun write(location: Int, value: Int) {
-                require(location in memory.indices)
                 memory[location].set(value)
             }
 
             fun read(location: Int): Int {
-                require(location in memory.indices)
                 return memory[location].get()
             }
 
             fun compareAndSet(location: Int, expected: Int, desired: Int): Boolean {
-                require(location in memory.indices)
                 return memory[location].compareAndSet(expected, desired)
             }
 
             fun addAndGet(location: Int, delta: Int): Int {
-                require(location in memory.indices)
                 return memory[location].addAndGet(delta)
             }
 
             fun getAndAdd(location: Int, delta: Int): Int {
-                require(location in memory.indices)
                 return memory[location].getAndAdd(delta)
             }
 
         }
 
-        val x = 0
-        val y = 1
-        val z = 2
+        companion object {
+            const val x = 0
+            const val y = 1
+            const val z = 2
+        }
 
         private val read = SharedMemory::read
         private val write = SharedMemory::write
@@ -281,7 +278,7 @@ class EventStructureStrategyTest {
         private val getAndAdd = SharedMemory::getAndAdd
 
         @Test
-        fun testAtomicSB() {
+        fun testSB() {
             val testScenario = scenario {
                 parallel {
                     thread {
@@ -296,8 +293,8 @@ class EventStructureStrategyTest {
             }
 
             val verifier = createVerifier(testScenario) { results ->
-                val r1 = getReadValue(results.parallelResults[0][1])
-                val r2 = getReadValue(results.parallelResults[1][1])
+                val r1 = getReadResult(results.parallelResults[0][1])
+                val r2 = getReadResult(results.parallelResults[1][1])
                 (r1 to r2) in listOf(
                     (0 to 1),
                     (1 to 0),
@@ -314,7 +311,7 @@ class EventStructureStrategyTest {
 
 }
 
-private fun getReadValue(result: Result): Int =
+private fun getReadResult(result: Result): Int =
     (result as ValueResult).value as Int
 
 private fun getCASResult(result: Result): Boolean =
