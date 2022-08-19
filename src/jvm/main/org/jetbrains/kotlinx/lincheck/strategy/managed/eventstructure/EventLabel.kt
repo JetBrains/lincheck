@@ -315,6 +315,19 @@ data class MemoryAccessLabel(
         return super.aggregate(label)
     }
 
+    // TODO: move to common class for type descriptor logic
+    private val valueString: String = when (typeDesc) {
+        // for primitive types just print the value
+        "I", "Z", "B", "C", "S", "J", "D", "F" -> value.toString()
+        // for object types we should not call `toString` because
+        // it itself can be transformed and instrumented to call
+        // `onSharedVariableRead`, `onSharedVariableWrite` or similar methods,
+        // calling those would recursively create new events
+        // TODO: perhaps, there is better workaround for this problem?
+        else -> if (value == null) "null"
+                else value.javaClass.name + '@' + Integer.toHexString(value.hashCode())
+    }
+
     override fun toString(): String {
         val kindString = when (kind) {
             LabelKind.Request -> "^req"
@@ -322,7 +335,7 @@ data class MemoryAccessLabel(
             LabelKind.Total -> ""
         }
         val exclString = if (isExclusive) "_ex" else ""
-        return "${accessKind}${kindString}${exclString}(${memId}, ${value})"
+        return "${accessKind}${kindString}${exclString}(${memId}, ${valueString})"
     }
 
 }
