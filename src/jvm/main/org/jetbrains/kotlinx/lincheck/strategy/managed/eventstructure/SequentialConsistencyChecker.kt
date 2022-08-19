@@ -28,7 +28,7 @@ private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? 
     check(label.isTotal)
     return when {
         label is MemoryAccessLabel && label.isRead ->
-            this.takeIf {
+            copy().takeIf {
                 readValue(label.threadId, label.memId, label.typeDesc) == label.value
             }
         label is MemoryAccessLabel && label.isWrite ->
@@ -56,24 +56,34 @@ class SequentialConsistencyChecker : ConsistencyChecker {
         val memoryTracker: SeqCstMemoryTracker
     ) {
         companion object {
-            fun initial(execution: Execution, covering: Covering<Event>): State =
-                State(
+            fun initial(execution: Execution, covering: Covering<Event>): State {
+                var memoryTracker = SeqCstMemoryTracker()
+                val ghostThread = execution.ghostThread
+                // replay ghost thread which potentially contains some initialization writes
+                for (i in 0 until execution.getThreadSize(ghostThread)) {
+                   memoryTracker = memoryTracker.replay(execution[ghostThread, i]!!.label)!!
+                }
+                return State(
                     execution = execution,
                     covering = covering,
-                    counter = execution.threads.associateWith { 0 }.toMutableMap(),
-                    // TODO: handle initialization writes!
-                    memoryTracker = SeqCstMemoryTracker()
+                    memoryTracker = memoryTracker,
+                    counter = execution.threads.associateWith { 0 }
+                        .toMutableMap()
+                        .apply { set(ghostThread, execution.getThreadSize(ghostThread)) },
                 )
+            }
         }
 
         fun covered(event: Event): Boolean =
             event.threadPosition < (counter[event.threadId] ?: 0)
 
-        fun coverable(event: Event): Boolean =
-            covering(event).all { covered(it) }
-
         fun coverable(events: List<Event>): Boolean =
-            events.all { event -> covering(event).all { covered(it) || it in events } }
+            events.all { event -> covering(event).all {
+                covered(it) || it in events
+            }}
+
+        fun coverable(event: Event): Boolean =
+            coverable(listOf(event))
 
         val isTerminal: Boolean
             get() = counter.all { (threadId, position) ->

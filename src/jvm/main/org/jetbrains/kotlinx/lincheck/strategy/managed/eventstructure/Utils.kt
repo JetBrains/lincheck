@@ -51,6 +51,14 @@ fun <T> List<T>.squash(combine: (T, T) -> T?): List<T> {
     return squashed
 }
 
+fun <T> List<T>.isChain(relation: (T, T) -> Boolean): Boolean {
+    for (i in 0 until size - 1) {
+        if (!relation(get(i), get(i + 1)))
+            return false
+    }
+    return true
+}
+
 infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 class UnreachableException: Exception()

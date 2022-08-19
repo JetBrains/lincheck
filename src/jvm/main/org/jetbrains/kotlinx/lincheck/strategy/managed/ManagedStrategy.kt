@@ -969,7 +969,7 @@ class SeqCstMemoryTracker : MemoryTracker() {
         SeqCstMemoryTracker().also { it.values += values }
 }
 
-// TODO: move to appropriate place
+// TODO: move to common class for type descriptor logic
 fun defaultValueByDescriptor(descriptor: String): Any? = when (descriptor) {
     "I" -> 0
     "Z" -> false
