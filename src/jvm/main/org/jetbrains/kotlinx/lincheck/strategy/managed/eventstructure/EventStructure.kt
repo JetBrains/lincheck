@@ -543,7 +543,7 @@ class EventStructure(
     private fun addRequestEvent(label: EventLabel): Event {
         require(label.isRequest)
         tryReplayEvent(label.threadId)?.let { event ->
-            check(label == event.label)
+            event.label.replay(label).also { check(it) }
             return event
         }
         return addEvent(label, emptyList()).also {
@@ -555,8 +555,12 @@ class EventStructure(
         require(requestEvent.label.isRequest)
         tryReplayEvent(requestEvent.threadId)?.let { event ->
             check(event.label.isResponse)
-            // TODO: check that response label is compatible with request label
-            // check(label == event.label)
+            check(event.parent == requestEvent)
+            val label = event.dependencies.fold (event.parent.label) { label: EventLabel?, dependency ->
+                label?.synchronize(dependency.label)
+            }
+            check(label != null)
+            event.label.replay(label).also { check(it) }
             return event to listOf(event)
         }
         val responseEvents = addSynchronizedEvents(requestEvent)
@@ -571,7 +575,7 @@ class EventStructure(
     private fun addTotalEvent(label: EventLabel): Event {
         require(label.isTotal)
         tryReplayEvent(label.threadId)?.let { event ->
-            check(label == event.label)
+            event.label.replay(label).also { check(it) }
             return event
         }
         return addEvent(label, emptyList()).also {

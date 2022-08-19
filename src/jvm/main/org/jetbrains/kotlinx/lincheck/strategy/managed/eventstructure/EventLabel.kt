@@ -32,6 +32,8 @@ abstract class EventLabel(
     open val threadId: Int = 0,
 ) {
 
+    abstract fun replay(label: EventLabel): Boolean
+
     /**
      * Synchronizes event label with another label passed as a parameter.
      * For example a write label `wlab = W(x, v)` synchronizes with a read-request label `rlab = R^{req}(x)`
@@ -116,6 +118,9 @@ data class EmptyLabel(
     isCompleted = true
 ) {
 
+    override fun replay(label: EventLabel): Boolean =
+        (this == label)
+
     override fun synchronize(label: EventLabel) = label
 
     override fun aggregate(label: EventLabel) = label
@@ -140,6 +145,10 @@ data class ThreadForkLabel(
     syncKind = SynchronizationKind.Binary,
     isCompleted = true,
 ) {
+
+    override fun replay(label: EventLabel): Boolean =
+        (this == label)
+
     override fun synchronize(label: EventLabel): EventLabel? {
         if (label is ThreadStartLabel && label.isRequest && label.threadId in forkThreadIds)
             return ThreadStartLabel(
@@ -163,6 +172,9 @@ data class ThreadStartLabel(
     syncKind = SynchronizationKind.Binary,
     isCompleted = true,
 ) {
+
+    override fun replay(label: EventLabel): Boolean =
+        (this == label)
 
     override fun synchronize(label: EventLabel): EventLabel? {
         if (label is ThreadForkLabel)
@@ -191,6 +203,9 @@ data class ThreadFinishLabel(
     syncKind = SynchronizationKind.Barrier,
     isCompleted = true,
 ) {
+
+    override fun replay(label: EventLabel): Boolean =
+        (this == label)
 
     override fun synchronize(label: EventLabel): EventLabel? {
         // TODO: handle cases of invalid synchronization:
@@ -228,6 +243,9 @@ data class ThreadJoinLabel(
     isCompleted = (kind == LabelKind.Response) implies joinThreadIds.isEmpty()
 ) {
 
+    override fun replay(label: EventLabel): Boolean =
+        (this == label)
+
     override fun synchronize(label: EventLabel): EventLabel? {
         if (label is ThreadFinishLabel)
             return label.synchronize(this)
@@ -254,7 +272,7 @@ data class MemoryAccessLabel(
     val accessKind: MemoryAccessKind,
     val typeDesc: String,
     val memId: Int,
-    val value: Any?,
+    var value: Any?,
     val isExclusive: Boolean = false
 ): AtomicEventLabel(
     threadId = threadId,
@@ -270,6 +288,22 @@ data class MemoryAccessLabel(
     init {
         require((isRead && isRequest) implies (value == null))
         require(isWrite implies isTotal)
+    }
+
+    fun equalUpToValue(label: MemoryAccessLabel): Boolean =
+        (threadId == label.threadId) &&
+        (kind == label.kind) &&
+        (accessKind == label.accessKind) &&
+        (typeDesc == label.typeDesc) &&
+        (memId == label.memId) &&
+        (isExclusive == label.isExclusive)
+
+    override fun replay(label: EventLabel): Boolean {
+        if (label is MemoryAccessLabel && equalUpToValue(label)) {
+            value = label.value
+            return true
+        }
+        return false
     }
 
     override fun synchronize(label: EventLabel): EventLabel? {
@@ -325,7 +359,7 @@ data class MemoryAccessLabel(
         // calling those would recursively create new events
         // TODO: perhaps, there is better workaround for this problem?
         else -> if (value == null) "null"
-                else value.javaClass.name + '@' + Integer.toHexString(value.hashCode())
+                else (value as Any).javaClass.name + '@' + Integer.toHexString(value.hashCode())
     }
 
     override fun toString(): String {
@@ -386,9 +420,22 @@ data class ReadModifyWriteMemoryAccessLabel(
 
     val memId: Int = readLabel.memId
 
-    val readValue: Any? = readLabel.value
+    val readValue: Any?
+        get() = readLabel.value
 
-    val writeValue: Any? = writeLabel.value
+    val writeValue: Any?
+        get() = writeLabel.value
+
+    override fun replay(label: EventLabel): Boolean {
+        if (label is ReadModifyWriteMemoryAccessLabel &&
+            readLabel.equalUpToValue(label.readLabel) &&
+            writeLabel.equalUpToValue(label.writeLabel)) {
+            readLabel.value = label.readValue
+            writeLabel.value = label.writeValue
+            return true
+        }
+        return false
+    }
 
     override fun synchronize(label: EventLabel): EventLabel? {
         return if (label is EmptyLabel) this else writeLabel.synchronize(label)
