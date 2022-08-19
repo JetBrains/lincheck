@@ -176,7 +176,10 @@ fun emptyClock() = VectorClock<Int, Event>(programOrder)
 /**
  * Execution represents a set of events belonging to single program's execution.
  */
-class Execution(threadEvents: Map<Int, List<Event>> = emptyMap()) {
+class Execution(
+    threadEvents: Map<Int, List<Event>> = emptyMap(),
+    val ghostThread: Int = GHOST_THREAD_ID,
+) {
     /**
      * Execution is encoded as a mapping `ThreadID -> List<Event>`
      * from thread id to a list of events belonging to this thread ordered by program-order.
