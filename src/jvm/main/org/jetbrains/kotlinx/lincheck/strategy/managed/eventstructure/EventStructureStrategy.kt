@@ -84,6 +84,12 @@ class EventStructureStrategy(
     }
 
     override fun shouldSwitch(iThread: Int): Boolean {
+        // If strategy is in replay mode for given thread
+        // we should wait until replaying the next event become possible
+        // (i.e. when all the dependencies will be replayed too)
+        if (eventStructure.inReplayMode(iThread)) {
+            return !eventStructure.canReplayNextEvent(iThread)
+        }
         // For event structure strategy enforcing context switches is not necessary,
         // because it is guaranteed that the strategy will explore all
         // executions anyway, no matter of the order of context switches.
@@ -100,6 +106,11 @@ class EventStructureStrategy(
         // see comment in `shouldSwitch` method
         // TODO: make scheduling strategy configurable
         return switchableThreads(iThread).first()
+    }
+
+    override fun isActive(iThread: Int): Boolean {
+        return super.isActive(iThread) &&
+            (eventStructure.inReplayMode(iThread) implies { eventStructure.canReplayNextEvent(iThread) })
     }
 
     override fun initializeInvocation() {

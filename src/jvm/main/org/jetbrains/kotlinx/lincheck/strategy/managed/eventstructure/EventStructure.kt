@@ -457,9 +457,17 @@ class EventStructure(
         currentFrontier.update(event)
     }
 
-    private fun inReplayMode(iThread: Int): Boolean {
+    fun inReplayMode(iThread: Int): Boolean {
         val frontEvent = currentFrontier[iThread]?.also { check(it in currentExecution) }
         return (frontEvent != currentExecution.lastEvent(iThread))
+    }
+
+    fun canReplayNextEvent(iThread: Int): Boolean {
+        val nextEvent = currentExecution[iThread, 1 + currentFrontier.getPosition(iThread)]
+        check(nextEvent != null)
+        return nextEvent.dependencies.all { dependency ->
+            dependency in currentFrontier
+        }
     }
 
     private fun tryReplayEvent(iThread: Int): Event? {
