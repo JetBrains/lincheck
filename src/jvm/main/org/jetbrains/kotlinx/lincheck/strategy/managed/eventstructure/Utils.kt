@@ -61,6 +61,8 @@ fun <T> List<T>.isChain(relation: (T, T) -> Boolean): Boolean {
 
 infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
+infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
+
 class UnreachableException: Exception()
 
 fun unreachable(): Nothing {

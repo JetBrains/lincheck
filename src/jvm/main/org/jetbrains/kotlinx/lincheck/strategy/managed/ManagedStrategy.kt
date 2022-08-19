@@ -353,7 +353,7 @@ abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e. is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
+    protected open fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
         !monitorTracker.isWaiting(iThread) &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
