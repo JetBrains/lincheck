@@ -1,3 +1,6 @@
+import groovy.util.Node
+import groovy.util.NodeList
+import kotlinx.team.infra.mavenPublicationsPom
 import org.gradle.jvm.tasks.Jar
 
 // atomicfu
@@ -14,7 +17,7 @@ plugins {
     kotlin("multiplatform")
     id("maven-publish")
     id("maven")
-    id("kotlinx.team.infra") version "0.2.0-dev-55"
+    id("kotlinx.team.infra") version "0.3.0-dev-64"
 }
 
 repositories {
@@ -81,11 +84,9 @@ sourceSets.test {
 }
 
 tasks {
-    // empty xxx-javadoc.jar
-    register<Jar>("javadocJar") {
-        archiveClassifier.set("javadoc")
+    replace("jvmSourcesJar", Jar::class).run {
+        from(sourceSets["main"].allSource)
     }
-
     withType<Test> {
         maxParallelForks = 1
         jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
@@ -104,63 +105,44 @@ tasks {
     }
 }
 
-publishing {
-    publications.withType<MavenPublication> {
-        // add empty javadoc
-        if (name == "jvm") {
-            artifact(tasks.getByName("javadocJar"))
-        }
-        mavenCentralMetadata()
-    }
-    publications {
-        mavenCentralMetadata()
-    }
-}
-
-fun PublishingExtension.mavenCentralMetadata() {
-    publications.withType(MavenPublication::class) {
-        pom {
-            if (!name.isPresent) {
-                name.set(artifactId)
-            }
-            description.set("Lincheck - Framework for testing concurrent data structures")
-            url.set("https://github.com/Kotlin/kotlinx-lincheck")
-            licenses {
-                license {
-                    name.set("GNU Lesser General Public License v3.0")
-                    url.set("https://www.gnu.org/licenses/lgpl-3.0.en.html")
-                    distribution.set("repo")
-                }
-            }
-            developers {
-                developer {
-                    id.set("JetBrains")
-                    name.set("JetBrains Team")
-                    organization.set("JetBrains")
-                    organizationUrl.set("https://www.jetbrains.com")
-                }
-            }
-            scm {
-                url.set("https://github.com/Kotlin/kotlinx-lincheck")
-            }
-        }
-    }
-}
-
 infra {
     teamcity {
-        bintrayUser = "%env.BINTRAY_USER%"
-        bintrayToken = "%env.BINTRAY_API_KEY%"
+        val name: String by project
+        val version: String by project
+        libraryStagingRepoDescription = "$name $version"
     }
     publishing {
         include(":")
 
-        bintray {
-            organization = "kotlin"
-            repository = "kotlinx"
-            library = "kotlinx.lincheck"
-            username = findProperty("bintrayUser") as String?
-            password = findProperty("bintrayApiKey") as String?
+        libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
+        sonatype {}
+    }
+}
+
+mavenPublicationsPom {
+    description.set("Lincheck - Framework for testing concurrent data structures")
+    val licenceName = "GNU Lesser General Public License v3.0"
+    licenses {
+        license {
+            name.set(licenceName)
+            url.set("https://www.gnu.org/licenses/lgpl-3.0.en.html")
+            distribution.set("repo")
+        }
+    }
+    withXml {
+        removeAllLicencesExceptOne(licenceName)
+    }
+}
+
+// kotlinx.team.infra adds Apache License, Version 2.0, remove it manually
+fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
+    val licenseList = (asNode()["licenses"] as NodeList)[0] as Node
+    val licenses = licenseList["license"] as NodeList
+    licenses.filterIsInstance<Node>().forEach { licence ->
+        val name = (licence["name"] as NodeList)[0] as Node
+        val nameValue = (name.value() as NodeList)[0] as String
+        if (nameValue != licenceName) {
+            licenseList.remove(licence)
         }
     }
 }
