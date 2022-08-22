@@ -87,6 +87,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                    !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) && // transform kotlin iterator classes
                    !className.startsWith("kotlin.ranges.") // transform kotlin ranges
                ) ||
+               className.startsWith("com.intellij.rt.coverage.") ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                    !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
                    !className.equals(ManagedStrategyStateHolder.class.getName())
