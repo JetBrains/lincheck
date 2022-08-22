@@ -235,6 +235,8 @@ internal class CoroutineCancellationTracePoint(
 
     override fun toStringImpl(): String {
         if (exception != null) return "EXCEPTION WHILE CANCELLATION"
+        // Do not throw exception when lateinit field is not initialized.
+        if (!::cancellationResult.isInitialized) return "<cancellation result not available>"
         return when (cancellationResult) {
             CANCELLED_BEFORE_RESUMPTION -> "CANCELLED BEFORE RESUMPTION"
             CANCELLED_AFTER_RESUMPTION -> "PROMPT CANCELLED AFTER RESUMPTION"

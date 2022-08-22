@@ -60,6 +60,24 @@ data class ExecutionResult(
 ) {
     constructor(initResults: List<Result>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<Result>) :
         this(initResults, null, parallelResultsWithClock, null, postResults, null)
+
+    /**
+     * Override `equals` to ignore states.
+     * We do not require state generation to be deterministic, so
+     * states can differ for the same interleaving.
+     */
+    override fun equals(other: Any?): Boolean =
+        other is ExecutionResult &&
+        initResults == other.initResults &&
+        parallelResultsWithClock == other.parallelResultsWithClock &&
+        postResults == other.postResults
+
+    override fun hashCode(): Int {
+        var result = initResults.hashCode()
+        result = 31 * result + parallelResultsWithClock.hashCode()
+        result = 31 * result + postResults.hashCode()
+        return result
+    }
 }
 
 val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
