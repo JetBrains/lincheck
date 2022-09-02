@@ -35,14 +35,14 @@ class Execution(
      *
      * TODO: use array instead of map?
      */
-    private val threadsEvents: MutableMap<Int, ArrayList<Event>> =
-        threadEvents.map { (threadId, events) -> threadId to ArrayList(events) }.toMap().toMutableMap()
+    private val threadsEvents: MutableMap<Int, SortedArrayList<Event>> =
+        threadEvents.map { (threadId, events) -> threadId to SortedArrayList(events) }.toMap().toMutableMap()
 
     val threads: Set<Int>
         get() = threadsEvents.keys
 
     fun addEvent(event: Event) {
-        val threadEvents = threadsEvents.getOrPut(event.threadId) { arrayListOf() }
+        val threadEvents = threadsEvents.getOrPut(event.threadId) { sortedArrayListOf() }
         check(event.parent == threadEvents.lastOrNull())
         threadEvents.add(event)
     }
@@ -60,7 +60,7 @@ class Execution(
         threadsEvents[iThread]?.getOrNull(Position)
 
     operator fun contains(event: Event): Boolean =
-        threadsEvents[event.threadId]?.let { events -> events.binarySearch(event) >= 0 } ?: false
+        threadsEvents[event.threadId]?.let { events -> event in events } ?: false
 
     fun getAggregatedEvent(iThread: Int, position: Int): Pair<Event, List<Event>>? {
         val threadEvents = threadsEvents[iThread] ?: return null

@@ -32,7 +32,7 @@ fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): Mutable
 
 fun <T> List<T>.getSquashed(position: Int, combine: (T, T) -> T?): Pair<T, Int>? {
     var i = position
-    var accumulator = getOrNull(position) ?: return null
+    var accumulator = getOrNull(i) ?: return null
     while (++i < size) {
         accumulator = combine(accumulator, get(i)) ?: break
     }
@@ -51,13 +51,16 @@ fun <T> List<T>.squash(combine: (T, T) -> T?): List<T> {
     return squashed
 }
 
-fun <T> List<T>.isChain(relation: (T, T) -> Boolean): Boolean {
-    for (i in 0 until size - 1) {
+fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: (T, T) -> Boolean): Boolean {
+    for (i in fromIndex until toIndex - 1) {
         if (!relation(get(i), get(i + 1)))
             return false
     }
     return true
 }
+
+fun <T : Comparable<T>> List<T>.isSorted(fromIndex : Int = 0, toIndex : Int = size): Boolean =
+    isChain(fromIndex, toIndex) { x, y -> x <= y }
 
 infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
@@ -68,3 +71,95 @@ class UnreachableException: Exception()
 fun unreachable(): Nothing {
     throw UnreachableException()
 }
+
+interface SortedList<T : Comparable<T>> : List<T> {
+
+    override fun contains(element: T): Boolean =
+        binarySearch(element) >= 0
+
+    override fun containsAll(elements: Collection<T>): Boolean =
+        elements.all { contains(it) }
+
+    override fun indexOf(element: T): Int {
+        var i: Int
+        var j = size
+        do {
+            i = j
+            j = binarySearch(element, toIndex = i)
+        } while (j >= 0)
+        return i
+    }
+
+    override fun lastIndexOf(element: T): Int {
+        var i: Int
+        var j = 0
+        do {
+            i = j
+            j = binarySearch(element, fromIndex = i)
+        } while (j >= 0)
+        return i
+    }
+
+}
+
+class SortedArrayList<T : Comparable<T>> : ArrayList<T>, SortedList<T> {
+
+    constructor() : super()
+
+    constructor(initialCapacity: Int) : super(initialCapacity)
+
+    constructor(elements: Collection<T>) : super(elements) {
+        require(isSorted()) { "Expected sorted list" }
+    }
+
+    override fun add(element: T): Boolean {
+        require(isNotEmpty() implies { last() <= element })
+        return super.add(element)
+    }
+
+    override fun add(index: Int, element: T) {
+        super.add(index, element).also {
+            check((index - 1 >= 0) implies { get(index - 1) <= get(index) })
+            check((index + 1 < size) implies { get(index) <= get(index + 1) })
+        }
+    }
+
+    override fun addAll(elements: Collection<T>): Boolean {
+        val oldSize = size
+        return super.addAll(elements).also {
+            check(isSorted(fromIndex = oldSize))
+        }
+    }
+
+    override fun addAll(index: Int, elements: Collection<T>): Boolean {
+        return super.addAll(index, elements).also {
+            val lastIndex = index + elements.size
+            check((index - 1 >= 0) implies { get(index - 1) <= get(index) })
+            check((lastIndex + 1 < size) implies { get(lastIndex) <= get(lastIndex + 1) })
+            check(isSorted(fromIndex = index, toIndex = lastIndex))
+        }
+    }
+
+    override fun set(index: Int, element: T): T {
+        return super.set(index, element).also {
+            check((index - 1 >= 0) implies { get(index - 1) <= get(index) })
+            check((index + 1 < size) implies { get(index) <= get(index + 1) })
+        }
+    }
+
+    override fun contains(element: T): Boolean =
+        super<SortedList>.contains(element)
+
+    override fun containsAll(elements: Collection<T>): Boolean =
+        super<SortedList>.containsAll(elements)
+
+    override fun indexOf(element: T): Int =
+        super<SortedList>.indexOf(element)
+
+    override fun lastIndexOf(element: T): Int =
+        super<SortedList>.lastIndexOf(element)
+
+}
+
+fun<T : Comparable<T>> sortedArrayListOf(vararg elements: T): SortedArrayList<T> =
+    SortedArrayList(elements.asList())
