@@ -24,305 +24,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryTracker
 import org.jetbrains.kotlinx.lincheck.strategy.managed.defaultValueByDescriptor
 import kotlin.collections.set
 
-class Event private constructor(
-    val id: EventID,
-    /**
-     * Event's position in a thread
-     * (i.e. number of its program-order predecessors).
-     */
-    val threadPosition: Int = 0,
-    /**
-     * Event's label.
-     */
-    val label: EventLabel = EmptyLabel(),
-    /**
-     * Event's parent in program order.
-     */
-    val parent: Event? = null,
-    /**
-     * List of event's dependencies
-     * (e.g. reads-from write for a read event).
-     */
-    val dependencies: List<Event> = listOf(),
-    /**
-     * Vector clock to track causality relation.
-     */
-    val causalityClock: VectorClock<Int, Event>,
-    /**
-     * State of the execution frontier at the point when event is created.
-     */
-    val frontier: ExecutionFrontier,
-) : Comparable<Event> {
-    val threadId: Int = label.threadId
-
-    var visited: Boolean = false
-        private set
-
-    fun predNth(n: Int): Event? {
-        var e = this
-        // current implementation has O(N) complexity,
-        // as an optimization, we can implement binary lifting and get O(lgN) complexity
-        // https://cp-algorithms.com/graph/lca_binary_lifting.html;
-        // since `predNth` is used to compute programOrder
-        // this optimization might be crucial for performance
-        for (i in 0 until n)
-            e = e.parent ?: return null
-        return e
-    }
-
-    // should only be called from EventStructure
-    // TODO: enforce this invariant!
-    fun visit() {
-        visited = true
-    }
-
-    companion object {
-        private var nextId: EventID = 0
-
-        fun create(
-            label: EventLabel,
-            parent: Event?,
-            dependencies: List<Event>,
-            frontier: ExecutionFrontier
-        ): Event {
-            val id = nextId++
-            val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
-            val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
-                clock + event.causalityClock
-            }
-            return Event(id,
-                threadPosition = threadPosition,
-                label = label,
-                parent = parent,
-                dependencies = dependencies,
-                causalityClock = causalityClock,
-                frontier = frontier
-            ).apply {
-                causalityClock.update(threadId, this)
-                frontier[threadId] = this
-            }
-        }
-    }
-
-    fun getReadsFrom(): Event {
-        require(label is MemoryAccessLabel && label.isRead && (label.isResponse || label.isTotal))
-        require(dependencies.isNotEmpty())
-        return dependencies.first().also {
-            // TODO: make `isSynchronized` method to check for labels' compatibility
-            //  according to synchronization algebra (e.g. write/read reads-from compatibility)
-            check(it.label is MemoryAccessLabel
-                && it.label.accessKind == MemoryAccessKind.Write
-                && it.label.memId == label.memId
-            )
-        }
-    }
-
-    fun getExclusiveReadPart(): Event {
-        require(label is MemoryAccessLabel && label.isWrite && label.isExclusive)
-        require(parent != null)
-        return parent.also {
-            check(it.label is MemoryAccessLabel
-                && it.label.isRead && (it.label.isResponse || it.label.isTotal)
-                && it.label.memId == label.memId
-                && it.label.isExclusive
-            )
-        }
-    }
-
-    fun aggregate(event: Event): Event? =
-        label.aggregate(event.label)?.let { label ->
-            create(
-                label = label,
-                parent = parent,
-                dependencies = dependencies + event.dependencies,
-                // TODO: think again what frontier to pick
-                frontier = event.frontier.copy(),
-            )
-        }
-
-    override fun equals(other: Any?): Boolean {
-        return (other is Event) && (id == other.id)
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
-    }
-
-    override fun compareTo(other: Event): Int {
-        return id.compareTo(other.id)
-    }
-
-    override fun toString(): String {
-        return "#${id}: $label"
-    }
-}
-
-val programOrder: PartialOrder<Event> = PartialOrder.ofLessThan { x, y ->
-    if (x.threadId != y.threadId || x.threadPosition >= y.threadPosition)
-        false
-    else (x == y.predNth(y.threadPosition - x.threadPosition))
-}
-
-val causalityOrder: PartialOrder<Event> = PartialOrder.ofLessOrEqual { x, y ->
-    y.causalityClock.observes(x.threadId, x)
-}
-
-val causalityCovering: Covering<Event> = Covering { y ->
-    y.dependencies + (y.parent?.let { listOf(it) } ?: listOf())
-}
-
-fun emptyClock() = VectorClock<Int, Event>(programOrder)
-
-/**
- * Execution represents a set of events belonging to single program's execution.
- */
-class Execution(
-    threadEvents: Map<Int, List<Event>> = emptyMap(),
-    val ghostThread: Int = GHOST_THREAD_ID,
-) {
-    /**
-     * Execution is encoded as a mapping `ThreadID -> List<Event>`
-     * from thread id to a list of events belonging to this thread ordered by program-order.
-     * We also assume that program order is compatible with execution order,
-     * and thus events within the same thread are also ordered by execution order.
-     *
-     * TODO: use array instead of map?
-     */
-    private val threadsEvents: MutableMap<Int, ArrayList<Event>> =
-        threadEvents.map { (threadId, events) -> threadId to ArrayList(events) }.toMap().toMutableMap()
-
-    val threads: Set<Int>
-        get() = threadsEvents.keys
-
-    fun addEvent(event: Event) {
-        val threadEvents = threadsEvents.getOrPut(event.threadId) { arrayListOf() }
-        check(event.parent == threadEvents.lastOrNull())
-        threadEvents.add(event)
-    }
-
-    fun getThreadSize(iThread: Int): Int =
-        threadsEvents[iThread]?.size ?: 0
-
-    fun firstEvent(iThread: Int): Event? =
-        threadsEvents[iThread]?.firstOrNull()
-
-    fun lastEvent(iThread: Int): Event? =
-        threadsEvents[iThread]?.lastOrNull()
-
-    operator fun get(iThread: Int, Position: Int): Event? =
-        threadsEvents[iThread]?.getOrNull(Position)
-
-    operator fun contains(event: Event): Boolean =
-        threadsEvents[event.threadId]?.let { events -> events.binarySearch(event) >= 0 } ?: false
-
-    fun getAggregatedEvent(iThread: Int, position: Int): Pair<Event, List<Event>>? {
-        val threadEvents = threadsEvents[iThread] ?: return null
-        val (event, nextPosition) = threadEvents.getSquashed(position, Event::aggregate) ?: return null
-        return event to threadEvents.subList(position, nextPosition)
-    }
-
-    // TODO: do not use it, not ready yet!
-    fun aggregated(): Execution = Execution(
-        // TODO: most likely, we should also compute remapping of events ---
-        //   a function from an old atomic event to new compound event
-        threadsEvents.mapValues { (_, events) ->
-            // TODO: usage of `squash` function here most likely
-            //   violates an invariant that events are sorted in the list
-            //   according to the order of their IDs.
-            events.squash(Event::aggregate)
-            // TODO: we should remap dependencies to their new compound counterparts at the end
-        }
-    )
-
-}
-
-/**
- * ExecutionFrontier represents a frontier of an execution,
- * that is the set of program-order maximal events of the execution.
- */
-class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
-
-    /**
-     * Frontier is encoded as a mapping `ThreadID -> Event` from the thread id
-     * to the last executed event in this thread in the given execution.
-     *
-     * TODO: use array instead of map?
-     */
-    private val frontier: MutableMap<Int, Event> = frontier.toMutableMap()
-
-    fun update(event: Event) {
-        check(event.parent == frontier[event.threadId])
-        frontier[event.threadId] = event
-    }
-
-    fun getPosition(iThread: Int): Int =
-        frontier[iThread]?.threadPosition ?: -1
-
-    operator fun get(iThread: Int): Event? =
-        frontier[iThread]
-
-    operator fun set(iThread: Int, event: Event) {
-        check(iThread == event.threadId)
-        // TODO: properly document this precondition
-        //  (i.e. we expect frontier to be updated to some offspring of frontier's execution)
-        check(programOrder.nullOrLessOrEqual(event.parent, frontier[iThread]))
-        frontier[iThread] = event
-    }
-
-    operator fun contains(event: Event): Boolean {
-        val lastEvent = frontier[event.threadId] ?: return false
-        return programOrder.lessOrEqual(event, lastEvent)
-    }
-
-    fun copy(): ExecutionFrontier =
-        ExecutionFrontier(frontier)
-
-    fun toExecution(): Execution {
-        return Execution(frontier.map { (threadId, lastEvent) ->
-            var event: Event? = lastEvent
-            val events = arrayListOf<Event>()
-            while (event != null) {
-                events.add(event)
-                event = event.parent
-            }
-            threadId to events.apply { reverse() }
-        }.toMap())
-    }
-
-}
-
-abstract class Inconsistency
-
-class InconsistentExecutionException(reason: Inconsistency): Exception(reason.toString())
-
-interface ConsistencyChecker {
-    fun check(execution: Execution): Inconsistency?
-}
-
-interface IncrementalConsistencyChecker {
-
-    /**
-     * Checks whether adding the given [event] to the current execution retains execution's consistency.
-     *
-     * @return `null` if execution remains consistent,
-     *   otherwise returns non-null [Inconsistency] object
-     *   representing the reason of inconsistency.
-     */
-    fun check(event: Event): Inconsistency?
-
-    /**
-     * Resets the internal state of consistency checker to [execution]
-     * with [event] being the next event to start exploration from.
-     *
-     * @return `null` if the given execution is consistent,
-     *   otherwise returns non-null [Inconsistency] object
-     *   representing the reason of inconsistency.
-     *
-     * TODO: split resetting and consistency checking logic!
-     */
-    fun reset(event: Event, execution: Execution): Inconsistency?
-}
-
 class EventStructure(
     val initialThreadId: Int,
     val checkers: List<ConsistencyChecker> = listOf(),
@@ -736,6 +437,34 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
 
 }
 
-// auxiliary ghost thread containing root event of the event structure
-// and initialization events (e.g. initialization writes of memory locations)
-private const val GHOST_THREAD_ID = -1
+abstract class Inconsistency
+
+class InconsistentExecutionException(reason: Inconsistency): Exception(reason.toString())
+
+interface ConsistencyChecker {
+    fun check(execution: Execution): Inconsistency?
+}
+
+interface IncrementalConsistencyChecker {
+
+    /**
+     * Checks whether adding the given [event] to the current execution retains execution's consistency.
+     *
+     * @return `null` if execution remains consistent,
+     *   otherwise returns non-null [Inconsistency] object
+     *   representing the reason of inconsistency.
+     */
+    fun check(event: Event): Inconsistency?
+
+    /**
+     * Resets the internal state of consistency checker to [execution]
+     * with [event] being the next event to start exploration from.
+     *
+     * @return `null` if the given execution is consistent,
+     *   otherwise returns non-null [Inconsistency] object
+     *   representing the reason of inconsistency.
+     *
+     * TODO: split resetting and consistency checking logic!
+     */
+    fun reset(event: Event, execution: Execution): Inconsistency?
+}
