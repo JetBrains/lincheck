@@ -43,12 +43,12 @@ class EventStructure(
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
-    private val _events: ArrayList<Event> = arrayListOf()
+    private val _events: SortedArrayList<Event> = sortedArrayListOf()
 
     /**
      * List of events of the event structure.
      */
-    val events: List<Event> = _events
+    val events: SortedList<Event> = _events
 
     private var currentExecution: Execution = Execution()
 
@@ -80,8 +80,7 @@ class EventStructure(
     private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {
         val eventIdx = _events.indexOfLast(predicate)
         _events.subList(eventIdx + 1, _events.size).clear()
-        // TODO: make a function to search for event in the execution-order sorted list
-        threadRoots.entries.retainAll { (_, event) -> events.binarySearch(event) >= 0 }
+        threadRoots.entries.retainAll { (_, threadRoot) -> threadRoot in events }
         return events.lastOrNull()
     }
 
