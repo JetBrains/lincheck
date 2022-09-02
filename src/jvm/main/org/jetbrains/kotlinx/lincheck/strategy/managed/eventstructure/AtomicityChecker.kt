@@ -47,8 +47,8 @@ class AtomicityChecker : IncrementalConsistencyChecker {
         return null
     }
 
-    override fun reset(event: Event, execution: Execution): Inconsistency? {
-        return check(event)
+    override fun reset(execution: Execution) {
+        return
     }
 
 }

@@ -66,7 +66,13 @@ class EventStructure(
     fun startNextExploration(): Boolean {
         loop@while (true) {
             val event = rollbackToEvent { !it.visited }?.apply { visit() } ?: return false
-            if (resetExecution(event) != null)
+            resetExecution(event)
+            // first run incremental consistency checkers to have an opportunity
+            // to find an inconsistency earlier
+            if (checkConsistencyIncrementally(event) != null)
+                continue@loop
+            // then run heavyweight full consistency checks
+            if (checkConsistency() != null)
                 continue@loop
             return true
         }
@@ -84,20 +90,27 @@ class EventStructure(
         return events.lastOrNull()
     }
 
-    private fun resetExecution(event: Event): Inconsistency? {
+    private fun resetExecution(event: Event) {
         _currentExecution = event.frontier.toExecution()
-        for (checker in checkers) {
-            checker.check(_currentExecution)?.let { return it }
-        }
+        // temporarily remove new event in order to reset incremental checkers
+        _currentExecution.removeLast(event)
         for (checker in incrementalCheckers) {
-            checker.reset(event, _currentExecution)?.let { return it }
+            checker.reset(_currentExecution)
         }
-        return null
+        // add new event back
+        _currentExecution.addEvent(event)
     }
 
     fun checkConsistency(): Inconsistency? {
         for (checker in checkers) {
             checker.check(currentExecution)?.let { return it }
+        }
+        return null
+    }
+
+    private fun checkConsistencyIncrementally(event: Event): Inconsistency? {
+        for (checker in incrementalCheckers) {
+            checker.check(event)?.let { return it }
         }
         return null
     }
@@ -144,8 +157,8 @@ class EventStructure(
             _events.add(event)
             if (label.isThreadInitializer)
                 threadRoots[label.threadId] = event
-            for (checker in incrementalCheckers) {
-                checker.check(event)?.let { throw InconsistentExecutionException(it) }
+            checkConsistencyIncrementally(event)?.let {
+                throw InconsistentExecutionException(it)
             }
         }
     }
@@ -462,8 +475,6 @@ interface IncrementalConsistencyChecker {
      * @return `null` if the given execution is consistent,
      *   otherwise returns non-null [Inconsistency] object
      *   representing the reason of inconsistency.
-     *
-     * TODO: split resetting and consistency checking logic!
      */
-    fun reset(event: Event, execution: Execution): Inconsistency?
+    fun reset(execution: Execution)
 }
