@@ -23,10 +23,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 /**
  * Execution represents a set of events belonging to single program's execution.
  */
-class Execution(
+open class Execution(
     threadEvents: Map<Int, List<Event>> = emptyMap(),
     val ghostThread: Int = GHOST_THREAD_ID,
-) {
+) : Collection<Event> {
     /**
      * Execution is encoded as a mapping `ThreadID -> List<Event>`
      * from thread id to a list of events belonging to this thread ordered by program-order.
@@ -35,17 +35,17 @@ class Execution(
      *
      * TODO: use array instead of map?
      */
-    private val threadsEvents: MutableMap<Int, SortedArrayList<Event>> =
+    protected val threadsEvents: MutableMap<Int, SortedArrayList<Event>> =
         threadEvents.map { (threadId, events) -> threadId to SortedArrayList(events) }.toMap().toMutableMap()
 
     val threads: Set<Int>
         get() = threadsEvents.keys
 
-    fun addEvent(event: Event) {
-        val threadEvents = threadsEvents.getOrPut(event.threadId) { sortedArrayListOf() }
-        check(event.parent == threadEvents.lastOrNull())
-        threadEvents.add(event)
-    }
+    override val size: Int
+        get() = threadsEvents.values.sumOf { it.size }
+
+    override fun isEmpty(): Boolean =
+        threadsEvents.isEmpty()
 
     fun getThreadSize(iThread: Int): Int =
         threadsEvents[iThread]?.size ?: 0
@@ -59,8 +59,13 @@ class Execution(
     operator fun get(iThread: Int, Position: Int): Event? =
         threadsEvents[iThread]?.getOrNull(Position)
 
-    operator fun contains(event: Event): Boolean =
-        threadsEvents[event.threadId]?.let { events -> event in events } ?: false
+    override operator fun contains(element: Event): Boolean =
+        threadsEvents[element.threadId]
+            ?.let { events -> events[element.threadPosition] == element }
+            ?: false
+
+    override fun containsAll(elements: Collection<Event>): Boolean =
+        elements.all { contains(it) }
 
     fun getAggregatedEvent(iThread: Int, position: Int): Pair<Event, List<Event>>? {
         val threadEvents = threadsEvents[iThread] ?: return null
@@ -68,17 +73,20 @@ class Execution(
         return event to threadEvents.subList(position, nextPosition)
     }
 
-    // TODO: do not use it, not ready yet!
-    fun aggregated(): Execution = Execution(
-        // TODO: most likely, we should also compute remapping of events ---
-        //   a function from an old atomic event to new compound event
-        threadsEvents.mapValues { (_, events) ->
-            // TODO: usage of `squash` function here most likely
-            //   violates an invariant that events are sorted in the list
-            //   according to the order of their IDs.
-            events.squash(Event::aggregate)
-            // TODO: we should remap dependencies to their new compound counterparts at the end
-        }
-    )
+    override fun iterator(): Iterator<Event> =
+        threadsEvents.values.asSequence().flatten().iterator()
+
+}
+
+class MutableExecution(
+    threadEvents: Map<Int, List<Event>> = emptyMap(),
+    ghostThread: Int = GHOST_THREAD_ID,
+) : Execution(threadEvents, ghostThread) {
+
+    fun addEvent(event: Event) {
+        val threadEvents = threadsEvents.getOrPut(event.threadId) { sortedArrayListOf() }
+        check(event.parent == threadEvents.lastOrNull())
+        threadEvents.add(event)
+    }
 
 }

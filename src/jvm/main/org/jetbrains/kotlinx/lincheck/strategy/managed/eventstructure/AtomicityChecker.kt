@@ -38,7 +38,7 @@ class AtomicityChecker : IncrementalConsistencyChecker {
         if (event.label !is MemoryAccessLabel) return null
         if (event.label.accessKind != MemoryAccessKind.Write || !event.label.isExclusive) return null
         val readFrom = event.getExclusiveReadPart().getReadsFrom()
-        eventStructure.currentExecutionEvents.find {
+        eventStructure.currentExecution.find {
             it.label is MemoryAccessLabel
                 && it.label.accessKind == MemoryAccessKind.Write
                 && it.label.isExclusive
