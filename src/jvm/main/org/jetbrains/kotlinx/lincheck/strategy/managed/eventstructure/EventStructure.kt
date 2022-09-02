@@ -50,14 +50,14 @@ class EventStructure(
      */
     val events: SortedList<Event> = _events
 
-    private var currentExecution: Execution = Execution()
+    // TODO: this pattern is covered by explicit backing fields KEEP
+    //   https://github.com/Kotlin/KEEP/issues/278
+    private var _currentExecution: MutableExecution = MutableExecution()
+
+    val currentExecution: Execution
+        get() = _currentExecution
 
     private var currentFrontier: ExecutionFrontier = ExecutionFrontier()
-
-    // TODO: rename?
-    val currentExecutionEvents: List<Event>
-        // TODO: just make an iterator for Execution class
-        get() = events.filter { it in currentExecution }
 
     init {
         root = addRootEvent(initialThreadId)
@@ -85,12 +85,12 @@ class EventStructure(
     }
 
     private fun resetExecution(event: Event): Inconsistency? {
-        currentExecution = event.frontier.toExecution()
+        _currentExecution = event.frontier.toExecution()
         for (checker in checkers) {
-            checker.check(currentExecution)?.let { return it }
+            checker.check(_currentExecution)?.let { return it }
         }
         for (checker in incrementalCheckers) {
-            checker.reset(event, currentExecution)?.let { return it }
+            checker.reset(event, _currentExecution)?.let { return it }
         }
         return null
     }
@@ -153,12 +153,12 @@ class EventStructure(
     private fun addEventToCurrentExecution(event: Event, visit: Boolean = true) {
         if (visit) { event.visit() }
         if (!inReplayMode(event.threadId))
-            currentExecution.addEvent(event)
+            _currentExecution.addEvent(event)
         currentFrontier.update(event)
     }
 
     fun inReplayMode(iThread: Int): Boolean {
-        val frontEvent = currentFrontier[iThread]?.also { check(it in currentExecution) }
+        val frontEvent = currentFrontier[iThread]?.also { check(it in _currentExecution) }
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
 
@@ -205,8 +205,8 @@ class EventStructure(
         // TODO: pre-filter some trivially inconsistent candidates
         //  (e.g. write synchronizing with program-order preceding read)
         val candidateEvents = when {
-            event.label.isTotal -> currentExecutionEvents.filterNot { causalityOrder.lessThan(it, event) }
-            else -> currentExecutionEvents
+            event.label.isTotal -> currentExecution.filterNot { causalityOrder.lessThan(it, event) }
+            else -> currentExecution
         }
         val syncEvents = arrayListOf<Event>()
         if (event.label.isBinarySynchronizing) {
@@ -222,7 +222,7 @@ class EventStructure(
         return syncEvents
     }
 
-    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: List<Event>): List<Event> {
+    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
         require(event.label.isBinarySynchronizing)
         // TODO: sort resulting events according to some strategy?
         return candidateEvents.mapNotNull {
@@ -232,7 +232,7 @@ class EventStructure(
         }
     }
 
-    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: List<Event>): Event? {
+    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): Event? {
         require(event.label.isBarrierSynchronizing)
         val (syncLab, dependencies) =
             candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->

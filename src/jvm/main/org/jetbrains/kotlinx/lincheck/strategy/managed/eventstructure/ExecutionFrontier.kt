@@ -61,8 +61,8 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
     fun copy(): ExecutionFrontier =
         ExecutionFrontier(frontier)
 
-    fun toExecution(): Execution {
-        return Execution(frontier.map { (threadId, lastEvent) ->
+    fun toExecution(): MutableExecution {
+        return MutableExecution(frontier.map { (threadId, lastEvent) ->
             var event: Event? = lastEvent
             val events = arrayListOf<Event>()
             while (event != null) {
