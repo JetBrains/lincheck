@@ -1,14 +1,13 @@
 [//]: # (title: Modular testing)
 
-When constructing new algorithms, it is common to use existing data structures as building blocks.
-As these data structures are typically non-trivial, they significantly increase
-the number of possible interleavings. Intuitively, it would be better to treat the operations of
-such already correct underlying data structures as atomic ones, checking only meaningful interleavings
-and, thus, increasing the testing quality. 
-Lincheck makes it is possible by providing the *modular testing* feature for the model checking.
+When constructing new algorithms, it's common to use existing data structures as building blocks.
+As these data structures are typically non-trivial, the number of possible interleavings increases significantly.
 
-Consider the `MultiMap` implementation below, 
-which bases on top of the state-of-the-art `j.u.c.ConcurrentHashMap`:
+If you consider such underlying data structures to be correct and treat their operations as atomic, you can check only
+meaningful interleavings, thus increasing the testing quality. Lincheck makes it possible with the _modular testing_
+feature available for the [model checking strategy](testing-strategies.md#model-checking).
+
+Consider the `MultiMap` implementation below, which is based on top of the modern `j.u.c.ConcurrentHashMap`:
 
 ```kotlin
 import java.util.concurrent.*
@@ -31,8 +30,8 @@ class MultiMap<K, V> {
 }
 ```
 
-It is already guaranteed that `j.u.c.ConcurrentHashMap` is linearizable, so its operations can be considered as atomic. 
-You can specify this guarantee via the `addGuarantee` option in the `ModelCheckingOptions()` in your test:
+It is already guaranteed that `j.u.c.ConcurrentHashMap` is linearizable, so its operations can be considered atomic. 
+You can specify this guarantee with the `addGuarantee` option in the `ModelCheckingOptions()` in your test:
 
 ```kotlin
 import java.util.concurrent.*
@@ -85,7 +84,7 @@ class MultiMapTest {
 >
 {type="note"}
 
-## What's next
+## Next step
 
-Learn how to test data structures that set access [constraints](constraints.md) on the execution, 
+Learn how to test data structures that set [access constraints on the execution](constraints.md), 
 such as single-producer single-consumer queues.

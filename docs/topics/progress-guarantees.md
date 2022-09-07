@@ -1,16 +1,16 @@
 [//]: # (title: Progress guarantees)
-Many concurrent algorithms provide non-blocking progress guarantees, such as lock- and wait-freedom.
-As they are usually non-trivial, it is easy to add a bug that makes the algorithm blocking. 
-Fortunately, Lincheck is able to find liveness bugs in the model checking mode.
 
-To check the progress guarantee of the algorithm, you need to turn on the `checkObstructionFreedom`
-option in `ModelCheckingOptions()`:
+Many concurrent algorithms provide non-blocking progress guarantees, such as lock-freedom and wait-freedom. As they are
+usually non-trivial, it's easy to add a bug that blocks the algorithm. Lincheck can help you find liveness bugs using
+the model checking strategy.
+
+To check the progress guarantee of the algorithm, enable the `checkObstructionFreedom` option in `ModelCheckingOptions()`:
 
 ```kotlin
 ModelCheckingOptions().checkObstructionFreedom()
 ```
 
-As an example, let's consider `ConcurrentHashMap<K, V>` from the Java standard library.
+For example, consider `ConcurrentHashMap<K, V>` from the Java standard library.
 Here is the Lincheck test to detect that `put(key: K, value: V)` is a blocking operation:
 
 ```kotlin
@@ -31,7 +31,7 @@ class ConcurrentHashMapTest {
 }
 ```
 
-Run the `modelCheckingTest` you will and get the following result:
+Run the `modelCheckingTest()`. You should get the following result:
 
 ```text
 = Obstruction-freedom is required but a lock has been found =
@@ -77,23 +77,25 @@ class ConcurrentSkipListMapTest {
 }
 ```
 
-The common non-blocking progress guarantees are (from strongest to weakest):
+> The common non-blocking progress guarantees are (from strongest to weakest):
+> 
+> * **wait-freedom**, when each operation is completed in a bounded number of steps no matter what other threads do.
+> * **lock-freedom**, which guarantees system-wide progress so that at least one operation is completed in a bounded number of
+>   steps while a particular operation may be stuck.
+> * **obstruction-freedom**, when any operation is completed in a bounded number of steps if all the other threads pause.
+>
+{type="tip"}
 
-* **wait-freedom:** each operation completes in a bounded number of steps no matter what other threads do;
-* **lock-freedom:** guarantees system-wide progress, so that at least one operation completes in a bounded number of steps, 
-                    while a particular operation may be stuck;
-* **obstruction-freedom:** – any operation can complete in a bounded number of steps if all the other threads pause.
-
-At the moment, Lincheck supports only the _obstruction-freedom_ progress guarantee.
-However, as most the real-world liveness bugs introduce unexpected blocking code,
-obstruction-freedom check is extremely helpful for lock-free and wait-free algorithms as well.
+At the moment, Lincheck supports only the obstruction-freedom progress guarantees. However, most real-life liveness bugs
+add unexpected blocking code, so the obstruction-freedom check will also help with lock-free and wait-free algorithms.
 
 > * Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentMapTest.kt).
-> * Get another example where we test Michael-Scott queue implementation for progress guarantees [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ObstructionFreedomViolationTest.kt).
+> * See [another example](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ObstructionFreedomViolationTest.kt)
+>   where the Michael-Scott queue implementation is tested for progress guarantees.
 >
 {type="note"}
 
-## What's next
+## Next step
 
-Learn [how to specify the sequential specification](sequential_specification.md) 
-of the testing algorithm explicitly, improving the Lincheck tests robustness.
+Learn how to [specify the sequential specification](sequential-specification.md) of the testing algorithm explicitly,
+improving the Lincheck tests robustness.

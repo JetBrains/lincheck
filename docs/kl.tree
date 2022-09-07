@@ -10,10 +10,10 @@
         <toc-element id="lincheck-guide.md"/>
         <toc-element id="introduction.md"/>
         <toc-element id="testing-strategies.md" toc-title="Testing strategies"/>
-        <toc-element id="parameter-generation.md"/>
+        <toc-element id="operation-arguments.md"/>
         <toc-element id="modular-testing.md"/>
         <toc-element id="constraints.md"/>
         <toc-element id="progress-guarantees.md"/>
-        <toc-element id="verification.md"/>
+        <toc-element id="sequential-specification.md"/>
     </chunk>
 </product-profile>

@@ -1,16 +1,14 @@
 [//]: # (title: Write your first test with Lincheck)
 
-This tutorial demonstrates how to set up the Lincheck framework and use its basic API.  
-You will create a new IntelliJ IDEA project with an incorrect concurrent counter implementation 
-and write your first Lincheck test for it, finding and analyzing the bug afterward.
-
+This tutorial demonstrates how to write your first Lincheck test, set up the Lincheck framework, and use its basic API. 
+You will create a new IntelliJ IDEA project with an incorrect concurrent counter implementation and write a test for it,
+finding and analyzing the bug afterward.
 
 ## Create a project
 
 1. Open an existing Kotlin project in IntelliJ IDEA or [create a new one](https://kotlinlang.org/docs/jvm-get-started.html).
-
+When creating a project, use the Gradle build system.
 2. In the `src/main/kotlin` directory, open the `main.kt` file.
-
 3. Replace the code in `main.kt` with the following counter implementation:
 
     ```kotlin
@@ -20,17 +18,34 @@ and write your first Lincheck test for it, finding and analyzing the bug afterwa
    
         fun inc(): Int = ++value
         fun get() = value
-   }
+    }
     ```
-   Further, your will write a Lincheck test to check whether the counter is thread-safe.
+
+    Your Lincheck test will check whether the counter is thread-safe.
 
 ## Add required dependencies
 
 1. Open the `build.gradle(.kts)` file and make sure that `mavenCentral()` is added to the repository list.
-
 2. Add the following dependencies to the Gradle configuration:
 
    <tabs group="build-script">
+   <tab title="Kotlin" group-key="kotlin">
+
+   ```kotlin
+   repositories {
+       mavenCentral()
+   }
+   
+   dependencies {
+       // Lincheck dependency
+       testImplementation("org.jetbrains.kotlinx:lincheck:2.14.1")
+   
+       // This dependency allows you to work with kotlin.test and JUnit:
+       testImplementation("junit:junit:4.13")
+   }
+   ```
+
+   </tab>
    <tab title="Groovy" group-key="groovy">
    
    ```groovy
@@ -41,14 +56,14 @@ and write your first Lincheck test for it, finding and analyzing the bug afterwa
    dependencies {
        // Lincheck dependency
        testImplementation "org.jetbrains.kotlinx:lincheck:2.14.1"
-       // This dependency will allow you to work with kotlin.test and JUnit
+       // This dependency allows you to work with kotlin.test and JUnit
        testImplementation "junit:junit:4.13"
    }
    ```
    </tab>
    </tabs>
 
-## Write a Lincheck test
+## Write and run the test
 
 1. In the `src/test/kotlin` directory, create a `BasicCounterTest.kt` file and add the following code:
 
@@ -81,16 +96,12 @@ and write your first Lincheck test for it, finding and analyzing the bug afterwa
    }
    ```
 
-2. Congratulations! This is your first Lincheck test for the counter implementation above. 
-   In short, it automatically 
-   (1) generates several random concurrent scenarios with the specified `inc()` and `dec()` operations,
-   (2) performs a lot of invocations for each of the generated scenario, and
-   (3) verifies that each invocation result is correct.
+   This Lincheck test automatically: 
+   * Generates several random concurrent scenarios with the specified `inc()` and `dec()` operations.
+   * Performs a lot of invocations for each of the generated scenarios.
+   * Verifies that each invocation result is correct.
 
-
-## Run the test
-
-Now it is time to run the test! It should fail with the following error:
+2. Run the test above, and you will see the following error:
 
    ```text
    = Invalid execution results =
@@ -98,18 +109,17 @@ Now it is time to run the test! It should fail with the following error:
    | inc(): 1 | inc(): 1 |
    ```
 
-   Lincheck found an execution that violates the counter atomicity — two concurrent increments ended
-   with the same result `1`, showing that one of the increment has been lost.
+   Here, Lincheck found an execution that violates the counter atomicity — two concurrent increments ended
+   with the same result `1`. It means that one increment has been lost, and the behavior of the counter is incorrect.
 
 ## Trace the invalid execution
 
-In addition to the invalid execution results, Lincheck also can provide an interleaving that leads to the error.
-This feature is accessible with the [model checking](testing-strategies.md#model-checking) testing mode, 
+Besides showing invalid execution results, Lincheck can also provide an interleaving that leads to the error. This
+feature is accessible with the [model checking](testing-strategies.md#model-checking) testing strategy,
 which examines numerous executions with a bounded number of context switches.
 
-1. To switch the testing strategy from stress testing to model checking, 
-   replace `StressOptions()` with `ModelCheckingOptions()`.
-   The updated `BasicCounterTest` implementation is presented below:
+1. To switch the testing strategy, replace the `options` type from `StressOptions()` to `ModelCheckingOptions()`.
+The updated `CounterTest` class will look like this:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.*
@@ -119,11 +129,11 @@ which examines numerous executions with a bounded number of context switches.
    import org.junit.*
    
    class Counter {
-        @Volatile
-        private var value = 0
+       @Volatile
+       private var value = 0
    
-        fun inc(): Int = ++value
-        fun get() = value
+       fun inc(): Int = ++value
+       fun get() = value
    }
    
    class BasicCounterTest {
@@ -140,7 +150,7 @@ which examines numerous executions with a bounded number of context switches.
    }
    ```
 
-2. Run the test again and get the execution trace that leads to the incorrect results:
+2. Run the test again. You will get the execution trace that leads to incorrect results:
 
    ```text
    = Invalid execution results =
@@ -160,22 +170,21 @@ which examines numerous executions with a bounded number of context switches.
    |                      |   thread is finished                                       |
    ```
 
-   According to the trace, the following events occur:
+   According to the trace, the following events have occurred:
 
-   **T2:** The second thread starts the `inc()` operation, reading the current counter value (`value.READ: 0`) and pausing.
-
-   **T1:** The first thread executes `inc()`, which returns `1`, and finishes.  
-
-   **T2:** The second thread resumes and increments the previously obtained counter value, incorrectly updating the counter to `1`.
+   * **T2**: The second thread starts the `inc()` operation, reading the current counter value (`value.READ: 0`) and pausing.
+   * **T1**: The first thread executes `inc()`, which returns `1`, and finishes.
+   * **T2**: The second thread resumes and increments the previously obtained counter value, incorrectly updating the
+   counter to `1`.
 
 > Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/BasicCounterTest.kt).
 >
 {type="note"}
 
-## Find the bug in the Java standard library
+## Test the Java standard library
 
-Let's now find a bug in the standard Java's `ConcurrentLinkedDeque` collection. 
-The Lincheck test below finds a race between removing and adding an element to the head of deque.
+Let's now find a bug in the standard Java's `ConcurrentLinkedDeque` class. 
+The Lincheck test below finds a race between removing and adding an element to the head of the deque:
 
 ```kotln
 import org.jetbrains.kotlinx.lincheck.*
@@ -210,7 +219,7 @@ class ConcurrentDequeTest {
 }
 ```
 
-Run `modelCheckingTest()`, and the test fails with the following output:
+Run `modelCheckingTest()`. The test will fail with the following output:
 
 ```text
 = Invalid execution results =
@@ -247,15 +256,14 @@ Parallel part trace:
 >
 {type="note"}
 
-## What's next
-[Stress testing and model checking strategies](testing-strategies.md).
+## Next step
 
-[How to generate operation arguments](operation-arguments.md)
+Choose [your testing strategy and configure test execution](testing-strategies.md).
 
-[Popular algorithm constraints](constraints.md)
+## See also
 
-[Modular testing in model checking](modular-testing.md)
-
-[Checking for non-blocking progress guarantees](progress-guarantees.md)
-
-[Define sequential specification of the algorithm](sequential_specification.md)
+* [How to generate operation arguments](operation-arguments.md)
+* [Popular algorithm constraints](constraints.md)
+* [Modular testing in model checking](modular-testing.md)
+* [Checking for non-blocking progress guarantees](progress-guarantees.md)
+* [Define sequential specification of the algorithm](sequential-specification.md)

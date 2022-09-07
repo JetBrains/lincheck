@@ -1,8 +1,9 @@
-Н[//]: # (title: How to generate operation arguments)
+[//]: # (title: Operation arguments)
 
-In this guide section, we will learn how to configure the operation arguments.
-Consider the straightforward `MultiMap` implementation below. 
-It bases on the `ConcurrentHashMap`, storing a list of values internally.
+In this tutorial, you'll learn how to configure operation arguments.
+
+Consider this straightforward `MultiMap` implementation below. It's based on the `ConcurrentHashMap`, internally storing
+a list of values:
 
 ```kotlin
 import java.util.concurrent.*
@@ -25,16 +26,15 @@ class MultiMap<K, V> {
 }
 ```
 
-Is this `MultiMap` implementation linearizable? If not, an incorrect interleaving is more likely to be detected 
-when accessing a small range of keys, thus, increasing the possibility to process the same key concurrently.
+Is this `MultiMap` implementation linearizable? If not, an incorrect interleaving is more likely to be detected
+when accessing a small range of keys, thus, increasing the possibility of processing the same key concurrently.
 
 For this, configure the generator for a `key: Int` parameter:
 
 1. Declare the `@Param` annotation.
 2. Specify the integer generator class: `@Param(gen = IntGen::class)`.
    Lincheck supports random parameter generators for almost all primitives and strings out of the box.
-
-3. Define the range of values generated with the string configuration: `@Param(conf = "1:2")`.
+3. Define the range of values generated with the string configuration `@Param(conf = "1:2")`.
 4. Specify the parameter configuration name (`@Param(name = "key")`) to share it for several operations.
 
    Below is the stress test for `MultiMap` that generates keys for `add(key, value)` and `get(key)` operations in the
@@ -93,7 +93,7 @@ For this, configure the generator for a `key: Int` parameter:
    [get(1): [4]]
    ```
 
-6. Finally, run `modelCheckingTest()`; it fails with the output below:
+6. Finally, run `modelCheckingTest()`. It fails with the following output:
 
    ```text
    = Invalid execution results =
@@ -121,13 +121,15 @@ one of the values may be overwritten and lost.
 >
 {type="note"}
 
-## What's next
+## Next step
 
-* `MultiMap` implementation uses a complex `j.u.c.ConcurrentHashMap` data structure as a building block, 
-the internal synchronization of which significantly increases the number of possible interleavings, 
-so it may take a while to find a bug. 
-Considering the `j.u.c.ConcurrentHashMap` implementation correct, you can speed up the testing 
-and increase the coverage with the [modular testing](modular-testing.md) feature for the model checking.
+The current `MultiMap` implementation uses a complex `j.u.c.ConcurrentHashMap` data structure as a building block,
+the internal synchronization of which significantly increases the number of possible interleavings, so it may take a while
+to find a bug. 
 
-* Learn how to test data structures that set access [constraints](constraints.md) on the execution,
-such as the single-writer one.
+If you consider the `j.u.c.ConcurrentHashMap` implementation correct, you can speed up testing 
+and increase coverage with the [modular testing feature](modular-testing.md) available for the model checking strategy.
+
+## See also
+
+Learn how to test data structures that set access [constraints](constraints.md) on the execution.
