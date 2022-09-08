@@ -100,10 +100,10 @@ class Event private constructor(
         }
     }
 
-    fun getReadsFrom(): Event {
+    val readsFrom: Event by lazy {
         require(label is MemoryAccessLabel && label.isRead && (label.isResponse || label.isTotal))
         require(dependencies.isNotEmpty())
-        return dependencies.first().also {
+        dependencies.first().also {
             // TODO: make `isSynchronized` method to check for labels' compatibility
             //  according to synchronization algebra (e.g. write/read reads-from compatibility)
             check(it.label is MemoryAccessLabel
@@ -113,10 +113,10 @@ class Event private constructor(
         }
     }
 
-    fun getExclusiveReadPart(): Event {
+    val exclusiveReadPart: Event by lazy {
         require(label is MemoryAccessLabel && label.isWrite && label.isExclusive)
         require(parent != null)
-        return parent.also {
+        parent.also {
             check(it.label is MemoryAccessLabel
                 && it.label.isRead && (it.label.isResponse || it.label.isTotal)
                 && it.label.memId == label.memId

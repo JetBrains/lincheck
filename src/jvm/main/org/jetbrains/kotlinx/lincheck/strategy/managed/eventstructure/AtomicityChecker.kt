@@ -35,14 +35,16 @@ class AtomicityChecker : IncrementalConsistencyChecker {
     }
 
     override fun check(event: Event): Inconsistency? {
-        if (event.label !is MemoryAccessLabel) return null
-        if (event.label.accessKind != MemoryAccessKind.Write || !event.label.isExclusive) return null
-        val readFrom = event.getExclusiveReadPart().getReadsFrom()
+        if (event.label !is MemoryAccessLabel)
+            return null
+        if (event.label.accessKind != MemoryAccessKind.Write || !event.label.isExclusive)
+            return null
+        val readFrom = event.exclusiveReadPart.readsFrom
         eventStructure.currentExecution.find {
             it.label is MemoryAccessLabel
                 && it.label.accessKind == MemoryAccessKind.Write
                 && it.label.isExclusive
-                && it.getExclusiveReadPart().getReadsFrom() == readFrom
+                && it.exclusiveReadPart.readsFrom == readFrom
         }?.let { return AtomicityViolation(it, event) }
         return null
     }
