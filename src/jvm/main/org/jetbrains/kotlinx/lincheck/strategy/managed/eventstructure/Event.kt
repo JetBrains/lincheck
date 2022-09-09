@@ -149,7 +149,7 @@ class Event private constructor(
     }
 
     override fun toString(): String {
-        return "#${id}: $label"
+        return "#${id}: [${threadId}, ${threadPosition}] $label"
     }
 }
 

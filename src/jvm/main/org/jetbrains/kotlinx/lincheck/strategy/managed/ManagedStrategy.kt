@@ -920,6 +920,21 @@ class SeqCstMemoryTracker : MemoryTracker() {
     override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? =
         values.getOrElse(memoryLocationId) { defaultValueByDescriptor(typeDescriptor) }
 
+    // TODO: perhaps, this is not the best place for this method;
+    //   better approach would be to finally define some wrapper for Any + typeDescriptor
+    //   to define all similar operations there (like comparison, arithmetic for primitive types, etc).
+    fun readExpectedValue(iThread: Int, memoryLocationId: Int, expectedValue: Any?, typeDescriptor: String): Boolean {
+        val value = readValue(iThread, memoryLocationId, typeDescriptor)
+        return when {
+            typeDescriptor.startsWith("L") -> {
+                (value === expectedValue)
+            }
+            else -> {
+                (value == expectedValue)
+            }
+        }
+    }
+
     override fun compareAndSet(iThread: Int, memoryLocationId: Int, expectedValue: Any?, newValue: Any?, typeDescriptor: String): Boolean {
         val oldValue = readValue(iThread, memoryLocationId, typeDescriptor)
         return when {
