@@ -126,17 +126,6 @@ class Event private constructor(
         }
     }
 
-    fun aggregate(event: Event): Event? =
-        label.aggregate(event.label)?.let { label ->
-            create(
-                label = label,
-                parent = parent,
-                dependencies = dependencies + event.dependencies,
-                // TODO: think again what frontier to pick
-                frontier = event.frontier.copy(),
-            )
-        }
-
     override fun equals(other: Any?): Boolean {
         return (other is Event) && (id == other.id)
     }

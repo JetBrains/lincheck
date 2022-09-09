@@ -330,6 +330,8 @@ interface MemoryAccessLabel {
 
     val typeDescriptor: String
 
+    val isExclusive: Boolean
+
 }
 
 data class AtomicMemoryAccessLabel(
@@ -338,14 +340,17 @@ data class AtomicMemoryAccessLabel(
     val accessKind: MemoryAccessKind,
     override val typeDescriptor: String,
     override val memId: Int,
-    var value: Any?,
-    val isExclusive: Boolean = false
+    private var value_: Any?,
+    override val isExclusive: Boolean = false
 ): AtomicEventLabel(
     threadId = threadId,
     kind = kind,
     syncKind = SynchronizationKind.Binary,
     isCompleted = true
 ), MemoryAccessLabel {
+
+    val value: Any?
+        get() = value_
 
     override val isRead: Boolean =
         (accessKind == MemoryAccessKind.Read)
@@ -375,7 +380,7 @@ data class AtomicMemoryAccessLabel(
             accessKind = MemoryAccessKind.Read,
             typeDescriptor = typeDescriptor,
             memId = memId,
-            value = value,
+            value_ = value,
             isExclusive = isExclusive,
         )
     }
@@ -399,7 +404,7 @@ data class AtomicMemoryAccessLabel(
     override fun aggregate(label: EventLabel): EventLabel? = when {
 
         // TODO: perform dynamic type-check of `typeDesc`
-        (isRead && isRequest && value == null &&
+        (isRead && isRequest &&
          label is AtomicMemoryAccessLabel && label.isRead && label.isResponse &&
          threadId == label.threadId && memId == label.memId && isExclusive == label.isExclusive) -> {
             AtomicMemoryAccessLabel(
@@ -408,15 +413,20 @@ data class AtomicMemoryAccessLabel(
                 accessKind = MemoryAccessKind.Read,
                 typeDescriptor = typeDescriptor,
                 memId = memId,
-                value = label.value,
+                value_ = label.value,
                 isExclusive = isExclusive
             )
         }
 
-        (isRead && isTotal && isExclusive &&
-         label is AtomicMemoryAccessLabel && label.isWrite && label.isExclusive &&
+        (isRead && !isRequest && isExclusive &&
+         label is MemoryAccessLabel && label.isWrite && label.isExclusive &&
          threadId == label.threadId && memId == label.memId) -> {
-            ReadModifyWriteMemoryAccessLabel(this, label)
+            val writeLabel = when(label) {
+                is AtomicMemoryAccessLabel -> label
+                is ReadModifyWriteMemoryAccessLabel -> label.writeLabel
+                else -> unreachable()
+            }
+            ReadModifyWriteMemoryAccessLabel(this, writeLabel)
         }
 
         else -> super.aggregate(label)
@@ -424,7 +434,7 @@ data class AtomicMemoryAccessLabel(
 
     override fun replay(label: EventLabel): Boolean {
         if (label is AtomicMemoryAccessLabel && equalUpToValue(label)) {
-            value = label.value
+            value_ = label.value
             return true
         }
         return false
@@ -440,7 +450,7 @@ data class AtomicMemoryAccessLabel(
         // calling those would recursively create new events
         // TODO: perhaps, there is better workaround for this problem?
         else -> if (value == null) "null"
-                else (value as Any).javaClass.name + '@' + Integer.toHexString(value.hashCode())
+                else (value as Any).javaClass.name + '@' + Integer.toHexString(System.identityHashCode(value))
     }
 
     override fun toString(): String {
@@ -468,7 +478,7 @@ data class ReadModifyWriteMemoryAccessLabel(
         require(readLabel.threadId == writeLabel.threadId)
         require(readLabel.memId == writeLabel.memId)
         // TODO: also check types
-        require(readLabel.isTotal && writeLabel.isTotal)
+        require(!readLabel.isRequest && writeLabel.isTotal)
     }
 
     override val isRead: Boolean = true
@@ -478,6 +488,8 @@ data class ReadModifyWriteMemoryAccessLabel(
     override val memId: Int = readLabel.memId
 
     override val typeDescriptor: String = readLabel.typeDescriptor
+
+    override val isExclusive: Boolean = true
 
     val readValue: Any?
         get() = readLabel.value
@@ -493,12 +505,8 @@ data class ReadModifyWriteMemoryAccessLabel(
     }
 
     override fun replay(label: EventLabel): Boolean =
-        if (label is ReadModifyWriteMemoryAccessLabel &&
-            readLabel.equalUpToValue(label.readLabel) &&
-            writeLabel.equalUpToValue(label.writeLabel)) {
-            readLabel.value = label.readValue
-            writeLabel.value = label.writeValue
-            true
+        if (label is ReadModifyWriteMemoryAccessLabel) {
+            readLabel.replay(label.readLabel) && writeLabel.replay(label.writeLabel)
         } else false
 
     override fun toString(): String =

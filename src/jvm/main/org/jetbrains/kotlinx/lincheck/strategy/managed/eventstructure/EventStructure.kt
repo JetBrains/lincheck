@@ -115,11 +115,10 @@ class EventStructure(
         return null
     }
 
-    fun getThreadRoot(iThread: Int): Event? =
-        when (iThread) {
-            GHOST_THREAD_ID -> root
-            else -> threadRoots[iThread]
-        }
+    fun getThreadRoot(iThread: Int): Event? = when (iThread) {
+        GHOST_THREAD_ID -> root
+        else -> threadRoots[iThread]
+    }
 
     fun isInitializedThread(iThread: Int): Boolean =
         iThread == GHOST_THREAD_ID || threadRoots.contains(iThread)
@@ -352,7 +351,7 @@ class EventStructure(
             accessKind = MemoryAccessKind.Write,
             typeDescriptor = typeDescriptor,
             memId = memoryLocationId,
-            value = value,
+            value_ = value,
             isExclusive = isExclusive,
         )
         return addTotalEvent(label)
@@ -368,7 +367,7 @@ class EventStructure(
             accessKind = MemoryAccessKind.Read,
             typeDescriptor = typeDescriptor,
             memId = memoryLocationId,
-            value = null,
+            value_ = null,
             isExclusive = isExclusive,
         )
         val requestEvent = addRequestEvent(label)
