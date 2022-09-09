@@ -90,16 +90,16 @@ class SequentialConsistencyChecker : ConsistencyChecker {
 
     private val transitions = AdjacencyList<State, EventLabel> { state ->
         state.counter.mapNotNull { (threadId, position) ->
-            val (event, aggregated) = state.execution.getAggregatedEvent(threadId, position)
+            val (label, aggregated) = state.execution.getAggregatedLabel(threadId, position)
                 ?.takeIf { (_, events) -> state.coverable(events) }
                 ?: return@mapNotNull null
-            val memoryTracker = state.memoryTracker.replay(event.label)
+            val memoryTracker = state.memoryTracker.replay(label)
                 ?: return@mapNotNull null
-            event.label to State(
+            label to State(
                 execution = state.execution,
                 covering = state.covering,
                 counter = state.counter.toMutableMap().apply {
-                    update(event.threadId, default = 0) { it + aggregated.size }
+                    update(label.threadId, default = 0) { it + aggregated.size }
                 },
                 memoryTracker
             )
