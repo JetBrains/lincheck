@@ -20,52 +20,32 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-typealias EventID = Int
-
-// TODO: maybe call it DualLabelKind?
-enum class LabelKind { Request, Response, Total }
-
-enum class SynchronizationKind { Binary, Barrier }
+import org.jetbrains.kotlinx.lincheck.strategy.managed.defaultValueByDescriptor
 
 // TODO: make a constant for default thread ID
-abstract class EventLabel(
-    open val threadId: Int = 0,
-) {
+abstract class EventLabel {
 
-    abstract fun replay(label: EventLabel): Boolean
-
-    /**
-     * Synchronizes event label with another label passed as a parameter.
-     * For example a write label `wlab = W(x, v)` synchronizes with a read-request label `rlab = R^{req}(x)`
-     * and produces the read-response label `lab = R^{rsp}(x, v)`.
-     * That is a call `rlab.synchronize(wlab)` returns `lab`.
-     * Synchronize operation is expected to be associative and commutative.
-     * Thus it is also declared as infix operation: `a synchronize b`.
-     * In terms of synchronization algebra, non-null return value to the call `C = A.synchronize(B)`
-     * means that `A \+ B = C` and consequently `A >> C` and `B >> C`
-     * (read as A synchronizes with B into C, and A/B synchronizes with C respectively).
-     */
-    open infix fun synchronize(label: EventLabel): EventLabel? =
-        when {
-            (label is EmptyLabel) -> this
-            else -> null
-        }
-
-    // TODO: rename?
-    open infix fun aggregate(label: EventLabel): EventLabel? =
-        when {
-            (label is EmptyLabel) -> this
-            else -> null
-        }
-
-    fun aggregatesWith(label: EventLabel): Boolean =
-        aggregate(label) != null
+    abstract val threadId: Int
 
     abstract val isRequest: Boolean
 
     abstract val isResponse: Boolean
 
     abstract val isTotal: Boolean
+
+    /**
+     * Synchronizes event label with another label passed as a parameter.
+     * For example, write label `wlab = W(x, v)` synchronizes with a read-request label `rlab = R^{req}(x)`
+     * and produces the read-response label `lab = R^{rsp}(x, v)`.
+     * That is a call `rlab.synchronize(wlab)` returns `lab`.
+     * Synchronize operation is expected to be associative and commutative.
+     * Thus, it is also declared as infix operation: `a synchronize b`.
+     * In terms of synchronization algebra, non-null return value to the call `C = A.synchronize(B)`
+     * means that `A \+ B = C` and consequently `A >> C` and `B >> C`
+     * (read as A synchronizes with B into C, and A/B synchronizes with C respectively).
+     */
+    open infix fun synchronize(label: EventLabel): EventLabel? =
+        if (label is EmptyLabel) this else null
 
     // TODO: better name?
     abstract val isCompleted: Boolean
@@ -74,20 +54,43 @@ abstract class EventLabel(
 
     abstract val isBarrierSynchronizing: Boolean
 
-    val isThreadInitializer: Boolean
-        get() = isRequest && (this is ThreadStartLabel)
+    // TODO: rename?
+    open infix fun aggregate(label: EventLabel): EventLabel? =
+        if (label is EmptyLabel) this else null
 
+    fun aggregatesWith(label: EventLabel): Boolean =
+        aggregate(label) != null
+
+    open fun replay(label: EventLabel): Boolean =
+        (this == label)
+
+    val isThreadInitializer: Boolean by lazy {
+        isRequest && (this is ThreadStartLabel)
+    }
+
+    fun isMemoryAccessTo(memId: Int, predicate: MemoryAccessLabel.() -> Boolean = { true }) =
+        if (this is MemoryAccessLabel && this.memId == memId)
+            predicate()
+        else false
 }
+
+// TODO: maybe call it DualLabelKind?
+enum class LabelKind { Request, Response, Total }
+
+enum class SynchronizationKind { Binary, Barrier }
+
+// TODO: rename to BarrierRaceException?
+class InvalidBarrierSynchronizationException(message: String): Exception(message)
 
 // TODO: use of word `Atomic` here is perhaps misleading?
 //   Maybe rename it to `SingletonEventLabel` or something similar?
 //   At least document the meaning of `Atomic` here.
 abstract class AtomicEventLabel(
-    threadId: Int,
+    override val threadId: Int,
     open val kind: LabelKind,
     open val syncKind: SynchronizationKind,
     override val isCompleted: Boolean,
-): EventLabel(threadId) {
+): EventLabel() {
 
     override val isRequest: Boolean
         get() = (kind == LabelKind.Request)
@@ -106,26 +109,73 @@ abstract class AtomicEventLabel(
 
 }
 
-// TODO: rename to BarrierRaceException?
-class InvalidBarrierSynchronizationException(message: String): Exception(message)
+// TODO: rename?
+abstract class AggregatedEventLabel(
+    val labels: List<AtomicEventLabel>,
+) : EventLabel() {
 
-data class EmptyLabel(
-    override val threadId: Int = 0
-): AtomicEventLabel(
-    threadId = threadId,
+    init {
+        require(labels.isNotEmpty())
+    }
+
+    override val threadId: Int
+        get() = labels.first().threadId
+
+    init {
+        require(labels.all { it.threadId == threadId })
+    }
+
+    override val isRequest: Boolean
+        get() = labels.any { it.isRequest }
+
+    override val isResponse: Boolean
+        get() = labels.any { it.isResponse }
+
+    override val isTotal: Boolean
+        get() = labels.any { it.isTotal }
+
+    override val isCompleted: Boolean
+        get() = labels.all { it.isCompleted }
+
+    override val isBinarySynchronizing: Boolean
+        get() = labels.any { it.isBinarySynchronizing }
+
+    override val isBarrierSynchronizing: Boolean
+        get() = labels.any { it.isBinarySynchronizing }
+
+}
+
+// auxiliary ghost thread used as
+// (1) thread id of empty label (so that we can have single unit empty object of our monoids);
+// (2) thread id of auxiliary initialization event (i.e. root of the event structure).
+const val GHOST_THREAD_ID = -1
+
+class EmptyLabel: AtomicEventLabel(
+    threadId = GHOST_THREAD_ID,
     kind = LabelKind.Total,
     syncKind = SynchronizationKind.Binary,
     isCompleted = true
 ) {
-
-    override fun replay(label: EventLabel): Boolean =
-        (this == label)
 
     override fun synchronize(label: EventLabel) = label
 
     override fun aggregate(label: EventLabel) = label
 
     override fun toString(): String = "Empty"
+
+}
+
+class InitializationLabel : AtomicEventLabel(
+    threadId = GHOST_THREAD_ID,
+    kind = LabelKind.Total,
+    // TODO: can barrier-synchronizing events also utilize InitializationLabel?
+    syncKind = SynchronizationKind.Binary,
+    isCompleted = true,
+) {
+    override fun synchronize(label: EventLabel): EventLabel? =
+        if (label is InitializationLabel) null else label.synchronize(this)
+
+    override fun toString(): String = "Init"
 
 }
 
@@ -146,17 +196,10 @@ data class ThreadForkLabel(
     isCompleted = true,
 ) {
 
-    override fun replay(label: EventLabel): Boolean =
-        (this == label)
-
-    override fun synchronize(label: EventLabel): EventLabel? {
-        if (label is ThreadStartLabel && label.isRequest && label.threadId in forkThreadIds)
-            return ThreadStartLabel(
-                threadId = label.threadId,
-                kind = LabelKind.Response
-            )
-        return super.synchronize(label)
-    }
+    override fun synchronize(label: EventLabel): EventLabel? =
+        if (label is ThreadStartLabel)
+            label.synchronize(this)
+        else super.synchronize(label)
 
     override fun toString(): String =
         "ThreadFork(${forkThreadIds})"
@@ -165,7 +208,8 @@ data class ThreadForkLabel(
 
 data class ThreadStartLabel(
     override val threadId: Int,
-    override val kind: LabelKind
+    override val kind: LabelKind,
+    val isInitializationThread: Boolean = false,
 ): ThreadEventLabel(
     threadId = threadId,
     kind = kind,
@@ -173,24 +217,35 @@ data class ThreadStartLabel(
     isCompleted = true,
 ) {
 
-    override fun replay(label: EventLabel): Boolean =
-        (this == label)
+    override fun synchronize(label: EventLabel): EventLabel? = when {
 
-    override fun synchronize(label: EventLabel): EventLabel? {
-        if (label is ThreadForkLabel)
-            return label.synchronize(this)
-        return super.synchronize(label)
+        isRequest && isInitializationThread && label is InitializationLabel -> {
+            ThreadStartLabel(
+                threadId = threadId,
+                kind = LabelKind.Response,
+                isInitializationThread = true,
+            )
+        }
+
+        isRequest && label is ThreadForkLabel && threadId in label.forkThreadIds -> {
+            check(!isInitializationThread)
+            ThreadStartLabel(
+                threadId = threadId,
+                kind = LabelKind.Response,
+                isInitializationThread = false,
+            )
+        }
+
+        else -> super.synchronize(label)
     }
 
-    override fun aggregate(label: EventLabel): EventLabel? {
+    override fun aggregate(label: EventLabel): EventLabel? =
         if (isRequest && label.isResponse &&
             label is ThreadStartLabel && threadId == label.threadId)
-            return ThreadStartLabel(threadId, LabelKind.Total)
-        return super.aggregate(label)
-    }
+            ThreadStartLabel(threadId, LabelKind.Total)
+        else super.aggregate(label)
 
-    override fun toString(): String =
-        "ThreadStart"
+    override fun toString(): String = "ThreadStart"
 
 }
 
@@ -204,31 +259,32 @@ data class ThreadFinishLabel(
     isCompleted = true,
 ) {
 
-    override fun replay(label: EventLabel): Boolean =
-        (this == label)
+    override fun synchronize(label: EventLabel): EventLabel? = when {
 
-    override fun synchronize(label: EventLabel): EventLabel? {
         // TODO: handle cases of invalid synchronization:
         //  - when there are multiple ThreadFinish labels with the same thread id
         //  - when thread finishes outside of matching ThreadFork/ThreadJoin scope
         //  In order to handle the last case we need to add `scope` parameter to Thread labels?.
         //  Throw `InvalidBarrierSynchronizationException` in these cases.
-        if (label is ThreadJoinLabel && label.joinThreadIds.containsAll(finishedThreadIds))
-            return ThreadJoinLabel(
+        (label is ThreadJoinLabel && label.joinThreadIds.containsAll(finishedThreadIds)) -> {
+            ThreadJoinLabel(
                 threadId = label.threadId,
                 kind = LabelKind.Response,
                 joinThreadIds = label.joinThreadIds - finishedThreadIds,
             )
-        if (label is ThreadFinishLabel)
-            return ThreadFinishLabel(
+        }
+
+        (label is ThreadFinishLabel) -> {
+            ThreadFinishLabel(
                 threadId = threadId,
                 finishedThreadIds = finishedThreadIds + label.finishedThreadIds
             )
-        return super.synchronize(label)
+        }
+
+        else -> super.synchronize(label)
     }
 
-    override fun toString(): String =
-        "ThreadFinish"
+    override fun toString(): String = "ThreadFinish"
 
 }
 
@@ -243,22 +299,17 @@ data class ThreadJoinLabel(
     isCompleted = (kind == LabelKind.Response) implies joinThreadIds.isEmpty()
 ) {
 
-    override fun replay(label: EventLabel): Boolean =
-        (this == label)
-
-    override fun synchronize(label: EventLabel): EventLabel? {
+    override fun synchronize(label: EventLabel): EventLabel? =
         if (label is ThreadFinishLabel)
-            return label.synchronize(this)
-        return super.synchronize(label)
-    }
+            label.synchronize(this)
+        else super.synchronize(label)
 
-    override fun aggregate(label: EventLabel): EventLabel? {
+    override fun aggregate(label: EventLabel): EventLabel? =
         if (isRequest && label.isResponse &&
             label is ThreadJoinLabel && threadId == label.threadId &&
-            label.joinThreadIds.isEmpty())
-            return ThreadJoinLabel(threadId, LabelKind.Total, setOf())
-        return super.aggregate(label)
-    }
+            label.joinThreadIds.isEmpty()) {
+            ThreadJoinLabel(threadId, LabelKind.Total, setOf())
+        } else super.aggregate(label)
 
     override fun toString(): String =
         "ThreadJoin(${joinThreadIds})"
@@ -266,12 +317,27 @@ data class ThreadJoinLabel(
 
 enum class MemoryAccessKind { Read, Write }
 
-data class MemoryAccessLabel(
+interface MemoryAccessLabel {
+
+    val isRead: Boolean
+
+    val isWrite: Boolean
+
+    val isReadModifyWrite: Boolean
+        get() = isRead && isWrite
+
+    val memId: Int
+
+    val typeDescriptor: String
+
+}
+
+data class AtomicMemoryAccessLabel(
     override val threadId: Int,
     override val kind: LabelKind,
     val accessKind: MemoryAccessKind,
-    val typeDesc: String,
-    val memId: Int,
+    override val typeDescriptor: String,
+    override val memId: Int,
     var value: Any?,
     val isExclusive: Boolean = false
 ): AtomicEventLabel(
@@ -279,78 +345,93 @@ data class MemoryAccessLabel(
     kind = kind,
     syncKind = SynchronizationKind.Binary,
     isCompleted = true
-) {
+), MemoryAccessLabel {
 
-    val isRead: Boolean = (accessKind == MemoryAccessKind.Read)
+    override val isRead: Boolean =
+        (accessKind == MemoryAccessKind.Read)
 
-    val isWrite: Boolean = (accessKind == MemoryAccessKind.Write)
+    override val isWrite: Boolean =
+        (accessKind == MemoryAccessKind.Write)
 
     init {
         require((isRead && isRequest) implies (value == null))
         require(isWrite implies isTotal)
     }
 
-    fun equalUpToValue(label: MemoryAccessLabel): Boolean =
+    fun equalUpToValue(label: AtomicMemoryAccessLabel): Boolean =
         (threadId == label.threadId) &&
         (kind == label.kind) &&
         (accessKind == label.accessKind) &&
-        (typeDesc == label.typeDesc) &&
+        (typeDescriptor == label.typeDescriptor) &&
         (memId == label.memId) &&
         (isExclusive == label.isExclusive)
 
+    private fun completeReadRequest(value: Any?, typeDescriptor: String): AtomicMemoryAccessLabel {
+        require(isRead && isRequest)
+        require(this.typeDescriptor == typeDescriptor)
+        return AtomicMemoryAccessLabel(
+            threadId = threadId,
+            kind = LabelKind.Response,
+            accessKind = MemoryAccessKind.Read,
+            typeDescriptor = typeDescriptor,
+            memId = memId,
+            value = value,
+            isExclusive = isExclusive,
+        )
+    }
+
+    override fun synchronize(label: EventLabel): EventLabel? = when {
+
+        (isRead && isRequest && label is InitializationLabel) ->
+            completeReadRequest(defaultValueByDescriptor(typeDescriptor), typeDescriptor)
+
+        (label is AtomicMemoryAccessLabel && memId == label.memId) -> when {
+            isRead && isRequest && label.isWrite ->
+                completeReadRequest(label.value, label.typeDescriptor)
+            isWrite && label.isRead && label.isRequest ->
+                label.completeReadRequest(value, typeDescriptor)
+            else -> null
+        }
+
+        else -> super.synchronize(label)
+    }
+
+    override fun aggregate(label: EventLabel): EventLabel? = when {
+
+        // TODO: perform dynamic type-check of `typeDesc`
+        (isRead && isRequest && value == null &&
+         label is AtomicMemoryAccessLabel && label.isRead && label.isResponse &&
+         threadId == label.threadId && memId == label.memId && isExclusive == label.isExclusive) -> {
+            AtomicMemoryAccessLabel(
+                threadId = threadId,
+                kind = LabelKind.Total,
+                accessKind = MemoryAccessKind.Read,
+                typeDescriptor = typeDescriptor,
+                memId = memId,
+                value = label.value,
+                isExclusive = isExclusive
+            )
+        }
+
+        (isRead && isTotal && isExclusive &&
+         label is AtomicMemoryAccessLabel && label.isWrite && label.isExclusive &&
+         threadId == label.threadId && memId == label.memId) -> {
+            ReadModifyWriteMemoryAccessLabel(this, label)
+        }
+
+        else -> super.aggregate(label)
+    }
+
     override fun replay(label: EventLabel): Boolean {
-        if (label is MemoryAccessLabel && equalUpToValue(label)) {
+        if (label is AtomicMemoryAccessLabel && equalUpToValue(label)) {
             value = label.value
             return true
         }
         return false
     }
 
-    override fun synchronize(label: EventLabel): EventLabel? {
-        // TODO: perform dynamic type-check of `typeDesc`
-        val writeReadSync = { writeLabel : MemoryAccessLabel, readLabel : MemoryAccessLabel ->
-            MemoryAccessLabel(
-                threadId = readLabel.threadId,
-                kind = LabelKind.Response,
-                accessKind = MemoryAccessKind.Read,
-                typeDesc = writeLabel.typeDesc,
-                memId = writeLabel.memId,
-                value = writeLabel.value,
-                isExclusive = readLabel.isExclusive,
-            )
-        }
-        if ((label is MemoryAccessLabel) && (memId == label.memId)) {
-            if (isWrite && label.isRead && label.isRequest)
-                return writeReadSync(this, label)
-            if (label.isWrite && isRead && isRequest)
-                return writeReadSync(label, this)
-        }
-        return super.synchronize(label)
-    }
-
-    override fun aggregate(label: EventLabel): EventLabel? {
-        // TODO: perform dynamic type-check of `typeDesc`
-        if (isRead && isRequest && value == null
-            && label is MemoryAccessLabel && label.isRead && label.isResponse
-            && threadId == label.threadId && memId == label.memId && isExclusive == label.isExclusive)
-            return MemoryAccessLabel(
-                threadId = threadId,
-                kind = LabelKind.Total,
-                accessKind = MemoryAccessKind.Read,
-                typeDesc = typeDesc,
-                memId = memId,
-                value = label.value,
-                isExclusive = isExclusive
-            )
-        if (isRead && isTotal && isExclusive
-            && label is MemoryAccessLabel && label.isWrite && label.isExclusive
-            && threadId == label.threadId && memId == label.memId)
-            return ReadModifyWriteMemoryAccessLabel(this, label)
-        return super.aggregate(label)
-    }
-
     // TODO: move to common class for type descriptor logic
-    private val valueString: String = when (typeDesc) {
+    private val valueString: String = when (typeDescriptor) {
         // for primitive types just print the value
         "I", "Z", "B", "C", "S", "J", "D", "F" -> value.toString()
         // for object types we should not call `toString` because
@@ -374,38 +455,12 @@ data class MemoryAccessLabel(
 
 }
 
-// TODO: rename?
-abstract class CompoundEventLabel(
-    threadId: Int,
-    val labels: List<AtomicEventLabel>,
-) : EventLabel(threadId) {
-
-    override val isRequest: Boolean
-        get() = labels.any { it.isRequest }
-
-    override val isResponse: Boolean
-        get() = labels.any { it.isResponse }
-
-    override val isTotal: Boolean
-        get() = labels.any { it.isTotal }
-
-    override val isCompleted: Boolean
-        get() = labels.all { it.isCompleted }
-
-    override val isBinarySynchronizing: Boolean
-        get() = labels.any { it.isBinarySynchronizing }
-
-    override val isBarrierSynchronizing: Boolean
-        get() = labels.any { it.isBinarySynchronizing }
-
-}
-
 // TODO: MemoryAccessLabel and ReadModifyWriteMemoryAccessLabel likely
 //   should have common ancestor in the hierarchy?
 data class ReadModifyWriteMemoryAccessLabel(
-    val readLabel: MemoryAccessLabel,
-    val writeLabel: MemoryAccessLabel,
-) : CompoundEventLabel(readLabel.threadId, listOf(readLabel, writeLabel)) {
+    val readLabel: AtomicMemoryAccessLabel,
+    val writeLabel: AtomicMemoryAccessLabel,
+) : AggregatedEventLabel(listOf(readLabel, writeLabel)), MemoryAccessLabel {
 
     init {
         require(readLabel.isRead && readLabel.isExclusive)
@@ -416,9 +471,13 @@ data class ReadModifyWriteMemoryAccessLabel(
         require(readLabel.isTotal && writeLabel.isTotal)
     }
 
-    val typeDesc: String = readLabel.typeDesc
+    override val isRead: Boolean = true
 
-    val memId: Int = readLabel.memId
+    override val isWrite: Boolean = true
+
+    override val memId: Int = readLabel.memId
+
+    override val typeDescriptor: String = readLabel.typeDescriptor
 
     val readValue: Any?
         get() = readLabel.value
@@ -426,26 +485,23 @@ data class ReadModifyWriteMemoryAccessLabel(
     val writeValue: Any?
         get() = writeLabel.value
 
-    override fun replay(label: EventLabel): Boolean {
-        if (label is ReadModifyWriteMemoryAccessLabel &&
-            readLabel.equalUpToValue(label.readLabel) &&
-            writeLabel.equalUpToValue(label.writeLabel)) {
-            readLabel.value = label.readValue
-            writeLabel.value = label.writeValue
-            return true
-        }
-        return false
-    }
-
-    override fun synchronize(label: EventLabel): EventLabel? {
-        return if (label is EmptyLabel) this else writeLabel.synchronize(label)
-    }
+    override fun synchronize(label: EventLabel): EventLabel? =
+        if (label is EmptyLabel) this else writeLabel.synchronize(label)
 
     override fun aggregate(label: EventLabel): EventLabel? {
         return super.aggregate(label)
     }
 
+    override fun replay(label: EventLabel): Boolean =
+        if (label is ReadModifyWriteMemoryAccessLabel &&
+            readLabel.equalUpToValue(label.readLabel) &&
+            writeLabel.equalUpToValue(label.writeLabel)) {
+            readLabel.value = label.readValue
+            writeLabel.value = label.writeValue
+            true
+        } else false
+
     override fun toString(): String =
-        "Update(${memId}, ${readValue}, ${writeValue})"
+        "ReadModifyWrite(${memId}, ${readValue}, ${writeValue})"
 
 }
