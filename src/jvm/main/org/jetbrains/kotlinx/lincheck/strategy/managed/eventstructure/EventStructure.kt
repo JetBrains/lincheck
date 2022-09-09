@@ -60,7 +60,7 @@ class EventStructure(
     private var currentFrontier: ExecutionFrontier = ExecutionFrontier()
 
     init {
-        root = addRootEvent(initialThreadId)
+        root = addRootEvent()
     }
 
     fun startNextExploration(): Boolean {
@@ -191,15 +191,12 @@ class EventStructure(
         } else null
     }
 
-    private fun addRootEvent(initialThreadId: Int): Event {
+    private fun addRootEvent(): Event {
         // we do not mark root event as visited purposefully;
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
-        val label = ThreadForkLabel(
-            threadId = GHOST_THREAD_ID,
-            setOf(initialThreadId)
-        )
-        return addEvent(label, emptyList())!!.also {
+        val label = InitializationLabel()
+        return addEvent(label, emptyList()).also {
             addEventToCurrentExecution(it, visit = false)
         }
     }
@@ -308,7 +305,8 @@ class EventStructure(
     fun addThreadStartEvent(iThread: Int): Event {
         val label = ThreadStartLabel(
             threadId = iThread,
-            kind = LabelKind.Request
+            kind = LabelKind.Request,
+            isInitializationThread = (iThread == initialThreadId)
         )
         val requestEvent = addRequestEvent(label)
         val (responseEvent, responseEvents) = addResponseEvents(requestEvent)
@@ -348,11 +346,11 @@ class EventStructure(
 
     fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String,
                       isExclusive: Boolean = false): Event {
-        val label = MemoryAccessLabel(
+        val label = AtomicMemoryAccessLabel(
             threadId = iThread,
             kind = LabelKind.Total,
             accessKind = MemoryAccessKind.Write,
-            typeDesc = typeDescriptor,
+            typeDescriptor = typeDescriptor,
             memId = memoryLocationId,
             value = value,
             isExclusive = isExclusive,
@@ -362,15 +360,13 @@ class EventStructure(
 
     fun addReadEvent(iThread: Int, memoryLocationId: Int, typeDescriptor: String,
                      isExclusive: Boolean = false): Event {
-        // we lazily initialize memory location upon first read to this location
-        initializeMemoryLocation(memoryLocationId, typeDescriptor)
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
-        val label = MemoryAccessLabel(
+        val label = AtomicMemoryAccessLabel(
             threadId = iThread,
             kind = LabelKind.Request,
             accessKind = MemoryAccessKind.Read,
-            typeDesc = typeDescriptor,
+            typeDescriptor = typeDescriptor,
             memId = memoryLocationId,
             value = null,
             isExclusive = isExclusive,
@@ -383,18 +379,6 @@ class EventStructure(
         checkNotNull(responseEvent)
         return responseEvent
     }
-
-    private fun initializeMemoryLocation(memoryLocationId: Int, typeDescriptor: String) {
-        // if there exists a write event to this location in the initialization thread,
-        // (or the ghost thread, in which case memory location was already initialized)
-        // then there is no need to add initialization write
-        events.find {
-            (it.threadId == GHOST_THREAD_ID || it.threadId == initialThreadId)
-                && it.label is MemoryAccessLabel
-                && it.label.memId == memoryLocationId
-        }?.let { return }
-        addWriteEvent(GHOST_THREAD_ID, memoryLocationId, defaultValueByDescriptor(typeDescriptor), typeDescriptor)
-    }
 }
 
 class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
@@ -405,12 +389,12 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
 
     override fun readValue(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor)
-        return (readEvent.label as MemoryAccessLabel).value
+        return (readEvent.label as AtomicMemoryAccessLabel).value
     }
 
     override fun compareAndSet(iThread: Int, memoryLocationId: Int, expectedValue: Any?, newValue: Any?, typeDescriptor: String): Boolean {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor, isExclusive = true)
-        val readValue = (readEvent.label as MemoryAccessLabel).value
+        val readValue = (readEvent.label as AtomicMemoryAccessLabel).value
         if (readValue != expectedValue) return false
         eventStructure.addWriteEvent(iThread, memoryLocationId, newValue, typeDescriptor, isExclusive = true)
         return true
@@ -421,9 +405,9 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
     private fun fetchAndAdd(iThread: Int, memoryLocationId: Int, delta: Number,
                             typeDescriptor: String, incKind: IncrementKind): Number {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, typeDescriptor, isExclusive = true)
-        val readLabel = readEvent.label as MemoryAccessLabel
+        val readLabel = readEvent.label as AtomicMemoryAccessLabel
         // TODO: should we use some sub-type check instead of equality check?
-        check(readLabel.typeDesc == typeDescriptor)
+        check(readLabel.typeDescriptor == typeDescriptor)
         val oldValue: Number = readLabel.value as Number
         val newValue: Number = when (typeDescriptor) {
             // check `Int` and `Long` types

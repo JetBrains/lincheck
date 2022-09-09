@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+typealias EventID = Int
+
 class Event private constructor(
     val id: EventID,
     /**
@@ -101,24 +103,23 @@ class Event private constructor(
     }
 
     val readsFrom: Event by lazy {
-        require(label is MemoryAccessLabel && label.isRead && (label.isResponse || label.isTotal))
+        require(label is MemoryAccessLabel && label.isRead && !label.isRequest)
         require(dependencies.isNotEmpty())
         dependencies.first().also {
             // TODO: make `isSynchronized` method to check for labels' compatibility
             //  according to synchronization algebra (e.g. write/read reads-from compatibility)
-            check(it.label is MemoryAccessLabel
-                && it.label.accessKind == MemoryAccessKind.Write
-                && it.label.memId == label.memId
-            )
+            check((it.label is InitializationLabel) ||
+                  (it.label is MemoryAccessLabel && it.label.isWrite &&
+                   it.label.memId == label.memId))
         }
     }
 
     val exclusiveReadPart: Event by lazy {
-        require(label is MemoryAccessLabel && label.isWrite && label.isExclusive)
+        require(label is AtomicMemoryAccessLabel && label.isWrite && label.isExclusive)
         require(parent != null)
         parent.also {
-            check(it.label is MemoryAccessLabel
-                && it.label.isRead && (it.label.isResponse || it.label.isTotal)
+            check(it.label is AtomicMemoryAccessLabel
+                && it.label.isRead && !it.label.isRequest
                 && it.label.memId == label.memId
                 && it.label.isExclusive
             )
@@ -168,7 +169,3 @@ val causalityCovering: Covering<Event> = Covering { y ->
 }
 
 fun emptyClock() = VectorClock<Int, Event>(programOrder)
-
-// auxiliary ghost thread containing root event of the event structure
-// and initialization events (e.g. initialization writes of memory locations)
-const val GHOST_THREAD_ID = -1

@@ -27,19 +27,23 @@ private typealias ExecutionCounter = MutableMap<Int, Int>
 private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? {
     check(label.isTotal)
     return when {
-        label is MemoryAccessLabel && label.isRead ->
+        label is AtomicMemoryAccessLabel && label.isRead ->
             copy().takeIf {
-                readExpectedValue(label.threadId, label.memId, label.value, label.typeDesc)
+                readExpectedValue(label.threadId, label.memId, label.value, label.typeDescriptor)
             }
-        label is MemoryAccessLabel && label.isWrite ->
+
+        label is AtomicMemoryAccessLabel && label.isWrite ->
             copy().apply {
-                writeValue(label.threadId, label.memId, label.value, label.typeDesc)
+                writeValue(label.threadId, label.memId, label.value, label.typeDescriptor)
             }
+
         label is ReadModifyWriteMemoryAccessLabel ->
             copy().takeIf {
-                compareAndSet(label.threadId, label.memId, label.readValue, label.writeValue, label.typeDesc)
+                compareAndSet(label.threadId, label.memId, label.readValue, label.writeValue, label.typeDescriptor)
             }
+
         label is ThreadEventLabel -> this
+        label is InitializationLabel -> this
         else -> unreachable()
     }
 }
@@ -58,18 +62,11 @@ class SequentialConsistencyChecker : ConsistencyChecker {
         companion object {
             fun initial(execution: Execution, covering: Covering<Event>): State {
                 var memoryTracker = SeqCstMemoryTracker()
-                val ghostThread = execution.ghostThread
-                // replay ghost thread which potentially contains some initialization writes
-                for (i in 0 until execution.getThreadSize(ghostThread)) {
-                   memoryTracker = memoryTracker.replay(execution[ghostThread, i]!!.label)!!
-                }
                 return State(
                     execution = execution,
                     covering = covering,
                     memoryTracker = memoryTracker,
-                    counter = execution.threads.associateWith { 0 }
-                        .toMutableMap()
-                        .apply { set(ghostThread, execution.getThreadSize(ghostThread)) },
+                    counter = execution.threads.associateWith { 0 }.toMutableMap()
                 )
             }
         }
