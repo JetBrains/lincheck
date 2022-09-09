@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.util.concurrent.atomic.*
 
 import org.junit.Test
+import org.junit.Assert.*
 import org.junit.runner.RunWith
 import org.junit.experimental.runners.Enclosed
 
@@ -276,6 +277,41 @@ class EventStructureStrategyTest {
         private val compareAndSet = SharedMemory::compareAndSet
         private val addAndGet = SharedMemory::addAndGet
         private val getAndAdd = SharedMemory::getAndAdd
+
+        @Test
+        fun testRRWW() {
+            val testScenario = scenario {
+                parallel {
+                    thread {
+                        actor(read, x)
+                        actor(read, y)
+                    }
+                    thread {
+                        actor(write, y, 1)
+                    }
+                    thread {
+                        actor(write, x, 1)
+                    }
+                }
+            }
+
+            val verifier = createVerifier(testScenario) { results ->
+                val r1 = getReadResult(results.parallelResults[0][0])
+                val r2 = getReadResult(results.parallelResults[0][1])
+                println("r1=$r1, r2=$r2")
+                (r1 to r2) in listOf(
+                    (0 to 0),
+                    (0 to 1),
+                    (1 to 0),
+                    (1 to 1)
+                )
+            }
+
+            val strategy = createStrategy(SharedMemory::class.java, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
+            assertEquals(4, strategy.consistentExecutions)
+        }
 
         @Test
         fun testSB() {

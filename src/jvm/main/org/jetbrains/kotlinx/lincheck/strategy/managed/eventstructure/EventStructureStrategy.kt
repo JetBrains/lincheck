@@ -55,6 +55,9 @@ class EventStructureStrategy(
     // TODO: change to EventStructureMonitorTracker
     override var monitorTracker: MonitorTracker = SeqCstMonitorTracker(nThreads)
 
+    var consistentExecutions: Int = 0
+        private set
+
     init {
         atomicityChecker.initialize(eventStructure)
     }
@@ -73,6 +76,7 @@ class EventStructureStrategy(
                 if (eventStructure.checkConsistency() != null) {
                     continue@inner
                 }
+                consistentExecutions++
                 // TODO: should we count failed inconsistent executions as used invocations?
                 usedInvocations++
                 checkResult(result, shouldCollectTrace = false)?.let { return it }

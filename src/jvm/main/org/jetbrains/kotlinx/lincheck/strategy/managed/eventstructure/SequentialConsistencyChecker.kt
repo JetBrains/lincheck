@@ -29,7 +29,7 @@ private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? 
     return when {
         label is MemoryAccessLabel && label.isRead ->
             copy().takeIf {
-                readValue(label.threadId, label.memId, label.typeDesc) == label.value
+                readExpectedValue(label.threadId, label.memId, label.value, label.typeDesc)
             }
         label is MemoryAccessLabel && label.isWrite ->
             copy().apply {
