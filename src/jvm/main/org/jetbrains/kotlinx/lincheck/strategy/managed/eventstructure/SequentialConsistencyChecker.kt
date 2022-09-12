@@ -27,20 +27,17 @@ private typealias ExecutionCounter = MutableMap<Int, Int>
 private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? {
     check(label.isTotal)
     return when {
-        label is AtomicMemoryAccessLabel && label.isRead ->
-            copy().takeIf {
-                readExpectedValue(label.threadId, label.memId, label.value, label.typeDescriptor)
-            }
+        label is AtomicMemoryAccessLabel && label.isRead -> copy().takeIf {
+            label.value == readValue(label.threadId, label.memId, label.kClass)
+        }
 
-        label is AtomicMemoryAccessLabel && label.isWrite ->
-            copy().apply {
-                writeValue(label.threadId, label.memId, label.value, label.typeDescriptor)
-            }
+        label is AtomicMemoryAccessLabel && label.isWrite -> copy().apply {
+            writeValue(label.threadId, label.memId, label.value, label.kClass)
+        }
 
-        label is ReadModifyWriteMemoryAccessLabel ->
-            copy().takeIf {
-                compareAndSet(label.threadId, label.memId, label.readValue, label.writeValue, label.typeDescriptor)
-            }
+        label is ReadModifyWriteMemoryAccessLabel -> copy().takeIf {
+            compareAndSet(label.threadId, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
+        }
 
         label is ThreadEventLabel -> this
         label is InitializationLabel -> this

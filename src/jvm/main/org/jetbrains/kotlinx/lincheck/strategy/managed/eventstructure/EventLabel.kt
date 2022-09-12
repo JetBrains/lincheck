@@ -20,7 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.defaultValueByDescriptor
+import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
+import org.jetbrains.kotlinx.lincheck.strategy.managed.isInstanceOf
+import kotlin.reflect.KClass
 
 // TODO: make a constant for default thread ID
 abstract class EventLabel {
@@ -328,7 +330,7 @@ interface MemoryAccessLabel {
 
     val memId: Int
 
-    val typeDescriptor: String
+    val kClass: KClass<*>
 
     val isExclusive: Boolean
 
@@ -338,9 +340,9 @@ data class AtomicMemoryAccessLabel(
     override val threadId: Int,
     override val kind: LabelKind,
     val accessKind: MemoryAccessKind,
-    override val typeDescriptor: String,
     override val memId: Int,
-    private var value_: Any?,
+    private var value_: OpaqueValue?,
+    override val kClass: KClass<*>,
     override val isExclusive: Boolean = false
 ): AtomicEventLabel(
     threadId = threadId,
@@ -349,7 +351,7 @@ data class AtomicMemoryAccessLabel(
     isCompleted = true
 ), MemoryAccessLabel {
 
-    val value: Any?
+    val value: OpaqueValue?
         get() = value_
 
     override val isRead: Boolean =
@@ -363,24 +365,16 @@ data class AtomicMemoryAccessLabel(
         require(isWrite implies isTotal)
     }
 
-    fun equalUpToValue(label: AtomicMemoryAccessLabel): Boolean =
-        (threadId == label.threadId) &&
-        (kind == label.kind) &&
-        (accessKind == label.accessKind) &&
-        (typeDescriptor == label.typeDescriptor) &&
-        (memId == label.memId) &&
-        (isExclusive == label.isExclusive)
-
-    private fun completeReadRequest(value: Any?, typeDescriptor: String): AtomicMemoryAccessLabel {
+    private fun completeReadRequest(value: OpaqueValue?): AtomicMemoryAccessLabel {
         require(isRead && isRequest)
-        require(this.typeDescriptor == typeDescriptor)
+        require(value.isInstanceOf(kClass))
         return AtomicMemoryAccessLabel(
             threadId = threadId,
             kind = LabelKind.Response,
             accessKind = MemoryAccessKind.Read,
-            typeDescriptor = typeDescriptor,
             memId = memId,
             value_ = value,
+            kClass = kClass,
             isExclusive = isExclusive,
         )
     }
@@ -388,13 +382,13 @@ data class AtomicMemoryAccessLabel(
     override fun synchronize(label: EventLabel): EventLabel? = when {
 
         (isRead && isRequest && label is InitializationLabel) ->
-            completeReadRequest(defaultValueByDescriptor(typeDescriptor), typeDescriptor)
+            completeReadRequest(OpaqueValue.default(kClass))
 
         (label is AtomicMemoryAccessLabel && memId == label.memId) -> when {
             isRead && isRequest && label.isWrite ->
-                completeReadRequest(label.value, label.typeDescriptor)
+                completeReadRequest(label.value)
             isWrite && label.isRead && label.isRequest ->
-                label.completeReadRequest(value, typeDescriptor)
+                label.completeReadRequest(value)
             else -> null
         }
 
@@ -411,9 +405,9 @@ data class AtomicMemoryAccessLabel(
                 threadId = threadId,
                 kind = LabelKind.Total,
                 accessKind = MemoryAccessKind.Read,
-                typeDescriptor = typeDescriptor,
                 memId = memId,
                 value_ = label.value,
+                kClass = kClass,
                 isExclusive = isExclusive
             )
         }
@@ -432,25 +426,20 @@ data class AtomicMemoryAccessLabel(
         else -> super.aggregate(label)
     }
 
+    private fun equalUpToValue(label: AtomicMemoryAccessLabel): Boolean =
+        (threadId == label.threadId) &&
+        (kind == label.kind) &&
+        (accessKind == label.accessKind) &&
+        (kClass == label.kClass) &&
+        (memId == label.memId) &&
+        (isExclusive == label.isExclusive)
+
     override fun replay(label: EventLabel): Boolean {
         if (label is AtomicMemoryAccessLabel && equalUpToValue(label)) {
             value_ = label.value
             return true
         }
         return false
-    }
-
-    // TODO: move to common class for type descriptor logic
-    private val valueString: String = when (typeDescriptor) {
-        // for primitive types just print the value
-        "I", "Z", "B", "C", "S", "J", "D", "F" -> value.toString()
-        // for object types we should not call `toString` because
-        // it itself can be transformed and instrumented to call
-        // `onSharedVariableRead`, `onSharedVariableWrite` or similar methods,
-        // calling those would recursively create new events
-        // TODO: perhaps, there is better workaround for this problem?
-        else -> if (value == null) "null"
-                else (value as Any).javaClass.name + '@' + Integer.toHexString(System.identityHashCode(value))
     }
 
     override fun toString(): String {
@@ -460,7 +449,8 @@ data class AtomicMemoryAccessLabel(
             LabelKind.Total -> ""
         }
         val exclString = if (isExclusive) "_ex" else ""
-        return "${accessKind}${kindString}${exclString}(${memId}, ${valueString})"
+        val argsString = "$memId" + if (kind != LabelKind.Request) ", $value" else ""
+        return "${accessKind}${kindString}${exclString}(${argsString})"
     }
 
 }
@@ -477,7 +467,9 @@ data class ReadModifyWriteMemoryAccessLabel(
         require(writeLabel.isWrite && writeLabel.isExclusive)
         require(readLabel.threadId == writeLabel.threadId)
         require(readLabel.memId == writeLabel.memId)
-        // TODO: also check types
+        // TODO: do we need weaker type check?
+        //  e.g. for a case when expected and desired values of CAS are of different classes
+        require(readLabel.kClass == writeLabel.kClass)
         require(!readLabel.isRequest && writeLabel.isTotal)
     }
 
@@ -487,15 +479,9 @@ data class ReadModifyWriteMemoryAccessLabel(
 
     override val memId: Int = readLabel.memId
 
-    override val typeDescriptor: String = readLabel.typeDescriptor
+    override val kClass: KClass<*> = readLabel.kClass
 
     override val isExclusive: Boolean = true
-
-    val readValue: Any?
-        get() = readLabel.value
-
-    val writeValue: Any?
-        get() = writeLabel.value
 
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is EmptyLabel) this else writeLabel.synchronize(label)
@@ -510,6 +496,6 @@ data class ReadModifyWriteMemoryAccessLabel(
         } else false
 
     override fun toString(): String =
-        "ReadModifyWrite(${memId}, ${readValue}, ${writeValue})"
+        "ReadModifyWrite(${memId}, ${readLabel.value}, ${writeLabel.value})"
 
 }
