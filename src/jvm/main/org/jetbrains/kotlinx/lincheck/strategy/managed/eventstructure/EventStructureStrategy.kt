@@ -72,6 +72,15 @@ class EventStructureStrategy(
                     result.exception is InconsistentExecutionException) {
                     continue@inner
                 }
+                if (result !is CompletedInvocationResult) {
+                    // TODO: replace `println` with logging
+                    // TODO: we need to differentiate between exceptions thrown by user-code or internal-code
+                    println("Failed lincheck result: $result")
+                    if (result is UnexpectedExceptionInvocationResult) {
+                        println(result.exception)
+                        println(result.exception.stackTraceToString())
+                    }
+                }
                 // check that the final execution is consistent
                 if (eventStructure.checkConsistency() != null) {
                     continue@inner
