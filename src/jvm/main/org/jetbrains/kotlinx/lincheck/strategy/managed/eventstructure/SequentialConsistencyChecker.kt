@@ -37,11 +37,11 @@ private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? 
         }
 
         label is ReadModifyWriteMemoryAccessLabel -> copy().takeIf {
-            compareAndSet(label.threadId, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
+            it.compareAndSet(label.threadId, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
         }
 
-        label is ThreadEventLabel -> this
-        label is InitializationLabel -> this
+        label is ThreadEventLabel -> copy()
+        label is InitializationLabel -> copy()
         else -> unreachable()
     }
 }
