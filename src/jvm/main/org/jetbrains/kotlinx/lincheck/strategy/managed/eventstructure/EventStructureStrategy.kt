@@ -40,14 +40,12 @@ class EventStructureStrategy(
     // The number of already used invocations.
     private var usedInvocations = 0
 
-    private val initialThreadId = nThreads
-
     private val seqCstChecker: SequentialConsistencyChecker = SequentialConsistencyChecker()
 
     private val atomicityChecker: AtomicityChecker = AtomicityChecker()
 
     private val eventStructure: EventStructure =
-        EventStructure(initialThreadId, listOf(seqCstChecker), listOf(atomicityChecker))
+        EventStructure(nThreads, listOf(seqCstChecker), listOf(atomicityChecker))
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
@@ -97,6 +95,10 @@ class EventStructureStrategy(
     }
 
     override fun shouldSwitch(iThread: Int): Boolean {
+        // If strategy is in replay phase we first need to execute replaying threads
+        if (eventStructure.inReplayMode() && !eventStructure.inReplayMode(iThread)) {
+            return true
+        }
         // If strategy is in replay mode for given thread
         // we should wait until replaying the next event become possible
         // (i.e. when all the dependencies will be replayed too)
@@ -122,8 +124,9 @@ class EventStructureStrategy(
     }
 
     override fun isActive(iThread: Int): Boolean {
-        return super.isActive(iThread) &&
-            (eventStructure.inReplayMode(iThread) implies { eventStructure.canReplayNextEvent(iThread) })
+        return super.isActive(iThread) && (eventStructure.inReplayMode() implies {
+            eventStructure.inReplayMode(iThread) && eventStructure.canReplayNextEvent(iThread)
+        })
     }
 
     override fun initializeInvocation() {
@@ -131,17 +134,17 @@ class EventStructureStrategy(
         eventStructure.initializeExploration()
         // TODO: fix monitorTracker
         monitorTracker = SeqCstMonitorTracker(nThreads)
-        eventStructure.addThreadStartEvent(initialThreadId)
+        eventStructure.addThreadStartEvent(eventStructure.initialThreadId)
     }
 
     override fun beforeParallelPart() {
         super.beforeParallelPart()
-        eventStructure.addThreadForkEvent(initialThreadId, (0 until nThreads).toSet())
+        eventStructure.addThreadForkEvent(eventStructure.initialThreadId, (0 until nThreads).toSet())
     }
 
     override fun afterParallelPart() {
         super.afterParallelPart()
-        eventStructure.addThreadJoinEvent(initialThreadId, (0 until nThreads).toSet())
+        eventStructure.addThreadJoinEvent(eventStructure.initialThreadId, (0 until nThreads).toSet())
     }
 
     override fun onStart(iThread: Int) {

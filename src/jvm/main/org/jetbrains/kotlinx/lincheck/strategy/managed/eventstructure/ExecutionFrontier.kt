@@ -42,6 +42,9 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
     fun getPosition(iThread: Int): Int =
         frontier[iThread]?.threadPosition ?: -1
 
+    fun getNextPosition(iThread: Int): Int =
+        1 + getPosition(iThread)
+
     operator fun get(iThread: Int): Event? =
         frontier[iThread]
 

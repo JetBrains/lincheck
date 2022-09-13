@@ -27,6 +27,7 @@ private typealias ExecutionCounter = MutableMap<Int, Int>
 private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? {
     check(label.isTotal)
     return when {
+
         label is AtomicMemoryAccessLabel && label.isRead -> copy().takeIf {
             label.value == readValue(label.threadId, label.memId, label.kClass)
         }
