@@ -26,21 +26,13 @@ import kotlin.collections.set
 import kotlin.reflect.KClass
 
 class EventStructure(
-    val initialThreadId: Int,
+    val nThreads: Int,
     val checkers: List<ConsistencyChecker> = listOf(),
     val incrementalCheckers: List<IncrementalConsistencyChecker> = listOf()
 ) {
+    val initialThreadId = nThreads
 
     val root: Event
-
-    /**
-     * Stores a mapping `ThreadID -> Event` from the thread id
-     * to the root event of the thread. It is guaranteed that this root event
-     * has label of type [ThreadEventLabel] with kind [ThreadLabelKind.ThreadStart].
-     *
-     * TODO: use array instead of map?
-     */
-    private var threadRoots: MutableMap<Int, Event> = mutableMapOf()
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
@@ -68,38 +60,51 @@ class EventStructure(
         loop@while (true) {
             val event = rollbackToEvent { !it.visited }?.apply { visit() } ?: return false
             resetExecution(event)
+            // TODO: calling consistency checkers before finishing Replaying phase
+            //   is error-prone, because until this phase is over
+            //   execution graph can be in inconsistent state
+            //   (e.g. memory location ID's of synchronizing events do not match).
+            //   Think about how we can still safely call consistency checks when replay phase is over.
             // first run incremental consistency checkers to have an opportunity
             // to find an inconsistency earlier
-            if (checkConsistencyIncrementally(event) != null)
-                continue@loop
+//             if (checkConsistencyIncrementally(event) != null)
+//                continue@loop
             // then run heavyweight full consistency checks
-            if (checkConsistency() != null)
-                continue@loop
+//            if (checkConsistency() != null)
+//                continue@loop
             return true
         }
     }
 
     fun initializeExploration() {
-        currentFrontier = ExecutionFrontier()
-        currentFrontier[GHOST_THREAD_ID] = root
+        currentFrontier = emptyFrontier()
     }
+
+    private fun emptyFrontier(): ExecutionFrontier =
+        ExecutionFrontier().apply { set(GHOST_THREAD_ID, root) }
+
+    private fun emptyExecution(): Execution =
+        emptyFrontier().toExecution()
 
     private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {
         val eventIdx = _events.indexOfLast(predicate)
         _events.subList(eventIdx + 1, _events.size).clear()
-        threadRoots.entries.retainAll { (_, threadRoot) -> threadRoot in events }
         return events.lastOrNull()
     }
 
     private fun resetExecution(event: Event) {
         _currentExecution = event.frontier.toExecution()
+        //   TODO: think how to safely reset state of incremental consistency checker
+        //    while reusing intermediate memorized state of this checker.
+        //    See comment in StartNextExploration().
         // temporarily remove new event in order to reset incremental checkers
-        _currentExecution.removeLast(event)
+        // _currentExecution.removeLast(event)
         for (checker in incrementalCheckers) {
-            checker.reset(_currentExecution)
+            // checker.reset(_currentExecution)
+            checker.reset(emptyExecution())
         }
         // add new event back
-        _currentExecution.addEvent(event)
+        // _currentExecution.addEvent(event)
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -116,13 +121,13 @@ class EventStructure(
         return null
     }
 
-    fun getThreadRoot(iThread: Int): Event? = when (iThread) {
-        GHOST_THREAD_ID -> root
-        else -> threadRoots[iThread]
-    }
+    fun getThreadRoot(iThread: Int): Event? =
+        currentExecution.firstEvent(iThread)?.also {event ->
+            check(event.label.isThreadInitializer)
+        }
 
     fun isInitializedThread(iThread: Int): Boolean =
-        iThread == GHOST_THREAD_ID || threadRoots.contains(iThread)
+        getThreadRoot(iThread) != null
 
     private fun createEvent(label: EventLabel, dependencies: List<Event>): Event {
         // We assume that at least one of the events participating into synchronization
@@ -147,19 +152,8 @@ class EventStructure(
     }
 
     private fun addEvent(label: EventLabel, dependencies: List<Event>): Event {
-        check(label.isThreadInitializer implies !isInitializedThread(label.threadId)) {
-            "Thread ${label.threadId} is already initialized."
-        }
-        check(!label.isThreadInitializer implies isInitializedThread(label.threadId)) {
-            "Thread ${label.threadId} should be initialized before new events can be added to it."
-        }
         return createEvent(label, dependencies).also { event ->
             _events.add(event)
-            if (label.isThreadInitializer)
-                threadRoots[label.threadId] = event
-            checkConsistencyIncrementally(event)?.let {
-                throw InconsistentExecutionException(it)
-            }
         }
     }
 
@@ -168,7 +162,13 @@ class EventStructure(
         if (!inReplayMode(event.threadId))
             _currentExecution.addEvent(event)
         currentFrontier.update(event)
+        checkConsistencyIncrementally(event)?.let {
+            throw InconsistentExecutionException(it)
+        }
     }
+
+    fun inReplayMode(): Boolean =
+        (0 .. nThreads).any { inReplayMode(it) }
 
     fun inReplayMode(iThread: Int): Boolean {
         val frontEvent = currentFrontier[iThread]?.also { check(it in _currentExecution) }
@@ -176,11 +176,19 @@ class EventStructure(
     }
 
     fun canReplayNextEvent(iThread: Int): Boolean {
-        val nextEvent = currentExecution[iThread, 1 + currentFrontier.getPosition(iThread)]
-        check(nextEvent != null)
-        return nextEvent.dependencies.all { dependency ->
-            dependency in currentFrontier
+        val aggregated = currentExecution.getAggregatedLabel(iThread, currentFrontier.getNextPosition(iThread))
+        check(aggregated != null) {
+            "There is no next event to replay"
         }
+        val (_, events) = aggregated
+        // TODO: unify with the similar code in SequentialConsistencyChecker
+        // TODO: maybe add an opportunity for ManagedStrategy to suspend
+        //   reading operation in the middle (i.e. after Request past, but before Response).
+        //   This could also be useful for implementing scheduling strategies
+        //   (e.g. write-first strategy that tries to first schedule threads whose next operation is write).
+        return events.all { it.dependencies.all { dependency ->
+            dependency in currentFrontier
+        }}
     }
 
     private fun tryReplayEvent(iThread: Int): Event? {
@@ -350,7 +358,7 @@ class EventStructure(
             threadId = iThread,
             kind = LabelKind.Total,
             accessKind = MemoryAccessKind.Write,
-            memId = memoryLocationId,
+            memId_ = memoryLocationId,
             value_ = value,
             kClass = kClass,
             isExclusive = isExclusive,
@@ -366,7 +374,7 @@ class EventStructure(
             threadId = iThread,
             kind = LabelKind.Request,
             accessKind = MemoryAccessKind.Read,
-            memId = memoryLocationId,
+            memId_ = memoryLocationId,
             value_ = null,
             kClass = kClass,
             isExclusive = isExclusive,
@@ -449,12 +457,7 @@ interface IncrementalConsistencyChecker {
     fun check(event: Event): Inconsistency?
 
     /**
-     * Resets the internal state of consistency checker to [execution]
-     * with [event] being the next event to start exploration from.
-     *
-     * @return `null` if the given execution is consistent,
-     *   otherwise returns non-null [Inconsistency] object
-     *   representing the reason of inconsistency.
+     * Resets the internal state of consistency checker to [execution].
      */
     fun reset(execution: Execution)
 }

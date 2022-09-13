@@ -318,6 +318,9 @@ abstract class ManagedStrategy(
      */
     open fun onStart(iThread: Int) {
         awaitTurn(iThread)
+        while (!isActive(iThread)) {
+            switchCurrentThread(iThread, mustSwitch = true)
+        }
     }
 
     /**
@@ -803,6 +806,7 @@ private class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
+
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         managedStrategy.onStart(iThread)
