@@ -41,10 +41,11 @@ class AtomicityChecker : IncrementalConsistencyChecker {
             return null
         val readFrom = event.exclusiveReadPart.readsFrom
         eventStructure.currentExecution.find {
-            it.label is AtomicMemoryAccessLabel
-                && it.label.accessKind == MemoryAccessKind.Write
-                && it.label.isExclusive
-                && it.exclusiveReadPart.readsFrom == readFrom
+            it != event &&
+            it.label is AtomicMemoryAccessLabel &&
+            it.label.accessKind == MemoryAccessKind.Write &&
+            it.label.isExclusive &&
+            it.exclusiveReadPart.readsFrom == readFrom
         }?.let { return AtomicityViolation(it, event) }
         return null
     }

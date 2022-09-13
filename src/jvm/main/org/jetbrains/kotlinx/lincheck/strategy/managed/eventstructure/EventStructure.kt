@@ -157,11 +157,13 @@ class EventStructure(
         }
     }
 
-    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true) {
+    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
         if (visit) { event.visit() }
         if (!inReplayMode(event.threadId))
             _currentExecution.addEvent(event)
         currentFrontier.update(event)
+        if (synchronize)
+            addSynchronizedEvents(event)
         checkConsistencyIncrementally(event)?.let {
             throw InconsistentExecutionException(it)
         }
@@ -175,12 +177,22 @@ class EventStructure(
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
 
+    // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
         val aggregated = currentExecution.getAggregatedLabel(iThread, currentFrontier.getNextPosition(iThread))
         check(aggregated != null) {
             "There is no next event to replay"
         }
         val (_, events) = aggregated
+        // delay replaying the last event till all other events are replayed;
+        // this is because replaying last event can lead to addition of new events;
+        // for example, in case of RMWs replaying exclusive read can lead to addition
+        // of new event representing write exclusive part
+        // TODO: this problem could be handled better if we had an opportunity to
+        //   suspend execution of operation in ManagedStrategy in the middle (see comment below).
+        if (this.events.last() in events) {
+            return (0 .. nThreads).all { it == iThread || !inReplayMode(it) }
+        }
         // TODO: unify with the similar code in SequentialConsistencyChecker
         // TODO: maybe add an opportunity for ManagedStrategy to suspend
         //   reading operation in the middle (i.e. after Request past, but before Response).
@@ -195,7 +207,9 @@ class EventStructure(
         return if (inReplayMode(iThread)) {
             val position = 1 + currentFrontier.getPosition(iThread)
             check(position < currentExecution.getThreadSize(iThread))
-            currentExecution[iThread, position]!!.also { addEventToCurrentExecution(it) }
+            currentExecution[iThread, position]!!.also { event ->
+                addEventToCurrentExecution(event)
+            }
         } else null
     }
 
@@ -272,8 +286,8 @@ class EventStructure(
             event.label.replay(label).also { check(it) }
             return event
         }
-        return addEvent(label, emptyList()).also {
-            addEventToCurrentExecution(it)
+        return addEvent(label, emptyList()).also { event ->
+            addEventToCurrentExecution(event)
         }
     }
 
@@ -292,8 +306,8 @@ class EventStructure(
         val responseEvents = addSynchronizedEvents(requestEvent)
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
-        val chosenEvent = responseEvents.lastOrNull()?.also {
-            addEventToCurrentExecution(it)
+        val chosenEvent = responseEvents.lastOrNull()?.also { event ->
+            addEventToCurrentExecution(event)
         }
         return (chosenEvent to responseEvents)
     }
@@ -304,9 +318,8 @@ class EventStructure(
             event.label.replay(label).also { check(it) }
             return event
         }
-        return addEvent(label, emptyList()).also {
-            addEventToCurrentExecution(it)
-            addSynchronizedEvents(it)
+        return addEvent(label, emptyList()).also { event ->
+            addEventToCurrentExecution(event, synchronize = true)
         }
     }
 
