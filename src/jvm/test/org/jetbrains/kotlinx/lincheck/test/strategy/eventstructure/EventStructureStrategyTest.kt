@@ -71,18 +71,11 @@ class EventStructureStrategyTest {
                 }
             }
 
-            val expectedReadResults = setOf(0, 1, 2)
-            val readResults: MutableSet<Int> = mutableSetOf()
-            val verifier = createVerifier(testScenario) { results ->
-                val readResult = getReadResult(results.parallelResults[1][0])
-                readResults.add(readResult)
-                readResult in expectedReadResults
-            }
+            val outcomes: Set<Int> = setOf(0, 1, 2)
 
-            val strategy = createStrategy(Register::class.java, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
-            assert(readResults == expectedReadResults)
+            litmusTest(Register::class.java, testScenario, outcomes) { results ->
+                getReadResult(results.parallelResults[1][0])
+            }
         }
 
     }
@@ -136,19 +129,11 @@ class EventStructureStrategyTest {
                     }
                 }
             }
+            val outcomes: Set<Int> = setOf(0, 1, 2)
 
-            val expectedReadResults = setOf(0, 1, 2)
-            val readResults: MutableSet<Int> = mutableSetOf()
-            val verifier = createVerifier(testScenario) { results ->
-                val readResult = getReadResult(results.parallelResults[1][0])
-                readResults.add(readResult)
-                readResult in expectedReadResults
+            litmusTest(AtomicRegister::class.java, testScenario, outcomes) { results ->
+                getReadResult(results.parallelResults[1][0])
             }
-
-            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
-            assert(readResults == expectedReadResults)
         }
 
         @Test
@@ -167,17 +152,17 @@ class EventStructureStrategyTest {
                 }
             }
 
-            val verifier = createVerifier(testScenario) { results ->
-                var succeededCAS = 0
-                if (getCASResult(results.parallelResults[0][0])) succeededCAS++
-                if (getCASResult(results.parallelResults[1][0])) succeededCAS++
-                val readResult = getReadResult(results.postResults[0])
-                (succeededCAS == 1) && (readResult == 1)
-            }
+            val outcomes: Set<Triple<Boolean, Boolean, Int>> = setOf(
+                Triple(true, false, 1),
+                Triple(false, true, 1)
+            )
 
-            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
+            litmusTest(AtomicRegister::class.java, testScenario, outcomes) { results ->
+                val r1 = getCASResult(results.parallelResults[0][0])
+                val r2 = getCASResult(results.parallelResults[1][0])
+                val r3 = getReadResult(results.postResults[0])
+                Triple(r1, r2, r3)
+            }
         }
 
         @Test
@@ -196,16 +181,17 @@ class EventStructureStrategyTest {
                 }
             }
 
-            val verifier = createVerifier(testScenario) { results ->
+            val outcomes: Set<Triple<Int, Int, Int>> = setOf(
+                Triple(0, 1, 2),
+                Triple(1, 0, 2)
+            )
+
+            litmusTest(AtomicRegister::class.java, testScenario, outcomes) { results ->
                 val r1 = getFAIResult(results.parallelResults[0][0])
                 val r2 = getFAIResult(results.parallelResults[1][0])
                 val r3 = getReadResult(results.postResults[0])
-                ((r1 == 0 && r2 == 1) || (r1 == 1 && r2 == 0)) && (r3 == 2)
+                Triple(r1, r2, r3)
             }
-
-            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
         }
 
         @Test
@@ -224,16 +210,17 @@ class EventStructureStrategyTest {
                 }
             }
 
-            val verifier = createVerifier(testScenario) { results ->
+            val outcomes: Set<Triple<Int, Int, Int>> = setOf(
+                Triple(1, 2, 2),
+                Triple(2, 1, 2)
+            )
+
+            litmusTest(AtomicRegister::class.java, testScenario, outcomes) { results ->
                 val r1 = getFAIResult(results.parallelResults[0][0])
                 val r2 = getFAIResult(results.parallelResults[1][0])
                 val r3 = getReadResult(results.postResults[0])
-                ((r1 == 1 && r2 == 2) || (r1 == 2 && r2 == 1)) && (r3 == 2)
+                Triple(r1, r2, r3)
             }
-
-            val strategy = createStrategy(AtomicRegister::class.java, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
         }
 
     }
@@ -295,22 +282,18 @@ class EventStructureStrategyTest {
                 }
             }
 
-            val verifier = createVerifier(testScenario) { results ->
+            val outcomes: Set<Pair<Int, Int>> = setOf(
+                (0 to 0),
+                (0 to 1),
+                (1 to 0),
+                (1 to 1)
+            )
+
+            litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
                 val r1 = getReadResult(results.parallelResults[0][0])
                 val r2 = getReadResult(results.parallelResults[0][1])
-                println("r1=$r1, r2=$r2")
-                (r1 to r2) in listOf(
-                    (0 to 0),
-                    (0 to 1),
-                    (1 to 0),
-                    (1 to 1)
-                )
+                (r1 to r2)
             }
-
-            val strategy = createStrategy(SharedMemory::class.java, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
-            assertEquals(4, strategy.consistentExecutions)
         }
 
         @Test
@@ -328,45 +311,61 @@ class EventStructureStrategyTest {
                 }
             }
 
-            val verifier = createVerifier(testScenario) { results ->
+            val outcomes: Set<Pair<Int, Int>> = setOf(
+                (0 to 1),
+                (1 to 0),
+                (1 to 1)
+            )
+
+            litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
                 val r1 = getReadResult(results.parallelResults[0][1])
                 val r2 = getReadResult(results.parallelResults[1][1])
-                (r1 to r2) in listOf(
-                    (0 to 1),
-                    (1 to 0),
-                    (1 to 1)
-                )
+                (r1 to r2)
             }
-
-            val strategy = createStrategy(SharedMemory::class.java, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
         }
 
     }
 
+
+
 }
 
-private fun getReadResult(result: Result): Int =
-    (result as ValueResult).value as Int
-
-private fun getCASResult(result: Result): Boolean =
-    (result as ValueResult).value as Boolean
-
-private fun getFAIResult(result: Result): Int =
-    (result as ValueResult).value as Int
+private fun<OutcomeType> litmusTest(
+    testClass: Class<*>,
+    testScenario: ExecutionScenario,
+    expectedOutcomes: Set<OutcomeType>,
+    uniqueOutcomes: Boolean = true,
+    outcome: (ExecutionResult) -> OutcomeType,
+) {
+    val outcomes: MutableSet<OutcomeType> = mutableSetOf()
+    val verifier = createVerifier(testScenario) { results ->
+        outcomes.add(outcome(results))
+        true
+    }
+    val strategy = createStrategy(testClass, testScenario, verifier)
+    val failure = strategy.run()
+    assert(failure == null) { failure.toString() }
+    assertEquals(expectedOutcomes, outcomes)
+//    if (uniqueOutcomes) {
+//        assertEquals(expectedOutcomes.size, strategy.consistentExecutions)
+//    }
+}
 
 private fun createConfiguration(testClass: Class<*>) =
-    EventStructureOptions().createTestConfigurations(testClass)
+    EventStructureOptions()
+//        .invocationTimeout(60 * 60 * 1000)
+//        .invocationTimeout(10 * 1000)
+        .createTestConfigurations(testClass)
 
 private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, verifier: Verifier): EventStructureStrategy {
-    return createConfiguration(testClass).createStrategy(
-        testClass = testClass,
-        scenario = scenario,
-        verifier = verifier,
-        validationFunctions = listOf(),
-        stateRepresentationMethod = null,
-    )
+    return createConfiguration(testClass)
+        .createStrategy(
+            testClass = testClass,
+            scenario = scenario,
+            verifier = verifier,
+            validationFunctions = listOf(),
+            stateRepresentationMethod = null,
+        )
 }
 
 private fun createVerifier(testScenario: ExecutionScenario?, verify: (ExecutionResult) -> Boolean): Verifier =
@@ -383,3 +382,12 @@ private fun createVerifier(testScenario: ExecutionScenario?, verify: (ExecutionR
         }
 
     }
+
+private fun getReadResult(result: Result): Int =
+    (result as ValueResult).value as Int
+
+private fun getCASResult(result: Result): Boolean =
+    (result as ValueResult).value as Boolean
+
+private fun getFAIResult(result: Result): Int =
+    (result as ValueResult).value as Int
