@@ -107,16 +107,32 @@ fun Any.opaque(): OpaqueValue = OpaqueValue.fromAny(this)
 fun OpaqueValue?.isInstanceOf(kClass: KClass<*>) =
     this?.unwrap()?.let { kClass.isInstance(it) } ?: true
 
-fun Type.getKClass(): KClass<*> = when (this) {
-    Type.INT_TYPE       -> Int::class
-    Type.BYTE_TYPE      -> Byte::class
-    Type.SHORT_TYPE     -> Short::class
-    Type.LONG_TYPE      -> Long::class
-    Type.FLOAT_TYPE     -> Float::class
-    Type.DOUBLE_TYPE    -> Double::class
-    Type.CHAR_TYPE      -> Char::class
-    Type.BOOLEAN_TYPE   -> Boolean::class
-    else                -> Class.forName(className).kotlin
+fun Type.getKClass(): KClass<*> = when (sort) {
+    Type.INT     -> Int::class
+    Type.BYTE    -> Byte::class
+    Type.SHORT   -> Short::class
+    Type.LONG    -> Long::class
+    Type.FLOAT   -> Float::class
+    Type.DOUBLE  -> Double::class
+    Type.CHAR    -> Char::class
+    Type.BOOLEAN -> Boolean::class
+    Type.OBJECT  -> Class.forName(className).kotlin
+    Type.ARRAY   -> { when (elementType.sort) {
+        Type.INT     -> IntArray::class
+        Type.BYTE    -> ByteArray::class
+        Type.SHORT   -> ShortArray::class
+        Type.LONG    -> LongArray::class
+        Type.FLOAT   -> FloatArray::class
+        Type.DOUBLE  -> DoubleArray::class
+        Type.CHAR    -> CharArray::class
+        Type.BOOLEAN -> BooleanArray::class
+        Type.OBJECT  -> Array::class
+        Type.ARRAY   -> Array::class
+        // TODO: do we need to handle other cases?
+        else -> throw IllegalArgumentException()
+    }}
+    // TODO: do we need to handle other cases?
+    else -> throw IllegalArgumentException()
 }
 
 fun KClass<*>.defaultValue(): OpaqueValue? = when(this) {
@@ -128,5 +144,5 @@ fun KClass<*>.defaultValue(): OpaqueValue? = when(this) {
     Double::class   -> 0.toDouble()
     Char::class     -> 0.toChar()
     Boolean::class  -> false
-    else -> null
+    else            -> null
 }?.opaque()
