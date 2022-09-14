@@ -58,7 +58,8 @@ class EventStructure(
 
     fun startNextExploration(): Boolean {
         loop@while (true) {
-            val event = rollbackToEvent { !it.visited }?.apply { visit() } ?: return false
+            val event = rollbackToEvent { !it.visited }?.apply { visit() }
+                ?: return false
             resetExecution(event)
             // TODO: calling consistency checkers before finishing Replaying phase
             //   is error-prone, because until this phase is over

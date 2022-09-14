@@ -371,7 +371,8 @@ abstract class ManagedStrategy(
         // Wait actively until the thread is allowed to continue
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
-            if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
+            if (suddenInvocationResult != null)
+                throw ForcibleExecutionFinishException
             Thread.yield()
         }
     }
