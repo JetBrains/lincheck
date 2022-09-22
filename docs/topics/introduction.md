@@ -186,7 +186,7 @@ The updated `CounterTest` class will look like this:
 Let's now find a bug in the standard Java's `ConcurrentLinkedDeque` class. 
 The Lincheck test below finds a race between removing and adding an element to the head of the deque:
 
-```kotln
+```kotlin
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
