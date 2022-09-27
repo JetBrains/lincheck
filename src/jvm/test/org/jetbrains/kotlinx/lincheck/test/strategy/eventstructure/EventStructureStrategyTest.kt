@@ -330,13 +330,17 @@ class EventStructureStrategyTest {
 
 }
 
+private const val UNIQUE_OUTCOMES = -1
+
 private fun<OutcomeType> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
     expectedOutcomes: Set<OutcomeType>,
-    uniqueOutcomes: Boolean = true,
+    executionCount: Int = UNIQUE_OUTCOMES,
     outcome: (ExecutionResult) -> OutcomeType,
 ) {
+    require(executionCount >= 0 || executionCount == UNIQUE_OUTCOMES)
+
     val outcomes: MutableSet<OutcomeType> = mutableSetOf()
     val verifier = createVerifier(testScenario) { results ->
         outcomes.add(outcome(results))
@@ -346,9 +350,11 @@ private fun<OutcomeType> litmusTest(
     val failure = strategy.run()
     assert(failure == null) { failure.toString() }
     assertEquals(expectedOutcomes, outcomes)
-//    if (uniqueOutcomes) {
-//        assertEquals(expectedOutcomes.size, strategy.consistentExecutions)
-//    }
+
+    val expectedCount = if (executionCount == UNIQUE_OUTCOMES)
+        expectedOutcomes.size
+        else executionCount
+    assertEquals(expectedCount, strategy.consistentCount)
 }
 
 private fun createConfiguration(testClass: Class<*>) =
