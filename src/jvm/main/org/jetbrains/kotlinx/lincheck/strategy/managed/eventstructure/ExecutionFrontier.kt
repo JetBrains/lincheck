@@ -27,12 +27,13 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
 
     /**
-     * Frontier is encoded as a mapping `ThreadID -> Event` from the thread id
+     * Frontier is encoded as a vector clock, i.e. a mapping `ThreadID -> Event` from the thread id
      * to the last executed event in this thread in the given execution.
      *
      * TODO: use array instead of map?
      */
-    private val frontier: MutableMap<Int, Event> = frontier.toMutableMap()
+    private val frontier: VectorClock<Int, Event> =
+        VectorClock(programOrder, frontier.toMutableMap())
 
     fun update(event: Event) {
         check(event.parent == frontier[event.threadId])
@@ -61,11 +62,15 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
         return programOrder.lessOrEqual(event, lastEvent)
     }
 
+    fun merge(other: ExecutionFrontier) {
+        frontier.merge(other.frontier)
+    }
+
     fun copy(): ExecutionFrontier =
-        ExecutionFrontier(frontier)
+        ExecutionFrontier(frontier.toMutableMap())
 
     fun toExecution(): MutableExecution {
-        return MutableExecution(frontier.map { (threadId, lastEvent) ->
+        return MutableExecution(frontier.asMap().map { (threadId, lastEvent) ->
             var event: Event? = lastEvent
             val events = arrayListOf<Event>()
             while (event != null) {
@@ -77,3 +82,7 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
     }
 
 }
+
+// TODO: ensure that vector clock is indexed by thread ids: VectorClock<ThreadID, Event>
+fun VectorClock<Int, Event>.toFrontier(): ExecutionFrontier =
+    ExecutionFrontier(this.toMutableMap())
