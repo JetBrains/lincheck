@@ -53,8 +53,14 @@ class EventStructureStrategy(
     // TODO: change to EventStructureMonitorTracker
     override var monitorTracker: MonitorTracker = SeqCstMonitorTracker(nThreads)
 
-    var consistentExecutions: Int = 0
+    var consistentCount: Int = 0
         private set
+
+    var inconsistentCount: Int = 0
+        private set
+
+    val totalCount: Int
+        get() = consistentCount + inconsistentCount
 
     init {
         atomicityChecker.initialize(eventStructure)
@@ -72,6 +78,7 @@ class EventStructureStrategy(
                 // check that there were no inconsistencies detected during the run
                 if (result is UnexpectedExceptionInvocationResult &&
                     result.exception is InconsistentExecutionException) {
+                    ++inconsistentCount
                     continue@inner
                 }
 //                if (result !is CompletedInvocationResult) {
@@ -85,11 +92,12 @@ class EventStructureStrategy(
 //                }
                 // check that the final execution is consistent
                 if (eventStructure.checkConsistency() != null) {
+                    ++inconsistentCount
                     continue@inner
                 }
-                consistentExecutions++
+                ++consistentCount
                 // TODO: should we count failed inconsistent executions as used invocations?
-                usedInvocations++
+                ++usedInvocations
                 checkResult(result, shouldCollectTrace = false)?.let { return it }
                 continue@outer
             }
