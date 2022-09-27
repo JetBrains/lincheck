@@ -52,6 +52,8 @@ class EventStructure(
 
     private var currentFrontier: ExecutionFrontier = ExecutionFrontier()
 
+    private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
+
     init {
         root = addRootEvent()
     }
@@ -95,6 +97,7 @@ class EventStructure(
 
     private fun resetExecution(event: Event) {
         _currentExecution = event.frontier.toExecution()
+        pinnedEvents = event.pinnedEvents.copy()
         //   TODO: think how to safely reset state of incremental consistency checker
         //    while reusing intermediate memorized state of this checker.
         //    See comment in StartNextExploration().
@@ -130,7 +133,7 @@ class EventStructure(
     fun isInitializedThread(iThread: Int): Boolean =
         getThreadRoot(iThread) != null
 
-    private fun createEvent(label: EventLabel, dependencies: List<Event>): Event {
+    private fun createEvent(label: EventLabel, dependencies: List<Event>, isPinned: Boolean = false): Event {
         // We assume that at least one of the events participating into synchronization
         // is a request event, and the result of synchronization is response event.
         // We also assume that request and response parts aggregate.
@@ -148,12 +151,14 @@ class EventStructure(
             // We also remove predecessor from the list of dependencies.
             // TODO: do not remove parent from dependencies?
             dependencies = dependencies.filter { it != parent },
-            frontier = currentFrontier.copy()
+            frontier = currentFrontier.copy(),
+            pinnedEvents = pinnedEvents.copy(),
+            isPinned = isPinned
         )
     }
 
-    private fun addEvent(label: EventLabel, dependencies: List<Event>): Event {
-        return createEvent(label, dependencies).also { event ->
+    private fun addEvent(label: EventLabel, dependencies: List<Event>, isPinned: Boolean = false): Event {
+        return createEvent(label, dependencies, isPinned).also { event ->
             _events.add(event)
         }
     }
@@ -164,7 +169,7 @@ class EventStructure(
             _currentExecution.addEvent(event)
         currentFrontier.update(event)
         if (synchronize)
-            addSynchronizedEvents(event)
+            addSynchronizedEvents(event, pin = true)
         checkConsistencyIncrementally(event)?.let {
             throw InconsistentExecutionException(it)
         }
@@ -233,39 +238,39 @@ class EventStructure(
      *
      * @return list of added events
      */
-    private fun addSynchronizedEvents(event: Event): List<Event> {
+    private fun addSynchronizedEvents(event: Event, pin: Boolean = false): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
-        // TODO: pre-filter some trivially inconsistent candidates
-        //  (e.g. write synchronizing with program-order preceding read)
         val candidateEvents = when {
-            event.label.isTotal -> currentExecution.filterNot { causalityOrder.lessThan(it, event) }
+            event.label.isTotal -> currentExecution.filter {
+                !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it)
+            }
             else -> currentExecution
         }
         val syncEvents = arrayListOf<Event>()
         if (event.label.isBinarySynchronizing) {
-            addBinarySynchronizedEvents(event, candidateEvents).let {
+            addBinarySynchronizedEvents(event, candidateEvents, pin).let {
                 syncEvents.addAll(it)
             }
         }
         if (event.label.isBarrierSynchronizing) {
-            addBarrierSynchronizedEvents(event, candidateEvents)?.let {
+            addBarrierSynchronizedEvents(event, candidateEvents, pin)?.let {
                 syncEvents.add(it)
             }
         }
         return syncEvents
     }
 
-    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
+    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>, pin: Boolean): List<Event> {
         require(event.label.isBinarySynchronizing)
         // TODO: sort resulting events according to some strategy?
         return candidateEvents.mapNotNull {
             val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
             val dependencies = listOf(event, it)
-            addEvent(syncLab, dependencies)
+            addEvent(syncLab, dependencies, isPinned = pin)
         }
     }
 
-    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): Event? {
+    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>, pin: Boolean): Event? {
         require(event.label.isBarrierSynchronizing)
         val (syncLab, dependencies) =
             candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
@@ -276,7 +281,8 @@ class EventStructure(
             }
         return when {
             // TODO: think again whether we need `isResponse` check here
-            syncLab.isResponse && syncLab.isCompleted -> addEvent(syncLab, dependencies)
+            syncLab.isResponse && syncLab.isCompleted ->
+                addEvent(syncLab, dependencies, isPinned = pin)
             else -> null
         }
     }

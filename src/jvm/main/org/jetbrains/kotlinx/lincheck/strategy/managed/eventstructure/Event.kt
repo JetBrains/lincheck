@@ -50,6 +50,10 @@ class Event private constructor(
      * State of the execution frontier at the point when event is created.
      */
     val frontier: ExecutionFrontier,
+    /**
+     * Frontier of pinned events.
+     */
+    val pinnedEvents: ExecutionFrontier,
 ) : Comparable<Event> {
     val threadId: Int = label.threadId
 
@@ -81,7 +85,9 @@ class Event private constructor(
             label: EventLabel,
             parent: Event?,
             dependencies: List<Event>,
-            frontier: ExecutionFrontier
+            frontier: ExecutionFrontier,
+            pinnedEvents: ExecutionFrontier,
+            isPinned: Boolean
         ): Event {
             val id = nextId++
             val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
@@ -94,10 +100,13 @@ class Event private constructor(
                 parent = parent,
                 dependencies = dependencies,
                 causalityClock = causalityClock,
-                frontier = frontier
+                frontier = frontier,
+                pinnedEvents = pinnedEvents,
             ).apply {
                 causalityClock.update(threadId, this)
                 frontier[threadId] = this
+                if (isPinned)
+                    pinnedEvents.merge(causalityClock.toFrontier())
             }
         }
     }

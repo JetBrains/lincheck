@@ -25,10 +25,11 @@ fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
     put(key, get(key)?.let(transform) ?: default)
 }
 
-fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V): MutableMap<K, V> =
-    toMutableMap().apply { other.forEach { (key, value) ->
+fun <K, V> MutableMap<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V) {
+    other.forEach { (key, value) ->
         update(key, default = value) { reduce(it, value) }
-    }}
+    }
+}
 
 fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: (T, T) -> Boolean): Boolean {
     for (i in fromIndex until toIndex - 1) {

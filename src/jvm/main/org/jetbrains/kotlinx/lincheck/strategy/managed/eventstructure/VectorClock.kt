@@ -20,18 +20,19 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-class VectorClock<P, T>(val partialOrder: PartialOrder<T>) {
-
+class VectorClock<P, T>(
+    val partialOrder: PartialOrder<T>,
     private val clock: MutableMap<P, T> = mutableMapOf()
+) {
 
     operator fun get(part: P): T? = clock[part]
 
-    operator fun set(part: P, timestamp: T) = update(part, timestamp)
-
-    operator fun plus(other: VectorClock<P, T>) = merge(other)
-
     fun observes(part: P, timestamp: T): Boolean =
         clock[part]?.let { partialOrder.lessOrEqual(timestamp, it) } ?: false
+
+    operator fun set(part: P, timestamp: T) {
+        clock[part] = timestamp
+    }
 
     fun update(part: P, timestamp: T) {
         clock.update(part, default = timestamp) { oldTimestamp ->
@@ -42,15 +43,21 @@ class VectorClock<P, T>(val partialOrder: PartialOrder<T>) {
         }
     }
 
-    infix fun merge(other: VectorClock<P, T>): VectorClock<P, T> {
+    operator fun plus(other: VectorClock<P, T>) =
+        copy().apply { merge(other) }
+
+    infix fun merge(other: VectorClock<P, T>) {
         require(partialOrder == other.partialOrder) {
             "Attempt to merge vector clocks ordered by differed partial orders."
         }
-        val clock = this.clock.mergeReduce(other.clock, partialOrder::max)
-        return VectorClock<P, T>(partialOrder).apply { this.clock += clock }
+        clock.mergeReduce(other.clock, partialOrder::max)
     }
 
     fun copy(): VectorClock<P, T> =
         VectorClock<P, T>(partialOrder).also { it.clock += clock }
+
+    fun asMap(): Map<P, T> = clock
+
+    fun toMutableMap(): MutableMap<P, T> = clock.toMutableMap()
 
 }
