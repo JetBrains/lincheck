@@ -46,10 +46,10 @@ infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
 
-class UnreachableException: Exception()
+class UnreachableException(message: String?): Exception(message)
 
-fun unreachable(): Nothing {
-    throw UnreachableException()
+fun unreachable(message: String? = null): Nothing {
+    throw UnreachableException(message)
 }
 
 interface SortedList<T : Comparable<T>> : List<T> {
