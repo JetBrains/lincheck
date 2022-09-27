@@ -133,7 +133,7 @@ class EventStructure(
     fun isInitializedThread(iThread: Int): Boolean =
         getThreadRoot(iThread) != null
 
-    private fun createEvent(label: EventLabel, dependencies: List<Event>, isPinned: Boolean = false): Event {
+    private fun createEvent(label: EventLabel, dependencies: List<Event>): Event {
         // We assume that at least one of the events participating into synchronization
         // is a request event, and the result of synchronization is response event.
         // We also assume that request and response parts aggregate.
@@ -152,13 +152,12 @@ class EventStructure(
             // TODO: do not remove parent from dependencies?
             dependencies = dependencies.filter { it != parent },
             frontier = currentFrontier.copy(),
-            pinnedEvents = pinnedEvents.copy(),
-            isPinned = isPinned
+            pinnedEvents = pinnedEvents.copy()
         )
     }
 
-    private fun addEvent(label: EventLabel, dependencies: List<Event>, isPinned: Boolean = false): Event {
-        return createEvent(label, dependencies, isPinned).also { event ->
+    private fun addEvent(label: EventLabel, dependencies: List<Event>): Event {
+        return createEvent(label, dependencies).also { event ->
             _events.add(event)
         }
     }
@@ -168,8 +167,7 @@ class EventStructure(
         if (!inReplayMode(event.threadId))
             _currentExecution.addEvent(event)
         currentFrontier.update(event)
-        if (synchronize)
-            addSynchronizedEvents(event, pin = true)
+        if (synchronize) { addSynchronizedEvents(event) }
         checkConsistencyIncrementally(event)?.let {
             throw InconsistentExecutionException(it)
         }
@@ -238,7 +236,7 @@ class EventStructure(
      *
      * @return list of added events
      */
-    private fun addSynchronizedEvents(event: Event, pin: Boolean = false): List<Event> {
+    private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
         val candidateEvents = when {
             event.label.isTotal -> currentExecution.filter {
@@ -248,29 +246,29 @@ class EventStructure(
         }
         val syncEvents = arrayListOf<Event>()
         if (event.label.isBinarySynchronizing) {
-            addBinarySynchronizedEvents(event, candidateEvents, pin).let {
+            addBinarySynchronizedEvents(event, candidateEvents).let {
                 syncEvents.addAll(it)
             }
         }
         if (event.label.isBarrierSynchronizing) {
-            addBarrierSynchronizedEvents(event, candidateEvents, pin)?.let {
+            addBarrierSynchronizedEvents(event, candidateEvents)?.let {
                 syncEvents.add(it)
             }
         }
         return syncEvents
     }
 
-    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>, pin: Boolean): List<Event> {
+    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
         require(event.label.isBinarySynchronizing)
         // TODO: sort resulting events according to some strategy?
         return candidateEvents.mapNotNull {
             val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
             val dependencies = listOf(event, it)
-            addEvent(syncLab, dependencies, isPinned = pin)
+            addEvent(syncLab, dependencies)
         }
     }
 
-    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>, pin: Boolean): Event? {
+    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): Event? {
         require(event.label.isBarrierSynchronizing)
         val (syncLab, dependencies) =
             candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
@@ -282,7 +280,7 @@ class EventStructure(
         return when {
             // TODO: think again whether we need `isResponse` check here
             syncLab.isResponse && syncLab.isCompleted ->
-                addEvent(syncLab, dependencies, isPinned = pin)
+                addEvent(syncLab, dependencies)
             else -> null
         }
     }

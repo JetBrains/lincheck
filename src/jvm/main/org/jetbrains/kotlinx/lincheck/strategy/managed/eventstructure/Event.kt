@@ -55,6 +55,7 @@ class Event private constructor(
      */
     val pinnedEvents: ExecutionFrontier,
 ) : Comparable<Event> {
+
     val threadId: Int = label.threadId
 
     var visited: Boolean = false
@@ -86,8 +87,7 @@ class Event private constructor(
             parent: Event?,
             dependencies: List<Event>,
             frontier: ExecutionFrontier,
-            pinnedEvents: ExecutionFrontier,
-            isPinned: Boolean
+            pinnedEvents: ExecutionFrontier
         ): Event {
             val id = nextId++
             val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
@@ -105,8 +105,7 @@ class Event private constructor(
             ).apply {
                 causalityClock.update(threadId, this)
                 frontier[threadId] = this
-                if (isPinned)
-                    pinnedEvents.merge(causalityClock.toFrontier())
+                pinnedEvents.merge(causalityClock.toFrontier())
             }
         }
     }
