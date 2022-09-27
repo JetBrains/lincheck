@@ -42,16 +42,16 @@ class Counter {
 }
 
 class CounterTest {
-    private val c = Counter() // initial state
+    private val c = Counter() // Initial state
     
-    // operations on the Counter
+    // Operations on the Counter
     @Operation
     fun inc() = c.inc()
 
     @Operation
     fun get() = c.get()
 
-    @Test // run the test
+    @Test // Run the test
     fun stressTest() = StressOptions().check(this::class)
 }
 ```
@@ -95,16 +95,16 @@ class Counter {
 }
 
 class CounterTest {
-    private val c = Counter() // initial state
+    private val c = Counter() // Initial state
 
-    // operations on the Counter
+    // Operations on the Counter
     @Operation
     fun inc() = c.inc()
 
     @Operation
     fun get() = c.get()
 
-    @Test // run the test
+    @Test // Run the test
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }
 ```
@@ -181,14 +181,14 @@ To configure the testing strategy, set options in the `<TestingMode>Options` cla
         fun get() = c.get()
     
         @Test
-        fun stressTest() = StressOptions() // stress testing options
-            .actorsBefore(2) // number of operations before the parallel part
-            .threads(2) // number of threads in the parallel part
-            .actorsPerThread(2) // number of operations in each thread of the parallel part
-            .actorsAfter(1) // number of operations after the parallel part
-            .iterations(100) // generate 100 random concurrent scenarios
-            .invocationsPerIteration(1000) // run each generated scenario 1000 times
-            .check(this::class) // run the test
+        fun stressTest() = StressOptions() // Stress testing options:
+            .actorsBefore(2) // Number of operations before the parallel part
+            .threads(2) // Number of threads in the parallel part
+            .actorsPerThread(2) // Number of operations in each thread of the parallel part
+            .actorsAfter(1) // Number of operations after the parallel part
+            .iterations(100) // Generate 100 random concurrent scenarios
+            .invocationsPerIteration(1000) // Run each generated scenario 1000 times
+            .check(this::class) // Run the test
     }
     ```
 
@@ -298,7 +298,7 @@ printed at the switch points that modify the counter state (they start with `STA
 In case of stress testing, Lincheck prints the state representation right before and after the parallel part of the scenario,
 as well as at the end.
 
-> * Get the full code of these examples [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/CounterTest.kt)
+> * Get the [full code of these examples](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/CounterTest.kt)
 > * See more [test examples](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/StackTest.kt)
 >
 {type="note"}

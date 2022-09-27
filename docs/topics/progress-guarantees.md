@@ -22,7 +22,7 @@ class ConcurrentHashMapTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
-        .actorsBefore(1) // to init the HashMap
+        .actorsBefore(1) // To init the HashMap
         .actorsPerThread(1)
         .actorsAfter(0)
         .minimizeFailedScenario(false)
@@ -89,7 +89,7 @@ class ConcurrentSkipListMapTest {
 At the moment, Lincheck supports only the obstruction-freedom progress guarantees. However, most real-life liveness bugs
 add unexpected blocking code, so the obstruction-freedom check will also help with lock-free and wait-free algorithms.
 
-> * Get the full code of the example [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentMapTest.kt).
+> * Get the [full code of the example](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentMapTest.kt).
 > * See [another example](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ObstructionFreedomViolationTest.kt)
 >   where the Michael-Scott queue implementation is tested for progress guarantees.
 >

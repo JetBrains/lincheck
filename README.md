@@ -10,10 +10,10 @@ The artifacts are available in [Bintray](https://bintray.com/kotlin/kotlinx/kotl
 Use `org.jetbrains.kotlinx:lincheck:<version>` artifact path in Gradle 
 and `org.jetbrains.kotlinx:lincheck-jvm:<version>` in Maven.
 
-##### Guide:
-Please read [the tutorial](/docs/topics/lincheck-guide.md) that explains how to use Lincheck and presents most of the features step-by-step.
+##### Guide
+[Read the tutorial](/docs/topics/lincheck-guide.md) that explains how to use Lincheck and presents most of the features step-by-step.
 
-##### Given talks:
+##### Given talks
  *  [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019, RU)
  *  [Testing concurrent algorithms with Lincheck](https://www.youtube.com/watch?v=cdpQMDgQP8Y) (JPoint 2019, RU)
  *  [Lincheck: testing concurrent data structures on Java](https://www.youtube.com/watch?v=hwbpUEGHvvY) (Hydra 2019, RU)

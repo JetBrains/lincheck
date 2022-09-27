@@ -15,8 +15,8 @@ import java.util.concurrent.*
 class MultiMap<K, V> {
     val map = ConcurrentHashMap<K, List<V>>()
 
-    // adds the value to the list by the given key
-    // contains the race :(
+    // Adds the value to the list by the given key
+    // Contains the race :(
     fun add(key: K, value: V) {
         val list = map[key]
         if (list == null) {
@@ -45,8 +45,8 @@ import org.junit.*
 class MultiMap<K,V> {
     val map = ConcurrentHashMap<K, List<V>>()
 
-    // adds the value to the list by the given key
-    // contains the race :(
+    // Adds the value to the list by the given key
+    // Contains the race :(
     fun add(key: K, value: V) {
         val list = map[key]
         if (list == null) {
@@ -80,7 +80,7 @@ class MultiMapTest {
 }
 ```
 
-> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
+> [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
 >
 {type="note"}
 

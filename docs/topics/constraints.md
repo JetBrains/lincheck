@@ -24,7 +24,7 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
-// declare a group of operations that should not be executed in parallel
+// Declare a group of operations that should not be executed in parallel:
 @OpGroupConfig(name = "consumer", nonParallel = true)
 class MPSCQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
@@ -66,7 +66,7 @@ Execution scenario (post part):
 Note that all consuming `poll()` and `peek()` invocations are performed from a single thread, thus satisfying the
 "single-consumer" restriction.
 
-> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MPSCQueueTest.kt).
+> [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MPSCQueueTest.kt).
 >
 {type="note"}
 

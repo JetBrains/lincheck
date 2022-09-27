@@ -14,7 +14,43 @@ When given a list of operations, Lincheck automatically:
 * Verifies that the results of each invocation satisfy the required correctness property (linearizability is the default
 one).
 
-This guide will help you get in touch with the framework and try the most useful features with examples. Explore the
+## Add Lincheck to your project
+
+To enable the Lincheck support, include the corresponding repository and dependency to the Gradle configuration. In your
+`build.gradle(.kts)` file, add the following:
+
+<tabs group="build-script">
+<tab title="Kotlin" group-key="kotlin">
+
+ ```kotlin
+ repositories {
+     mavenCentral()
+ }
+ 
+ dependencies {
+     testImplementation("org.jetbrains.kotlinx:lincheck:%lincheckVersion%")
+ }
+ ```
+
+</tab>
+<tab title="Groovy" group-key="groovy">
+
+ ```groovy
+ repositories {
+     mavenCentral()
+ }
+ 
+ dependencies {
+     testImplementation "org.jetbrains.kotlinx:lincheck:%lincheckVersion%"
+ }
+ ```
+
+</tab>
+</tabs>
+
+## Explore Lincheck
+
+This guide will help you get in touch with the framework and try the most useful features with examples. Learn the
 Lincheck features step-by-step:
 
 1. [Write your first test with Lincheck](introduction.md)

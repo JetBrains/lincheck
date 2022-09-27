@@ -38,8 +38,7 @@ When creating a project, use the Gradle build system.
    
    dependencies {
        // Lincheck dependency
-       testImplementation("org.jetbrains.kotlinx:lincheck:2.14.1")
-   
+       testImplementation("org.jetbrains.kotlinx:lincheck:%lincheckVersion%")
        // This dependency allows you to work with kotlin.test and JUnit:
        testImplementation("junit:junit:4.13")
    }
@@ -55,8 +54,8 @@ When creating a project, use the Gradle build system.
    
    dependencies {
        // Lincheck dependency
-       testImplementation "org.jetbrains.kotlinx:lincheck:2.14.1"
-       // This dependency allows you to work with kotlin.test and JUnit
+       testImplementation "org.jetbrains.kotlinx:lincheck:%lincheckVersion%"
+       // This dependency allows you to work with kotlin.test and JUnit:
        testImplementation "junit:junit:4.13"
    }
    ```
@@ -82,9 +81,9 @@ When creating a project, use the Gradle build system.
    }
    
    class BasicCounterTest {
-       private val c = Counter() // initial state
+       private val c = Counter() // Initial state
    
-       // operations on the Counter
+       // Operations on the Counter
        @Operation
        fun inc() = c.inc()
    
@@ -92,7 +91,7 @@ When creating a project, use the Gradle build system.
        fun get() = c.get()
    
        @Test // JUnit
-       fun stressTest() = StressOptions().check(this::class) // the magic button
+       fun stressTest() = StressOptions().check(this::class) // The magic button
    }
    ```
 
@@ -109,7 +108,7 @@ When creating a project, use the Gradle build system.
    | inc(): 1 | inc(): 1 |
    ```
 
-   Here, Lincheck found an execution that violates the counter atomicity — two concurrent increments ended
+   Here, Lincheck found an execution that violates the counter atomicity – two concurrent increments ended
    with the same result `1`. It means that one increment has been lost, and the behavior of the counter is incorrect.
 
 ## Trace the invalid execution
@@ -119,7 +118,7 @@ feature is accessible with the [model checking](testing-strategies.md#model-chec
 which examines numerous executions with a bounded number of context switches.
 
 1. To switch the testing strategy, replace the `options` type from `StressOptions()` to `ModelCheckingOptions()`.
-The updated `CounterTest` class will look like this:
+The updated `BasicCounterTest` class will look like this:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.*
@@ -177,7 +176,7 @@ The updated `CounterTest` class will look like this:
    * **T2**: The second thread resumes and increments the previously obtained counter value, incorrectly updating the
    counter to `1`.
 
-> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/BasicCounterTest.kt).
+> [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/BasicCounterTest.kt).
 >
 {type="note"}
 
@@ -252,7 +251,7 @@ Parallel part trace:
 |   thread is finished                                                                                      |                      |
 ```
 
-> Get the full code [here](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedDequeTest.kt).
+> [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedDequeTest.kt).
 >
 {type="note"}
 
