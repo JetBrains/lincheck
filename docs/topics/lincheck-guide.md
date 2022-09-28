@@ -22,28 +22,28 @@ To enable the Lincheck support, include the corresponding repository and depende
 <tabs group="build-script">
 <tab title="Kotlin" group-key="kotlin">
 
- ```kotlin
- repositories {
-     mavenCentral()
- }
+```kotlin
+repositories {
+    mavenCentral()
+}
  
- dependencies {
-     testImplementation("org.jetbrains.kotlinx:lincheck:%lincheckVersion%")
- }
- ```
+dependencies {
+    testImplementation("org.jetbrains.kotlinx:lincheck:%lincheckVersion%")
+}
+```
 
 </tab>
 <tab title="Groovy" group-key="groovy">
 
- ```groovy
- repositories {
-     mavenCentral()
- }
- 
- dependencies {
-     testImplementation "org.jetbrains.kotlinx:lincheck:%lincheckVersion%"
- }
- ```
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation "org.jetbrains.kotlinx:lincheck:%lincheckVersion%"
+}
+```
 
 </tab>
 </tabs>

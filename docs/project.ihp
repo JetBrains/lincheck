@@ -6,7 +6,7 @@
     <module name="lincheck"/>
     <topics dir="topics"/>
     <images dir="images"/>
-    <!-- <vars src="v.list"/> -->
+    <vars src="v.list"/>
     <product src="kl.tree" version="1.0"/>
     <settings>
         <default-property element-name="toc-element" property-name="show-structure-depth" value="2"/>
