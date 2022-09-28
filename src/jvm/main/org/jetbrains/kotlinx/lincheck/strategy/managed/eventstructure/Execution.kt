@@ -96,7 +96,7 @@ class MutableExecution(
         threadEvents.add(event)
     }
 
-    fun removeLast(event: Event) {
+    fun removeLastEvent(event: Event) {
         val threadEvents = threadsEvents[event.threadId]
         check(event == threadEvents?.lastOrNull())
         threadEvents?.removeLast()
