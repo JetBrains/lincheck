@@ -133,14 +133,19 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun await(timeoutMs: Long) {
         val deadline = System.currentTimeMillis() + timeoutMs
-        for (iThread in 0 until nThreads)
-            awaitTask(iThread, deadline)
+        var exception: Throwable? = null
+        for (iThread in 0 until nThreads) {
+            val e = awaitTask(iThread, deadline)
+            if (e != null) exception = e
+        }
+        exception?.let { throw ExecutionException(it) }
     }
 
-    private fun awaitTask(iThread: Int, deadline: Long) {
+    private fun awaitTask(iThread: Int, deadline: Long): Throwable? {
         val result = getResult(iThread, deadline)
         // Check whether there was an exception during the execution.
-        if (result != DONE) throw ExecutionException(result as Throwable)
+        if (result != DONE) return result as Throwable
+        return null
     }
 
     private fun getResult(iThread: Int, deadline: Long): Any {
