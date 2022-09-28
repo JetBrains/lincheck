@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryTracker
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
-import kotlin.collections.set
 import kotlin.reflect.KClass
 
 class EventStructure(
@@ -164,7 +163,7 @@ class EventStructure(
 
     private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
         if (visit) { event.visit() }
-        if (!inReplayMode(event.threadId))
+        if (!inReplayPhase(event.threadId))
             _currentExecution.addEvent(event)
         currentFrontier.update(event)
         if (synchronize) { addSynchronizedEvents(event) }
@@ -173,10 +172,10 @@ class EventStructure(
         }
     }
 
-    fun inReplayMode(): Boolean =
-        (0 .. nThreads).any { inReplayMode(it) }
+    fun inReplayPhase(): Boolean =
+        (0 .. nThreads).any { inReplayPhase(it) }
 
-    fun inReplayMode(iThread: Int): Boolean {
+    fun inReplayPhase(iThread: Int): Boolean {
         val frontEvent = currentFrontier[iThread]?.also { check(it in _currentExecution) }
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
@@ -195,7 +194,7 @@ class EventStructure(
         // TODO: this problem could be handled better if we had an opportunity to
         //   suspend execution of operation in ManagedStrategy in the middle (see comment below).
         if (this.events.last() in events) {
-            return (0 .. nThreads).all { it == iThread || !inReplayMode(it) }
+            return (0 .. nThreads).all { it == iThread || !inReplayPhase(it) }
         }
         // TODO: unify with the similar code in SequentialConsistencyChecker
         // TODO: maybe add an opportunity for ManagedStrategy to suspend
@@ -208,7 +207,7 @@ class EventStructure(
     }
 
     private fun tryReplayEvent(iThread: Int): Event? {
-        return if (inReplayMode(iThread)) {
+        return if (inReplayPhase(iThread)) {
             val position = 1 + currentFrontier.getPosition(iThread)
             check(position < currentExecution.getThreadSize(iThread))
             currentExecution[iThread, position]!!.also { event ->
