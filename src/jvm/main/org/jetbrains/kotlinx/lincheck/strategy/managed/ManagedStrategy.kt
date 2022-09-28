@@ -331,7 +331,7 @@ abstract class ManagedStrategy(
         awaitTurn(iThread)
         finished[iThread] = true
         traceCollector?.finishThread(iThread)
-        doSwitchCurrentThread(iThread, true)
+        doSwitchCurrentThread(iThread, mustSwitch = true)
     }
 
     /**
@@ -380,7 +380,7 @@ abstract class ManagedStrategy(
     /**
      * A regular context thread switch to another thread.
      */
-    private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+    protected fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)

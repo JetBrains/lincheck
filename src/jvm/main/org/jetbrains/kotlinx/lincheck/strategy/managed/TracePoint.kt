@@ -273,7 +273,8 @@ private fun adornedStringRepresentation(any: Any?): String {
     return "${any.javaClass.simpleName}@$id"
 }
 
-internal enum class SwitchReason(private val reason: String) {
+// TODO: make class `internal` again
+enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),

@@ -40,12 +40,12 @@ class EventStructureStrategy(
     // The number of already used invocations.
     private var usedInvocations = 0
 
-    private val seqCstChecker: SequentialConsistencyChecker = SequentialConsistencyChecker()
+    private val sequentialConsistencyChecker: SequentialConsistencyChecker = SequentialConsistencyChecker()
 
     private val atomicityChecker: AtomicityChecker = AtomicityChecker()
 
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, listOf(seqCstChecker), listOf(atomicityChecker))
+        EventStructure(nThreads, sequentialConsistencyChecker, atomicityChecker)
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
@@ -165,8 +165,12 @@ class EventStructureStrategy(
     }
 
     override fun onFinish(iThread: Int) {
-        // TODO: recheck `currentThread` bookkeeping in ManagedStrategy
-        //  to avoid data-races
+        // TODO: refactor, make `switchCurrentThread` private again in ManagedStrategy,
+        //   call overridden `onStart` and `onFinish` methods only when thread is active
+        //   and the `currentThread` lock is held
+        while (!isActive(iThread)) {
+            switchCurrentThread(iThread, mustSwitch = true)
+        }
         eventStructure.addThreadFinishEvent(iThread)
         super.onFinish(iThread)
     }

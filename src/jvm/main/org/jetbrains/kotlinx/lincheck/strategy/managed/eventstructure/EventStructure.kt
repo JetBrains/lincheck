@@ -26,8 +26,8 @@ import kotlin.reflect.KClass
 
 class EventStructure(
     val nThreads: Int,
-    val checkers: List<ConsistencyChecker> = listOf(),
-    val incrementalCheckers: List<IncrementalConsistencyChecker> = listOf()
+    val checker: ConsistencyChecker = idleConsistencyChecker,
+    val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker
 ) {
     val initialThreadId = nThreads
 
@@ -62,18 +62,6 @@ class EventStructure(
             val event = rollbackToEvent { !it.visited }?.apply { visit() }
                 ?: return false
             resetExecution(event)
-            // TODO: calling consistency checkers before finishing Replaying phase
-            //   is error-prone, because until this phase is over
-            //   execution graph can be in inconsistent state
-            //   (e.g. memory location ID's of synchronizing events do not match).
-            //   Think about how we can still safely call consistency checks when replay phase is over.
-            // first run incremental consistency checkers to have an opportunity
-            // to find an inconsistency earlier
-//             if (checkConsistencyIncrementally(event) != null)
-//                continue@loop
-            // then run heavyweight full consistency checks
-//            if (checkConsistency() != null)
-//                continue@loop
             return true
         }
     }
@@ -97,29 +85,32 @@ class EventStructure(
     private fun resetExecution(event: Event) {
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
-        //   TODO: think how to safely reset state of incremental consistency checker
-        //    while reusing intermediate memorized state of this checker.
-        //    See comment in StartNextExploration().
-        // temporarily remove new event in order to reset incremental checkers
-        // _currentExecution.removeLast(event)
-        for (checker in incrementalCheckers) {
-            // checker.reset(_currentExecution)
-            checker.reset(emptyExecution())
-        }
-        // add new event back
-        // _currentExecution.addEvent(event)
     }
 
-    fun checkConsistency(): Inconsistency? {
-        for (checker in checkers) {
-            checker.check(currentExecution)?.let { return it }
-        }
-        return null
-    }
+    fun checkConsistency(): Inconsistency? =
+        checker.check(currentExecution)
 
-    private fun checkConsistencyIncrementally(event: Event): Inconsistency? {
-        for (checker in incrementalCheckers) {
-            checker.check(event)?.let { return it }
+    private fun checkConsistencyIncrementally(event: Event, isReplayedEvent: Boolean): Inconsistency? {
+        // if we are not replaying the event then just run all necessary consistency checks
+        if (!isReplayedEvent) {
+            return incrementalChecker.check(event)
+        }
+        // if we finished replay phase we need to reset internal state of incremental checker
+        // and to check full consistency of the new execution before we start to explore it further
+        if (!inReplayPhase()) {
+            // the new event being visited is the last event in the event structure,
+            // we assume that it is the last event to be replayed
+            check(event == events.last())
+            // we temporarily remove new event in order to reset incremental checker
+            _currentExecution.removeLastEvent(event)
+            // reset internal state of incremental checker
+            incrementalChecker.reset(_currentExecution)
+            // add new event back
+             _currentExecution.addEvent(event)
+            // first run incremental checker to have an opportunity to find an inconsistency earlier
+            incrementalChecker.check(event)?.let { return it }
+            // then run heavyweight full consistency check
+            return checker.check(_currentExecution)
         }
         return null
     }
@@ -163,11 +154,12 @@ class EventStructure(
 
     private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
         if (visit) { event.visit() }
-        if (!inReplayPhase(event.threadId))
+        val isReplayedEvent = inReplayPhase(event.threadId)
+        if (!isReplayedEvent)
             _currentExecution.addEvent(event)
         currentFrontier.update(event)
         if (synchronize) { addSynchronizedEvents(event) }
-        checkConsistencyIncrementally(event)?.let {
+        checkConsistencyIncrementally(event, isReplayedEvent)?.let {
             throw InconsistentExecutionException(it)
         }
     }
@@ -210,9 +202,7 @@ class EventStructure(
         return if (inReplayPhase(iThread)) {
             val position = 1 + currentFrontier.getPosition(iThread)
             check(position < currentExecution.getThreadSize(iThread))
-            currentExecution[iThread, position]!!.also { event ->
-                addEventToCurrentExecution(event)
-            }
+            currentExecution[iThread, position]!!
         } else null
     }
 
@@ -288,6 +278,7 @@ class EventStructure(
         require(label.isRequest)
         tryReplayEvent(label.threadId)?.let { event ->
             event.label.replay(label).also { check(it) }
+            addEventToCurrentExecution(event)
             return event
         }
         return addEvent(label, emptyList()).also { event ->
@@ -305,6 +296,7 @@ class EventStructure(
             }
             check(label != null)
             event.label.replay(label).also { check(it) }
+            addEventToCurrentExecution(event)
             return event to listOf(event)
         }
         val responseEvents = addSynchronizedEvents(requestEvent)
@@ -320,6 +312,7 @@ class EventStructure(
         require(label.isTotal)
         tryReplayEvent(label.threadId)?.let { event ->
             event.label.replay(label).also { check(it) }
+            addEventToCurrentExecution(event)
             return event
         }
         return addEvent(label, emptyList()).also { event ->
@@ -452,29 +445,4 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
         return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Post)
     }
 
-}
-
-abstract class Inconsistency
-
-class InconsistentExecutionException(reason: Inconsistency): Exception(reason.toString())
-
-interface ConsistencyChecker {
-    fun check(execution: Execution): Inconsistency?
-}
-
-interface IncrementalConsistencyChecker {
-
-    /**
-     * Checks whether adding the given [event] to the current execution retains execution's consistency.
-     *
-     * @return `null` if execution remains consistent,
-     *   otherwise returns non-null [Inconsistency] object
-     *   representing the reason of inconsistency.
-     */
-    fun check(event: Event): Inconsistency?
-
-    /**
-     * Resets the internal state of consistency checker to [execution].
-     */
-    fun reset(execution: Execution)
 }
