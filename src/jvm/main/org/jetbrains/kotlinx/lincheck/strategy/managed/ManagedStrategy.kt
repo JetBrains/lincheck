@@ -463,7 +463,7 @@ abstract class ManagedStrategy(
      */
     internal fun onSharedVariableWrite(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) {
         val kClass = Type.getType(typeDescriptor).getKClass()
-        memoryTracker.writeValue(iThread, memoryLocationId, value?.opaque(), kClass)
+        memoryTracker.writeValue(iThread, memoryLocationId, value?.opaque(kClass), kClass)
     }
 
     /**
@@ -477,7 +477,8 @@ abstract class ManagedStrategy(
     internal fun onCompareAndSet(iThread: Int, memoryLocationId: Int, expected: Any?, desired: Any?,
                                  typeDescriptor: String): Boolean {
         val kClass = Type.getType(typeDescriptor).getKClass()
-        return memoryTracker.compareAndSet(iThread, memoryLocationId, expected?.opaque(), desired?.opaque(), kClass)
+        return memoryTracker.compareAndSet(iThread, memoryLocationId,
+            expected?.opaque(kClass), desired?.opaque(kClass), kClass)
     }
 
     /**
@@ -956,6 +957,14 @@ class SeqCstMemoryTracker : MemoryTracker() {
 
     fun copy(): SeqCstMemoryTracker =
         SeqCstMemoryTracker().also { it.values += values }
+
+    override fun equals(other: Any?): Boolean {
+        return (other is SeqCstMemoryTracker) && (values == other.values)
+    }
+
+    override fun hashCode(): Int {
+        return values.hashCode()
+    }
 }
 
 /**
