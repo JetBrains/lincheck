@@ -72,13 +72,8 @@ class SequentialConsistencyChecker : ConsistencyChecker {
         fun covered(event: Event): Boolean =
             event.threadPosition < (counter[event.threadId] ?: 0)
 
-        fun coverable(events: List<Event>): Boolean =
-            events.all { event -> covering(event).all {
-                covered(it) || it in events
-            }}
-
         fun coverable(event: Event): Boolean =
-            coverable(listOf(event))
+            covering(event).all { covered(it) }
 
         val isTerminal: Boolean
             get() = counter.all { (threadId, position) ->
@@ -88,7 +83,7 @@ class SequentialConsistencyChecker : ConsistencyChecker {
         fun transitions() : List<State> =
             counter.mapNotNull { (threadId, position) ->
                 val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
-                    ?.takeIf { (_, events) -> coverable(events) }
+                    ?.takeIf { (_, events) -> events.all(::coverable) }
                     ?: return@mapNotNull null
                 val memoryTracker = this.memoryTracker.replay(label)
                     ?: return@mapNotNull null
@@ -125,7 +120,7 @@ class SequentialConsistencyChecker : ConsistencyChecker {
     }
 
     override fun check(execution: Execution): Inconsistency? {
-        return if (!checkByReplaying(execution, causalityCovering))
+        return if (!checkByReplaying(execution, externalCausalityCovering))
             SequentialConsistencyViolation()
             else null
     }

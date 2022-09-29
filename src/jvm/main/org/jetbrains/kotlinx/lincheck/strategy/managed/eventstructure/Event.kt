@@ -161,8 +161,8 @@ val causalityOrder: PartialOrder<Event> = PartialOrder.ofLessOrEqual { x, y ->
     y.causalityClock.observes(x.threadId, x)
 }
 
-val causalityCovering: Covering<Event> = Covering { y ->
-    y.dependencies + (y.parent?.let { listOf(it) } ?: listOf())
+val externalCausalityCovering: Covering<Event> = Covering { y ->
+    y.dependencies
 }
 
 fun emptyClock() = VectorClock<Int, Event>(programOrder)
