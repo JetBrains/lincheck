@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SeqCstMemoryTracker
 
-private typealias ExecutionCounter = MutableMap<Int, Int>
+private typealias ExecutionCounter = IntArray
 
 private fun SeqCstMemoryTracker.replay(iThread: Int, label: EventLabel): SeqCstMemoryTracker? {
     check(label.isTotal)
@@ -57,11 +57,23 @@ class SequentialConsistencyChecker : ConsistencyChecker {
     ) {
         companion object {
             fun initial(execution: Execution): State {
+                val size = execution.threads.maxOrNull()?.let { 1 + it } ?: 0
                 return State(
+                    counter = IntArray(size),
                     memoryTracker = SeqCstMemoryTracker(),
-                    counter = execution.threads.associateWith { 0 }.toMutableMap()
                 )
             }
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is State) return false
+            return counter.contentEquals(other.counter) &&
+                   memoryTracker == other.memoryTracker
+        }
+
+        override fun hashCode(): Int {
+            return 31 * counter.contentHashCode() + memoryTracker.hashCode()
         }
     }
 
@@ -74,24 +86,33 @@ class SequentialConsistencyChecker : ConsistencyChecker {
             covering(event).all { covered(it) }
 
         val State.isTerminal: Boolean
-            get() = counter.all { (threadId, position) ->
+            get() = counter.withIndex().all { (threadId, position) ->
                 position == execution.getThreadSize(threadId)
             }
 
-        fun State.transitions() : List<State> =
-            counter.mapNotNull { (threadId, position) ->
-                val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
-                    ?.takeIf { (_, events) -> events.all { coverable(it) } }
-                    ?: return@mapNotNull null
-                val memoryTracker = this.memoryTracker.replay(threadId, label)
-                    ?: return@mapNotNull null
-                State(
-                    memoryTracker = memoryTracker,
-                    counter = this.counter.toMutableMap().apply {
-                        update(threadId, default = 0) { it + aggregated.size }
-                    },
-                )
+        fun State.transition(threadId: Int): State? {
+            val position = counter[threadId]
+            val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
+                ?.takeIf { (_, events) -> events.all { coverable(it) } }
+                ?: return null
+            val memoryTracker = this.memoryTracker.replay(threadId, label)
+                ?: return null
+            return State(
+                memoryTracker = memoryTracker,
+                counter = this.counter.copyOf().also {
+                    it[threadId] += aggregated.size
+                },
+            )
+        }
+
+        fun State.transitions() : List<State> {
+            val states = arrayListOf<State>()
+            for (threadId in counter.indices) {
+                transition(threadId)?.let { states.add(it) }
             }
+            return states
+        }
+
     }
 
     private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Boolean {
