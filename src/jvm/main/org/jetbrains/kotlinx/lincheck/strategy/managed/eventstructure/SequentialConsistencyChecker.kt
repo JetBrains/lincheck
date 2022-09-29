@@ -28,7 +28,7 @@ private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? 
     check(label.isTotal)
     return when {
 
-        label is AtomicMemoryAccessLabel && label.isRead -> copy().takeIf {
+        label is AtomicMemoryAccessLabel && label.isRead -> this.takeIf {
             label.value == readValue(label.threadId, label.memId, label.kClass)
         }
 
@@ -40,8 +40,8 @@ private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? 
             it.compareAndSet(label.threadId, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
         }
 
-        label is ThreadEventLabel -> copy()
-        label is InitializationLabel -> copy()
+        label is ThreadEventLabel -> this
+        label is InitializationLabel -> this
         else -> unreachable()
     }
 }
@@ -84,24 +84,23 @@ class SequentialConsistencyChecker : ConsistencyChecker {
             get() = counter.all { (threadId, position) ->
                 position == execution.getThreadSize(threadId)
             }
-    }
 
-    private val transitions = AdjacencyList<State, EventLabel> { state ->
-        state.counter.mapNotNull { (threadId, position) ->
-            val (label, aggregated) = state.execution.getAggregatedLabel(threadId, position)
-                ?.takeIf { (_, events) -> state.coverable(events) }
-                ?: return@mapNotNull null
-            val memoryTracker = state.memoryTracker.replay(label)
-                ?: return@mapNotNull null
-            label to State(
-                execution = state.execution,
-                covering = state.covering,
-                counter = state.counter.toMutableMap().apply {
-                    update(label.threadId, default = 0) { it + aggregated.size }
-                },
-                memoryTracker
-            )
-        }
+        fun transitions() : List<State> =
+            counter.mapNotNull { (threadId, position) ->
+                val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
+                    ?.takeIf { (_, events) -> coverable(events) }
+                    ?: return@mapNotNull null
+                val memoryTracker = this.memoryTracker.replay(label)
+                    ?: return@mapNotNull null
+                State(
+                    execution = this.execution,
+                    covering = this.covering,
+                    counter = this.counter.toMutableMap().apply {
+                        update(label.threadId, default = 0) { it + aggregated.size }
+                    },
+                    memoryTracker
+                )
+            }
     }
 
     private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Boolean {
@@ -111,12 +110,16 @@ class SequentialConsistencyChecker : ConsistencyChecker {
         //  and trying to find a trace in this LTS leading to terminal state.
         val initState = State.initial(execution, covering)
         val stack = ArrayDeque(listOf(initState))
+        val visited = mutableSetOf(initState)
         while (stack.isNotEmpty()) {
             val state = stack.removeLast()
             // TODO: maybe we should return more information than just success
             //  (e.g. path leading to terminal state)?
             if (state.isTerminal) return true
-            transitions(state).forEach { (_, state) -> stack.addLast(state) }
+            state.transitions().filter { it !in visited }.forEach { state ->
+                visited.add(state)
+                stack.addLast(state)
+            }
         }
         return false
     }
