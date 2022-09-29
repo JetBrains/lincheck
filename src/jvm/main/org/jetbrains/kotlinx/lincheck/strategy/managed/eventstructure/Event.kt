@@ -25,6 +25,10 @@ typealias EventID = Int
 class Event private constructor(
     val id: EventID,
     /**
+     * Event's thread
+     */
+    val threadId: Int,
+    /**
      * Event's position in a thread
      * (i.e. number of its program-order predecessors).
      */
@@ -56,8 +60,6 @@ class Event private constructor(
     val pinnedEvents: ExecutionFrontier,
 ) : Comparable<Event> {
 
-    val threadId: Int = label.threadId
-
     var visited: Boolean = false
         private set
 
@@ -83,6 +85,7 @@ class Event private constructor(
         private var nextId: EventID = 0
 
         fun create(
+            threadId: Int,
             label: EventLabel,
             parent: Event?,
             dependencies: List<Event>,
@@ -95,6 +98,7 @@ class Event private constructor(
                 clock + event.causalityClock
             }
             return Event(id,
+                threadId = threadId,
                 threadPosition = threadPosition,
                 label = label,
                 parent = parent,

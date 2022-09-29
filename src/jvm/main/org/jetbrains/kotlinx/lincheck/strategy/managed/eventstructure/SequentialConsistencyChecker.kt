@@ -24,20 +24,20 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.SeqCstMemoryTracker
 
 private typealias ExecutionCounter = MutableMap<Int, Int>
 
-private fun SeqCstMemoryTracker.replay(label: EventLabel): SeqCstMemoryTracker? {
+private fun SeqCstMemoryTracker.replay(iThread: Int, label: EventLabel): SeqCstMemoryTracker? {
     check(label.isTotal)
     return when {
 
         label is AtomicMemoryAccessLabel && label.isRead -> this.takeIf {
-            label.value == readValue(label.threadId, label.memId, label.kClass)
+            label.value == readValue(iThread, label.memId, label.kClass)
         }
 
         label is AtomicMemoryAccessLabel && label.isWrite -> copy().apply {
-            writeValue(label.threadId, label.memId, label.value, label.kClass)
+            writeValue(iThread, label.memId, label.value, label.kClass)
         }
 
         label is ReadModifyWriteMemoryAccessLabel -> copy().takeIf {
-            it.compareAndSet(label.threadId, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
+            it.compareAndSet(iThread, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
         }
 
         label is ThreadEventLabel -> this
@@ -85,13 +85,13 @@ class SequentialConsistencyChecker : ConsistencyChecker {
                 val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
                     ?.takeIf { (_, events) -> events.all(::coverable) }
                     ?: return@mapNotNull null
-                val memoryTracker = this.memoryTracker.replay(label)
+                val memoryTracker = this.memoryTracker.replay(threadId, label)
                     ?: return@mapNotNull null
                 State(
                     execution = this.execution,
                     covering = this.covering,
                     counter = this.counter.toMutableMap().apply {
-                        update(label.threadId, default = 0) { it + aggregated.size }
+                        update(threadId, default = 0) { it + aggregated.size }
                     },
                     memoryTracker
                 )
