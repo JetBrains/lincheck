@@ -52,48 +52,44 @@ class SequentialConsistencyViolation : Inconsistency()
 class SequentialConsistencyChecker : ConsistencyChecker {
 
     private data class State(
-        val execution: Execution,
-        val covering: Covering<Event>,
         val counter: ExecutionCounter,
         val memoryTracker: SeqCstMemoryTracker
     ) {
         companion object {
-            fun initial(execution: Execution, covering: Covering<Event>): State {
-                var memoryTracker = SeqCstMemoryTracker()
+            fun initial(execution: Execution): State {
                 return State(
-                    execution = execution,
-                    covering = covering,
-                    memoryTracker = memoryTracker,
+                    memoryTracker = SeqCstMemoryTracker(),
                     counter = execution.threads.associateWith { 0 }.toMutableMap()
                 )
             }
         }
+    }
 
-        fun covered(event: Event): Boolean =
+    private class Context(val execution: Execution, val covering: Covering<Event>) {
+
+        fun State.covered(event: Event): Boolean =
             event.threadPosition < (counter[event.threadId] ?: 0)
 
-        fun coverable(event: Event): Boolean =
+        fun State.coverable(event: Event): Boolean =
             covering(event).all { covered(it) }
 
-        val isTerminal: Boolean
+        val State.isTerminal: Boolean
             get() = counter.all { (threadId, position) ->
                 position == execution.getThreadSize(threadId)
             }
 
-        fun transitions() : List<State> =
+        fun State.transitions() : List<State> =
             counter.mapNotNull { (threadId, position) ->
                 val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
-                    ?.takeIf { (_, events) -> events.all(::coverable) }
+                    ?.takeIf { (_, events) -> events.all { coverable(it) } }
                     ?: return@mapNotNull null
                 val memoryTracker = this.memoryTracker.replay(threadId, label)
                     ?: return@mapNotNull null
                 State(
-                    execution = this.execution,
-                    covering = this.covering,
+                    memoryTracker = memoryTracker,
                     counter = this.counter.toMutableMap().apply {
                         update(threadId, default = 0) { it + aggregated.size }
                     },
-                    memoryTracker
                 )
             }
     }
@@ -103,20 +99,23 @@ class SequentialConsistencyChecker : ConsistencyChecker {
         //  In fact, we can generalize this algorithm to
         //  two arbitrary labelled transition systems by taking their product LTS
         //  and trying to find a trace in this LTS leading to terminal state.
-        val initState = State.initial(execution, covering)
+        val context = Context(execution, covering)
+        val initState = State.initial(execution)
         val stack = ArrayDeque(listOf(initState))
         val visited = mutableSetOf(initState)
-        while (stack.isNotEmpty()) {
-            val state = stack.removeLast()
-            // TODO: maybe we should return more information than just success
-            //  (e.g. path leading to terminal state)?
-            if (state.isTerminal) return true
-            state.transitions().filter { it !in visited }.forEach { state ->
-                visited.add(state)
-                stack.addLast(state)
+        with(context) {
+            while (stack.isNotEmpty()) {
+                val state = stack.removeLast()
+                // TODO: maybe we should return more information than just success
+                //  (e.g. path leading to terminal state)?
+                if (state.isTerminal) return true
+                state.transitions().filter { it !in visited }.forEach {
+                    visited.add(it)
+                    stack.addLast(it)
+                }
             }
+            return false
         }
-        return false
     }
 
     override fun check(execution: Execution): Inconsistency? {
