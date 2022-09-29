@@ -28,6 +28,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*
  */
 sealed class InvocationResult
 
+fun InvocationResult.isAbortedInvocation(): Boolean =
+    this is DeadlockInvocationResult
+
 /**
  * The invocation completed successfully, the output [results] are provided.
  */

@@ -197,7 +197,10 @@ abstract class ManagedStrategy(
                 IncorrectResultsFailure(scenario, result.results, trace)
             }
         }
-        else -> result.toLincheckFailure(scenario, collectTrace(result))
+        else -> {
+            val trace = if (shouldCollectTrace) collectTrace(result) else null
+            result.toLincheckFailure(scenario, trace)
+        }
     }
 
     /**

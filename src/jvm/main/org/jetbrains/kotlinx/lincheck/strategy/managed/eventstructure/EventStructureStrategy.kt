@@ -81,21 +81,16 @@ class EventStructureStrategy(
                     ++inconsistentCount
                     continue@inner
                 }
-//                if (result !is CompletedInvocationResult) {
-//                    // TODO: replace `println` with logging
-//                    // TODO: we need to differentiate between exceptions thrown by user-code or internal-code
-//                    println("Failed lincheck result: $result")
-//                    if (result is UnexpectedExceptionInvocationResult) {
-//                        println(result.exception)
-//                        println(result.exception.stackTraceToString())
-//                    }
-//                }
-                // check that the final execution is consistent
-                if (eventStructure.checkConsistency() != null) {
-                    ++inconsistentCount
-                    continue@inner
+                // if execution was aborted we do not check consistency,
+                // because the graph can be in invalid state
+                if (!result.isAbortedInvocation()) {
+                    // check that the final execution is consistent
+                    if (eventStructure.checkConsistency() != null) {
+                        ++inconsistentCount
+                        continue@inner
+                    }
+                    ++consistentCount
                 }
-                ++consistentCount
                 // TODO: should we count failed inconsistent executions as used invocations?
                 ++usedInvocations
                 checkResult(result, shouldCollectTrace = false)?.let { return it }
