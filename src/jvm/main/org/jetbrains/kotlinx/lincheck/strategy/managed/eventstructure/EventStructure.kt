@@ -168,9 +168,17 @@ class EventStructure(
 
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
-        val aggregated = currentExecution.getAggregatedLabel(iThread, currentFrontier.getNextPosition(iThread))
-        check(aggregated != null) {
-            "There is no next event to replay"
+        // TODO: this problem could be handled better if we had an opportunity to
+        //   suspend execution of operation in ManagedStrategy in the middle (see comment below).
+        val nextPosition = currentFrontier.getNextPosition(iThread)
+        val nextEvent = currentExecution[iThread, nextPosition]!!
+        val events = when {
+            nextEvent.label.isTotal   -> listOf(nextEvent)
+            nextEvent.label.isRequest -> {
+                val rspEvent = currentExecution[iThread, 1 + nextPosition]!!
+                listOf(nextEvent, rspEvent)
+            }
+            else -> unreachable()
         }
         // delay replaying the last event till all other events are replayed;
         // this is because replaying last event can lead to addition of new events;
