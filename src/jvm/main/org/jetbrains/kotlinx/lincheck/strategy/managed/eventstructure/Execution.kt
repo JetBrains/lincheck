@@ -49,6 +49,9 @@ open class Execution(
     fun getThreadSize(iThread: Int): Int =
         threadsEvents[iThread]?.size ?: 0
 
+    fun lastPosition(iThread: Int): Int =
+        getThreadSize(iThread) - 1
+
     fun firstEvent(iThread: Int): Event? =
         threadsEvents[iThread]?.firstOrNull()
 
