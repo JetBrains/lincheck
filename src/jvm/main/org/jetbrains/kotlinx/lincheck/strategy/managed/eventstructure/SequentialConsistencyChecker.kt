@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.SeqCstMemoryTracker
 private typealias ExecutionCounter = IntArray
 
 private fun SeqCstMemoryTracker.replay(iThread: Int, label: EventLabel): SeqCstMemoryTracker? {
-    check(label.isTotal)
     return when {
 
         label is AtomicMemoryAccessLabel && label.isRead -> this.takeIf {
@@ -95,8 +94,12 @@ class SequentialConsistencyChecker : ConsistencyChecker {
             val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
                 ?.takeIf { (_, events) -> events.all { coverable(it) } }
                 ?: return null
-            val memoryTracker = this.memoryTracker.replay(threadId, label)
-                ?: return null
+            val memoryTracker = if (label.isTotal) {
+                this.memoryTracker.replay(threadId, label) ?: return null
+            } else {
+                require(label.isRequest && position == execution.lastPosition(threadId))
+                this.memoryTracker
+            }
             return State(
                 memoryTracker = memoryTracker,
                 counter = this.counter.copyOf().also {
