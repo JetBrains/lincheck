@@ -31,6 +31,7 @@ class EventStructure(
 ) {
     val initialThreadId = nThreads
     val rootThreadId = nThreads + 1
+    val maxThreadId = rootThreadId
 
     val root: Event
 
@@ -125,7 +126,6 @@ class EventStructure(
         getThreadRoot(iThread) != null
 
     private fun createEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
-
         // To prevent causality cycles to appear we check that
         // dependencies do not causally depend on predecessor.
         check(dependencies.all { dependency -> !causalityOrder.lessThan(parent!!, dependency) })
@@ -159,7 +159,7 @@ class EventStructure(
     }
 
     fun inReplayPhase(): Boolean =
-        (0 .. nThreads).any { inReplayPhase(it) }
+        (0 .. maxThreadId).any { inReplayPhase(it) }
 
     fun inReplayPhase(iThread: Int): Boolean {
         val frontEvent = currentFrontier[iThread]?.also { check(it in _currentExecution) }
@@ -172,7 +172,6 @@ class EventStructure(
         check(aggregated != null) {
             "There is no next event to replay"
         }
-        val (_, events) = aggregated
         // delay replaying the last event till all other events are replayed;
         // this is because replaying last event can lead to addition of new events;
         // for example, in case of RMWs replaying exclusive read can lead to addition
@@ -180,7 +179,7 @@ class EventStructure(
         // TODO: this problem could be handled better if we had an opportunity to
         //   suspend execution of operation in ManagedStrategy in the middle (see comment below).
         if (this.events.last() in events) {
-            return (0 .. nThreads).all { it == iThread || !inReplayPhase(it) }
+            return (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
         }
         // TODO: unify with the similar code in SequentialConsistencyChecker
         // TODO: maybe add an opportunity for ManagedStrategy to suspend
