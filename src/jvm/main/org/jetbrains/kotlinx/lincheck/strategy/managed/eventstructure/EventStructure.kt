@@ -30,6 +30,7 @@ class EventStructure(
     val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker
 ) {
     val initialThreadId = nThreads
+    val rootThreadId = nThreads + 1
 
     val root: Event
 
@@ -71,7 +72,7 @@ class EventStructure(
     }
 
     private fun emptyFrontier(): ExecutionFrontier =
-        ExecutionFrontier().apply { set(GHOST_THREAD_ID, root) }
+        ExecutionFrontier().apply { set(rootThreadId, root) }
 
     private fun emptyExecution(): Execution =
         emptyFrontier().toExecution()
@@ -123,31 +124,24 @@ class EventStructure(
     fun isInitializedThread(iThread: Int): Boolean =
         getThreadRoot(iThread) != null
 
-    private fun createEvent(label: EventLabel, dependencies: List<Event>): Event {
-        // We assume that at least one of the events participating into synchronization
-        // is a request event, and the result of synchronization is response event.
-        // We also assume that request and response parts aggregate.
-        // Thus, we use `aggregatesWith` method to find among the list
-        // of dependencies the parent event of newly added synchronized event.
-        val parents = dependencies.filter { it.label.aggregatesWith(label) }
-        check(dependencies.isNotEmpty() implies (parents.size == 1))
-        val parent = parents.firstOrNull() ?: currentFrontier[label.threadId]
+    private fun createEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
+
         // To prevent causality cycles to appear we check that
         // dependencies do not causally depend on predecessor.
         check(dependencies.all { dependency -> !causalityOrder.lessThan(parent!!, dependency) })
         return Event.create(
+            threadId = iThread,
             label = label,
             parent = parent,
-            // We also remove predecessor from the list of dependencies.
-            // TODO: do not remove parent from dependencies?
+            // TODO: rename to external dependencies?
             dependencies = dependencies.filter { it != parent },
             frontier = currentFrontier.copy(),
             pinnedEvents = pinnedEvents.copy()
         )
     }
 
-    private fun addEvent(label: EventLabel, dependencies: List<Event>): Event {
-        return createEvent(label, dependencies).also { event ->
+    private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
+        return createEvent(iThread, label, parent,  dependencies).also { event ->
             _events.add(event)
         }
     }
@@ -211,7 +205,7 @@ class EventStructure(
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel()
-        return addEvent(label, emptyList()).also {
+        return addEvent(rootThreadId, label, parent = null, dependencies = emptyList()).also {
             addEventToCurrentExecution(it, visit = false)
         }
     }
@@ -250,10 +244,14 @@ class EventStructure(
     private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
         require(event.label.isBinarySynchronizing)
         // TODO: sort resulting events according to some strategy?
-        return candidateEvents.mapNotNull {
-            val syncLab = event.label.synchronize(it.label) ?: return@mapNotNull null
-            val dependencies = listOf(event, it)
-            addEvent(syncLab, dependencies)
+        return candidateEvents.mapNotNull { other ->
+            val syncLab = event.label.synchronize(other.label) ?: return@mapNotNull null
+            val (parent, dependency) = when {
+                event.label.aggregatesWith(syncLab) -> event to other
+                other.label.aggregatesWith(syncLab) -> other to event
+                else -> unreachable()
+            }
+            addEvent(parent.threadId, syncLab, parent, dependencies = listOf(dependency))
         }
     }
 
@@ -266,22 +264,39 @@ class EventStructure(
                     (resultLabel to deps + candidateEvent)
                 else (lab to deps)
             }
-        return when {
-            // TODO: think again whether we need `isResponse` check here
-            syncLab.isResponse && syncLab.isCompleted ->
-                addEvent(syncLab, dependencies)
-            else -> null
-        }
+        if (!(syncLab.isResponse && syncLab.isCompleted))
+            return null
+        // We assume that at least one of the events participating into synchronization
+        // is a request event, and the result of synchronization is response event.
+        // We also assume that request and response parts aggregate.
+        // Thus, we use `aggregatesWith` method to find among the list
+        // of dependencies the parent event of newly added synchronized event.
+        val parent = dependencies.first { it.label.aggregatesWith(syncLab) }
+        return addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
     }
 
-    private fun addRequestEvent(label: EventLabel): Event {
-        require(label.isRequest)
-        tryReplayEvent(label.threadId)?.let { event ->
+    private fun addTotalEvent(iThread: Int, label: EventLabel): Event {
+        require(label.isTotal)
+        tryReplayEvent(iThread)?.let { event ->
             event.label.replay(label).also { check(it) }
             addEventToCurrentExecution(event)
             return event
         }
-        return addEvent(label, emptyList()).also { event ->
+        val parent = currentFrontier[iThread]
+        return addEvent(iThread, label, parent, dependencies = emptyList()).also { event ->
+            addEventToCurrentExecution(event, synchronize = true)
+        }
+    }
+
+    private fun addRequestEvent(iThread: Int, label: EventLabel): Event {
+        require(label.isRequest)
+        tryReplayEvent(iThread)?.let { event ->
+            event.label.replay(label).also { check(it) }
+            addEventToCurrentExecution(event)
+            return event
+        }
+        val parent = currentFrontier[iThread]
+        return addEvent(iThread, label, parent, dependencies = emptyList()).also { event ->
             addEventToCurrentExecution(event)
         }
     }
@@ -308,25 +323,13 @@ class EventStructure(
         return (chosenEvent to responseEvents)
     }
 
-    private fun addTotalEvent(label: EventLabel): Event {
-        require(label.isTotal)
-        tryReplayEvent(label.threadId)?.let { event ->
-            event.label.replay(label).also { check(it) }
-            addEventToCurrentExecution(event)
-            return event
-        }
-        return addEvent(label, emptyList()).also { event ->
-            addEventToCurrentExecution(event, synchronize = true)
-        }
-    }
-
     fun addThreadStartEvent(iThread: Int): Event {
         val label = ThreadStartLabel(
             threadId = iThread,
             kind = LabelKind.Request,
             isInitializationThread = (iThread == initialThreadId)
         )
-        val requestEvent = addRequestEvent(label)
+        val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, responseEvents) = addResponseEvents(requestEvent)
         checkNotNull(responseEvent)
         check(responseEvents.size == 1)
@@ -337,24 +340,22 @@ class EventStructure(
         val label = ThreadFinishLabel(
             threadId = iThread,
         )
-        return addTotalEvent(label)
+        return addTotalEvent(iThread, label)
     }
 
     fun addThreadForkEvent(iThread: Int, forkThreadIds: Set<Int>): Event {
         val label = ThreadForkLabel(
-            threadId = iThread,
             forkThreadIds = forkThreadIds
         )
-        return addTotalEvent(label)
+        return addTotalEvent(iThread, label)
     }
 
     fun addThreadJoinEvent(iThread: Int, joinThreadIds: Set<Int>): Event {
         val label = ThreadJoinLabel(
-            threadId = iThread,
             kind = LabelKind.Request,
             joinThreadIds = joinThreadIds,
         )
-        val requestEvent = addRequestEvent(label)
+        val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, responseEvents) = addResponseEvents(requestEvent)
         // TODO: handle case when ThreadJoin is not ready yet
         checkNotNull(responseEvent)
@@ -365,7 +366,6 @@ class EventStructure(
     fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: OpaqueValue?, kClass: KClass<*>,
                       isExclusive: Boolean = false): Event {
         val label = AtomicMemoryAccessLabel(
-            threadId = iThread,
             kind = LabelKind.Total,
             accessKind = MemoryAccessKind.Write,
             memId_ = memoryLocationId,
@@ -373,7 +373,7 @@ class EventStructure(
             kClass = kClass,
             isExclusive = isExclusive,
         )
-        return addTotalEvent(label)
+        return addTotalEvent(iThread, label)
     }
 
     fun addReadEvent(iThread: Int, memoryLocationId: Int, kClass: KClass<*>,
@@ -381,7 +381,6 @@ class EventStructure(
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
         val label = AtomicMemoryAccessLabel(
-            threadId = iThread,
             kind = LabelKind.Request,
             accessKind = MemoryAccessKind.Read,
             memId_ = memoryLocationId,
@@ -389,7 +388,7 @@ class EventStructure(
             kClass = kClass,
             isExclusive = isExclusive,
         )
-        val requestEvent = addRequestEvent(label)
+        val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, _) = addResponseEvents(requestEvent)
         // TODO: think again --- is it possible that there is no write to read-from?
         //  Probably not, because in Kotlin variables are always initialized by default?

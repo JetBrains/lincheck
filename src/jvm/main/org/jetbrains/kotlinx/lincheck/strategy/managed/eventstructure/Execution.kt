@@ -25,7 +25,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
  */
 open class Execution(
     threadEvents: Map<Int, List<Event>> = emptyMap(),
-    val ghostThread: Int = GHOST_THREAD_ID,
 ) : Collection<Event> {
     /**
      * Execution is encoded as a mapping `ThreadID -> List<Event>`
@@ -87,8 +86,7 @@ open class Execution(
 
 class MutableExecution(
     threadEvents: Map<Int, List<Event>> = emptyMap(),
-    ghostThread: Int = GHOST_THREAD_ID,
-) : Execution(threadEvents, ghostThread) {
+) : Execution(threadEvents) {
 
     fun addEvent(event: Event) {
         val threadEvents = threadsEvents.getOrPut(event.threadId) { sortedArrayListOf() }
