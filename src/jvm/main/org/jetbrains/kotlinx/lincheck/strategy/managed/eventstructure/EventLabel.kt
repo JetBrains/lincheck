@@ -374,7 +374,7 @@ data class AtomicMemoryAccessLabel(
 
     private fun completeReadRequest(value: OpaqueValue?): AtomicMemoryAccessLabel {
         require(isRead && isRequest)
-        require(value.isInstanceOf(kClass))
+        // require(value.isInstanceOf(kClass))
         return AtomicMemoryAccessLabel(
             threadId = threadId,
             kind = LabelKind.Response,
