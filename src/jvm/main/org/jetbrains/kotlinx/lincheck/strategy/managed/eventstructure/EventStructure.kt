@@ -24,10 +24,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryTracker
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
 import kotlin.reflect.KClass
 
+typealias ThreadSwitchCallback = (Int) -> Unit
+
 class EventStructure(
-    val nThreads: Int,
+    nThreads: Int,
     val checker: ConsistencyChecker = idleConsistencyChecker,
-    val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker
+    val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
+    // TODO: refactor this!
+    val threadSwitchCallback: ThreadSwitchCallback = {},
 ) {
     val initialThreadId = nThreads
     val rootThreadId = nThreads + 1
@@ -66,12 +70,17 @@ class EventStructure(
         emptyFrontier().toExecution()
 
     fun getThreadRoot(iThread: Int): Event? =
-        currentExecution.firstEvent(iThread)?.also {event ->
+        currentExecution.firstEvent(iThread)?.also { event ->
             check(event.label.isThreadInitializer)
         }
 
-    fun isInitializedThread(iThread: Int): Boolean =
+    fun isStartedThread(iThread: Int): Boolean =
         getThreadRoot(iThread) != null
+
+    fun isFinishedThread(iThread: Int): Boolean =
+        currentExecution.lastEvent(iThread)?.let { event ->
+            event.label is ThreadFinishLabel
+        } ?: false
 
     fun startNextExploration(): Boolean {
         loop@while (true) {
@@ -135,35 +144,14 @@ class EventStructure(
 
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
-        // TODO: this problem could be handled better if we had an opportunity to
-        //   suspend execution of operation in ManagedStrategy in the middle (see comment below).
-        val nextPosition = currentFrontier.getNextPosition(iThread)
-        val nextEvent = currentExecution[iThread, nextPosition]!!
-        val events = when {
-            nextEvent.label.isTotal   -> listOf(nextEvent)
-            nextEvent.label.isRequest -> {
-                val rspEvent = currentExecution[iThread, 1 + nextPosition]!!
-                listOf(nextEvent, rspEvent)
-            }
-            else -> unreachable()
-        }
+        val event = currentExecution[iThread, currentFrontier.getNextPosition(iThread)]!!
         // delay replaying the last event till all other events are replayed;
-        // this is because replaying last event can lead to addition of new events;
-        // for example, in case of RMWs replaying exclusive read can lead to addition
-        // of new event representing write exclusive part
-        // TODO: this problem could be handled better if we had an opportunity to
-        //   suspend execution of operation in ManagedStrategy in the middle (see comment below).
-        if (this.events.last() in events) {
+        if (event == events.last()) {
             return (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
         }
-        // TODO: unify with the similar code in SequentialConsistencyChecker
-        // TODO: maybe add an opportunity for ManagedStrategy to suspend
-        //   reading operation in the middle (i.e. after Request past, but before Response).
-        //   This could also be useful for implementing scheduling strategies
-        //   (e.g. write-first strategy that tries to first schedule threads whose next operation is write).
-        return events.all { it.dependencies.all { dependency ->
+        return event.dependencies.all { dependency ->
             dependency in currentFrontier
-        }}
+        }
     }
 
     private fun tryReplayEvent(iThread: Int): Event? {
@@ -172,6 +160,14 @@ class EventStructure(
             check(position < currentExecution.getThreadSize(iThread))
             currentExecution[iThread, position]!!
         } else null
+    }
+
+    private fun waitForReplay(iThread: Int) {
+        val threadInReplayPhase = inReplayPhase(iThread)
+        if ( threadInReplayPhase && !canReplayNextEvent(iThread) ||
+            !threadInReplayPhase && !isFinishedThread(iThread) && inReplayPhase()) {
+            threadSwitchCallback(iThread)
+        }
     }
 
     private fun createEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
@@ -218,6 +214,9 @@ class EventStructure(
         if (synchronize) { addSynchronizedEvents(event) }
         checkConsistencyIncrementally(event, isReplayedEvent)?.let {
             throw InconsistentExecutionException(it)
+        }
+        if (isReplayedEvent) {
+            waitForReplay(event.threadId)
         }
     }
 
