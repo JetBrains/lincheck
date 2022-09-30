@@ -178,15 +178,29 @@ class EventStructure(
         // To prevent causality cycles to appear we check that
         // dependencies do not causally depend on predecessor.
         check(dependencies.all { dependency -> !causalityOrder.lessThan(parent!!, dependency) })
+        val cutPosition = parent?.let { it.threadPosition + 1 } ?: 0
         return Event.create(
             threadId = iThread,
             label = label,
             parent = parent,
             // TODO: rename to external dependencies?
             dependencies = dependencies.filter { it != parent },
-            frontier = currentFrontier.copy(),
-            pinnedEvents = pinnedEvents.copy()
+            frontier = cutFrontier(iThread, cutPosition, currentFrontier),
+            pinnedEvents = cutFrontier(iThread, cutPosition, pinnedEvents),
         )
+    }
+
+    private fun cutFrontier(iThread: Int, position: Int, frontier: ExecutionFrontier): ExecutionFrontier {
+        val nextEvent = currentExecution[iThread, position] ?: return frontier.copy()
+        return ExecutionFrontier(frontier.mapping.mapNotNull { (threadId, frontEvent) ->
+            require(frontEvent in currentExecution)
+            // TODO: optimize using binary search
+            var event: Event = frontEvent
+            while (event.causalityClock.observes(nextEvent.threadId, nextEvent)) {
+                event = event.parent ?: return@mapNotNull null
+            }
+            threadId to event
+        }.toMap())
     }
 
     private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {

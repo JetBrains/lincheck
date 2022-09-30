@@ -61,6 +61,12 @@ open class Execution(
     operator fun get(iThread: Int, Position: Int): Event? =
         threadsEvents[iThread]?.getOrNull(Position)
 
+    fun nextEvent(event: Event): Event? =
+        threadsEvents[event.threadId]?.let { events ->
+            require(events[event.threadPosition] == event)
+            events.getOrNull(event.threadPosition + 1)
+        }
+
     override operator fun contains(element: Event): Boolean =
         threadsEvents[element.threadId]
             ?.let { events -> events[element.threadPosition] == element }
