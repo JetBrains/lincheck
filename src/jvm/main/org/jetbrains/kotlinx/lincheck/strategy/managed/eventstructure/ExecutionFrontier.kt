@@ -33,7 +33,10 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
      * TODO: use array instead of map?
      */
     private val frontier: VectorClock<Int, Event> =
-        VectorClock(programOrder, frontier.toMutableMap())
+        VectorClock(programOrder, frontier)
+
+    val mapping: Map<Int, Event>
+        get() = frontier.clock
 
     fun update(event: Event) {
         check(event.parent == frontier[event.threadId])
@@ -67,10 +70,10 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
     }
 
     fun copy(): ExecutionFrontier =
-        ExecutionFrontier(frontier.toMutableMap())
+        ExecutionFrontier(mapping)
 
     fun toExecution(): MutableExecution {
-        return MutableExecution(frontier.asMap().map { (threadId, lastEvent) ->
+        return MutableExecution(mapping.map { (threadId, lastEvent) ->
             var event: Event? = lastEvent
             val events = arrayListOf<Event>()
             while (event != null) {
@@ -85,4 +88,4 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
 
 // TODO: ensure that vector clock is indexed by thread ids: VectorClock<ThreadID, Event>
 fun VectorClock<Int, Event>.toFrontier(): ExecutionFrontier =
-    ExecutionFrontier(this.toMutableMap())
+    ExecutionFrontier(this.clock)
