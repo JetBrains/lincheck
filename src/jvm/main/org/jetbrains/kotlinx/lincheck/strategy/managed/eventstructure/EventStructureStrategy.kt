@@ -45,7 +45,14 @@ class EventStructureStrategy(
     private val atomicityChecker: AtomicityChecker = AtomicityChecker()
 
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, sequentialConsistencyChecker, atomicityChecker)
+        EventStructure(
+            nThreads,
+            sequentialConsistencyChecker,
+            atomicityChecker,
+            threadSwitchCallback = { iThread ->
+                switchCurrentThread(iThread, mustSwitch = true)
+            }
+        )
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)

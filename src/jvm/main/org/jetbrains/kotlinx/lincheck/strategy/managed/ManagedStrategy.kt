@@ -287,35 +287,6 @@ abstract class ManagedStrategy(
     // == EXECUTION CONTROL METHODS ==
 
     /**
-     * Create a new switch point, where a thread context switch can occur.
-     * @param iThread the current thread
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param codeLocation the byte-code location identifier of the point in code.
-     */
-    private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        if (!isTestThread(iThread)) return // can switch only test threads
-        if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
-        check(iThread == currentThread)
-        var isLoop = false
-        if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
-            failIfObstructionFreedomIsRequired {
-                // Log the last event that caused obstruction freedom violation
-                traceCollector?.passCodeLocation(tracePoint)
-                "Obstruction-freedom is required but an active lock has been found"
-            }
-            checkLiveLockHappened(loopDetector.totalOperations)
-            isLoop = true
-        }
-        val shouldSwitch = shouldSwitch(iThread) or isLoop
-        if (shouldSwitch) {
-            val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
-            switchCurrentThread(iThread, reason)
-        }
-        traceCollector?.passCodeLocation(tracePoint)
-        // continue the operation
-    }
-
-    /**
      * This method is executed as the first thread action.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
@@ -381,9 +352,39 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Create a new switch point, where a thread context switch can occur.
+     * @param iThread the current thread
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param codeLocation the byte-code location identifier of the point in code.
+     */
+    private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
+        if (!isTestThread(iThread)) return // can switch only test threads
+        if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
+        check(iThread == currentThread)
+        var isLoop = false
+        if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
+            failIfObstructionFreedomIsRequired {
+                // Log the last event that caused obstruction freedom violation
+                traceCollector?.passCodeLocation(tracePoint)
+                "Obstruction-freedom is required but an active lock has been found"
+            }
+            checkLiveLockHappened(loopDetector.totalOperations)
+            isLoop = true
+        }
+        val shouldSwitch = shouldSwitch(iThread) or isLoop
+        if (shouldSwitch) {
+            val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
+            switchCurrentThread(iThread, reason)
+        }
+        traceCollector?.passCodeLocation(tracePoint)
+        // continue the operation
+    }
+
+    /**
      * A regular context thread switch to another thread.
      */
     protected fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+        if (!isTestThread(iThread)) return // can switch only test threads
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
