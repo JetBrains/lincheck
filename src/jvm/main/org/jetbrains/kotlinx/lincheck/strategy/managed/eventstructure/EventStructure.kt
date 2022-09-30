@@ -59,6 +59,20 @@ class EventStructure(
         root = addRootEvent()
     }
 
+    private fun emptyFrontier(): ExecutionFrontier =
+        ExecutionFrontier().apply { set(rootThreadId, root) }
+
+    private fun emptyExecution(): Execution =
+        emptyFrontier().toExecution()
+
+    fun getThreadRoot(iThread: Int): Event? =
+        currentExecution.firstEvent(iThread)?.also {event ->
+            check(event.label.isThreadInitializer)
+        }
+
+    fun isInitializedThread(iThread: Int): Boolean =
+        getThreadRoot(iThread) != null
+
     fun startNextExploration(): Boolean {
         loop@while (true) {
             val event = rollbackToEvent { !it.visited }?.apply { visit() }
@@ -71,12 +85,6 @@ class EventStructure(
     fun initializeExploration() {
         currentFrontier = emptyFrontier()
     }
-
-    private fun emptyFrontier(): ExecutionFrontier =
-        ExecutionFrontier().apply { set(rootThreadId, root) }
-
-    private fun emptyExecution(): Execution =
-        emptyFrontier().toExecution()
 
     private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {
         val eventIdx = _events.indexOfLast(predicate)
@@ -115,47 +123,6 @@ class EventStructure(
             return checker.check(_currentExecution)
         }
         return null
-    }
-
-    fun getThreadRoot(iThread: Int): Event? =
-        currentExecution.firstEvent(iThread)?.also {event ->
-            check(event.label.isThreadInitializer)
-        }
-
-    fun isInitializedThread(iThread: Int): Boolean =
-        getThreadRoot(iThread) != null
-
-    private fun createEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
-        // To prevent causality cycles to appear we check that
-        // dependencies do not causally depend on predecessor.
-        check(dependencies.all { dependency -> !causalityOrder.lessThan(parent!!, dependency) })
-        return Event.create(
-            threadId = iThread,
-            label = label,
-            parent = parent,
-            // TODO: rename to external dependencies?
-            dependencies = dependencies.filter { it != parent },
-            frontier = currentFrontier.copy(),
-            pinnedEvents = pinnedEvents.copy()
-        )
-    }
-
-    private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
-        return createEvent(iThread, label, parent,  dependencies).also { event ->
-            _events.add(event)
-        }
-    }
-
-    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
-        if (visit) { event.visit() }
-        val isReplayedEvent = inReplayPhase(event.threadId)
-        if (!isReplayedEvent)
-            _currentExecution.addEvent(event)
-        currentFrontier.update(event)
-        if (synchronize) { addSynchronizedEvents(event) }
-        checkConsistencyIncrementally(event, isReplayedEvent)?.let {
-            throw InconsistentExecutionException(it)
-        }
     }
 
     fun inReplayPhase(): Boolean =
@@ -207,13 +174,36 @@ class EventStructure(
         } else null
     }
 
-    private fun addRootEvent(): Event {
-        // we do not mark root event as visited purposefully;
-        // this is just a trick to make first call to `startNextExploration`
-        // to pick the root event as the next event to explore from.
-        val label = InitializationLabel()
-        return addEvent(rootThreadId, label, parent = null, dependencies = emptyList()).also {
-            addEventToCurrentExecution(it, visit = false)
+    private fun createEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
+        // To prevent causality cycles to appear we check that
+        // dependencies do not causally depend on predecessor.
+        check(dependencies.all { dependency -> !causalityOrder.lessThan(parent!!, dependency) })
+        return Event.create(
+            threadId = iThread,
+            label = label,
+            parent = parent,
+            // TODO: rename to external dependencies?
+            dependencies = dependencies.filter { it != parent },
+            frontier = currentFrontier.copy(),
+            pinnedEvents = pinnedEvents.copy()
+        )
+    }
+
+    private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
+        return createEvent(iThread, label, parent,  dependencies).also { event ->
+            _events.add(event)
+        }
+    }
+
+    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
+        if (visit) { event.visit() }
+        val isReplayedEvent = inReplayPhase(event.threadId)
+        if (!isReplayedEvent)
+            _currentExecution.addEvent(event)
+        currentFrontier.update(event)
+        if (synchronize) { addSynchronizedEvents(event) }
+        checkConsistencyIncrementally(event, isReplayedEvent)?.let {
+            throw InconsistentExecutionException(it)
         }
     }
 
@@ -280,6 +270,16 @@ class EventStructure(
         // of dependencies the parent event of newly added synchronized event.
         val parent = dependencies.first { it.label.aggregatesWith(syncLab) }
         return addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
+    }
+
+    private fun addRootEvent(): Event {
+        // we do not mark root event as visited purposefully;
+        // this is just a trick to make first call to `startNextExploration`
+        // to pick the root event as the next event to explore from.
+        val label = InitializationLabel()
+        return addEvent(rootThreadId, label, parent = null, dependencies = emptyList()).also {
+            addEventToCurrentExecution(it, visit = false)
+        }
     }
 
     private fun addTotalEvent(iThread: Int, label: EventLabel): Event {
@@ -403,6 +403,7 @@ class EventStructure(
         checkNotNull(responseEvent)
         return responseEvent
     }
+
 }
 
 class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
