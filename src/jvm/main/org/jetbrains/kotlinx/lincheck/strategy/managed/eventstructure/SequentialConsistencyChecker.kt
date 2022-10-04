@@ -48,7 +48,9 @@ private fun SeqCstMemoryTracker.replay(iThread: Int, label: EventLabel): SeqCstM
 // TODO: what information we can store to point out to the reason of violation?
 class SequentialConsistencyViolation : Inconsistency()
 
-class SequentialConsistencyChecker : ConsistencyChecker {
+class SequentialConsistencyChecker(
+    val approximateSequentialConsistencyRelation: Boolean = true
+) : ConsistencyChecker {
 
     private data class State(
         val counter: ExecutionCounter,
@@ -56,9 +58,8 @@ class SequentialConsistencyChecker : ConsistencyChecker {
     ) {
         companion object {
             fun initial(execution: Execution): State {
-                val size = execution.threads.maxOrNull()?.let { 1 + it } ?: 0
                 return State(
-                    counter = IntArray(size),
+                    counter = IntArray(execution.maxThreadId),
                     memoryTracker = SeqCstMemoryTracker(),
                 )
             }
@@ -118,6 +119,34 @@ class SequentialConsistencyChecker : ConsistencyChecker {
 
     }
 
+    private fun buildApproximateSequentialConsistencyRelation(execution: Execution): RelationMatrix<Event> {
+        val relation = RelationMatrix(execution, execution.buildIndexer()) { x, y ->
+            causalityOrder.lessThan(x, y)
+        }
+        val writesBefore = { write1: Event, write2: Event, read: Event ->
+            write1 != write2 &&
+                write1.label is MemoryAccessLabel && write1.label.isWrite &&
+                write2.label is MemoryAccessLabel && write2.label.isWrite &&
+                read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest &&
+                write1.label.memId == write2.label.memId &&
+                causalityOrder.lessThan(write1, read) && read.readsFrom == write2
+        }
+        val readsBefore = { read: Event, write1: Event, write2: Event ->
+            read != write1 &&
+                write1.label is MemoryAccessLabel && write1.label.isWrite &&
+                write2.label is MemoryAccessLabel && write2.label.isWrite &&
+                read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest &&
+                write1.label.memId == write2.label.memId &&
+                causalityOrder.lessThan(write2, write1) && read.readsFrom == write2
+        }
+        do {
+            val changed = relation.closure { x, y, z ->
+                writesBefore(x, y, z) || readsBefore(x, y, z)
+            } && relation.transitiveClosure()
+        } while (changed)
+        return relation
+    }
+
     private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Boolean {
         // TODO: this is just a DFS search.
         //  In fact, we can generalize this algorithm to
@@ -143,7 +172,22 @@ class SequentialConsistencyChecker : ConsistencyChecker {
     }
 
     override fun check(execution: Execution): Inconsistency? {
-        return if (!checkByReplaying(execution, externalCausalityCovering))
+        val covering = if (!approximateSequentialConsistencyRelation)
+            externalCausalityCovering
+        else {
+            val relation = buildApproximateSequentialConsistencyRelation(execution)
+            if (!relation.isIrreflexive()) {
+                return SequentialConsistencyViolation()
+            }
+            relation.apply {
+                transpose()
+                transitiveReduction()
+                remove { x, y -> x.threadId == y.threadId }
+            }
+            relation.covering()
+        }
+
+        return if (!checkByReplaying(execution, covering))
             SequentialConsistencyViolation()
             else null
     }

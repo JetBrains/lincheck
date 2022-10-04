@@ -43,6 +43,9 @@ open class Execution(
     override val size: Int
         get() = threadsEvents.values.sumOf { it.size }
 
+    val maxThreadId: Int
+        get() = threads.maxOrNull()?.let { 1 + it } ?: 0
+
     override fun isEmpty(): Boolean =
         threadsEvents.isEmpty()
 
@@ -90,6 +93,33 @@ open class Execution(
 
     override fun iterator(): Iterator<Event> =
         threadsEvents.values.asSequence().flatten().iterator()
+
+    fun buildIndexer() = object : Indexer<Event> {
+
+        val threadOffsets: IntArray =
+            IntArray(maxThreadId).apply {
+                var offset = 0
+                for (i in indices) {
+                    this[i] = offset
+                    offset += getThreadSize(i)
+                }
+            }
+
+        override fun index(x: Event): Int {
+            // require(x in this@Execution)
+            return threadOffsets[x.threadId] + x.threadPosition
+        }
+
+        override fun get(i: Int): Event {
+            // require(i < this@Execution.size)
+            for (threadId in threadOffsets.indices) {
+                if (i < threadOffsets[threadId] + getThreadSize(threadId))
+                    return this@Execution[threadId, i - threadOffsets[threadId]]!!
+            }
+            unreachable()
+        }
+
+    }
 
 }
 
