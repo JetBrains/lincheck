@@ -40,9 +40,11 @@ class EventStructureStrategy(
     // The number of already used invocations.
     private var usedInvocations = 0
 
-    private val sequentialConsistencyChecker: SequentialConsistencyChecker = SequentialConsistencyChecker()
+    private val sequentialConsistencyChecker: SequentialConsistencyChecker =
+        SequentialConsistencyChecker(approximateSequentialConsistencyRelation = false)
 
-    private val atomicityChecker: AtomicityChecker = AtomicityChecker()
+    private val atomicityChecker: AtomicityChecker =
+        AtomicityChecker()
 
     private val eventStructure: EventStructure =
         EventStructure(
