@@ -147,7 +147,7 @@ class SequentialConsistencyChecker(
             val changed =
                 saturateApproximateSequentialConsistencyRelation(execution, relation) &&
                 relation.transitiveClosure()
-        } while (changed)
+        } while (changed && relation.isIrreflexive())
         return relation
     }
 
