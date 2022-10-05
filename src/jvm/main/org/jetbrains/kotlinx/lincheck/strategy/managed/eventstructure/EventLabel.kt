@@ -71,10 +71,28 @@ abstract class EventLabel {
         isRequest && this is ThreadStartLabel
     }
 
-    fun isMemoryAccessTo(memId: Int, predicate: MemoryAccessLabel.() -> Boolean = { true }) =
-        if (this is MemoryAccessLabel && this.memId == memId)
+    inline fun isMemoryAccess(predicate: MemoryAccessPredicate = { true }) =
+        if (this is MemoryAccessLabel)
             predicate()
         else false
+
+    inline fun isReadAccess(predicate: MemoryAccessPredicate = { true }) =
+        isMemoryAccess { isRead && predicate() }
+
+    inline fun isWriteAccess(predicate: MemoryAccessPredicate = { true }) =
+        isMemoryAccess { isWrite && predicate() }
+
+    inline fun isMemoryAccessTo(memId: Int, predicate: MemoryAccessPredicate = { true }) =
+        isMemoryAccess { this.memId == memId && predicate() }
+
+    inline fun isWriteAccessTo(memId: Int, predicate: MemoryAccessPredicate = { true }) =
+        isMemoryAccessTo(memId) { isWrite && predicate() }
+
+    infix fun toSameLocation(other: EventLabel) =
+        this is MemoryAccessLabel && other.isMemoryAccessTo(memId)
+
+    infix fun writesToSameLocation(other: EventLabel) =
+        this is MemoryAccessLabel && isWrite && other.isWriteAccessTo(memId)
 }
 
 // TODO: maybe call it DualLabelKind?
@@ -313,6 +331,8 @@ interface MemoryAccessLabel {
     val isExclusive: Boolean
 
 }
+
+typealias MemoryAccessPredicate = MemoryAccessLabel.() -> Boolean
 
 data class AtomicMemoryAccessLabel(
     override val kind: LabelKind,

@@ -119,30 +119,34 @@ class SequentialConsistencyChecker(
 
     }
 
+    private fun saturateApproximateSequentialConsistencyRelation(execution: Execution, relation: RelationMatrix<Event>): Boolean {
+        var changed = false
+        readLoop@for (read in execution) {
+            if (!(read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest))
+                continue
+            val readFrom = read.readsFrom
+            writeLoop@for (write in execution) {
+                if (!write.label.isWriteAccessTo(read.label.memId))
+                    continue
+                if (relation(write, read) && write != readFrom) {
+                    changed = changed || relation.change(write, readFrom, true)
+                }
+                if (relation(readFrom, write) && read != write) {
+                    changed = changed || relation.change(read, write, true)
+                }
+            }
+        }
+        return changed
+    }
+
     private fun buildApproximateSequentialConsistencyRelation(execution: Execution): RelationMatrix<Event> {
         val relation = RelationMatrix(execution, execution.buildIndexer()) { x, y ->
             causalityOrder.lessThan(x, y)
         }
-        val writesBefore = { write1: Event, write2: Event, read: Event ->
-            write1 != write2 &&
-                write1.label is MemoryAccessLabel && write1.label.isWrite &&
-                write2.label is MemoryAccessLabel && write2.label.isWrite &&
-                read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest &&
-                write1.label.memId == write2.label.memId &&
-                causalityOrder.lessThan(write1, read) && read.readsFrom == write2
-        }
-        val readsBefore = { read: Event, write1: Event, write2: Event ->
-            read != write1 &&
-                write1.label is MemoryAccessLabel && write1.label.isWrite &&
-                write2.label is MemoryAccessLabel && write2.label.isWrite &&
-                read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest &&
-                write1.label.memId == write2.label.memId &&
-                causalityOrder.lessThan(write2, write1) && read.readsFrom == write2
-        }
         do {
-            val changed = relation.closure { x, y, z ->
-                writesBefore(x, y, z) || readsBefore(x, y, z)
-            } && relation.transitiveClosure()
+            val changed =
+                saturateApproximateSequentialConsistencyRelation(execution, relation) &&
+                relation.transitiveClosure()
         } while (changed)
         return relation
     }
