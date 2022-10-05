@@ -96,7 +96,7 @@ open class Execution(
 
     fun buildIndexer() = object : Indexer<Event> {
 
-        val threadOffsets: IntArray =
+        private val threadOffsets: IntArray =
             IntArray(maxThreadId).apply {
                 var offset = 0
                 for (i in indices) {
@@ -105,18 +105,23 @@ open class Execution(
                 }
             }
 
+        private val events: Array<Event> =
+            Array(size) { i ->
+                for (threadId in threadOffsets.indices) {
+                    if (i < threadOffsets[threadId] + getThreadSize(threadId))
+                        return@Array this@Execution[threadId, i - threadOffsets[threadId]]!!
+                }
+                unreachable()
+            }
+
         override fun index(x: Event): Int {
             // require(x in this@Execution)
             return threadOffsets[x.threadId] + x.threadPosition
         }
 
         override fun get(i: Int): Event {
-            // require(i < this@Execution.size)
-            for (threadId in threadOffsets.indices) {
-                if (i < threadOffsets[threadId] + getThreadSize(threadId))
-                    return this@Execution[threadId, i - threadOffsets[threadId]]!!
-            }
-            unreachable()
+            require(i < events.size)
+            return events[i]
         }
 
     }

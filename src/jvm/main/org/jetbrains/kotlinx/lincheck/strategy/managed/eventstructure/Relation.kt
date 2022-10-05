@@ -45,16 +45,14 @@ interface Indexer<T> {
 }
 
 class RelationMatrix<T>(
-    // TODO: do not save `nodes` inside object, it is error-prone
-    //  because underlying collection can change between methods' calls
-    val nodes: Collection<T>,
+    nodes: Collection<T>,
     val indexer: Indexer<T>,
     relation: Relation<T>? = null
 ) : Relation<T> {
 
-    val size = nodes.size
+    private val size = nodes.size
 
-    val matrix: BooleanArray = BooleanArray(size * size)
+    private val matrix: BooleanArray = BooleanArray(size * size)
 
     init {
         relation?.let { add(it) }
@@ -86,26 +84,32 @@ class RelationMatrix<T>(
     operator fun set(x: T, y: T, value: Boolean) =
         set(indexer.index(x), indexer.index(y), value)
 
+    fun change(x: T, y: T, new: Boolean): Boolean {
+        val old = this[x, y]
+        this[x, y] = new
+        return old != new
+    }
+
     fun add(relation: Relation<T>) {
-        for (x in nodes) {
-            for (y in nodes) {
-                this[x, y] = this[x, y] || relation(x, y)
+        for (i in 0 until size) {
+            for (j in 0 until size) {
+                this[i, j] = this[i, j] || relation(indexer[i], indexer[j])
             }
         }
     }
 
     fun remove(relation: Relation<T>) {
-        for (x in nodes) {
-            for (y in nodes) {
-                this[x, y] = this[x, y] && !relation(x, y)
+        for (i in 0 until size) {
+            for (j in 0 until size) {
+                this[i, j] = this[i, j] && !relation(indexer[i], indexer[j])
             }
         }
     }
 
     fun filter(relation: Relation<T>) {
-        for (x in nodes) {
-            for (y in nodes) {
-                this[x, y] = this[x, y] && relation(x, y)
+        for (i in 0 until size) {
+            for (j in 0 until size) {
+                this[i, j] = this[i, j] && relation(indexer[i], indexer[j])
             }
         }
     }
@@ -117,7 +121,7 @@ class RelationMatrix<T>(
     }
 
     fun transpose() {
-        for (i in 1 until nodes.size) {
+        for (i in 1 until size) {
             for (j in 0 until i) {
                 swap(i, j)
             }
@@ -126,15 +130,16 @@ class RelationMatrix<T>(
 
     fun closure(rule: (T, T, T) -> Boolean): Boolean {
         var changed = false
-        xLoop@for (x in nodes) {
-            yLoop@for (y in nodes) {
-                if (this[x, y])
-                    continue@yLoop
-                zLoop@for (z in nodes) {
+        iLoop@for (i in 0 until size) {
+            val x = indexer[i]
+            jLoop@for (j in 0 until size) {
+                val y = indexer[j]
+                kLoop@for (k in 0 until size) {
+                    val z = indexer[k]
                     if (rule(x, y, z)) {
-                        this[x, y] = true
+                        this[i, j] = true
                         changed = true
-                        continue@yLoop
+                        continue@jLoop
                     }
                 }
             }
@@ -144,15 +149,15 @@ class RelationMatrix<T>(
 
     fun transitiveClosure(): Boolean {
         var changed = false
-        xLoop@for (x in nodes) {
-            yLoop@for (y in nodes) {
-                if (this[x, y])
-                    continue@yLoop
-                zLoop@for (z in nodes) {
-                    if (this[x, z] && this[z, y]) {
-                        this[x, y] = true
+        iLoop@for (i in 0 until size) {
+            jLoop@for (j in 0 until size) {
+                if (this[i, j])
+                    continue@jLoop
+                kLoop@for (k in 0 until size) {
+                    if (this[i, k] && this[k, j]) {
+                        this[i, j] = true
                         changed = true
-                        continue@yLoop
+                        continue@jLoop
                     }
                 }
             }
@@ -162,13 +167,13 @@ class RelationMatrix<T>(
 
     fun transitiveReduction(): Boolean {
         var changed = false
-        xLoop@for (y in nodes) {
-            yLoop@for (x in nodes) {
-                if (!this[x, y])
-                    continue@yLoop
-                zLoop@for (z in nodes) {
-                    if (this[x, z] && this[y, z]) {
-                        this[x, z] = false
+        jLoop@for (j in 0 until size) {
+            iLoop@for (i in 0 until size) {
+                if (!this[i, j])
+                    continue@iLoop
+                kLoop@for (k in 0 until size) {
+                    if (this[i, k] && this[j, k]) {
+                        this[i, k] = false
                         changed = true
                     }
                 }
@@ -178,8 +183,8 @@ class RelationMatrix<T>(
     }
 
     fun isIrreflexive(): Boolean {
-        for (x in nodes) {
-            if (this[x, x])
+        for (i in 0 until size) {
+            if (this[i, i])
                 return false
         }
         return true
@@ -189,7 +194,7 @@ class RelationMatrix<T>(
 
         val indexer = this@RelationMatrix.indexer
 
-        val covering: List<List<T>> = Array(nodes.size) { i ->
+        val covering: List<List<T>> = Array(this@RelationMatrix.size) { i ->
             val x = indexer[i]
             (startIndex(x) until endIndex(x)).mapNotNull { j ->
                 val y = indexer[j - startIndex(x)]
