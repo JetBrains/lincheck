@@ -22,29 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SeqCstMemoryTracker
 
-private typealias ExecutionCounter = IntArray
-
-private fun SeqCstMemoryTracker.replay(iThread: Int, label: EventLabel): SeqCstMemoryTracker? {
-    return when {
-
-        label is AtomicMemoryAccessLabel && label.isRead -> this.takeIf {
-            label.value == readValue(iThread, label.memId, label.kClass)
-        }
-
-        label is AtomicMemoryAccessLabel && label.isWrite -> copy().apply {
-            writeValue(iThread, label.memId, label.value, label.kClass)
-        }
-
-        label is ReadModifyWriteMemoryAccessLabel -> copy().takeIf {
-            it.compareAndSet(iThread, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
-        }
-
-        label is ThreadEventLabel -> this
-        label is InitializationLabel -> this
-        else -> unreachable()
-    }
-}
-
 // TODO: what information we can store to point out to the reason of violation?
 class SequentialConsistencyViolation : Inconsistency()
 
@@ -52,103 +29,17 @@ class SequentialConsistencyChecker(
     val approximateSequentialConsistencyRelation: Boolean = true
 ) : ConsistencyChecker {
 
-    private data class State(
-        val counter: ExecutionCounter,
-        val memoryTracker: SeqCstMemoryTracker
-    ) {
-        companion object {
-            fun initial(execution: Execution): State {
-                return State(
-                    counter = IntArray(execution.maxThreadId),
-                    memoryTracker = SeqCstMemoryTracker(),
-                )
-            }
+    override fun check(execution: Execution): Inconsistency? {
+        val covering = if (!approximateSequentialConsistencyRelation)
+            externalCausalityCovering
+        else {
+            val scRelation = SequentialConsistencyRelation(execution)
+            scRelation.approximate()?.let { return it }
+            scRelation.buildExternalCovering()
         }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is State) return false
-            return counter.contentEquals(other.counter) &&
-                   memoryTracker == other.memoryTracker
-        }
-
-        override fun hashCode(): Int {
-            return 31 * counter.contentHashCode() + memoryTracker.hashCode()
-        }
-    }
-
-    private class Context(val execution: Execution, val covering: Covering<Event>) {
-
-        fun State.covered(event: Event): Boolean =
-            event.threadPosition < (counter[event.threadId] ?: 0)
-
-        fun State.coverable(event: Event): Boolean =
-            covering(event).all { covered(it) }
-
-        val State.isTerminal: Boolean
-            get() = counter.withIndex().all { (threadId, position) ->
-                position == execution.getThreadSize(threadId)
-            }
-
-        fun State.transition(threadId: Int): State? {
-            val position = counter[threadId]
-            val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
-                ?.takeIf { (_, events) -> events.all { coverable(it) } }
-                ?: return null
-            val memoryTracker = if (label.isTotal) {
-                this.memoryTracker.replay(threadId, label) ?: return null
-            } else {
-                require(label.isRequest && position == execution.lastPosition(threadId))
-                this.memoryTracker
-            }
-            return State(
-                memoryTracker = memoryTracker,
-                counter = this.counter.copyOf().also {
-                    it[threadId] += aggregated.size
-                },
-            )
-        }
-
-        fun State.transitions() : List<State> {
-            val states = arrayListOf<State>()
-            for (threadId in counter.indices) {
-                transition(threadId)?.let { states.add(it) }
-            }
-            return states
-        }
-
-    }
-
-    private fun saturateApproximateSequentialConsistencyRelation(execution: Execution, relation: RelationMatrix<Event>): Boolean {
-        var changed = false
-        readLoop@for (read in execution) {
-            if (!(read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest))
-                continue
-            val readFrom = read.readsFrom
-            writeLoop@for (write in execution) {
-                if (!write.label.isWriteAccessTo(read.label.memId))
-                    continue
-                if (relation(write, read) && write != readFrom) {
-                    changed = changed || relation.change(write, readFrom, true)
-                }
-                if (relation(readFrom, write) && read != write) {
-                    changed = changed || relation.change(read, write, true)
-                }
-            }
-        }
-        return changed
-    }
-
-    private fun buildApproximateSequentialConsistencyRelation(execution: Execution): RelationMatrix<Event> {
-        val relation = RelationMatrix(execution, execution.buildIndexer()) { x, y ->
-            causalityOrder.lessThan(x, y)
-        }
-        do {
-            val changed =
-                saturateApproximateSequentialConsistencyRelation(execution, relation) &&
-                relation.transitiveClosure()
-        } while (changed && relation.isIrreflexive())
-        return relation
+        return if (!checkByReplaying(execution, covering))
+            SequentialConsistencyViolation()
+        else null
     }
 
     private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Boolean {
@@ -175,25 +66,159 @@ class SequentialConsistencyChecker(
         }
     }
 
-    override fun check(execution: Execution): Inconsistency? {
-        val covering = if (!approximateSequentialConsistencyRelation)
-            externalCausalityCovering
-        else {
-            val relation = buildApproximateSequentialConsistencyRelation(execution)
-            if (!relation.isIrreflexive()) {
-                return SequentialConsistencyViolation()
-            }
-            relation.apply {
-                transpose()
-                transitiveReduction()
-                remove { x, y -> x.threadId == y.threadId }
-            }
-            relation.covering()
+}
+
+private typealias ExecutionCounter = IntArray
+
+private fun SeqCstMemoryTracker.replay(iThread: Int, label: EventLabel): SeqCstMemoryTracker? {
+    return when {
+
+        label is AtomicMemoryAccessLabel && label.isRead -> this.takeIf {
+            label.value == readValue(iThread, label.memId, label.kClass)
         }
 
-        return if (!checkByReplaying(execution, covering))
-            SequentialConsistencyViolation()
-            else null
+        label is AtomicMemoryAccessLabel && label.isWrite -> copy().apply {
+            writeValue(iThread, label.memId, label.value, label.kClass)
+        }
+
+        label is ReadModifyWriteMemoryAccessLabel -> copy().takeIf {
+            it.compareAndSet(iThread, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
+        }
+
+        label is ThreadEventLabel -> this
+        label is InitializationLabel -> this
+        else -> unreachable()
+
+    }
+}
+
+private data class State(
+    val counter: ExecutionCounter,
+    val memoryTracker: SeqCstMemoryTracker
+) {
+    companion object {
+        fun initial(execution: Execution): State {
+            return State(
+                counter = IntArray(execution.maxThreadId),
+                memoryTracker = SeqCstMemoryTracker(),
+            )
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is State) return false
+        return counter.contentEquals(other.counter) &&
+            memoryTracker == other.memoryTracker
+    }
+
+    override fun hashCode(): Int {
+        return 31 * counter.contentHashCode() + memoryTracker.hashCode()
+    }
+}
+
+private class Context(val execution: Execution, val covering: Covering<Event>) {
+
+    fun State.covered(event: Event): Boolean =
+        event.threadPosition < (counter[event.threadId] ?: 0)
+
+    fun State.coverable(event: Event): Boolean =
+        covering(event).all { covered(it) }
+
+    val State.isTerminal: Boolean
+        get() = counter.withIndex().all { (threadId, position) ->
+            position == execution.getThreadSize(threadId)
+        }
+
+    fun State.transition(threadId: Int): State? {
+        val position = counter[threadId]
+        val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
+            ?.takeIf { (_, events) -> events.all { coverable(it) } }
+            ?: return null
+        val memoryTracker = if (label.isTotal) {
+            this.memoryTracker.replay(threadId, label) ?: return null
+        } else {
+            require(label.isRequest && position == execution.lastPosition(threadId))
+            this.memoryTracker
+        }
+        return State(
+            memoryTracker = memoryTracker,
+            counter = this.counter.copyOf().also {
+                it[threadId] += aggregated.size
+            },
+        )
+    }
+
+    fun State.transitions() : List<State> {
+        val states = arrayListOf<State>()
+        for (threadId in counter.indices) {
+            transition(threadId)?.let { states.add(it) }
+        }
+        return states
+    }
+
+}
+
+private class SequentialConsistencyRelation(val execution: Execution): Relation<Event> {
+
+    val indexer = execution.buildIndexer()
+
+    val relation = RelationMatrix(execution, indexer) { x, y ->
+        causalityOrder.lessThan(x, y)
+    }
+
+    override fun invoke(x: Event, y: Event): Boolean =
+        relation(x, y)
+
+    fun approximate(): SequentialConsistencyViolation? {
+        do {
+            val changed = saturate() && relation.transitiveClosure()
+            if (!relation.isIrreflexive())
+                return SequentialConsistencyViolation()
+        } while (changed)
+        return null
+    }
+
+    private fun saturate(): Boolean {
+        var changed = false
+        readLoop@for (read in execution) {
+            if (!(read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest))
+                continue
+            val readFrom = read.readsFrom
+            writeLoop@for (write in execution) {
+                if (!write.label.isWriteAccessTo(read.label.memId))
+                    continue
+                if (relation(write, read) && write != readFrom) {
+                    changed = changed || relation.change(write, readFrom, true)
+                }
+                if (relation(readFrom, write) && read != write) {
+                    changed = changed || relation.change(read, write, true)
+                }
+            }
+        }
+        return changed
+    }
+
+    fun buildExternalCovering() = object : Covering<Event> {
+
+        val covering: List<List<Event>> = execution.indices.map { index ->
+            val event = indexer[index]
+            val counter = IntArray(execution.maxThreadId) { -1 }
+            for (other in execution) {
+                if (relation(other, event) && other.threadPosition > counter[other.threadId]) {
+                    counter[other.threadId] = other.threadPosition
+                }
+            }
+            (0 until execution.maxThreadId).mapNotNull { threadId ->
+                if (threadId != event.threadId && counter[threadId] != -1)
+                    execution[threadId, counter[threadId]]
+                else null
+            }
+        }
+
+        override fun invoke(x: Event): List<Event> =
+            covering[indexer.index(x)]
+
     }
 
 }
