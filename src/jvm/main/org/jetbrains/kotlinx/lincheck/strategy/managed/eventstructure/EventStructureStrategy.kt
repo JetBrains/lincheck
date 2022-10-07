@@ -116,7 +116,7 @@ class EventStructureStrategy(
 
         private var scReplayPhaseInconsistenciesCount: Int = 0
 
-        fun sequentialConsistencyViolationsCount(phase: SequentialConsistencyCheckPhase? = null) {
+        fun sequentialConsistencyViolationsCount(phase: SequentialConsistencyCheckPhase? = null): Int =
             when (phase) {
                 SequentialConsistencyCheckPhase.APPROXIMATION -> scApproxPhaseInconsistenciesCount
                 SequentialConsistencyCheckPhase.REPLAYING -> scReplayPhaseInconsistenciesCount
@@ -124,7 +124,6 @@ class EventStructureStrategy(
                     scApproxPhaseInconsistenciesCount +
                     scReplayPhaseInconsistenciesCount
             }
-        }
 
         fun update(result: InvocationResult, inconsistency: Inconsistency?) {
             when(inconsistency) {
@@ -139,6 +138,15 @@ class EventStructureStrategy(
                 null -> consistentInvocations++
             }
         }
+
+        override fun toString(): String = """
+            #Total invocations   = ${totalInvocations}         
+                #consistent      = ${consistentInvocations}    
+                #inconsistent    = ${inconsistentInvocations}  
+            #SeqCst violations   = ${sequentialConsistencyViolationsCount()}
+                #approx. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.APPROXIMATION)} 
+                #replay  phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.REPLAYING)}
+        """.trimIndent()
 
     }
 
