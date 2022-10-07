@@ -61,6 +61,9 @@ open class Execution(
     fun lastEvent(iThread: Int): Event? =
         threadsEvents[iThread]?.lastOrNull()
 
+    operator fun get(iThread: Int): SortedArrayList<Event>? =
+        threadsEvents[iThread]
+
     operator fun get(iThread: Int, Position: Int): Event? =
         threadsEvents[iThread]?.getOrNull(Position)
 

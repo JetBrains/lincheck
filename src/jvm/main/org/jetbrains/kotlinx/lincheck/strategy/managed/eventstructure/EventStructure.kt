@@ -220,6 +220,36 @@ class EventStructure(
         }
     }
 
+    private fun synchronizationCandidates(event: Event): List<Event> {
+        val predicates = mutableListOf<(Event) -> Boolean>()
+
+        // for total event we filter out all of its causal predecessors,
+        // because an attempt to synchronize with these predecessors will result in causality cycle
+        if (event.label.isTotal) {
+            predicates.add { !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it) }
+        }
+
+        // for read-request events we search for the last write to the same memory location
+        // in the same thread, and then filter out all causal predecessors of this last write,
+        // because these events are "obsolete" --- reading from them will result in coherence cycle
+        // and will violate consistency
+        if (event.label.isRequest && event.label is MemoryAccessLabel) {
+            require(event.label.isRead)
+            val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
+                it.label is MemoryAccessLabel && it.label.isWrite && it.label.memId == event.label.memId
+            } ?: root
+            predicates.add { !causalityOrder.lessThan(it, threadLastWrite) }
+        }
+
+        return currentExecution.filter {
+            for (predicate in predicates) {
+                if (!predicate(it))
+                    return@filter false
+            }
+            return@filter true
+        }
+    }
+
     /**
      * Adds to the event structure a list of events obtained as a result of synchronizing given [event]
      * with the events contained in the current exploration. For example, if
@@ -231,12 +261,7 @@ class EventStructure(
      */
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
-        val candidateEvents = when {
-            event.label.isTotal -> currentExecution.filter {
-                !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it)
-            }
-            else -> currentExecution
-        }
+        val candidateEvents = synchronizationCandidates(event)
         val syncEvents = arrayListOf<Event>()
         if (event.label.isBinarySynchronizing) {
             addBinarySynchronizedEvents(event, candidateEvents).let {
