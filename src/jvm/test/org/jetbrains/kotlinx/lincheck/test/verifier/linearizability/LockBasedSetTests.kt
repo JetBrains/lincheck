@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.test.*
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.*
 import kotlin.concurrent.*
+import org.junit.Ignore
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
 abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
@@ -46,8 +47,10 @@ class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet())
 
 // TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
 //class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet())
-class SynchronizedLockSetTest : AbstractSetTest(SynchronizedBlockBasedSet())
-class SynchronizedMethodSetTest : AbstractSetTest(SynchronizedMethodBasedSet())
+
+
+@Ignore class SynchronizedLockSetTest : AbstractSetTest(SynchronizedBlockBasedSet())
+@Ignore class SynchronizedMethodSetTest : AbstractSetTest(SynchronizedMethodBasedSet())
 
 interface Set {
     fun add(key: Int): Boolean
