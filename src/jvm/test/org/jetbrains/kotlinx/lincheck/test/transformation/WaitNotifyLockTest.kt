@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.junit.Ignore
 import org.junit.Test
 
 @ModelCheckingCTest(iterations = 30)
@@ -37,6 +38,7 @@ class WaitNotifyLockTest : VerifierState() {
     fun getAndIncrement() = lock.withLock { counter++ }
 
     @Test
+    @Ignore
     fun test() {
         LinChecker.check(this::class.java)
     }

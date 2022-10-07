@@ -42,6 +42,7 @@ class NestedSynchronizedBlocksTest : VerifierState() {
         }
 
     @Test
+    @Ignore
     fun test() {
         LinChecker.check(this::class.java)
     }
