@@ -37,8 +37,6 @@ class EventStructureStrategy(
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
-    // The number of already used invocations.
-    private var usedInvocations = 0
 
     private val sequentialConsistencyChecker: SequentialConsistencyChecker =
         SequentialConsistencyChecker(approximateSequentialConsistencyRelation = false)
@@ -71,7 +69,7 @@ class EventStructureStrategy(
     override fun runImpl(): LincheckFailure? {
         // TODO: move invocation counting logic to ManagedStrategy class
         // TODO: should we count failed inconsistent executions as used invocations?
-        outer@while (stats.consistentInvocations < maxInvocations) {
+        outer@while (stats.totalInvocations < maxInvocations) {
             inner@while (eventStructure.startNextExploration()) {
                 val result = try {
                     runInvocation()
@@ -82,7 +80,7 @@ class EventStructureStrategy(
                 if (result is UnexpectedExceptionInvocationResult &&
                     result.exception is InconsistentExecutionException) {
                     stats.update(result, result.exception.reason)
-                    continue@inner
+                    continue@outer
                 }
                 // if execution was aborted we do not check consistency,
                 // because the graph can be in invalid state
@@ -91,7 +89,7 @@ class EventStructureStrategy(
                     val inconsistency = eventStructure.checkConsistency()
                     if (inconsistency != null) {
                         stats.update(result, inconsistency)
-                        continue@inner
+                        continue@outer
                     }
                 }
                 stats.update(result, null)
