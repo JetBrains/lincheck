@@ -52,7 +52,7 @@ class RelationMatrix<T>(
 
     private val size = nodes.size
 
-    private val matrix: BooleanArray = BooleanArray(size * size)
+    private val matrix = BooleanArray(size * size)
 
     init {
         relation?.let { add(it) }
@@ -64,13 +64,13 @@ class RelationMatrix<T>(
     private fun endIndex(x: T): Int =
         indexer.index(x) * size + size
 
-    private fun index(i: Int, j: Int): Int =
+    private inline fun index(i: Int, j: Int): Int =
         i * size + j
 
     override operator fun invoke(x: T, y: T): Boolean =
         get(x, y)
 
-    private operator fun get(i: Int, j: Int): Boolean {
+    private inline operator fun get(i: Int, j: Int): Boolean {
         return matrix[index(i, j)]
     }
 
