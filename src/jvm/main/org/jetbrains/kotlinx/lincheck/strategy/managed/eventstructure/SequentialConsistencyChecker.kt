@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.SeqCstMemoryTracker
 
 enum class SequentialConsistencyCheckPhase {
     APPROXIMATION, REPLAYING
@@ -78,37 +77,54 @@ class SequentialConsistencyChecker(
 
 private typealias ExecutionCounter = IntArray
 
-private fun SeqCstMemoryTracker.replay(iThread: Int, label: EventLabel): SeqCstMemoryTracker? {
-    return when {
+private data class SequentialConsistencyView(val view: MutableMap<Int, Event> = mutableMapOf()) {
 
-        label is AtomicMemoryAccessLabel && label.isRead -> this.takeIf {
-            label.value == readValue(iThread, label.memId, label.kClass)
+    fun replay(event: Event): SequentialConsistencyView? {
+        return when {
+
+            event.label is AtomicMemoryAccessLabel && event.label.isRead && event.label.isRequest ->
+                this
+
+            event.label is AtomicMemoryAccessLabel && event.label.isRead && event.label.isResponse ->
+                this.takeIf {
+                    if (event.readsFrom.label !is InitializationLabel)
+                        view[event.label.memId] == event.readsFrom
+                    else view[event.label.memId] == null
+                }
+
+            event.label is AtomicMemoryAccessLabel && event.label.isWrite ->
+                this.copy().apply { view[event.label.memId] = event }
+
+            event.label is InitializationLabel -> this
+            event.label is ThreadEventLabel -> this
+
+            else -> unreachable()
+
         }
-
-        label is AtomicMemoryAccessLabel && label.isWrite -> copy().apply {
-            writeValue(iThread, label.memId, label.value, label.kClass)
-        }
-
-        label is ReadModifyWriteMemoryAccessLabel -> copy().takeIf {
-            it.compareAndSet(iThread, label.memId, label.readLabel.value, label.writeLabel.value, label.kClass)
-        }
-
-        label is ThreadEventLabel -> this
-        label is InitializationLabel -> this
-        else -> unreachable()
-
     }
+
+    fun replay(events: List<Event>): SequentialConsistencyView? {
+        var view = this
+        for (event in events) {
+            view = view.replay(event) ?: return null
+        }
+        return view
+    }
+
+    fun copy(): SequentialConsistencyView =
+        SequentialConsistencyView(view.toMutableMap())
+
 }
 
 private data class State(
     val counter: ExecutionCounter,
-    val memoryTracker: SeqCstMemoryTracker
+    val view: SequentialConsistencyView,
 ) {
     companion object {
         fun initial(execution: Execution): State {
             return State(
                 counter = IntArray(execution.maxThreadId),
-                memoryTracker = SeqCstMemoryTracker(),
+                view = SequentialConsistencyView(),
             )
         }
     }
@@ -116,19 +132,18 @@ private data class State(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is State) return false
-        return counter.contentEquals(other.counter) &&
-            memoryTracker == other.memoryTracker
+        return counter.contentEquals(other.counter) && view == other.view
     }
 
     override fun hashCode(): Int {
-        return 31 * counter.contentHashCode() + memoryTracker.hashCode()
+        return 31 * counter.contentHashCode() + view.hashCode()
     }
 }
 
 private class Context(val execution: Execution, val covering: Covering<Event>) {
 
     fun State.covered(event: Event): Boolean =
-        event.threadPosition < (counter[event.threadId] ?: 0)
+        event.threadPosition < counter[event.threadId]
 
     fun State.coverable(event: Event): Boolean =
         covering(event).all { covered(it) }
@@ -140,17 +155,12 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
 
     fun State.transition(threadId: Int): State? {
         val position = counter[threadId]
-        val (label, aggregated) = execution.getAggregatedLabel(threadId, position)
+        val (_, aggregated) = execution.getAggregatedLabel(threadId, position)
             ?.takeIf { (_, events) -> events.all { coverable(it) } }
             ?: return null
-        val memoryTracker = if (label.isTotal) {
-            this.memoryTracker.replay(threadId, label) ?: return null
-        } else {
-            require(label.isRequest && position == execution.lastPosition(threadId))
-            this.memoryTracker
-        }
+        val view = view.replay(aggregated) ?: return null
         return State(
-            memoryTracker = memoryTracker,
+            view = view,
             counter = this.counter.copyOf().also {
                 it[threadId] += aggregated.size
             },
