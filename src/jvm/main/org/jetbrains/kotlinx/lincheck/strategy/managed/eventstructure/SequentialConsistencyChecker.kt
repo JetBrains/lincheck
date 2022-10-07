@@ -198,11 +198,13 @@ private class SequentialConsistencyRelation(val execution: Execution): Relation<
             writeLoop@for (write in execution) {
                 if (!write.label.isWriteAccessTo(read.label.memId))
                     continue
-                if (relation(write, read) && write != readFrom) {
-                    changed = changed || relation.change(write, readFrom, true)
+                if (relation(write, read) && !relation(write, readFrom) && write != readFrom) {
+                    relation[write, readFrom] = true
+                    changed = true
                 }
-                if (relation(readFrom, write) && read != write) {
-                    changed = changed || relation.change(read, write, true)
+                if (relation(readFrom, write) && !relation(read, write) && read != write) {
+                    relation[read, write] = true
+                    changed = true
                 }
             }
         }
