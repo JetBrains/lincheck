@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 abstract class Inconsistency
 
-class InconsistentExecutionException(reason: Inconsistency): Exception(reason.toString())
+class InconsistentExecutionException(val reason: Inconsistency): Exception(reason.toString())
 
 fun interface ConsistencyChecker {
     fun check(execution: Execution): Inconsistency?

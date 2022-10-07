@@ -354,7 +354,7 @@ private fun<OutcomeType> litmusTest(
     val expectedCount = if (executionCount == UNIQUE_OUTCOMES)
         expectedOutcomes.size
         else executionCount
-    assertEquals(expectedCount, strategy.consistentCount)
+    assertEquals(expectedCount, strategy.stats.consistentInvocations)
 }
 
 private fun createConfiguration(testClass: Class<*>) =
