@@ -22,8 +22,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SeqCstMemoryTracker
 
+enum class SequentialConsistencyCheckPhase {
+    APPROXIMATION, REPLAYING
+}
+
 // TODO: what information we can store to point out to the reason of violation?
-class SequentialConsistencyViolation : Inconsistency()
+data class SequentialConsistencyViolation(
+    val phase: SequentialConsistencyCheckPhase
+) : Inconsistency()
 
 class SequentialConsistencyChecker(
     val approximateSequentialConsistencyRelation: Boolean = true
@@ -38,7 +44,9 @@ class SequentialConsistencyChecker(
             scRelation.buildExternalCovering()
         }
         return if (!checkByReplaying(execution, covering))
-            SequentialConsistencyViolation()
+            SequentialConsistencyViolation(
+                phase = SequentialConsistencyCheckPhase.REPLAYING
+            )
         else null
     }
 
@@ -174,7 +182,9 @@ private class SequentialConsistencyRelation(val execution: Execution): Relation<
         do {
             val changed = saturate() && relation.transitiveClosure()
             if (!relation.isIrreflexive())
-                return SequentialConsistencyViolation()
+                return SequentialConsistencyViolation(
+                    phase = SequentialConsistencyCheckPhase.APPROXIMATION
+                )
         } while (changed)
         return null
     }

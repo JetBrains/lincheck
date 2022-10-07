@@ -62,14 +62,7 @@ class EventStructureStrategy(
     // TODO: change to EventStructureMonitorTracker
     override var monitorTracker: MonitorTracker = SeqCstMonitorTracker(nThreads)
 
-    var consistentCount: Int = 0
-        private set
-
-    var inconsistentCount: Int = 0
-        private set
-
-    val totalCount: Int
-        get() = consistentCount + inconsistentCount
+    val stats = Stats()
 
     init {
         atomicityChecker.initialize(eventStructure)
@@ -77,7 +70,8 @@ class EventStructureStrategy(
 
     override fun runImpl(): LincheckFailure? {
         // TODO: move invocation counting logic to ManagedStrategy class
-        outer@while (usedInvocations < maxInvocations) {
+        // TODO: should we count failed inconsistent executions as used invocations?
+        outer@while (stats.consistentInvocations < maxInvocations) {
             inner@while (eventStructure.startNextExploration()) {
                 val result = try {
                     runInvocation()
@@ -87,27 +81,67 @@ class EventStructureStrategy(
                 // check that there were no inconsistencies detected during the run
                 if (result is UnexpectedExceptionInvocationResult &&
                     result.exception is InconsistentExecutionException) {
-                    ++inconsistentCount
+                    stats.update(result, result.exception.reason)
                     continue@inner
                 }
                 // if execution was aborted we do not check consistency,
                 // because the graph can be in invalid state
                 if (!result.isAbortedInvocation()) {
                     // check that the final execution is consistent
-                    if (eventStructure.checkConsistency() != null) {
-                        ++inconsistentCount
+                    val inconsistency = eventStructure.checkConsistency()
+                    if (inconsistency != null) {
+                        stats.update(result, inconsistency)
                         continue@inner
                     }
-                    ++consistentCount
                 }
-                // TODO: should we count failed inconsistent executions as used invocations?
-                ++usedInvocations
+                stats.update(result, null)
                 checkResult(result, shouldCollectTrace = false)?.let { return it }
                 continue@outer
             }
             return null
         }
         return null
+    }
+
+    class Stats {
+
+        var consistentInvocations: Int = 0
+            private set
+
+        var inconsistentInvocations: Int = 0
+            private set
+
+        val totalInvocations: Int
+            get() = consistentInvocations + inconsistentInvocations
+
+        private var scApproxPhaseInconsistenciesCount: Int = 0
+
+        private var scReplayPhaseInconsistenciesCount: Int = 0
+
+        fun sequentialConsistencyViolationsCount(phase: SequentialConsistencyCheckPhase? = null) {
+            when (phase) {
+                SequentialConsistencyCheckPhase.APPROXIMATION -> scApproxPhaseInconsistenciesCount
+                SequentialConsistencyCheckPhase.REPLAYING -> scReplayPhaseInconsistenciesCount
+                null ->
+                    scApproxPhaseInconsistenciesCount +
+                    scReplayPhaseInconsistenciesCount
+            }
+        }
+
+        fun update(result: InvocationResult, inconsistency: Inconsistency?) {
+            when(inconsistency) {
+                is SequentialConsistencyViolation -> {
+                    inconsistentInvocations++
+                    when (inconsistency.phase) {
+                        SequentialConsistencyCheckPhase.APPROXIMATION -> scApproxPhaseInconsistenciesCount++
+                        SequentialConsistencyCheckPhase.REPLAYING -> scReplayPhaseInconsistenciesCount++
+                    }
+                }
+
+                null -> consistentInvocations++
+            }
+        }
+
     }
 
     override fun shouldSwitch(iThread: Int): Boolean {
