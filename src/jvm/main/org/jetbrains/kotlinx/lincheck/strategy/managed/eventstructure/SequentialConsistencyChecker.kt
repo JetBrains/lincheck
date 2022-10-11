@@ -64,9 +64,11 @@ class SequentialConsistencyChecker(
                 // TODO: maybe we should return more information than just success
                 //  (e.g. path leading to terminal state)?
                 if (state.isTerminal) return true
-                state.transitions().filter { it !in visited }.forEach {
-                    visited.add(it)
-                    stack.addLast(it)
+                state.transitions().forEach {
+                    if (it !in visited) {
+                        visited.add(it)
+                        stack.addLast(it)
+                    }
                 }
             }
             return false
@@ -74,8 +76,6 @@ class SequentialConsistencyChecker(
     }
 
 }
-
-private typealias ExecutionCounter = IntArray
 
 private data class SequentialConsistencyView(val view: MutableMap<Int, Event> = mutableMapOf()) {
 
@@ -116,6 +116,8 @@ private data class SequentialConsistencyView(val view: MutableMap<Int, Event> = 
 
 }
 
+private typealias ExecutionCounter = IntArray
+
 private data class State(
     val counter: ExecutionCounter,
     val view: SequentialConsistencyView,
@@ -138,6 +140,7 @@ private data class State(
     override fun hashCode(): Int {
         return 31 * counter.contentHashCode() + view.hashCode()
     }
+
 }
 
 private class Context(val execution: Execution, val covering: Covering<Event>) {
