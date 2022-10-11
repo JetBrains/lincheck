@@ -12,6 +12,9 @@ out
 target
 local.properties
 
+# Profiler
+*.hprof
+
 # Common
 *~
 *.bak
