@@ -54,6 +54,8 @@ class RelationMatrix<T>(
 
     private val matrix = BooleanArray(size * size)
 
+    private val offsets = IntArray(size) { i -> i * size }
+
     init {
         relation?.let { add(it) }
     }
@@ -65,7 +67,7 @@ class RelationMatrix<T>(
         indexer.index(x) * size + size
 
     private inline fun index(i: Int, j: Int): Int =
-        i * size + j
+        offsets[i] + j
 
     override operator fun invoke(x: T, y: T): Boolean =
         get(x, y)
