@@ -63,17 +63,7 @@ class Event private constructor(
     var visited: Boolean = false
         private set
 
-    fun predNth(n: Int): Event? {
-        var e = this
-        // current implementation has O(N) complexity,
-        // as an optimization, we can implement binary lifting and get O(lgN) complexity
-        // https://cp-algorithms.com/graph/lca_binary_lifting.html;
-        // since `predNth` is used to compute programOrder
-        // this optimization might be crucial for performance
-        for (i in 0 until n)
-            e = e.parent ?: return null
-        return e
-    }
+    private val jumps = Array<Event?>(N_JUMPS) { null }
 
     // should only be called from EventStructure
     // TODO: enforce this invariant!
@@ -97,7 +87,8 @@ class Event private constructor(
             val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
                 clock + event.causalityClock
             }
-            return Event(id,
+            return Event(
+                id,
                 threadId = threadId,
                 threadPosition = threadPosition,
                 label = label,
@@ -107,11 +98,61 @@ class Event private constructor(
                 frontier = frontier,
                 pinnedEvents = pinnedEvents,
             ).apply {
+                calculateJumps(this)
                 causalityClock.update(threadId, this)
                 frontier[threadId] = this
                 pinnedEvents.merge(causalityClock.toFrontier())
             }
         }
+
+        private const val N_JUMPS = 10
+        private const val MAX_JUMP = 1 shl (N_JUMPS - 1)
+
+        private fun calculateJumps(event: Event) {
+            require(N_JUMPS > 0)
+            event.jumps[0] = event.parent
+            for (i in 1 until N_JUMPS) {
+                event.jumps[i] = event.jumps[i - 1]?.jumps?.get(i - 1)
+            }
+        }
+
+    }
+
+    // naive implementation with O(N) complexity, just for testing and debugging
+    private fun predNthNaive(n : Int): Event? {
+        var e = this
+        // current implementation has O(N) complexity,
+        // as an optimization, we can implement binary lifting and get O(lgN) complexity
+        // https://cp-algorithms.com/graph/lca_binary_lifting.html;
+        // since `predNth` is used to compute programOrder
+        // this optimization might be crucial for performance
+        for (i in 0 until n)
+            e = e.parent ?: return null
+        return e
+    }
+
+    // binary lifting search with O(lgN) complexity
+    // https://cp-algorithms.com/graph/lca_binary_lifting.html;
+    private fun predNthOptimized(n: Int): Event? {
+        require(n > 0)
+        var e = this
+        var r = n
+        while (r > MAX_JUMP) {
+            e = e.jumps[N_JUMPS - 1] ?: return null
+            r -= MAX_JUMP
+        }
+        while (r != 0) {
+            val k = 31 - Integer.numberOfLeadingZeros(r)
+            val jump = Integer.highestOneBit(r)
+            e = e.jumps[k] ?: return null
+            r -= jump
+        }
+        return e
+    }
+
+    fun predNth(n: Int): Event? {
+        return predNthOptimized(n)
+            // .also { check(it == predNthNaive(n)) }
     }
 
     val readsFrom: Event by lazy {
