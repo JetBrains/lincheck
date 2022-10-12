@@ -39,7 +39,10 @@ class EventStructureStrategy(
     private val maxInvocations = testCfg.invocationsPerIteration
 
     private val sequentialConsistencyChecker: SequentialConsistencyChecker =
-        SequentialConsistencyChecker(approximateSequentialConsistencyRelation = false)
+        SequentialConsistencyChecker(
+            checkReleaseAcquireConsistency = true,
+            approximateSequentialConsistencyRelation = false
+        )
 
     private val atomicityChecker: AtomicityChecker =
         AtomicityChecker()
@@ -112,26 +115,30 @@ class EventStructureStrategy(
         val totalInvocations: Int
             get() = consistentInvocations + inconsistentInvocations
 
-        private var scApproxPhaseInconsistenciesCount: Int = 0
+        private var relAcqInconsistenciesCount: Int = 0
 
-        private var scReplayPhaseInconsistenciesCount: Int = 0
+        private var seqCstApproxPhaseInconsistenciesCount: Int = 0
+
+        private var seqCstReplayPhaseInconsistenciesCount: Int = 0
 
         fun sequentialConsistencyViolationsCount(phase: SequentialConsistencyCheckPhase? = null): Int =
             when (phase) {
-                SequentialConsistencyCheckPhase.APPROXIMATION -> scApproxPhaseInconsistenciesCount
-                SequentialConsistencyCheckPhase.REPLAYING -> scReplayPhaseInconsistenciesCount
+                SequentialConsistencyCheckPhase.REL_ACQ_CHECK -> relAcqInconsistenciesCount
+                SequentialConsistencyCheckPhase.APPROXIMATION -> seqCstApproxPhaseInconsistenciesCount
+                SequentialConsistencyCheckPhase.REPLAYING -> seqCstReplayPhaseInconsistenciesCount
                 null ->
-                    scApproxPhaseInconsistenciesCount +
-                    scReplayPhaseInconsistenciesCount
+                    seqCstApproxPhaseInconsistenciesCount +
+                    seqCstReplayPhaseInconsistenciesCount
             }
 
-        fun update(result: InvocationResult, inconsistency: Inconsistency?) {
+        fun update(result: InvocationResult?, inconsistency: Inconsistency?) {
             when(inconsistency) {
                 is SequentialConsistencyViolation -> {
                     inconsistentInvocations++
                     when (inconsistency.phase) {
-                        SequentialConsistencyCheckPhase.APPROXIMATION -> scApproxPhaseInconsistenciesCount++
-                        SequentialConsistencyCheckPhase.REPLAYING -> scReplayPhaseInconsistenciesCount++
+                        SequentialConsistencyCheckPhase.REL_ACQ_CHECK -> relAcqInconsistenciesCount++
+                        SequentialConsistencyCheckPhase.APPROXIMATION -> seqCstApproxPhaseInconsistenciesCount++
+                        SequentialConsistencyCheckPhase.REPLAYING -> seqCstReplayPhaseInconsistenciesCount++
                     }
                 }
 
@@ -140,9 +147,10 @@ class EventStructureStrategy(
         }
 
         override fun toString(): String = """
-            #Total invocations   = ${totalInvocations}         
-                #consistent      = ${consistentInvocations}    
-                #inconsistent    = ${inconsistentInvocations}  
+            #Total invocations   = $totalInvocations         
+                #consistent      = $consistentInvocations    
+                #inconsistent    = $inconsistentInvocations  
+            #RelAcq violations   = $relAcqInconsistenciesCount
             #SeqCst violations   = ${sequentialConsistencyViolationsCount()}
                 #approx. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.APPROXIMATION)} 
                 #replay  phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.REPLAYING)}

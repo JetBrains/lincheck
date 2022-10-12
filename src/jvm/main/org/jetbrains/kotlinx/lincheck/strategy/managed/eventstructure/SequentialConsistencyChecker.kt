@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 
 enum class SequentialConsistencyCheckPhase {
-    APPROXIMATION, REPLAYING
+    REL_ACQ_CHECK, APPROXIMATION, REPLAYING
 }
 
 // TODO: what information we can store to point out to the reason of violation?
@@ -31,17 +31,29 @@ data class SequentialConsistencyViolation(
 ) : Inconsistency()
 
 class SequentialConsistencyChecker(
+    val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistencyRelation: Boolean = true
 ) : ConsistencyChecker {
 
     override fun check(execution: Execution): Inconsistency? {
-        val covering = if (!approximateSequentialConsistencyRelation)
-            externalCausalityCovering
-        else {
-            val scRelation = SequentialConsistencyRelation(execution)
+        // TODO: cleanup!
+        val wbRelation = if (checkReleaseAcquireConsistency) {
+            WritesBeforeRelation(execution).apply {
+                if (!saturate()) {
+                    return SequentialConsistencyViolation(
+                        phase = SequentialConsistencyCheckPhase.REL_ACQ_CHECK
+                    )
+                }
+            }
+        } else Relation { _, _ -> false }
+        val covering = if (approximateSequentialConsistencyRelation) {
+            val initialApproximation: Relation<Event> =
+                if (checkReleaseAcquireConsistency) wbRelation
+                else causalityOrder.lessThan
+            val scRelation = SequentialConsistencyRelation(execution, initialApproximation)
             scRelation.approximate()?.let { return it }
             scRelation.buildExternalCovering()
-        }
+        } else externalCausalityCovering
         return if (!checkByReplaying(execution, covering))
             SequentialConsistencyViolation(
                 phase = SequentialConsistencyCheckPhase.REPLAYING
@@ -180,13 +192,14 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
 
 }
 
-private class SequentialConsistencyRelation(val execution: Execution): Relation<Event> {
+private class SequentialConsistencyRelation(
+    val execution: Execution,
+    initialApproximation: Relation<Event>
+): Relation<Event> {
 
     val indexer = execution.buildIndexer()
 
-    val relation = RelationMatrix(execution, indexer) { x, y ->
-        causalityOrder.lessThan(x, y)
-    }
+    val relation = RelationMatrix(execution, indexer, initialApproximation)
 
     override fun invoke(x: Event, y: Event): Boolean =
         relation(x, y)
@@ -243,6 +256,85 @@ private class SequentialConsistencyRelation(val execution: Execution): Relation<
 
         override fun invoke(x: Event): List<Event> =
             covering[indexer.index(x)]
+
+    }
+
+}
+
+private class WritesBeforeRelation(val execution: Execution): Relation<Event> {
+
+    private val readsMap: MutableMap<Int, ArrayList<Event>> = mutableMapOf()
+
+    private val writesMap: MutableMap<Int, ArrayList<Event>> = mutableMapOf()
+
+    private val relations: MutableMap<Int, RelationMatrix<Event>> = mutableMapOf()
+
+    init {
+        var initEvent: Event? = null
+        for (event in execution) {
+            if (event.label is InitializationLabel)
+                initEvent = event
+            if (event.label !is MemoryAccessLabel)
+                continue
+            if (event.label.isRead && !event.label.isRequest) {
+                readsMap.computeIfAbsent(event.label.memId) { arrayListOf() }.apply {
+                    add(event)
+                }
+            }
+            if (event.label.isWrite) {
+                writesMap.computeIfAbsent(event.label.memId) { arrayListOf() }.apply {
+                    add(event)
+                }
+            }
+        }
+        for ((memId, writes) in writesMap) {
+            writes.add(initEvent!!)
+            relations[memId] = RelationMatrix(writes, buildIndexer(writes)) { x, y ->
+                causalityOrder.lessThan(x, y)
+            }
+        }
+    }
+
+    fun saturate(): Boolean {
+        for ((memId, relation) in relations) {
+            val reads = readsMap[memId] ?: continue
+            val writes = writesMap[memId] ?: continue
+            var changed = false
+            readLoop@ for (read in reads) {
+                val readFrom = read.readsFrom
+                writeLoop@ for (write in writes) {
+                    if (write != readFrom && causalityOrder.lessThan(write, read) && !relation[write, readFrom]) {
+                        relation[write, readFrom] = true
+                        changed = true
+                    }
+                }
+            }
+            if (changed) {
+                relation.transitiveClosure()
+                if (!relation.isIrreflexive())
+                    return false
+            }
+        }
+        return true
+    }
+
+    override fun invoke(x: Event, y: Event): Boolean {
+        return if (x.label is MemoryAccessLabel && x.label.isWrite &&
+            y.label.isWriteAccessTo(x.label.memId)) {
+            relations[x.label.memId]?.get(x, y) ?: false
+        } else false
+    }
+
+    fun isIrreflexive(): Boolean =
+        relations.all { (_, relation) -> relation.isIrreflexive() }
+
+    private fun buildIndexer(_events: ArrayList<Event>) = object : Indexer<Event> {
+
+        val events: SortedList<Event> = SortedArrayList(_events.apply { sort() })
+
+        override fun get(i: Int): Event = events[i]
+
+        override fun index(x: Event): Int = events.indexOf(x)
 
     }
 
