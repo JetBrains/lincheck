@@ -87,6 +87,8 @@ class EventStructure(
             val event = rollbackToEvent { !it.visited }?.apply { visit() }
                 ?: return false
             resetExecution(event)
+            // if (checker.check(_currentExecution) != null)
+            //     continue
             return true
         }
     }
@@ -128,8 +130,9 @@ class EventStructure(
              _currentExecution.addEvent(event)
             // first run incremental checker to have an opportunity to find an inconsistency earlier
             incrementalChecker.check(event)?.let { return it }
+            return null
             // then run heavyweight full consistency check
-            return checker.check(_currentExecution)
+            // return checker.check(_currentExecution)
         }
         return null
     }

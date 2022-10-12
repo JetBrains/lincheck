@@ -74,6 +74,9 @@ class EventStructureStrategy(
         // TODO: should we count failed inconsistent executions as used invocations?
         outer@while (stats.totalInvocations < maxInvocations) {
             inner@while (eventStructure.startNextExploration()) {
+                // TODO: cleanup stats logic, maybe count statistics inside EventStructure class itself?
+                if (eventStructure.checkConsistency()?.also { stats.update(null, it) } != null)
+                    continue
                 val result = try {
                     runInvocation()
                 } catch (e: Throwable) {
