@@ -52,35 +52,24 @@ class RelationMatrix<T>(
 
     private val size = nodes.size
 
-    private val matrix = BooleanArray(size * size)
-
-    private val offsets = IntArray(size) { i -> i * size }
+    private val matrix = Array(size) { BooleanArray(size) }
 
     init {
         relation?.let { add(it) }
     }
 
-    private fun startIndex(x: T): Int =
-        indexer.index(x) * size
-
-    private fun endIndex(x: T): Int =
-        indexer.index(x) * size + size
-
-    private inline fun index(i: Int, j: Int): Int =
-        offsets[i] + j
-
     override operator fun invoke(x: T, y: T): Boolean =
         get(x, y)
 
     private inline operator fun get(i: Int, j: Int): Boolean {
-        return matrix[index(i, j)]
+        return matrix[i][j]
     }
 
     operator fun get(x: T, y: T): Boolean =
         get(indexer.index(x), indexer.index(y))
 
     private operator fun set(i: Int, j: Int, value: Boolean) {
-        matrix[index(i, j)] = value
+        matrix[i][j] = value
     }
 
     operator fun set(x: T, y: T, value: Boolean) =
@@ -198,8 +187,8 @@ class RelationMatrix<T>(
 
         val covering: List<List<T>> = Array(this@RelationMatrix.size) { i ->
             val x = indexer[i]
-            (startIndex(x) until endIndex(x)).mapNotNull { j ->
-                val y = indexer[j - startIndex(x)]
+            (0 until size).mapNotNull { j ->
+                val y = indexer[j]
                 if (this@RelationMatrix[x, y]) y else null
             }
         }.asList()
