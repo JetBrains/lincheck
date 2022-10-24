@@ -454,7 +454,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param memoryLocationId the memory location identifier.
      */
-    internal fun onSharedVariableRead(iThread: Int, memoryLocationId: Int, typeDescriptor: String): Any? {
+    internal fun onSharedVariableRead(iThread: Int, memoryLocationId: MemoryLocation, typeDescriptor: String): Any? {
         val kClass = Type.getType(typeDescriptor).getKClass()
         return memoryTracker.readValue(iThread, memoryLocationId, kClass)?.unwrap()
     }
@@ -465,7 +465,7 @@ abstract class ManagedStrategy(
      * @param memoryLocationId the memory location identifier.
      * @param value the value to be written.
      */
-    internal fun onSharedVariableWrite(iThread: Int, memoryLocationId: Int, value: Any?, typeDescriptor: String) {
+    internal fun onSharedVariableWrite(iThread: Int, memoryLocationId: MemoryLocation, value: Any?, typeDescriptor: String) {
         val kClass = Type.getType(typeDescriptor).getKClass()
         memoryTracker.writeValue(iThread, memoryLocationId, value?.opaque(kClass), kClass)
     }
@@ -478,7 +478,7 @@ abstract class ManagedStrategy(
      * @param desired next value if CAS is successful.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onCompareAndSet(iThread: Int, memoryLocationId: Int, expected: Any?, desired: Any?,
+    internal fun onCompareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: Any?, desired: Any?,
                                  typeDescriptor: String): Boolean {
         val kClass = Type.getType(typeDescriptor).getKClass()
         return memoryTracker.compareAndSet(iThread, memoryLocationId,
@@ -492,7 +492,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onAddAndGet(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
+    internal fun onAddAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, typeDescriptor: String): Number {
         val kClass = Type.getType(typeDescriptor).getKClass()
         return memoryTracker.addAndGet(iThread, memoryLocationId, delta, kClass)?.unwrap() as Number
     }
@@ -504,7 +504,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onGetAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, typeDescriptor: String): Number {
+    internal fun onGetAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, typeDescriptor: String): Number {
         val kClass = Type.getType(typeDescriptor).getKClass()
         return memoryTracker.getAndAdd(iThread, memoryLocationId, delta, kClass)?.unwrap() as Number
     }
@@ -915,16 +915,16 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
  */
 abstract class MemoryTracker {
 
-    abstract fun writeValue(iThread: Int, memoryLocationId: Int, value: OpaqueValue?, kClass: KClass<*>)
+    abstract fun writeValue(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>)
 
-    abstract fun readValue(iThread: Int, memoryLocationId: Int, kClass: KClass<*>): OpaqueValue?
+    abstract fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue?
 
-    abstract fun compareAndSet(iThread: Int, memoryLocationId: Int, expected: OpaqueValue?, desired: OpaqueValue?,
+    abstract fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
                                kClass: KClass<*>): Boolean
 
-    abstract fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, kClass: KClass<*>): OpaqueValue?
+    abstract fun addAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue?
 
-    abstract fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, kClass: KClass<*>): OpaqueValue?
+    abstract fun getAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue?
 }
 
 /**
@@ -935,16 +935,16 @@ abstract class MemoryTracker {
  * TODO: move to interleaving-based model checking directory?
  * TODO: add dynamic type-checks (via kClass)
  */
-class SeqCstMemoryTracker : MemoryTracker() {
-    private val values = HashMap<Int, OpaqueValue?>()
+internal class SeqCstMemoryTracker : MemoryTracker() {
+    private val values = HashMap<MemoryLocation, OpaqueValue?>()
 
-    override fun writeValue(iThread: Int, memoryLocationId: Int, value: OpaqueValue?, kClass: KClass<*>) =
+    override fun writeValue(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>) =
         values.set(memoryLocationId, value)
 
-    override fun readValue(iThread: Int, memoryLocationId: Int, kClass: KClass<*>): OpaqueValue? =
+    override fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue? =
         values.getOrElse(memoryLocationId) { OpaqueValue.default(kClass) }
 
-    override fun compareAndSet(iThread: Int, memoryLocationId: Int, expected: OpaqueValue?, desired: OpaqueValue?,
+    override fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
                                kClass: KClass<*>): Boolean {
         if (expected == readValue(iThread, memoryLocationId, kClass)) {
             writeValue(iThread, memoryLocationId, desired, kClass)
@@ -953,11 +953,11 @@ class SeqCstMemoryTracker : MemoryTracker() {
         return false
     }
 
-    override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, kClass: KClass<*>): OpaqueValue? =
+    override fun addAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? =
         (readValue(iThread, memoryLocationId, kClass)!! + delta)
             .also { value -> writeValue(iThread, memoryLocationId, value, kClass) }
 
-    override fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, kClass: KClass<*>): OpaqueValue? =
+    override fun getAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? =
         readValue(iThread, memoryLocationId, kClass)!!
             .also { value -> writeValue(iThread, memoryLocationId, value + delta, kClass) }
 

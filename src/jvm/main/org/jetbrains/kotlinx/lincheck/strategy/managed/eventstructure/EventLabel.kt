@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
 import org.jetbrains.kotlinx.lincheck.strategy.managed.isInstanceOf
 import kotlin.reflect.KClass
@@ -82,10 +83,10 @@ abstract class EventLabel {
     inline fun isWriteAccess(predicate: MemoryAccessPredicate = { true }) =
         isMemoryAccess { isWrite && predicate() }
 
-    inline fun isMemoryAccessTo(memId: Int, predicate: MemoryAccessPredicate = { true }) =
+    inline fun isMemoryAccessTo(memId: MemoryLocation, predicate: MemoryAccessPredicate = { true }) =
         isMemoryAccess { this.memId == memId && predicate() }
 
-    inline fun isWriteAccessTo(memId: Int, predicate: MemoryAccessPredicate = { true }) =
+    inline fun isWriteAccessTo(memId: MemoryLocation, predicate: MemoryAccessPredicate = { true }) =
         isMemoryAccessTo(memId) { isWrite && predicate() }
 
     infix fun toSameLocation(other: EventLabel) =
@@ -324,7 +325,7 @@ interface MemoryAccessLabel {
     val isReadModifyWrite: Boolean
         get() = isRead && isWrite
 
-    val memId: Int
+    val memId: MemoryLocation
 
     val kClass: KClass<*>
 
@@ -335,19 +336,19 @@ interface MemoryAccessLabel {
 typealias MemoryAccessPredicate = MemoryAccessLabel.() -> Boolean
 
 data class AtomicMemoryAccessLabel(
-    override val kind: LabelKind,
-    val accessKind: MemoryAccessKind,
-    private var memId_: Int,
-    private var value_: OpaqueValue?,
-    override val kClass: KClass<*>,
-    override val isExclusive: Boolean = false
+        override val kind: LabelKind,
+        val accessKind: MemoryAccessKind,
+        private var memId_: MemoryLocation,
+        private var value_: OpaqueValue?,
+        override val kClass: KClass<*>,
+        override val isExclusive: Boolean = false
 ): AtomicEventLabel(
     kind = kind,
     syncKind = SynchronizationKind.Binary,
     isCompleted = true
 ), MemoryAccessLabel {
 
-    override val memId: Int
+    override val memId: MemoryLocation
         get() = memId_
 
     val value: OpaqueValue?
@@ -472,7 +473,7 @@ data class ReadModifyWriteMemoryAccessLabel(
 
     override val isWrite: Boolean = true
 
-    override val memId: Int = readLabel.memId
+    override val memId: MemoryLocation = readLabel.memId
 
     override val kClass: KClass<*> = readLabel.kClass
 

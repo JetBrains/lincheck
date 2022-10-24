@@ -20,43 +20,61 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.*
+
+interface MemoryLocation
 
 /**
- * Assigns unique identifiers to every shared memory location.
- *
- * TODO: support accessing memory locations via Unsafe/AFU/VarHandle.
- */
-class MemoryLocationLabeler {
-    // TODO: make a typealias `MemoryLocationID = Int` ?
-    private val memoryLocations = ConcurrentHashMap<MemoryLocation, Int>()
+ * Assigns identifiers to every shared memory location
+ * accessed directly or through reflections (e.g., through AFU or VarHandle).
+*/
+internal class MemoryLocationLabeler {
+    fun labelStaticField(className: String, fieldName: String): MemoryLocation =
+        StaticFieldMemoryLocation(className, fieldName)
 
-    fun labelStaticField(className: String, fieldName: String): Int =
-        label(null, Pair(className, fieldName))
+    fun labelObjectField(obj: Any, fieldName: String): MemoryLocation =
+        ObjectFieldMemoryLocation(obj, fieldName)
 
-    fun labelObjectField(obj: Any, fieldName: String): Int =
-        label(obj, fieldName)
+    fun labelArrayElement(array: Any, position: Int): MemoryLocation =
+        ArrayElementMemoryLocation(array, position)
 
-    fun labelArrayElement(array: Any, position: Int): Int =
-        label(array, position)
+    fun labelAtomicPrimitive(primitive: Any): MemoryLocation =
+        AtomicPrimitiveMemoryLocation(primitive)
 
-    fun labelAtomicPrimitive(primitive: Any): Int =
-        label(primitive, NO_MARKER)
+    internal class StaticFieldMemoryLocation(val className: String, val fieldName: String) : MemoryLocation {
+        override fun equals(other: Any?): Boolean =
+                other is StaticFieldMemoryLocation && (className == other.className && fieldName == other.fieldName)
 
-    private fun label(owner: Any?, marker: Any): Int = memoryLocations.computeIfAbsent(MemoryLocation(owner, marker)) { memoryLocations.size }
+        override fun hashCode(): Int = Objects.hash(className, fieldName)
 
-    /**
-     * Custom class since owners should be compared by identity, while markers should be compared via `equals`.
-     */
-    private class MemoryLocation(val owner: Any?, val marker: Any) {
-        override fun equals(other: Any?): Boolean {
-            return other is MemoryLocation && (owner === other.owner && marker == other.marker)
-        }
+        override fun toString(): String = "[static access] $className.$fieldName"
+    }
 
-        override fun hashCode(): Int {
-            // do not call owner.hashCode, because it can lead to infinite recursion
-            return marker.hashCode()
-        }
+    internal class ObjectFieldMemoryLocation(val obj: Any, val fieldName: String) : MemoryLocation {
+        override fun equals(other: Any?): Boolean =
+                other is ObjectFieldMemoryLocation && (obj === other.obj && fieldName == other.fieldName)
+
+        override fun hashCode(): Int = Objects.hash(System.identityHashCode(obj), fieldName)
+
+        override fun toString(): String = "[object access] ${obj::class.simpleName}.$fieldName to object ${System.identityHashCode(obj)}"
+    }
+
+    internal class ArrayElementMemoryLocation(val array: Any, val index: Int) : MemoryLocation {
+        override fun equals(other: Any?): Boolean =
+                other is ArrayElementMemoryLocation && (array === other.array && index == other.index)
+
+        override fun hashCode(): Int = Objects.hash(System.identityHashCode(array), index)
+
+        override fun toString(): String = "[array access] ${array::class.simpleName}[$index] for array ${System.identityHashCode(array)}"
+    }
+
+    internal class AtomicPrimitiveMemoryLocation(val primitive: Any) : MemoryLocation {
+        override fun equals(other: Any?): Boolean =
+                other is AtomicPrimitiveMemoryLocation && primitive === other.primitive
+
+        override fun hashCode(): Int = System.identityHashCode(primitive)
+
+        override fun toString(): String = "[atomic primitive access] ${primitive::class.simpleName} (primitive ${System.identityHashCode(primitive)}) "
     }
 }
 
