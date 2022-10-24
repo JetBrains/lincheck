@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryTracker
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
 import kotlin.reflect.KClass
@@ -408,7 +409,7 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addWriteEvent(iThread: Int, memoryLocationId: Int, value: OpaqueValue?, kClass: KClass<*>,
+    fun addWriteEvent(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>,
                       isExclusive: Boolean = false): Event {
         val label = AtomicMemoryAccessLabel(
             kind = LabelKind.Total,
@@ -421,7 +422,7 @@ class EventStructure(
         return addTotalEvent(iThread, label)
     }
 
-    fun addReadEvent(iThread: Int, memoryLocationId: Int, kClass: KClass<*>,
+    fun addReadEvent(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>,
                      isExclusive: Boolean = false): Event {
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
@@ -446,16 +447,16 @@ class EventStructure(
 
 class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
 
-    override fun writeValue(iThread: Int, memoryLocationId: Int, value: OpaqueValue?, kClass: KClass<*>) {
+    override fun writeValue(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>) {
         eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass)
     }
 
-    override fun readValue(iThread: Int, memoryLocationId: Int, kClass: KClass<*>): OpaqueValue? {
+    override fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass)
         return (readEvent.label as AtomicMemoryAccessLabel).value
     }
 
-    override fun compareAndSet(iThread: Int, memoryLocationId: Int, expected: OpaqueValue?, desired: OpaqueValue?,
+    override fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
                                kClass: KClass<*>): Boolean {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
         val value = (readEvent.label as AtomicMemoryAccessLabel).value
@@ -467,7 +468,7 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
 
     private enum class IncrementKind { Pre, Post }
 
-    private fun fetchAndAdd(iThread: Int, memoryLocationId: Int, delta: Number,
+    private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number,
                             kClass: KClass<*>, incKind: IncrementKind): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
         val readLabel = readEvent.label as AtomicMemoryAccessLabel
@@ -482,11 +483,11 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
         }
     }
 
-    override fun getAndAdd(iThread: Int, memoryLocationId: Int, delta: Number, kClass: KClass<*>): OpaqueValue? {
+    override fun getAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
         return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Pre)
     }
 
-    override fun addAndGet(iThread: Int, memoryLocationId: Int, delta: Number, kClass: KClass<*>): OpaqueValue? {
+    override fun addAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
         return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Post)
     }
 
