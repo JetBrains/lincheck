@@ -449,13 +449,11 @@ abstract class ManagedStrategy(
     /**
      * This method is executed upon a shared variable read operation.
      * Its result replaces the real read value.
-     * [typeDescriptor] is used only to determine default, initial value.
      * TODO: remove [typeDescriptor] from the interface.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param memoryLocationId the memory location identifier.
      */
-    internal fun onSharedVariableRead(iThread: Int, memoryLocationId: MemoryLocation, typeDescriptor: String): Any? {
-        val kClass = Type.getType(typeDescriptor).getKClass()
+    internal fun onSharedVariableRead(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): Any? {
         return memoryTracker.readValue(iThread, memoryLocationId, kClass)?.unwrap()
     }
 
@@ -465,8 +463,7 @@ abstract class ManagedStrategy(
      * @param memoryLocationId the memory location identifier.
      * @param value the value to be written.
      */
-    internal fun onSharedVariableWrite(iThread: Int, memoryLocationId: MemoryLocation, value: Any?, typeDescriptor: String) {
-        val kClass = Type.getType(typeDescriptor).getKClass()
+    internal fun onSharedVariableWrite(iThread: Int, memoryLocationId: MemoryLocation, value: Any?, kClass: KClass<*>) {
         memoryTracker.writeValue(iThread, memoryLocationId, value?.opaque(kClass), kClass)
     }
 
@@ -478,9 +475,7 @@ abstract class ManagedStrategy(
      * @param desired next value if CAS is successful.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onCompareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: Any?, desired: Any?,
-                                 typeDescriptor: String): Boolean {
-        val kClass = Type.getType(typeDescriptor).getKClass()
+    internal fun onCompareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: Any?, desired: Any?, kClass: KClass<*>): Boolean {
         return memoryTracker.compareAndSet(iThread, memoryLocationId,
             expected?.opaque(kClass), desired?.opaque(kClass), kClass)
     }
@@ -492,8 +487,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onAddAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, typeDescriptor: String): Number {
-        val kClass = Type.getType(typeDescriptor).getKClass()
+    internal fun onAddAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): Number {
         return memoryTracker.addAndGet(iThread, memoryLocationId, delta, kClass)?.unwrap() as Number
     }
 
@@ -504,8 +498,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onGetAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, typeDescriptor: String): Number {
-        val kClass = Type.getType(typeDescriptor).getKClass()
+    internal fun onGetAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): Number {
         return memoryTracker.getAndAdd(iThread, memoryLocationId, delta, kClass)?.unwrap() as Number
     }
 
@@ -516,8 +509,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onGetAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: Any?, typeDescriptor: String): Any? {
-        val kClass = Type.getType(typeDescriptor).getKClass()
+    internal fun onGetAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: Any?, kClass: KClass<*>): Any? {
         return memoryTracker.getAndSet(iThread, memoryLocationId, value?.opaque(kClass), kClass)?.unwrap()
     }
 
