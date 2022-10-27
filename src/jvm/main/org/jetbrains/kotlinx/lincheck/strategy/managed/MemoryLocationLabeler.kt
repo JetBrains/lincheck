@@ -41,6 +41,8 @@ internal class MemoryLocationLabeler {
     fun labelAtomicPrimitive(primitive: Any): MemoryLocation =
         AtomicPrimitiveMemoryLocation(primitive)
 
+    fun registerAtomicFieldReflection(reflection: Any, clazz: Class<*>, fieldName: String) {}
+    
     internal class StaticFieldMemoryLocation(val className: String, val fieldName: String) : MemoryLocation {
         override fun equals(other: Any?): Boolean =
                 other is StaticFieldMemoryLocation && (className == other.className && fieldName == other.fieldName)
@@ -77,5 +79,3 @@ internal class MemoryLocationLabeler {
         override fun toString(): String = "[atomic primitive access] ${primitive::class.simpleName} (primitive ${System.identityHashCode(primitive)}) "
     }
 }
-
-private val NO_MARKER = Any()

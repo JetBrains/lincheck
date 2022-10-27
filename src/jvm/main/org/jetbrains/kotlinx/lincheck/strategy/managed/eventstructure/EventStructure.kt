@@ -491,4 +491,10 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
         return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Post)
     }
 
+    override fun getAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
+        val readValue = (readEvent.label as AtomicMemoryAccessLabel).value
+        eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass, isExclusive = true)
+        return readValue
+    }
 }

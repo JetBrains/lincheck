@@ -30,10 +30,7 @@ import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.Method
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.*
 import java.util.stream.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
@@ -445,49 +442,67 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Adds invocations of ManagedStrategy methods on atomic primitive calls.
+     * Adds invocations of ManagedStrategy methods on atomic calls
+     * for java.util AtomicBoolean, AtomicInteger, AtomicLong, AtomicReference and Atomic*Array.
      * TODO: support primitives other than those from java.util.concurrent.atomic
+     * TODO: support new JDK9+ methods (e.g., compareAndExchange)
+     * TODO: distinguish weak and strong memory accesses
      */
     private inner class AtomicPrimitiveAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
-            if (!isAtomicPrimitive(owner)) {
+            if (!isAtomicPrimitive(owner) && ! isAtomicArray(owner)) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
-            val innerDescriptor = atomicPrimitiveInnerDescriptor(owner) // e.g., Int for AtomicInteger
+            val innerDescriptor = atomicInnerDescriptor(owner) // e.g., Int for AtomicInteger
+            val isAtomicPrimitive = isAtomicPrimitive(owner) // else it is atomic array
+            val memoryLocationState = if (isAtomicPrimitive) AtomicPrimitiveMemoryLocationState() else AtomicArrayMemoryLocationState()
             when (name) {
                 "<init>" -> {
-                    // Constructors of these atomic primitives take either zero or one argument (initial value)
-                    val argumentTypes = Type.getArgumentTypes(descriptor)
-                    if (argumentTypes.isEmpty()) {
-                        // Do nothing. The initial value is default/
-                        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                    if (isAtomicPrimitive) {
+                        // Constructors of these atomic primitives take either zero or one argument (initial value)
+                        val argumentTypes = Type.getArgumentTypes(descriptor)
+                        if (argumentTypes.isEmpty()) {
+                            // Do nothing. The initial value is default
+                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                        } else {
+                            check(argumentTypes.size == 1) { "Unexpected complex constructor for $owner with descriptor $descriptor" }
+                            // Copy the initial value.
+                            val initialValueLocal = newLocal(argumentTypes.first())
+                            copyLocal(initialValueLocal)
+                            // Call the constructor.
+                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                            // Report the initial value to managed strategy *after* the object is initialized.
+                            dup()
+                            loadLocal(initialValueLocal)
+                            // Call onSharedVariableWrite.
+                            onWrite(memoryLocationState, innerDescriptor)
+                        }
                     } else {
-                        check(argumentTypes.size == 1) { "Unexpected complex constructor for $owner with descriptor $descriptor" }
-                        // Copy the initial value.
-                        val initialValueLocal = newLocal(argumentTypes.first())
-                        copyLocal(initialValueLocal)
-                        // Call the constructor.
+                        // Constructor of an atomic array.
+                        if (descriptor != "I") {
+                            if (!showedAtomicArrayConstructorTransformationWarning) {
+                                showedAtomicArrayConstructorTransformationWarning = true;
+                                System.err.println("If your code uses java.util.concurrent.Atomic*Array(int[]) constructor, " +
+                                        "please note that some model checking strategies may not support it.")
+                            }
+                        }
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                        // Report the initial value to managed strategy *after* the object is initialized.
-                        dup()
-                        loadLocal(initialValueLocal)
-                        // Call onSharedVariableWrite.
-                        onWrite(innerDescriptor)
                     }
                 }
-                "set", "lazySet" -> onWrite(innerDescriptor)
-                "get" -> onRead(innerDescriptor)
-                "compareAndSet", "weakCompareAndSet" -> onCompareAndSet(innerDescriptor)
-                "getAndAdd" -> onGetAndAdd(innerDescriptor)
-                "addAndGet" -> onAddAndGet(innerDescriptor)
+                "set", "lazySet", "setOpaque", "setPlain", "setRelease" -> onWrite(memoryLocationState, innerDescriptor)
+                "get", "getPlain", "getAcquire", "getOpaque" -> onRead(memoryLocationState, innerDescriptor)
+                "compareAndSet", "weakCompareAndSet", "weakCompareAndSetAcquire", "weakCompareAndSetPlain",
+                    "weakCompareAndSetRelease", "weakCompareAndSetVolatile" -> onCompareAndSet(memoryLocationState, innerDescriptor)
+                "getAndAdd" -> onGetAndAdd(memoryLocationState, innerDescriptor)
+                "addAndGet" -> onAddAndGet(memoryLocationState, innerDescriptor)
                 "getAndIncrement" -> {
                     when (innerDescriptor) {
                         "I" -> push(1)
                         "J" -> push(1L)
                         else -> throw IllegalStateException()
                     }
-                    onGetAndAdd(innerDescriptor)
+                    onGetAndAdd(memoryLocationState, innerDescriptor)
                 }
                 "incrementAndGet" -> {
                     when (innerDescriptor) {
@@ -495,7 +510,7 @@ internal class ManagedStrategyTransformer(
                         "J" -> push(1L)
                         else -> throw IllegalStateException()
                     }
-                    onAddAndGet(innerDescriptor)
+                    onAddAndGet(memoryLocationState, innerDescriptor)
                 }
                 "getAndDecrement" -> {
                     when (innerDescriptor) {
@@ -503,7 +518,7 @@ internal class ManagedStrategyTransformer(
                         "J" -> push(-1L)
                         else -> throw IllegalStateException()
                     }
-                    onGetAndAdd(innerDescriptor)
+                    onGetAndAdd(memoryLocationState, innerDescriptor)
                 }
                 "decrementAndGet" -> {
                     when (innerDescriptor) {
@@ -511,47 +526,48 @@ internal class ManagedStrategyTransformer(
                         "J" -> push(-1L)
                         else -> throw IllegalStateException()
                     }
-                    onAddAndGet(innerDescriptor)
+                    onAddAndGet(memoryLocationState, innerDescriptor)
                 }
+                "getAndSet" -> onGetAndSet(memoryLocationState, innerDescriptor)
                 else -> super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
         }
 
-        private fun onGetAndAdd(innerDescriptor: String) = onXXXAndXXX(innerDescriptor, ON_GET_AND_ADD_METHOD)
+        private fun onGetAndAdd(memoryLocationState: MemoryLocationState, innerDescriptor: String) = onXXXAndXXX(memoryLocationState, innerDescriptor, ON_GET_AND_ADD_METHOD)
 
-        private fun onAddAndGet(innerDescriptor: String) = onXXXAndXXX(innerDescriptor, ON_ADD_AND_GET_METHOD)
+        private fun onAddAndGet(memoryLocationState: MemoryLocationState, innerDescriptor: String) = onXXXAndXXX(memoryLocationState, innerDescriptor, ON_ADD_AND_GET_METHOD)
 
-        private fun onXXXAndXXX(innerDescriptor: String, method: Method) = adapter.run {
-            val deltaLocal = newLocal(Type.getType(innerDescriptor))
-            storeLocal(deltaLocal)
-            val primitiveLocal = newLocal(OBJECT_TYPE)
-            storeLocal(primitiveLocal)
+        private fun onGetAndSet(memoryLocationState: MemoryLocationState, innerDescriptor: String) = onXXXAndXXX(memoryLocationState, innerDescriptor, ON_GET_AND_SET_METHOD)
+
+        private fun onXXXAndXXX(memoryLocationState: MemoryLocationState, innerDescriptor: String, method: Method) = adapter.run {
+            val valueLocal = newLocal(Type.getType(innerDescriptor))
+            storeLocal(valueLocal)
+            memoryLocationState.store(this)
             loadStrategy()
             loadCurrentThreadNumber()
             // Get memory location id.
             loadMemoryLocationLabeler()
-            loadLocal(primitiveLocal)
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_ATOMIC_PRIMITIVE)
-            loadLocal(deltaLocal)
+            memoryLocationState.load(this)
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, memoryLocationState.labelMethod)
+            loadLocal(valueLocal)
             box(Type.getType(innerDescriptor))
             push(innerDescriptor)
             invokeVirtual(MANAGED_STRATEGY_TYPE, method)
             unboxOrCast(Type.getType(innerDescriptor))
         }
 
-        private fun onCompareAndSet(innerDescriptor: String) = adapter.run {
+        private fun onCompareAndSet(memoryLocationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
             val newValueLocal = newLocal(Type.getType(innerDescriptor))
             storeLocal(newValueLocal)
             val expectedValueLocal = newLocal(Type.getType(innerDescriptor))
             storeLocal(expectedValueLocal)
-            val primitiveLocal = newLocal(OBJECT_TYPE)
-            storeLocal(primitiveLocal)
+            memoryLocationState.store(this)
             loadStrategy()
             loadCurrentThreadNumber()
             // Get memory location id.
             loadMemoryLocationLabeler()
-            loadLocal(primitiveLocal)
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_ATOMIC_PRIMITIVE)
+            memoryLocationState.load(this)
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, memoryLocationState.labelMethod)
             loadLocal(expectedValueLocal)
             box(Type.getType(innerDescriptor))
             loadLocal(newValueLocal)
@@ -560,32 +576,30 @@ internal class ManagedStrategyTransformer(
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_COMPARE_AND_SET_METHOD)
         }
 
-        private fun onWrite(innerDescriptor: String) = adapter.run {
+        private fun onWrite(memoryLocationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
             val valueLocal = newLocal(Type.getType(innerDescriptor))
             storeLocal(valueLocal)
-            val primitiveLocal = newLocal(OBJECT_TYPE)
-            storeLocal(primitiveLocal)
+            memoryLocationState.store(this)
             loadStrategy()
             loadCurrentThreadNumber()
             // Get memory location id.
             loadMemoryLocationLabeler()
-            loadLocal(primitiveLocal)
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_ATOMIC_PRIMITIVE)
+            memoryLocationState.load(this)
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, memoryLocationState.labelMethod)
             loadLocal(valueLocal)
             box(Type.getType(innerDescriptor))
             push(innerDescriptor)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
         }
 
-        private fun onRead(innerDescriptor: String) = adapter.run {
-            val primitiveLocal = newLocal(OBJECT_TYPE)
-            storeLocal(primitiveLocal)
+        private fun onRead(memoryLocationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
+            memoryLocationState.store(this)
             loadStrategy()
             loadCurrentThreadNumber()
             // Get memory location id.
             loadMemoryLocationLabeler()
-            loadLocal(primitiveLocal)
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, LABEL_ATOMIC_PRIMITIVE)
+            memoryLocationState.load(this)
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, memoryLocationState.labelMethod)
             push(innerDescriptor)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
             unboxOrCast(Type.getType(innerDescriptor))
@@ -602,14 +616,68 @@ internal class ManagedStrategyTransformer(
             else -> false
         }
 
-        private fun atomicPrimitiveInnerDescriptor(owner: String): String = when (owner) {
+        private fun atomicInnerDescriptor(owner: String): String = when (owner) {
             AtomicBoolean::class.qualifiedName!!.internalClassName -> "B"
             AtomicInteger::class.qualifiedName!!.internalClassName -> "I"
             AtomicLong::class.qualifiedName!!.internalClassName -> "J"
             AtomicReference::class.qualifiedName!!.internalClassName -> OBJECT_TYPE.descriptor
+            AtomicIntegerArray::class.qualifiedName!!.internalClassName -> "I"
+            AtomicLongArray::class.qualifiedName!!.internalClassName -> "J"
+            AtomicReferenceArray::class.qualifiedName!!.internalClassName -> OBJECT_TYPE.descriptor
             else -> throw IllegalStateException("Unknown atomic primitive $owner")
         }
 
+        private fun isAtomicArray(owner: String): Boolean = when {
+            owner.startsWith("java/util/concurrent/atomic/") ->
+                owner.removePrefix("java/util/concurrent/atomic/") in listOf(
+                        AtomicIntegerArray::class.simpleName,
+                        AtomicReferenceArray::class.simpleName,
+                        AtomicLongArray::class.simpleName,
+                )
+            else -> false
+        }
+
+        abstract inner class MemoryLocationState {
+            abstract val labelMethod: Method
+
+            abstract fun store(adapter: GeneratorAdapter)
+            abstract fun load(adapter: GeneratorAdapter)
+        }
+
+        inner class AtomicPrimitiveMemoryLocationState() : MemoryLocationState() {
+            var atomicPrimitiveLocal = -1 // not initialized
+            override val labelMethod: Method = LABEL_ATOMIC_PRIMITIVE
+
+            override fun store(adapter: GeneratorAdapter) = adapter.run {
+                atomicPrimitiveLocal = newLocal(OBJECT_TYPE)
+                storeLocal(atomicPrimitiveLocal)
+            }
+
+            override fun load(adapter: GeneratorAdapter) = adapter.run {
+                check(atomicPrimitiveLocal != -1)
+                loadLocal(atomicPrimitiveLocal)
+            }
+        }
+
+        inner class AtomicArrayMemoryLocationState() : MemoryLocationState() {
+            var atomicArrayLocal = -1 // not initialized
+            var indexLocal = -1 // not initialized
+            override val labelMethod: Method = LABEL_ARRAY_ELEMENT
+
+            override fun store(adapter: GeneratorAdapter) = adapter.run {
+                indexLocal = newLocal(Type.INT_TYPE)
+                storeLocal(indexLocal)
+                atomicArrayLocal = newLocal(OBJECT_TYPE)
+                storeLocal(atomicArrayLocal)
+            }
+
+            override fun load(adapter: GeneratorAdapter) = adapter.run {
+                check(atomicArrayLocal != -1)
+                check(indexLocal != -1)
+                loadLocal(atomicArrayLocal)
+                loadLocal(indexLocal)
+            }
+        }
     }
 
     /**
@@ -1593,6 +1661,7 @@ private val ON_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::
 private val ON_COMPARE_AND_SET_METHOD = Method.getMethod(ManagedStrategy::onCompareAndSet.javaMethod)
 private val ON_GET_AND_ADD_METHOD = Method.getMethod(ManagedStrategy::onGetAndAdd.javaMethod)
 private val ON_ADD_AND_GET_METHOD = Method.getMethod(ManagedStrategy::onAddAndGet.javaMethod)
+private val ON_GET_AND_SET_METHOD = Method.getMethod(ManagedStrategy::onGetAndSet.javaMethod)
 private val BEFORE_LOCK_ACQUIRE_METHOD = Method.getMethod(ManagedStrategy::beforeLockAcquire.javaMethod)
 private val BEFORE_LOCK_RELEASE_METHOD = Method.getMethod(ManagedStrategy::beforeLockRelease.javaMethod)
 private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.javaMethod)
@@ -1819,3 +1888,6 @@ private fun Type.getBoxedType(): Type {
         else -> throw IllegalStateException()
     }
 }
+
+// TODO: We probably need a unified approach for warnings
+private var showedAtomicArrayConstructorTransformationWarning = false
