@@ -142,6 +142,7 @@ internal class ManagedStrategyTransformer(
                     // STACK: strategy, threadId, memoryLocation
 
                     push(desc)
+                    invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
 
                     unboxOrCast(Type.getType(desc))
@@ -169,6 +170,7 @@ internal class ManagedStrategyTransformer(
                     // STACK: strategy, threadId, memoryLocation
 
                     push(desc)
+                    invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
 
                     unboxOrCast(Type.getType(desc))
@@ -199,6 +201,7 @@ internal class ManagedStrategyTransformer(
                     // STACK: strategy, threadId, memoryLocation, value
 
                     push(desc)
+                    invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -231,6 +234,7 @@ internal class ManagedStrategyTransformer(
                     // STACK: strategy, threadId, memoryLocation, value
 
                     push(desc)
+                    invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
                     // STACK: <empty>
 
@@ -269,6 +273,7 @@ internal class ManagedStrategyTransformer(
                     // STACK: strategy, threadId, memoryLocation
 
                     push(getArrayLoadType(opcode).descriptor)
+                    invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
 
                     // Get rid of boxes
@@ -314,6 +319,7 @@ internal class ManagedStrategyTransformer(
                     box(valueType)
 
                     push(getArrayStoreType(opcode).descriptor)
+                    invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
                     invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
                     super.visitInsn(opcode)
 
@@ -552,6 +558,7 @@ internal class ManagedStrategyTransformer(
             loadLocal(valueLocal)
             box(Type.getType(innerDescriptor))
             push(innerDescriptor)
+            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
             invokeVirtual(MANAGED_STRATEGY_TYPE, method)
             unboxOrCast(Type.getType(innerDescriptor))
         }
@@ -573,6 +580,7 @@ internal class ManagedStrategyTransformer(
             loadLocal(newValueLocal)
             box(Type.getType(innerDescriptor))
             push(innerDescriptor)
+            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_COMPARE_AND_SET_METHOD)
         }
 
@@ -589,6 +597,7 @@ internal class ManagedStrategyTransformer(
             loadLocal(valueLocal)
             box(Type.getType(innerDescriptor))
             push(innerDescriptor)
+            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
         }
 
@@ -601,6 +610,7 @@ internal class ManagedStrategyTransformer(
             memoryLocationState.load(this)
             invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, memoryLocationState.labelMethod)
             push(innerDescriptor)
+            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
             unboxOrCast(Type.getType(innerDescriptor))
         }
@@ -1652,6 +1662,7 @@ private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitTracePoint::class.java)
 private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
 private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
+private val UTILS_KT_TYPE = Type.getType("Lorg/jetbrains/kotlinx/lincheck/UtilsKt;")
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
@@ -1694,6 +1705,7 @@ private val LABEL_STATIC_FIELD = Method.getMethod(MemoryLocationLabeler::labelSt
 private val LABEL_OBJECT_FIELD = Method.getMethod(MemoryLocationLabeler::labelObjectField.javaMethod)
 private val LABEL_ARRAY_ELEMENT = Method.getMethod(MemoryLocationLabeler::labelArrayElement.javaMethod)
 private val LABEL_ATOMIC_PRIMITIVE = Method.getMethod(MemoryLocationLabeler::labelAtomicPrimitive.javaMethod)
+private val GET_KCLASS_FROM_DESCRIPTOR = Method.getMethod(::getKClassFromDescriptor.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 

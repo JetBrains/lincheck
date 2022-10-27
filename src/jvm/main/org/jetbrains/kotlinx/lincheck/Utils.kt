@@ -36,6 +36,7 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.reflect.KClass
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
 
@@ -329,3 +330,29 @@ private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses
     "Please add the following lines to your test running configuration:\n" +
     "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
     "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+
+internal fun getKClassFromDescriptor(desc: String): KClass<*> = Type.getType(desc).getKClass()
+
+private fun Type.getKClass(): KClass<*> = when (sort) {
+    Type.INT     -> Int::class
+    Type.BYTE    -> Byte::class
+    Type.SHORT   -> Short::class
+    Type.LONG    -> Long::class
+    Type.FLOAT   -> Float::class
+    Type.DOUBLE  -> Double::class
+    Type.CHAR    -> Char::class
+    Type.BOOLEAN -> Boolean::class
+    Type.OBJECT  -> Any::class
+    Type.ARRAY   -> { when (elementType.sort) {
+        Type.INT     -> IntArray::class
+        Type.BYTE    -> ByteArray::class
+        Type.SHORT   -> ShortArray::class
+        Type.LONG    -> LongArray::class
+        Type.FLOAT   -> FloatArray::class
+        Type.DOUBLE  -> DoubleArray::class
+        Type.CHAR    -> CharArray::class
+        Type.BOOLEAN -> BooleanArray::class
+        else -> Array::class
+    }}
+    else -> throw IllegalArgumentException()
+}

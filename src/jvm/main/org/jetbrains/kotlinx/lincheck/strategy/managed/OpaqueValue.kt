@@ -107,34 +107,6 @@ fun Any.opaque(kClass: KClass<*> = this.javaClass.kotlin): OpaqueValue =
 fun OpaqueValue?.isInstanceOf(kClass: KClass<*>) =
     this?.unwrap()?.let { kClass.isInstance(it) } ?: true
 
-fun Type.getKClass(): KClass<*> = when (sort) {
-    Type.INT     -> Int::class
-    Type.BYTE    -> Byte::class
-    Type.SHORT   -> Short::class
-    Type.LONG    -> Long::class
-    Type.FLOAT   -> Float::class
-    Type.DOUBLE  -> Double::class
-    Type.CHAR    -> Char::class
-    Type.BOOLEAN -> Boolean::class
-    Type.OBJECT  -> Class.forName(className).kotlin
-    Type.ARRAY   -> { when (elementType.sort) {
-        Type.INT     -> IntArray::class
-        Type.BYTE    -> ByteArray::class
-        Type.SHORT   -> ShortArray::class
-        Type.LONG    -> LongArray::class
-        Type.FLOAT   -> FloatArray::class
-        Type.DOUBLE  -> DoubleArray::class
-        Type.CHAR    -> CharArray::class
-        Type.BOOLEAN -> BooleanArray::class
-        Type.OBJECT  -> Array::class
-        Type.ARRAY   -> Array::class
-        // TODO: do we need to handle other cases?
-        else -> throw IllegalArgumentException()
-    }}
-    // TODO: do we need to handle other cases?
-    else -> throw IllegalArgumentException()
-}
-
 fun KClass<*>.defaultValue(): OpaqueValue? = when(this) {
     Int::class      -> 0
     Byte::class     -> 0.toByte()
