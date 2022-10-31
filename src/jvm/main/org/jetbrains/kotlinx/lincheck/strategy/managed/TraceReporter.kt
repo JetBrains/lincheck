@@ -284,7 +284,7 @@ private class TraceEventRepresentation(val iThread: Int, val representation: Str
 
 // Should be called only during `appendTrace` invocation
 internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
-    .computeIfAbsent(clazz) { WeakHashMap() }
+    .computeIfAbsent(clazz) { IdentityHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
 private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()

@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
@@ -132,5 +133,33 @@ class TwoStateRepresentationFunctionsTest : VerifierState() {
             .actorsBefore(0)
             .actorsAfter(0)
             .checkImpl(this::class.java)
+    }
+}
+
+/**
+ * Check LinCheck do not fail when state implementation is not deterministic.
+ */
+class NonDeterministicStateRepresentationTest() {
+    @Volatile
+    private var counter = AtomicInteger(0)
+
+    @Operation
+    fun operation(): Int {
+        counter.incrementAndGet()
+        return counter.getAndIncrement()
+    }
+
+    @StateRepresentation
+    fun stateRepresentation() = "(${counter.get()}, ${Any()})"
+
+    @Test
+    fun test() {
+        val options = ModelCheckingOptions()
+            .actorsPerThread(1)
+            .actorsBefore(0)
+            .actorsAfter(0)
+        val failure = options.checkImpl(this::class.java)
+        check(failure != null) { "the test should fail" }
+        check(failure is IncorrectResultsFailure) { "Incorrect results are expected, but ${failure::class.simpleName} failure found." }
     }
 }

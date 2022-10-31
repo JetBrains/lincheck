@@ -72,5 +72,6 @@ internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, tra
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, trace)
     is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)
+    is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, trace)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

@@ -167,6 +167,8 @@ internal open class ParallelThreadsRunner(
         } else {
             spinningTimeBeforeYield = (spinningTimeBeforeYield * 2).coerceAtMost(MAX_SPINNING_TIME_BEFORE_YIELD)
         }
+        // reset stored continuations
+        executor.threads.forEach { it.cont = null }
     }
 
     /**
