@@ -29,6 +29,8 @@ interface MemoryLocation
  * accessed directly or through reflections (e.g., through AFU or VarHandle).
 */
 internal class MemoryLocationLabeler {
+    private val fieldNameByReflection =  IdentityHashMap<Any, String>()
+
     fun labelStaticField(className: String, fieldName: String): MemoryLocation =
         StaticFieldMemoryLocation(className, fieldName)
 
@@ -41,7 +43,15 @@ internal class MemoryLocationLabeler {
     fun labelAtomicPrimitive(primitive: Any): MemoryLocation =
         AtomicPrimitiveMemoryLocation(primitive)
 
-    fun registerAtomicFieldReflection(reflection: Any, clazz: Class<*>, fieldName: String) {}
+    fun labelReflectionAccess(obj: Any, reflection: Any): MemoryLocation {
+        require(fieldNameByReflection.contains(reflection)) { "AFU is used but was not registered. Do you create AFU not with AFU.newUpdater(...)?" }
+        return ObjectFieldMemoryLocation(obj, fieldNameByReflection[reflection]!!)
+    }
+
+    fun registerAtomicFieldReflection(reflection: Any, fieldName: String) {
+        check(!fieldNameByReflection.contains(reflection)) { "The same AFU should not be registered twice" }
+        fieldNameByReflection[reflection] = fieldName
+    }
     
     internal class StaticFieldMemoryLocation(val className: String, val fieldName: String) : MemoryLocation {
         override fun equals(other: Any?): Boolean =
