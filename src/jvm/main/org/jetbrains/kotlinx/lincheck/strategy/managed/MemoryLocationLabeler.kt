@@ -43,7 +43,7 @@ internal class MemoryLocationLabeler {
     fun labelAtomicPrimitive(primitive: Any): MemoryLocation =
         AtomicPrimitiveMemoryLocation(primitive)
 
-    fun labelReflectionAccess(obj: Any, reflection: Any): MemoryLocation {
+    fun labelReflectionAccess(reflection: Any, obj: Any): MemoryLocation {
         require(fieldNameByReflection.contains(reflection)) { "AFU is used but was not registered. Do you create AFU not with AFU.newUpdater(...)?" }
         return ObjectFieldMemoryLocation(obj, fieldNameByReflection[reflection]!!)
     }

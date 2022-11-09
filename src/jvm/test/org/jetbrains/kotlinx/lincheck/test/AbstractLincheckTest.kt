@@ -59,7 +59,7 @@ abstract class AbstractLincheckTest(
     }
 
     @Test(timeout = TIMEOUT)
-    fun testWithModelCheckingStrategy(): Unit = EventStructureOptions().run {
+    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
         invocationsPerIteration(1_000)
         commonConfiguration()
         runInternalTest()
