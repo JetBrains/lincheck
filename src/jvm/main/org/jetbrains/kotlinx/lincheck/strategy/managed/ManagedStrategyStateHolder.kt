@@ -38,7 +38,7 @@ internal object ManagedStrategyStateHolder {
     @JvmField
     var random: Random? = null
     @JvmField
-    var memoryLocationLabeler: MemoryLocationLabeler? = null
+    var memoryLocationLabeler: MemoryLocationLabeler? = MemoryLocationLabeler()
 
     /**
      * Sets the strategy and its initial state for the specified class loader.
@@ -74,7 +74,10 @@ internal object ManagedStrategyStateHolder {
     fun resetStateImpl(testClass: Class<out Any>) {
         random!!.setSeed(INITIAL_SEED)
         objectManager = ObjectManager(testClass)
-        memoryLocationLabeler = MemoryLocationLabeler()
+        // TODO: do we need to fix (uncomment) this?
+        // Currently, memory location labeler cannot be reset between invocations as it stores AFUs, some of which can be initialized statically
+        // (i.e. only once, in the first invocation).
+//        memoryLocationLabeler = MemoryLocationLabeler()
     }
 }
 
