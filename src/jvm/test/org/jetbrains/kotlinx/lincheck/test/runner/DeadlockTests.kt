@@ -58,6 +58,25 @@ class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure:
     override fun extractState(): Any = counter
 }
 
+class DeadlockOnSynchronizedWaitTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+    private var lock = Object()
+
+    @Operation
+    fun operation() {
+        synchronized(lock) {
+            lock.wait()
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+        minimizeFailedScenario(false)
+        invocationTimeout(200)
+    }
+
+    override fun extractState(): Any = 0 // constant
+}
+
 class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     private var counter = 0
     private val lock1 = AtomicBoolean(false)
