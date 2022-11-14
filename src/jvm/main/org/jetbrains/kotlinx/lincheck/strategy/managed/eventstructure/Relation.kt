@@ -23,11 +23,11 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 fun interface Relation<T> {
     operator fun invoke(x: T, y: T): Boolean
 
-    infix fun or(relation: Relation<T>) = Relation<T> { x, y ->
+    infix fun union(relation: Relation<T>) = Relation<T> { x, y ->
         this(x, y) || relation(x, y)
     }
 
-    infix fun and(relation: Relation<T>) = Relation<T> { x, y ->
+    infix fun intersection(relation: Relation<T>) = Relation<T> { x, y ->
         this(x, y) && relation(x, y)
     }
 }

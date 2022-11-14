@@ -20,48 +20,43 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+// TODO: what information can we store about the reason of violation?
+class ReleaseAcquireConsistencyViolation: Inconsistency()
 
-enum class SequentialConsistencyCheckPhase {
-    REL_ACQ_CHECK, APPROXIMATION, REPLAYING
-}
-
-// TODO: what information we can store to point out to the reason of violation?
+// TODO: what information can we store about the reason of violation?
 data class SequentialConsistencyViolation(
     val phase: SequentialConsistencyCheckPhase
 ) : Inconsistency()
 
+enum class SequentialConsistencyCheckPhase {
+    APPROXIMATION, REPLAYING
+}
+
 class SequentialConsistencyChecker(
     val checkReleaseAcquireConsistency: Boolean = true,
-    val approximateSequentialConsistencyRelation: Boolean = true
+    val approximateSequentialConsistency: Boolean = true
 ) : ConsistencyChecker {
 
     override fun check(execution: Execution): Inconsistency? {
-        // TODO: cleanup!
         val wbRelation = if (checkReleaseAcquireConsistency) {
             WritesBeforeRelation(execution).apply {
-                if (!saturate()) {
-                    return SequentialConsistencyViolation(
-                        phase = SequentialConsistencyCheckPhase.REL_ACQ_CHECK
-                    )
-                }
+                saturate()?.let { return it }
             }
-        } else Relation { _, _ -> false }
-        val covering = if (approximateSequentialConsistencyRelation) {
-            val initialApproximation: Relation<Event> =
-                if (checkReleaseAcquireConsistency) wbRelation
-                else causalityOrder.lessThan
-            val scRelation = SequentialConsistencyRelation(execution, initialApproximation)
-            scRelation.approximate()?.let { return it }
-            scRelation.buildExternalCovering()
-        } else externalCausalityCovering
-        return if (!checkByReplaying(execution, covering))
-            SequentialConsistencyViolation(
-                phase = SequentialConsistencyCheckPhase.REPLAYING
-            )
-        else null
+        } else null
+        val hbwbRelation = wbRelation?.let { wb ->
+            executionRelation(execution, relation = causalityOrder.lessThan union wb)
+        }
+        val scApproximationRelation = if (approximateSequentialConsistency) {
+            val initialApproximation = hbwbRelation ?: causalityOrder.lessThan
+            SequentialConsistencyRelation(execution, initialApproximation).apply {
+                saturate()?.let { return it }
+            }
+        } else hbwbRelation
+        val covering = scApproximationRelation?.buildExternalCovering() ?: externalCausalityCovering
+        return checkByReplaying(execution, covering)
     }
 
-    private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Boolean {
+    private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Inconsistency? {
         // TODO: this is just a DFS search.
         //  In fact, we can generalize this algorithm to
         //  two arbitrary labelled transition systems by taking their product LTS
@@ -75,7 +70,7 @@ class SequentialConsistencyChecker(
                 val state = stack.removeLast()
                 // TODO: maybe we should return more information than just success
                 //  (e.g. path leading to terminal state)?
-                if (state.isTerminal) return true
+                if (state.isTerminal) return null
                 state.transitions().forEach {
                     if (it !in visited) {
                         visited.add(it)
@@ -83,7 +78,9 @@ class SequentialConsistencyChecker(
                     }
                 }
             }
-            return false
+            return SequentialConsistencyViolation(
+                phase = SequentialConsistencyCheckPhase.REPLAYING
+            )
         }
     }
 
@@ -193,20 +190,18 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
 }
 
 private class SequentialConsistencyRelation(
-    val execution: Execution,
+    execution: Execution,
     initialApproximation: Relation<Event>
-): Relation<Event> {
-
-    val indexer = execution.buildIndexer()
+): ExecutionRelation(execution) {
 
     val relation = RelationMatrix(execution, indexer, initialApproximation)
 
     override fun invoke(x: Event, y: Event): Boolean =
         relation(x, y)
 
-    fun approximate(): SequentialConsistencyViolation? {
+    fun saturate(): SequentialConsistencyViolation? {
         do {
-            val changed = saturate() && relation.transitiveClosure()
+            val changed = coherenceClosure() && relation.transitiveClosure()
             if (!relation.isIrreflexive())
                 return SequentialConsistencyViolation(
                     phase = SequentialConsistencyCheckPhase.APPROXIMATION
@@ -215,7 +210,7 @@ private class SequentialConsistencyRelation(
         return null
     }
 
-    private fun saturate(): Boolean {
+    private fun coherenceClosure(): Boolean {
         var changed = false
         readLoop@for (read in execution) {
             if (!(read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest))
@@ -224,11 +219,11 @@ private class SequentialConsistencyRelation(
             writeLoop@for (write in execution) {
                 if (!write.label.isWriteAccessTo(read.label.memId))
                     continue
-                if (relation(write, read) && !relation(write, readFrom) && write != readFrom) {
+                if (write != readFrom && relation(write, read) && !relation(write, readFrom)) {
                     relation[write, readFrom] = true
                     changed = true
                 }
-                if (relation(readFrom, write) && !relation(read, write) && read != write) {
+                if (read != write && relation(readFrom, write) && !relation(read, write)) {
                     relation[read, write] = true
                     changed = true
                 }
@@ -237,31 +232,11 @@ private class SequentialConsistencyRelation(
         return changed
     }
 
-    fun buildExternalCovering() = object : Covering<Event> {
-
-        val covering: List<List<Event>> = execution.indices.map { index ->
-            val event = indexer[index]
-            val counter = IntArray(execution.maxThreadId) { -1 }
-            for (other in execution) {
-                if (relation(other, event) && other.threadPosition > counter[other.threadId]) {
-                    counter[other.threadId] = other.threadPosition
-                }
-            }
-            (0 until execution.maxThreadId).mapNotNull { threadId ->
-                if (threadId != event.threadId && counter[threadId] != -1)
-                    execution[threadId, counter[threadId]]
-                else null
-            }
-        }
-
-        override fun invoke(x: Event): List<Event> =
-            covering[indexer.index(x)]
-
-    }
-
 }
 
-private class WritesBeforeRelation(val execution: Execution): Relation<Event> {
+private class WritesBeforeRelation(
+    execution: Execution
+): ExecutionRelation(execution) {
 
     private val readsMap: MutableMap<Int, ArrayList<Event>> = mutableMapOf()
 
@@ -295,7 +270,7 @@ private class WritesBeforeRelation(val execution: Execution): Relation<Event> {
         }
     }
 
-    fun saturate(): Boolean {
+    fun saturate(): ReleaseAcquireConsistencyViolation? {
         for ((memId, relation) in relations) {
             val reads = readsMap[memId] ?: continue
             val writes = writesMap[memId] ?: continue
@@ -312,10 +287,10 @@ private class WritesBeforeRelation(val execution: Execution): Relation<Event> {
             if (changed) {
                 relation.transitiveClosure()
                 if (!relation.isIrreflexive())
-                    return false
+                    return ReleaseAcquireConsistencyViolation()
             }
         }
-        return true
+        return null
     }
 
     override fun invoke(x: Event, y: Event): Boolean {

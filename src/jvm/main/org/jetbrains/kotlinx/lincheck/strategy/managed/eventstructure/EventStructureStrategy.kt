@@ -41,7 +41,7 @@ class EventStructureStrategy(
     private val sequentialConsistencyChecker: SequentialConsistencyChecker =
         SequentialConsistencyChecker(
             checkReleaseAcquireConsistency = true,
-            approximateSequentialConsistencyRelation = false
+            approximateSequentialConsistency = false
         )
 
     private val atomicityChecker: AtomicityChecker =
@@ -109,40 +109,35 @@ class EventStructureStrategy(
         var consistentInvocations: Int = 0
             private set
 
-        var inconsistentInvocations: Int = 0
-            private set
+        private var relAcqInconsistenciesCount: Int = 0
+
+        private var seqCstViolationsCount: IntArray =
+            IntArray(SequentialConsistencyCheckPhase.values().size) { 0 }
+
+        val inconsistentInvocations: Int
+            get() =
+                releaseAcquireViolationsCount() +
+                sequentialConsistencyViolationsCount()
 
         val totalInvocations: Int
             get() = consistentInvocations + inconsistentInvocations
 
-        private var relAcqInconsistenciesCount: Int = 0
-
-        private var seqCstApproxPhaseInconsistenciesCount: Int = 0
-
-        private var seqCstReplayPhaseInconsistenciesCount: Int = 0
+        fun releaseAcquireViolationsCount(): Int =
+            relAcqInconsistenciesCount
 
         fun sequentialConsistencyViolationsCount(phase: SequentialConsistencyCheckPhase? = null): Int =
-            when (phase) {
-                SequentialConsistencyCheckPhase.REL_ACQ_CHECK -> relAcqInconsistenciesCount
-                SequentialConsistencyCheckPhase.APPROXIMATION -> seqCstApproxPhaseInconsistenciesCount
-                SequentialConsistencyCheckPhase.REPLAYING -> seqCstReplayPhaseInconsistenciesCount
-                null ->
-                    seqCstApproxPhaseInconsistenciesCount +
-                    seqCstReplayPhaseInconsistenciesCount
-            }
+            phase?.let { seqCstViolationsCount[it.ordinal] } ?: seqCstViolationsCount.sum()
 
         fun update(result: InvocationResult?, inconsistency: Inconsistency?) {
+            if (inconsistency == null) {
+                consistentInvocations++
+                return
+            }
             when(inconsistency) {
-                is SequentialConsistencyViolation -> {
-                    inconsistentInvocations++
-                    when (inconsistency.phase) {
-                        SequentialConsistencyCheckPhase.REL_ACQ_CHECK -> relAcqInconsistenciesCount++
-                        SequentialConsistencyCheckPhase.APPROXIMATION -> seqCstApproxPhaseInconsistenciesCount++
-                        SequentialConsistencyCheckPhase.REPLAYING -> seqCstReplayPhaseInconsistenciesCount++
-                    }
-                }
-
-                null -> consistentInvocations++
+                is ReleaseAcquireConsistencyViolation ->
+                    relAcqInconsistenciesCount++
+                is SequentialConsistencyViolation ->
+                    seqCstViolationsCount[inconsistency.phase.ordinal]++
             }
         }
 

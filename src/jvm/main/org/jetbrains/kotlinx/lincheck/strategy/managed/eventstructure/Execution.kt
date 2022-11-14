@@ -148,3 +148,50 @@ class MutableExecution(
     }
 
 }
+
+abstract class ExecutionRelation(
+    val execution: Execution,
+    val respectsProgramOrder: Boolean = true,
+) : Relation<Event> {
+
+    val indexer = execution.buildIndexer()
+
+    fun buildExternalCovering() = object : Covering<Event> {
+
+        init {
+            require(respectsProgramOrder)
+        }
+
+        val relation = this@ExecutionRelation
+
+        val covering: List<List<Event>> = execution.indices.map { index ->
+            val event = indexer[index]
+            val counter = IntArray(execution.maxThreadId) { -1 }
+            for (other in execution) {
+                if (relation(other, event) && other.threadPosition > counter[other.threadId]) {
+                    counter[other.threadId] = other.threadPosition
+                }
+            }
+            (0 until execution.maxThreadId).mapNotNull { threadId ->
+                if (threadId != event.threadId && counter[threadId] != -1)
+                    execution[threadId, counter[threadId]]
+                else null
+            }
+        }
+
+        override fun invoke(x: Event): List<Event> =
+            covering[indexer.index(x)]
+
+    }
+
+}
+
+fun executionRelation(
+    execution: Execution,
+    respectsProgramOrder: Boolean = true,
+    relation: Relation<Event>
+) = object : ExecutionRelation(execution, respectsProgramOrder) {
+
+    override fun invoke(x: Event, y: Event): Boolean = relation(x, y)
+
+}
