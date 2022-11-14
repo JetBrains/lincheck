@@ -93,7 +93,7 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
     try {
         m.invoke(instance)
     } catch (e: Throwable) {
-        return e
+        return e.cause
     }
     return null
 }
