@@ -99,7 +99,7 @@ class EventStructureStrategy(
                 checkResult(result, shouldCollectTrace = false)?.let { return it }
                 continue@outer
             }
-            return null
+            break
         }
         return null
     }

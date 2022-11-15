@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
+
 // TODO: what information can we store about the reason of violation?
 class ReleaseAcquireConsistencyViolation: Inconsistency()
 
@@ -86,7 +88,7 @@ class SequentialConsistencyChecker(
 
 }
 
-private data class SequentialConsistencyView(val view: MutableMap<Int, Event> = mutableMapOf()) {
+private data class SequentialConsistencyView(val view: MutableMap<MemoryLocation, Event> = mutableMapOf()) {
 
     fun replay(event: Event): SequentialConsistencyView? {
         return when {
@@ -238,11 +240,11 @@ private class WritesBeforeRelation(
     execution: Execution
 ): ExecutionRelation(execution) {
 
-    private val readsMap: MutableMap<Int, ArrayList<Event>> = mutableMapOf()
+    private val readsMap: MutableMap<MemoryLocation, ArrayList<Event>> = mutableMapOf()
 
-    private val writesMap: MutableMap<Int, ArrayList<Event>> = mutableMapOf()
+    private val writesMap: MutableMap<MemoryLocation, ArrayList<Event>> = mutableMapOf()
 
-    private val relations: MutableMap<Int, RelationMatrix<Event>> = mutableMapOf()
+    private val relations: MutableMap<MemoryLocation, RelationMatrix<Event>> = mutableMapOf()
 
     init {
         var initEvent: Event? = null
