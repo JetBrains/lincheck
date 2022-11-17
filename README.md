@@ -13,13 +13,6 @@ and `org.jetbrains.kotlinx:lincheck-jvm:<version>` in Maven.
 ##### Guide
 [Read the tutorial](/docs/topics/lincheck-guide.md) that explains how to use Lincheck and presents most of the features step-by-step.
 
-##### Given talks
- *  [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM) (Heisenbug 2019, RU)
- *  [Testing concurrent algorithms with Lincheck](https://www.youtube.com/watch?v=cdpQMDgQP8Y) (JPoint 2019, RU)
- *  [Lincheck: testing concurrent data structures on Java](https://www.youtube.com/watch?v=hwbpUEGHvvY) (Hydra 2019, RU)
- *  [Lock-free algorithms testing](https://www.youtube.com/watch?v=_0_HOnTSS0E&t=1s) (Joker 2017, RU)
-
-
 This is a fork of [Lin-Check framework by Devexperts](https://github.com/Devexperts/lin-check); the last one is no longer being developed.
 
 
@@ -57,6 +50,7 @@ Table of contents
   + [Test example](#test-example-2)
 - [Configuration via options](#configuration-via-options)
 - [Example](#example)
+- [Contributing](#contributing)
 
 
 
@@ -566,3 +560,7 @@ Parallel part trace:
 |   result: null                                                       |                      |
 |   thread is finished                                                 |                      |
 ```
+
+# Contributing
+
+See [Contributing Guidelines](CONTRIBUTING.md).
