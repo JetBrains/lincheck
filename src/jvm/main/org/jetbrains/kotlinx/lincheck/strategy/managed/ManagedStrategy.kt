@@ -450,6 +450,7 @@ abstract class ManagedStrategy(
      */
     internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
+        if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         // Try to acquire the monitor
         if (!monitorTracker.acquireMonitor(iThread, monitor)) {
@@ -470,6 +471,7 @@ abstract class ManagedStrategy(
      */
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
+        if (inIgnoredSection(iThread)) return false
         monitorTracker.releaseMonitor(monitor)
         traceCollector?.passCodeLocation(tracePoint)
         return false
@@ -505,6 +507,7 @@ abstract class ManagedStrategy(
      */
     internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
+        if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
         if (withTimeout) return false // timeouts occur instantly
