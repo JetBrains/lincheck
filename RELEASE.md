@@ -11,11 +11,11 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
    `git merge origin/master`
 
 4. Replace `<old-version>` with `<version>`:
-   * in [`gradle.properties`](gradle.properties)
-   * in the [user guide section about adding Lincheck dependency](docs/topics/introduction.md#add-required-dependencies)
+   * in [gradle.properties](gradle.properties)
+   * in [docs/v.list](docs/v.list)
 
 5. Commit the updated [`gradle.properties`](gradle.properties): <br>
-   `git add gradle.properties` <br>
+   `git add gradle.properties docs/v.list` <br>
    `git commit -m "Release lincheck-<version>"`
    
 6. Create a tag related to the releasing `<version>`: <br>
