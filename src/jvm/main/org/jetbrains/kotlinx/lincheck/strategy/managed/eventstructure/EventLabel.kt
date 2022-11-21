@@ -22,163 +22,221 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
-import org.jetbrains.kotlinx.lincheck.strategy.managed.isInstanceOf
 import kotlin.reflect.KClass
 
-abstract class EventLabel {
-
-    abstract val isRequest: Boolean
-
-    abstract val isResponse: Boolean
-
-    abstract val isTotal: Boolean
-
+/**
+ * EventLabel is a base class for the hierarchy of classes representing semantic labels
+ * of atomic events performed by the program.
+ * It includes events such as:
+ * - thread fork, join, start and finish;
+ * - reads and writes from/to shared memory;
+ * - lock acquisitions and releases;
+ * and other (see subclasses of this class).
+ *
+ * Label can be one of the following kind (see [LabelKind]):
+ * - [LabelKind.Send] --- send label.
+ * - [LabelKind.Request] --- request label.
+ * - [LabelKind.Response] --- response label.
+ * For example, giving [MemoryAccessLabel],
+ * [WriteAccessLabel] is an example of the send label,
+ * while [ReadAccessLabel] is split into request and response part.
+ *
+ * Labels can synchronize to form new labels using [synchronize] method.
+ * For example, write access label can synchronize with read-request label
+ * to form a read-response label. The response label takes value written by write access
+ * as its read value. When appropriate, we use notation `\+` to denote synchronization binary operation:
+ *
+ * ```
+ * W(x, v) \+ R^{req}(x) = R^{rsp}(x, v)
+ * ```
+ *
+ * Synchronize operation is expected to be associative and commutative.
+ * It is partial operation --- some labels cannot participate in
+ * synchronization (e.g. write access label cannot synchronize with lock acquire request).
+ * In such cases [synchronize] returns null.
+ *
+ * ```
+ * W(x, v) \+ Lk^{req}(l) = 0
+ * ```
+ *
+ * It is responsibility of [EventLabel] subclasses to override [synchronize] method
+ * in case when they need to implement non-trivial synchronization.
+ * Default implementation only checks for synchronization against
+ * special dummy [EmptyLabel] that behaves as a neutral element of [synchronize] operation.
+ * Every label should be able to synchronize with [EmptyLabel] and produce itself.
+ *
+ * ```
+ * W(x, v) \+ 1 = W(x, v)
+ * ```
+ *
+ * Formally, labels form a synchronization algebra [1],
+ * that is the algebraic structure (deriving from partial commutative monoid)
+ * defining how individual atomic events can synchronize to produce new events.
+ *
+ * [1] Winskel, Glynn. "Event structure semantics for CCS and related languages."
+ *     International Colloquium on Automata, Languages, and Programming. Springer, Berlin, Heidelberg, 1982.
+ *
+ */
+abstract class EventLabel(
+    /**
+     * [LabelKind] of this label: send, request or response.
+     *
+     * @see EventLabel
+     */
+    open val kind: LabelKind,
+    /**
+     * Type of synchronization used by this label.
+     * Currently, two types of synchronization are supported.
+     *
+     * - [SynchronizationType.Binary] binary synchronization ---
+     *   only a pair of events can synchronize. For example,
+     *   write access label can synchronize with read-request label,
+     *   but the resulting read-response label can no longer synchronize with
+     *   any other label.
+     *
+     * - [SynchronizationType.Barrier] barrier synchronization ---
+     *   a set of events can synchronize. For example,
+     *   several thread finish labels can synchronize with single thread
+     *   join-request label waiting for all of these threads to complete.
+     */
+    val syncType: SynchronizationType,
+    /**
+     * Whether this label is blocking.
+     * Load acquire-request and thread join-request/response are examples of blocking labels.
+     */
+    val isBlocking: Boolean = false,
+    /**
+     * Whether this blocking label is already unblocked.
+     * For example, thread join-response is unblocked when
+     * all the threads it waits for have finished.
+     */
+    val unblocked: Boolean = true,
+) {
+    
     /**
      * Synchronizes event label with another label passed as a parameter.
-     * For example, write label `wlab = W(x, v)` synchronizes with a read-request label `rlab = R^{req}(x)`
-     * and produces the read-response label `lab = R^{rsp}(x, v)`.
-     * That is a call `rlab.synchronize(wlab)` returns `lab`.
-     * Synchronize operation is expected to be associative and commutative.
-     * Thus, it is also declared as infix operation: `a synchronize b`.
-     * In terms of synchronization algebra, non-null return value to the call `C = A.synchronize(B)`
-     * means that `A \+ B = C` and consequently `A >> C` and `B >> C`
-     * (read as A synchronizes with B into C, and A/B synchronizes with C respectively).
+     *
+     * @see EventLabel
      */
     open infix fun synchronize(label: EventLabel): EventLabel? =
         if (label is EmptyLabel) this else null
 
-    // TODO: better name?
-    abstract val isCompleted: Boolean
+    /**
+     * Checks whether a pair of labels can synchronize
+     * (do not confuse this term with "synchronizes-with" relation from the Java Memory Model).
+     * Default implementation just checks that result of [synchronize] is not null,
+     * overridden implementation can optimize this check.
+     */
+    open infix fun synchronizesWith(label: EventLabel): Boolean =
+        (synchronize(label) != null)
 
-    abstract val isBinarySynchronizing: Boolean
+    /**
+     * Checks whether this label is send label.
+     */
+    val isSend: Boolean
+        get() = (kind == LabelKind.Send)
 
-    abstract val isBarrierSynchronizing: Boolean
+    /**
+     * Checks whether this label is request label.
+     */
+    val isRequest: Boolean
+        get() = (kind == LabelKind.Request)
 
-    // TODO: rename?
-    open infix fun aggregate(label: EventLabel): EventLabel? =
-        if (label is EmptyLabel) this else null
+    /**
+     * Checks whether this label is response label.
+     */
+    val isResponse: Boolean
+        get() = (kind == LabelKind.Response)
 
-    fun aggregatesWith(label: EventLabel): Boolean =
-        aggregate(label) != null
+    /**
+     * Checks whether this label has binary synchronization.
+     */
+    val isBinarySynchronizing: Boolean
+        get() = (syncType == SynchronizationType.Binary)
 
+    /**
+     * Checks whether this label has barrier synchronization.
+     */
+    val isBarrierSynchronizing: Boolean
+        get() = (syncType == SynchronizationType.Barrier)
+
+    /**
+     * Tries to replay this label using given argument label.
+     *
+     * Replaying can be used by an executor in order to reproduce execution saved as a list of labels.
+     * Because some values of execution can change non-deterministically
+     * between different invocations (for example, addresses of allocated objects),
+     * replaying execution scenario may require to change some internal information
+     * kept in event label, without modifying its shape.
+     * For example, write access event should remain write access event,
+     * but the address of the written memory location can change.
+     *
+     * @return true if replay is successfull, false otherwise.
+     */
     open fun replay(label: EventLabel): Boolean =
         (this == label)
 
-    val isInitializer: Boolean by lazy {
-        this is InitializationLabel
-    }
-
-    val isThreadInitializer: Boolean by lazy {
-        isRequest && this is ThreadStartLabel
-    }
-
-    inline fun isMemoryAccess(predicate: MemoryAccessPredicate = { true }) =
-        if (this is MemoryAccessLabel)
-            predicate()
-        else false
-
-    inline fun isReadAccess(predicate: MemoryAccessPredicate = { true }) =
-        isMemoryAccess { isRead && predicate() }
-
-    inline fun isWriteAccess(predicate: MemoryAccessPredicate = { true }) =
-        isMemoryAccess { isWrite && predicate() }
-
-    inline fun isMemoryAccessTo(memId: MemoryLocation, predicate: MemoryAccessPredicate = { true }) =
-        isMemoryAccess { this.memId == memId && predicate() }
-
-    inline fun isWriteAccessTo(memId: MemoryLocation, predicate: MemoryAccessPredicate = { true }) =
-        isMemoryAccessTo(memId) { isWrite && predicate() }
-
-    infix fun toSameLocation(other: EventLabel) =
-        this is MemoryAccessLabel && other.isMemoryAccessTo(memId)
-
-    infix fun writesToSameLocation(other: EventLabel) =
-        this is MemoryAccessLabel && isWrite && other.isWriteAccessTo(memId)
 }
 
-// TODO: maybe call it DualLabelKind?
-enum class LabelKind { Request, Response, Total }
+/**
+ * Kind of label.
+ *
+ * @see EventLabel
+ */
+enum class LabelKind { Send, Request, Response }
 
-enum class SynchronizationKind { Binary, Barrier }
+/**
+ * Type of synchronization used by label.
+ *
+ * @see EventLabel
+ */
+enum class SynchronizationType { Binary, Barrier }
 
 // TODO: rename to BarrierRaceException?
 class InvalidBarrierSynchronizationException(message: String): Exception(message)
 
-// TODO: use of word `Atomic` here is perhaps misleading?
-//   Maybe rename it to `SingletonEventLabel` or something similar?
-//   At least document the meaning of `Atomic` here.
-abstract class AtomicEventLabel(
-    open val kind: LabelKind,
-    open val syncKind: SynchronizationKind,
-    override val isCompleted: Boolean,
-): EventLabel() {
-
-    override val isRequest: Boolean
-        get() = (kind == LabelKind.Request)
-
-    override val isResponse: Boolean
-        get() = (kind == LabelKind.Response)
-
-    override val isTotal: Boolean
-        get() = (kind == LabelKind.Total)
-
-    override val isBinarySynchronizing: Boolean
-        get() = (syncKind == SynchronizationKind.Binary)
-
-    override val isBarrierSynchronizing: Boolean
-        get() = (syncKind == SynchronizationKind.Barrier)
-
-}
-
-// TODO: rename?
-abstract class AggregatedEventLabel(
-    val labels: List<AtomicEventLabel>,
-) : EventLabel() {
-
-    init {
-        require(labels.isNotEmpty())
-    }
-
-    override val isRequest: Boolean
-        get() = labels.any { it.isRequest }
-
-    override val isResponse: Boolean
-        get() = labels.any { it.isResponse }
-
-    override val isTotal: Boolean
-        get() = labels.any { it.isTotal }
-
-    override val isCompleted: Boolean
-        get() = labels.all { it.isCompleted }
-
-    override val isBinarySynchronizing: Boolean
-        get() = labels.any { it.isBinarySynchronizing }
-
-    override val isBarrierSynchronizing: Boolean
-        get() = labels.any { it.isBinarySynchronizing }
-
-}
-
-class EmptyLabel: AtomicEventLabel(
-    kind = LabelKind.Total,
-    syncKind = SynchronizationKind.Binary,
-    isCompleted = true
+/**
+ * Dummy empty label acting as a neutral element of [synchronize] operation.
+ *
+ * For each label `l` it should be true that:
+ *
+ * ```
+ * l \+ 1 = 1 \+ l = l
+ * ```
+ *
+ */
+class EmptyLabel: EventLabel(
+    kind = LabelKind.Send,
+    syncType = SynchronizationType.Binary,
 ) {
 
     override fun synchronize(label: EventLabel) = label
-
-    override fun aggregate(label: EventLabel) = label
 
     override fun toString(): String = "Empty"
 
 }
 
-class InitializationLabel : AtomicEventLabel(
-    kind = LabelKind.Total,
+/**
+ * Special label acting as a label of the virtual root event of every execution.
+ *
+ * Has [LabelKind.Send] kind.
+ *
+ * Initialization label can synchronize with various different labels.
+ * Usually synchronization of initialization label with some request label
+ * results in response label that obtains some default value.
+ * For example, synchronizing initialization label with read-request label of integer
+ * results in read-response label with 0 value.
+ *
+ * ```
+ * init \+ R^{req}(x) = R^{rsp}(x, 0)
+ * ```
+ */
+class InitializationLabel : EventLabel(
+    kind = LabelKind.Send,
     // TODO: can barrier-synchronizing events also utilize InitializationLabel?
-    syncKind = SynchronizationKind.Binary,
-    isCompleted = true,
+    syncType = SynchronizationType.Binary,
 ) {
+
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is InitializationLabel) null else label.synchronize(this)
 
@@ -186,18 +244,30 @@ class InitializationLabel : AtomicEventLabel(
 
 }
 
+/**
+ * Base class for all thread event labels.
+ */
 abstract class ThreadEventLabel(
     kind: LabelKind,
-    syncKind: SynchronizationKind,
-    isCompleted: Boolean
-): AtomicEventLabel(kind, syncKind, isCompleted)
+    syncKind: SynchronizationType,
+    isBlocking: Boolean = false,
+    unblocked: Boolean = true,
+): EventLabel(kind, syncKind, isBlocking, unblocked)
 
+/**
+ * Label representing fork of a set of threads.
+ *
+ * Has [LabelKind.Send] kind.
+ * Can synchronize with [ThreadStartLabel].
+ */
 data class ThreadForkLabel(
+    /**
+     * A set of thread ids this fork spawns.
+     */
     val forkThreadIds: Set<Int>,
 ): ThreadEventLabel(
-    kind = LabelKind.Total,
-    syncKind = SynchronizationKind.Binary,
-    isCompleted = true,
+    kind = LabelKind.Send,
+    syncKind = SynchronizationType.Binary,
 ) {
 
     override fun synchronize(label: EventLabel): EventLabel? =
@@ -210,54 +280,83 @@ data class ThreadForkLabel(
 
 }
 
+/**
+ * Label of virtual event put into beginning of each thread.
+ *
+ * Can either be of [LabelKind.Request] or response [LabelKind.Response] kind.
+ * Thread start-request label can synchronize with
+ * [InitializationLabel] (for main thread, see [isMainThread]) or with
+ * [ThreadForkLabel] to produce thread start-response.
+ */
 data class ThreadStartLabel(
+    /**
+     * Kind of label.
+     * Should either be [LabelKind.Request] or [LabelKind.Response].
+     */
     override val kind: LabelKind,
+    /**
+     * Thread id of started thread.
+     */
     val threadId: Int,
-    val isInitializationThread: Boolean = false,
+    /**
+     * Whether this thread is main thread, i.e. thread
+     * starting the execution of the whole program.
+     */
+    val isMainThread: Boolean = false,
 ): ThreadEventLabel(
     kind = kind,
-    syncKind = SynchronizationKind.Binary,
-    isCompleted = true,
+    syncKind = SynchronizationType.Binary,
 ) {
+
+    init {
+        check(isRequest || isResponse)
+    }
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
 
-        isRequest && isInitializationThread && label is InitializationLabel -> {
+        isRequest && isMainThread && label is InitializationLabel -> {
             ThreadStartLabel(
                 threadId = threadId,
                 kind = LabelKind.Response,
-                isInitializationThread = true,
+                isMainThread = true,
             )
         }
 
         isRequest && label is ThreadForkLabel && threadId in label.forkThreadIds -> {
-            check(!isInitializationThread)
+            check(!isMainThread)
             ThreadStartLabel(
                 threadId = threadId,
                 kind = LabelKind.Response,
-                isInitializationThread = false,
+                isMainThread = false,
             )
         }
 
         else -> super.synchronize(label)
     }
 
-    override fun aggregate(label: EventLabel): EventLabel? =
-        if (isRequest && label.isResponse &&
-            label is ThreadStartLabel && threadId == label.threadId)
-            ThreadStartLabel(LabelKind.Total, threadId, isInitializationThread)
-        else super.aggregate(label)
-
     override fun toString(): String = "ThreadStart"
 
 }
 
+/**
+ * Label of a virtual event put into the end of each thread.
+ *
+ * Has [LabelKind.Send] kind.
+ * Can synchronize with [ThreadJoinLabel] or another [ThreadFinishLabel].
+ * In the latter case the sets of [finishedThreadIds] of two labels are merged in the resulting label.
+ *
+ * Thread finish label is considered to be always blocked.
+ */
 data class ThreadFinishLabel(
+    /**
+     * Set of threads that have been finished.
+     */
     val finishedThreadIds: Set<Int>
 ): ThreadEventLabel(
-    kind = LabelKind.Total,
-    syncKind = SynchronizationKind.Barrier,
-    isCompleted = true,
+    kind = LabelKind.Send,
+    syncKind = SynchronizationType.Barrier,
+    isBlocking = true,
+    unblocked = false,
 ) {
 
     constructor(threadId: Int): this(setOf(threadId))
@@ -289,150 +388,125 @@ data class ThreadFinishLabel(
 
 }
 
+/**
+ * Label representing join of a set of threads.
+ *
+ * Can either be of [LabelKind.Request] or response [LabelKind.Response] kind.
+ * Both thread join-request and join-response labels can synchronize with
+ * [ThreadFinishLabel] to produce another thread join-response label,
+ * however the new join label no longer waits for synchronized finished thread.
+ *
+ * This is blocking label, it becomes [unblocked] when set of
+ * wait-to-be-join threads becomes empty (see [joinThreadIds]).
+ */
 data class ThreadJoinLabel(
+    /**
+     * Kind of label.
+     * Should either be [LabelKind.Request] or [LabelKind.Response].
+     */
     override val kind: LabelKind,
+    /**
+     * Set of threads this label awaits to join.
+     */
     val joinThreadIds: Set<Int>,
 ): ThreadEventLabel(
     kind = kind,
-    syncKind = SynchronizationKind.Barrier,
-    isCompleted = (kind == LabelKind.Response) implies joinThreadIds.isEmpty()
+    syncKind = SynchronizationType.Barrier,
+    isBlocking = true,
+    unblocked = (kind == LabelKind.Response) implies joinThreadIds.isEmpty(),
 ) {
+
+    init {
+        check(isRequest || isResponse)
+    }
 
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is ThreadFinishLabel)
             label.synchronize(this)
         else super.synchronize(label)
 
-    override fun aggregate(label: EventLabel): EventLabel? =
-        if (isRequest && label.isResponse &&
-            label is ThreadJoinLabel &&
-            label.joinThreadIds.isEmpty()) {
-            ThreadJoinLabel(LabelKind.Total, setOf())
-        } else super.aggregate(label)
-
     override fun toString(): String =
         "ThreadJoin(${joinThreadIds})"
 }
 
-enum class MemoryAccessKind { Read, Write }
-
-interface MemoryAccessLabel {
-
-    val isRead: Boolean
-
-    val isWrite: Boolean
-
-    val isReadModifyWrite: Boolean
-        get() = isRead && isWrite
-
-    val memId: MemoryLocation
-
-    val kClass: KClass<*>
-
-    val isExclusive: Boolean
-
-}
-
-typealias MemoryAccessPredicate = MemoryAccessLabel.() -> Boolean
-
-data class AtomicMemoryAccessLabel(
-        override val kind: LabelKind,
-        val accessKind: MemoryAccessKind,
-        private var memId_: MemoryLocation,
-        private var value_: OpaqueValue?,
-        override val kClass: KClass<*>,
-        override val isExclusive: Boolean = false
-): AtomicEventLabel(
+/**
+ * Base class of read and write shared memory access event labels.
+ * Stores common information about memory access ---
+ * such as accessing memory location and read or written value.
+ */
+sealed class MemoryAccessLabel(
+    /**
+     * Kind of label.
+     */
+    kind: LabelKind,
+    /**
+     * Memory location affected by this memory access.
+     */
+    protected open var location_: MemoryLocation,
+    /**
+     * Written value for write access, read value for read access.
+     */
+    protected open var value_: OpaqueValue?,
+    /**
+     * Class of written or read value.
+     */
+    open val kClass: KClass<*>,
+    /**
+     * Flag indicating whether this access is exclusive.
+     * Memory accesses obtained as a result of executing
+     * atomic read-modify-write instructions (such as CAS),
+     * have this flag set.
+     */
+    open val isExclusive: Boolean = false
+): EventLabel(
     kind = kind,
-    syncKind = SynchronizationKind.Binary,
-    isCompleted = true
-), MemoryAccessLabel {
+    syncType = SynchronizationType.Binary,
+) {
 
-    override val memId: MemoryLocation
-        get() = memId_
+    /**
+     * Memory location affected by this memory access.
+     */
+    val location: MemoryLocation
+        get() = location_
 
+    /**
+     * Written value for write access, read value for read access.
+     */
     val value: OpaqueValue?
         get() = value_
 
-    override val isRead: Boolean =
-        (accessKind == MemoryAccessKind.Read)
-
-    override val isWrite: Boolean =
-        (accessKind == MemoryAccessKind.Write)
-
-    init {
-        require((isRead && isRequest) implies (value == null))
-        require(isWrite implies isTotal)
-    }
-
-    private fun completeReadRequest(value: OpaqueValue?): AtomicMemoryAccessLabel {
-        require(isRead && isRequest)
-        // require(value.isInstanceOf(kClass))
-        return AtomicMemoryAccessLabel(
-            kind = LabelKind.Response,
-            accessKind = MemoryAccessKind.Read,
-            memId_ = memId,
-            value_ = value,
-            kClass = kClass,
-            isExclusive = isExclusive,
-        )
-    }
-
-    override fun synchronize(label: EventLabel): EventLabel? = when {
-
-        (isRead && isRequest && label is InitializationLabel) ->
-            completeReadRequest(OpaqueValue.default(kClass))
-
-        (label is AtomicMemoryAccessLabel && memId == label.memId) -> when {
-            isRead && isRequest && label.isWrite ->
-                completeReadRequest(label.value)
-            isWrite && label.isRead && label.isRequest ->
-                label.completeReadRequest(value)
-            else -> null
+    /**
+     * Kind of memory access of this label:
+     * either [MemoryAccessKind.Write] or [MemoryAccessKind.Read].
+     */
+    val accessKind: MemoryAccessKind
+        get() = when(this) {
+            is WriteAccessLabel -> MemoryAccessKind.Write
+            is ReadAccessLabel -> MemoryAccessKind.Read
         }
 
-        else -> super.synchronize(label)
-    }
+    /**
+     * Checks whether this memory access is write.
+     */
+    val isWrite: Boolean
+        get() = (accessKind == MemoryAccessKind.Write)
 
-    override fun aggregate(label: EventLabel): EventLabel? = when {
+    /**
+     * Checks whether this memory access is read.
+     */
+    val isRead: Boolean
+        get() = (this is ReadAccessLabel)
 
-        // TODO: perform dynamic type-check of `typeDesc`
-        (isRead && isRequest &&
-         label is AtomicMemoryAccessLabel && label.isRead && label.isResponse &&
-         memId == label.memId && isExclusive == label.isExclusive) -> {
-            AtomicMemoryAccessLabel(
-                kind = LabelKind.Total,
-                accessKind = MemoryAccessKind.Read,
-                memId_ = memId,
-                value_ = label.value,
-                kClass = kClass,
-                isExclusive = isExclusive
-            )
-        }
-
-        (isRead && !isRequest && isExclusive &&
-         label is MemoryAccessLabel && label.isWrite && label.isExclusive &&
-         memId == label.memId) -> {
-            val writeLabel = when(label) {
-                is AtomicMemoryAccessLabel -> label
-                is ReadModifyWriteMemoryAccessLabel -> label.writeLabel
-                else -> unreachable()
-            }
-            ReadModifyWriteMemoryAccessLabel(this, writeLabel)
-        }
-
-        else -> super.aggregate(label)
-    }
-
-    private fun equalUpToReplay(label: AtomicMemoryAccessLabel): Boolean =
+    private fun equalUpToReplay(label: MemoryAccessLabel): Boolean =
         (kind == label.kind) &&
         (accessKind == label.accessKind) &&
         (kClass == label.kClass) &&
         (isExclusive == label.isExclusive)
+        // TODO: check for locations compatibility
 
     override fun replay(label: EventLabel): Boolean {
-        if (label is AtomicMemoryAccessLabel && equalUpToReplay(label)) {
-            memId_ = label.memId
+        if (label is MemoryAccessLabel && equalUpToReplay(label)) {
+            location_ = label.location
             value_ = label.value
             return true
         }
@@ -441,59 +515,130 @@ data class AtomicMemoryAccessLabel(
 
     override fun toString(): String {
         val kindString = when (kind) {
+            LabelKind.Send -> ""
             LabelKind.Request -> "^req"
             LabelKind.Response -> "^rsp"
-            LabelKind.Total -> ""
         }
         val exclString = if (isExclusive) "_ex" else ""
-        val argsString = "$memId" + if (kind != LabelKind.Request) ", $value" else ""
+        val argsString = "$location" + if (kind != LabelKind.Request) ", $value" else ""
         return "${accessKind}${kindString}${exclString}(${argsString})"
     }
 
 }
 
-// TODO: MemoryAccessLabel and ReadModifyWriteMemoryAccessLabel likely
-//   should have common ancestor in the hierarchy?
-data class ReadModifyWriteMemoryAccessLabel(
-    val readLabel: AtomicMemoryAccessLabel,
-    val writeLabel: AtomicMemoryAccessLabel,
-) : AggregatedEventLabel(listOf(readLabel, writeLabel)), MemoryAccessLabel {
+/**
+ * Kind of memory access.
+ *
+ * @see MemoryAccessLabel
+ */
+enum class MemoryAccessKind { Read, Write }
 
-    init {
-        require(readLabel.isRead && readLabel.isExclusive)
-        require(writeLabel.isWrite && writeLabel.isExclusive)
-        require(readLabel.memId == writeLabel.memId)
-        // TODO: do we need weaker type check?
-        //  e.g. for a case when expected and desired values of CAS are of different classes
-        require(readLabel.kClass == writeLabel.kClass)
-        require(!readLabel.isRequest && writeLabel.isTotal)
-    }
-
-    override val isRead: Boolean = true
-
-    override val isWrite: Boolean = true
-
-    override val memId: MemoryLocation = readLabel.memId
-
-    override val kClass: KClass<*> = readLabel.kClass
-
-    override val isExclusive: Boolean = true
+/**
+ * Label denoting write access to shared memory.
+ *
+ * Has [LabelKind.Send] kind.
+ * Can synchronize with request [ReadAccessLabel] producing read-response label.
+ *
+ * @see MemoryAccessLabel
+ */
+data class WriteAccessLabel(
+    /**
+     * Memory location affected by this write.
+     */
+    override var location_: MemoryLocation,
+    /**
+     * Written value.
+     */
+    override var value_: OpaqueValue?,
+    /**
+     * Class of written value.
+     */
+    override val kClass: KClass<*>,
+    /**
+     * Exclusive access flag.
+     */
+    override val isExclusive: Boolean = false
+): MemoryAccessLabel(
+    kind = LabelKind.Send,
+    location_ = location_,
+    value_ = value_,
+    kClass = kClass,
+    isExclusive = isExclusive
+) {
 
     override fun synchronize(label: EventLabel): EventLabel? =
-        if (label is EmptyLabel) this else writeLabel.synchronize(label)
+        if (label is ReadAccessLabel)
+            label.synchronize(this)
+        else super.synchronize(label)
 
-    override fun aggregate(label: EventLabel): EventLabel? {
-        return super.aggregate(label)
+}
+
+/**
+ * Label denoting read access to shared memory.
+ *
+ * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
+ * Read-request can synchronize either with [InitializationLabel] or with [WriteAccessLabel]
+ * to produce read-response label. In the former case response will take default value
+ * for given class, provided by [kClass] constructor argument.
+ * In the latter case read-response will take value of the write label.
+ *
+ * @see MemoryAccessLabel
+ */
+data class ReadAccessLabel(
+    /**
+     * Kind of label.
+     */
+    override val kind: LabelKind,
+    /**
+     * Memory location of this read.
+     */
+    override var location_: MemoryLocation,
+    /**
+     * Read value. For read-request labels equals to null.
+     */
+    override var value_: OpaqueValue?,
+    /**
+     * Class of read value.
+     */
+    override val kClass: KClass<*>,
+    /**
+     * Exclusive access flag.
+     */
+    override val isExclusive: Boolean = false
+): MemoryAccessLabel(
+    kind = kind,
+    location_ = location_,
+    value_ = value_,
+    kClass = kClass,
+    isExclusive = isExclusive
+) {
+
+    init {
+        require(isRequest || isResponse)
+        require(isRequest implies (value == null))
     }
 
-    override fun replay(label: EventLabel): Boolean =
-        if (label is ReadModifyWriteMemoryAccessLabel) {
-            readLabel.replay(label.readLabel) && writeLabel.replay(label.writeLabel)
-        } else false
+    override fun synchronize(label: EventLabel): EventLabel? = when {
 
-    override fun toString(): String {
-        val kindString = if (readLabel.isResponse) "^rsp" else ""
-        return "ReadModifyWrite${kindString}(${memId}, ${readLabel.value}, ${writeLabel.value})"
+        (isRequest && label is InitializationLabel) ->
+            completeRequest(OpaqueValue.default(kClass))
+
+        (isRequest && label is WriteAccessLabel && location == label.location) ->
+            completeRequest(label.value)
+
+        else -> super.synchronize(label)
+    }
+
+    private fun completeRequest(value: OpaqueValue?): ReadAccessLabel {
+        require(isRequest)
+        // require(value.isInstanceOf(kClass))
+        return ReadAccessLabel(
+            kind = LabelKind.Response,
+            location_ = location,
+            value_ = value,
+            kClass = kClass,
+            isExclusive = isExclusive,
+        )
     }
 
 }

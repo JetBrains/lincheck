@@ -81,19 +81,6 @@ open class Execution(
     override fun containsAll(elements: Collection<Event>): Boolean =
         elements.all { contains(it) }
 
-    fun getAggregatedLabel(iThread: Int, position: Int): Pair<EventLabel, List<Event>>? {
-        val threadEvents = threadsEvents[iThread]
-            ?: return null
-        var accumulator = threadEvents.getOrNull(position)?.label
-            ?: return null
-        var i = position
-        while (++i < threadEvents.size) {
-            accumulator = accumulator.aggregate(threadEvents[i].label)
-                ?: break
-        }
-        return accumulator to threadEvents.subList(position, i)
-    }
-
     override fun iterator(): Iterator<Event> =
         threadsEvents.values.asSequence().flatten().iterator()
 

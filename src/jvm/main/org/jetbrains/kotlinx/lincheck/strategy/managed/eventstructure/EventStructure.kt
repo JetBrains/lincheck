@@ -31,8 +31,6 @@ class EventStructure(
     nThreads: Int,
     val checker: ConsistencyChecker = idleConsistencyChecker,
     val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
-    // TODO: refactor this!
-    val threadSwitchCallback: ThreadSwitchCallback = {},
 ) {
     val initialThreadId = nThreads
     val rootThreadId = nThreads + 1
@@ -72,7 +70,7 @@ class EventStructure(
 
     fun getThreadRoot(iThread: Int): Event? =
         currentExecution.firstEvent(iThread)?.also { event ->
-            check(event.label.isThreadInitializer)
+            check(event.label is ThreadStartLabel && event.label.isRequest)
         }
 
     fun isStartedThread(iThread: Int): Boolean =
@@ -145,12 +143,13 @@ class EventStructure(
 
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
-        val event = currentExecution[iThread, currentFrontier.getNextPosition(iThread)]!!
+        val nextPosition = currentFrontier.getNextPosition(iThread)
+        val atomicEvent = currentExecution.nextAtomicEvent(iThread, nextPosition, replaying = true)!!
         // delay replaying the last event till all other events are replayed;
-        if (event == events.last()) {
+        if (atomicEvent.events.last() == events.last()) {
             return (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
         }
-        return event.dependencies.all { dependency ->
+        return atomicEvent.dependencies.all { dependency ->
             dependency in currentFrontier
         }
     }
@@ -161,14 +160,6 @@ class EventStructure(
             check(position < currentExecution.getThreadSize(iThread))
             currentExecution[iThread, position]!!
         } else null
-    }
-
-    private fun waitForReplay(iThread: Int) {
-        val threadInReplayPhase = inReplayPhase(iThread)
-        if ( threadInReplayPhase && !canReplayNextEvent(iThread) ||
-            !threadInReplayPhase && !isFinishedThread(iThread) && inReplayPhase()) {
-            threadSwitchCallback(iThread)
-        }
     }
 
     private fun createEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
@@ -216,9 +207,6 @@ class EventStructure(
         checkConsistencyIncrementally(event, isReplayedEvent)?.let {
             throw InconsistentExecutionException(it)
         }
-        if (isReplayedEvent) {
-            waitForReplay(event.threadId)
-        }
     }
 
     private fun synchronizationCandidates(event: Event): List<Event> {
@@ -226,7 +214,7 @@ class EventStructure(
 
         // for total event we filter out all of its causal predecessors,
         // because an attempt to synchronize with these predecessors will result in causality cycle
-        if (event.label.isTotal) {
+        if (event.label.isSend) {
             predicates.add { !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it) }
         }
 
@@ -237,7 +225,7 @@ class EventStructure(
         if (event.label.isRequest && event.label is MemoryAccessLabel) {
             require(event.label.isRead)
             val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
-                it.label is MemoryAccessLabel && it.label.isWrite && it.label.memId == event.label.memId
+                it.label is MemoryAccessLabel && it.label.isWrite && it.label.location == event.label.location
             } ?: root
             predicates.add { !causalityOrder.lessThan(it, threadLastWrite) }
         }
@@ -264,13 +252,11 @@ class EventStructure(
         // TODO: we should maintain an index of read/write accesses to specific memory location
         val candidateEvents = synchronizationCandidates(event)
         val syncEvents = arrayListOf<Event>()
-        if (event.label.isBinarySynchronizing) {
-            addBinarySynchronizedEvents(event, candidateEvents).let {
+        when(event.label.syncType) {
+            SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidateEvents).let {
                 syncEvents.addAll(it)
             }
-        }
-        if (event.label.isBarrierSynchronizing) {
-            addBarrierSynchronizedEvents(event, candidateEvents)?.let {
+            SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidateEvents)?.let {
                 syncEvents.add(it)
             }
         }
@@ -283,10 +269,11 @@ class EventStructure(
         return candidateEvents.mapNotNull { other ->
             val syncLab = event.label.synchronize(other.label) ?: return@mapNotNull null
             val (parent, dependency) = when {
-                event.label.aggregatesWith(syncLab) -> event to other
-                other.label.aggregatesWith(syncLab) -> other to event
+                event.label.isRequest -> event to other
+                other.label.isRequest -> other to event
                 else -> unreachable()
             }
+            check(parent.label.isRequest && dependency.label.isSend && syncLab.isResponse)
             addEvent(parent.threadId, syncLab, parent, dependencies = listOf(dependency))
         }
     }
@@ -295,19 +282,16 @@ class EventStructure(
         require(event.label.isBarrierSynchronizing)
         val (syncLab, dependencies) =
             candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
-                val resultLabel = candidateEvent.label.synchronize(lab)
-                if (resultLabel != null)
-                    (resultLabel to deps + candidateEvent)
-                else (lab to deps)
+                candidateEvent.label.synchronize(lab)?.let {
+                    (it to deps + candidateEvent)
+                } ?: (lab to deps)
             }
-        if (!(syncLab.isResponse && syncLab.isCompleted))
+        if (syncLab.isBlocking && !syncLab.unblocked)
             return null
-        // We assume that at least one of the events participating into synchronization
+        // We assume that at most one of the events participating into synchronization
         // is a request event, and the result of synchronization is response event.
-        // We also assume that request and response parts aggregate.
-        // Thus, we use `aggregatesWith` method to find among the list
-        // of dependencies the parent event of newly added synchronized event.
-        val parent = dependencies.first { it.label.aggregatesWith(syncLab) }
+        check(syncLab.isResponse)
+        val parent = dependencies.first { it.label.isRequest }
         return addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
     }
 
@@ -322,8 +306,11 @@ class EventStructure(
     }
 
     private fun addTotalEvent(iThread: Int, label: EventLabel): Event {
-        require(label.isTotal)
+        require(label.isSend)
         tryReplayEvent(iThread)?.let { event ->
+            // TODO: also check custom event/label specific rules when replaying,
+            //   e.g. upon replaying write-exclusive check its location equal to
+            //   the location of previous read-exclusive part
             event.label.replay(label).also { check(it) }
             addEventToCurrentExecution(event)
             return event
@@ -373,7 +360,7 @@ class EventStructure(
         val label = ThreadStartLabel(
             threadId = iThread,
             kind = LabelKind.Request,
-            isInitializationThread = (iThread == initialThreadId)
+            isMainThread = (iThread == initialThreadId)
         )
         val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, responseEvents) = addResponseEvents(requestEvent)
@@ -409,12 +396,10 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addWriteEvent(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>,
+    fun addWriteEvent(iThread: Int, location: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>,
                       isExclusive: Boolean = false): Event {
-        val label = AtomicMemoryAccessLabel(
-            kind = LabelKind.Total,
-            accessKind = MemoryAccessKind.Write,
-            memId_ = memoryLocationId,
+        val label = WriteAccessLabel(
+            location_ = location,
             value_ = value,
             kClass = kClass,
             isExclusive = isExclusive,
@@ -422,14 +407,13 @@ class EventStructure(
         return addTotalEvent(iThread, label)
     }
 
-    fun addReadEvent(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>,
+    fun addReadEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>,
                      isExclusive: Boolean = false): Event {
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
-        val label = AtomicMemoryAccessLabel(
+        val label = ReadAccessLabel(
             kind = LabelKind.Request,
-            accessKind = MemoryAccessKind.Read,
-            memId_ = memoryLocationId,
+            location_ = location,
             value_ = null,
             kClass = kClass,
             isExclusive = isExclusive,
@@ -453,13 +437,13 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
 
     override fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass)
-        return (readEvent.label as AtomicMemoryAccessLabel).value
+        return (readEvent.label as ReadAccessLabel).value
     }
 
     override fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
                                kClass: KClass<*>): Boolean {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
-        val value = (readEvent.label as AtomicMemoryAccessLabel).value
+        val value = (readEvent.label as ReadAccessLabel).value
         if (value != expected)
             return false
         eventStructure.addWriteEvent(iThread, memoryLocationId, desired, kClass, isExclusive = true)
@@ -471,7 +455,7 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
     private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number,
                             kClass: KClass<*>, incKind: IncrementKind): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
-        val readLabel = readEvent.label as AtomicMemoryAccessLabel
+        val readLabel = readEvent.label as ReadAccessLabel
         // TODO: should we use some sub-type check instead of equality check?
         check(readLabel.kClass == kClass)
         val oldValue = readLabel.value!!
@@ -493,7 +477,7 @@ class EventStructureMemoryTracker(private val eventStructure: EventStructure): M
 
     override fun getAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
-        val readValue = (readEvent.label as AtomicMemoryAccessLabel).value
+        val readValue = (readEvent.label as ReadAccessLabel).value
         eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass, isExclusive = true)
         return readValue
     }

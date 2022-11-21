@@ -52,9 +52,6 @@ class EventStructureStrategy(
             nThreads,
             sequentialConsistencyChecker,
             atomicityChecker,
-            threadSwitchCallback = { iThread ->
-                switchCurrentThread(iThread, mustSwitch = true)
-            }
         )
 
     // Tracker of shared memory accesses.
@@ -88,6 +85,7 @@ class EventStructureStrategy(
                 // if execution was aborted we do not check consistency,
                 // because the graph can be in invalid state
                 if (!result.isAbortedInvocation()) {
+                    // TODO: in this case we actually need to cut current execution to its replayed part
                     // check that the final execution is consistent
                     val inconsistency = eventStructure.checkConsistency()
                     if (inconsistency != null) {

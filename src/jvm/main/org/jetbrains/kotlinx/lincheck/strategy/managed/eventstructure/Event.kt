@@ -56,6 +56,8 @@ class Event private constructor(
     val frontier: ExecutionFrontier,
     /**
      * Frontier of pinned events.
+     * Pinned events are the events that should not be
+     * considering for branching in an exploration starting from this event.
      */
     val pinnedEvents: ExecutionFrontier,
 ) : Comparable<Event> {
@@ -156,24 +158,23 @@ class Event private constructor(
     }
 
     val readsFrom: Event by lazy {
-        require(label is MemoryAccessLabel && label.isRead && !label.isRequest)
-        require(dependencies.isNotEmpty())
+        require(label is ReadAccessLabel && label.isResponse)
+        check(dependencies.isNotEmpty())
         dependencies.first().also {
             // TODO: make `isSynchronized` method to check for labels' compatibility
             //  according to synchronization algebra (e.g. write/read reads-from compatibility)
             check((it.label is InitializationLabel) ||
                   (it.label is MemoryAccessLabel && it.label.isWrite &&
-                   it.label.memId == label.memId))
+                   it.label.location == label.location))
         }
     }
 
     val exclusiveReadPart: Event by lazy {
-        require(label is AtomicMemoryAccessLabel && label.isWrite && label.isExclusive)
-        require(parent != null)
+        require(label is WriteAccessLabel && label.isExclusive)
+        check(parent != null)
         parent.also {
-            check(it.label is AtomicMemoryAccessLabel
-                && it.label.isRead && !it.label.isRequest
-                && it.label.memId == label.memId
+            check(it.label is ReadAccessLabel && it.label.isResponse
+                && it.label.location == label.location
                 && it.label.isExclusive
             )
         }

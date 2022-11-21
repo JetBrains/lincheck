@@ -93,18 +93,18 @@ private data class SequentialConsistencyView(val view: MutableMap<MemoryLocation
     fun replay(event: Event): SequentialConsistencyView? {
         return when {
 
-            event.label is AtomicMemoryAccessLabel && event.label.isRead && event.label.isRequest ->
+            event.label is ReadAccessLabel && event.label.isRequest ->
                 this
 
-            event.label is AtomicMemoryAccessLabel && event.label.isRead && event.label.isResponse ->
+            event.label is ReadAccessLabel && event.label.isResponse ->
                 this.takeIf {
                     if (event.readsFrom.label !is InitializationLabel)
-                        view[event.label.memId] == event.readsFrom
-                    else view[event.label.memId] == null
+                        view[event.label.location] == event.readsFrom
+                    else view[event.label.location] == null
                 }
 
-            event.label is AtomicMemoryAccessLabel && event.label.isWrite ->
-                this.copy().apply { view[event.label.memId] = event }
+            event.label is WriteAccessLabel ->
+                this.copy().apply { view[event.label.location] = event }
 
             event.label is InitializationLabel -> this
             event.label is ThreadEventLabel -> this
@@ -169,14 +169,14 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
 
     fun State.transition(threadId: Int): State? {
         val position = counter[threadId]
-        val (_, aggregated) = execution.getAggregatedLabel(threadId, position)
-            ?.takeIf { (_, events) -> events.all { coverable(it) } }
+        val atomicEvent = execution.nextAtomicEvent(threadId, position)
+            ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it) } }
             ?: return null
-        val view = view.replay(aggregated) ?: return null
+        val view = view.replay(atomicEvent.events) ?: return null
         return State(
             view = view,
             counter = this.counter.copyOf().also {
-                it[threadId] += aggregated.size
+                it[threadId] += atomicEvent.events.size
             },
         )
     }
@@ -215,11 +215,11 @@ private class SequentialConsistencyRelation(
     private fun coherenceClosure(): Boolean {
         var changed = false
         readLoop@for (read in execution) {
-            if (!(read.label is MemoryAccessLabel && read.label.isRead && !read.label.isRequest))
+            if (!(read.label is ReadAccessLabel && read.label.isResponse))
                 continue
             val readFrom = read.readsFrom
             writeLoop@for (write in execution) {
-                if (!write.label.isWriteAccessTo(read.label.memId))
+                if (!(write.label is WriteAccessLabel && write.label.location == read.label.location))
                     continue
                 if (write != readFrom && relation(write, read) && !relation(write, readFrom)) {
                     relation[write, readFrom] = true
@@ -253,13 +253,13 @@ private class WritesBeforeRelation(
                 initEvent = event
             if (event.label !is MemoryAccessLabel)
                 continue
-            if (event.label.isRead && !event.label.isRequest) {
-                readsMap.computeIfAbsent(event.label.memId) { arrayListOf() }.apply {
+            if (event.label.isRead && event.label.isResponse) {
+                readsMap.computeIfAbsent(event.label.location) { arrayListOf() }.apply {
                     add(event)
                 }
             }
             if (event.label.isWrite) {
-                writesMap.computeIfAbsent(event.label.memId) { arrayListOf() }.apply {
+                writesMap.computeIfAbsent(event.label.location) { arrayListOf() }.apply {
                     add(event)
                 }
             }
@@ -296,9 +296,10 @@ private class WritesBeforeRelation(
     }
 
     override fun invoke(x: Event, y: Event): Boolean {
-        return if (x.label is MemoryAccessLabel && x.label.isWrite &&
-            y.label.isWriteAccessTo(x.label.memId)) {
-            relations[x.label.memId]?.get(x, y) ?: false
+        // TODO: handle InitializationLabel?
+        return if (x.label is WriteAccessLabel && y.label is WriteAccessLabel &&
+            x.label.location == y.label.location) {
+            relations[x.label.location]?.get(x, y) ?: false
         } else false
     }
 

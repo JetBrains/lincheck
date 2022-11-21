@@ -44,48 +44,66 @@ internal class MemoryLocationLabeler {
         AtomicPrimitiveMemoryLocation(primitive)
 
     fun labelReflectionAccess(reflection: Any, obj: Any): MemoryLocation {
-        require(fieldNameByReflection.contains(reflection)) { "AFU is used but was not registered. Do you create AFU not with AFU.newUpdater(...)?" }
+        require(fieldNameByReflection.contains(reflection)) {
+            "AFU is used but was not registered. Do you create AFU not with AFU.newUpdater(...)?"
+        }
         return ObjectFieldMemoryLocation(obj, fieldNameByReflection[reflection]!!)
     }
 
     fun registerAtomicFieldReflection(reflection: Any, fieldName: String) {
-        check(!fieldNameByReflection.contains(reflection)) { "The same AFU should not be registered twice" }
+        check(!fieldNameByReflection.contains(reflection)) {
+            "The same AFU should not be registered twice"
+        }
         fieldNameByReflection[reflection] = fieldName
     }
-    
-    internal class StaticFieldMemoryLocation(val className: String, val fieldName: String) : MemoryLocation {
-        override fun equals(other: Any?): Boolean =
-                other is StaticFieldMemoryLocation && (className == other.className && fieldName == other.fieldName)
 
-        override fun hashCode(): Int = Objects.hash(className, fieldName)
+}
 
-        override fun toString(): String = "[static access] $className.$fieldName"
-    }
+internal class StaticFieldMemoryLocation(val className: String, val fieldName: String) : MemoryLocation {
 
-    internal class ObjectFieldMemoryLocation(val obj: Any, val fieldName: String) : MemoryLocation {
-        override fun equals(other: Any?): Boolean =
-                other is ObjectFieldMemoryLocation && (obj === other.obj && fieldName == other.fieldName)
+    override fun equals(other: Any?): Boolean =
+        other is StaticFieldMemoryLocation && (className == other.className && fieldName == other.fieldName)
 
-        override fun hashCode(): Int = Objects.hash(System.identityHashCode(obj), fieldName)
+    override fun hashCode(): Int =
+        Objects.hash(className, fieldName)
 
-        override fun toString(): String = "[object access] ${obj::class.simpleName}.$fieldName to object ${System.identityHashCode(obj)}"
-    }
+    override fun toString(): String = "$className.$fieldName"
 
-    internal class ArrayElementMemoryLocation(val array: Any, val index: Int) : MemoryLocation {
-        override fun equals(other: Any?): Boolean =
-                other is ArrayElementMemoryLocation && (array === other.array && index == other.index)
+}
 
-        override fun hashCode(): Int = Objects.hash(System.identityHashCode(array), index)
+internal class ObjectFieldMemoryLocation(val obj: Any, val fieldName: String) : MemoryLocation {
 
-        override fun toString(): String = "[array access] ${array::class.simpleName}[$index] for array ${System.identityHashCode(array)}"
-    }
+    override fun equals(other: Any?): Boolean =
+        other is ObjectFieldMemoryLocation && (obj === other.obj && fieldName == other.fieldName)
 
-    internal class AtomicPrimitiveMemoryLocation(val primitive: Any) : MemoryLocation {
-        override fun equals(other: Any?): Boolean =
-                other is AtomicPrimitiveMemoryLocation && primitive === other.primitive
+    override fun hashCode(): Int =
+        Objects.hash(System.identityHashCode(obj), fieldName)
 
-        override fun hashCode(): Int = System.identityHashCode(primitive)
+    override fun toString(): String =
+        "${obj::class.simpleName}@${System.identityHashCode(obj)}.$fieldName"
 
-        override fun toString(): String = "[atomic primitive access] ${primitive::class.simpleName} (primitive ${System.identityHashCode(primitive)}) "
-    }
+}
+
+internal class ArrayElementMemoryLocation(val array: Any, val index: Int) : MemoryLocation {
+
+    override fun equals(other: Any?): Boolean =
+        other is ArrayElementMemoryLocation && (array === other.array && index == other.index)
+
+    override fun hashCode(): Int =
+        Objects.hash(System.identityHashCode(array), index)
+
+    override fun toString(): String =
+        "${array::class.simpleName}@${System.identityHashCode(array)}[$index]"
+}
+
+internal class AtomicPrimitiveMemoryLocation(val primitive: Any) : MemoryLocation {
+
+    override fun equals(other: Any?): Boolean =
+        other is AtomicPrimitiveMemoryLocation && primitive === other.primitive
+
+    override fun hashCode(): Int = System.identityHashCode(primitive)
+
+    override fun toString(): String =
+        "${primitive::class.simpleName}@${System.identityHashCode(primitive)}"
+
 }
