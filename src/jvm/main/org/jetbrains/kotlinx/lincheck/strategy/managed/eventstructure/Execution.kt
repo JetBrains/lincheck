@@ -73,6 +73,10 @@ open class Execution(
             events.getOrNull(event.threadPosition + 1)
         }
 
+    fun toFrontier(): ExecutionFrontier = ExecutionFrontier(
+        threadsEvents.mapValues { (_, events) -> events.last() }
+    )
+
     override operator fun contains(element: Event): Boolean =
         threadsEvents[element.threadId]
             ?.let { events -> events[element.threadPosition] == element }
@@ -83,6 +87,11 @@ open class Execution(
 
     override fun iterator(): Iterator<Event> =
         threadsEvents.values.asSequence().flatten().iterator()
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is Execution) return false
+        return threadsEvents == other.threadsEvents
+    }
 
     fun buildIndexer() = object : Indexer<Event> {
 

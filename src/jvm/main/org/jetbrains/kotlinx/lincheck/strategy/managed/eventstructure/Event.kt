@@ -136,7 +136,7 @@ class Event private constructor(
     // binary lifting search with O(lgN) complexity
     // https://cp-algorithms.com/graph/lca_binary_lifting.html;
     private fun predNthOptimized(n: Int): Event? {
-        require(n > 0)
+        require(n >= 0)
         var e = this
         var r = n
         while (r > MAX_JUMP) {
@@ -156,6 +156,9 @@ class Event private constructor(
         return predNthOptimized(n)
             // .also { check(it == predNthNaive(n)) }
     }
+
+    val threadRoot: Event
+        get() = predNth(threadPosition)!!
 
     val readsFrom: Event by lazy {
         require(label is ReadAccessLabel && label.isResponse)

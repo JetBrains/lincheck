@@ -47,6 +47,9 @@ class EventStructure(
      */
     val events: SortedList<Event> = _events
 
+    lateinit var currentExplorationRoot: Event
+        private set
+
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
     private var _currentExecution: MutableExecution = MutableExecution()
@@ -57,6 +60,8 @@ class EventStructure(
     private var currentFrontier: ExecutionFrontier = ExecutionFrontier()
 
     private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
+
+    private val delayedConsistencyCheckBuffer = mutableListOf<Event>()
 
     init {
         root = addRootEvent()
@@ -85,7 +90,7 @@ class EventStructure(
         loop@while (true) {
             val event = rollbackToEvent { !it.visited }?.apply { visit() }
                 ?: return false
-            resetExecution(event)
+            resetExploration(event)
             return true
         }
     }
@@ -100,37 +105,64 @@ class EventStructure(
         return events.lastOrNull()
     }
 
-    private fun resetExecution(event: Event) {
+    private fun resetExploration(event: Event) {
+        currentExplorationRoot = event
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
+        check(delayedConsistencyCheckBuffer.isEmpty())
     }
 
     fun checkConsistency(): Inconsistency? =
         checker.check(currentExecution)
 
     private fun checkConsistencyIncrementally(event: Event, isReplayedEvent: Boolean): Inconsistency? {
-        // if we are not replaying the event then just run all necessary consistency checks
-        if (!isReplayedEvent) {
-            return incrementalChecker.check(event)
+        if (inReplayPhase()) {
+            // If we are in replay phase, but the event being added is not a replayed event,
+            // then we need to save it to delayed events consistency check buffer,
+            // so that we will be able to pass it to incremental consistency checker later.
+            // This situation can occur when we are replaying instruction that produces several events.
+            // For example, replaying the read part of read-modify-write instruction (like CAS)
+            // can also create new event representing write part of this RMW.
+            if (!isReplayedEvent) {
+                delayedConsistencyCheckBuffer.add(event)
+            }
+            // In any case we do not run incremental consistency checks during replay phase,
+            // because during this phase consistency checker has invalid internal state.
+            return null
         }
-        // if we finished replay phase we need to reset internal state of incremental checker
-        // and to check full consistency of the new execution before we start to explore it further
-        if (!inReplayPhase()) {
-            // the new event being visited is the last event in the event structure,
-            // we assume that it is the last event to be replayed
-            check(event == events.last())
+        // If we are not in replay phase anymore, but the current event is replayed event,
+        // it means that we just finished replay phase (i.e. the given event is the last replayed event).
+        // In this case we need to do the following.
+        //   (1) Reset internal state of incremental checker.
+        //   (2) Run incremental checker on all delayed non-replayed events.
+        //   (3) Check full consistency of the new execution before we start to explore it further.
+        // We run incremental consistency checker before heavyweight full consistency check
+        // in order to give it more lightweight incremental checker
+        // an opportunity to find inconsistency earlier.
+        if (isReplayedEvent) {
+            val replayedExecution = currentExplorationRoot.frontier.toExecution()
             // we temporarily remove new event in order to reset incremental checker
-            _currentExecution.removeLastEvent(event)
+            replayedExecution.removeLastEvent(currentExplorationRoot)
             // reset internal state of incremental checker
-            incrementalChecker.reset(_currentExecution)
-            // add new event back
-             _currentExecution.addEvent(event)
-            // first run incremental checker to have an opportunity to find an inconsistency earlier
-            incrementalChecker.check(event)?.let { return it }
-            // then run heavyweight full consistency check
+            incrementalChecker.reset(replayedExecution)
+            // add current exploration root to delayed buffer too
+            delayedConsistencyCheckBuffer.add(currentExplorationRoot)
+            // copy delayed events from the buffer and reset it
+            val delayedEvents = delayedConsistencyCheckBuffer.toMutableList()
+            delayedConsistencyCheckBuffer.clear()
+            // run incremental checker on delayed events
+            for (delayedEvent in delayedEvents) {
+                replayedExecution.addEvent(delayedEvent)
+                incrementalChecker.check(delayedEvent)?.let { return it }
+            }
+            // to make sure that we have incrementally checked all newly added events
+            check(replayedExecution == currentExecution)
+            // finally run heavyweight full consistency check
             return checker.check(_currentExecution)
         }
-        return null
+        // If we are not in replay phase (and we have finished it before adding current event)
+        // then just run incremental consistency checker.
+        return incrementalChecker.check(event)
     }
 
     fun inReplayPhase(): Boolean =
@@ -147,6 +179,7 @@ class EventStructure(
         val atomicEvent = currentExecution.nextAtomicEvent(iThread, nextPosition, replaying = true)!!
         // delay replaying the last event till all other events are replayed;
         if (atomicEvent.events.last() == events.last()) {
+            // TODO: prettify
             return (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
         }
         return atomicEvent.dependencies.all { dependency ->
@@ -173,18 +206,21 @@ class EventStructure(
             parent = parent,
             // TODO: rename to external dependencies?
             dependencies = dependencies.filter { it != parent },
-            frontier = cutFrontier(iThread, cutPosition, currentFrontier),
+            frontier = cutFrontier(iThread, cutPosition, currentExecution.toFrontier()),
             pinnedEvents = cutFrontier(iThread, cutPosition, pinnedEvents),
         )
     }
 
     private fun cutFrontier(iThread: Int, position: Int, frontier: ExecutionFrontier): ExecutionFrontier {
-        val nextEvent = currentExecution[iThread, position] ?: return frontier.copy()
+        // Calculating cut event:
+        // first try to obtain event at given position in the current execution
+        val cutEvent = currentExecution[iThread, position]
+            ?: return frontier.copy()
         return ExecutionFrontier(frontier.mapping.mapNotNull { (threadId, frontEvent) ->
             require(frontEvent in currentExecution)
             // TODO: optimize using binary search
             var event: Event = frontEvent
-            while (event.causalityClock.observes(nextEvent.threadId, nextEvent)) {
+            while (event.causalityClock.observes(cutEvent.threadId, cutEvent)) {
                 event = event.parent ?: return@mapNotNull null
             }
             threadId to event
@@ -203,7 +239,8 @@ class EventStructure(
         if (!isReplayedEvent)
             _currentExecution.addEvent(event)
         currentFrontier.update(event)
-        if (synchronize) { addSynchronizedEvents(event) }
+        if (synchronize)
+            addSynchronizedEvents(event)
         checkConsistencyIncrementally(event, isReplayedEvent)?.let {
             throw InconsistentExecutionException(it)
         }
