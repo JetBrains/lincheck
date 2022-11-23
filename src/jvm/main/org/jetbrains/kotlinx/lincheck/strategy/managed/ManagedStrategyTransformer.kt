@@ -464,7 +464,7 @@ internal class ManagedStrategyTransformer(
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
-            val innerDescriptor = atomicInnerDescriptor(owner) // e.g., Int for AtomicInteger
+            val innerDescriptor = atomicInnerDescriptor(owner, name, descriptor) // e.g., Int for AtomicInteger
             val memoryLocationState = when {
                 isAtomicPrimitive -> AtomicPrimitiveMemoryLocationState()
                 isAtomicArray -> AtomicArrayMemoryLocationState()
@@ -506,10 +506,17 @@ internal class ManagedStrategyTransformer(
                         }
                     }
                 }
-                "newUpdater" -> {
-                    // AFU constructor
+                "newUpdater", "findVarHandle" -> {
+                    // AFU or VarHandle constructor
                     val fieldLocal = newLocal(STRING_TYPE)
-                    copyLocal(fieldLocal)
+                    if (name == "newUpdater") { // STACK: field_name
+                        copyLocal(fieldLocal)
+                    } else { // STACK: field_name class
+                        val classLocal = newLocal(CLASS_TYPE)
+                        storeLocal(classLocal)
+                        copyLocal(fieldLocal)
+                        loadLocal(classLocal)
+                    }
                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     val afuLocal = newLocal(OBJECT_TYPE)
                     dup()
@@ -649,18 +656,28 @@ internal class ManagedStrategyTransformer(
             else -> false
         }
 
-        private fun atomicInnerDescriptor(owner: String): String = when (owner) {
-            AtomicBoolean::class.qualifiedName!!.internalClassName -> "B"
-            AtomicInteger::class.qualifiedName!!.internalClassName -> "I"
-            AtomicLong::class.qualifiedName!!.internalClassName -> "J"
+        private fun atomicInnerDescriptor(owner: String, name: String, desc: String): String = when (owner) {
+            AtomicBoolean::class.qualifiedName!!.internalClassName -> Type.BOOLEAN_TYPE.descriptor
+            AtomicInteger::class.qualifiedName!!.internalClassName -> Type.INT_TYPE.descriptor
+            AtomicLong::class.qualifiedName!!.internalClassName -> Type.LONG_TYPE.descriptor
             AtomicReference::class.qualifiedName!!.internalClassName -> OBJECT_TYPE.descriptor
-            AtomicIntegerArray::class.qualifiedName!!.internalClassName -> "I"
-            AtomicLongArray::class.qualifiedName!!.internalClassName -> "J"
+            AtomicIntegerArray::class.qualifiedName!!.internalClassName -> Type.INT_TYPE.descriptor
+            AtomicLongArray::class.qualifiedName!!.internalClassName -> Type.LONG_TYPE.descriptor
             AtomicReferenceArray::class.qualifiedName!!.internalClassName -> OBJECT_TYPE.descriptor
-            AtomicIntegerFieldUpdater::class.qualifiedName!!.internalClassName -> "I"
-            AtomicLongFieldUpdater::class.qualifiedName!!.internalClassName -> "J"
+            AtomicIntegerFieldUpdater::class.qualifiedName!!.internalClassName -> Type.INT_TYPE.descriptor
+            AtomicLongFieldUpdater::class.qualifiedName!!.internalClassName -> Type.LONG_TYPE.descriptor
             AtomicReferenceFieldUpdater::class.qualifiedName!!.internalClassName -> OBJECT_TYPE.descriptor
-            else -> throw IllegalStateException("Unknown atomic primitive $owner")
+            else -> parseDescriptorFromMethod(owner, name, desc)
+        }
+
+        private fun parseDescriptorFromMethod(owner: String, name: String, desc: String): String {
+            return if ("get" in name) {
+                Type.getReturnType(desc).descriptor
+            } else {
+                val types = Type.getArgumentTypes(desc)
+                if (types.isEmpty()) throw IllegalStateException("Unknown atomic primitive $owner $name")
+                types.last().descriptor
+            }
         }
 
         private fun isAtomicArray(owner: String): Boolean = when {
@@ -673,7 +690,10 @@ internal class ManagedStrategyTransformer(
             else -> false
         }
 
-        private fun isAtomicReflection(owner: String): Boolean = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
+        private fun isAtomicReflection(owner: String): Boolean =
+                owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater") ||
+                        owner == "java/lang/invoke/VarHandle" ||
+                        owner == "java/lang/invoke/MethodHandles\$Lookup"
 
         abstract inner class MemoryLocationState {
             abstract val labelMethod: Method
