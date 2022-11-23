@@ -93,6 +93,9 @@ class EventStructureStrategy(
                         continue@outer
                     }
                 }
+                if (result is CompletedInvocationResult) {
+                    patchResultsClock(result.results)
+                }
                 stats.update(result, null)
                 checkResult(result, shouldCollectTrace = false)?.let { return it }
                 continue@outer
@@ -149,6 +152,20 @@ class EventStructureStrategy(
                 #replay  phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.REPLAYING)}
         """.trimIndent()
 
+    }
+
+    // a hack to reset happens-before clocks computed by scheduler,
+    // because these clocks can be not in sync with with
+    // happens-before relation constructed by the event structure
+    // TODO: refactor this --- we need a more robust solution;
+    //   for example, we can compute happens before relation induced by
+    //   the event structure and pass it on
+    private fun patchResultsClock(executionResult: ExecutionResult) {
+        for (results in executionResult.parallelResultsWithClock) {
+            for (result in results) {
+                result.clockOnStart.reset()
+            }
+        }
     }
 
     override fun shouldSwitch(iThread: Int): Boolean {

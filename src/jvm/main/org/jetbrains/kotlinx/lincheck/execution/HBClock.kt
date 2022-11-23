@@ -26,7 +26,14 @@ import org.jetbrains.kotlinx.lincheck.Result
 data class HBClock(val clock: IntArray) {
     val threads: Int get() = clock.size
     val empty: Boolean get() = clock.all { it == 0 }
+
     operator fun get(i: Int) = clock[i]
+
+    fun reset() {
+        for (i in clock.indices) {
+            clock[i] = 0
+        }
+    }
 
     override fun toString() = clock.joinToString(prefix = "[", separator = ",", postfix = "]") {
         if (it == 0) "-" else "$it"
