@@ -26,23 +26,22 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import java.util.concurrent.*
 
-// TODO: This test does not work now because of modifications via AFU
-//class TransformInterfaceFromJUCWithRemappedClassTest : AbstractLincheckTest() {
-//    private val q: BlockingQueue<Int> = ArrayBlockingQueue(10)
-//
-//    init {
-//        q.add(10)
-//    }
-//
-//    @Operation
-//    fun op() = q.poll(100, TimeUnit.DAYS)
-//
-//    override fun <O : Options<O, *>> O.customize() {
-//        iterations(1)
-//        actorsBefore(0)
-//        threads(1)
-//        actorsPerThread(1)
-//        actorsAfter(0)
-//        requireStateEquivalenceImplCheck(false)
-//    }
-//}
+class TransformInterfaceFromJUCWithRemappedClassTest : AbstractLincheckTest() {
+    private val q: BlockingQueue<Int> = ArrayBlockingQueue(10)
+
+    init {
+        q.add(10)
+    }
+
+    @Operation
+    fun op() = q.poll(100, TimeUnit.DAYS)
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(1)
+        actorsBefore(0)
+        threads(1)
+        actorsPerThread(1)
+        actorsAfter(0)
+        requireStateEquivalenceImplCheck(false)
+    }
+}

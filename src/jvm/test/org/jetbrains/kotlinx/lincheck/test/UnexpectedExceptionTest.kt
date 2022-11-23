@@ -21,8 +21,10 @@
  */
 package org.jetbrains.kotlinx.lincheck.test
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import kotlin.coroutines.*
 
 class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
     private var canEnterForbiddenSection = false
@@ -41,15 +43,14 @@ class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure:
     override fun extractState(): Any = canEnterForbiddenSection
 }
 
-// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
-//class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
-//    @InternalCoroutinesApi
-//    @Operation
-//    suspend fun operation() {
-//        suspendCancellableCoroutine<Unit> { cont ->
-//            cont.resumeWithException(IllegalArgumentException("Unexpected!"))
-//        }
-//    }
-//
-//    override fun extractState(): Any = 0 // constant state
-//}
+class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
+    @InternalCoroutinesApi
+    @Operation
+    suspend fun operation() {
+        suspendCancellableCoroutine<Unit> { cont ->
+            cont.resumeWithException(IllegalArgumentException("Unexpected!"))
+        }
+    }
+
+    override fun extractState(): Any = 0 // constant state
+}

@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
-import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation

@@ -26,22 +26,21 @@ import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import java.util.concurrent.*
 
-// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
-//@Param(name = "value", gen = IntGen::class, conf = "1:5")
-//class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
-//    private val queue = ConcurrentLinkedQueue<Int>()
-//
-//    @Operation
-//    fun add(e: Int) = queue.add(e)
-//
-//    @Operation
-//    fun offer(e: Int) = queue.offer(e)
-//
-//    @Operation
-//    fun peek() = queue.peek()
-//
-//    @Operation
-//    fun poll() = queue.poll()
-//
-//    override fun extractState() = queue.toList()
-//}
+@Param(name = "value", gen = IntGen::class, conf = "1:5")
+class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
+    private val queue = ConcurrentLinkedQueue<Int>()
+
+    @Operation
+    fun add(e: Int) = queue.add(e)
+
+    @Operation
+    fun offer(e: Int) = queue.offer(e)
+
+    @Operation
+    fun peek() = queue.peek()
+
+    @Operation
+    fun poll() = queue.poll()
+
+    override fun extractState() = queue.toList()
+}

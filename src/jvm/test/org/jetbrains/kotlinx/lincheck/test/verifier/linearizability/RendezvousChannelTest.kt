@@ -28,30 +28,29 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.test.*
 
-// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
-//@ExperimentalCoroutinesApi
-//@InternalCoroutinesApi
-//@Param(name = "value", gen = IntGen::class, conf = "1:5")
-//class RendezvousChannelTest : AbstractLincheckTest() {
-//    private val ch = Channel<Int>()
-//
-//    @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
-//    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
-//
-//    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
-//    suspend fun receive() = ch.receive()
-//
-//    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
-//    suspend fun receiveOrNull() = ch.receiveOrNull()
-//
-//    @Operation
-//    fun close() = ch.close()
-//
-//    override fun <O : Options<O, *>> O.customize() {
-//        sequentialSpecification(SequentialRendezvousIntChannel::class.java)
-//        iterations(10)
-//    }
-//}
+@ExperimentalCoroutinesApi
+@InternalCoroutinesApi
+@Param(name = "value", gen = IntGen::class, conf = "1:5")
+class RendezvousChannelTest : AbstractLincheckTest() {
+    private val ch = Channel<Int>()
+
+    @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
+    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+
+    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+    suspend fun receive() = ch.receive()
+
+    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+    suspend fun receiveOrNull() = ch.receiveOrNull()
+
+    @Operation
+    fun close() = ch.close()
+
+    override fun <O : Options<O, *>> O.customize() {
+        sequentialSpecification(SequentialRendezvousIntChannel::class.java)
+        iterations(10)
+    }
+}
 
 @InternalCoroutinesApi
 class SequentialRendezvousIntChannel : SequentialIntChannel(capacity = 0)

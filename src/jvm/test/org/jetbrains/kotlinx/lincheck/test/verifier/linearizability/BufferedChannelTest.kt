@@ -28,28 +28,27 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.test.*
 
-// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
-//@InternalCoroutinesApi
-//@Param(name = "value", gen = IntGen::class, conf = "1:5")
-//class BufferedChannelTest : AbstractLincheckTest() {
-//    private val c = Channel<Int>(2)
-//
-//    @Operation(cancellableOnSuspension = false)
-//    suspend fun send(@Param(name = "value") value: Int) = c.send(value)
-//
-//    @Operation(cancellableOnSuspension = false)
-//    suspend fun receive() = c.receive()
-//
-//    @Operation
-//    fun poll() = c.poll()
-//
-//    @Operation
-//    fun offer(@Param(name = "value") value: Int) = c.offer(value)
-//
-//    override fun <O : Options<O, *>> O.customize() {
-//        sequentialSpecification(SequentiaBuffered2IntChannel::class.java)
-//    }
-//}
-//
-//@InternalCoroutinesApi
-//class SequentiaBuffered2IntChannel : SequentialIntChannel(capacity = 2)
+@InternalCoroutinesApi
+@Param(name = "value", gen = IntGen::class, conf = "1:5")
+class BufferedChannelTest : AbstractLincheckTest() {
+    private val c = Channel<Int>(2)
+
+    @Operation(cancellableOnSuspension = false)
+    suspend fun send(@Param(name = "value") value: Int) = c.send(value)
+
+    @Operation(cancellableOnSuspension = false)
+    suspend fun receive() = c.receive()
+
+    @Operation
+    fun poll() = c.poll()
+
+    @Operation
+    fun offer(@Param(name = "value") value: Int) = c.offer(value)
+
+    override fun <O : Options<O, *>> O.customize() {
+        sequentialSpecification(SequentiaBuffered2IntChannel::class.java)
+    }
+}
+
+@InternalCoroutinesApi
+class SequentiaBuffered2IntChannel : SequentialIntChannel(capacity = 2)

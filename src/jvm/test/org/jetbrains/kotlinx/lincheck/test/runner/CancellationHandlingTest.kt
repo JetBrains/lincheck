@@ -29,31 +29,30 @@ import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import org.junit.*
 import java.util.concurrent.atomic.*
 
-// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
-//class CancellationHandlingTest : AbstractLincheckTest() {
-//    @Volatile
-//    private var suspendedContOrCancelled = AtomicReference<Any?>(null)
-//
-//    @InternalCoroutinesApi
-//    @Operation(runOnce = true, handleExceptionsAsResult = [CancellationException::class])
-//    suspend fun suspendIfNotClosed() = suspendCancellableCoroutine<Unit> { cont ->
-//        val cancelled = !suspendedContOrCancelled.compareAndSet(null, cont)
-//        if (cancelled) cont.cancel()
-//    }
-//
-//    @Operation(runOnce = true)
-//    fun cancelSuspended() {
-//        val cont = suspendedContOrCancelled.getAndSet(CANCELLED)
-//        if (cont === null) return
-//        (cont as CancellableContinuation<Unit>).cancel()
-//    }
-//
-//    override fun <O : Options<O, *>> O.customize() {
-//        requireStateEquivalenceImplCheck(false)
-//        actorsBefore(0)
-//        actorsAfter(0)
-//        iterations(1)
-//    }
-//}
-//
-//private val CANCELLED = Any()
+class CancellationHandlingTest : AbstractLincheckTest() {
+    @Volatile
+    private var suspendedContOrCancelled = AtomicReference<Any?>(null)
+
+    @InternalCoroutinesApi
+    @Operation(runOnce = true, handleExceptionsAsResult = [CancellationException::class])
+    suspend fun suspendIfNotClosed() = suspendCancellableCoroutine<Unit> { cont ->
+        val cancelled = !suspendedContOrCancelled.compareAndSet(null, cont)
+        if (cancelled) cont.cancel()
+    }
+
+    @Operation(runOnce = true)
+    fun cancelSuspended() {
+        val cont = suspendedContOrCancelled.getAndSet(CANCELLED)
+        if (cont === null) return
+        (cont as CancellableContinuation<Unit>).cancel()
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        requireStateEquivalenceImplCheck(false)
+        actorsBefore(0)
+        actorsAfter(0)
+        iterations(1)
+    }
+}
+
+private val CANCELLED = Any()

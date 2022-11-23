@@ -28,25 +28,24 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import java.util.concurrent.*
 
-// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
-//@Param(name = "key", gen = IntGen::class, conf = "1:5")
-//class ConcurrentHashMapTest : AbstractLincheckTest() {
-//    private val map = ConcurrentHashMap<Int, Int>()
-//
-//    @Operation
-//    fun put(@Param(name = "key") key: Int, value: Int) = map.put(key, value)
-//
-//    @Operation
-//    operator fun get(@Param(name = "key") key: Int) = map[key]
-//
-//    @Operation
-//    fun remove(@Param(name = "key") key: Int) = map.remove(key)
-//
-//    override fun extractState(): Any = map
-//
-//    override fun <O : Options<O, *>> O.customize() {
-//        // To obtain rare interleaving with `fullAddCount` method
-//        if (this is ModelCheckingOptions)
-//            invocationsPerIteration(10000)
-//    }
-//}
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class ConcurrentHashMapTest : AbstractLincheckTest() {
+    private val map = ConcurrentHashMap<Int, Int>()
+
+    @Operation
+    fun put(@Param(name = "key") key: Int, value: Int) = map.put(key, value)
+
+    @Operation
+    operator fun get(@Param(name = "key") key: Int) = map[key]
+
+    @Operation
+    fun remove(@Param(name = "key") key: Int) = map.remove(key)
+
+    override fun extractState(): Any = map
+
+    override fun <O : Options<O, *>> O.customize() {
+        // To obtain rare interleaving with `fullAddCount` method
+        if (this is ModelCheckingOptions)
+            invocationsPerIteration(10000)
+    }
+}

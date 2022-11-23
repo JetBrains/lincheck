@@ -26,30 +26,29 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 
-// TODO: support AFU/VarHandle/Unsafe for memory tracking and uncomment this test
-//class UnexpectedExceptionInCancellationHandlerTest: AbstractLincheckTest(UnexpectedExceptionFailure::class) {
-//    @Operation(cancellableOnSuspension = true)
-//    suspend fun foo() {
-//        suspendCancellableCoroutine<Unit> { cont ->
-//            cont.invokeOnCancellation {
-//                throw AssertionError("This exception is unexpected")
-//            }
-//        }
-//    }
-//
-//    override fun <O : Options<O, *>> O.customize() {
-//        iterations(100)
-//        actorsBefore(0)
-//        actorsAfter(0)
-//        threads(1)
-//        actorsPerThread(1)
-//        requireStateEquivalenceImplCheck(false)
-//        sequentialSpecification(UnexpectedExceptionInCancellationHandlerTestSequential::class.java)
-//    }
-//}
-//
-//class UnexpectedExceptionInCancellationHandlerTestSequential() {
-//    suspend fun foo() {
-//        suspendCancellableCoroutine<Unit> {}
-//    }
-//}
+class UnexpectedExceptionInCancellationHandlerTest: AbstractLincheckTest(UnexpectedExceptionFailure::class) {
+    @Operation(cancellableOnSuspension = true)
+    suspend fun foo() {
+        suspendCancellableCoroutine<Unit> { cont ->
+            cont.invokeOnCancellation {
+                throw AssertionError("This exception is unexpected")
+            }
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(100)
+        actorsBefore(0)
+        actorsAfter(0)
+        threads(1)
+        actorsPerThread(1)
+        requireStateEquivalenceImplCheck(false)
+        sequentialSpecification(UnexpectedExceptionInCancellationHandlerTestSequential::class.java)
+    }
+}
+
+class UnexpectedExceptionInCancellationHandlerTestSequential() {
+    suspend fun foo() {
+        suspendCancellableCoroutine<Unit> {}
+    }
+}

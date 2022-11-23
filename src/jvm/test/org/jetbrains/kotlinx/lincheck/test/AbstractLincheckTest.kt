@@ -83,7 +83,7 @@ abstract class AbstractLincheckTest(
     }
 }
 
-private const val TIMEOUT = 100_000L
+private const val TIMEOUT = 20_000L
 
 fun checkTraceHasNoLincheckEvents(trace: String) {
     val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.test.").size - 1
