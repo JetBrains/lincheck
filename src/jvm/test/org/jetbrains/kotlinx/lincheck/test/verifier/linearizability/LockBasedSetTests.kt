@@ -43,10 +43,7 @@ abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
 }
 
 class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet())
-
 class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet())
-
-
 class SynchronizedLockSetTest : AbstractSetTest(SynchronizedBlockBasedSet())
 class SynchronizedMethodSetTest : AbstractSetTest(SynchronizedMethodBasedSet())
 
