@@ -34,7 +34,13 @@ import kotlin.reflect.*
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) : VerifierState() {
+
     open fun <O: Options<O, *>> O.customize() {}
+
+    open fun StressOptions.customize() {}
+    open fun ModelCheckingOptions.customize() {}
+    open fun EventStructureOptions.customize() {}
+
     override fun extractState(): Any = System.identityHashCode(this)
 
     private fun <O : Options<O, *>> O.runInternalTest() {
@@ -69,6 +75,7 @@ abstract class AbstractLincheckTest(
     fun testWithEventStructureStrategy(): Unit = EventStructureOptions().run {
         invocationsPerIteration(1_000)
         commonConfiguration()
+        customize()
         runInternalTest()
     }
 
