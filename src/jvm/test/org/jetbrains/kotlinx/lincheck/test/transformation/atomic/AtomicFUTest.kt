@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.transformation.atomic
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import kotlinx.atomicfu.*
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 
 class AtomicFUBooleanTest : AbstractLincheckTest() {
     val bool = atomic(false)
@@ -146,6 +147,8 @@ class AtomicFULongTest : AbstractLincheckTest() {
     override fun extractState(): Any = long.value
 }
 
+// see comment on AtomicReferenceTest explaining usage of custom parameter generator here
+@Param(name = "test", gen = TestStringGenerator::class)
 class AtomicFUReferenceTest : AbstractLincheckTest() {
 
     val ref = atomic("")
@@ -154,16 +157,17 @@ class AtomicFUReferenceTest : AbstractLincheckTest() {
     fun get() = ref.value
 
     @Operation
-    fun set(newValue: String) {
+    fun set(@Param(name = "test") newValue: String) {
         ref.value = newValue
     }
 
     @Operation
-    fun compareAndSet(expectedValue: String, newValue: String) =
+    fun compareAndSet(@Param(name = "test") expectedValue: String,
+                      @Param(name = "test") newValue: String) =
         ref.compareAndSet(expectedValue, newValue)
 
     @Operation
-    fun getAndSet(newValue: String) =
+    fun getAndSet(@Param(name = "test") newValue: String) =
         ref.getAndSet(newValue)
 
     override fun extractState(): Any = ref.value

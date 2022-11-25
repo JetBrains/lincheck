@@ -23,11 +23,10 @@ package org.jetbrains.kotlinx.lincheck.test.transformation.atomic
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicIntegerArray
-import java.util.concurrent.atomic.AtomicLong
+import java.util.*
+import java.util.concurrent.atomic.*
 
 class AtomicBooleanTest : AbstractLincheckTest() {
     val value = AtomicBoolean()
@@ -154,4 +153,49 @@ class AtomicIntegerArrayTest : AbstractLincheckTest() {
     fun getAndDecrement(@Param(name = "idx") idx: Int) = value.getAndDecrement(idx)
 
     override fun extractState(): Any = (0 until 5).map { value.get(it) }
+}
+
+// We use here a generator choosing from a predefined array of strings,
+// because the default string generator is not "referentially-stable".
+// In other words it can generate two strings with identical content,
+// but having different references.
+// Even empty string "" can be represented by several objects.
+// Besides that, because we are also testing compare-and-swap method here,
+// executing it on randomly generated strings will result in failures most of the time.
+// On contrary, by choosing from fixed predefined list of strings
+// we increase the chance of CAS to succeed.
+@Param(name = "test", gen = TestStringGenerator::class)
+class AtomicReferenceTest : AbstractLincheckTest() {
+
+    val ref = AtomicReference("")
+
+    @Operation
+    fun get() = ref.get()
+
+    @Operation
+    fun set(@Param(name = "test") newValue: String) {
+        ref.set(newValue)
+    }
+
+    @Operation
+    fun compareAndSet(@Param(name = "test") expectedValue: String,
+                      @Param(name = "test") newValue: String) =
+        ref.compareAndSet(expectedValue, newValue)
+
+    @Operation
+    fun getAndSet(@Param(name = "test") newValue: String) =
+        ref.getAndSet(newValue)
+
+    override fun extractState(): Any = ref.get()
+}
+
+// TODO: this generator can be generalized to a generator choosing random element
+//   from an arbitrary user-defined list
+class TestStringGenerator(configuration: String): ParameterGenerator<String> {
+    private val random = Random(0)
+
+    private val strings = arrayOf("", "abc", "xyz")
+
+    override fun generate(): String =
+        strings[random.nextInt(strings.size)]
 }
