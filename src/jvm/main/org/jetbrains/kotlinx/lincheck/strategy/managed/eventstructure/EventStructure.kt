@@ -249,7 +249,7 @@ class EventStructure(
     private fun synchronizationCandidates(event: Event): List<Event> {
         val predicates = mutableListOf<(Event) -> Boolean>()
 
-        // for total event we filter out all of its causal predecessors,
+        // for send event we filter out all of its causal predecessors,
         // because an attempt to synchronize with these predecessors will result in causality cycle
         if (event.label.isSend) {
             predicates.add { !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it) }
@@ -342,7 +342,7 @@ class EventStructure(
         }
     }
 
-    private fun addTotalEvent(iThread: Int, label: EventLabel): Event {
+    private fun addSendEvent(iThread: Int, label: EventLabel): Event {
         require(label.isSend)
         tryReplayEvent(iThread)?.let { event ->
             // TODO: also check custom event/label specific rules when replaying,
@@ -410,14 +410,14 @@ class EventStructure(
         val label = ThreadFinishLabel(
             threadId = iThread,
         )
-        return addTotalEvent(iThread, label)
+        return addSendEvent(iThread, label)
     }
 
     fun addThreadForkEvent(iThread: Int, forkThreadIds: Set<Int>): Event {
         val label = ThreadForkLabel(
             forkThreadIds = forkThreadIds
         )
-        return addTotalEvent(iThread, label)
+        return addSendEvent(iThread, label)
     }
 
     fun addThreadJoinEvent(iThread: Int, joinThreadIds: Set<Int>): Event {
@@ -441,7 +441,7 @@ class EventStructure(
             kClass = kClass,
             isExclusive = isExclusive,
         )
-        return addTotalEvent(iThread, label)
+        return addSendEvent(iThread, label)
     }
 
     fun addReadEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>,
