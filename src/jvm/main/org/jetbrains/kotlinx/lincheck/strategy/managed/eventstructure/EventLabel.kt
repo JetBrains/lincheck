@@ -642,3 +642,195 @@ data class ReadAccessLabel(
     }
 
 }
+
+/**
+ * Base class of all mutex operations event labels.
+ */
+sealed class MutexLabel(
+    /**
+     * Kind of label.
+     */
+    kind: LabelKind,
+    /**
+     * Lock object affected by this operation.
+     */
+    protected open var mutex_: Any,
+    /**
+     * Whether this label is blocking.
+     */
+    isBlocking: Boolean = false,
+    /**
+     * Whether this blocking label is already unblocked.
+     */
+    unblocked: Boolean = true,
+): EventLabel(kind, SynchronizationType.Binary, isBlocking, unblocked) {
+
+    /**
+     * Lock object affected by this operation.
+     */
+    val mutex: Any
+        get() = mutex_
+
+    /**
+     * Kind of mutex operation.
+     */
+    val operationKind: MutexOperationKind
+        get() = when(this) {
+            is LockLabel    -> MutexOperationKind.Lock
+            is UnlockLabel  -> MutexOperationKind.Unlock
+            is WaitLabel    -> MutexOperationKind.Wait
+            is NotifyLabel  -> MutexOperationKind.Notify
+        }
+
+    override fun toString(): String {
+        val kindString = when (kind) {
+            LabelKind.Send -> ""
+            LabelKind.Request -> "^req"
+            LabelKind.Response -> "^rsp"
+        }
+        val mutexString = System.identityHashCode(mutex)
+        return "${operationKind}${kindString}(${mutexString})"
+    }
+
+}
+
+/**
+ * Kind of mutex operation.
+ *
+ * @see MutexLabel
+ */
+enum class MutexOperationKind { Lock, Unlock, Wait, Notify }
+
+/**
+ * Label denoting lock of a mutex.
+ *
+ * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
+ * Lock-request can synchronize either with [InitializationLabel] or with [UnlockLabel]
+ * to produce lock-response label.
+ *
+ * @see MutexLabel
+ */
+data class LockLabel(
+    /**
+     * Kind of label.
+     */
+    override val kind: LabelKind,
+    /**
+     * Locked mutex.
+     */
+    override var mutex_: Any,
+) : MutexLabel(
+    kind = kind,
+    mutex_ = mutex_,
+    isBlocking = true,
+    unblocked = (kind == LabelKind.Response),
+) {
+    init {
+        require(isRequest || isResponse)
+    }
+
+    override fun synchronize(label: EventLabel): EventLabel? = when {
+        (isRequest && label is InitializationLabel) ->
+            LockLabel(LabelKind.Response, mutex)
+
+        (isRequest && label is UnlockLabel && mutex == label.mutex) ->
+            LockLabel(LabelKind.Response, mutex)
+
+        else -> super.synchronize(label)
+    }
+
+    override fun toString(): String = super.toString()
+}
+
+/**
+ * Label denoting unlock of a mutex.
+ *
+ * Has [LabelKind.Send] kind.
+ * Can synchronize with request [LockLabel] producing lock-response label.
+ *
+ * @see MutexLabel
+ */
+data class UnlockLabel(
+    /**
+     * Unlocked mutex.
+     */
+    override var mutex_: Any,
+) : MutexLabel(
+    kind = LabelKind.Send,
+    mutex_ = mutex_
+) {
+    override fun synchronize(label: EventLabel): EventLabel? =
+        if (label is LockLabel)
+            label.synchronize(this)
+        else super.synchronize(label)
+
+    override fun toString(): String = super.toString()
+}
+
+/**
+ * Label denoting wait on a mutex.
+ *
+ * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
+ * Wait-request can synchronize either with [InitializationLabel] or with [NotifyLabel]
+ * to produce wait-response label.
+ *
+ * @see MutexLabel
+ */
+data class WaitLabel(
+    /**
+     * Kind of label.
+     */
+    override val kind: LabelKind,
+    /**
+     * Mutex to wait on.
+     */
+    override var mutex_: Any,
+) : MutexLabel(
+    kind = kind,
+    mutex_ = mutex_,
+    isBlocking = true,
+    unblocked = (kind == LabelKind.Response),
+) {
+    override fun synchronize(label: EventLabel): EventLabel? = when {
+        (isRequest && label is InitializationLabel) ->
+            WaitLabel(LabelKind.Response, mutex)
+
+        (isRequest && label is NotifyLabel && mutex == label.mutex) ->
+            WaitLabel(LabelKind.Response, mutex)
+
+        else -> super.synchronize(label)
+    }
+
+
+    override fun toString(): String = super.toString()
+}
+
+/**
+ * Label denoting notification of a mutex.
+ *
+ * Has [LabelKind.Send] kind.
+ * Can synchronize with [WaitLabel] request producing [WaitLabel] response.
+ *
+ * @see MutexLabel
+ */
+data class NotifyLabel(
+    /**
+     * Notified mutex.
+     */
+    override var mutex_: Any,
+    /**
+     * Flag indication that this notification is broadcast,
+     * e.g. caused by notifyAll() method call.
+     */
+    val isBroadcast: Boolean
+) : MutexLabel(
+    kind = LabelKind.Send,
+    mutex_ = mutex_,
+) {
+    override fun synchronize(label: EventLabel): EventLabel? =
+        if (label is WaitLabel)
+            label.synchronize(this)
+        else super.synchronize(label)
+
+    override fun toString(): String = super.toString()
+}
