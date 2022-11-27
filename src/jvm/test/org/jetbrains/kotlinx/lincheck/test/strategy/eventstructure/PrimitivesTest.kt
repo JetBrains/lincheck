@@ -36,7 +36,7 @@ import org.junit.Test
 class PrimitivesTest {
 
     class PlainVariable {
-        private var variable : Int = 0
+        private var variable: Int = 0
 
         fun write(value: Int) {
             variable = value
@@ -71,7 +71,7 @@ class PrimitivesTest {
         //   we should probably report races on plain variables as errors (or warnings at least)
         val outcomes: Set<Int> = setOf(0, 1, 2)
         litmusTest(PlainVariable::class.java, testScenario, outcomes) { results ->
-            getReadValue(results.parallelResults[1][0])
+            getValue<Int>(results.parallelResults[1][0])
         }
     }
 
@@ -123,7 +123,7 @@ class PrimitivesTest {
         // naive strategy would explore 6 interleavings
         val outcomes: Set<Int> = setOf(0, 1, 2)
         litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
-            getReadValue(results.parallelResults[1][0])
+            getValue<Int>(results.parallelResults[1][0])
         }
     }
 
@@ -151,9 +151,9 @@ class PrimitivesTest {
             Triple(false, true, 1)
         )
         litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
-            val r1 = getCASValue(results.parallelResults[0][0])
-            val r2 = getCASValue(results.parallelResults[1][0])
-            val r3 = getReadValue(results.postResults[0])
+            val r1 = getValue<Boolean>(results.parallelResults[0][0])
+            val r2 = getValue<Boolean>(results.parallelResults[1][0])
+            val r3 = getValue<Int>(results.postResults[0])
             Triple(r1, r2, r3)
         }
     }
@@ -182,9 +182,9 @@ class PrimitivesTest {
             Triple(1, 0, 2)
         )
         litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
-            val r1 = getFAIValue(results.parallelResults[0][0])
-            val r2 = getFAIValue(results.parallelResults[1][0])
-            val r3 = getReadValue(results.postResults[0])
+            val r1 = getValue<Int>(results.parallelResults[0][0])
+            val r2 = getValue<Int>(results.parallelResults[1][0])
+            val r3 = getValue<Int>(results.postResults[0])
             Triple(r1, r2, r3)
         }
     }
@@ -213,9 +213,9 @@ class PrimitivesTest {
             Triple(2, 1, 2)
         )
         litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
-            val r1 = getFAIValue(results.parallelResults[0][0])
-            val r2 = getFAIValue(results.parallelResults[1][0])
-            val r3 = getReadValue(results.postResults[0])
+            val r1 = getValue<Int>(results.parallelResults[0][0])
+            val r2 = getValue<Int>(results.parallelResults[1][0])
+            val r3 = getValue<Int>(results.postResults[0])
             Triple(r1, r2, r3)
         }
     }

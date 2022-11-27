@@ -88,12 +88,3 @@ internal fun createVerifier(testScenario: ExecutionScenario?, verify: (Execution
 
 internal inline fun<reified T> getValue(result: Result): T =
     (result as ValueResult).value as T
-
-internal fun getReadValue(result: Result): Int =
-    (result as ValueResult).value as Int
-
-internal fun getCASValue(result: Result): Boolean =
-    (result as ValueResult).value as Boolean
-
-internal fun getFAIValue(result: Result): Int =
-    (result as ValueResult).value as Int

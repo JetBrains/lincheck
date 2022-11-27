@@ -70,8 +70,8 @@ class MemoryModelTest {
             (1 to 1)
         )
         litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
-            val r1 = getReadValue(results.parallelResults[0][0])
-            val r2 = getReadValue(results.parallelResults[0][1])
+            val r1 = getValue<Int>(results.parallelResults[0][0])
+            val r2 = getValue<Int>(results.parallelResults[0][1])
             (r1 to r2)
         }
     }
@@ -98,8 +98,8 @@ class MemoryModelTest {
             (1 to 1)
         )
         litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
-            val r1 = getReadValue(results.parallelResults[0][1])
-            val r2 = getReadValue(results.parallelResults[1][1])
+            val r1 = getValue<Int>(results.parallelResults[0][1])
+            val r2 = getValue<Int>(results.parallelResults[1][1])
             (r1 to r2)
         }
     }
