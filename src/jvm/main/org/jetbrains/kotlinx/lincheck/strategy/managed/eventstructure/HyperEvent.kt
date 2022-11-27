@@ -55,50 +55,13 @@ fun Execution.nextAtomicEvent(iThread: Int, pos: Int, replaying: Boolean = false
     return get(iThread)?.nextAtomicEvent(pos, replaying)
 }
 
-private fun SortedArrayList<Event>.nextAtomicEvent(pos: Int, replaying: Boolean): HyperEvent? {
+fun SortedArrayList<Event>.nextAtomicEvent(pos: Int, replaying: Boolean): HyperEvent? {
     val event = getOrNull(pos) ?: return null
     return when(event.label) {
         is ThreadEventLabel -> nextAtomicThreadEvent(event, replaying)
         is MemoryAccessLabel -> nextAtomicMemoryAccessEvent(event, replaying)
         else -> nextAtomicEventDefault(event)
     }
-}
-
-private fun SortedArrayList<Event>.nextAtomicThreadEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
-    require(firstEvent.label is ThreadEventLabel)
-    return nextAtomicSendOrReceiveEvent(firstEvent, replaying)
-}
-
-private fun SortedArrayList<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
-    require(firstEvent.label is MemoryAccessLabel)
-    when(firstEvent.label) {
-        is WriteAccessLabel -> return SingletonEvent(firstEvent)
-        is ReadAccessLabel -> {
-            check(firstEvent.label.isRequest)
-            val readRequestEvent = firstEvent
-            val readResponseEvent = getOrNull(1 + readRequestEvent.threadPosition)
-                ?: return SingletonEvent(readRequestEvent)
-            check(readResponseEvent.label.isResponse && readResponseEvent.label is ReadAccessLabel)
-            if (!readResponseEvent.label.isExclusive) {
-                return ReceiveEvent(readRequestEvent, readResponseEvent, replaying)
-            }
-            val writeEvent = getOrNull(1 + readResponseEvent.threadPosition)
-                ?.takeIf { it.label is WriteAccessLabel && it.label.isExclusive }
-                ?: return ReceiveEvent(readRequestEvent, readResponseEvent)
-            return ReadModifyWriteEvent(readRequestEvent, readResponseEvent, writeEvent, replaying)
-        }
-    }
-}
-
-private fun SortedArrayList<Event>.nextAtomicSendOrReceiveEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
-    if (firstEvent.label.isSend)
-        return SingletonEvent(firstEvent)
-    check(firstEvent.label.isRequest)
-    val requestEvent = firstEvent
-    val responseEvent = getOrNull(1 + requestEvent.threadPosition)
-        ?: return SingletonEvent(requestEvent)
-    check(responseEvent.label.isResponse)
-    return ReceiveEvent(requestEvent, responseEvent, replaying)
 }
 
 private fun SortedArrayList<Event>.nextAtomicEventDefault(firstEvent: Event): HyperEvent {
@@ -114,6 +77,19 @@ class SingletonEvent(event: Event) : HyperEvent(listOf(event)) {
     override val dependencies: List<Event>
         get() = event.dependencies
 
+}
+
+/* ======== Send and Receive Events  ======== */
+
+fun SortedArrayList<Event>.nextAtomicSendOrReceiveEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
+    if (firstEvent.label.isSend)
+        return SingletonEvent(firstEvent)
+    check(firstEvent.label.isRequest)
+    val requestEvent = firstEvent
+    val responseEvent = getOrNull(1 + requestEvent.threadPosition)
+        ?: return SingletonEvent(requestEvent)
+    check(responseEvent.label.isResponse)
+    return ReceiveEvent(requestEvent, responseEvent, replaying)
 }
 
 class ReceiveEvent(
@@ -143,6 +119,36 @@ class ReceiveEvent(
 
 }
 
+/* ======== Thread Event  ======== */
+
+fun SortedArrayList<Event>.nextAtomicThreadEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
+    require(firstEvent.label is ThreadEventLabel)
+    return nextAtomicSendOrReceiveEvent(firstEvent, replaying)
+}
+
+/* ======== Memory Accesses  ======== */
+
+fun SortedArrayList<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
+    require(firstEvent.label is MemoryAccessLabel)
+    when(firstEvent.label) {
+        is WriteAccessLabel -> return SingletonEvent(firstEvent)
+        is ReadAccessLabel -> {
+            check(firstEvent.label.isRequest)
+            val readRequestEvent = firstEvent
+            val readResponseEvent = getOrNull(1 + readRequestEvent.threadPosition)
+                ?: return SingletonEvent(readRequestEvent)
+            check(readResponseEvent.label.isResponse && readResponseEvent.label is ReadAccessLabel)
+            if (!readResponseEvent.label.isExclusive) {
+                return ReceiveEvent(readRequestEvent, readResponseEvent, replaying)
+            }
+            val writeEvent = getOrNull(1 + readResponseEvent.threadPosition)
+                ?.takeIf { it.label is WriteAccessLabel && it.label.isExclusive }
+                ?: return ReceiveEvent(readRequestEvent, readResponseEvent)
+            return ReadModifyWriteEvent(readRequestEvent, readResponseEvent, writeEvent, replaying)
+        }
+    }
+}
+
 class ReadModifyWriteEvent(
     readRequest: Event,
     readResponse: Event,
@@ -161,6 +167,7 @@ class ReadModifyWriteEvent(
 
         // when replaying, locations do not necessarily match
         if (!replaying) {
+            // TODO: make a function checking for labels compatibility
             require(readRequest.label.location == readResponse.label.location)
             require(readResponse.label.location == write.label.location)
         }
@@ -175,7 +182,7 @@ class ReadModifyWriteEvent(
     val readResponsePart: Event
         get() = events[1]
 
-    val writePart: Event
+    val writeSendPart: Event
         get() = events[2]
 
     override val dependencies: List<Event>
