@@ -464,58 +464,41 @@ class EventStructure(
         return responseEvent
     }
 
-}
-
-class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
-
-    override fun writeValue(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>) {
-        eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass)
+    fun addLockEvent(iThread: Int, mutex: Any): Event {
+        val label = LockLabel(
+            kind = LabelKind.Request,
+            mutex_ = mutex,
+        )
+        val requestEvent = addRequestEvent(iThread, label)
+        val (responseEvent, _) = addResponseEvents(requestEvent)
+        checkNotNull(responseEvent)
+        return responseEvent
     }
 
-    override fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass)
-        return (readEvent.label as ReadAccessLabel).value
+    fun addUnlockEvent(iThread: Int, mutex: Any): Event {
+        val label = UnlockLabel(mutex)
+        return addSendEvent(iThread, label)
     }
 
-    override fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
-                               kClass: KClass<*>): Boolean {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
-        val value = (readEvent.label as ReadAccessLabel).value
-        if (value != expected)
-            return false
-        eventStructure.addWriteEvent(iThread, memoryLocationId, desired, kClass, isExclusive = true)
-        return true
+    fun addWaitEvent(iThread: Int, mutex: Any): Event {
+        val label = WaitLabel(
+            kind = LabelKind.Request,
+            mutex_ = mutex,
+        )
+        val requestEvent = addRequestEvent(iThread, label)
+        val (responseEvent, _) = addResponseEvents(requestEvent)
+        checkNotNull(responseEvent)
+        return responseEvent
     }
 
-    private enum class IncrementKind { Pre, Post }
-
-    private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number,
-                            kClass: KClass<*>, incKind: IncrementKind): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
-        val readLabel = readEvent.label as ReadAccessLabel
-        // TODO: should we use some sub-type check instead of equality check?
-        check(readLabel.kClass == kClass)
-        val oldValue = readLabel.value!!
-        val newValue = oldValue + delta
-        eventStructure.addWriteEvent(iThread, memoryLocationId, newValue, kClass, isExclusive = true)
-        return when (incKind) {
-            IncrementKind.Pre -> oldValue
-            IncrementKind.Post -> newValue
-        }
+    fun addNotifyEvent(iThread: Int, mutex: Any, isBroadcast: Boolean): Event {
+        // TODO: we currently ignore isBroadcast flag and handle `notify` similarly as `notifyAll`.
+        //   It is correct wrt. Java's semantics, since `wait` can wake-up spuriously according to the spec.
+        //   Thus multiple wake-ups due to single notify can be interpreted as spurious.
+        //   However, if one day we will want to support wait semantics without spurious wake-ups
+        //   we will need to revisit this.
+        val label = NotifyLabel(mutex, isBroadcast)
+        return addSendEvent(iThread, label)
     }
 
-    override fun getAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
-        return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Pre)
-    }
-
-    override fun addAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
-        return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Post)
-    }
-
-    override fun getAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
-        val readValue = (readEvent.label as ReadAccessLabel).value
-        eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass, isExclusive = true)
-        return readValue
-    }
 }

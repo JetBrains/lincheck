@@ -29,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
-import org.objectweb.asm.Type
 import java.io.*
 import java.lang.reflect.*
 import java.util.*
@@ -334,7 +333,6 @@ abstract class ManagedStrategy(
      */
     protected open fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
-        !monitorTracker.isWaiting(iThread) &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
 
     /**
@@ -535,12 +533,12 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         // Try to acquire the monitor
-        if (!monitorTracker.acquireMonitor(iThread, monitor)) {
+        if (!monitorTracker.acquire(iThread, monitor)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
             // Now it is possible to acquire the monitor, do it then.
-            require(monitorTracker.acquireMonitor(iThread, monitor))
+            require(monitorTracker.acquire(iThread, monitor))
         }
         // The monitor is acquired, finish.
         return false
@@ -554,7 +552,7 @@ abstract class ManagedStrategy(
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
-        monitorTracker.releaseMonitor(monitor)
+        monitorTracker.release(iThread, monitor)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
@@ -593,10 +591,10 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
         failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
         if (withTimeout) return false // timeouts occur instantly
-        monitorTracker.waitOnMonitor(iThread, monitor)
+        monitorTracker.wait(iThread, monitor)
         // switch to another thread and wait till a notify event happens
         switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, true)
-        require(monitorTracker.acquireMonitor(iThread, monitor)) // acquire the lock again
+        require(monitorTracker.acquire(iThread, monitor)) // acquire the lock again
         return false
     }
 
@@ -607,10 +605,7 @@ abstract class ManagedStrategy(
      */
     internal fun beforeNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
-        if (notifyAll)
-            monitorTracker.notifyAll(monitor)
-        else
-            monitorTracker.notify(monitor)
+        monitorTracker.notify(iThread, monitor, notifyAll)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
@@ -913,116 +908,18 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
 }
 
 /**
- * Tracks synchronization operations with monitors (acquire/release, wait/notify).
+ * Tracks synchronization operations with monitors.
  */
-abstract class MonitorTracker {
+interface MonitorTracker {
 
-    abstract fun acquireMonitor(iThread: Int, monitor: Any): Boolean
+    fun acquire(iThread: Int, monitor: Any): Boolean
 
-    abstract fun releaseMonitor(monitor: Any)
+    fun release(iThread: Int, monitor: Any)
 
-    abstract fun isWaiting(iThread: Int): Boolean
+    fun wait(iThread: Int, monitor: Any)
 
-    protected abstract fun canAcquireMonitor(iThread: Int, monitor: Any): Boolean
+    fun notify(iThread: Int, monitor: Any, notifyAll: Boolean)
 
-    abstract fun waitOnMonitor(iThread: Int, monitor: Any)
-
-    abstract fun notify(monitor: Any)
-
-    abstract fun notifyAll(monitor: Any): Unit
-}
-
-/**
- * Sequentially consistent monitor tracking.
- * Represents the set of acquired monitors as a map Monitor -> ThreadId.
- *
- * TODO: move to interleaving-based model checking directory?
- */
-class SeqCstMonitorTracker(nThreads: Int) : MonitorTracker() {
-    // Maintains a set of acquired monitors with an information on which thread
-    // performed the acquisition and the the reentrancy depth.
-    private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
-    // Maintains a set of monitors on which each thread is waiting.
-    // Note, that a thread can wait on a free monitor if it is waiting for
-    // a `notify` call.
-    // Stores `null` if thread is not waiting on any monitor.
-    private val acquiringMonitors = Array<Any?>(nThreads) { null }
-    // Stores `true` for the threads which are waiting for a
-    // `notify` call on the monitor stored in `acquiringMonitor`.
-    private val waitForNotify = BooleanArray(nThreads) { false }
-
-    /**
-     * Performs a logical acquisition.
-     */
-    override fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
-        // Increment the reentrant depth and store the
-        // acquisition info if needed.
-        val ai = acquiredMonitors.computeIfAbsent(monitor) { MonitorAcquiringInfo(iThread, 0) }
-        if (ai.iThread != iThread) {
-            acquiringMonitors[iThread] = monitor
-            return false
-        }
-        ai.timesAcquired++
-        acquiringMonitors[iThread] = null // re-set
-        return true
-    }
-
-    /**
-     * Performs a logical release.
-     */
-    override fun releaseMonitor(monitor: Any) {
-        // Decrement the reentrancy depth and remove the acquisition info
-        // if the monitor becomes free to acquire by another thread.
-        val ai = acquiredMonitors[monitor]!!
-        ai.timesAcquired--
-        if (ai.timesAcquired == 0) acquiredMonitors.remove(monitor)
-    }
-
-    /**
-     * Returns `true` if the corresponding threads is waiting on some monitor.
-     */
-    override fun isWaiting(iThread: Int): Boolean {
-        val monitor = acquiringMonitors[iThread] ?: return false
-        return waitForNotify[iThread] || !canAcquireMonitor(iThread, monitor)
-    }
-
-    /**
-     * Returns `true` if the monitor is already acquired by
-     * the thread [iThread], or if this monitor is free to acquire.
-     */
-    override fun canAcquireMonitor(iThread: Int, monitor: Any) =
-        acquiredMonitors[monitor]?.iThread?.equals(iThread) ?: true
-
-    /**
-     * Performs a logical wait, [isWaiting] for the specified thread
-     * returns `true` until the corresponding [notify] or [notifyAll]
-     * is invoked.
-     */
-    override fun waitOnMonitor(iThread: Int, monitor: Any) {
-        // TODO: we can add spurious wakeups here
-        check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
-        releaseMonitor(monitor)
-        waitForNotify[iThread] = true
-        acquiringMonitors[iThread] = monitor
-    }
-
-    /**
-     * Just notify all thread. Odd threads will have a spurious wakeup
-     */
-    override fun notify(monitor: Any) = notifyAll(monitor)
-
-    /**
-     * Performs the logical `notifyAll`.
-     */
-    override fun notifyAll(monitor: Any): Unit = acquiringMonitors.forEachIndexed { iThread, m ->
-        if (monitor === m) waitForNotify[iThread] = false
-    }
-
-    /**
-     * Stores the number of reentrant acquisitions ([timesAcquired])
-     * and the number of thread ([iThread]) that holds the monitor.
-     */
-    private class MonitorAcquiringInfo(val iThread: Int, var timesAcquired: Int)
 }
 
 /**

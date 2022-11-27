@@ -707,7 +707,7 @@ data class UnlockLabel(
  * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
  *
  * Wait-request can synchronize either with [InitializationLabel] or with [NotifyLabel]
- * to produce wait-response label.
+ * to produce wait-response label. The former case models spurious wake-ups.
  *
  * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
  * @param mutex_ the mutex to wait on.

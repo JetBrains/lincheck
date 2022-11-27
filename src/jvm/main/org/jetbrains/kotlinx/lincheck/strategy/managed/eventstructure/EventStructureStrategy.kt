@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
+import kotlin.reflect.KClass
 
 class EventStructureStrategy(
         testCfg: EventStructureCTestConfiguration,
@@ -56,9 +57,8 @@ class EventStructureStrategy(
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
-    // Tracker of acquisitions and releases of monitors.
-    // TODO: change to EventStructureMonitorTracker
-    override var monitorTracker: MonitorTracker = SeqCstMonitorTracker(nThreads)
+    // Tracker of monitors operations.
+    override var monitorTracker: MonitorTracker = EventStructureMonitorTracker(eventStructure)
 
     val stats = Stats()
 
@@ -206,8 +206,6 @@ class EventStructureStrategy(
     override fun initializeInvocation() {
         super.initializeInvocation()
         eventStructure.initializeExploration()
-        // TODO: fix monitorTracker
-        monitorTracker = SeqCstMonitorTracker(nThreads)
         eventStructure.addThreadStartEvent(eventStructure.initialThreadId)
     }
 
@@ -236,4 +234,82 @@ class EventStructureStrategy(
         eventStructure.addThreadFinishEvent(iThread)
         super.onFinish(iThread)
     }
+}
+
+private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
+
+    override fun writeValue(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>) {
+        eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass)
+    }
+
+    override fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass)
+        return (readEvent.label as ReadAccessLabel).value
+    }
+
+    override fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
+                               kClass: KClass<*>): Boolean {
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
+        val value = (readEvent.label as ReadAccessLabel).value
+        if (value != expected)
+            return false
+        eventStructure.addWriteEvent(iThread, memoryLocationId, desired, kClass, isExclusive = true)
+        return true
+    }
+
+    private enum class IncrementKind { Pre, Post }
+
+    private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number,
+                            kClass: KClass<*>, incKind: IncrementKind): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
+        val readLabel = readEvent.label as ReadAccessLabel
+        // TODO: should we use some sub-type check instead of equality check?
+        check(readLabel.kClass == kClass)
+        val oldValue = readLabel.value!!
+        val newValue = oldValue + delta
+        eventStructure.addWriteEvent(iThread, memoryLocationId, newValue, kClass, isExclusive = true)
+        return when (incKind) {
+            IncrementKind.Pre -> oldValue
+            IncrementKind.Post -> newValue
+        }
+    }
+
+    override fun getAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
+        return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Pre)
+    }
+
+    override fun addAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
+        return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Post)
+    }
+
+    override fun getAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
+        val readValue = (readEvent.label as ReadAccessLabel).value
+        eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass, isExclusive = true)
+        return readValue
+    }
+}
+
+private class EventStructureMonitorTracker(private val eventStructure: EventStructure) : MonitorTracker {
+
+    override fun acquire(iThread: Int, monitor: Any): Boolean {
+        eventStructure.addLockEvent(iThread, monitor)
+        // We consider it is always possible to acquire a lock due to inversion of control.
+        // The strategy prioritizes threads resided in critical section. Thus, once
+        // thread acquires a lock it will be executed uninterruptedly till it leaves critical section.
+        return true
+    }
+
+    override fun release(iThread: Int, monitor: Any) {
+        eventStructure.addUnlockEvent(iThread, monitor)
+    }
+
+    override fun wait(iThread: Int, monitor: Any) {
+        eventStructure.addWaitEvent(iThread, monitor)
+    }
+
+    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {
+        eventStructure.addNotifyEvent(iThread, monitor, notifyAll)
+    }
+
 }
