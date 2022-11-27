@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryTracker
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
 import kotlin.reflect.KClass
 
@@ -178,7 +177,7 @@ class EventStructure(
         val nextPosition = currentFrontier.getNextPosition(iThread)
         val atomicEvent = currentExecution.nextAtomicEvent(iThread, nextPosition, replaying = true)!!
         // delay replaying the last event till all other events are replayed;
-        if (atomicEvent.events.last() == events.last()) {
+        if (currentExplorationRoot == atomicEvent.events.last()) {
             // TODO: prettify
             return (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
         }
@@ -259,10 +258,12 @@ class EventStructure(
         // in the same thread, and then filter out all causal predecessors of this last write,
         // because these events are "obsolete" --- reading from them will result in coherence cycle
         // and will violate consistency
+        // TODO: we can improve on this and calculate the vector clock
+        //   of events observed in the reader thread at current position
         if (event.label.isRequest && event.label is MemoryAccessLabel) {
             require(event.label.isRead)
             val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
-                it.label is MemoryAccessLabel && it.label.isWrite && it.label.location == event.label.location
+                it.label is WriteAccessLabel && it.label.location == event.label.location
             } ?: root
             predicates.add { !causalityOrder.lessThan(it, threadLastWrite) }
         }
