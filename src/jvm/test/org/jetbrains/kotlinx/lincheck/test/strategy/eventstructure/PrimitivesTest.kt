@@ -220,4 +220,85 @@ class PrimitivesTest {
         }
     }
 
+    class IntrinsicLockTest {
+
+        fun withLock(block: () -> Any): Any {
+            return synchronized(this) {
+                block()
+            }
+        }
+
+        fun lockAndWait(afterWait: () -> Any): Any {
+            return synchronized(this) {
+                (this as java.lang.Object).wait()
+                afterWait()
+            }
+        }
+
+        fun lockAndNotify(notifyAll: Boolean, beforeNotify: () -> Any): Any {
+            return synchronized(this) {
+                beforeNotify().also {
+                    (this as java.lang.Object)
+                    if (notifyAll) notifyAll() else notify()
+                }
+            }
+        }
+
+    }
+
+    @Test
+    fun testSynchronized() {
+        var x = 0
+        var y = 0
+        val withLock = IntrinsicLockTest::withLock
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(withLock, { x = 1; y })
+                }
+                thread {
+                    actor(withLock, { y = 1; x })
+                }
+            }
+        }
+        // strategy should explore only 2 interleavings
+        // naive strategy also explores 2 interleavings
+        val outcomes: Set<Pair<Int, Int>> = setOf(
+            (0 to 1),
+            (1 to 0),
+        )
+        litmusTest(IntrinsicLockTest::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Int>(results.parallelResults[0][0])
+            val r2 = getValue<Int>(results.parallelResults[1][0])
+            Pair(r1, r2)
+        }
+    }
+
+    @Test
+    fun testWaitNotify() {
+        var x = 0
+        val lockAndWait = IntrinsicLockTest::lockAndWait
+        val lockAndNotify = IntrinsicLockTest::lockAndNotify
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(lockAndWait, { x })
+                }
+                thread {
+                    actor(lockAndNotify, false, { x = 1 })
+                }
+            }
+        }
+        // strategy should explore only 1 interleaving
+        // naive strategy also explores 1 interleaving
+        val outcomes = setOf(
+            (1 to Unit),
+        )
+        litmusTest(IntrinsicLockTest::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Int>(results.parallelResults[0][0])
+            val r2 = getValue<Unit>(results.parallelResults[1][0])
+            Pair(r1, r2)
+        }
+    }
+
 }
