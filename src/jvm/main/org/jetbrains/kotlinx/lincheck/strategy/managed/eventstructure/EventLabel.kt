@@ -76,53 +76,32 @@ import kotlin.reflect.KClass
  * [1] Winskel, Glynn. "Event structure semantics for CCS and related languages."
  *     International Colloquium on Automata, Languages, and Programming. Springer, Berlin, Heidelberg, 1982.
  *
+ * @param kind the kind of this label: send, request or response.
+ * @param syncType the synchronization type of this label: binary or barrier.
+ * @param isBlocking whether this label is blocking.
+ *    Load acquire-request and thread join-request/response are examples of blocking labels.
+ * @param unblocked whether this blocking label is already unblocked.
+ *   For example, thread join-response is unblocked when all the threads it waits for have finished.
  */
 abstract class EventLabel(
-    /**
-     * [LabelKind] of this label: send, request or response.
-     *
-     * @see EventLabel
-     */
     open val kind: LabelKind,
-    /**
-     * Type of synchronization used by this label.
-     * Currently, two types of synchronization are supported.
-     *
-     * - [SynchronizationType.Binary] binary synchronization ---
-     *   only a pair of events can synchronize. For example,
-     *   write access label can synchronize with read-request label,
-     *   but the resulting read-response label can no longer synchronize with
-     *   any other label.
-     *
-     * - [SynchronizationType.Barrier] barrier synchronization ---
-     *   a set of events can synchronize. For example,
-     *   several thread finish labels can synchronize with single thread
-     *   join-request label waiting for all of these threads to complete.
-     */
     val syncType: SynchronizationType,
-    /**
-     * Whether this label is blocking.
-     * Load acquire-request and thread join-request/response are examples of blocking labels.
-     */
     val isBlocking: Boolean = false,
-    /**
-     * Whether this blocking label is already unblocked.
-     * For example, thread join-response is unblocked when
-     * all the threads it waits for have finished.
-     */
     val unblocked: Boolean = true,
 ) {
-    
     /**
      * Synchronizes event label with another label passed as a parameter.
      *
+     * @param label label to synchronize with
+     * @return label representing result of synchronization
+     *   or null if this label cannot synchronize with [label]
      * @see EventLabel
      */
     open infix fun synchronize(label: EventLabel): EventLabel? =
         if (label is EmptyLabel) this else null
 
     /**
-     * Checks whether a pair of labels can synchronize
+     * Checks whether a pair of labels can potentially synchronize
      * (do not confuse this term with "synchronizes-with" relation from the Java Memory Model).
      * Default implementation just checks that result of [synchronize] is not null,
      * overridden implementation can optimize this check.
@@ -179,7 +158,7 @@ abstract class EventLabel(
 }
 
 /**
- * Kind of label.
+ * Kind of label: send, request or response.
  *
  * @see EventLabel
  */
@@ -187,13 +166,22 @@ enum class LabelKind { Send, Request, Response }
 
 /**
  * Type of synchronization used by label.
+ * Currently, two types of synchronization are supported.
  *
- * @see EventLabel
+ * - [SynchronizationType.Binary] binary synchronization ---
+ *   only a pair of events can synchronize. For example,
+ *   write access label can synchronize with read-request label,
+ *   but the resulting read-response label can no longer synchronize with
+ *   any other label.
+ *
+ * - [SynchronizationType.Barrier] barrier synchronization ---
+ *   a set of events can synchronize. For example,
+ *   several thread finish labels can synchronize with single thread
+ *   join-request label waiting for all of these threads to complete.
+ *
+ * @see [EventLabel]
  */
 enum class SynchronizationType { Binary, Barrier }
-
-// TODO: rename to BarrierRaceException?
-class InvalidBarrierSynchronizationException(message: String): Exception(message)
 
 /**
  * Dummy empty label acting as a neutral element of [synchronize] operation.
@@ -203,12 +191,8 @@ class InvalidBarrierSynchronizationException(message: String): Exception(message
  * ```
  * l \+ 1 = 1 \+ l = l
  * ```
- *
  */
-class EmptyLabel: EventLabel(
-    kind = LabelKind.Send,
-    syncType = SynchronizationType.Binary,
-) {
+class EmptyLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
 
     override fun synchronize(label: EventLabel) = label
 
@@ -231,11 +215,8 @@ class EmptyLabel: EventLabel(
  * init \+ R^{req}(x) = R^{rsp}(x, 0)
  * ```
  */
-class InitializationLabel : EventLabel(
-    kind = LabelKind.Send,
+class InitializationLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
     // TODO: can barrier-synchronizing events also utilize InitializationLabel?
-    syncType = SynchronizationType.Binary,
-) {
 
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is InitializationLabel) null else label.synchronize(this)
@@ -246,28 +227,33 @@ class InitializationLabel : EventLabel(
 
 /**
  * Base class for all thread event labels.
- */
+ *
+ * @param kind the kind of this label.
+ * @param syncType the synchronization type of this label.
+ * @param isBlocking whether this label is blocking.
+ * @param unblocked whether this blocking label is already unblocked.
+  */
 abstract class ThreadEventLabel(
     kind: LabelKind,
-    syncKind: SynchronizationType,
+    syncType: SynchronizationType,
     isBlocking: Boolean = false,
     unblocked: Boolean = true,
-): EventLabel(kind, syncKind, isBlocking, unblocked)
+): EventLabel(kind, syncType, isBlocking, unblocked)
 
 /**
  * Label representing fork of a set of threads.
  *
  * Has [LabelKind.Send] kind.
+ *
  * Can synchronize with [ThreadStartLabel].
+ *
+ * @param forkThreadIds a set of thread ids this fork spawns.
  */
 data class ThreadForkLabel(
-    /**
-     * A set of thread ids this fork spawns.
-     */
     val forkThreadIds: Set<Int>,
 ): ThreadEventLabel(
     kind = LabelKind.Send,
-    syncKind = SynchronizationType.Binary,
+    syncType = SynchronizationType.Binary,
 ) {
 
     override fun synchronize(label: EventLabel): EventLabel? =
@@ -284,36 +270,26 @@ data class ThreadForkLabel(
  * Label of virtual event put into beginning of each thread.
  *
  * Can either be of [LabelKind.Request] or response [LabelKind.Response] kind.
- * Thread start-request label can synchronize with
- * [InitializationLabel] (for main thread, see [isMainThread]) or with
- * [ThreadForkLabel] to produce thread start-response.
+ *
+ * Thread start-request label can synchronize with [InitializationLabel] (for main thread)
+ * or with [ThreadForkLabel] to produce thread start-response.
+ *
+ * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response]..
+ * @param threadId thread id of started thread.
+ * @param isMainThread whether this is the main thread,
+ *   i.e. the thread starting the execution of the whole program.
  */
 data class ThreadStartLabel(
-    /**
-     * Kind of label.
-     * Should either be [LabelKind.Request] or [LabelKind.Response].
-     */
     override val kind: LabelKind,
-    /**
-     * Thread id of started thread.
-     */
     val threadId: Int,
-    /**
-     * Whether this thread is main thread, i.e. thread
-     * starting the execution of the whole program.
-     */
     val isMainThread: Boolean = false,
-): ThreadEventLabel(
-    kind = kind,
-    syncKind = SynchronizationType.Binary,
-) {
+): ThreadEventLabel(kind, SynchronizationType.Binary) {
 
     init {
         check(isRequest || isResponse)
     }
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-
         isRequest && isMainThread && label is InitializationLabel -> {
             ThreadStartLabel(
                 threadId = threadId,
@@ -342,19 +318,19 @@ data class ThreadStartLabel(
  * Label of a virtual event put into the end of each thread.
  *
  * Has [LabelKind.Send] kind.
+ *
  * Can synchronize with [ThreadJoinLabel] or another [ThreadFinishLabel].
  * In the latter case the sets of [finishedThreadIds] of two labels are merged in the resulting label.
  *
  * Thread finish label is considered to be always blocked.
+ *
+ * @param finishedThreadIds set of threads that have been finished.
  */
 data class ThreadFinishLabel(
-    /**
-     * Set of threads that have been finished.
-     */
     val finishedThreadIds: Set<Int>
 ): ThreadEventLabel(
     kind = LabelKind.Send,
-    syncKind = SynchronizationType.Barrier,
+    syncType = SynchronizationType.Barrier,
     isBlocking = true,
     unblocked = false,
 ) {
@@ -362,7 +338,6 @@ data class ThreadFinishLabel(
     constructor(threadId: Int): this(setOf(threadId))
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-
         // TODO: handle cases of invalid synchronization:
         //  - when there are multiple ThreadFinish labels with the same thread id
         //  - when thread finishes outside of matching ThreadFork/ThreadJoin scope
@@ -398,20 +373,16 @@ data class ThreadFinishLabel(
  *
  * This is blocking label, it becomes [unblocked] when set of
  * wait-to-be-join threads becomes empty (see [joinThreadIds]).
+ *
+ * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param joinThreadIds set of threads this label awaits to join.
  */
 data class ThreadJoinLabel(
-    /**
-     * Kind of label.
-     * Should either be [LabelKind.Request] or [LabelKind.Response].
-     */
     override val kind: LabelKind,
-    /**
-     * Set of threads this label awaits to join.
-     */
     val joinThreadIds: Set<Int>,
 ): ThreadEventLabel(
     kind = kind,
-    syncKind = SynchronizationType.Barrier,
+    syncType = SynchronizationType.Barrier,
     isBlocking = true,
     unblocked = (kind == LabelKind.Response) implies joinThreadIds.isEmpty(),
 ) {
@@ -433,35 +404,22 @@ data class ThreadJoinLabel(
  * Base class of read and write shared memory access event labels.
  * Stores common information about memory access ---
  * such as accessing memory location and read or written value.
+ *
+ * @param kind the kind of this label.
+ * @param location_ memory location affected by this memory access.
+ * @param value_ written value for write access, read value for read access.
+ * @param kClass class of written or read value.
+ * @param isExclusive flag indicating whether this access is exclusive.
+ *   Memory accesses obtained as a result of executing atomic read-modify-write
+ *   instructions (such as CAS) have this flag set.
  */
 sealed class MemoryAccessLabel(
-    /**
-     * Kind of label.
-     */
     kind: LabelKind,
-    /**
-     * Memory location affected by this memory access.
-     */
     protected open var location_: MemoryLocation,
-    /**
-     * Written value for write access, read value for read access.
-     */
     protected open var value_: OpaqueValue?,
-    /**
-     * Class of written or read value.
-     */
     open val kClass: KClass<*>,
-    /**
-     * Flag indicating whether this access is exclusive.
-     * Memory accesses obtained as a result of executing
-     * atomic read-modify-write instructions (such as CAS),
-     * have this flag set.
-     */
     open val isExclusive: Boolean = false
-): EventLabel(
-    kind = kind,
-    syncType = SynchronizationType.Binary,
-) {
+): EventLabel(kind, SynchronizationType.Binary) {
 
     /**
      * Memory location affected by this memory access.
@@ -534,46 +492,6 @@ sealed class MemoryAccessLabel(
 enum class MemoryAccessKind { Read, Write }
 
 /**
- * Label denoting write access to shared memory.
- *
- * Has [LabelKind.Send] kind.
- * Can synchronize with request [ReadAccessLabel] producing read-response label.
- *
- * @see MemoryAccessLabel
- */
-data class WriteAccessLabel(
-    /**
-     * Memory location affected by this write.
-     */
-    override var location_: MemoryLocation,
-    /**
-     * Written value.
-     */
-    override var value_: OpaqueValue?,
-    /**
-     * Class of written value.
-     */
-    override val kClass: KClass<*>,
-    /**
-     * Exclusive access flag.
-     */
-    override val isExclusive: Boolean = false
-): MemoryAccessLabel(
-    kind = LabelKind.Send,
-    location_ = location_,
-    value_ = value_,
-    kClass = kClass,
-    isExclusive = isExclusive
-) {
-
-    override fun synchronize(label: EventLabel): EventLabel? =
-        if (label is ReadAccessLabel)
-            label.synchronize(this)
-        else super.synchronize(label)
-
-}
-
-/**
  * Label denoting read access to shared memory.
  *
  * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
@@ -582,36 +500,21 @@ data class WriteAccessLabel(
  * for given class, provided by [kClass] constructor argument.
  * In the latter case read-response will take value of the write label.
  *
+ * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response] kind.
+ * @param location_ memory location of this read.
+ * @param value_ the read value, for read-request label equals to null.
+ * @param kClass the class of read value.
+ * @param isExclusive exclusive access flag.
+ *
  * @see MemoryAccessLabel
  */
 data class ReadAccessLabel(
-    /**
-     * Kind of label.
-     */
     override val kind: LabelKind,
-    /**
-     * Memory location of this read.
-     */
     override var location_: MemoryLocation,
-    /**
-     * Read value. For read-request labels equals to null.
-     */
     override var value_: OpaqueValue?,
-    /**
-     * Class of read value.
-     */
     override val kClass: KClass<*>,
-    /**
-     * Exclusive access flag.
-     */
     override val isExclusive: Boolean = false
-): MemoryAccessLabel(
-    kind = kind,
-    location_ = location_,
-    value_ = value_,
-    kClass = kClass,
-    isExclusive = isExclusive
-) {
+): MemoryAccessLabel(kind, location_, value_, kClass, isExclusive) {
 
     init {
         require(isRequest || isResponse)
@@ -619,7 +522,6 @@ data class ReadAccessLabel(
     }
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-
         (isRequest && label is InitializationLabel) ->
             completeRequest(OpaqueValue.default(kClass))
 
@@ -641,10 +543,46 @@ data class ReadAccessLabel(
         )
     }
 
+    override fun toString(): String = super.toString()
+
+}
+
+/**
+ * Label denoting write access to shared memory.
+ *
+ * Has [LabelKind.Send] kind.
+ * Can synchronize with request [ReadAccessLabel] producing read-response label.
+ *
+ * @param location_ the memory location affected by this write.
+ * @param value_ the written value.
+ * @param kClass the class of written value.
+ * @param isExclusive exclusive access flag.
+ *
+ * @see MemoryAccessLabel
+ */
+data class WriteAccessLabel(
+    override var location_: MemoryLocation,
+    override var value_: OpaqueValue?,
+    override val kClass: KClass<*>,
+    override val isExclusive: Boolean = false
+): MemoryAccessLabel(LabelKind.Send, location_, value_, kClass, isExclusive) {
+
+    override fun synchronize(label: EventLabel): EventLabel? =
+        if (label is ReadAccessLabel)
+            label.synchronize(this)
+        else super.synchronize(label)
+
+    override fun toString(): String = super.toString()
+
 }
 
 /**
  * Base class of all mutex operations event labels.
+ *
+ * @param kind the kind of this label.
+ * @param syncType the synchronization type of this label.
+ * @param isBlocking whether this label is blocking.
+ * @param unblocked whether this blocking label is already unblocked.
  */
 sealed class MutexLabel(
     /**
@@ -705,19 +643,17 @@ enum class MutexOperationKind { Lock, Unlock, Wait, Notify }
  * Label denoting lock of a mutex.
  *
  * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
+ *
  * Lock-request can synchronize either with [InitializationLabel] or with [UnlockLabel]
  * to produce lock-response label.
+ *
+ * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param mutex_ the locked mutex.
  *
  * @see MutexLabel
  */
 data class LockLabel(
-    /**
-     * Kind of label.
-     */
     override val kind: LabelKind,
-    /**
-     * Locked mutex.
-     */
     override var mutex_: Any,
 ) : MutexLabel(
     kind = kind,
@@ -746,19 +682,17 @@ data class LockLabel(
  * Label denoting unlock of a mutex.
  *
  * Has [LabelKind.Send] kind.
+ *
  * Can synchronize with request [LockLabel] producing lock-response label.
+ *
+ * @param mutex_ the unblocked mutex.
  *
  * @see MutexLabel
  */
 data class UnlockLabel(
-    /**
-     * Unlocked mutex.
-     */
     override var mutex_: Any,
-) : MutexLabel(
-    kind = LabelKind.Send,
-    mutex_ = mutex_
-) {
+) : MutexLabel(LabelKind.Send, mutex_) {
+
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is LockLabel)
             label.synchronize(this)
@@ -771,19 +705,17 @@ data class UnlockLabel(
  * Label denoting wait on a mutex.
  *
  * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
+ *
  * Wait-request can synchronize either with [InitializationLabel] or with [NotifyLabel]
  * to produce wait-response label.
+ *
+ * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param mutex_ the mutex to wait on.
  *
  * @see MutexLabel
  */
 data class WaitLabel(
-    /**
-     * Kind of label.
-     */
     override val kind: LabelKind,
-    /**
-     * Mutex to wait on.
-     */
     override var mutex_: Any,
 ) : MutexLabel(
     kind = kind,
@@ -809,24 +741,20 @@ data class WaitLabel(
  * Label denoting notification of a mutex.
  *
  * Has [LabelKind.Send] kind.
+ *
  * Can synchronize with [WaitLabel] request producing [WaitLabel] response.
+ *
+ * @param mutex_ notified mutex.
+ * @param isBroadcast flag indication that this notification is broadcast,
+ *   e.g. caused by notifyAll() method call.
  *
  * @see MutexLabel
  */
 data class NotifyLabel(
-    /**
-     * Notified mutex.
-     */
     override var mutex_: Any,
-    /**
-     * Flag indication that this notification is broadcast,
-     * e.g. caused by notifyAll() method call.
-     */
     val isBroadcast: Boolean
-) : MutexLabel(
-    kind = LabelKind.Send,
-    mutex_ = mutex_,
-) {
+) : MutexLabel(LabelKind.Send, mutex_) {
+
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is WaitLabel)
             label.synchronize(this)
