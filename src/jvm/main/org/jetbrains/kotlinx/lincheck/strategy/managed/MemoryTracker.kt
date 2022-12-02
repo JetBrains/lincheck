@@ -54,10 +54,10 @@ internal class SeqCstMemoryTracker : MemoryTracker() {
     private val values = HashMap<MemoryLocation, OpaqueValue?>()
 
     override fun writeValue(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>) =
-            values.set(memoryLocationId, value)
+        values.set(memoryLocationId, value)
 
     override fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue? =
-            values.getOrElse(memoryLocationId) { OpaqueValue.default(kClass) }
+        values.getOrElse(memoryLocationId) { OpaqueValue.default(kClass) }
 
     override fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
                                kClass: KClass<*>): Boolean {
@@ -69,19 +69,21 @@ internal class SeqCstMemoryTracker : MemoryTracker() {
     }
 
     override fun addAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? =
-            (readValue(iThread, memoryLocationId, kClass)!! + delta)
-                    .also { value -> writeValue(iThread, memoryLocationId, value, kClass) }
+        (readValue(iThread, memoryLocationId, kClass)!! + delta)
+            .also { value -> writeValue(iThread, memoryLocationId, value, kClass) }
 
     override fun getAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? =
-            readValue(iThread, memoryLocationId, kClass)!!
-                    .also { value -> writeValue(iThread, memoryLocationId, value + delta, kClass) }
+        readValue(iThread, memoryLocationId, kClass)!!
+            .also { value -> writeValue(iThread, memoryLocationId, value + delta, kClass) }
 
-    override fun getAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>): OpaqueValue? =
-            readValue(iThread, memoryLocationId, kClass)!!
-                    .also { writeValue(iThread, memoryLocationId, value, kClass) }
+    override fun getAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>): OpaqueValue? {
+        val result = readValue(iThread, memoryLocationId, kClass)
+        writeValue(iThread, memoryLocationId, value, kClass)
+        return result
+    }
 
     fun copy(): SeqCstMemoryTracker =
-            SeqCstMemoryTracker().also { it.values += values }
+        SeqCstMemoryTracker().also { it.values += values }
 
     override fun equals(other: Any?): Boolean {
         return (other is SeqCstMemoryTracker) && (values == other.values)
