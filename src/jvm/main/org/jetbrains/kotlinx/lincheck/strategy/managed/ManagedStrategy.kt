@@ -533,12 +533,10 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         // Try to acquire the monitor
-        if (!monitorTracker.acquire(iThread, monitor)) {
+        while (!monitorTracker.acquire(iThread, monitor)) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
-            // Now it is possible to acquire the monitor, do it then.
-            require(monitorTracker.acquire(iThread, monitor))
         }
         // The monitor is acquired, finish.
         return false
@@ -553,6 +551,37 @@ abstract class ManagedStrategy(
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         monitorTracker.release(iThread, monitor)
+        traceCollector?.passCodeLocation(tracePoint)
+        return false
+    }
+
+    /**
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param codeLocation the byte-code location identifier of this operation.
+     * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
+     * @return whether `Object.wait` should be executed
+     */
+    internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
+        if (!isTestThread(iThread)) return true
+        if (inIgnoredSection(iThread)) return false
+        newSwitchPoint(iThread, codeLocation, tracePoint)
+        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
+        if (withTimeout) return false // timeouts occur instantly
+        while (monitorTracker.wait(iThread, monitor)) {
+            // switch to another thread and wait till a notify event happens
+            switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, true)
+        }
+        return false
+    }
+
+    /**
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param codeLocation the byte-code location identifier of this operation.
+     * @return whether `Object.notify` should be executed
+     */
+    internal fun beforeNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean): Boolean {
+        if (!isTestThread(iThread)) return true
+        monitorTracker.notify(iThread, monitor, notifyAll)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
@@ -577,37 +606,6 @@ abstract class ManagedStrategy(
     internal fun afterUnpark(iThread: Int, codeLocation: Int, tracePoint: UnparkTracePoint?, thread: Any) {
         if (!isTestThread(iThread)) return
         traceCollector?.passCodeLocation(tracePoint)
-    }
-
-    /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param codeLocation the byte-code location identifier of this operation.
-     * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
-     * @return whether `Object.wait` should be executed
-     */
-    internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
-        if (!isTestThread(iThread)) return true
-        if (inIgnoredSection(iThread)) return false
-        newSwitchPoint(iThread, codeLocation, tracePoint)
-        failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
-        if (withTimeout) return false // timeouts occur instantly
-        monitorTracker.wait(iThread, monitor)
-        // switch to another thread and wait till a notify event happens
-        switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, true)
-        require(monitorTracker.acquire(iThread, monitor)) // acquire the lock again
-        return false
-    }
-
-    /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param codeLocation the byte-code location identifier of this operation.
-     * @return whether `Object.notify` should be executed
-     */
-    internal fun beforeNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean): Boolean {
-        if (!isTestThread(iThread)) return true
-        monitorTracker.notify(iThread, monitor, notifyAll)
-        traceCollector?.passCodeLocation(tracePoint)
-        return false
     }
 
     /**
@@ -916,7 +914,7 @@ interface MonitorTracker {
 
     fun release(iThread: Int, monitor: Any)
 
-    fun wait(iThread: Int, monitor: Any)
+    fun wait(iThread: Int, monitor: Any): Boolean
 
     fun notify(iThread: Int, monitor: Any, notifyAll: Boolean)
 

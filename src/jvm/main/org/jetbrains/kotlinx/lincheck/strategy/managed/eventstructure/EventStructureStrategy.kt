@@ -304,8 +304,9 @@ private class EventStructureMonitorTracker(private val eventStructure: EventStru
         eventStructure.addUnlockEvent(iThread, monitor)
     }
 
-    override fun wait(iThread: Int, monitor: Any) {
+    override fun wait(iThread: Int, monitor: Any): Boolean {
         eventStructure.addWaitEvent(iThread, monitor)
+        return false
     }
 
     override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {

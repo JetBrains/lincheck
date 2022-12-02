@@ -321,7 +321,7 @@ private class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     // Note, that a thread can wait on a free monitor if it is waiting for
     // a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
-    private val acquiringMonitors = Array<Any?>(nThreads) { null }
+    private val acquiringMonitors = Array<MonitorAcquiringInfo?>(nThreads) { null }
     // Stores `true` for the threads which are waiting for a
     // `notify` call on the monitor stored in `acquiringMonitor`.
     private val waitForNotify = BooleanArray(nThreads) { false }
@@ -330,14 +330,15 @@ private class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
      * Performs a logical acquisition.
      */
     override fun acquire(iThread: Int, monitor: Any): Boolean {
-        // Increment the reentrant depth and store the
-        // acquisition info if needed.
-        val ai = acquiredMonitors.computeIfAbsent(monitor) { MonitorAcquiringInfo(iThread, 0) }
-        if (ai.iThread != iThread) {
-            acquiringMonitors[iThread] = monitor
+        // Increment the reentrant depth and store the acquisition info if needed.
+        val info = acquiredMonitors.computeIfAbsent(monitor) {
+            MonitorAcquiringInfo(monitor, iThread, 0)
+        }
+        if (info.iThread != iThread) {
+            acquiringMonitors[iThread] = MonitorAcquiringInfo(monitor, iThread, 0)
             return false
         }
-        ai.timesAcquired++
+        info.timesAcquired++
         acquiringMonitors[iThread] = null // re-set
         return true
     }
@@ -348,16 +349,17 @@ private class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     override fun release(iThread: Int, monitor: Any) {
         // Decrement the reentrancy depth and remove the acquisition info
         // if the monitor becomes free to acquire by another thread.
-        val ai = acquiredMonitors[monitor]!!
-        ai.timesAcquired--
-        if (ai.timesAcquired == 0) acquiredMonitors.remove(monitor)
+        val info = acquiredMonitors[monitor]!!
+        info.timesAcquired--
+        if (info.timesAcquired == 0)
+            acquiredMonitors.remove(monitor)
     }
 
     /**
      * Returns `true` if the corresponding threads is waiting on some monitor.
      */
     fun isWaiting(iThread: Int): Boolean {
-        val monitor = acquiringMonitors[iThread] ?: return false
+        val monitor = acquiringMonitors[iThread]?.monitor ?: return false
         return waitForNotify[iThread] || !canAcquireMonitor(iThread, monitor)
     }
 
@@ -365,34 +367,47 @@ private class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
      * Returns `true` if the monitor is already acquired by
      * the thread [iThread], or if this monitor is free to acquire.
      */
-    fun canAcquireMonitor(iThread: Int, monitor: Any) =
-        acquiredMonitors[monitor]?.iThread?.equals(iThread) ?: true
+    fun canAcquireMonitor(iThread: Int, monitor: Any): Boolean {
+        val info = acquiredMonitors[monitor] ?: return true
+        return info.iThread == iThread
+    }
 
     /**
      * Performs a logical wait, [isWaiting] for the specified thread
-     * returns `true` until the corresponding [notify] or [notifyAll]
-     * is invoked.
+     * returns `true` until the corresponding [notify] or [notifyAll] is invoked.
      */
-    override fun wait(iThread: Int, monitor: Any) {
+    override fun wait(iThread: Int, monitor: Any): Boolean {
         // TODO: we can add spurious wakeups here
-        check(monitor in acquiredMonitors) { "Monitor should have been acquired by this thread" }
-        release(iThread, monitor)
-        waitForNotify[iThread] = true
-        acquiringMonitors[iThread] = monitor
+        var info = acquiredMonitors[monitor]
+        if (info != null && info.iThread == iThread) {
+            waitForNotify[iThread] = true
+            acquiringMonitors[iThread] = info
+            acquiredMonitors.remove(monitor)
+            return true
+        }
+        info = acquiringMonitors[iThread]
+        check(info != null) { "Monitor should have been acquired by this thread" }
+        if (waitForNotify[iThread]) {
+            return true
+        }
+        acquiredMonitors[monitor] = info
+        acquiringMonitors[iThread] = null
+        return false
     }
 
     /**
      * Performs the logical `notify` operation.
      * Notifies all threads, even if [notifyAll] is false: odd threads will have a spurious wakeup.
      */
-    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) =
-        acquiringMonitors.forEachIndexed { iThread, m ->
-            if (monitor === m) waitForNotify[iThread] = false
+    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {
+        acquiringMonitors.forEachIndexed { t, info ->
+            if (monitor === info?.monitor) waitForNotify[t] = false
         }
+    }
 
     /**
      * Stores the number of reentrant acquisitions ([timesAcquired])
      * and the number of thread ([iThread]) that holds the monitor.
      */
-    private class MonitorAcquiringInfo(val iThread: Int, var timesAcquired: Int)
+    private class MonitorAcquiringInfo(val monitor: Any, val iThread: Int, var timesAcquired: Int)
 }
