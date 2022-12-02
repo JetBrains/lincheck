@@ -47,27 +47,33 @@ private class WaitNotifyLock {
 
     fun lock() {
         val thread = Thread.currentThread()
+        // use nested synchronized blocks to test wait/notify with lock re-entrance
         synchronized(this) {
-            while (owner != null) {
-                (this as Object).wait()
+            synchronized(this) {
+                while (owner != null) {
+                    (this as Object).wait()
+                }
+                owner = thread
             }
-            owner = thread
         }
     }
 
     fun unlock() {
+        // use nested synchronized blocks to test wait/notify with lock re-entrance
         synchronized(this) {
-            owner = null
-            (this as Object).notify()
+            synchronized(this) {
+                owner = null
+                (this as Object).notify()
+            }
         }
     }
-}
 
-private inline fun <T> WaitNotifyLock.withLock(body: () -> T): T {
-    try {
-        lock()
-        return body()
-    } finally {
-        unlock()
+    inline fun <T> withLock(body: () -> T): T {
+        try {
+            lock()
+            return body()
+        } finally {
+            unlock()
+        }
     }
 }
