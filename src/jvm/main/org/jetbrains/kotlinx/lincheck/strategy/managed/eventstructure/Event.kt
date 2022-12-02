@@ -183,6 +183,53 @@ class Event private constructor(
         }
     }
 
+    /**
+     * Checks whether this event is valid response to the [request] event.
+     * If this event is not a response or [request] is not a request returns false.
+     *
+     * Response is considered to be valid if:
+     * - request is a parent of response,
+     * - request-label can be synchronized-into response-label.
+     *
+     * Flag [relaxedCheck] enables relaxed checking in the presence of
+     * partially replayed execution (see [EventLabel.replay]).
+     *
+     * @see EventLabel.synchronizesInto
+     */
+    fun isValidResponse(request: Event, relaxedCheck: Boolean = false) =
+        request.label.isRequest && label.isResponse && parent == request &&
+        request.label.synchronizesInto(label, relaxedCheck)
+
+    /**
+     * Checks whether this event is valid response to its parent request event.
+     * If this event is not a response or its parent is not a request returns false.
+     *
+     * @see isValidResponse
+     */
+    fun isValidResponse(relaxedCheck: Boolean = false) =
+        parent != null && isValidResponse(parent, relaxedCheck)
+
+    /**
+     * Checks whether this event is valid write part of atomic read-modify-write,
+     * of which the [readResponse] is a read-response part.
+     * If this event is not an exclusive write or [readResponse] is not an exclusive read-response returns false.
+     *
+     * Write is considered to be valid write part of read-modify-write if:
+     * - read-response is a parent of write,
+     * - read-response and write access same location,
+     * - both have exclusive flag set.
+     * request-label can be synchronized-into response-label.
+     *
+     * Flag [relaxedCheck] enables relaxed checking in the presence of
+     * partially replayed execution (see [EventLabel.replay]).
+     *
+     * @see MemoryAccessLabel.isExclusive
+     */
+    fun isWritePartOfAtomicUpdate(readResponse: Event, relaxedCheck: Boolean = false) =
+        readResponse.label is ReadAccessLabel && readResponse.label.isResponse && readResponse.label.isExclusive &&
+        label is WriteAccessLabel && label.isExclusive && parent == readResponse &&
+        readResponse.label.accessesSameLocation(label, relaxedCheck)
+
     override fun equals(other: Any?): Boolean {
         return (other is Event) && (id == other.id)
     }

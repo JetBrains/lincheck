@@ -43,11 +43,11 @@ import kotlin.reflect.KClass
  *
  * Labels can synchronize to form new labels using [synchronize] method.
  * For example, write access label can synchronize with read-request label
- * to form a read-response label. The response label takes value written by write access
+ * to form a read-response label. The response label takes value written by the write access
  * as its read value. When appropriate, we use notation `\+` to denote synchronization binary operation:
  *
  * ```
- * W(x, v) \+ R^{req}(x) = R^{rsp}(x, v)
+ * Write(x, v) \+ Read^{req}(x) = Read^{rsp}(x, v)
  * ```
  *
  * Synchronize operation is expected to be associative and commutative.
@@ -56,8 +56,20 @@ import kotlin.reflect.KClass
  * In such cases [synchronize] returns null.
  *
  * ```
- * W(x, v) \+ Lk^{req}(l) = 0
+ * Write(x, v) \+ Lock^{req}(l) = null
  * ```
+ *
+ * In case when a pair of labels can synchronize we also say that they synchronize-with each other
+ * and use notation `<+>` to denote this relation.
+ * Do not confuse this synchronizes-with relation with the synchronizes-with relation from the Java Memory Model.
+ * Method [synchronizesWith] checks whether two labels can synchronize.
+ *
+ * Given a pair of synchronizable labels, we say that
+ * these labels synchronize-into the synchronization result label.
+ * Equivalently, we say that the result label is synchronized-from the argument labels.
+ * Methods [synchronizesInto] and [synchronizedFrom] implement these relations.
+ * We use notation `\>>` to denote the synchronize-into relation and `<</` to denote synchronized-from relation.
+ * Therefore, if `A \+ B = C` then `A \>> C` and `B \>> C`.
  *
  * It is responsibility of [EventLabel] subclasses to override [synchronize] method
  * in case when they need to implement non-trivial synchronization.
@@ -66,12 +78,21 @@ import kotlin.reflect.KClass
  * Every label should be able to synchronize with [EmptyLabel] and produce itself.
  *
  * ```
- * W(x, v) \+ 1 = W(x, v)
+ * Write(x, v) \+ Empty = Write(x, v)
  * ```
+ *
+ * In the case of non-trivial synchronization it is also necessary to override [synchronizedFrom] method,
+ * because its implementation should be consistent with [synchronize]
+ * ([synchronizesInto] method implementation is derived from [synchronizedFrom]).
+ * It is not obligatory to override [synchronizesWith] method, because the default implementation
+ * is guaranteed to be consistent with [synchronize] (it just checks that result of [synchronize] is not null).
+ * However, the overridden implementation can optimize this check.
  *
  * Formally, labels form a synchronization algebra [1],
  * that is the algebraic structure (deriving from partial commutative monoid)
  * defining how individual atomic events can synchronize to produce new events.
+ * The synchronizes-into relation corresponds to the irreflexive kernel of
+ * the divisibility pre-order associated with the synchronization monoid.
  *
  * [1] Winskel, Glynn. "Event structure semantics for CCS and related languages."
  *     International Colloquium on Automata, Languages, and Programming. Springer, Berlin, Heidelberg, 1982.
@@ -91,23 +112,53 @@ abstract class EventLabel(
 ) {
     /**
      * Synchronizes event label with another label passed as a parameter.
+     * Default implementation provides synchronization only with [EmptyLabel].
      *
-     * @param label label to synchronize with
+     * @param label label to synchronize with.
      * @return label representing result of synchronization
-     *   or null if this label cannot synchronize with [label]
+     *   or null if this label cannot synchronize with [label].
      * @see EventLabel
      */
     open infix fun synchronize(label: EventLabel): EventLabel? =
         if (label is EmptyLabel) this else null
 
     /**
-     * Checks whether a pair of labels can potentially synchronize
-     * (do not confuse this term with "synchronizes-with" relation from the Java Memory Model).
+     * Checks whether two labels can synchronize.
      * Default implementation just checks that result of [synchronize] is not null,
      * overridden implementation can optimize this check.
+     *
+     * @see EventLabel
      */
     open infix fun synchronizesWith(label: EventLabel): Boolean =
         (synchronize(label) != null)
+
+    /**
+     * Checks whether this label synchronizes-into the argument label,
+     * i.e. there exists another label which can be synchronized with this label to produce argument label.
+     * Inverse of [synchronizedFrom].
+     *
+     * @see synchronizedFrom
+     */
+    fun synchronizesInto(label: EventLabel, relaxedCheck: Boolean = false): Boolean =
+        label.synchronizedFrom(this, relaxedCheck)
+
+    /**
+     * Checks whether this label synchronizes-from the argument label,
+     * i.e. it is a result of synchronization of the argument label with some another label.
+     * Inverse of [synchronizesInto].
+     *
+     * Default implementation returns true only if [label] is [EmptyLabel],
+     * since by default label can synchronize only with [EmptyLabel]
+     * (due to default implementation of [synchronize]).
+     * If subclass overrides [synchronize] it should also override this method.
+     *
+     * Flag [relaxedCheck] can be passed to relax the synchronizes-from check
+     * in presence of partially replayed execution (see [replay]).
+     *
+     * @see EventLabel
+     */
+    open fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean = false): Boolean =
+        (label is EmptyLabel)
 
     /**
      * Checks whether this label is send label.
@@ -186,15 +237,17 @@ enum class SynchronizationType { Binary, Barrier }
 /**
  * Dummy empty label acting as a neutral element of [synchronize] operation.
  *
- * For each label `l` it should be true that:
+ * For each label `L` it should be true that:
  *
  * ```
- * l \+ 1 = 1 \+ l = l
+ * L \+ Empty = Empty \+ L = L
  * ```
  */
 class EmptyLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
 
     override fun synchronize(label: EventLabel) = label
+
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = false
 
     override fun toString(): String = "Empty"
 
@@ -212,7 +265,7 @@ class EmptyLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
  * results in read-response label with 0 value.
  *
  * ```
- * init \+ R^{req}(x) = R^{rsp}(x, 0)
+ * Init \+ Read^{req}(x) = Read^{rsp}(x, 0)
  * ```
  */
 class InitializationLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
@@ -299,7 +352,6 @@ data class ThreadStartLabel(
         }
 
         isRequest && label is ThreadForkLabel && threadId in label.forkThreadIds -> {
-            check(!isMainThread)
             ThreadStartLabel(
                 threadId = threadId,
                 kind = LabelKind.Response,
@@ -308,6 +360,14 @@ data class ThreadStartLabel(
         }
 
         else -> super.synchronize(label)
+    }
+
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+        !isResponse -> false
+        label is ThreadStartLabel && label.isRequest && threadId == label.threadId -> true
+        label is ThreadForkLabel && !isMainThread && threadId in label.forkThreadIds -> true
+        label is InitializationLabel && isMainThread -> true
+        else -> false
     }
 
     override fun toString(): String = "ThreadStart"
@@ -359,6 +419,9 @@ data class ThreadFinishLabel(
         else -> super.synchronize(label)
     }
 
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean =
+        label is ThreadFinishLabel && finishedThreadIds.containsAll(label.finishedThreadIds)
+
     override fun toString(): String = "ThreadFinish"
 
 }
@@ -395,6 +458,14 @@ data class ThreadJoinLabel(
         if (label is ThreadFinishLabel)
             label.synchronize(this)
         else super.synchronize(label)
+
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+        !isResponse -> false
+        label is ThreadJoinLabel && label.isRequest && label.joinThreadIds.containsAll(joinThreadIds) -> true
+        label is ThreadFinishLabel && label.finishedThreadIds.all { it !in joinThreadIds } -> true
+        else -> false
+    }
+
 
     override fun toString(): String =
         "ThreadJoin(${joinThreadIds})"
@@ -455,12 +526,28 @@ sealed class MemoryAccessLabel(
     val isRead: Boolean
         get() = (this is ReadAccessLabel)
 
-    private fun equalUpToReplay(label: MemoryAccessLabel): Boolean =
+    /**
+     * Checks that this access is to the same memory location as [other].
+     * If [relaxedCheck] flag is true then checks only locations' shape,
+     * e.g. whether both accesses are to the same field of the same class but
+     * not that they access the same object.
+     *
+     * TODO: instead of relaxed check we can just substitute memory locations
+     *   at first point during replay when we detect incompatibility.
+     */
+    fun accessesSameLocation(other: MemoryAccessLabel, relaxedCheck: Boolean = false): Boolean =
+        if (!relaxedCheck)
+            location == other.location
+        // TODO: implement check for locations compatibility
+        else true
+
+
+    protected fun equalUpToReplay(label: MemoryAccessLabel): Boolean =
         (kind == label.kind) &&
         (accessKind == label.accessKind) &&
         (kClass == label.kClass) &&
-        (isExclusive == label.isExclusive)
-        // TODO: check for locations compatibility
+        (isExclusive == label.isExclusive) &&
+        accessesSameLocation(label, relaxedCheck = true)
 
     override fun replay(label: EventLabel): Boolean {
         if (label is MemoryAccessLabel && equalUpToReplay(label)) {
@@ -522,17 +609,18 @@ data class ReadAccessLabel(
     }
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-        (isRequest && label is InitializationLabel) ->
-            completeRequest(OpaqueValue.default(kClass))
-
         (isRequest && label is WriteAccessLabel && location == label.location) ->
             completeRequest(label.value)
+
+        (isRequest && label is InitializationLabel) ->
+            completeRequest(OpaqueValue.default(kClass))
 
         else -> super.synchronize(label)
     }
 
     private fun completeRequest(value: OpaqueValue?): ReadAccessLabel {
         require(isRequest)
+        // TODO: perform dynamic type-check
         // require(value.isInstanceOf(kClass))
         return ReadAccessLabel(
             kind = LabelKind.Response,
@@ -542,6 +630,27 @@ data class ReadAccessLabel(
             isExclusive = isExclusive,
         )
     }
+
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+        !isResponse -> false
+
+        label is ReadAccessLabel && label.isRequest &&
+            kClass == label.kClass && isExclusive == label.isExclusive &&
+            accessesSameLocation(label, relaxedCheck)
+        -> true
+
+        label is WriteAccessLabel &&
+            accessesSameLocation(label, relaxedCheck) && canReadFrom(label)
+        -> true
+
+        label is InitializationLabel && value == OpaqueValue.default(kClass) -> true
+
+        else -> false
+    }
+
+    private fun canReadFrom(writeLabel: WriteAccessLabel): Boolean =
+        // TODO: also check kClass
+        value == writeLabel.value
 
     override fun toString(): String = super.toString()
 
@@ -580,26 +689,14 @@ data class WriteAccessLabel(
  * Base class of all mutex operations event labels.
  *
  * @param kind the kind of this label.
- * @param syncType the synchronization type of this label.
+ * @param mutex_ the mutex to perform operation on.
  * @param isBlocking whether this label is blocking.
  * @param unblocked whether this blocking label is already unblocked.
  */
 sealed class MutexLabel(
-    /**
-     * Kind of label.
-     */
     kind: LabelKind,
-    /**
-     * Lock object affected by this operation.
-     */
     protected open var mutex_: Any,
-    /**
-     * Whether this label is blocking.
-     */
     isBlocking: Boolean = false,
-    /**
-     * Whether this blocking label is already unblocked.
-     */
     unblocked: Boolean = true,
 ): EventLabel(kind, SynchronizationType.Binary, isBlocking, unblocked) {
 
@@ -619,6 +716,26 @@ sealed class MutexLabel(
             is WaitLabel    -> MutexOperationKind.Wait
             is NotifyLabel  -> MutexOperationKind.Notify
         }
+
+    fun operatesOnSameMutex(other: MutexLabel, relaxedCheck: Boolean) =
+        // TODO: can we perform some checks in relaxed case?
+        if (!relaxedCheck) mutex === other.mutex else true
+
+    private fun equalUpToReplay(label: MutexLabel): Boolean =
+        (kind == label.kind) &&
+        (operationKind == label.operationKind) &&
+        operatesOnSameMutex(label, relaxedCheck = true) &&
+        ((this is NotifyLabel) implies {
+            (this as NotifyLabel).isBroadcast == (label as NotifyLabel).isBroadcast
+        })
+
+    override fun replay(label: EventLabel): Boolean {
+        if (label is MutexLabel && equalUpToReplay(label)) {
+            mutex_ = label.mutex
+            return true
+        }
+        return false
+    }
 
     override fun toString(): String {
         val kindString = when (kind) {
@@ -666,13 +783,21 @@ data class LockLabel(
     }
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-        (isRequest && label is InitializationLabel) ->
-            LockLabel(LabelKind.Response, mutex)
-
         (isRequest && label is UnlockLabel && mutex == label.mutex) ->
             LockLabel(LabelKind.Response, mutex)
 
+        (isRequest && label is InitializationLabel) ->
+            LockLabel(LabelKind.Response, mutex)
+
         else -> super.synchronize(label)
+    }
+
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+        !isResponse -> false
+        label is LockLabel && label.isRequest && operatesOnSameMutex(label, relaxedCheck) -> true
+        label is UnlockLabel && operatesOnSameMutex(label, relaxedCheck) -> true
+        label is InitializationLabel -> true
+        else -> false
     }
 
     override fun toString(): String = super.toString()
@@ -724,6 +849,7 @@ data class WaitLabel(
     unblocked = (kind == LabelKind.Response),
 ) {
     override fun synchronize(label: EventLabel): EventLabel? = when {
+        // TODO: provide an option to forbid spurious wake-ups
         (isRequest && label is InitializationLabel) ->
             WaitLabel(LabelKind.Response, mutex)
 
@@ -733,6 +859,13 @@ data class WaitLabel(
         else -> super.synchronize(label)
     }
 
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+        !isResponse -> false
+        label is WaitLabel && label.isRequest && operatesOnSameMutex(label, relaxedCheck) -> true
+        label is NotifyLabel && operatesOnSameMutex(label, relaxedCheck) -> true
+        label is InitializationLabel -> true
+        else -> false
+    }
 
     override fun toString(): String = super.toString()
 }

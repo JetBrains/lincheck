@@ -106,6 +106,9 @@ private data class SequentialConsistencyView(val view: MutableMap<MemoryLocation
             event.label is WriteAccessLabel ->
                 this.copy().apply { view[event.label.location] = event }
 
+            // TODO: handle locks!
+            event.label is MutexLabel -> this
+
             event.label is InitializationLabel -> this
             event.label is ThreadEventLabel -> this
 
