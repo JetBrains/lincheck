@@ -333,7 +333,8 @@ abstract class ManagedStrategy(
      */
     protected open fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
-        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
+        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread])) &&
+        !monitorTracker.isWaiting(iThread)
 
     /**
      * Waits until the specified thread can continue
@@ -903,21 +904,6 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
         operationCounts.clear()
         lastIThread = iThread
     }
-}
-
-/**
- * Tracks synchronization operations with monitors.
- */
-interface MonitorTracker {
-
-    fun acquire(iThread: Int, monitor: Any): Boolean
-
-    fun release(iThread: Int, monitor: Any)
-
-    fun wait(iThread: Int, monitor: Any): Boolean
-
-    fun notify(iThread: Int, monitor: Any, notifyAll: Boolean)
-
 }
 
 /**

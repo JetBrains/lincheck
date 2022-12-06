@@ -160,17 +160,19 @@ class Event private constructor(
     val threadRoot: Event
         get() = predNth(threadPosition)!!
 
-    val readsFrom: Event by lazy {
-        require(label is ReadAccessLabel && label.isResponse)
-        check(dependencies.isNotEmpty())
-        dependencies.first().also {
-            // TODO: make `isSynchronized` method to check for labels' compatibility
-            //  according to synchronization algebra (e.g. write/read reads-from compatibility)
-            check((it.label is InitializationLabel) ||
-                  (it.label is MemoryAccessLabel && it.label.isWrite &&
-                   it.label.location == label.location))
+    val syncFrom: Event by lazy {
+        require(label.isResponse && label.isBinarySynchronizing)
+        check(dependencies.size == 1)
+        dependencies.first().ensure {
+            it.label.synchronizesInto(label)
         }
     }
+
+    val readsFrom: Event
+        get() = run {
+            require(label is ReadAccessLabel)
+            syncFrom
+        }
 
     val exclusiveReadPart: Event by lazy {
         require(label is WriteAccessLabel && label.isExclusive)
@@ -182,6 +184,18 @@ class Event private constructor(
             )
         }
     }
+
+    val locksFrom: Event
+        get() = run {
+            require(label is LockLabel)
+            syncFrom
+        }
+
+    val notifiedBy: Event
+        get() = run {
+            require(label is WaitLabel)
+            syncFrom
+        }
 
     /**
      * Checks whether this event is valid response to the [request] event.

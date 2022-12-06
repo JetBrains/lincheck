@@ -46,6 +46,29 @@ infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
 
+inline fun Boolean.ensure(): Boolean {
+    // TODO: add contract?
+    // contract {
+    //     returns() implies this
+    // }
+    check(this)
+    return this
+}
+
+inline fun Boolean.ensureFalse(): Boolean {
+    // TODO: add contract?
+    // contract {
+    //     returns() implies !this
+    // }
+    check(!this)
+    return this
+}
+
+inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
+    check(predicate(this))
+    return this
+}
+
 class UnreachableException(message: String?): Exception(message)
 
 fun unreachable(message: String? = null): Nothing {

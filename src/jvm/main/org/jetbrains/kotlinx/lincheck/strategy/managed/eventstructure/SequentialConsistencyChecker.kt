@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 // TODO: what information can we store about the reason of violation?
 class ReleaseAcquireConsistencyViolation: Inconsistency()
@@ -31,7 +31,7 @@ data class SequentialConsistencyViolation(
 ) : Inconsistency()
 
 enum class SequentialConsistencyCheckPhase {
-    APPROXIMATION, REPLAYING
+    PRELIMINARY, APPROXIMATION, REPLAYING
 }
 
 class SequentialConsistencyChecker(
@@ -40,22 +40,57 @@ class SequentialConsistencyChecker(
 ) : ConsistencyChecker {
 
     override fun check(execution: Execution): Inconsistency? {
+        // do basic preliminary checks
+        checkLocks(execution)?.let { return it }
+        // calculate writes-before relation if required
         val wbRelation = if (checkReleaseAcquireConsistency) {
             WritesBeforeRelation(execution).apply {
                 saturate()?.let { return it }
             }
         } else null
+        // calculate union of happens-before and writes-before relations
         val hbwbRelation = wbRelation?.let { wb ->
             executionRelation(execution, relation = causalityOrder.lessThan union wb)
         }
+        // calculate approximation of sequential consistency order if required
         val scApproximationRelation = if (approximateSequentialConsistency) {
             val initialApproximation = hbwbRelation ?: causalityOrder.lessThan
             SequentialConsistencyRelation(execution, initialApproximation).apply {
                 saturate()?.let { return it }
             }
         } else hbwbRelation
+        // get dependency covering to guide the search
         val covering = scApproximationRelation?.buildExternalCovering() ?: externalCausalityCovering
+        // check consistency by trying to replay execution using sequentially consistent abstract machine
         return checkByReplaying(execution, covering)
+    }
+
+    private fun checkLocks(execution: Execution): Inconsistency? {
+        val mapping = mutableMapOf<Event, Event>()
+        for (event in execution) {
+            if (event.label !is MutexLabel || !event.label.isResponse)
+                continue
+            when (event.label) {
+                is LockLabel -> {
+                    if (mapping.put(event.locksFrom, event) != null)
+                        return SequentialConsistencyViolation(
+                            phase = SequentialConsistencyCheckPhase.PRELIMINARY
+                        )
+                }
+
+                is WaitLabel -> {
+                    if ((event.notifiedBy.label as NotifyLabel).isBroadcast)
+                        continue
+                    if (mapping.put(event.notifiedBy, event) != null)
+                        return SequentialConsistencyViolation(
+                            phase = SequentialConsistencyCheckPhase.PRELIMINARY
+                        )
+                }
+
+                else -> continue
+            }
+        }
+        return null
     }
 
     private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Inconsistency? {
@@ -88,9 +123,13 @@ class SequentialConsistencyChecker(
 
 }
 
-private data class SequentialConsistencyView(val view: MutableMap<MemoryLocation, Event> = mutableMapOf()) {
+private data class SequentialConsistencyReplayer(
+    val nThreads: Int,
+    val memoryView: MutableMap<MemoryLocation, Event> = mutableMapOf(),
+    val monitorTracker: MapMonitorTracker = MapMonitorTracker(nThreads),
+) {
 
-    fun replay(event: Event): SequentialConsistencyView? {
+    fun replay(event: Event): SequentialConsistencyReplayer? {
         return when {
 
             event.label is ReadAccessLabel && event.label.isRequest ->
@@ -99,15 +138,34 @@ private data class SequentialConsistencyView(val view: MutableMap<MemoryLocation
             event.label is ReadAccessLabel && event.label.isResponse ->
                 this.takeIf {
                     if (event.readsFrom.label !is InitializationLabel)
-                        view[event.label.location] == event.readsFrom
-                    else view[event.label.location] == null
+                         memoryView[event.label.location] == event.readsFrom
+                    else memoryView[event.label.location] == null
                 }
 
             event.label is WriteAccessLabel ->
-                this.copy().apply { view[event.label.location] = event }
+                this.copy().apply { memoryView[event.label.location] = event }
 
-            // TODO: handle locks!
-            event.label is MutexLabel -> this
+            event.label is LockLabel && event.label.isRequest ->
+                this
+
+            event.label is LockLabel && event.label.isResponse ->
+                if (this.monitorTracker.canAcquireMonitor(event.threadId, event.label.mutex)) {
+                    this.copy().apply { monitorTracker.acquire(event.threadId, event.label.mutex).ensure() }
+                } else null
+
+            event.label is UnlockLabel ->
+                this.copy().apply { monitorTracker.release(event.threadId, event.label.mutex) }
+
+            event.label is WaitLabel && event.label.isRequest ->
+                this.copy().apply { monitorTracker.wait(event.threadId, event.label.mutex).ensure() }
+
+            event.label is WaitLabel && event.label.isResponse ->
+                if (this.monitorTracker.canAcquireMonitor(event.threadId, event.label.mutex)) {
+                    this.copy().takeIf { !it.monitorTracker.wait(event.threadId, event.label.mutex) }
+                } else null
+
+            event.label is NotifyLabel ->
+                this.copy().apply { monitorTracker.notify(event.threadId, event.label.mutex, event.label.isBroadcast) }
 
             event.label is InitializationLabel -> this
             event.label is ThreadEventLabel -> this
@@ -117,16 +175,25 @@ private data class SequentialConsistencyView(val view: MutableMap<MemoryLocation
         }
     }
 
-    fun replay(events: List<Event>): SequentialConsistencyView? {
-        var view = this
-        for (event in events) {
-            view = view.replay(event) ?: return null
+    fun replay(hyperEvent: HyperEvent): SequentialConsistencyReplayer? {
+        val events: List<Event> = when(hyperEvent) {
+            is UnlockAndWait -> listOf(hyperEvent.waitRequestPart)
+            is WakeUpAndLock -> listOf(hyperEvent.waitResponsePart)
+            else -> hyperEvent.events
         }
-        return view
+        var replayer = this
+        for (event in events) {
+            replayer = replayer.replay(event) ?: return null
+        }
+        return replayer
     }
 
-    fun copy(): SequentialConsistencyView =
-        SequentialConsistencyView(view.toMutableMap())
+    fun copy(): SequentialConsistencyReplayer =
+        SequentialConsistencyReplayer(
+            nThreads,
+            memoryView.toMutableMap(),
+            monitorTracker.copy(),
+        )
 
 }
 
@@ -134,13 +201,13 @@ private typealias ExecutionCounter = IntArray
 
 private data class State(
     val counter: ExecutionCounter,
-    val view: SequentialConsistencyView,
+    val replayer: SequentialConsistencyReplayer,
 ) {
     companion object {
         fun initial(execution: Execution): State {
             return State(
                 counter = IntArray(execution.maxThreadId),
-                view = SequentialConsistencyView(),
+                replayer = SequentialConsistencyReplayer(execution.maxThreadId),
             )
         }
     }
@@ -148,11 +215,11 @@ private data class State(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is State) return false
-        return counter.contentEquals(other.counter) && view == other.view
+        return counter.contentEquals(other.counter) && replayer == other.replayer
     }
 
     override fun hashCode(): Int {
-        return 31 * counter.contentHashCode() + view.hashCode()
+        return 31 * counter.contentHashCode() + replayer.hashCode()
     }
 
 }
@@ -175,9 +242,9 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
         val atomicEvent = execution.nextAtomicEvent(threadId, position)
             ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it) } }
             ?: return null
-        val view = view.replay(atomicEvent.events) ?: return null
+        val view = replayer.replay(atomicEvent) ?: return null
         return State(
-            view = view,
+            replayer = view,
             counter = this.counter.copyOf().also {
                 it[threadId] += atomicEvent.events.size
             },

@@ -139,6 +139,7 @@ class EventStructureStrategy(
                 #inconsistent    = $inconsistentInvocations  
             #RelAcq violations   = $relAcqInconsistenciesCount
             #SeqCst violations   = ${sequentialConsistencyViolationsCount()}
+                #prelim. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.PRELIMINARY)}
                 #approx. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.APPROXIMATION)} 
                 #replay  phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.REPLAYING)}
         """.trimIndent()
@@ -284,11 +285,8 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
 private class EventStructureMonitorTracker(private val eventStructure: EventStructure) : MonitorTracker {
 
     override fun acquire(iThread: Int, monitor: Any): Boolean {
-        eventStructure.addLockEvent(iThread, monitor)
-        // We consider it is always possible to acquire a lock due to inversion of control.
-        // The strategy prioritizes threads resided in critical section. Thus, once
-        // thread acquires a lock it will be executed uninterruptedly till it leaves critical section.
-        return true
+        val event = eventStructure.addLockEvent(iThread, monitor)
+        return event.label.isResponse
     }
 
     override fun release(iThread: Int, monitor: Any) {
@@ -296,12 +294,16 @@ private class EventStructureMonitorTracker(private val eventStructure: EventStru
     }
 
     override fun wait(iThread: Int, monitor: Any): Boolean {
-        eventStructure.addWaitEvent(iThread, monitor)
-        return false
+        val event = eventStructure.addWaitEvent(iThread, monitor)
+        return event.label.isRequest
     }
 
     override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {
         eventStructure.addNotifyEvent(iThread, monitor, notifyAll)
+    }
+
+    override fun isWaiting(iThread: Int): Boolean {
+        return eventStructure.isWaiting(iThread)
     }
 
 }
