@@ -93,6 +93,39 @@ open class Execution(
         return threadsEvents == other.threadsEvents
     }
 
+    override fun hashCode(): Int =
+        threadsEvents.hashCode()
+
+    override fun toString(): String = buildString {
+        appendLine("<======== Execution Graph @${hashCode()} ========>")
+        threads.toList().sorted().forEach { tid ->
+            val events = threadsEvents[tid] ?: return@forEach
+            appendLine("[-------- Thread #${tid} --------]")
+            for (event in events) {
+                append("$event")
+                if (event.dependencies.isNotEmpty()) {
+                    appendLine()
+                    append("    dependencies: ${event.dependencies.joinToString { 
+                        "#${it.id}: [${it.threadId}, ${it.threadPosition}]" 
+                    }}")
+                }
+                appendLine()
+            }
+        }
+    }
+
+    infix fun equivalent(other: Execution): Boolean =
+        this.all { it equivalent (other[it.threadId, it.threadPosition] ?: return false) }
+
+    private infix fun Event.equivalent(other: Event): Boolean =
+        threadId == other.threadId &&
+        threadPosition == other.threadPosition &&
+        // TODO: check for label up to replaying
+        dependencies.size == other.dependencies.size &&
+        dependencies.all { e1 -> other.dependencies.any { e2 ->
+            e1 equivalent e2
+        }}
+
     fun buildIndexer() = object : Indexer<Event> {
 
         private val threadOffsets: IntArray =

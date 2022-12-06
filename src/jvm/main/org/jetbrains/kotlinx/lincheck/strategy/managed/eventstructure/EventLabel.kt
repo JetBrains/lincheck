@@ -20,8 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import kotlin.reflect.KClass
 
 /**
@@ -743,8 +742,7 @@ sealed class MutexLabel(
             LabelKind.Request -> "^req"
             LabelKind.Response -> "^rsp"
         }
-        val mutexString = System.identityHashCode(mutex)
-        return "${operationKind}${kindString}(${mutexString})"
+        return "${operationKind}${kindString}(${mutex.stringDescriptor()})"
     }
 
 }

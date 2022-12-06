@@ -64,7 +64,6 @@ class OpaqueValue private constructor(
             OpaqueValue(value, kClass)
 
         fun default(kClass: KClass<*>): OpaqueValue? = kClass.defaultValue()
-
     }
 
     val isPrimitive: Boolean =
@@ -87,17 +86,11 @@ class OpaqueValue private constructor(
         } else (this.value === other.value)
     }
 
-    override fun hashCode(): Int {
-        return System.identityHashCode(value)
-    }
+    override fun hashCode(): Int =
+        System.identityHashCode(value)
 
-    override fun toString(): String {
-        if (isPrimitive)
-            return value.toString()
-        val typeName = value.javaClass.simpleName ?: ""
-        val objHash = Integer.toHexString(hashCode())
-        return "${typeName}@${objHash}"
-    }
+    override fun toString(): String =
+        if (isPrimitive) value.toString() else value.stringDescriptor()
 
 }
 
@@ -118,3 +111,10 @@ fun KClass<*>.defaultValue(): OpaqueValue? = when(this) {
     Boolean::class  -> false
     else            -> null
 }?.opaque(kClass = this)
+
+
+fun Any.stringDescriptor(): String {
+    val typeName = this.javaClass.simpleName ?: ""
+    val objHash = Integer.toHexString(System.identityHashCode(this))
+    return "${typeName}@${objHash}"
+}
