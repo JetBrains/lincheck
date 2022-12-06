@@ -71,4 +71,4 @@ Lincheck features step-by-step:
   RU
 * [Testing concurrent algorithms with Lincheck](https://www.youtube.com/watch?v=9cB36asOjPo), Joker 2019, RU
 * [Lincheck: testing concurrent data structures on Java](https://www.youtube.com/watch?v=hwbpUEGHvvY), Hydra 2019, RU
-* [Lock-free algorithms testing](https://www.youtube.com/watch?v=_0_HOnTSS0E&t=1s), Joker 2017, RU
+* [Lock-free algorithms testing](https://www.youtube.com/watch?v=_0_HOnTSS0E), Joker 2017, RU
