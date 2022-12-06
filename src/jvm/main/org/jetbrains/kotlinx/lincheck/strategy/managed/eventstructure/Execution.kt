@@ -46,6 +46,10 @@ open class Execution(
     val maxThreadId: Int
         get() = threads.maxOrNull()?.let { 1 + it } ?: 0
 
+    val rootEvent: Event by lazy {
+        this.first { it.label is InitializationLabel }
+    }
+
     override fun isEmpty(): Boolean =
         threadsEvents.isEmpty()
 

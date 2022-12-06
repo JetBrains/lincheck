@@ -66,28 +66,22 @@ class SequentialConsistencyChecker(
     }
 
     private fun checkLocks(execution: Execution): Inconsistency? {
-        val mapping = mutableMapOf<Event, Event>()
+        // maps unlock (or notify) event to its single matching lock (or wait) event;
+        // if lock synchronizes-from initialization event,
+        // then instead maps lock object itself to its first lock event
+        val mapping = mutableMapOf<Any, Event>()
         for (event in execution) {
             if (event.label !is MutexLabel || !event.label.isResponse)
                 continue
-            when (event.label) {
-                is LockLabel -> {
-                    if (mapping.put(event.locksFrom, event) != null)
-                        return SequentialConsistencyViolation(
-                            phase = SequentialConsistencyCheckPhase.PRELIMINARY
-                        )
-                }
-
-                is WaitLabel -> {
-                    if ((event.notifiedBy.label as NotifyLabel).isBroadcast)
-                        continue
-                    if (mapping.put(event.notifiedBy, event) != null)
-                        return SequentialConsistencyViolation(
-                            phase = SequentialConsistencyCheckPhase.PRELIMINARY
-                        )
-                }
-
-                else -> continue
+            if (!(event.label is LockLabel || event.label is WaitLabel))
+                continue
+            if (event.label is WaitLabel && (event.notifiedBy.label as NotifyLabel).isBroadcast)
+                continue
+            val key: Any = if (event.syncFrom != execution.rootEvent) event.syncFrom else event.label.mutex.opaque()
+            if (mapping.put(key, event) != null) {
+                return SequentialConsistencyViolation(
+                    phase = SequentialConsistencyCheckPhase.PRELIMINARY
+                )
             }
         }
         return null
