@@ -63,11 +63,11 @@ class EventStructure(
 
     private var detectedInconsistency: Inconsistency? = null
 
+    private val lockReentranceMap = LockReentranceMap()
+
     init {
         root = addRootEvent()
     }
-
-    private val lockReentranceMap = LockReentranceMap()
 
     private fun emptyFrontier(): ExecutionFrontier =
         ExecutionFrontier().apply { set(rootThreadId, root) }
@@ -117,9 +117,8 @@ class EventStructure(
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
         detectedInconsistency = null
+        lockReentranceMap.reset()
     }
-
-    // lockReentranceMap.reset()
 
     fun checkConsistency(): Inconsistency? {
         if (detectedInconsistency == null) {
