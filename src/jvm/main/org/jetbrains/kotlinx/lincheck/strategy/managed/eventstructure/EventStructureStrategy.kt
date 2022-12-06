@@ -76,29 +76,20 @@ class EventStructureStrategy(
                 } catch (e: Throwable) {
                     UnexpectedExceptionInvocationResult(e)
                 }
-                // check that there were no inconsistencies detected during the run
-                if (result is UnexpectedExceptionInvocationResult &&
-                    result.exception is InconsistentExecutionException) {
-                    stats.update(result, result.exception.reason)
-                    continue@outer
-                }
-                // if execution was aborted we do not check consistency,
-                // because the graph can be in invalid state
+                // if invocation was aborted we also abort the current execution inside event structure
                 if (!result.isAbortedInvocation()) {
-                    // TODO: in this case we actually need to cut current execution to its replayed part
-                    // check that the final execution is consistent
-                    val inconsistency = eventStructure.checkConsistency()
-                    if (inconsistency != null) {
-                        stats.update(result, inconsistency)
-                        continue@outer
-                    }
+                    eventStructure.abortExploration()
                 }
+                // patch clocks
                 if (result is CompletedInvocationResult) {
                     patchResultsClock(result.results)
                 }
-                stats.update(result, null)
-                checkResult(result, shouldCollectTrace = false)?.let { return it }
-                continue@outer
+                val inconsistency = eventStructure.checkConsistency()
+                stats.update(result, inconsistency)
+                if (inconsistency == null) {
+                    checkResult(result, shouldCollectTrace = false)?.let { return it }
+                    continue@outer
+                }
             }
             break
         }

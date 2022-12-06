@@ -20,8 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import kotlin.reflect.KClass
 
 typealias ThreadSwitchCallback = (Int) -> Unit
@@ -56,11 +55,13 @@ class EventStructure(
     val currentExecution: Execution
         get() = _currentExecution
 
-    private var currentFrontier: ExecutionFrontier = ExecutionFrontier()
+    private var playedFrontier: ExecutionFrontier = ExecutionFrontier()
 
     private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
 
     private val delayedConsistencyCheckBuffer = mutableListOf<Event>()
+
+    private var detectedInconsistency: Inconsistency? = null
 
     init {
         root = addRootEvent()
@@ -95,7 +96,11 @@ class EventStructure(
     }
 
     fun initializeExploration() {
-        currentFrontier = emptyFrontier()
+        playedFrontier = emptyFrontier()
+    }
+
+    fun abortExploration() {
+        _currentExecution = playedFrontier.toExecution()
     }
 
     private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {
@@ -105,14 +110,19 @@ class EventStructure(
     }
 
     private fun resetExploration(event: Event) {
+        check(delayedConsistencyCheckBuffer.isEmpty())
         currentExplorationRoot = event
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
-        check(delayedConsistencyCheckBuffer.isEmpty())
+        detectedInconsistency = null
     }
 
-    fun checkConsistency(): Inconsistency? =
-        checker.check(currentExecution)
+    fun checkConsistency(): Inconsistency? {
+        if (detectedInconsistency == null) {
+            detectedInconsistency = checker.check(currentExecution)
+        }
+        return detectedInconsistency
+    }
 
     private fun checkConsistencyIncrementally(event: Event, isReplayedEvent: Boolean): Inconsistency? {
         if (inReplayPhase()) {
@@ -168,13 +178,13 @@ class EventStructure(
         (0 .. maxThreadId).any { inReplayPhase(it) }
 
     fun inReplayPhase(iThread: Int): Boolean {
-        val frontEvent = currentFrontier[iThread]?.also { check(it in _currentExecution) }
+        val frontEvent = playedFrontier[iThread]?.also { check(it in _currentExecution) }
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
 
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
-        val nextPosition = currentFrontier.getNextPosition(iThread)
+        val nextPosition = playedFrontier.getNextPosition(iThread)
         val atomicEvent = currentExecution.nextAtomicEvent(iThread, nextPosition, replaying = true)!!
         // delay replaying the last event till all other events are replayed;
         if (currentExplorationRoot == atomicEvent.events.last()) {
@@ -182,13 +192,13 @@ class EventStructure(
             return (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
         }
         return atomicEvent.dependencies.all { dependency ->
-            dependency in currentFrontier
+            dependency in playedFrontier
         }
     }
 
     private fun tryReplayEvent(iThread: Int): Event? {
         return if (inReplayPhase(iThread)) {
-            val position = 1 + currentFrontier.getPosition(iThread)
+            val position = 1 + playedFrontier.getPosition(iThread)
             check(position < currentExecution.getThreadSize(iThread))
             currentExecution[iThread, position]!!
         } else null
@@ -237,11 +247,12 @@ class EventStructure(
         val isReplayedEvent = inReplayPhase(event.threadId)
         if (!isReplayedEvent)
             _currentExecution.addEvent(event)
-        currentFrontier.update(event)
+        playedFrontier.update(event)
         if (synchronize)
             addSynchronizedEvents(event)
-        checkConsistencyIncrementally(event, isReplayedEvent)?.let {
-            throw InconsistentExecutionException(it)
+        // TODO: set suddenInvocationResult instead
+        if (detectedInconsistency == null) {
+            detectedInconsistency = checkConsistencyIncrementally(event, isReplayedEvent)
         }
     }
 
@@ -353,7 +364,7 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event
         }
-        val parent = currentFrontier[iThread]
+        val parent = playedFrontier[iThread]
         return addEvent(iThread, label, parent, dependencies = emptyList()).also { event ->
             addEventToCurrentExecution(event, synchronize = true)
         }
@@ -366,7 +377,7 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event
         }
-        val parent = currentFrontier[iThread]
+        val parent = playedFrontier[iThread]
         return addEvent(iThread, label, parent, dependencies = emptyList()).also { event ->
             addEventToCurrentExecution(event)
         }
