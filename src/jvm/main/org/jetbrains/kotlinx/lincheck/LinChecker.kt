@@ -64,15 +64,21 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
-        val verifier = createVerifier(checkStateEquivalence = true)
         for (i in customScenarios.indices) {
+            val verifier = createVerifier(checkStateEquivalence = i == 0)
             val scenario = customScenarios[i]
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) return failure
         }
+        var verifier = createVerifier(checkStateEquivalence = true)
         repeat(iterations) { i ->
+            // If verifier is too old or not enough free memory, create a new one to avoid memory leaks.
+            // Otherwise, the memory leak can cause OutOfMemoryError, especially when non-primitive parameters or results are used.
+            // https://github.com/Kotlin/kotlinx-lincheck/issues/124
+            if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0 || lacksFreeMemory())
+                verifier = createVerifier(checkStateEquivalence = false)
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
@@ -85,6 +91,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             }
         }
         return null
+    }
+
+    private fun lacksFreeMemory(): Boolean {
+        val runtime = Runtime.getRuntime()
+        // Check whether less than 10% free memory is left
+        return runtime.freeMemory() < 0.1 * runtime.maxMemory()
     }
 
     // Tries to minimize the specified failing scenario to make the error easier to understand.
@@ -209,6 +221,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
             LinChecker(testClass, options).check()
         }
+
+        private const val VERIFIER_REFRESH_CYCLE = 100
     }
 }
 
