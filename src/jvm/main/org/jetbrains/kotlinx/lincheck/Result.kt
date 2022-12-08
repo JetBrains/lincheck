@@ -44,38 +44,8 @@ sealed class Result {
 /**
  * Type of result used if the actor invocation returns any value.
  */
-class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
-    private val valueClassTransformed: Boolean get() = value?.javaClass?.classLoader is TransformationClassLoader
-    private val serializedObject: ByteArray by lazy(LazyThreadSafetyMode.NONE) {
-        check(value is Serializable?) {
-            "The result should either be a type always loaded by the system class loader " +
-                "(e.g., Int, String, List<T>) or implement Serializable interface; " +
-                "the actual class is ${value?.javaClass}."
-        }
-        if (!valueClassTransformed) {
-            // The object is not transformed
-            value.serialize()
-        } else {
-            // The object is not transformed and should be converted beforehand
-            value.convertForLoader(LinChecker::class.java.classLoader).serialize()
-        }
-    }
-
+data class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
     override fun toString() = wasSuspendedPrefix + "$value"
-
-    override fun equals(other: Any?): Boolean {
-        // Check that the classes are equal by names
-        // since they can be loaded via different class loaders.
-        if (javaClass.name != other?.javaClass?.name) return false
-        other as ValueResult
-        // Is `wasSuspended` flag the same?
-        if (wasSuspended != other.wasSuspended) return false
-        // When both value are not transformed, then compare them directly, otherwise serialize to compare
-        return if (!valueClassTransformed && !other.valueClassTransformed) value == other.value
-               else serializedObject.contentEquals(other.serializedObject)
-    }
-
-    override fun hashCode(): Int = if (wasSuspended) 0 else 1  // we cannot use the value here
 }
 
 /**

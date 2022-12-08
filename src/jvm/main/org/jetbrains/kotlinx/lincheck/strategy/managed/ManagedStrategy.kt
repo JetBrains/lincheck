@@ -106,7 +106,8 @@ abstract class ManagedStrategy(
         runner = createRunner()
         // The managed state should be initialized before еру test class transformation.
         try {
-            initializeManagedState()
+            // Initialize ManagedStrategyStateHolder - it can be used during test class construction.
+            ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
             runner.initialize()
         } catch (t: Throwable) {
             runner.close()
@@ -116,10 +117,6 @@ abstract class ManagedStrategy(
 
     private fun createRunner(): Runner =
         ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
-
-    private fun initializeManagedState() {
-        ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
-    }
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
@@ -175,7 +172,7 @@ abstract class ManagedStrategy(
         ignoredSectionDepth.fill(0)
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
-        ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
+        ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -216,7 +213,7 @@ abstract class ManagedStrategy(
         // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
         runner.close()
         runner = createRunner()
-        initializeManagedState()
+        ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
         runner.initialize()
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass

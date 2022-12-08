@@ -53,5 +53,5 @@ class FinalFieldReadingEliminationTest : VerifierState() {
 
     override fun extractState(): Any = 0 // constant state
 
-    class ValueHolder(val value: Int) : Serializable
+    data class ValueHolder(val value: Int) : Serializable
 }
