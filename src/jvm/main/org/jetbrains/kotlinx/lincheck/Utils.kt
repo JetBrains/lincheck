@@ -291,6 +291,8 @@ private fun Result.convertForLoader(loader: ClassLoader): Result = when (this) {
  */
 internal fun Any?.convertForLoader(loader: ClassLoader) = when {
     this == null -> this
+    this::class.java.classLoader == null -> this // primitive class, no need to convert
+    this::class.java.classLoader == loader -> this // already in this loader
     loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
     this is Serializable -> serialize().run { deserialize(loader) }
     else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
