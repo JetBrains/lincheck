@@ -74,10 +74,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         }
         var verifier = createVerifier(checkStateEquivalence = true)
         repeat(iterations) { i ->
-            // If verifier is too old or not enough free memory, create a new one to avoid memory leaks.
-            // Otherwise, the memory leak can cause OutOfMemoryError, especially when non-primitive parameters or results are used.
+            // For performance reasons, verifier re-uses LTS from previous iterations.
+            // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
+            // This is why we periodically create a new verifier to still have increased performance
+            // from re-using LTS and limit the size of potential memory leak.
             // https://github.com/Kotlin/kotlinx-lincheck/issues/124
-            if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0 || lacksFreeMemory())
+            if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier(checkStateEquivalence = false)
             val scenario = exGen.nextExecution()
             scenario.validate()
@@ -91,12 +93,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             }
         }
         return null
-    }
-
-    private fun lacksFreeMemory(): Boolean {
-        val runtime = Runtime.getRuntime()
-        // Check whether less than 10% free memory is left
-        return runtime.freeMemory() < 0.1 * runtime.maxMemory()
     }
 
     // Tries to minimize the specified failing scenario to make the error easier to understand.
