@@ -431,6 +431,25 @@ class EventStructure(
         return (chosenEvent to responseEvents)
     }
 
+    private fun getBlockedEvent(iThread: Int, label: EventLabel): Event? {
+        require(label.isRequest && label.isBlocking)
+        return playedFrontier[iThread]?.takeIf { it.label == label }
+    }
+
+    private fun isBlockedEvent(event: Event): Boolean {
+        require(event.label.isRequest && event.label.isBlocking)
+        require(event == playedFrontier[event.threadId])
+        // block last event in the thread during replay phase
+        if (inReplayPhase() && !inReplayPhase(event.threadId))
+            // TODO: such events should be considered pending?
+            return true
+        // block event if its response part cannot be replayed yet
+        if (inReplayPhase(event.threadId) && !canReplayNextEvent(event.threadId))
+            return true
+        // TODO: do we need to handle other cases?
+        return false
+    }
+
     fun addThreadStartEvent(iThread: Int): Event {
         val label = ThreadStartLabel(
             threadId = iThread,
@@ -510,19 +529,15 @@ class EventStructure(
             reentranceDepth = depth
         )
         // take the last lock-request event or create new one
-        val requestEvent = getBlockingEvent(iThread, label)
+        val requestEvent = getBlockedEvent(iThread, label)
             ?: addRequestEvent(iThread, label)
+        // if event is blocked then postpone addition of lock-response event
+        if (isBlockedEvent(requestEvent))
+            return requestEvent
         // if lock is acquired by another thread then also postpone addition of lock-response event
         if (!monitorTracker.acquire(iThread, mutex))
             return requestEvent
-        // val acquired = monitorTracker.acquire(iThread, mutex)
-        // if lock is acquired by another thread and we are not in replay phase,
-        // then postpone addition of lock-response event
-        // if (!acquired && !inReplayPhase(iThread)) {
-        //     return requestEvent
-        // }
         // otherwise add lock-response event
-        // TODO: optimize addition of reentrant lock-response event (sync only with init event)
         val (responseEvent, _) = addResponseEvents(requestEvent)
         checkNotNull(responseEvent)
         return responseEvent
@@ -545,7 +560,7 @@ class EventStructure(
             mutex_ = mutex,
         )
         // take the last wait-request event or create new one
-        val requestEvent = getBlockingEvent(iThread, label) ?: run {
+        val requestEvent = getBlockedEvent(iThread, label) ?: run {
             // also add releasing unlock event before wait-request
             val depth = monitorTracker.reentranceDepth(iThread, mutex)
             val unlockLabel = UnlockLabel(
@@ -556,8 +571,8 @@ class EventStructure(
             addSendEvent(iThread, unlockLabel)
             addRequestEvent(iThread, label)
         }
-        // if we are in replay phase we need to postpone the execution until wait-response event can be replayed
-        if (inReplayPhase(iThread) && !canReplayNextEvent(iThread))
+        // if event is blocked then postpone addition of wait-response event
+        if (isBlockedEvent(requestEvent))
             return requestEvent
         // if we need to wait then postpone addition of the wait-response event
         if (monitorTracker.wait(iThread, mutex)) {
