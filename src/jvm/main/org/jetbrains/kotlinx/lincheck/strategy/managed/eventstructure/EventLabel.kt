@@ -784,11 +784,11 @@ data class LockLabel(
         // TODO: checks for non-reentrant locks
     }
 
-    val isAcquiring: Boolean =
-        (reentranceDepth - reentranceCount == 0)
+    val isReentry: Boolean =
+        (reentranceDepth - reentranceCount > 0)
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-        (isRequest && isAcquiring && label is UnlockLabel && label.isReleasing && mutex == label.mutex) ->
+        (isRequest && !isReentry && label is UnlockLabel && !label.isReentry && mutex == label.mutex) ->
             LockLabel(LabelKind.Response, mutex)
 
         (isRequest && label is InitializationLabel) ->
@@ -800,7 +800,7 @@ data class LockLabel(
     override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
         !isResponse -> false
         label is LockLabel && label.isRequest && operatesOnSameMutex(label, relaxedCheck) -> true
-        label is UnlockLabel && label.isReleasing && isAcquiring && operatesOnSameMutex(label, relaxedCheck) -> true
+        label is UnlockLabel && !label.isReentry && !isReentry && operatesOnSameMutex(label, relaxedCheck) -> true
         label is InitializationLabel -> true
         else -> false
     }
@@ -837,8 +837,8 @@ data class UnlockLabel(
         require(reentranceDepth - reentranceCount >= 0)
     }
 
-    val isReleasing: Boolean =
-        (reentranceDepth - reentranceCount == 0)
+    val isReentry: Boolean =
+        (reentranceDepth - reentranceCount > 0)
 
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is LockLabel)

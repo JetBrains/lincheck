@@ -61,12 +61,8 @@ fun List<Event>.nextAtomicEvent(pos: Int, replaying: Boolean): HyperEvent? {
         is ThreadEventLabel -> nextAtomicThreadEvent(event, replaying)
         is MemoryAccessLabel -> nextAtomicMemoryAccessEvent(event, replaying)
         is MutexLabel -> nextAtomicMutexEvent(event, replaying)
-        else -> nextAtomicEventDefault(event, replaying)
+        else -> SingletonEvent(event)
     }
-}
-
-private fun List<Event>.nextAtomicEventDefault(firstEvent: Event, replaying: Boolean): HyperEvent {
-    return nextAtomicSendOrReceiveEvent(firstEvent, replaying)
 }
 
 class SingletonEvent(event: Event) : HyperEvent(listOf(event)) {
@@ -190,7 +186,8 @@ class ReadModifyWriteEvent(
 fun List<Event>.nextAtomicMutexEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
     require(firstEvent.label is MutexLabel)
     return when(firstEvent.label) {
-        is LockLabel -> nextAtomicSendOrReceiveEvent(firstEvent, replaying)
+        is LockLabel ->
+            SingletonEvent(firstEvent)
 
         is UnlockLabel -> {
             val unlockEvent = firstEvent
@@ -210,9 +207,7 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event, replaying: Boolean): Hyp
 
             val lockRequestEvent = getOrNull(1 + waitResponseEvent.threadPosition)
                 ?: return SingletonEvent(waitResponseEvent)
-            check(lockRequestEvent.label is LockLabel && lockRequestEvent.label.isRequest)
-            val lockResponseEvent = get(1 + lockRequestEvent.threadPosition)
-            WakeUpAndLock(waitResponseEvent, lockRequestEvent, lockResponseEvent, replaying)
+            WakeUpAndTryLock(waitResponseEvent, lockRequestEvent, replaying)
         }
 
         is NotifyLabel -> nextAtomicSendOrReceiveEvent(firstEvent, replaying)
@@ -243,17 +238,16 @@ class UnlockAndWait(
 
 }
 
-class WakeUpAndLock(
+class WakeUpAndTryLock(
     waitResponse: Event,
     lockRequest: Event,
-    lockResponse: Event,
     replaying: Boolean = false,
-) : HyperEvent(listOf(waitResponse, lockRequest, lockResponse)) {
+) : HyperEvent(listOf(waitResponse, lockRequest)) {
 
     init {
         require(waitResponse.label is WaitLabel && waitResponse.label.isResponse)
-        require(lockResponse.label is LockLabel && lockResponse.isValidResponse(lockRequest, replaying))
-        require(lockResponse.label.operatesOnSameMutex(waitResponse.label, replaying))
+        require(lockRequest.label is LockLabel && lockRequest.label.isRequest)
+        require(lockRequest.label.operatesOnSameMutex(waitResponse.label, replaying))
         require(lockRequest.parent == waitResponse)
         check(lockRequest.dependencies.isEmpty())
     }
@@ -267,8 +261,7 @@ class WakeUpAndLock(
     val lockResponsePart: Event
         get() = events[2]
 
-    override val dependencies: List<Event> =
-        waitResponse.dependencies + lockResponse.dependencies
+    override val dependencies: List<Event> = waitResponse.dependencies
 
 }
 

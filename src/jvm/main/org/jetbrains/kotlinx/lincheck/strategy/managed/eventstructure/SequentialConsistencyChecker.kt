@@ -172,7 +172,7 @@ private data class SequentialConsistencyReplayer(
     fun replay(hyperEvent: HyperEvent): SequentialConsistencyReplayer? {
         val events: List<Event> = when(hyperEvent) {
             is UnlockAndWait -> listOf(hyperEvent.waitRequestPart)
-            is WakeUpAndLock -> listOf(hyperEvent.waitResponsePart)
+            is WakeUpAndTryLock -> listOf(hyperEvent.waitResponsePart)
             else -> hyperEvent.events
         }
         var replayer = this
