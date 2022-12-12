@@ -69,6 +69,9 @@ inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
     return this
 }
 
+inline fun<T> T.runIf(boolean: Boolean, block: T.() -> T): T =
+    if (boolean) block() else this
+
 class UnreachableException(message: String?): Exception(message)
 
 fun unreachable(message: String? = null): Nothing {

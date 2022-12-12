@@ -182,7 +182,7 @@ class EventStructure(
         (0 .. maxThreadId).any { inReplayPhase(it) }
 
     fun inReplayPhase(iThread: Int): Boolean {
-        val frontEvent = playedFrontier[iThread]?.also { check(it in _currentExecution) }
+        val frontEvent = playedFrontier[iThread]?.ensure { it in _currentExecution }
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
 
@@ -261,35 +261,34 @@ class EventStructure(
     }
 
     private fun synchronizationCandidates(event: Event): List<Event> {
-        val predicates = mutableListOf<(Event) -> Boolean>()
-
-        // for send event we filter out all of its causal predecessors,
-        // because an attempt to synchronize with these predecessors will result in causality cycle
-        if (event.label.isSend) {
-            predicates.add { !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it) }
-        }
-
-        // for read-request events we search for the last write to the same memory location
-        // in the same thread, and then filter out all causal predecessors of this last write,
-        // because these events are "obsolete" --- reading from them will result in coherence cycle
-        // and will violate consistency
-        // TODO: we can improve on this and calculate the vector clock
-        //   of events observed in the reader thread at current position
-        if (event.label.isRequest && event.label is MemoryAccessLabel) {
-            require(event.label.isRead)
-            val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
-                it.label is WriteAccessLabel && it.label.location == event.label.location
-            } ?: root
-            predicates.add { !causalityOrder.lessThan(it, threadLastWrite) }
-        }
-
-        return currentExecution.filter {
-            for (predicate in predicates) {
-                if (!predicate(it))
-                    return@filter false
+        val candidates = currentExecution.asSequence()
+            // for send event we filter out all of its causal predecessors,
+            // because an attempt to synchronize with these predecessors will result in causality cycle
+            .runIf(event.label.isSend) { filter {
+                !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it)
+            }}
+        return when {
+            // for read-request events we search for the last write to the same memory location
+            // in the same thread, and then filter out all causal predecessors of this last write,
+            // because these events are "obsolete" --- reading from them will result in coherence cycle
+            // and will violate consistency
+            event.label is MemoryAccessLabel && event.label.isRequest -> {
+                require(event.label.isRead)
+                val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
+                    it.label is WriteAccessLabel && it.label.location == event.label.location
+                } ?: root
+                candidates.filter { !causalityOrder.lessThan(it, threadLastWrite) }
             }
-            return@filter true
-        }
+
+            event.label is LockLabel && event.label.isRequest -> {
+                // re-entry lock-request synchronizes only with the initial event
+                if (event.label.isReentry)
+                    return listOf(root)
+                candidates
+            }
+
+            else -> candidates
+        }.toList()
     }
 
     /**
@@ -304,16 +303,10 @@ class EventStructure(
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
         val candidateEvents = synchronizationCandidates(event)
-        val syncEvents = arrayListOf<Event>()
-        when(event.label.syncType) {
-            SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidateEvents).let {
-                syncEvents.addAll(it)
-            }
-            SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidateEvents)?.let {
-                syncEvents.add(it)
-            }
+        return when(event.label.syncType) {
+            SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidateEvents)
+            SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidateEvents)
         }
-        return syncEvents
     }
 
     private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
@@ -331,7 +324,7 @@ class EventStructure(
         }
     }
 
-    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): Event? {
+    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
         require(event.label.isBarrierSynchronizing)
         val (syncLab, dependencies) =
             candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
@@ -345,7 +338,8 @@ class EventStructure(
         // is a request event, and the result of synchronization is response event.
         check(syncLab.isResponse)
         val parent = dependencies.first { it.label.isRequest }
-        return addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
+        val event = addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
+        return listOf(event)
     }
 
     private fun addRootEvent(): Event {
