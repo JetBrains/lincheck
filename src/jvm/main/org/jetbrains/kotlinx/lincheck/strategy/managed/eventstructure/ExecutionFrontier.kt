@@ -72,6 +72,22 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
     fun copy(): ExecutionFrontier =
         ExecutionFrontier(mapping)
 
+    fun cut(cutEvents: List<Event>): ExecutionFrontier {
+        return if (cutEvents.isEmpty())
+            copy()
+        else ExecutionFrontier(frontier.clock.mapNotNull { (threadId, frontEvent) ->
+            var event: Event = frontEvent
+            // TODO: optimize --- transform cutEvents into vector clock
+            cutEvents.forEach { cutEvent ->
+                // TODO: optimize using binary search
+                while (event.causalityClock.observes(cutEvent.threadId, cutEvent)) {
+                    event = event.parent ?: return@mapNotNull null
+                }
+            }
+            threadId to event
+        }.toMap())
+    }
+
     fun toExecution(): MutableExecution {
         return MutableExecution(mapping.map { (threadId, lastEvent) ->
             var event: Event? = lastEvent

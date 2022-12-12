@@ -208,42 +208,70 @@ class EventStructure(
         } else null
     }
 
-    private fun createEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
-        // To prevent causality cycles to appear we check that
-        // dependencies do not causally depend on predecessor.
-        check(dependencies.all { dependency -> !causalityOrder.lessThan(parent!!, dependency) })
-        val cutPosition = parent?.let { it.threadPosition + 1 } ?: 0
+    private fun createEvent(iThread: Int, label: EventLabel, parent: Event?,
+                            dependencies: List<Event>, conflicts: List<Event>): Event {
+        // Check that parent does not depend on conflicting events.
+        parent?.ensure { conflicts.all { conflict ->
+            !causalityOrder.lessOrEqual(conflict, parent)
+        }}
+        // Also check that dependencies do not causally depend on conflicting events.
+        check(dependencies.all { dependency ->
+            conflicts.all { conflict ->
+                !causalityOrder.lessOrEqual(conflict, dependency)
+            }
+        })
         return Event.create(
             threadId = iThread,
             label = label,
             parent = parent,
             // TODO: rename to external dependencies?
             dependencies = dependencies.filter { it != parent },
-            frontier = cutFrontier(iThread, cutPosition, currentExecution.toFrontier()),
-            pinnedEvents = cutFrontier(iThread, cutPosition, pinnedEvents),
+            frontier = currentExecution.toFrontier().cut(conflicts),
+            pinnedEvents = pinnedEvents.cut(conflicts),
         )
     }
 
-    private fun cutFrontier(iThread: Int, position: Int, frontier: ExecutionFrontier): ExecutionFrontier {
-        // Calculating cut event:
-        // first try to obtain event at given position in the current execution
-        val cutEvent = currentExecution[iThread, position]
-            ?: return frontier.copy()
-        return ExecutionFrontier(frontier.mapping.mapNotNull { (threadId, frontEvent) ->
-            require(frontEvent in currentExecution)
-            // TODO: optimize using binary search
-            var event: Event = frontEvent
-            while (event.causalityClock.observes(cutEvent.threadId, cutEvent)) {
-                event = event.parent ?: return@mapNotNull null
-            }
-            threadId to event
-        }.toMap())
-    }
-
     private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
-        return createEvent(iThread, label, parent,  dependencies).also { event ->
+        val conflicts = conflictingEvents(iThread, parent?.let { it.threadPosition + 1 } ?: 0, label, dependencies)
+        return createEvent(iThread, label, parent, dependencies, conflicts).also { event ->
             _events.add(event)
         }
+    }
+
+    private fun conflictingEvents(iThread: Int, position: Int, label: EventLabel, dependencies: List<Event>): List<Event> {
+        val conflicts = mutableListOf<Event>()
+        // if current execution already has an event in given position --- then it is conflict
+        currentExecution[iThread, position]?.also { conflicts.add(it) }
+        // handle label specific cases
+        // TODO: unify this logic for various kinds of labels?
+        when (label) {
+            // remove lock-response synchronizing with our unlock
+            is LockLabel -> run {
+                if (!label.isResponse)
+                    return@run
+                require(dependencies.size == 1)
+                val unlock = dependencies.first()
+                currentExecution.forEach { event ->
+                    if (event.label is LockLabel && event.label.isResponse && event.locksFrom == unlock)
+                        conflicts.add(event)
+                }
+            }
+            // remove wait-response synchronizing with our notify
+            is WaitLabel -> run {
+                if (!label.isResponse)
+                    return@run
+                require(dependencies.size == 1)
+                val notify = dependencies.first()
+                if ((notify.label as NotifyLabel).isBroadcast)
+                    return@run
+                currentExecution.forEach { event ->
+                    if (event.label is WaitLabel && event.label.isResponse && event.notifiedBy == notify)
+                        conflicts.add(event)
+                }
+            }
+            // TODO: add similar rule for read-exclusive-response?
+        }
+        return conflicts
     }
 
     private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
