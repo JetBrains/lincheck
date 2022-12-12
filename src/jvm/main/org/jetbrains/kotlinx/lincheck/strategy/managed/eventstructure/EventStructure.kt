@@ -29,6 +29,7 @@ class EventStructure(
     nThreads: Int,
     val checker: ConsistencyChecker = idleConsistencyChecker,
     val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
+    val lockAwareScheduling: Boolean = true,
 ) {
     val initialThreadId = nThreads
     val rootThreadId = nThreads + 1
@@ -63,7 +64,7 @@ class EventStructure(
 
     private var detectedInconsistency: Inconsistency? = null
 
-    private val lockReentranceMap = LockReentranceMap()
+    private var monitorTracker = createMonitorTracker()
 
     init {
         root = addRootEvent()
@@ -117,7 +118,7 @@ class EventStructure(
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
         detectedInconsistency = null
-        lockReentranceMap.reset()
+        monitorTracker = createMonitorTracker()
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -339,7 +340,7 @@ class EventStructure(
                 } ?: (lab to deps)
             }
         if (syncLab.isBlocking && !syncLab.unblocked)
-            return null
+            return listOf()
         // We assume that at most one of the events participating into synchronization
         // is a request event, and the result of synchronization is response event.
         check(syncLab.isResponse)
@@ -479,27 +480,8 @@ class EventStructure(
         return responseEvent
     }
 
-    private fun getBlockingEvent(iThread: Int, label: EventLabel): Event? {
-        require(label.isRequest && label.isBlocking)
-        return playedFrontier[iThread]?.takeIf { it.label == label }
-    }
-
-//    private fun addBlockingEvent(iThread: Int, label: EventLabel, isBlocked: (Event) -> Boolean,
-//                                 pre): Event {
-//        require(label.isRequest && label.isBlocking)
-//        val requestEvent = currentFrontier[iThread]
-//            ?.takeIf { it.label == label }
-//            ?: addRequestEvent(iThread, label)
-//        if (isBlocked(requestEvent)) {
-//            return requestEvent
-//        }
-//        val (responseEvent, _) = addResponseEvents(requestEvent)
-//        checkNotNull(responseEvent)
-//        return responseEvent
-//    }
-
     fun addLockEvent(iThread: Int, mutex: Any): Event {
-        val depth = 1 + lockReentranceMap.depth(iThread, mutex)
+        val depth = 1 + monitorTracker.reentranceDepth(iThread, mutex)
         val label = LockLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
@@ -508,31 +490,30 @@ class EventStructure(
         // take the last lock-request event or create new one
         val requestEvent = getBlockingEvent(iThread, label)
             ?: addRequestEvent(iThread, label)
-        // if lock is acquired by another thread then postpone addition of the lock-response event
-        // TODO: add option to enable lock-aware execution order.
-        //   Note that this order is generally inapplicable, because we may need to temporarily
-        //   violate mutual exclusion property in order to generate all executions.
-        //   Still, it can be useful, for example during trace collection phase.
-        // if (!monitorTracker.acquire(iThread, mutex)) {
+        // if lock is acquired by another thread then also postpone addition of lock-response event
+        if (!monitorTracker.acquire(iThread, mutex))
+            return requestEvent
+        // val acquired = monitorTracker.acquire(iThread, mutex)
+        // if lock is acquired by another thread and we are not in replay phase,
+        // then postpone addition of lock-response event
+        // if (!acquired && !inReplayPhase(iThread)) {
         //     return requestEvent
         // }
-        lockReentranceMap.increment(iThread, mutex)
-        // otherwise add the lock-response event
-        // TODO: optimize addition of reentrant lock-response event
+        // otherwise add lock-response event
+        // TODO: optimize addition of reentrant lock-response event (sync only with init event)
         val (responseEvent, _) = addResponseEvents(requestEvent)
         checkNotNull(responseEvent)
         return responseEvent
     }
 
     fun addUnlockEvent(iThread: Int, mutex: Any): Event {
-        val depth = lockReentranceMap.depth(iThread, mutex)
+        val depth = monitorTracker.reentranceDepth(iThread, mutex)
         val label = UnlockLabel(
             mutex_ = mutex,
             reentranceDepth = depth
         )
         return addSendEvent(iThread, label).also {
-            // monitorTracker.release(iThread, mutex)
-            lockReentranceMap.decrement(iThread, mutex)
+            monitorTracker.release(iThread, mutex)
         }
     }
 
@@ -544,7 +525,7 @@ class EventStructure(
         // take the last wait-request event or create new one
         val requestEvent = getBlockingEvent(iThread, label) ?: run {
             // also add releasing unlock event before wait-request
-            val depth = lockReentranceMap.depth(iThread, mutex)
+            val depth = monitorTracker.reentranceDepth(iThread, mutex)
             val unlockLabel = UnlockLabel(
                 mutex,
                 reentranceDepth = depth,
@@ -556,19 +537,18 @@ class EventStructure(
         // if we are in replay phase we need to postpone the execution until wait-response event can be replayed
         if (inReplayPhase(iThread) && !canReplayNextEvent(iThread))
             return requestEvent
-        // if we need to wait for notify then postpone addition of the wait-response event
-        // TODO: see comment in addLockEvent method
-        // if (monitorTracker.wait(iThread, mutex)) {
-        //     return requestEvent
-        // }
-        // otherwise add the wait-response event
+        // if we need to wait then postpone addition of the wait-response event
+        if (monitorTracker.wait(iThread, mutex)) {
+            return requestEvent
+        }
+        // otherwise try to add the wait-response event
         val (responseEvent, _) = addResponseEvents(requestEvent)
         // if wait-response is currently unavailable return wait-request
         if (responseEvent == null) {
             return requestEvent
         }
         // otherwise also add acquiring lock event
-        val depth = lockReentranceMap.depth(iThread, mutex)
+        val depth = monitorTracker.reentranceDepth(iThread, mutex)
         val lockLabel = LockLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
@@ -589,34 +569,45 @@ class EventStructure(
         //   we will need to revisit this.
         val label = NotifyLabel(mutex, isBroadcast)
         return addSendEvent(iThread, label).also {
-            // monitorTracker.notify(iThread, mutex, isBroadcast)
+            monitorTracker.notify(iThread, mutex, isBroadcast)
         }
     }
 
     fun isWaiting(iThread: Int): Boolean =
-        false
-        // monitorTracker.isWaiting(iThread)
+        monitorTracker.isWaiting(iThread)
 
-    private inner class LockReentranceMap {
+    fun lockReentranceDepth(iThread: Int, monitor: Any): Int =
+        monitorTracker.reentranceDepth(iThread, monitor)
+
+    private fun createMonitorTracker(): MonitorTracker =
+        if (lockAwareScheduling)
+            MapMonitorTracker(maxThreadId)
+        else
+            LockReentranceCounter(maxThreadId)
+
+    private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
         private val map = mutableMapOf<Any, IntArray>()
 
-        fun increment(iThread: Int, mutex: Any) {
-            val reentrance = map.computeIfAbsent(mutex) { IntArray(maxThreadId) }
+        override fun acquire(iThread: Int, monitor: Any): Boolean {
+            val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
             reentrance[iThread]++
+            return true
         }
 
-        fun decrement(iThread: Int, mutex: Any) {
-            val reentrance = map.computeIfAbsent(mutex) { IntArray(maxThreadId) }
+        override fun release(iThread: Int, monitor: Any) {
+            val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
+            check(reentrance[iThread] > 0)
             reentrance[iThread]--
         }
 
-        fun depth(iThread: Int, mutex: Any): Int {
-            return map[mutex]?.get(iThread) ?: 0
-        }
+        override fun reentranceDepth(iThread: Int, monitor: Any): Int =
+            map[monitor]?.get(iThread) ?: 0
 
-        fun reset() {
-            map.clear()
-        }
+        override fun wait(iThread: Int, monitor: Any): Boolean = false
+
+        override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {}
+
+        override fun isWaiting(iThread: Int): Boolean = false
 
     }
 

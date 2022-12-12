@@ -37,6 +37,8 @@ interface MonitorTracker {
 
     fun isWaiting(iThread: Int): Boolean
 
+    fun reentranceDepth(iThread: Int, monitor: Any): Int
+
 }
 
 /**
@@ -137,7 +139,7 @@ class MapMonitorTracker(val nThreads: Int) : MonitorTracker {
         return info.iThread == iThread
     }
 
-    fun reentranceDepth(iThread: Int, monitor: Any): Int {
+    override fun reentranceDepth(iThread: Int, monitor: Any): Int {
         val info = acquiredMonitors[monitor]?.takeIf { it.iThread == iThread } ?: return 0
         return info.timesAcquired
     }
