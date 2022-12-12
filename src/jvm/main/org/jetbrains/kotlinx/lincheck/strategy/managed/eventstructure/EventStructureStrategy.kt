@@ -55,6 +55,8 @@ class EventStructureStrategy(
             atomicityChecker,
         )
 
+    override val alwaysMustSwitch: Boolean = true
+
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
     // Tracker of monitors operations.
@@ -77,7 +79,7 @@ class EventStructureStrategy(
                     UnexpectedExceptionInvocationResult(e)
                 }
                 // if invocation was aborted we also abort the current execution inside event structure
-                if (!result.isAbortedInvocation()) {
+                if (result.isAbortedInvocation()) {
                     eventStructure.abortExploration()
                 }
                 // patch clocks
@@ -88,8 +90,8 @@ class EventStructureStrategy(
                 stats.update(result, inconsistency)
                 if (inconsistency == null) {
                     checkResult(result, shouldCollectTrace = false)?.let { return it }
-                    continue@outer
                 }
+                continue@outer
             }
             break
         }
@@ -304,6 +306,10 @@ private class EventStructureMonitorTracker(private val eventStructure: EventStru
 
     override fun isWaiting(iThread: Int): Boolean {
         return eventStructure.isWaiting(iThread)
+    }
+
+    override fun reentranceDepth(iThread: Int, monitor: Any): Int {
+        return eventStructure.lockReentranceDepth(iThread, monitor)
     }
 
 }
