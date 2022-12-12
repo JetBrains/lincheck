@@ -75,6 +75,8 @@ abstract class ManagedStrategy(
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // Detector of loops or hangs (i.e. active locks).
     private lateinit var loopDetector: LoopDetector
+    // Whether strategy should always switch when requested
+    protected open val alwaysMustSwitch: Boolean = false
 
     // Tracker of shared memory accesses.
     protected abstract val memoryTracker: MemoryTracker
@@ -373,7 +375,7 @@ abstract class ManagedStrategy(
         val shouldSwitch = shouldSwitch(iThread) or isLoop
         if (shouldSwitch) {
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
-            switchCurrentThread(iThread, reason)
+            switchCurrentThread(iThread, reason, mustSwitch = alwaysMustSwitch)
         }
         traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
