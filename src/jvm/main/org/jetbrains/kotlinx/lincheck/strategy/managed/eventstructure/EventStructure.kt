@@ -66,6 +66,13 @@ class EventStructure(
 
     private var monitorTracker = createMonitorTracker()
 
+    /*
+     * Map from pending blocked events to their responses.
+     * If event is pending but the corresponding response has not arrived yet
+     * then it is mapped to null.
+     */
+    private val pendingEvents = mutableMapOf<Event, Event?>()
+
     init {
         root = addRootEvent()
     }
@@ -117,8 +124,9 @@ class EventStructure(
         currentExplorationRoot = event
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
-        detectedInconsistency = null
         monitorTracker = createMonitorTracker()
+        pendingEvents.clear().also { populatePendingEvents() }
+        detectedInconsistency = null
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -212,7 +220,11 @@ class EventStructure(
                             dependencies: List<Event>, conflicts: List<Event>): Event {
         // Check that parent does not depend on conflicting events.
         parent?.ensure { conflicts.all { conflict ->
-            !causalityOrder.lessOrEqual(conflict, parent)
+            !causalityOrder.lessOrEqual(conflict, parent).also {
+                check(!it) {
+                    "hehn't"
+                }
+            }
         }}
         // Also check that dependencies do not causally depend on conflicting events.
         check(dependencies.all { dependency ->
@@ -244,29 +256,29 @@ class EventStructure(
         currentExecution[iThread, position]?.also { conflicts.add(it) }
         // handle label specific cases
         // TODO: unify this logic for various kinds of labels?
-        when (label) {
-            // remove lock-response synchronizing with our unlock
-            is LockLabel -> run {
-                if (!label.isResponse)
-                    return@run
+        when {
+            // lock-response synchronizing with our unlock is conflict
+            label is LockLabel && label.isResponse && !label.isReentry -> run {
                 require(dependencies.size == 1)
                 val unlock = dependencies.first()
                 currentExecution.forEach { event ->
-                    if (event.label is LockLabel && event.label.isResponse && event.locksFrom == unlock)
+                    if (event.label is LockLabel && event.label.isResponse &&
+                        event.label.mutex == label.mutex && event.locksFrom == unlock) {
                         conflicts.add(event)
+                    }
                 }
             }
-            // remove wait-response synchronizing with our notify
-            is WaitLabel -> run {
-                if (!label.isResponse)
-                    return@run
+            // wait-response synchronizing with our notify is conflict
+            label is WaitLabel && label.isResponse -> run {
                 require(dependencies.size == 1)
                 val notify = dependencies.first()
                 if ((notify.label as NotifyLabel).isBroadcast)
                     return@run
                 currentExecution.forEach { event ->
-                    if (event.label is WaitLabel && event.label.isResponse && event.notifiedBy == notify)
+                    if (event.label is WaitLabel && event.label.isResponse &&
+                        event.label.mutex == label.mutex && event.notifiedBy == notify) {
                         conflicts.add(event)
+                    }
                 }
             }
             // TODO: add similar rule for read-exclusive-response?
@@ -289,6 +301,11 @@ class EventStructure(
     }
 
     private fun synchronizationCandidates(event: Event): List<Event> {
+        // pending events should not synchronize themselves and should wait
+        // for appropriate send event to appear
+        if (event in pendingEvents)
+            return emptyList()
+        // consider all candidates in current execution and apply some general filters
         val candidates = currentExecution.asSequence()
             // for send event we filter out all of its causal predecessors,
             // because an attempt to synchronize with these predecessors will result in causality cycle
@@ -308,11 +325,14 @@ class EventStructure(
                 candidates.filter { !causalityOrder.lessThan(it, threadLastWrite) }
             }
 
-            event.label is LockLabel && event.label.isRequest -> {
-                // re-entry lock-request synchronizes only with the initial event
-                if (event.label.isReentry)
-                    return listOf(root)
-                candidates
+            // re-entry lock-request synchronizes only with the initial event
+            event.label is LockLabel && event.label.isRequest && event.label.isReentry -> {
+                return listOf(root)
+            }
+
+            // re-entry unlock synchronizes with nothing
+            event.label is UnlockLabel && event.label.isReentry -> {
+                return listOf(root)
             }
 
             else -> candidates
@@ -331,10 +351,17 @@ class EventStructure(
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
         val candidateEvents = synchronizationCandidates(event)
-        return when(event.label.syncType) {
+        val events = when(event.label.syncType) {
             SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidateEvents)
             SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidateEvents)
         }
+        // if there are responses to pending requests,
+        // then set the response of one of these requests
+        events.forEach {
+            if (it.parent != null && isPendingEvent(it.parent))
+                setPendingResponse(it)
+        }
+        return events
     }
 
     private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
@@ -366,8 +393,8 @@ class EventStructure(
         // is a request event, and the result of synchronization is response event.
         check(syncLab.isResponse)
         val parent = dependencies.first { it.label.isRequest }
-        val event = addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
-        return listOf(event)
+        val responseEvent = addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
+        return listOf(responseEvent)
     }
 
     private fun addRootEvent(): Event {
@@ -422,6 +449,12 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
+        tryCompletePendingRequest(requestEvent)?.let { event ->
+            check(event.label.isResponse)
+            check(event.parent == requestEvent)
+            addEventToCurrentExecution(event)
+            return event to listOf(event)
+        }
         val responseEvents = addSynchronizedEvents(requestEvent)
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
@@ -439,15 +472,35 @@ class EventStructure(
     private fun isBlockedEvent(event: Event): Boolean {
         require(event.label.isRequest && event.label.isBlocking)
         require(event == playedFrontier[event.threadId])
-        // block last event in the thread during replay phase
-        if (inReplayPhase() && !inReplayPhase(event.threadId))
-            // TODO: such events should be considered pending?
+        // block pending events
+        if (isPendingEvent(event))
             return true
         // block event if its response part cannot be replayed yet
         if (inReplayPhase(event.threadId) && !canReplayNextEvent(event.threadId))
             return true
         // TODO: do we need to handle other cases?
         return false
+    }
+
+    private fun isPendingEvent(event: Event) =
+        (event in pendingEvents && pendingEvents[event] == null)
+
+    private fun setPendingResponse(event: Event) {
+        require(event.label.isResponse)
+        require(event.parent in pendingEvents)
+        pendingEvents.put(event.parent!!, event).ensure { it == null }
+    }
+
+    private fun tryCompletePendingRequest(event: Event): Event? {
+        return pendingEvents[event]
+    }
+
+    private fun populatePendingEvents() {
+        for (tid in currentExecution.threads) {
+            val event = currentExecution[tid]?.lastOrNull() ?: continue
+            if (event.label.isRequest && event.label.isBlocking)
+                pendingEvents[event] = null
+        }
     }
 
     fun addThreadStartEvent(iThread: Int): Event {
