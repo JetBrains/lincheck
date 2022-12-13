@@ -217,35 +217,34 @@ class EventStructure(
     }
 
     private fun createEvent(iThread: Int, label: EventLabel, parent: Event?,
-                            dependencies: List<Event>, conflicts: List<Event>): Event {
+                            dependencies: List<Event>, conflicts: List<Event>): Event? {
+        var causalityViolation = false
         // Check that parent does not depend on conflicting events.
-        parent?.ensure { conflicts.all { conflict ->
-            !causalityOrder.lessOrEqual(conflict, parent).also {
-                check(!it) {
-                    "hehn't"
-                }
+        if (parent != null) {
+            causalityViolation = causalityViolation || conflicts.any { conflict ->
+                causalityOrder.lessOrEqual(conflict, parent)
             }
-        }}
+        }
         // Also check that dependencies do not causally depend on conflicting events.
-        check(dependencies.all { dependency ->
-            conflicts.all { conflict ->
-                !causalityOrder.lessOrEqual(conflict, dependency)
-            }
-        })
-        return Event.create(
-            threadId = iThread,
-            label = label,
-            parent = parent,
-            // TODO: rename to external dependencies?
-            dependencies = dependencies.filter { it != parent },
-            frontier = currentExecution.toFrontier().cut(conflicts),
-            pinnedEvents = pinnedEvents.cut(conflicts),
-        )
+        causalityViolation = causalityViolation || conflicts.any { conflict -> dependencies.any { dependency ->
+                causalityOrder.lessOrEqual(conflict, dependency)
+        }}
+        return if (!causalityViolation)
+            Event.create(
+                threadId = iThread,
+                label = label,
+                parent = parent,
+                // TODO: rename to external dependencies?
+                dependencies = dependencies.filter { it != parent },
+                frontier = currentExecution.toFrontier().cut(conflicts),
+                pinnedEvents = pinnedEvents.cut(conflicts),
+            )
+        else null
     }
 
-    private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event {
+    private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event? {
         val conflicts = conflictingEvents(iThread, parent?.let { it.threadPosition + 1 } ?: 0, label, dependencies)
-        return createEvent(iThread, label, parent, dependencies, conflicts).also { event ->
+        return createEvent(iThread, label, parent, dependencies, conflicts)?.also { event ->
             _events.add(event)
         }
     }
@@ -394,7 +393,7 @@ class EventStructure(
         check(syncLab.isResponse)
         val parent = dependencies.first { it.label.isRequest }
         val responseEvent = addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
-        return listOf(responseEvent)
+        return listOfNotNull(responseEvent)
     }
 
     private fun addRootEvent(): Event {
@@ -402,7 +401,7 @@ class EventStructure(
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel()
-        return addEvent(rootThreadId, label, parent = null, dependencies = emptyList()).also {
+        return addEvent(rootThreadId, label, parent = null, dependencies = emptyList())!!.also {
             addEventToCurrentExecution(it, visit = false)
         }
     }
@@ -418,7 +417,7 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        return addEvent(iThread, label, parent, dependencies = emptyList()).also { event ->
+        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
             addEventToCurrentExecution(event, synchronize = true)
         }
     }
@@ -431,7 +430,7 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        return addEvent(iThread, label, parent, dependencies = emptyList()).also { event ->
+        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
             addEventToCurrentExecution(event)
         }
     }
@@ -592,7 +591,10 @@ class EventStructure(
             return requestEvent
         // otherwise add lock-response event
         val (responseEvent, _) = addResponseEvents(requestEvent)
-        checkNotNull(responseEvent)
+        // if lock-response is currently unavailable return lock-request
+        if (responseEvent == null) {
+            return requestEvent
+        }
         return responseEvent
     }
 
