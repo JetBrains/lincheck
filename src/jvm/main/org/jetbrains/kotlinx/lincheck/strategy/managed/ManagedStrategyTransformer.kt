@@ -121,7 +121,11 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name) || isSuspendStateMachine(owner)) {
+            if (isFinalField(owner, name) || isSuspendStateMachine(owner)
+                // TODO: this is only required if we intercept shared variable reads/writes,
+                //   then we don't need to intercept accesses to `value` field inside atomic classes
+                // || isAtomicPrimitive(owner)
+            ) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
             }
@@ -416,11 +420,13 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeSharedVariableRead(fieldName: String? = null, tracePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, tracePointLocal, READ_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> ReadTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, tracePointLocal, READ_TRACE_POINT_TYPE) {
+                iThread, actorId, callStackTrace, ste -> ReadTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
             }
 
         private fun invokeBeforeSharedVariableWrite(fieldName: String? = null, tracePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, tracePointLocal, WRITE_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> WriteTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, tracePointLocal, WRITE_TRACE_POINT_TYPE) {
+                iThread, actorId, callStackTrace, ste -> WriteTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
             }
 
         private fun invokeBeforeSharedVariableReadOrWrite(
@@ -459,38 +465,70 @@ internal class ManagedStrategyTransformer(
             val isAtomicPrimitive = isAtomicPrimitive(owner)
             val isAtomicArray = isAtomicArray(owner)
             val isAtomicReflection = isAtomicReflection(owner)
-
             if (!isAtomicPrimitive && !isAtomicArray && !isAtomicReflection) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
-            val innerDescriptor = atomicInnerDescriptor(owner, name, descriptor) // e.g., Int for AtomicInteger
+            if (name !in atomicMethods) {
+                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                return
+            }
+
+            val atomicOwner = getAtomicPrimitiveClassName(owner)
+            val innerDescriptor = atomicInnerDescriptor(atomicOwner ?: owner, name, descriptor) // e.g., Int for AtomicInteger
             val memoryLocationState = when {
                 isAtomicPrimitive -> AtomicPrimitiveMemoryLocationState()
                 isAtomicArray -> AtomicArrayMemoryLocationState()
                 else -> AtomicReflectionMemoryLocationState()
             }
+
             when (name) {
                 "<init>" -> {
                     when {
                         isAtomicPrimitive -> {
                             // Constructors of these atomic primitives take either zero or one argument (initial value)
                             val argumentTypes = Type.getArgumentTypes(descriptor)
-                            if (argumentTypes.isEmpty()) {
-                                // Do nothing. The initial value is default
-                                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                            } else {
-                                check(argumentTypes.size == 1) { "Unexpected complex constructor for $owner with descriptor $descriptor" }
-                                // Copy the initial value.
-                                val initialValueLocal = newLocal(argumentTypes.first())
-                                copyLocal(initialValueLocal)
-                                // Call the constructor.
-                                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                                // Report the initial value to managed strategy *after* the object is initialized.
-                                dup()
-                                loadLocal(initialValueLocal)
-                                // Call onSharedVariableWrite.
-                                onWrite(memoryLocationState, innerDescriptor)
+                            if (!isAtomicClassName(owner) && !showedInheritedAtomicConstructorTransformationWarning) {
+                                showedInheritedAtomicConstructorTransformationWarning = true
+                                System.err.println("""
+                                    If your code uses non-default constructor of java.util.concurrent.Atomic*Array(int[]) in inherited class, 
+                                    please note that some model checking strategies may not support it.
+                                """.trimIndent())
+                            }
+                            when {
+                                // Assume default constructor was called in inheritor
+                                // TODO: can we do better? maybe try to read actual value after constructor finishes?
+                                !isAtomicClassName(owner) -> {
+                                    if (!showedInheritedAtomicConstructorTransformationWarning) {
+                                        showedInheritedAtomicConstructorTransformationWarning = true
+                                        System.err.println("""
+                                            If your code uses non-default constructor of java.util.concurrent.Atomic*Array(int[]) in inherited class, 
+                                            please note that some model checking strategies may not support it.
+                                        """.trimIndent())
+                                    }
+                                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                                }
+
+                                // Default constructor. Do nothing. The initial value is default
+                                argumentTypes.isEmpty() -> {
+                                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                                }
+
+                                else -> {
+                                    check(argumentTypes.size == 1) {
+                                        "Unexpected complex constructor for $owner with descriptor $descriptor"
+                                    }
+                                    // Copy the initial value.
+                                    val initialValueLocal = newLocal(argumentTypes.first())
+                                    copyLocal(initialValueLocal)
+                                    // Call the constructor.
+                                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                                    // Report the initial value to managed strategy *after* the object is initialized.
+                                    dup()
+                                    loadLocal(initialValueLocal)
+                                    // Call onSharedVariableWrite.
+                                    onWrite(memoryLocationState, innerDescriptor)
+                                }
                             }
                         }
                         isAtomicArray -> {
@@ -576,6 +614,10 @@ internal class ManagedStrategyTransformer(
         private fun onGetAndSet(memoryLocationState: MemoryLocationState, innerDescriptor: String) = onXXXAndXXX(memoryLocationState, innerDescriptor, ON_GET_AND_SET_METHOD)
 
         private fun onXXXAndXXX(memoryLocationState: MemoryLocationState, innerDescriptor: String, method: Method) = adapter.run {
+            // TODO: call invoke before CAS?
+            val tracePointLocal = newTracePointLocal()
+            invokeBeforeSharedVariableRead(null, tracePointLocal)
+
             val valueLocal = newLocal(Type.getType(innerDescriptor))
             storeLocal(valueLocal)
             memoryLocationState.store(this)
@@ -594,6 +636,10 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun onCompareAndSet(memoryLocationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
+            // TODO: call invoke before CAS?
+            val tracePointLocal = newTracePointLocal()
+            invokeBeforeSharedVariableRead(null, tracePointLocal)
+
             val newValueLocal = newLocal(Type.getType(innerDescriptor))
             storeLocal(newValueLocal)
             val expectedValueLocal = newLocal(Type.getType(innerDescriptor))
@@ -615,6 +661,9 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun onWrite(memoryLocationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
+            val tracePointLocal = newTracePointLocal()
+            invokeBeforeSharedVariableWrite(null, tracePointLocal)
+
             val valueLocal = newLocal(Type.getType(innerDescriptor))
             storeLocal(valueLocal)
             memoryLocationState.store(this)
@@ -632,6 +681,10 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun onRead(memoryLocationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
+            // TODO: call invoke before CAS?
+            val tracePointLocal = newTracePointLocal()
+            invokeBeforeSharedVariableRead(null, tracePointLocal)
+
             memoryLocationState.store(this)
             loadStrategy()
             loadCurrentThreadNumber()
@@ -645,15 +698,26 @@ internal class ManagedStrategyTransformer(
             unboxOrCast(Type.getType(innerDescriptor))
         }
 
-        private fun isAtomicPrimitive(owner: String): Boolean = when {
-            owner.startsWith("java/util/concurrent/atomic/") ->
-                owner.removePrefix("java/util/concurrent/atomic/") in listOf(
-                    AtomicBoolean::class.simpleName,
-                    AtomicInteger::class.simpleName,
-                    AtomicReference::class.simpleName,
-                    AtomicLong::class.simpleName,
-                )
-            else -> false
+        // TODO: copy-paste of the same method from SharedVariableAccessMethodTransformer!
+        private fun invokeBeforeSharedVariableRead(fieldName: String? = null, tracePointLocal: Int?) =
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, tracePointLocal, READ_TRACE_POINT_TYPE) {
+                iThread, actorId, callStackTrace, ste -> ReadTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
+            }
+
+        // TODO: copy-paste of the same method from SharedVariableAccessMethodTransformer!
+        private fun invokeBeforeSharedVariableWrite(fieldName: String? = null, tracePointLocal: Int?) =
+            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, tracePointLocal, WRITE_TRACE_POINT_TYPE) {
+                iThread, actorId, callStackTrace, ste -> WriteTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
+            }
+
+        // TODO: copy-paste of the same method from SharedVariableAccessMethodTransformer!
+        private fun invokeBeforeSharedVariableReadOrWrite(
+            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor
+        ) {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocationAndTracePoint(tracePointLocal, tracePointType, codeLocationConstructor)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
 
         private fun atomicInnerDescriptor(owner: String, name: String, desc: String): String = when (owner) {
@@ -675,7 +739,8 @@ internal class ManagedStrategyTransformer(
                 Type.getReturnType(desc).descriptor
             } else {
                 val types = Type.getArgumentTypes(desc)
-                if (types.isEmpty()) throw IllegalStateException("Unknown atomic primitive $owner $name")
+                if (types.isEmpty())
+                    throw IllegalStateException("Unknown atomic primitive $owner $name")
                 types.last().descriptor
             }
         }
@@ -694,6 +759,41 @@ internal class ManagedStrategyTransformer(
                 owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater") ||
                         owner == "java/lang/invoke/VarHandle" ||
                         owner == "java/lang/invoke/MethodHandles\$Lookup"
+
+        private val atomicGetMethods = listOf(
+            "get", "getPlain", "getAcquire", "getOpaque"
+        )
+
+        private val atomicSetMethods = listOf(
+            "set", "lazySet", "setOpaque", "setPlain", "setRelease"
+        )
+
+        private val atomicGetAndSetMethods = listOf(
+            "getAndSet"
+        )
+
+        private val atomicCompareAndSetMethods = listOf(
+            "compareAndSet", "weakCompareAndSet",
+            "weakCompareAndSetAcquire",
+            "weakCompareAndSetRelease",
+            "weakCompareAndSetPlain",
+            "weakCompareAndSetVolatile",
+        )
+
+        private val atomicIncrementMethods = listOf(
+            "getAndAdd", "addAndGet", "getAndIncrement", "incrementAndGet", "getAndDecrement", "decrementAndGet"
+        )
+
+        private val atomicFieldUpdaterMethods = listOf(
+            "newUpdater", "findVarHandle"
+        )
+
+        private val atomicMethods = listOf(
+            listOf("<init>"),
+            atomicGetMethods, atomicSetMethods, atomicGetAndSetMethods,
+            atomicCompareAndSetMethods, atomicIncrementMethods,
+            atomicFieldUpdaterMethods
+        ).flatten()
 
         abstract inner class MemoryLocationState {
             abstract val labelMethod: Method
@@ -1900,6 +2000,38 @@ private fun isStrategyMethod(className: String) = className.startsWith("org/jetb
 
 private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 
+private fun isAtomicClassName(className: String): Boolean {
+    val atomicClassNames = listOf(
+        AtomicBoolean::class.simpleName,
+        AtomicInteger::class.simpleName,
+        AtomicReference::class.simpleName,
+        AtomicLong::class.simpleName,
+    )
+    return (
+        className.startsWith("java/util/concurrent/atomic/") &&
+        className.removePrefix("java/util/concurrent/atomic/") in atomicClassNames
+    )
+}
+
+private fun getAtomicPrimitiveClassName(className: String): String? {
+    if (isAtomicClassName(className))
+        return className
+    val clazz = Class.forName(className.canonicalClassName)
+    val metadata = clazz.declaredAnnotations.firstOrNull { ann -> ann is Metadata }
+    if (metadata != null && (metadata as Metadata).kind != 1 /* Class */)
+        return null
+    val atomicClasses = clazz.kotlin.allSuperclasses.filter { kSuperClass ->
+        kSuperClass.qualifiedName?.let { isAtomicClassName(it.internalClassName) } ?: false
+    }
+    if (atomicClasses.isEmpty())
+        return null
+    check(atomicClasses.size == 1)
+    return atomicClasses.first().let { it.qualifiedName?.internalClassName }
+}
+
+private fun isAtomicPrimitive(owner: String): Boolean =
+    getAtomicPrimitiveClassName(owner) != null
+
 // returns true only the method is declared in this class and is not inherited
 private fun isClassMethod(owner: String, methodName: String, desc: String): Boolean =
     Class.forName(owner.canonicalClassName).declaredMethods.any {
@@ -1973,3 +2105,4 @@ private fun Type.getBoxedType(): Type {
 
 // TODO: We probably need a unified approach for warnings
 private var showedAtomicArrayConstructorTransformationWarning = false
+private var showedInheritedAtomicConstructorTransformationWarning = false
