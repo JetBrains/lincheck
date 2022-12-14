@@ -64,15 +64,16 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
+        var isFirstVerifier = true
         for (i in customScenarios.indices) {
-            val verifier = createVerifier(checkStateEquivalence = i == 0)
+            val verifier = createVerifier(checkStateEquivalence = isFirstVerifier).also { isFirstVerifier = false }
             val scenario = customScenarios[i]
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) return failure
         }
-        var verifier = createVerifier(checkStateEquivalence = true)
+        var verifier = createVerifier(checkStateEquivalence = isFirstVerifier).also { isFirstVerifier = false }
         repeat(iterations) { i ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
