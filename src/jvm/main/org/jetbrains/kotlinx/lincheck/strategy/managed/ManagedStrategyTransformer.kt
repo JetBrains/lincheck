@@ -2016,17 +2016,22 @@ private fun isAtomicClassName(className: String): Boolean {
 private fun getAtomicPrimitiveClassName(className: String): String? {
     if (isAtomicClassName(className))
         return className
-    val clazz = Class.forName(className.canonicalClassName)
-    val metadata = clazz.declaredAnnotations.firstOrNull { ann -> ann is Metadata }
-    if (metadata != null && (metadata as Metadata).kind != 1 /* Class */)
+    try {
+        val clazz = Class.forName(className.canonicalClassName)
+        val metadata = clazz.declaredAnnotations.firstOrNull { ann -> ann is Metadata }
+        if (metadata != null && (metadata as Metadata).kind != 1 /* Class */)
+            return null
+        val atomicClasses = clazz.kotlin.allSuperclasses.filter { kSuperClass ->
+            kSuperClass.qualifiedName?.let { isAtomicClassName(it.internalClassName) } ?: false
+        }
+        if (atomicClasses.isEmpty())
+            return null
+        check(atomicClasses.size == 1)
+        return atomicClasses.first().let { it.qualifiedName?.internalClassName }
+    } catch (exception: Throwable) {
+        // System.err.println(exception)
         return null
-    val atomicClasses = clazz.kotlin.allSuperclasses.filter { kSuperClass ->
-        kSuperClass.qualifiedName?.let { isAtomicClassName(it.internalClassName) } ?: false
     }
-    if (atomicClasses.isEmpty())
-        return null
-    check(atomicClasses.size == 1)
-    return atomicClasses.first().let { it.qualifiedName?.internalClassName }
 }
 
 private fun isAtomicPrimitive(owner: String): Boolean =
