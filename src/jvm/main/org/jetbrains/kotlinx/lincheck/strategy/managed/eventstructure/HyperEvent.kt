@@ -99,7 +99,7 @@ class ReceiveEvent(
         require(response.label.isResponse)
         require(response.parent == request)
         // TODO: use isValidResponse
-        // require(response.isValidResponse(request, replaying))
+        require(response.isValidResponse(request, replaying))
         check(requestPart !in responsePart.dependencies)
     }
 
@@ -146,7 +146,7 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event, replaying: Boolea
 
             val writeEvent = getOrNull(1 + readResponseEvent.threadPosition)
                 ?.takeIf { it.label is WriteAccessLabel && it.label.isExclusive }
-                ?: return ReceiveEvent(readRequestEvent, readResponseEvent)
+                ?: return ReceiveEvent(readRequestEvent, readResponseEvent, replaying)
 
             ReadModifyWriteEvent(readRequestEvent, readResponseEvent, writeEvent, replaying)
         }
