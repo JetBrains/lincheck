@@ -860,7 +860,7 @@ data class UnlockLabel(
  * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
  *
  * Wait-request can synchronize either with [InitializationLabel] or with [NotifyLabel]
- * to produce wait-response label. The former case models spurious wake-ups.
+ * to produce wait-response label. The former case models spurious wake-ups (disabled currently).
  *
  * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
  * @param mutex_ the mutex to wait on.
@@ -878,8 +878,8 @@ data class WaitLabel(
 ) {
     override fun synchronize(label: EventLabel): EventLabel? = when {
         // TODO: provide an option to enable spurious wake-ups
-//        (isRequest && label is InitializationLabel) ->
-//            WaitLabel(LabelKind.Response, mutex)
+        // (isRequest && label is InitializationLabel) ->
+        //     WaitLabel(LabelKind.Response, mutex)
 
         (isRequest && label is NotifyLabel && mutex == label.mutex) ->
             WaitLabel(LabelKind.Response, mutex)
@@ -892,7 +892,7 @@ data class WaitLabel(
         label is WaitLabel && label.isRequest && operatesOnSameMutex(label, relaxedCheck) -> true
         label is NotifyLabel && operatesOnSameMutex(label, relaxedCheck) -> true
         // TODO: provide an option to enable spurious wake-ups
-//        label is InitializationLabel -> true
+        // label is InitializationLabel -> true
         else -> false
     }
 
@@ -931,6 +931,122 @@ data class NotifyLabel(
         (label is NotifyLabel) &&
         operatesOnSameMutex(label, relaxedCheck = true) &&
         (isBroadcast == label.isBroadcast)
+
+    override fun toString(): String = super.toString()
+}
+
+
+/**
+ * Base class for park and unpark event labels.
+ *
+ * @param kind the kind of this label.
+ * @param threadId identifier of parked or unparked thread.
+ * @param isBlocking whether this label is blocking.
+ * @param unblocked whether this blocking label is already unblocked.
+ */
+sealed class ParkingEventLabel(
+    kind: LabelKind,
+    open val threadId: Int,
+    isBlocking: Boolean = false,
+    unblocked: Boolean = true,
+): EventLabel(kind, SynchronizationType.Binary, isBlocking, unblocked) {
+
+    /**
+     * Kind of mutex operation.
+     */
+    val operationKind: ParkingOperationKind
+        get() = when(this) {
+            is ParkLabel    -> ParkingOperationKind.Park
+            is UnparkLabel  -> ParkingOperationKind.Unpark
+        }
+
+    override fun toString(): String {
+        val kindString = when (kind) {
+            LabelKind.Send -> ""
+            LabelKind.Request -> "^req"
+            LabelKind.Response -> "^rsp"
+        }
+        val argsString = if (operationKind == ParkingOperationKind.Unpark) "($threadId)" else ""
+        return "${operationKind}${kindString}${argsString}"
+    }
+
+}
+
+/**
+ * Kind of parking operation.
+ *
+ * @see ParkingEventLabel
+ */
+enum class ParkingOperationKind { Park, Unpark }
+
+/**
+ * Label denoting park of a thread.
+ *
+ * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
+ *
+ * Park-request can synchronize either with [InitializationLabel] or with [UnparkLabel]
+ * to produce park-response label. The former case models spurious wake-ups (disabled currently).
+ *
+ * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param threadId the identifier of parked thread.
+ *
+ * @see ParkingEventLabel
+ */
+data class ParkLabel(
+    override val kind: LabelKind,
+    override val threadId: Int,
+) : ParkingEventLabel(
+    kind = kind,
+    threadId = threadId,
+    isBlocking = true,
+    unblocked = (kind == LabelKind.Response),
+) {
+    init {
+        require(isRequest || isResponse)
+    }
+
+    override fun synchronize(label: EventLabel): EventLabel? = when {
+        (isRequest && label is UnparkLabel && threadId == label.threadId) ->
+            ParkLabel(LabelKind.Response, threadId)
+
+        // TODO: provide an option to enable spurious wake-ups
+        // (isRequest && label is InitializationLabel) ->
+        //     ParkLabel(LabelKind.Response, threadId)
+
+        else -> super.synchronize(label)
+    }
+
+    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+        !isResponse -> false
+        label is ParkLabel && label.isRequest && threadId == label.threadId -> true
+        label is UnparkLabel && threadId == label.threadId -> true
+        // TODO: provide an option to enable spurious wake-ups
+        // label is InitializationLabel -> true
+        else -> false
+    }
+
+    override fun toString(): String = super.toString()
+}
+
+/**
+ * Label denoting unpark of a thread.
+ *
+ * Has [LabelKind.Send] kind.
+ *
+ * Can synchronize with [ParkLabel] request producing park-response label.
+ *
+ * @param threadId the identifier of unparked thread.
+ *
+ * @see ParkingEventLabel
+ */
+data class UnparkLabel(
+    override val threadId: Int,
+) : ParkingEventLabel(LabelKind.Send, threadId) {
+
+    override fun synchronize(label: EventLabel): EventLabel? =
+        if (label is ParkLabel)
+            label.synchronize(this)
+        else super.synchronize(label)
 
     override fun toString(): String = super.toString()
 }

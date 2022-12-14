@@ -163,6 +163,8 @@ private data class SequentialConsistencyReplayer(
 
             event.label is InitializationLabel -> this
             event.label is ThreadEventLabel -> this
+            // TODO: do we need to care about parking?
+            event.label is ParkingEventLabel -> this
 
             else -> unreachable()
 

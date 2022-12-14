@@ -82,6 +82,8 @@ abstract class ManagedStrategy(
     protected abstract val memoryTracker: MemoryTracker
     // Tracker of acquisitions and releases of monitors.
     protected abstract val monitorTracker: MonitorTracker
+    // Tracker of thread parking
+    protected abstract val parkingTracker: ParkingTracker
 
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
@@ -336,7 +338,8 @@ abstract class ManagedStrategy(
     protected open fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread])) &&
-        !monitorTracker.isWaiting(iThread)
+        !monitorTracker.isWaiting(iThread) &&
+        !parkingTracker.isParked(iThread)
 
     /**
      * Waits until the specified thread can continue
@@ -598,6 +601,8 @@ abstract class ManagedStrategy(
      */
     @Suppress("UNUSED_PARAMETER")
     internal fun beforePark(iThread: Int, codeLocation: Int, tracePoint: ParkTracePoint?, withTimeout: Boolean): Boolean {
+        if (!isTestThread(iThread)) return false // TODO: return true?
+        parkingTracker.park(iThread)
         newSwitchPoint(iThread, codeLocation, tracePoint)
         return false
     }
@@ -609,6 +614,9 @@ abstract class ManagedStrategy(
     @Suppress("UNUSED_PARAMETER")
     internal fun afterUnpark(iThread: Int, codeLocation: Int, tracePoint: UnparkTracePoint?, thread: Any) {
         if (!isTestThread(iThread)) return
+        if (thread is FixedActiveThreadsExecutor.TestThread) {
+            parkingTracker.unpark(iThread, thread.iThread)
+        }
         traceCollector?.passCodeLocation(tracePoint)
     }
 

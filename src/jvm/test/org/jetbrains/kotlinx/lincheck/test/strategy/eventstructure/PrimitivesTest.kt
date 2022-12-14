@@ -25,8 +25,10 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 
 import java.util.concurrent.atomic.*
+import java.util.concurrent.locks.LockSupport.*
 
 import org.junit.Test
+import org.junit.Ignore
 
 /**
  * These tests check that [EventStructureStrategy] correctly handles all basic concurrent primitives.

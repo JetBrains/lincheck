@@ -66,6 +66,8 @@ class EventStructure(
 
     private var monitorTracker = createMonitorTracker()
 
+    private var parkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = false)
+
     /*
      * Map from pending blocked events to their responses.
      * If event is pending but the corresponding response has not arrived yet
@@ -481,6 +483,19 @@ class EventStructure(
         return false
     }
 
+    private fun addPendingRequest(event: Event) {
+        require(event.label.isRequest && event.label.isBlocking)
+        pendingEvents.put(event, null).ensureNull()
+    }
+
+    private fun populatePendingEvents() {
+        for (tid in currentExecution.threads) {
+            val event = currentExecution[tid]?.lastOrNull() ?: continue
+            if (event.label.isRequest && event.label.isBlocking)
+                addPendingRequest(event)
+        }
+    }
+
     private fun isPendingEvent(event: Event) =
         (event in pendingEvents && pendingEvents[event] == null)
 
@@ -492,14 +507,6 @@ class EventStructure(
 
     private fun tryCompletePendingRequest(event: Event): Event? {
         return pendingEvents[event]
-    }
-
-    private fun populatePendingEvents() {
-        for (tid in currentExecution.threads) {
-            val event = currentExecution[tid]?.lastOrNull() ?: continue
-            if (event.label.isRequest && event.label.isBlocking)
-                pendingEvents[event] = null
-        }
     }
 
     fun addThreadStartEvent(iThread: Int): Event {
@@ -665,11 +672,47 @@ class EventStructure(
         }
     }
 
-    fun isWaiting(iThread: Int): Boolean =
-        monitorTracker.isWaiting(iThread)
+    fun addParkEvent(iThread: Int): Event {
+        val label = ParkLabel(LabelKind.Request, iThread)
+        // take the last park-request event or create new one
+        val requestEvent = getBlockedEvent(iThread, label)
+            ?: addRequestEvent(iThread, label)
+        // if event is blocked then postpone addition of park-response event
+        if (isBlockedEvent(requestEvent))
+            return requestEvent
+        // if we already parked and haven't been unparked yet then postpone addition of the park-response event
+        if (parkingTracker.isParked(iThread)) {
+            return requestEvent
+        }
+        // try to add park-response event
+        val (responseEvent, _) = addResponseEvents(requestEvent)
+        // if park-response is currently unavailable then park and return park-request
+        if (responseEvent == null) {
+            // TODO: implement a uniform approach to handle pending events ---
+            //   in addResponseEvents check for conflicts on blocking response events
+            //   and return null in such cases, putting the request into pending events set
+            addPendingRequest(requestEvent)
+            parkingTracker.park(iThread)
+            return requestEvent
+        }
+        return responseEvent
+    }
+
+    fun addUnparkEvent(iThread: Int, unparkingThreadId: Int): Event {
+        val label = UnparkLabel(unparkingThreadId)
+        return addSendEvent(iThread, label).also {
+            parkingTracker.unpark(iThread, unparkingThreadId)
+        }
+    }
 
     fun lockReentranceDepth(iThread: Int, monitor: Any): Int =
         monitorTracker.reentranceDepth(iThread, monitor)
+
+    fun isWaiting(iThread: Int): Boolean =
+        monitorTracker.isWaiting(iThread)
+
+    fun isParked(iThread: Int): Boolean =
+        parkingTracker.isParked(iThread)
 
     private fun createMonitorTracker(): MonitorTracker =
         if (lockAwareScheduling)
@@ -684,30 +727,30 @@ class EventStructure(
         else
             LockReentranceCounter(maxThreadId)
 
-    private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
-        private val map = mutableMapOf<Any, IntArray>()
+}
 
-        override fun acquire(iThread: Int, monitor: Any): Boolean {
-            val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
-            reentrance[iThread]++
-            return true
-        }
+private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
+    private val map = mutableMapOf<Any, IntArray>()
 
-        override fun release(iThread: Int, monitor: Any) {
-            val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
-            check(reentrance[iThread] > 0)
-            reentrance[iThread]--
-        }
-
-        override fun reentranceDepth(iThread: Int, monitor: Any): Int =
-            map[monitor]?.get(iThread) ?: 0
-
-        override fun wait(iThread: Int, monitor: Any): Boolean = false
-
-        override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {}
-
-        override fun isWaiting(iThread: Int): Boolean = false
-
+    override fun acquire(iThread: Int, monitor: Any): Boolean {
+        val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
+        reentrance[iThread]++
+        return true
     }
+
+    override fun release(iThread: Int, monitor: Any) {
+        val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
+        check(reentrance[iThread] > 0)
+        reentrance[iThread]--
+    }
+
+    override fun reentranceDepth(iThread: Int, monitor: Any): Int =
+        map[monitor]?.get(iThread) ?: 0
+
+    override fun wait(iThread: Int, monitor: Any): Boolean = false
+
+    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {}
+
+    override fun isWaiting(iThread: Int): Boolean = false
 
 }

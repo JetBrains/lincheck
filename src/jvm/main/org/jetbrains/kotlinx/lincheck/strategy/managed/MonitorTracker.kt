@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import java.util.*
 
 /**
- * Tracks synchronization operations with monitors.
+ * Tracks synchronization operations with locks.
  */
 interface MonitorTracker {
 

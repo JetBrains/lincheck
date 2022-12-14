@@ -64,6 +64,11 @@ inline fun Boolean.ensureFalse(): Boolean {
     return this
 }
 
+inline fun<T> T?.ensureNull(): T? {
+    check(this == null)
+    return this
+}
+
 inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
     check(predicate(this))
     return this

@@ -72,6 +72,9 @@ internal class ModelCheckingStrategy(
     override var memoryTracker: MemoryTracker = SeqCstMemoryTracker()
     // Tracker of monitors operations.
     override var monitorTracker: MonitorTracker = MapMonitorTracker(nThreads)
+    // Tracker of thread parking.
+    override var parkingTracker: ParkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = true)
+
 
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {
@@ -104,14 +107,11 @@ internal class ModelCheckingStrategy(
 
     override fun chooseThread(iThread: Int): Int = currentInterleaving.chooseThread(iThread)
 
-    override fun isActive(iThread: Int): Boolean {
-        return super.isActive(iThread) && !(monitorTracker as MapMonitorTracker).isWaiting(iThread)
-    }
-
     override fun initializeInvocation() {
         currentInterleaving.initialize()
         memoryTracker = SeqCstMemoryTracker()
         monitorTracker = MapMonitorTracker(nThreads)
+        parkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = true)
         super.initializeInvocation()
     }
 

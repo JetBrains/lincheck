@@ -61,6 +61,7 @@ fun List<Event>.nextAtomicEvent(pos: Int, replaying: Boolean): HyperEvent? {
         is ThreadEventLabel -> nextAtomicThreadEvent(event, replaying)
         is MemoryAccessLabel -> nextAtomicMemoryAccessEvent(event, replaying)
         is MutexLabel -> nextAtomicMutexEvent(event, replaying)
+        is ParkingEventLabel -> nextAtomicParkingEvent(event, replaying)
         else -> SingletonEvent(event)
     }
 }
@@ -98,7 +99,6 @@ class ReceiveEvent(
         require(request.label.isRequest)
         require(response.label.isResponse)
         require(response.parent == request)
-        // TODO: use isValidResponse
         require(response.isValidResponse(request, replaying))
         check(requestPart !in responsePart.dependencies)
     }
@@ -186,8 +186,7 @@ class ReadModifyWriteEvent(
 fun List<Event>.nextAtomicMutexEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
     require(firstEvent.label is MutexLabel)
     return when(firstEvent.label) {
-        is LockLabel ->
-            SingletonEvent(firstEvent)
+        is LockLabel -> SingletonEvent(firstEvent)
 
         is UnlockLabel -> {
             val unlockEvent = firstEvent
@@ -210,7 +209,7 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event, replaying: Boolean): Hyp
             WakeUpAndTryLock(waitResponseEvent, lockRequestEvent, replaying)
         }
 
-        is NotifyLabel -> nextAtomicSendOrReceiveEvent(firstEvent, replaying)
+        is NotifyLabel -> SingletonEvent(firstEvent)
     }
 }
 
@@ -356,4 +355,11 @@ class CriticalSectionEvent(events: List<Event>) : HyperEvent(events) {
 
     }
 
+}
+
+/* ======== Park and Unpark Events  ======== */
+
+fun List<Event>.nextAtomicParkingEvent(firstEvent: Event, replaying: Boolean): HyperEvent {
+    require(firstEvent.label is ParkingEventLabel)
+    return SingletonEvent(firstEvent)
 }

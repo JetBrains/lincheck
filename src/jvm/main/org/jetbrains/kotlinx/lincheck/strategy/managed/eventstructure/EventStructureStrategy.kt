@@ -61,6 +61,8 @@ class EventStructureStrategy(
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
     // Tracker of monitors operations.
     override var monitorTracker: MonitorTracker = EventStructureMonitorTracker(eventStructure)
+    // Tracker of thread parking
+    override val parkingTracker: ParkingTracker = EventStructureParkingTracker(eventStructure)
 
     val stats = Stats()
 
@@ -86,8 +88,13 @@ class EventStructureStrategy(
                 if (result is CompletedInvocationResult) {
                     patchResultsClock(result.results)
                 }
+                // println(eventStructure.currentExecution)
+
                 val inconsistency = eventStructure.checkConsistency()
                 stats.update(result, inconsistency)
+                // println(stats)
+                // println()
+
                 if (inconsistency == null) {
                     checkResult(result, shouldCollectTrace = false)?.let { return it }
                 }
@@ -311,5 +318,20 @@ private class EventStructureMonitorTracker(private val eventStructure: EventStru
     override fun reentranceDepth(iThread: Int, monitor: Any): Int {
         return eventStructure.lockReentranceDepth(iThread, monitor)
     }
+
+}
+
+private class EventStructureParkingTracker(private val eventStructure: EventStructure) : ParkingTracker {
+
+    override fun park(iThread: Int) {
+        eventStructure.addParkEvent(iThread)
+    }
+
+    override fun unpark(iThread: Int, unparkingThreadId: Int) {
+        eventStructure.addUnparkEvent(iThread, unparkingThreadId)
+    }
+
+    override fun isParked(iThread: Int): Boolean =
+        eventStructure.isParked(iThread)
 
 }
