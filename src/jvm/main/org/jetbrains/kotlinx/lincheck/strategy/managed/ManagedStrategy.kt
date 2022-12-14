@@ -571,8 +571,9 @@ abstract class ManagedStrategy(
         failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
         if (withTimeout) return false // timeouts occur instantly
         while (monitorTracker.wait(iThread, monitor)) {
+            val mustSwitch = monitorTracker.isWaiting(iThread)
             // switch to another thread and wait till a notify event happens
-            switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, true)
+            switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, mustSwitch)
         }
         return false
     }

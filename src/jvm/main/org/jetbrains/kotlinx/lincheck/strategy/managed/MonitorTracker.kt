@@ -45,7 +45,7 @@ interface MonitorTracker {
  * Monitor tracking for model checking strategy.
  * Represents the set of acquired monitors as a map Monitor -> ThreadId.
  */
-class MapMonitorTracker(val nThreads: Int) : MonitorTracker {
+class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = false) : MonitorTracker {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
@@ -92,9 +92,12 @@ class MapMonitorTracker(val nThreads: Int) : MonitorTracker {
      * returns `true` until the corresponding [notify] or [notifyAll] is invoked.
      */
     override fun wait(iThread: Int, monitor: Any): Boolean {
-        // TODO: we can add spurious wakeups here
         var info = acquiredMonitors[monitor]
         if (info != null && info.iThread == iThread) {
+            /* in case when current thread owns the lock we do not
+             * proceed immediately even if spurious wake-ups are allowed,
+             * we release the lock in order to give other thread a chance to acquire it
+             */
             waitForNotify[iThread] = true
             acquiringMonitors[iThread] = info
             acquiredMonitors.remove(monitor)
@@ -104,7 +107,7 @@ class MapMonitorTracker(val nThreads: Int) : MonitorTracker {
         check(info != null && info.monitor === monitor && info.iThread == iThread) {
             "Monitor should have been acquired by this thread"
         }
-        if (waitForNotify[iThread]) {
+        if (waitForNotify[iThread] && !allowSpuriousWakeUps) {
             return true
         }
         acquiredMonitors[monitor] = info
@@ -127,7 +130,9 @@ class MapMonitorTracker(val nThreads: Int) : MonitorTracker {
      */
     override fun isWaiting(iThread: Int): Boolean {
         val monitor = acquiringMonitors[iThread]?.monitor ?: return false
-        return waitForNotify[iThread] || !canAcquireMonitor(iThread, monitor)
+        if (waitForNotify[iThread] && !allowSpuriousWakeUps)
+            return true
+        return !canAcquireMonitor(iThread, monitor)
     }
 
     /**
@@ -145,7 +150,7 @@ class MapMonitorTracker(val nThreads: Int) : MonitorTracker {
     }
 
     fun copy(): MapMonitorTracker {
-        val tracker = MapMonitorTracker(nThreads)
+        val tracker = MapMonitorTracker(nThreads, allowSpuriousWakeUps)
         acquiredMonitors.forEach { (monitor, info) ->
             tracker.acquiredMonitors[monitor] = info.copy()
         }
@@ -159,6 +164,8 @@ class MapMonitorTracker(val nThreads: Int) : MonitorTracker {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         return (other is MapMonitorTracker) &&
+            (nThreads == other.nThreads) &&
+            (allowSpuriousWakeUps == other.allowSpuriousWakeUps) &&
             (acquiredMonitors == other.acquiredMonitors) &&
             (acquiringMonitors.contentEquals(other.acquiringMonitors)) &&
             (waitForNotify.contentEquals(other.waitForNotify))

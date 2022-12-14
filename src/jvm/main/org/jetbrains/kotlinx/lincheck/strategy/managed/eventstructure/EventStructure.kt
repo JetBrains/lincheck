@@ -626,13 +626,13 @@ class EventStructure(
             addSendEvent(iThread, unlockLabel)
             addRequestEvent(iThread, label)
         }
-        // if event is blocked then postpone addition of wait-response event
-        if (isBlockedEvent(requestEvent))
-            return requestEvent
         // if we need to wait then postpone addition of the wait-response event
         if (monitorTracker.wait(iThread, mutex)) {
             return requestEvent
         }
+        // if event is blocked then postpone addition of wait-response event
+        if (isBlockedEvent(requestEvent))
+            return requestEvent
         // otherwise try to add the wait-response event
         val (responseEvent, _) = addResponseEvents(requestEvent)
         // if wait-response is currently unavailable return wait-request
@@ -673,7 +673,14 @@ class EventStructure(
 
     private fun createMonitorTracker(): MonitorTracker =
         if (lockAwareScheduling)
-            MapMonitorTracker(maxThreadId)
+            /* Spurious wake-ups are handled on the level of event structure:
+             * by default we require wait events to synchronize with notify events
+             * in order to proceed (see [addWaitEvent] method).
+             * However, we need to allow spurious wake-ups here in order
+             * to make event structure construction independent of the scheduler
+             * (i.e. we allow notifies arrive earlier than waits).
+             */
+            MapMonitorTracker(maxThreadId, allowSpuriousWakeUps = true)
         else
             LockReentranceCounter(maxThreadId)
 
