@@ -64,15 +64,24 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
-        val verifier = createVerifier(checkStateEquivalence = true)
+        var isFirstVerifier = true
         for (i in customScenarios.indices) {
+            val verifier = createVerifier(checkStateEquivalence = isFirstVerifier).also { isFirstVerifier = false }
             val scenario = customScenarios[i]
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) return failure
         }
+        var verifier = createVerifier(checkStateEquivalence = isFirstVerifier).also { isFirstVerifier = false }
         repeat(iterations) { i ->
+            // For performance reasons, verifier re-uses LTS from previous iterations.
+            // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
+            // This is why we periodically create a new verifier to still have increased performance
+            // from re-using LTS and limit the size of potential memory leak.
+            // https://github.com/Kotlin/kotlinx-lincheck/issues/124
+            if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
+                verifier = createVerifier(checkStateEquivalence = false)
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
@@ -209,6 +218,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
             LinChecker(testClass, options).check()
         }
+
+        private const val VERIFIER_REFRESH_CYCLE = 100
     }
 }
 

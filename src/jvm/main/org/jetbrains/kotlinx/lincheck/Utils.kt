@@ -142,7 +142,7 @@ internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = wh
     res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
-    else -> ValueResult(res, wasSuspended)
+    else -> ValueResult(res.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
 }
 
 private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
@@ -151,7 +151,7 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
             // Throwable was returned as a successful result
             is Throwable -> ValueResult(value::class.java, wasSuspended)
-            else -> ValueResult(value, wasSuspended)
+            else -> ValueResult(value.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
         }
     } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
 
@@ -254,6 +254,15 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     postExecution
 )
 
+internal fun ExecutionResult.convertForLoader(loader: ClassLoader) = ExecutionResult(
+        initResults.map { it.convertForLoader(loader) },
+        afterInitStateRepresentation,
+        parallelResultsWithClock.map { results -> results.map { it.convertForLoader(loader) } },
+        afterParallelStateRepresentation,
+        postResults.map { it.convertForLoader(loader) },
+        afterPostStateRepresentation
+)
+
 /**
  * Finds the same method but loaded by the specified (class loader)[loader],
  * the signature can be changed according to the [TransformationClassLoader]'s remapper.
@@ -267,8 +276,23 @@ private fun Method.convertForLoader(loader: ClassLoader): Method {
 
 private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
 
+private fun ResultWithClock.convertForLoader(loader: ClassLoader): ResultWithClock =
+        ResultWithClock(result.convertForLoader(loader), clockOnStart)
+
+private fun Result.convertForLoader(loader: ClassLoader): Result = when (this) {
+    is ValueResult -> ValueResult(value.convertForLoader(loader), wasSuspended)
+    else -> this // does not need to be transformed
+}
+
+/**
+ * Move the value from its current class loader to the specified [loader].
+ * For primitive values, does nothing.
+ * Non-primitive values need to be [Serializable] for this to succeed.
+ */
 internal fun Any?.convertForLoader(loader: ClassLoader) = when {
     this == null -> this
+    this::class.java.classLoader == null -> this // primitive class, no need to convert
+    this::class.java.classLoader == loader -> this // already in this loader
     loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
     this is Serializable -> serialize().run { deserialize(loader) }
     else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
