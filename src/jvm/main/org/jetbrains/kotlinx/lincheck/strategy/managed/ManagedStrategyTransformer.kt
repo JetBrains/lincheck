@@ -133,8 +133,8 @@ internal class ManagedStrategyTransformer(
                 return
             }
             val locationState = when (opcode) {
-                GETSTATIC, PUTSTATIC    -> StaticFieldMemoryLocationState(owner, name, adapter)
-                GETFIELD, PUTFIELD      -> ObjectFieldMemoryLocationState(name, adapter)
+                GETSTATIC, PUTSTATIC    -> StaticFieldMemoryLocationState(owner.canonicalClassName, name, adapter)
+                GETFIELD, PUTFIELD      -> ObjectFieldMemoryLocationState(owner.canonicalClassName, name, adapter)
                 else                    -> throw IllegalArgumentException("Unknown field opcode")
             }
             when (opcode) {
@@ -346,21 +346,31 @@ internal class ManagedStrategyTransformer(
         private fun visitAtomicReflectionConstructor(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean,
                                                      locationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
             // AFU or VarHandle constructor
+            val classLocal = newLocal(CLASS_TYPE)
             val fieldLocal = newLocal(STRING_TYPE)
-            if (name == "newUpdater") { // STACK: field_name
-                copyLocal(fieldLocal)
-            } else { // STACK: field_name, class
-                val classLocal = newLocal(CLASS_TYPE)
+            if (name == "newUpdater") {
+                // STACK: tgt_class, fld_class, field_name
+                val fieldClassLocal = newLocal(CLASS_TYPE)
+                storeLocal(fieldLocal)
+                storeLocal(fieldClassLocal)
                 storeLocal(classLocal)
-                copyLocal(fieldLocal)
                 loadLocal(classLocal)
+                loadLocal(fieldClassLocal)
+                loadLocal(fieldLocal)
+            } else {
+                // STACK: tgt_class, field_name, fld_class
+                val fieldClassLocal = newLocal(CLASS_TYPE).also { storeLocal(it) }
+                storeLocal(fieldLocal)
+                storeLocal(classLocal)
+                loadLocal(classLocal)
+                loadLocal(fieldLocal)
+                loadLocal(fieldClassLocal)
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            val afuLocal = newLocal(OBJECT_TYPE)
-            dup()
-            storeLocal(afuLocal)
+            val afuLocal = newLocal(OBJECT_TYPE).also { copyLocal(it) }
             loadMemoryLocationLabeler()
             loadLocal(afuLocal)
+            loadLocal(classLocal)
             loadLocal(fieldLocal)
             invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_ATOMIC_REFLECTION)
         }
@@ -466,7 +476,7 @@ internal class ManagedStrategyTransformer(
                 newLocal(valueType).also { storeLocal(it) }
             } else null
             locationState.store()
-            invokeOnAtomicMethod(locationState, methodDescriptor, cmpValueLocal, updValueLocal, valueType)
+            invokeOnAtomicMethod(methodDescriptor, locationState, cmpValueLocal, updValueLocal, valueType)
             if (methodDescriptor.returnsReadValue()) {
                 unboxOrCast(valueType)
             }
@@ -513,7 +523,7 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> method result
-        private fun invokeOnAtomicMethod(locationState: MemoryLocationState, methodDescriptor: AtomicMethodDescriptor,
+        private fun invokeOnAtomicMethod(methodDescriptor: AtomicMethodDescriptor, locationState: MemoryLocationState,
                                          cmpValueLocal: Int?, updValueLocal: Int, valueType: Type) = adapter.run {
             require((methodDescriptor == AtomicMethodDescriptor.CMP_AND_SET) implies (cmpValueLocal != null))
             loadStrategy()                                          // STACK: strategy
@@ -618,7 +628,6 @@ internal class ManagedStrategyTransformer(
         val locationName: String?,
         val labelMethod: Method
     ) {
-
         /*
          * Saves the memory location data stored on the stack
          */
@@ -647,6 +656,7 @@ internal class ManagedStrategyTransformer(
     }
 
     private inner class ObjectFieldMemoryLocationState(
+        val className: String,
         val fieldName: String,
         adapter: GeneratorAdapter
     ) : MemoryLocationState(adapter, locationName = fieldName, labelMethod = LABEL_OBJECT_FIELD) {
@@ -658,10 +668,11 @@ internal class ManagedStrategyTransformer(
             storeLocal(objectLocal)
         }
 
-        // STACK: (empty) -> object, fieldName
+        // STACK: (empty) -> object, className, fieldName
         override fun load() = adapter.run {
             check(objectLocal != -1)
             loadLocal(objectLocal)
+            push(className)
             push(fieldName)
         }
     }
@@ -1771,7 +1782,7 @@ private val LABEL_STATIC_FIELD = Method.getMethod(MemoryLocationLabeler::labelSt
 private val LABEL_OBJECT_FIELD = Method.getMethod(MemoryLocationLabeler::labelObjectField.javaMethod)
 private val LABEL_ARRAY_ELEMENT = Method.getMethod(MemoryLocationLabeler::labelArrayElement.javaMethod)
 private val LABEL_ATOMIC_PRIMITIVE = Method.getMethod(MemoryLocationLabeler::labelAtomicPrimitive.javaMethod)
-private val LABEL_ATOMIC_REFLECTION_ACCESS = Method.getMethod(MemoryLocationLabeler::labelReflectionAccess.javaMethod)
+private val LABEL_ATOMIC_REFLECTION_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionAccess.javaMethod)
 private val REGISTER_ATOMIC_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicFieldReflection.javaMethod)
 private val GET_KCLASS_FROM_DESCRIPTOR = Method.getMethod(::getKClassFromDescriptor.javaMethod)
 

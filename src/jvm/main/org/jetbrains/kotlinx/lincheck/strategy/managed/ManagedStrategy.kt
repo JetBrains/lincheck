@@ -60,6 +60,10 @@ abstract class ManagedStrategy(
     // to keep them different in different code locations.
     private val codeLocationIdProvider = CodeLocationIdProvider()
 
+    // TODO: refactor?
+    val classLoader: ClassLoader
+        get() = runner.classLoader
+
     // == EXECUTION CONTROL FIELDS ==
 
     // Which thread is allowed to perform operations?
