@@ -418,7 +418,7 @@ internal class ManagedStrategyTransformer(
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
             locationState.store()
-            invokeOnSharedVariableRead(locationState, descriptor)
+            invokeOnSharedVariableRead(locationState, valueType)
             unboxOrCast(valueType)
             // capture read value only when logging is enabled
             if (constructTraceRepresentation) {
@@ -434,7 +434,7 @@ internal class ManagedStrategyTransformer(
             invokeBeforeSharedVariableWrite(locationState.locationName, tracePointLocal)
             val valueLocal = newLocal(valueType).also { storeLocal(it) }
             locationState.store()
-            invokeOnSharedVariableWrite(locationState, descriptor, valueLocal, valueType)
+            invokeOnSharedVariableWrite(locationState, valueLocal, valueType)
             // capture written value only when logging is enabled
             if (constructTraceRepresentation) {
                 captureWrittenValue(valueLocal, valueType, tracePointLocal)
@@ -466,7 +466,7 @@ internal class ManagedStrategyTransformer(
                 newLocal(valueType).also { storeLocal(it) }
             } else null
             locationState.store()
-            invokeOnAtomicMethod(locationState, descriptor, methodDescriptor, cmpValueLocal, updValueLocal, valueType)
+            invokeOnAtomicMethod(locationState, methodDescriptor, cmpValueLocal, updValueLocal, valueType)
             if (methodDescriptor.returnsReadValue()) {
                 unboxOrCast(valueType)
             }
@@ -494,35 +494,34 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> read value
-        private fun invokeOnSharedVariableRead(locationState: MemoryLocationState, descriptor: String) = adapter.run {
+        private fun invokeOnSharedVariableRead(locationState: MemoryLocationState, valueType: Type) = adapter.run {
             loadStrategy()                              // STACK: strategy
             loadCurrentThreadNumber()                   // STACK: strategy, threadId
             invokeLabelMemoryLocation(locationState)    // STACK: strategy, threadId, location
-            invokeGetKClassFromDescriptor(descriptor)   // STACK: strategy, threadId, location, kClass
+            invokeGetKClassFromType(valueType)          // STACK: strategy, threadId, location, kClass
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
         }
 
         // STACK: (empty) -> (empty)
-        private fun invokeOnSharedVariableWrite(locationState: MemoryLocationState, descriptor: String,
-                                                valueLocal: Int, valueType: Type) = adapter.run {
+        private fun invokeOnSharedVariableWrite(locationState: MemoryLocationState, valueLocal: Int, valueType: Type) = adapter.run {
             loadStrategy()                                  // STACK: strategy
             loadCurrentThreadNumber()                       // STACK: strategy, threadId
             invokeLabelMemoryLocation(locationState)        // STACK: strategy, threadId, location
-            loadLocal(valueLocal); box(valueType)           // STACK: strategy, threadId, location, value
-            invokeGetKClassFromDescriptor(descriptor)       // STACK: strategy, threadId, location, value, kClass
+            invokeGetKClassFromType(valueType)              // STACK: strategy, threadId, location, kClass
+            loadLocal(valueLocal); box(valueType)           // STACK: strategy, threadId, location, kClass, value
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
         }
 
         // STACK: (empty) -> method result
-        private fun invokeOnAtomicMethod(locationState: MemoryLocationState, descriptor: String, methodDescriptor: AtomicMethodDescriptor,
+        private fun invokeOnAtomicMethod(locationState: MemoryLocationState, methodDescriptor: AtomicMethodDescriptor,
                                          cmpValueLocal: Int?, updValueLocal: Int, valueType: Type) = adapter.run {
             require((methodDescriptor == AtomicMethodDescriptor.CMP_AND_SET) implies (cmpValueLocal != null))
             loadStrategy()                                          // STACK: strategy
             loadCurrentThreadNumber()                               // STACK: strategy, threadId
             invokeLabelMemoryLocation(locationState)                // STACK: strategy, threadId, location
-            cmpValueLocal?.also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, cmpValue?
-            updValueLocal .also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, cmpValue?, updValue
-            invokeGetKClassFromDescriptor(descriptor)               // STACK: strategy, threadId, location, cmpValue?, updValue, kClass
+            invokeGetKClassFromType(valueType)                      // STACK: strategy, threadId, location, kClass
+            cmpValueLocal?.also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?
+            updValueLocal .also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?, updValue
             invokeVirtual(MANAGED_STRATEGY_TYPE, methodDescriptor.method())
         }
 
@@ -534,8 +533,9 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> kClass
-        private fun invokeGetKClassFromDescriptor(descriptor: String) = adapter.run {
-            push(descriptor)
+        private fun invokeGetKClassFromType(type: Type) = adapter.run {
+            // TODO: for some reason, pushing `type` directly on the stack does not work
+            push(type.descriptor)
             invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
         }
 

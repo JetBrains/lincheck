@@ -455,66 +455,65 @@ abstract class ManagedStrategy(
      * Its result replaces the real read value.
      * TODO: remove [typeDescriptor] from the interface.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocationId the memory location identifier.
+     * @param location the memory location identifier.
      */
-    internal fun onSharedVariableRead(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): Any? {
-        return memoryTracker.readValue(iThread, memoryLocationId, kClass)?.unwrap()
+    internal fun onSharedVariableRead(iThread: Int, location: MemoryLocation, kClass: KClass<*>): Any? {
+        return memoryTracker.readValue(iThread, location, kClass)?.unwrap()
     }
 
     /**
      * This method is executed upon a shared variable write operation.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocationId the memory location identifier.
+     * @param location the memory location identifier.
      * @param value the value to be written.
      */
-    internal fun onSharedVariableWrite(iThread: Int, memoryLocationId: MemoryLocation, value: Any?, kClass: KClass<*>) {
-        memoryTracker.writeValue(iThread, memoryLocationId, value?.opaque(kClass), kClass)
+    internal fun onSharedVariableWrite(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?) {
+        memoryTracker.writeValue(iThread, location, kClass, value?.opaque(kClass))
     }
 
     /**
      * This method is executed upon `compareAndSet` invocation using atomic primitives.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocationId the memory location identifier.
+     * @param location the memory location identifier.
      * @param expected expected value for CAS.
      * @param desired next value if CAS is successful.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onCompareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: Any?, desired: Any?, kClass: KClass<*>): Boolean {
-        return memoryTracker.compareAndSet(iThread, memoryLocationId,
-            expected?.opaque(kClass), desired?.opaque(kClass), kClass)
+    internal fun onCompareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: Any?, desired: Any?): Boolean {
+        return memoryTracker.compareAndSet(iThread, location, kClass, expected?.opaque(kClass), desired?.opaque(kClass))
     }
 
     /**
      * This method is executed upon `addAndGet` invocation using atomic primitives.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocationId the memory location identifier.
+     * @param location the memory location identifier.
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onAddAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): Number {
-        return memoryTracker.addAndGet(iThread, memoryLocationId, delta, kClass)?.unwrap() as Number
+    internal fun onAddAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
+        return memoryTracker.addAndGet(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
     /**
      * This method is executed upon `getAndAdd` invocation using atomic primitives.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocationId the memory location identifier.
+     * @param location the memory location identifier.
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onGetAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): Number {
-        return memoryTracker.getAndAdd(iThread, memoryLocationId, delta, kClass)?.unwrap() as Number
+    internal fun onGetAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
+        return memoryTracker.getAndAdd(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
     /**
      * This method is executed upon `getAndAdd` invocation using atomic primitives.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param memoryLocationId the memory location identifier.
+     * @param location the memory location identifier.
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onGetAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: Any?, kClass: KClass<*>): Any? {
-        return memoryTracker.getAndSet(iThread, memoryLocationId, value?.opaque(kClass), kClass)?.unwrap()
+    internal fun onGetAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?): Any? {
+        return memoryTracker.getAndSet(iThread, location, kClass, value?.opaque(kClass))?.unwrap()
     }
 
     /**

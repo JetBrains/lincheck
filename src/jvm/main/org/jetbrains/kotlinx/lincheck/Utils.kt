@@ -352,7 +352,7 @@ private fun Type.getKClass(): KClass<*> = when (sort) {
         Type.DOUBLE  -> DoubleArray::class
         Type.CHAR    -> CharArray::class
         Type.BOOLEAN -> BooleanArray::class
-        else -> Array::class
+        else         -> Array::class
     }}
     else -> throw IllegalArgumentException()
 }

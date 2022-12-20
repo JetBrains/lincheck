@@ -240,54 +240,52 @@ class EventStructureStrategy(
 
 private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
 
-    override fun writeValue(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>) {
-        eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass)
+    override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
+        eventStructure.addWriteEvent(iThread, location, kClass, value)
     }
 
-    override fun readValue(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass)
+    override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, location, kClass)
         return (readEvent.label as ReadAccessLabel).value
     }
 
-    override fun compareAndSet(iThread: Int, memoryLocationId: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?,
-                               kClass: KClass<*>): Boolean {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
+    override fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
+        val readEvent = eventStructure.addReadEvent(iThread, location, kClass, isExclusive = true)
         val value = (readEvent.label as ReadAccessLabel).value
         if (value != expected)
             return false
-        eventStructure.addWriteEvent(iThread, memoryLocationId, desired, kClass, isExclusive = true)
+        eventStructure.addWriteEvent(iThread, location, kClass, desired, isExclusive = true)
         return true
     }
 
     private enum class IncrementKind { Pre, Post }
 
-    private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number,
-                            kClass: KClass<*>, incKind: IncrementKind): OpaqueValue? {
+    private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>, delta: Number, incKind: IncrementKind): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
         val readLabel = readEvent.label as ReadAccessLabel
         // TODO: should we use some sub-type check instead of equality check?
         check(readLabel.kClass == kClass)
         val oldValue = readLabel.value!!
         val newValue = oldValue + delta
-        eventStructure.addWriteEvent(iThread, memoryLocationId, newValue, kClass, isExclusive = true)
+        eventStructure.addWriteEvent(iThread, memoryLocationId, kClass, newValue, isExclusive = true)
         return when (incKind) {
             IncrementKind.Pre -> oldValue
             IncrementKind.Post -> newValue
         }
     }
 
-    override fun getAndAdd(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
-        return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Pre)
+    override fun getAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
+        return fetchAndAdd(iThread, location, kClass, delta, IncrementKind.Pre)
     }
 
-    override fun addAndGet(iThread: Int, memoryLocationId: MemoryLocation, delta: Number, kClass: KClass<*>): OpaqueValue? {
-        return fetchAndAdd(iThread, memoryLocationId, delta, kClass, IncrementKind.Post)
+    override fun addAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
+        return fetchAndAdd(iThread, location, kClass, delta, IncrementKind.Post)
     }
 
-    override fun getAndSet(iThread: Int, memoryLocationId: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
+    override fun getAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, location, kClass, isExclusive = true)
         val readValue = (readEvent.label as ReadAccessLabel).value
-        eventStructure.addWriteEvent(iThread, memoryLocationId, value, kClass, isExclusive = true)
+        eventStructure.addWriteEvent(iThread, location, kClass, value, isExclusive = true)
         return readValue
     }
 }

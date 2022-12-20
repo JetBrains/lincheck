@@ -548,7 +548,7 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addWriteEvent(iThread: Int, location: MemoryLocation, value: OpaqueValue?, kClass: KClass<*>,
+    fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,
                       isExclusive: Boolean = false): Event {
         val label = WriteAccessLabel(
             location_ = location,
