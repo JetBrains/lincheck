@@ -356,3 +356,9 @@ private fun Type.getKClass(): KClass<*> = when (sort) {
     }}
     else -> throw IllegalArgumentException()
 }
+
+class UnreachableException(message: String?): Exception(message)
+
+fun unreachable(message: String? = null): Nothing {
+    throw UnreachableException(message)
+}

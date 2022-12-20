@@ -20,10 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import kotlin.reflect.KClass
-
-typealias ThreadSwitchCallback = (Int) -> Unit
 
 class EventStructure(
     nThreads: Int,
