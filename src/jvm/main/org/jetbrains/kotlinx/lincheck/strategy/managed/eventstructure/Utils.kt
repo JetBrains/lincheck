@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.implies
+
 fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
     // TODO: could it be done with a single lookup in a map?
     put(key, get(key)?.let(transform) ?: default)
@@ -41,10 +43,6 @@ fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: (T,
 
 fun <T : Comparable<T>> List<T>.isSorted(fromIndex : Int = 0, toIndex : Int = size): Boolean =
     isChain(fromIndex, toIndex) { x, y -> x <= y }
-
-infix fun Boolean.implies(other: Boolean): Boolean = !this || other
-
-infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
 
 inline fun Boolean.ensure(): Boolean {
     // TODO: add contract?

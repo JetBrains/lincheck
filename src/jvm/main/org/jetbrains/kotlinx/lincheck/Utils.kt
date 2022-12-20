@@ -362,3 +362,7 @@ class UnreachableException(message: String?): Exception(message)
 fun unreachable(message: String? = null): Nothing {
     throw UnreachableException(message)
 }
+
+infix fun Boolean.implies(other: Boolean): Boolean = !this || other
+
+infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
