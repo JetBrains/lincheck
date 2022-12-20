@@ -271,7 +271,7 @@ internal class ManagedStrategyTransformer(
                     visitRead(locationState, innerDescriptor)
 
                 name in atomicCompareAndSetMethods ->
-                    visitCompareAndSet(locationState, innerDescriptor)
+                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.CMP_AND_SET)
 
                 name in atomicGetAndSetMethods ->
                     visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.GET_AND_SET)
@@ -279,33 +279,11 @@ internal class ManagedStrategyTransformer(
                 name in atomicGetAndAddMethods ->
                     visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.fromName(name))
 
-                name in atomicIncrementMethods -> {
-                    when (innerDescriptor) {
-                        "I" -> push(1)
-                        "J" -> push(1L)
-                        else -> throw IllegalStateException()
-                    }
-                    val methodDescriptor = when (name) {
-                        "getAndIncrement" -> AtomicMethodDescriptor.GET_AND_ADD
-                        "incrementAndGet" -> AtomicMethodDescriptor.ADD_AND_GET
-                        else              -> unreachable()
-                    }
-                    visitAtomicMethod(locationState, innerDescriptor, methodDescriptor)
-                }
+                name in atomicIncrementMethods ->
+                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.fromName(name))
 
-                name in atomicDecrementMethods -> {
-                    when (innerDescriptor) {
-                        "I" -> push(-1)
-                        "J" -> push(-1L)
-                        else -> throw IllegalStateException()
-                    }
-                    val methodDescriptor = when (name) {
-                        "getAndDecrement" -> AtomicMethodDescriptor.GET_AND_ADD
-                        "decrementAndGet" -> AtomicMethodDescriptor.ADD_AND_GET
-                        else              -> unreachable()
-                    }
-                    visitAtomicMethod(locationState, innerDescriptor, methodDescriptor)
-                }
+                name in atomicDecrementMethods ->
+                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.fromName(name))
 
                 else -> super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
@@ -427,50 +405,6 @@ internal class ManagedStrategyTransformer(
                         owner == "java/lang/invoke/VarHandle" ||
                         owner == "java/lang/invoke/MethodHandles\$Lookup"
 
-        private val atomicGetMethods = listOf(
-            "get", "getPlain", "getAcquire", "getOpaque"
-        )
-
-        private val atomicSetMethods = listOf(
-            "set", "lazySet", "setOpaque", "setPlain", "setRelease"
-        )
-
-        private val atomicGetAndSetMethods = listOf(
-            "getAndSet"
-        )
-
-        private val atomicCompareAndSetMethods = listOf(
-            "compareAndSet", "weakCompareAndSet",
-            "weakCompareAndSetAcquire",
-            "weakCompareAndSetRelease",
-            "weakCompareAndSetPlain",
-            "weakCompareAndSetVolatile",
-        )
-
-        private val atomicGetAndAddMethods = listOf(
-            "getAndAdd", "addAndGet"
-        )
-
-        private val atomicIncrementMethods = listOf(
-            "getAndIncrement", "incrementAndGet"
-        )
-
-        private val atomicDecrementMethods = listOf(
-            "getAndDecrement", "decrementAndGet"
-        )
-
-        private val atomicFieldUpdaterMethods = listOf(
-            "newUpdater", "findVarHandle"
-        )
-
-        private val atomicMethods = listOf(
-            listOf("<init>"),
-            atomicGetMethods, atomicSetMethods,
-            atomicGetAndSetMethods, atomicCompareAndSetMethods,
-            atomicGetAndAddMethods, atomicIncrementMethods, atomicDecrementMethods,
-            atomicFieldUpdaterMethods
-        ).flatten()
-
     }
 
     private open inner class ManagedStrategyMemoryTrackingTransformer(
@@ -478,187 +412,125 @@ internal class ManagedStrategyTransformer(
         adapter: GeneratorAdapter
     ) : ManagedStrategyMethodVisitor(methodName, adapter) {
 
-        // STACK: [location args...] -> read value
+        // STACK: [location args ...] -> read value
         protected fun visitRead(locationState: MemoryLocationState, descriptor: String) = adapter.run {
-            // call beforeSharedVariableRead method
+            val valueType = Type.getType(descriptor)
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
-            // save memory location's state in order to reuse it later
             locationState.store()
-            // load strategy and thread id
-            loadStrategy()                  // STACK: strategy
-            loadCurrentThreadNumber()       // STACK: strategy, threadId
-            // get memory location label
-            loadMemoryLocationLabeler()     // STACK: strategy, threadId, memoryLocationLabeler
-            locationState.load()            // STACK: strategy, threadId, memoryLocationLabeler, [location args...]
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, locationState.labelMethod)
-                                            // STACK: strategy, threadId, location
-            // get kClass by descriptor
-            push(descriptor)                                        // STACK: strategy, threadId, location, descriptor
-            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR) // STACK: strategy, threadId, location, kClass
-            // call onSharedVariableRead method
-            invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
-            // unbox the read value and capture it
-            unboxOrCast(Type.getType(descriptor))
-            captureReadValue(descriptor, tracePointLocal)
+            invokeOnSharedVariableRead(locationState, descriptor)
+            unboxOrCast(valueType)
+            // capture read value only when logging is enabled
+            if (constructTraceRepresentation) {
+                val readValueLocal = newLocal(valueType).also { copyLocal(it) }
+                captureReadValue(readValueLocal, valueType, tracePointLocal)
+            }
         }
 
-        // STACK: [location label args...], value -> (empty)
+        // STACK: [location args ...], value -> (empty)
         protected fun visitWrite(locationState: MemoryLocationState, descriptor: String) = adapter.run {
-            // call beforeSharedVariableWrite method and capture value
+            val valueType = Type.getType(descriptor)
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableWrite(locationState.locationName, tracePointLocal)
-            captureWrittenValue(descriptor, tracePointLocal)
-            // save written value in order to reuse it later
-            val valueLocal = newLocal(Type.getType(descriptor))
-            storeLocal(valueLocal)
-            // save memory location's state in order to reuse it later
+            val valueLocal = newLocal(valueType).also { storeLocal(it) }
             locationState.store()
-            // load strategy and thread id
-            loadStrategy()                  // STACK: strategy
-            loadCurrentThreadNumber()       // STACK: strategy, threadId
-            // get memory location label
-            loadMemoryLocationLabeler()     // STACK: strategy, threadId, labeller
-            locationState.load()            // STACK: strategy, threadId, labeller, [location args...]
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, locationState.labelMethod)
-                                            // STACK: strategy, threadId, location
-            // get written value
-            loadLocal(valueLocal)           // STACK: strategy, threadId, location, value
-            box(Type.getType(descriptor))   // STACK: strategy, threadId, location, value
-            // get kClass from descriptor
-            push(descriptor)
-            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR) // STACK: strategy, threadId, location, value, kClass
-            // call onSharedVariableWrite method
-            invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
-            // make state representation
+            invokeOnSharedVariableWrite(locationState, descriptor, valueLocal, valueType)
+            // capture written value only when logging is enabled
+            if (constructTraceRepresentation) {
+                captureWrittenValue(valueLocal, valueType, tracePointLocal)
+            }
             invokeMakeStateRepresentation()
         }
 
-        protected fun visitCompareAndSet(locationState: MemoryLocationState, descriptor: String) = adapter.run {
-            // TODO: call invokeBeforeCAS method?
+        // STACK: [location args ...], [value args ...] -> method result
+        protected fun visitAtomicMethod(locationState: MemoryLocationState, descriptor: String, methodDescriptor: AtomicMethodDescriptor) = adapter.run {
+            val valueType = Type.getType(descriptor)
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
-            // save expected and desired values in order to reuse them later
-            val newValueLocal = newLocal(Type.getType(descriptor))
-            storeLocal(newValueLocal)
-            val expectedValueLocal = newLocal(Type.getType(descriptor))
-            storeLocal(expectedValueLocal)
-            // save memory location's state in order to reuse it later
+            if (methodDescriptor.isIncrement()) {
+                when (descriptor) {
+                    "I" -> push(1)
+                    "J" -> push(1L)
+                    else -> throw IllegalStateException()
+                }
+            }
+            if (methodDescriptor.isDecrement()) {
+                when (descriptor) {
+                    "I" -> push(-1)
+                    "J" -> push(-1L)
+                    else -> throw IllegalStateException()
+                }
+            }
+            val updValueLocal = newLocal(valueType).also { storeLocal(it) }
+            val cmpValueLocal = if (methodDescriptor.hasCompareValue()) {
+                newLocal(valueType).also { storeLocal(it) }
+            } else null
             locationState.store()
-            // load strategy and thread id
-            loadStrategy()                  // STACK: strategy
-            loadCurrentThreadNumber()       // STACK: strategy, threadId
-            // get memory location label
-            loadMemoryLocationLabeler()     // STACK: strategy, threadId, labeller
-            locationState.load()            // STACK: strategy, threadId, labeller, [location args...]
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, locationState.labelMethod)
-                                            // STACK: strategy, threadId, location
-            // get expected and desired values
-            loadLocal(expectedValueLocal)   // STACK: strategy, threadId, location, expected value
-            box(Type.getType(descriptor))
-            loadLocal(newValueLocal)        // STACK: strategy, threadId, location, expected value, desired value
-            box(Type.getType(descriptor))
-            // get kClass from descriptor
-            push(descriptor)
-            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR) // STACK: strategy, threadId, location, expected value, desired value, kClass
-            // call onCompareAndSet method
-            invokeVirtual(MANAGED_STRATEGY_TYPE, ON_COMPARE_AND_SET_METHOD)
+            invokeOnAtomicMethod(locationState, descriptor, methodDescriptor, cmpValueLocal, updValueLocal, valueType)
+            if (methodDescriptor.returnsReadValue()) {
+                unboxOrCast(valueType)
+            }
             // TODO: make state representation, call capture read/written values
-            // invokeMakeStateRepresentation()
-        }
-
-        protected fun visitAtomicMethod(locationState: MemoryLocationState, descriptor: String,
-                                        methodDescriptor: AtomicMethodDescriptor) = adapter.run {
-            // TODO: call invokeBeforeCAS method?
-            val tracePointLocal = newTracePointLocal()
-            invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
-            // save the value in order to reuse it later
-            val valueLocal = newLocal(Type.getType(descriptor))
-            storeLocal(valueLocal)
-            // save memory location's state in order to reuse it later
-            locationState.store()
-            // load strategy and thread id
-            loadStrategy()                  // STACK: strategy
-            loadCurrentThreadNumber()       // STACK: strategy, threadId
-            // get memory location label
-            loadMemoryLocationLabeler()     // STACK: strategy, threadId, labeller
-            locationState.load()            // STACK: strategy, threadId, labeller, [location args...]
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, locationState.labelMethod)
-                                            // STACK: strategy, threadId, location
-            // get value
-            loadLocal(valueLocal)           // STACK: strategy, threadId, location, value
-            box(Type.getType(descriptor))
-            // get kClass from descriptor
-            push(descriptor)
-            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR) // STACK: strategy, threadId, location, value, kClass
-            // call method
-            invokeVirtual(MANAGED_STRATEGY_TYPE, methodDescriptor.method())
-            unboxOrCast(Type.getType(descriptor))
-            // TODO: make state representation, call capture read/written values
-            // invokeMakeStateRepresentation()
         }
 
         // STACK: (empty) -> (empty)
-        private fun invokeBeforeSharedVariableRead(fieldName: String?, tracePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, tracePointLocal, READ_TRACE_POINT_TYPE) {
-                iThread, actorId, callStackTrace, stackTraceElement ->
-                    ReadTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
-            }
-
-        // STACK: (empty) -> (empty)
-        private fun invokeBeforeSharedVariableWrite(fieldName: String?, tracePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, tracePointLocal, WRITE_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, stackTraceElement ->
-                WriteTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
-            }
-
-        // STACK: (empty) -> (empty)
-        private fun invokeBeforeSharedVariableReadOrWrite(
-            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor
-        ) = adapter.run {
+        private fun invokeBeforeSharedVariableRead(fieldName: String?, tracePointLocal: Int?) = adapter.run {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(tracePointLocal, tracePointType, codeLocationConstructor)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+            loadNewCodeLocationAndTracePoint(tracePointLocal, READ_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, stackTraceElement ->
+                ReadTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
+            }
+            invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_SHARED_VARIABLE_READ_METHOD)
         }
 
-        // STACK: strategy, threadId, location, kClass -> read value
-        private fun invokeOnSharedVariableRead() = adapter.run {
+        // STACK: (empty) -> (empty)
+        private fun invokeBeforeSharedVariableWrite(fieldName: String?, tracePointLocal: Int?) = adapter.run {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadNewCodeLocationAndTracePoint(tracePointLocal, WRITE_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, stackTraceElement ->
+                WriteTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
+            }
+            invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_SHARED_VARIABLE_WRITE_METHOD)
+        }
+
+        // STACK: (empty) -> read value
+        private fun invokeOnSharedVariableRead(locationState: MemoryLocationState, descriptor: String) = adapter.run {
+            loadStrategy()                              // STACK: strategy
+            loadCurrentThreadNumber()                   // STACK: strategy, threadId
+            invokeLabelMemoryLocation(locationState)    // STACK: strategy, threadId, location
+            invokeGetKClassFromDescriptor(descriptor)   // STACK: strategy, threadId, location, kClass
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
         }
 
-        // STACK: strategy, threadId, location, value, kClass -> (empty)
-        private fun invokeOnSharedVariableWrite() = adapter.run {
+        // STACK: (empty) -> (empty)
+        private fun invokeOnSharedVariableWrite(locationState: MemoryLocationState, descriptor: String,
+                                                valueLocal: Int, valueType: Type) = adapter.run {
+            loadStrategy()                                  // STACK: strategy
+            loadCurrentThreadNumber()                       // STACK: strategy, threadId
+            invokeLabelMemoryLocation(locationState)        // STACK: strategy, threadId, location
+            loadLocal(valueLocal); box(valueType)           // STACK: strategy, threadId, location, value
+            invokeGetKClassFromDescriptor(descriptor)       // STACK: strategy, threadId, location, value, kClass
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
         }
 
-        // STACK: read value -> read value
-        private fun captureReadValue(desc: String, tracePointLocal: Int?) = adapter.run {
-            // capture return values only when logging is enabled
-            if (!constructTraceRepresentation) return
-            val valueType = Type.getType(desc)
-            val readValue = newLocal(valueType)
-            copyLocal(readValue)
-            // initialize ReadCodeLocation
-            loadLocal(tracePointLocal!!)
-            checkCast(READ_TRACE_POINT_TYPE)
-            loadLocal(readValue)
-            box(valueType)
-            invokeVirtual(READ_TRACE_POINT_TYPE, INITIALIZE_READ_VALUE_METHOD)
+        // STACK: (empty) -> method result
+        private fun invokeOnAtomicMethod(locationState: MemoryLocationState, descriptor: String, methodDescriptor: AtomicMethodDescriptor,
+                                         cmpValueLocal: Int?, updValueLocal: Int, valueType: Type) = adapter.run {
+            require((methodDescriptor == AtomicMethodDescriptor.CMP_AND_SET) implies (cmpValueLocal != null))
+            loadStrategy()                                          // STACK: strategy
+            loadCurrentThreadNumber()                               // STACK: strategy, threadId
+            invokeLabelMemoryLocation(locationState)                // STACK: strategy, threadId, location
+            cmpValueLocal?.also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, cmpValue?
+            updValueLocal .also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, cmpValue?, updValue
+            invokeGetKClassFromDescriptor(descriptor)               // STACK: strategy, threadId, location, cmpValue?, updValue, kClass
+            invokeVirtual(MANAGED_STRATEGY_TYPE, methodDescriptor.method())
         }
 
-        // STACK: written value -> written value
-        private fun captureWrittenValue(desc: String, tracePointLocal: Int?) = adapter.run {
-            // capture written values only when logging is enabled
-            if (!constructTraceRepresentation) return
-            val valueType = Type.getType(desc)
-            val storedValue = newLocal(valueType)
-            copyLocal(storedValue) // save store value
-            // initialize WriteCodeLocation with stored value
-            loadLocal(tracePointLocal!!)
-            checkCast(WRITE_TRACE_POINT_TYPE)
-            loadLocal(storedValue)
-            box(valueType)
-            invokeVirtual(WRITE_TRACE_POINT_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
+        // Stack: (empty) -> location
+        private fun invokeLabelMemoryLocation(locationState: MemoryLocationState) = adapter.run {
+            loadMemoryLocationLabeler()
+            locationState.load()
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, locationState.labelMethod)
         }
 
         // STACK: (empty) -> kClass
@@ -667,23 +539,75 @@ internal class ManagedStrategyTransformer(
             invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
         }
 
+        // STACK: (empty) -> (empty)
+        private fun captureReadValue(valueLocal: Int, valueType: Type, tracePointLocal: Int?) = adapter.run {
+            loadLocal(tracePointLocal!!)
+            checkCast(READ_TRACE_POINT_TYPE)
+            loadLocal(valueLocal)
+            box(valueType)
+            invokeVirtual(READ_TRACE_POINT_TYPE, INITIALIZE_READ_VALUE_METHOD)
+        }
+
+        // STACK: (empty) -> (empty)
+        private fun captureWrittenValue(valueLocal: Int, valueType: Type, tracePointLocal: Int?) = adapter.run {
+            loadLocal(tracePointLocal!!)
+            checkCast(WRITE_TRACE_POINT_TYPE)
+            loadLocal(valueLocal)
+            box(valueType)
+            invokeVirtual(WRITE_TRACE_POINT_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
+        }
+
     }
 
     enum class AtomicMethodDescriptor {
-        // TODO: add other atomic methods for completeness?
-        GET_AND_ADD, ADD_AND_GET, GET_AND_SET;
+        CMP_AND_SET, GET_AND_SET,
+        GET_AND_ADD, ADD_AND_GET,
+        GET_AND_INC, INC_AND_GET,
+        GET_AND_DEC, DEC_AND_GET;
 
-        fun method(): Method = when(this) {
-            GET_AND_ADD -> ON_GET_AND_ADD_METHOD
-            ADD_AND_GET -> ON_ADD_AND_GET_METHOD
+        fun method(): Method = when (this) {
+            CMP_AND_SET -> ON_COMPARE_AND_SET_METHOD
             GET_AND_SET -> ON_GET_AND_SET_METHOD
+            GET_AND_ADD, GET_AND_INC, GET_AND_DEC -> ON_GET_AND_ADD_METHOD
+            ADD_AND_GET, INC_AND_GET, DEC_AND_GET -> ON_ADD_AND_GET_METHOD
+        }
+
+        fun hasCompareValue(): Boolean = when (this) {
+            CMP_AND_SET -> true
+            else        -> false
+        }
+
+        fun hasUpdateValue(): Boolean = when (this) {
+            CMP_AND_SET, GET_AND_SET,
+            GET_AND_ADD, ADD_AND_GET -> true
+            else                     -> false
+        }
+
+        fun isIncrement(): Boolean = when (this) {
+            INC_AND_GET, GET_AND_INC -> true
+            else -> false
+        }
+
+        fun isDecrement(): Boolean = when (this) {
+            DEC_AND_GET, GET_AND_DEC -> true
+            else -> false
+        }
+
+        fun returnsReadValue(): Boolean = when (this) {
+            CMP_AND_SET -> false
+            else        -> true
         }
 
         companion object {
-            fun fromName(name: String): AtomicMethodDescriptor = when(name) {
-                "getAndAdd" -> GET_AND_ADD
-                "addAndGet" -> ADD_AND_GET
-                "getAndSet" -> GET_AND_SET
+            fun fromName(name: String): AtomicMethodDescriptor = when (name) {
+                "getAndSet"         -> GET_AND_SET
+                "getAndAdd"         -> GET_AND_ADD
+                "addAndGet"         -> ADD_AND_GET
+                "incrementAndGet"   -> INC_AND_GET
+                "decrementAndGet"   -> DEC_AND_GET
+                "getAndIncrement"   -> GET_AND_INC
+                "getAndDecrement"   -> GET_AND_DEC
+                in atomicCompareAndSetMethods -> CMP_AND_SET
                 else -> throw IllegalArgumentException("Method $name is not atomic!")
             }
         }
@@ -1971,6 +1895,51 @@ private fun isSuspendStateMachine(internalClassName: String): Boolean {
 }
 
 private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
+
+
+private val atomicGetMethods = listOf(
+    "get", "getPlain", "getAcquire", "getOpaque"
+)
+
+private val atomicSetMethods = listOf(
+    "set", "lazySet", "setOpaque", "setPlain", "setRelease"
+)
+
+private val atomicGetAndSetMethods = listOf(
+    "getAndSet"
+)
+
+private val atomicCompareAndSetMethods = listOf(
+    "compareAndSet", "weakCompareAndSet",
+    "weakCompareAndSetAcquire",
+    "weakCompareAndSetRelease",
+    "weakCompareAndSetPlain",
+    "weakCompareAndSetVolatile",
+)
+
+private val atomicGetAndAddMethods = listOf(
+    "getAndAdd", "addAndGet"
+)
+
+private val atomicIncrementMethods = listOf(
+    "getAndIncrement", "incrementAndGet"
+)
+
+private val atomicDecrementMethods = listOf(
+    "getAndDecrement", "decrementAndGet"
+)
+
+private val atomicFieldUpdaterMethods = listOf(
+    "newUpdater", "findVarHandle"
+)
+
+private val atomicMethods = listOf(
+    listOf("<init>"),
+    atomicGetMethods, atomicSetMethods,
+    atomicGetAndSetMethods, atomicCompareAndSetMethods,
+    atomicGetAndAddMethods, atomicIncrementMethods, atomicDecrementMethods,
+    atomicFieldUpdaterMethods
+).flatten()
 
 private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 
