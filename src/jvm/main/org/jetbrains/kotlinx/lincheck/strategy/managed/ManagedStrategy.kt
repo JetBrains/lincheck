@@ -49,7 +49,8 @@ abstract class ManagedStrategy(
     private val verifier: Verifier,
     private val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    private val testCfg: ManagedCTestConfiguration,
+    val memoryTrackingEnabled: Boolean = false,
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.parallelExecution.size
@@ -77,6 +78,8 @@ abstract class ManagedStrategy(
     protected val currentActorId = IntArray(nThreads)
     // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
+    // Ihe number of entered but not left (yet) blocks where memory operations should not be tracked.
+    private val untrackingSectionDepth = IntArray(nThreads + 1) { if (memoryTrackingEnabled) 0 else 1 }
     // Detector of loops or hangs (i.e. active locks).
     private lateinit var loopDetector: LoopDetector
     // Whether strategy should always switch when requested
@@ -184,6 +187,7 @@ abstract class ManagedStrategy(
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
+        untrackingSectionDepth.fill(if (memoryTrackingEnabled) 0 else 1)
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
@@ -725,6 +729,20 @@ abstract class ManagedStrategy(
             }
             callStackTrace.removeAt(callStackTrace.lastIndex)
         }
+    }
+
+    internal fun shouldTrackMemory(iThread: Int): Boolean {
+        return (iThread < untrackingSectionDepth.size) && (untrackingSectionDepth[iThread] == 0)
+    }
+
+    internal fun enterUntrackingSection(iThread: Int) {
+        if (iThread < untrackingSectionDepth.size)
+            untrackingSectionDepth[iThread]++
+    }
+
+    internal fun leaveUntrackingSection(iThread: Int) {
+        if (iThread < untrackingSectionDepth.size)
+            untrackingSectionDepth[iThread]--
     }
 
     // == LOGGING METHODS ==

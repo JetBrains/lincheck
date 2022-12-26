@@ -138,18 +138,28 @@ internal class ManagedStrategyTransformer(
                 else                    -> throw IllegalArgumentException("Unknown field opcode")
             }
             when (opcode) {
-                GETSTATIC, GETFIELD -> visitRead(locationState, desc)
-                PUTSTATIC, PUTFIELD -> visitWrite(locationState, desc)
+                GETSTATIC, GETFIELD -> visitRead(locationState, desc) {
+                    super.visitFieldInsn(opcode, owner, name, desc)
+                }
+                PUTSTATIC, PUTFIELD -> visitWrite(locationState, desc) {
+                    super.visitFieldInsn(opcode, owner, name, desc)
+                }
             }
         }
 
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
-                AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD ->
-                    visitRead(ArrayElementMemoryLocationState(adapter), getArrayLoadType(opcode).descriptor)
+                AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
+                    visitRead(ArrayElementMemoryLocationState(adapter), getArrayLoadType(opcode).descriptor) {
+                        super.visitInsn(opcode)
+                    }
+                }
 
-                AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE ->
-                    visitWrite(ArrayElementMemoryLocationState(adapter), getArrayStoreType(opcode).descriptor)
+                AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
+                    visitWrite(ArrayElementMemoryLocationState(adapter), getArrayLoadType(opcode).descriptor) {
+                        super.visitInsn(opcode)
+                    }
+                }
 
                 else -> super.visitInsn(opcode)
             }
@@ -265,25 +275,23 @@ internal class ManagedStrategyTransformer(
                     visitAtomicReflectionConstructor(opcode, owner, name, descriptor, isInterface, locationState, innerDescriptor)
 
                 name in atomicSetMethods ->
-                    visitWrite(locationState, innerDescriptor)
+                    visitWrite(locationState, innerDescriptor) {
+                        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                    }
 
                 name in atomicGetMethods ->
-                    visitRead(locationState, innerDescriptor)
+                    visitRead(locationState, innerDescriptor) {
+                        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                    }
 
+                name in atomicGetAndSetMethods ||
+                name in atomicGetAndAddMethods ||
+                name in atomicIncrementMethods ||
+                name in atomicDecrementMethods ||
                 name in atomicCompareAndSetMethods ->
-                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.CMP_AND_SET)
-
-                name in atomicGetAndSetMethods ->
-                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.GET_AND_SET)
-
-                name in atomicGetAndAddMethods ->
-                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.fromName(name))
-
-                name in atomicIncrementMethods ->
-                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.fromName(name))
-
-                name in atomicDecrementMethods ->
-                    visitAtomicMethod(locationState, innerDescriptor, AtomicMethodDescriptor.fromName(name))
+                    visitAtomicMethod(AtomicMethodDescriptor.fromName(name), locationState, innerDescriptor) {
+                        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                    }
 
                 else -> super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
@@ -325,7 +333,7 @@ internal class ManagedStrategyTransformer(
                     dup()
                     loadLocal(initialValueLocal)
                     // Call onSharedVariableWrite.
-                    visitWrite(locationState, innerDescriptor)
+                    visitWrite(locationState, innerDescriptor) { pop() }
                 }
             }
         }
@@ -423,13 +431,15 @@ internal class ManagedStrategyTransformer(
     ) : ManagedStrategyMethodVisitor(methodName, adapter) {
 
         // STACK: [location args ...] -> read value
-        protected fun visitRead(locationState: MemoryLocationState, descriptor: String) = adapter.run {
+        protected fun visitRead(locationState: MemoryLocationState, descriptor: String, performRead: () -> Unit) = adapter.run {
             val valueType = Type.getType(descriptor)
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
-            locationState.store()
-            invokeOnSharedVariableRead(locationState, valueType)
-            unboxOrCast(valueType)
+            interceptIfMemoryTrackingEnabled(performRead) {
+                locationState.store()
+                invokeOnSharedVariableRead(locationState, valueType)
+                unboxOrCast(valueType)
+            }
             // capture read value only when logging is enabled
             if (constructTraceRepresentation) {
                 val readValueLocal = newLocal(valueType).also { copyLocal(it) }
@@ -438,13 +448,16 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: [location args ...], value -> (empty)
-        protected fun visitWrite(locationState: MemoryLocationState, descriptor: String) = adapter.run {
+        protected fun visitWrite(locationState: MemoryLocationState, descriptor: String, performWrite: () -> Unit) = adapter.run {
             val valueType = Type.getType(descriptor)
+            val valueLocal = newLocal(valueType).also { copyLocal(it) }
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableWrite(locationState.locationName, tracePointLocal)
-            val valueLocal = newLocal(valueType).also { storeLocal(it) }
-            locationState.store()
-            invokeOnSharedVariableWrite(locationState, valueLocal, valueType)
+            interceptIfMemoryTrackingEnabled(performWrite) {
+                pop() // pops value from stack
+                locationState.store()
+                invokeOnSharedVariableWrite(locationState, valueLocal, valueType)
+            }
             // capture written value only when logging is enabled
             if (constructTraceRepresentation) {
                 captureWrittenValue(valueLocal, valueType, tracePointLocal)
@@ -453,34 +466,50 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: [location args ...], [value args ...] -> method result
-        protected fun visitAtomicMethod(locationState: MemoryLocationState, descriptor: String, methodDescriptor: AtomicMethodDescriptor) = adapter.run {
+        protected fun visitAtomicMethod(methodDescriptor: AtomicMethodDescriptor, locationState: MemoryLocationState, descriptor: String,
+                                        performMethod: () -> Unit) = adapter.run {
             val valueType = Type.getType(descriptor)
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
-            if (methodDescriptor.isIncrement()) {
-                when (descriptor) {
-                    "I" -> push(1)
-                    "J" -> push(1L)
-                    else -> throw IllegalStateException()
+            interceptIfMemoryTrackingEnabled(performMethod) {
+                if (methodDescriptor.isIncrement()) {
+                    when (descriptor) {
+                        "I" -> push(1)
+                        "J" -> push(1L)
+                        else -> throw IllegalStateException()
+                    }
                 }
-            }
-            if (methodDescriptor.isDecrement()) {
-                when (descriptor) {
-                    "I" -> push(-1)
-                    "J" -> push(-1L)
-                    else -> throw IllegalStateException()
+                if (methodDescriptor.isDecrement()) {
+                    when (descriptor) {
+                        "I" -> push(-1)
+                        "J" -> push(-1L)
+                        else -> throw IllegalStateException()
+                    }
                 }
-            }
-            val updValueLocal = newLocal(valueType).also { storeLocal(it) }
-            val cmpValueLocal = if (methodDescriptor.hasCompareValue()) {
-                newLocal(valueType).also { storeLocal(it) }
-            } else null
-            locationState.store()
-            invokeOnAtomicMethod(methodDescriptor, locationState, cmpValueLocal, updValueLocal, valueType)
-            if (methodDescriptor.returnsReadValue()) {
-                unboxOrCast(valueType)
+                val updValueLocal = newLocal(valueType).also { storeLocal(it) }
+                val cmpValueLocal = if (methodDescriptor.hasCompareValue()) {
+                    newLocal(valueType).also { storeLocal(it) }
+                } else null
+                locationState.store()
+                invokeOnAtomicMethod(methodDescriptor, locationState, cmpValueLocal, updValueLocal, valueType)
+                if (methodDescriptor.returnsReadValue()) {
+                    unboxOrCast(valueType)
+                }
             }
             // TODO: make state representation, call capture read/written values
+        }
+
+        // STACK: (empty) -> operation result
+        private fun interceptIfMemoryTrackingEnabled(performOperation: () -> Unit, interceptOperation: () -> Unit) = adapter.run {
+            val skipTrackingLabel: Label = newLabel()
+            val endLabel: Label = newLabel()
+            invokeShouldTrackMemory()
+            ifZCmp(GeneratorAdapter.EQ, skipTrackingLabel)
+            interceptOperation()
+            goTo(endLabel)
+            visitLabel(skipTrackingLabel)
+            performOperation()
+            visitLabel(endLabel)
         }
 
         // STACK: (empty) -> (empty)
@@ -533,6 +562,13 @@ internal class ManagedStrategyTransformer(
             cmpValueLocal?.also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?
             updValueLocal .also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?, updValue
             invokeVirtual(MANAGED_STRATEGY_TYPE, methodDescriptor.method())
+        }
+
+        // STACK: (empty) -> bool
+        private fun invokeShouldTrackMemory() = adapter.run {
+            loadStrategy()                      // STACK: strategy
+            loadCurrentThreadNumber()           // STACK: strategy, threadId
+            invokeVirtual(MANAGED_STRATEGY_TYPE, SHOULD_TRACK_MEMORY_METHOD)
         }
 
         // Stack: (empty) -> location
@@ -1756,12 +1792,15 @@ private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.ja
 private val BEFORE_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::beforeNotify.javaMethod)
 private val BEFORE_PARK_METHOD = Method.getMethod(ManagedStrategy::beforePark.javaMethod)
 private val AFTER_UNPARK_METHOD = Method.getMethod(ManagedStrategy::afterUnpark.javaMethod)
-private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
-private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
 private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
 private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
-private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
 private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
+private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
+private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
+private val SHOULD_TRACK_MEMORY_METHOD = Method.getMethod(ManagedStrategy::shouldTrackMemory.javaMethod)
+private val ENTER_UNTRACKING_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterUntrackingSection.javaMethod)
+private val LEAVE_UNTRACKING_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveUntrackingSection.javaMethod)
+private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
 private val CREATE_TRACE_POINT_METHOD = Method.getMethod(ManagedStrategy::createTracePoint.javaMethod)
 private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::newLocalObject.javaMethod)
 private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::deleteLocalObject.javaMethod)
