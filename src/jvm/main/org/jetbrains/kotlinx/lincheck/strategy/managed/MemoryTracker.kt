@@ -42,14 +42,13 @@ abstract class MemoryTracker {
 }
 
 /**
- * Sequentially consistent memory tracking.
+ * Simple straightforward implementation of memory tracking.
  * Represents the shared memory as a map MemoryLocation -> Value.
  *
  * TODO: do not use this class for interleaving-based model checking?.
- * TODO: move to interleaving-based model checking directory?
  * TODO: add dynamic type-checks (via kClass)
  */
-internal class SeqCstMemoryTracker : MemoryTracker() {
+internal class PlainMemoryTracker : MemoryTracker() {
     private val values = HashMap<MemoryLocation, OpaqueValue?>()
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
@@ -80,11 +79,11 @@ internal class SeqCstMemoryTracker : MemoryTracker() {
         return result
     }
 
-    fun copy(): SeqCstMemoryTracker =
-        SeqCstMemoryTracker().also { it.values += values }
+    fun copy(): PlainMemoryTracker =
+        PlainMemoryTracker().also { it.values += values }
 
     override fun equals(other: Any?): Boolean {
-        return (other is SeqCstMemoryTracker) && (values == other.values)
+        return (other is PlainMemoryTracker) && (values == other.values)
     }
 
     override fun hashCode(): Int {

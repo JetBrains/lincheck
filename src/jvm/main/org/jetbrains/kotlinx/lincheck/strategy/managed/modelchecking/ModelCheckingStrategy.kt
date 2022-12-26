@@ -70,7 +70,7 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     // Tracker of shared memory accesses.
-    override var memoryTracker: MemoryTracker = SeqCstMemoryTracker()
+    override var memoryTracker: MemoryTracker = PlainMemoryTracker()
     // Tracker of monitors operations.
     override var monitorTracker: MonitorTracker = MapMonitorTracker(nThreads)
     // Tracker of thread parking.
@@ -110,7 +110,7 @@ internal class ModelCheckingStrategy(
 
     override fun initializeInvocation() {
         currentInterleaving.initialize()
-        memoryTracker = SeqCstMemoryTracker()
+        memoryTracker = PlainMemoryTracker()
         monitorTracker = MapMonitorTracker(nThreads)
         parkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = true)
         super.initializeInvocation()
