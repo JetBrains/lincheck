@@ -99,7 +99,9 @@ internal class ObjectFieldMemoryLocation(val obj: Any, val className: String, va
                                          override val isAtomic: Boolean = false) : MemoryLocation {
 
     private val field by lazy {
-        obj.javaClass.getDeclaredField(fieldName).apply { isAccessible = true }
+        // TODO: is it correct to use this class loader here?
+        val classLoader = (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
+        classLoader.loadClass(className).getDeclaredField(fieldName).apply { isAccessible = true }
     }
 
     override fun read(): Any? = field.get(obj)

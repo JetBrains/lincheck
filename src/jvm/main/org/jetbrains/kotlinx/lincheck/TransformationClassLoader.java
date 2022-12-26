@@ -89,8 +89,9 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                ) ||
                className.startsWith("com.intellij.rt.coverage.") ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                   !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                   !className.equals(ManagedStrategyStateHolder.class.getName())
+                   !className.startsWith("org.jetbrains.kotlinx.lincheck.test.")
+                   // TODO: disabled ManagedStrategyStateHolder transformation in order to access it from MemoryLocation code
+                   // && !className.equals(ManagedStrategyStateHolder.class.getName())
                ) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||
