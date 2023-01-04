@@ -59,6 +59,8 @@ class EventStructure(
 
     private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
 
+    private val currentRemapping: Remapping = Remapping()
+
     private val delayedConsistencyCheckBuffer = mutableListOf<Event>()
 
     private var detectedInconsistency: Inconsistency? = null
@@ -125,6 +127,7 @@ class EventStructure(
         currentExplorationRoot = event
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
+        currentRemapping.reset()
         monitorTracker = createMonitorTracker()
         pendingEvents.clear().also { populatePendingEvents() }
         detectedInconsistency = null
@@ -198,7 +201,7 @@ class EventStructure(
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
         val nextPosition = playedFrontier.getNextPosition(iThread)
-        val atomicEvent = currentExecution.nextAtomicEvent(iThread, nextPosition, replaying = true)!!
+        val atomicEvent = currentExecution.nextAtomicEvent(iThread, nextPosition)!!
         // delay replaying the last event till all other events are replayed;
         if (currentExplorationRoot == atomicEvent.events.last()) {
             // TODO: prettify
@@ -413,7 +416,7 @@ class EventStructure(
             // TODO: also check custom event/label specific rules when replaying,
             //   e.g. upon replaying write-exclusive check its location equal to
             //   the location of previous read-exclusive part
-            event.label.replay(label).also { check(it) }
+            event.label.replay(label, currentRemapping)
             addEventToCurrentExecution(event)
             return event
         }
@@ -426,7 +429,7 @@ class EventStructure(
     private fun addRequestEvent(iThread: Int, label: EventLabel): Event {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
-            event.label.replay(label).also { check(it) }
+            event.label.replay(label, currentRemapping)
             addEventToCurrentExecution(event)
             return event
         }
@@ -445,7 +448,7 @@ class EventStructure(
                 label?.synchronize(dependency.label)
             }
             check(label != null)
-            event.label.replay(label).also { check(it) }
+            event.label.replay(label, currentRemapping)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }

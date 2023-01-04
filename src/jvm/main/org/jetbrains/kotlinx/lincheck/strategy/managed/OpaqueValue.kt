@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.objectweb.asm.Type
 import kotlin.reflect.KClass
 
 /**
@@ -90,7 +89,7 @@ class OpaqueValue private constructor(
         System.identityHashCode(value)
 
     override fun toString(): String =
-        if (isPrimitive) value.toString() else value.stringDescriptor()
+        if (isPrimitive) value.toString() else opaqueString(value)
 
 }
 
@@ -113,8 +112,9 @@ fun KClass<*>.defaultValue(): OpaqueValue? = when(this) {
 }?.opaque(kClass = this)
 
 
-fun Any.stringDescriptor(): String {
-    val typeName = this.javaClass.simpleName ?: ""
-    val objHash = Integer.toHexString(System.identityHashCode(this))
-    return "${typeName}@${objHash}"
-}
+fun opaqueString(className: String, obj: Any): String =
+    "${className}@${Integer.toHexString(System.identityHashCode(obj))}"
+
+// TODO: use obj.opaque().toString() instead?
+fun opaqueString(obj: Any?): String =
+    if (obj != null) opaqueString(obj::class.simpleName ?: "", obj) else "null"

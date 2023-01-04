@@ -205,14 +205,11 @@ class Event private constructor(
      * - request is a parent of response,
      * - request-label can be synchronized-into response-label.
      *
-     * Flag [relaxedCheck] enables relaxed checking in the presence of
-     * partially replayed execution (see [EventLabel.replay]).
-     *
      * @see EventLabel.synchronizesInto
      */
-    fun isValidResponse(request: Event, relaxedCheck: Boolean = false) =
+    fun isValidResponse(request: Event) =
         request.label.isRequest && label.isResponse && parent == request &&
-        request.label.synchronizesInto(label, relaxedCheck)
+        request.label.synchronizesInto(label)
 
     /**
      * Checks whether this event is valid response to its parent request event.
@@ -220,8 +217,8 @@ class Event private constructor(
      *
      * @see isValidResponse
      */
-    fun isValidResponse(relaxedCheck: Boolean = false) =
-        parent != null && isValidResponse(parent, relaxedCheck)
+    fun isValidResponse() =
+        parent != null && isValidResponse(parent)
 
     /**
      * Checks whether this event is valid write part of atomic read-modify-write,
@@ -234,15 +231,12 @@ class Event private constructor(
      * - both have exclusive flag set.
      * request-label can be synchronized-into response-label.
      *
-     * Flag [relaxedCheck] enables relaxed checking in the presence of
-     * partially replayed execution (see [EventLabel.replay]).
-     *
      * @see MemoryAccessLabel.isExclusive
      */
-    fun isWritePartOfAtomicUpdate(readResponse: Event, relaxedCheck: Boolean = false) =
+    fun isWritePartOfAtomicUpdate(readResponse: Event) =
         readResponse.label is ReadAccessLabel && readResponse.label.isResponse && readResponse.label.isExclusive &&
         label is WriteAccessLabel && label.isExclusive && parent == readResponse &&
-        readResponse.label.accessesSameLocation(label, relaxedCheck)
+        label.location == readResponse.label.location
 
     override fun equals(other: Any?): Boolean {
         return (other is Event) && (id == other.id)

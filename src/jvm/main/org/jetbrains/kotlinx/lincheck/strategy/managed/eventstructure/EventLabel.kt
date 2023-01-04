@@ -139,8 +139,8 @@ abstract class EventLabel(
      *
      * @see synchronizedFrom
      */
-    fun synchronizesInto(label: EventLabel, relaxedCheck: Boolean = false): Boolean =
-        label.synchronizedFrom(this, relaxedCheck)
+    fun synchronizesInto(label: EventLabel): Boolean =
+        label.synchronizedFrom(this)
 
     /**
      * Checks whether this label synchronizes-from the argument label,
@@ -157,7 +157,7 @@ abstract class EventLabel(
      *
      * @see EventLabel
      */
-    open fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean = false): Boolean =
+    open fun synchronizedFrom(label: EventLabel): Boolean =
         (label is EmptyLabel)
 
     /**
@@ -191,21 +191,47 @@ abstract class EventLabel(
         get() = (syncType == SynchronizationType.Barrier)
 
     /**
-     * Tries to replay this label using given argument label.
+     * Recipient object for the operation represented by the label.
+     * For example, for memory access labels this is memory location,
+     * for lock/unlock labels this is mutex object, etc.
+     * If particular subclass of labels does not have natural recipient object
+     * then this property is null.
+     */
+    open val recipient: Any? = null
+
+    /**
+     * Replays this label using another label given as argument.
      *
      * Replaying can be used by an executor in order to reproduce execution saved as a list of labels.
      * Because some values of execution can change non-deterministically
      * between different invocations (for example, addresses of allocated objects),
-     * replaying execution scenario may require to change some internal information
-     * kept in event label, without modifying its shape.
-     * For example, write access event should remain write access event,
-     * but the address of the written memory location can change.
+     * replaying execution scenario may require to change some internal state
+     * kept in event label, without modifying shape of the label.
+     * For example, write access label should remain write access label,
+     * but the address of the accessed memory location can change.
      *
-     * @return true if replay is successfull, false otherwise.
+     * This method takes as arguments [label] to replay and current [remapping]
+     * that keeps the mapping from old to new objects.
+     * If the shape of this label matches the shape of argument [label], then
+     * internal state of this label is changed to match the state of [label],
+     * and the [remapping] is updated to reflect this change.
+     * If [remapping] already has conflicting information
+     * (for example, it maps address of allocated object to another address not
+     * equal to the address stored in [label]), then the exception is thrown.
+     *
+     * @param label to replay this label.
+     * @param remapping stores the mapping from old to new replayed objects.
+     * @throws IllegalStateException if shapes of labels do not match or
+     *   [remapping] already contains a binding that contradicts the replaying.
      */
-    open fun replay(label: EventLabel): Boolean =
-        (this == label)
+    open fun replay(label: EventLabel, remapping: Remapping) {}
 
+    /**
+     * Changes the internal state of this label using given [remapping].
+     *
+     * @see replay
+     */
+    open fun remap(remapping: Remapping) {}
 }
 
 /**
@@ -247,7 +273,7 @@ class EmptyLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
 
     override fun synchronize(label: EventLabel) = label
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = false
+    override fun synchronizedFrom(label: EventLabel): Boolean = false
 
     override fun toString(): String = "Empty"
 
@@ -362,7 +388,7 @@ data class ThreadStartLabel(
         else -> super.synchronize(label)
     }
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+    override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
         label is ThreadStartLabel && label.isRequest && threadId == label.threadId -> true
         label is ThreadForkLabel && !isMainThread && threadId in label.forkThreadIds -> true
@@ -372,6 +398,7 @@ data class ThreadStartLabel(
 
     override fun toString(): String = "ThreadStart"
 
+    // TODO: should we override `recipient` of `ThreadStartLabel` to be the thread id of the starting thread?
 }
 
 /**
@@ -419,7 +446,7 @@ data class ThreadFinishLabel(
         else -> super.synchronize(label)
     }
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean =
+    override fun synchronizedFrom(label: EventLabel): Boolean =
         label is ThreadFinishLabel && finishedThreadIds.containsAll(label.finishedThreadIds)
 
     override fun toString(): String = "ThreadFinish"
@@ -459,7 +486,7 @@ data class ThreadJoinLabel(
             label.synchronize(this)
         else super.synchronize(label)
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+    override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
         label is ThreadJoinLabel && label.isRequest && label.joinThreadIds.containsAll(joinThreadIds) -> true
         label is ThreadFinishLabel && label.finishedThreadIds.all { it !in joinThreadIds } -> true
@@ -527,35 +554,41 @@ sealed class MemoryAccessLabel(
         get() = (this is ReadAccessLabel)
 
     /**
-     * Checks that this access is to the same memory location as [other].
-     * If [relaxedCheck] flag is true then checks only locations' shape,
-     * e.g. whether both accesses are to the same field of the same class but
-     * not that they access the same object.
-     *
-     * TODO: instead of relaxed check we can just substitute memory locations
-     *   at first point during replay when we detect incompatibility.
+     * Recipient of a memory access label is equal to its memory location.
      */
-    fun accessesSameLocation(other: MemoryAccessLabel, relaxedCheck: Boolean = false): Boolean =
-        if (!relaxedCheck)
-            location == other.location
-        // TODO: implement check for locations compatibility
-        else true
+    override val recipient: Any?
+        get() = location
 
-
-    protected fun equalUpToReplay(label: MemoryAccessLabel): Boolean =
-        (kind == label.kind) &&
-        (accessKind == label.accessKind) &&
-        (kClass == label.kClass) &&
-        (isExclusive == label.isExclusive) &&
-        accessesSameLocation(label, relaxedCheck = true)
-
-    override fun replay(label: EventLabel): Boolean {
-        if (label is MemoryAccessLabel && equalUpToReplay(label)) {
-            location_ = label.location
-            value_ = label.value
-            return true
+    /**
+     * Replays this memory access label using another memory access label given as argument.
+     * Replaying can substitute accessed memory location and read/written value of the memory access.
+     *
+     * @see EventLabel.replay
+     */
+    override fun replay(label: EventLabel, remapping: Remapping) {
+        check(label is MemoryAccessLabel &&
+            kind == label.kind &&
+            accessKind == label.accessKind &&
+            kClass == label.kClass &&
+            isExclusive == label.isExclusive) {
+            "Event label $this cannot be replayed by $label"
         }
-        return false
+        location.replay(label.location, remapping)
+        // TODO: check primitive values are equal
+        remapping[value?.unwrap()] = label.value?.unwrap()
+        value_ = label.value
+    }
+
+    /**
+     * Remaps memory location and value according to given [remapping].
+     *
+     * @see EventLabel.replay
+     */
+    override fun remap(remapping: Remapping) {
+        location.remap(remapping)
+        value?.unwrap()
+            ?.let { remapping[it] }
+            ?.also { value_ = it.opaque() }
     }
 
     override fun toString(): String {
@@ -631,26 +664,27 @@ data class ReadAccessLabel(
         )
     }
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+    override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
 
         label is ReadAccessLabel && label.isRequest &&
-            kClass == label.kClass && isExclusive == label.isExclusive &&
-            accessesSameLocation(label, relaxedCheck)
+            kClass == label.kClass &&
+            isExclusive == label.isExclusive &&
+            location == label.location
         -> true
 
         label is WriteAccessLabel &&
-            accessesSameLocation(label, relaxedCheck) && canReadFrom(label)
+            location == label.location &&
+            // TODO: also check kClass
+            value == label.value
         -> true
 
-        label is InitializationLabel && value == OpaqueValue.default(kClass) -> true
+        label is InitializationLabel &&
+            value == OpaqueValue.default(kClass)
+        -> true
 
         else -> false
     }
-
-    private fun canReadFrom(writeLabel: WriteAccessLabel): Boolean =
-        // TODO: also check kClass
-        value == writeLabel.value
 
     override fun toString(): String = super.toString()
 
@@ -717,24 +751,39 @@ sealed class MutexLabel(
             is NotifyLabel  -> MutexOperationKind.Notify
         }
 
-    fun operatesOnSameMutex(other: MutexLabel, relaxedCheck: Boolean) =
-        // TODO: can we perform some checks in relaxed case?
-        if (!relaxedCheck) mutex === other.mutex else true
+    /**
+     * Recipient of a mutex label is its mutex object.
+     */
+    override val recipient: Any?
+        get() = mutex
 
-    protected abstract fun equalUpToReplay(label: MutexLabel): Boolean
-//        (kind == label.kind) &&
-//        (operationKind == label.operationKind) &&
-//        operatesOnSameMutex(label, relaxedCheck = true) &&
-//        ((this is NotifyLabel) implies {
-//            (this as NotifyLabel).isBroadcast == (label as NotifyLabel).isBroadcast
-//        })
-
-    override fun replay(label: EventLabel): Boolean {
-        if (label is MutexLabel && equalUpToReplay(label)) {
-            mutex_ = label.mutex
-            return true
+    /**
+     * Replays this mutex label using another mutex label given as argument.
+     * Replaying can substitute accessed mutex object.
+     *
+     * @see EventLabel.replay
+     */
+    override fun replay(label: EventLabel, remapping: Remapping) {
+        check(label is MutexLabel &&
+            kind == label.kind &&
+            operationKind == label.operationKind &&
+            when (this) {
+                is LockLabel -> label is LockLabel &&
+                    reentranceDepth == label.reentranceDepth && reentranceCount == label.reentranceCount
+                is UnlockLabel -> label is UnlockLabel &&
+                    reentranceDepth == label.reentranceDepth && reentranceCount == label.reentranceCount
+                is NotifyLabel -> label is NotifyLabel &&
+                    isBroadcast == label.isBroadcast
+                else -> true
+            }) {
+            "Event label $this cannot be replayed by $label"
         }
-        return false
+        remapping[mutex] = label.mutex
+        mutex_ = label.mutex
+    }
+
+    override fun remap(remapping: Remapping) {
+        remapping[mutex]?.also { mutex_ = it }
     }
 
     override fun toString(): String {
@@ -743,7 +792,7 @@ sealed class MutexLabel(
             LabelKind.Request -> "^req"
             LabelKind.Response -> "^rsp"
         }
-        return "${operationKind}${kindString}(${mutex.stringDescriptor()})"
+        return "${operationKind}${kindString}(${opaqueString(mutex)})"
     }
 
 }
@@ -798,20 +847,13 @@ data class LockLabel(
         else -> super.synchronize(label)
     }
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+    override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
-        label is LockLabel && label.isRequest && operatesOnSameMutex(label, relaxedCheck) -> true
-        label is UnlockLabel && !label.isReentry && !isReentry && operatesOnSameMutex(label, relaxedCheck) -> true
+        label is LockLabel && label.isRequest && mutex == label.mutex -> true
+        label is UnlockLabel && !label.isReentry && !isReentry && mutex == label.mutex -> true
         label is InitializationLabel -> true
         else -> false
     }
-
-    override fun equalUpToReplay(label: MutexLabel): Boolean =
-        (label is LockLabel) &&
-        (kind == label.kind) &&
-        operatesOnSameMutex(label, relaxedCheck = true) &&
-        (reentranceDepth == label.reentranceDepth) &&
-        (reentranceCount == label.reentranceCount)
 
     override fun toString(): String = super.toString()
 }
@@ -845,12 +887,6 @@ data class UnlockLabel(
         if (label is LockLabel)
             label.synchronize(this)
         else super.synchronize(label)
-
-    override fun equalUpToReplay(label: MutexLabel): Boolean =
-        (label is UnlockLabel) &&
-        operatesOnSameMutex(label, relaxedCheck = true) &&
-        (reentranceDepth == label.reentranceDepth) &&
-        (reentranceCount == label.reentranceCount)
 
     override fun toString(): String = super.toString()
 }
@@ -888,19 +924,14 @@ data class WaitLabel(
         else -> super.synchronize(label)
     }
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+    override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
-        label is WaitLabel && label.isRequest && operatesOnSameMutex(label, relaxedCheck) -> true
-        label is NotifyLabel && operatesOnSameMutex(label, relaxedCheck) -> true
+        label is WaitLabel && label.isRequest && mutex == label.mutex -> true
+        label is NotifyLabel && mutex == label.mutex -> true
         // TODO: provide an option to enable spurious wake-ups
         // label is InitializationLabel -> true
         else -> false
     }
-
-    override fun equalUpToReplay(label: MutexLabel): Boolean =
-        (label is WaitLabel) &&
-        (kind == label.kind) &&
-        operatesOnSameMutex(label, relaxedCheck = true)
 
     override fun toString(): String = super.toString()
 }
@@ -927,11 +958,6 @@ data class NotifyLabel(
         if (label is WaitLabel)
             label.synchronize(this)
         else super.synchronize(label)
-
-    override fun equalUpToReplay(label: MutexLabel): Boolean =
-        (label is NotifyLabel) &&
-        operatesOnSameMutex(label, relaxedCheck = true) &&
-        (isBroadcast == label.isBroadcast)
 
     override fun toString(): String = super.toString()
 }
@@ -971,6 +997,7 @@ sealed class ParkingEventLabel(
         return "${operationKind}${kindString}${argsString}"
     }
 
+    // TODO: should we override `recipient` of `ParkingLabel` to be the thread id of the parked/unparked thread?
 }
 
 /**
@@ -1017,7 +1044,7 @@ data class ParkLabel(
         else -> super.synchronize(label)
     }
 
-    override fun synchronizedFrom(label: EventLabel, relaxedCheck: Boolean): Boolean = when {
+    override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
         label is ParkLabel && label.isRequest && threadId == label.threadId -> true
         label is UnparkLabel && threadId == label.threadId -> true
