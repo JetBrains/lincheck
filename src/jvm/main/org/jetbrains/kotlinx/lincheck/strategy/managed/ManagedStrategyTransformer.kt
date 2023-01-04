@@ -333,7 +333,10 @@ internal class ManagedStrategyTransformer(
                     dup()
                     loadLocal(initialValueLocal)
                     // Call onSharedVariableWrite.
-                    visitWrite(locationState, innerDescriptor) { pop() }
+                    visitWrite(locationState, innerDescriptor) {
+                        pop() // value
+                        pop() // location
+                    }
                 }
             }
         }

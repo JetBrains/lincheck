@@ -222,6 +222,56 @@ class PrimitivesTest {
         }
     }
 
+    class GlobalAtomicVariable {
+
+        fun write(value: Int) {
+            globalVariable.set(value)
+        }
+
+        fun read(): Int {
+            return globalVariable.get()
+        }
+
+        fun compareAndSet(expected: Int, desired: Int): Boolean {
+            return globalVariable.compareAndSet(expected, desired)
+        }
+
+        fun addAndGet(delta: Int): Int {
+            return globalVariable.addAndGet(delta)
+        }
+
+        fun getAndAdd(delta: Int): Int {
+            return globalVariable.getAndAdd(delta)
+        }
+    }
+
+    @Test
+    @Ignore
+    fun testGlobalAtomicVariable() {
+        val read = GlobalAtomicVariable::read
+        val write = GlobalAtomicVariable::write
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, 1)
+                }
+                thread {
+                    actor(read)
+                }
+                thread {
+                    actor(write, 2)
+                }
+            }
+        }
+        // strategy should explore only 3 interleavings
+        // (by the number of distinct possible read values)
+        // naive strategy would explore 6 interleavings
+        val outcomes: Set<Int> = setOf(0, 1, 2)
+        litmusTest(GlobalAtomicVariable::class.java, testScenario, outcomes) { results ->
+            getValue<Int>(results.parallelResults[1][0])
+        }
+    }
+
     // TODO: handle IntRef (var variables accessed from multiple threads)
 
     class SynchronizedVariable {
@@ -328,4 +378,59 @@ class PrimitivesTest {
         }
     }
 
+    class ParkLatchedVariable {
+
+        private var variable: Int = 0
+
+        @Volatile
+        private var parkedThread: Thread? = null
+
+        @Volatile
+        private var delivered: Boolean = false
+
+        fun parkAndRead(): Int? {
+            // TODO: handle spurious wake-ups?
+            parkedThread = Thread.currentThread()
+            return if (delivered) {
+                park()
+                variable
+            } else null
+        }
+
+        fun writeAndUnpark(value: Int) {
+            variable = value
+            val thread = parkedThread
+            if (thread != null)
+                delivered = true
+            unpark(thread)
+        }
+
+    }
+
+    @Test
+    fun testParking() {
+        val writeAndUnpark = ParkLatchedVariable::writeAndUnpark
+        val parkAndRead = ParkLatchedVariable::parkAndRead
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(writeAndUnpark, 1)
+                }
+                thread {
+                    actor(parkAndRead)
+                }
+            }
+        }
+        // strategy should explore only 3 interleaving
+        // naive strategy may explore more interleavings (due to context-switches before/after park)
+        val outcomes = setOf(null, 1)
+        litmusTest(ParkLatchedVariable::class.java, testScenario, outcomes, executionCount = 3) { results ->
+            getValue<Int?>(results.parallelResults[1][0])
+        }
+    }
+
 }
+
+// TODO: In the future we would likely want to switch to atomicfu primitives.
+//   However, atomicfu currently does not support various access modes that we intend to test here.
+private val globalVariable = AtomicInteger(0)

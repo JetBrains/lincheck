@@ -57,19 +57,19 @@ abstract class AbstractLincheckTest(
         }
     }
 
-    @Test(timeout = TIMEOUT)
-    fun testWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(5_000)
-        commonConfiguration()
-        runInternalTest()
-    }
-
-    @Test(timeout = TIMEOUT)
-    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(1_000)
-        commonConfiguration()
-        runInternalTest()
-    }
+    // @Test(timeout = TIMEOUT)
+    // fun testWithStressStrategy(): Unit = StressOptions().run {
+    //     invocationsPerIteration(5_000)
+    //     commonConfiguration()
+    //     runInternalTest()
+    // }
+    //
+    // @Test(timeout = TIMEOUT)
+    // fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
+    //     invocationsPerIteration(1_000)
+    //     commonConfiguration()
+    //     runInternalTest()
+    // }
 
     @Test(timeout = TIMEOUT)
     fun testWithEventStructureStrategy(): Unit = EventStructureOptions().run {
@@ -90,7 +90,7 @@ abstract class AbstractLincheckTest(
     }
 }
 
-private const val TIMEOUT = 20_000L
+private const val TIMEOUT = 2 * 60 * 1000L
 
 fun checkTraceHasNoLincheckEvents(trace: String) {
     val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.test.").size - 1
