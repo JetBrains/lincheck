@@ -232,6 +232,12 @@ abstract class EventLabel(
      * @see replay
      */
     open fun remap(remapping: Remapping) {}
+
+    fun remapRecipient(label: EventLabel, remapping: Remapping = Remapping()) {
+        // TODO: check that labels have same operation kind
+        remapping[recipient] = label.recipient
+        remap(remapping)
+    }
 }
 
 /**

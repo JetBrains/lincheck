@@ -141,11 +141,7 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
                 ?: return SingletonEvent(readRequestEvent)
 
             check(readResponseEvent.label.isResponse && readResponseEvent.label is ReadAccessLabel)
-
-            val remapping = Remapping()
-            remapping[readResponseEvent.label.recipient] = readRequestEvent.label.recipient
-            readResponseEvent.label.remap(remapping)
-
+            readResponseEvent.label.remapRecipient(readRequestEvent.label)
             if (!readResponseEvent.label.isExclusive) {
                 return ReceiveEvent(readRequestEvent, readResponseEvent)
             }
@@ -154,9 +150,7 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
                 ?.takeIf { it.label is WriteAccessLabel && it.label.isExclusive }
                 ?: return ReceiveEvent(readRequestEvent, readResponseEvent)
 
-            remapping[writeEvent.label.recipient] = readResponseEvent.label.recipient
-            writeEvent.label.remap(remapping)
-
+            writeEvent.label.remapRecipient(readResponseEvent.label)
             ReadModifyWriteEvent(readRequestEvent, readResponseEvent, writeEvent)
         }
     }
@@ -204,10 +198,7 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
                 ?.takeIf { it.label is WaitLabel }
                 ?: return SingletonEvent(unlockEvent)
 
-            val remapping = Remapping()
-            remapping[waitRequestEvent.label.recipient] = unlockEvent.label.recipient
-            waitRequestEvent.label.remap(remapping)
-
+            waitRequestEvent.label.remapRecipient(unlockEvent.label)
             UnlockAndWait(unlockEvent, waitRequestEvent)
         }
 
@@ -219,10 +210,7 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
             val lockRequestEvent = getOrNull(1 + waitResponseEvent.threadPosition)
                 ?: return SingletonEvent(waitResponseEvent)
 
-            val remapping = Remapping()
-            remapping[lockRequestEvent.label.recipient] = waitResponseEvent.label.recipient
-            waitResponseEvent.label.remap(remapping)
-
+            lockRequestEvent.label.remapRecipient(waitResponseEvent.label)
             WakeUpAndTryLock(waitResponseEvent, lockRequestEvent)
         }
 
