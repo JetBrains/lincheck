@@ -156,7 +156,7 @@ internal class ManagedStrategyTransformer(
                 }
 
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                    visitWrite(ArrayElementMemoryLocationState(adapter), getArrayLoadType(opcode).descriptor) {
+                    visitWrite(ArrayElementMemoryLocationState(adapter), getArrayStoreType(opcode).descriptor) {
                         super.visitInsn(opcode)
                     }
                 }
