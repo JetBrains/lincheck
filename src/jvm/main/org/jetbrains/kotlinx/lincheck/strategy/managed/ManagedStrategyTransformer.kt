@@ -355,31 +355,51 @@ internal class ManagedStrategyTransformer(
                                                      locationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
             // AFU or VarHandle constructor
             val classLocal = newLocal(CLASS_TYPE)
-            val fieldLocal = newLocal(STRING_TYPE)
-            if (name == "newUpdater") {
-                // STACK: tgt_class, fld_class, field_name
-                val fieldClassLocal = newLocal(CLASS_TYPE)
-                storeLocal(fieldLocal)
-                storeLocal(fieldClassLocal)
-                storeLocal(classLocal)
-                loadLocal(classLocal)
-                loadLocal(fieldClassLocal)
-                loadLocal(fieldLocal)
-            } else {
-                // STACK: tgt_class, field_name, fld_class
-                val fieldClassLocal = newLocal(CLASS_TYPE).also { storeLocal(it) }
-                storeLocal(fieldLocal)
-                storeLocal(classLocal)
-                loadLocal(classLocal)
-                loadLocal(fieldLocal)
-                loadLocal(fieldClassLocal)
+            val fieldNameLocal = newLocal(STRING_TYPE)
+            // val
+            when (name) {
+                "newUpdater" -> {
+                    val isAtomicReferenceFieldUpdater = when (owner.canonicalClassName) {
+                        AtomicReferenceFieldUpdater::class.qualifiedName -> true
+                        AtomicIntegerFieldUpdater::class.qualifiedName -> false
+                        AtomicLongFieldUpdater::class.qualifiedName -> false
+                        else -> unreachable()
+                    }
+                    if (isAtomicReferenceFieldUpdater) {
+                        // STACK: tgt_class, field_class, field_name
+                        val fieldClassLocal = newLocal(CLASS_TYPE)
+                        storeLocal(fieldNameLocal)
+                        storeLocal(fieldClassLocal)
+                        storeLocal(classLocal)
+                        loadLocal(classLocal)
+                        loadLocal(fieldClassLocal)
+                        loadLocal(fieldNameLocal)
+                    } else {
+                        // STACK: tgt_class, field_name
+                        storeLocal(fieldNameLocal)
+                        storeLocal(classLocal)
+                        loadLocal(classLocal)
+                        loadLocal(fieldNameLocal)
+                    }
+                }
+                "findVarHandle" -> {
+                    // STACK: tgt_class, field_name, field_class
+                    val fieldClassLocal = newLocal(CLASS_TYPE)
+                    storeLocal(fieldClassLocal)
+                    storeLocal(fieldNameLocal)
+                    storeLocal(classLocal)
+                    loadLocal(classLocal)
+                    loadLocal(fieldNameLocal)
+                    loadLocal(fieldClassLocal)
+                }
+                else -> unreachable()
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             val afuLocal = newLocal(OBJECT_TYPE).also { copyLocal(it) }
             loadMemoryLocationLabeler()
             loadLocal(afuLocal)
             loadLocal(classLocal)
-            loadLocal(fieldLocal)
+            loadLocal(fieldNameLocal)
             invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_ATOMIC_REFLECTION)
         }
 
