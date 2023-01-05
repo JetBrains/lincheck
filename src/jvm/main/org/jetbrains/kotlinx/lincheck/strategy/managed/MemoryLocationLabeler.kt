@@ -282,7 +282,7 @@ internal class AtomicPrimitiveMemoryLocation(
 // TODO: remapping should work with OpaqueValue?
 class Remapping {
 
-    private val map = mutableMapOf<Any, Any>()
+    private val map = IdentityHashMap<Any, Any>()
 
     operator fun get(from: Any): Any? = map[from]
 
@@ -291,7 +291,7 @@ class Remapping {
         check(from != null && to != null) {
             "Value ${opaqueString(from)} cannot be remapped to ${opaqueString(to)} because one of them is null but not the other!"
         }
-        map.put(from, to).also { old -> check(old == null || old == to) {
+        map.put(from, to).also { old -> check(old == null || old === to) {
             "Value ${opaqueString(from)} cannot be remapped to ${opaqueString(to)} because it is already mapped to ${opaqueString(old!!)}!"
         }}
     }
