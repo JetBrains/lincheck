@@ -26,6 +26,9 @@ import java.util.concurrent.atomic.*
 interface MemoryLocation {
     val isAtomic: Boolean
 
+    // TODO: rename?
+    val recipient: Any?
+
     fun read(): Any?
     fun write(value: Any?)
 
@@ -78,7 +81,9 @@ internal class StaticFieldMemoryLocation(
     val fieldName: String
 ) : MemoryLocation {
 
-    override val isAtomic: Boolean = false
+    override val isAtomic = false
+
+    override val recipient = null
 
     private val field by lazy {
         // TODO: is it correct to use this class loader here?
@@ -120,6 +125,8 @@ internal class ObjectFieldMemoryLocation(
 ) : MemoryLocation {
 
     val obj: Any get() = _obj
+
+    override val recipient get() = obj
 
     private val field by lazy {
         // TODO: is it correct to use this class loader here?
@@ -164,6 +171,8 @@ internal class ArrayElementMemoryLocation(
 ) : MemoryLocation {
 
     val array: Any get() = _array
+
+    override val recipient get() = array
 
     override val isAtomic: Boolean = when (array) {
         is AtomicIntegerArray,
@@ -235,7 +244,9 @@ internal class AtomicPrimitiveMemoryLocation(
 
     val primitive: Any get() = _primitive
 
-    override val isAtomic: Boolean = true
+    override val isAtomic = true
+
+    override val recipient get() = primitive
 
     override fun read(): Any? = when (primitive) {
         // TODO: can we use getOpaque() here?

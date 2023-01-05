@@ -192,7 +192,7 @@ abstract class EventLabel(
 
     /**
      * Recipient object for the operation represented by the label.
-     * For example, for memory access labels this is memory location,
+     * For example, for object field memory access labels this is the accessed object,
      * for lock/unlock labels this is mutex object, etc.
      * If particular subclass of labels does not have natural recipient object
      * then this property is null.
@@ -560,10 +560,10 @@ sealed class MemoryAccessLabel(
         get() = (this is ReadAccessLabel)
 
     /**
-     * Recipient of a memory access label is equal to its memory location.
+     * Recipient of a memory access label is equal to its memory location's recipient.
      */
     override val recipient: Any?
-        get() = location
+        get() = location.recipient
 
     /**
      * Replays this memory access label using another memory access label given as argument.
