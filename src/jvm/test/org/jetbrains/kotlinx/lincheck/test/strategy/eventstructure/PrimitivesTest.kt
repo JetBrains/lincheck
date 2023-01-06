@@ -50,7 +50,7 @@ class PrimitivesTest {
     }
 
     @Test
-    fun testPlainVariable() {
+    fun testPlainAccesses() {
         val write = PlainVariable::write
         val read = PlainVariable::read
         val testScenario = scenario {
@@ -73,6 +73,46 @@ class PrimitivesTest {
         //   we should probably report races on plain variables as errors (or warnings at least)
         val outcomes: Set<Int> = setOf(0, 1, 2)
         litmusTest(PlainVariable::class.java, testScenario, outcomes) { results ->
+            getValue<Int>(results.parallelResults[1][0])
+        }
+    }
+
+    class ArrayVariable {
+        private val array = Array<Int>(10) { 0 }
+
+        fun write(index: Int, value: Int) {
+            array[index] = value
+        }
+
+        fun read(index: Int): Int {
+            return array[index]
+        }
+    }
+
+    @Test
+    fun testArrayAccesses() {
+        val write = ArrayVariable::write
+        val read = ArrayVariable::read
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, 0, 1)
+                }
+                thread {
+                    actor(read, 0)
+                }
+                thread {
+                    actor(write, 0, 2)
+                }
+            }
+        }
+        // strategy should explore only 3 interleavings
+        // (by the number of distinct possible read values)
+        // naive strategy would explore 6 interleavings
+        // TODO: when we will implement various access modes,
+        //   we should probably report races on plain variables as errors (or warnings at least)
+        val outcomes: Set<Int> = setOf(0, 1, 2)
+        litmusTest(ArrayVariable::class.java, testScenario, outcomes) { results ->
             getValue<Int>(results.parallelResults[1][0])
         }
     }
