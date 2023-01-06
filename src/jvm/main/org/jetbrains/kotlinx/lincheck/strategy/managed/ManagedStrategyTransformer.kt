@@ -64,7 +64,8 @@ internal class ManagedStrategyTransformer(
 
     override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
         // do not transform strategy methods
-        if (isStrategyMethod(className)) return super.visitMethod(access, mname, desc, signature, exceptions)
+        if (isStrategyMethod(className))
+            return super.visitMethod(access, mname, desc, signature, exceptions)
         var access = access
         // replace native method VMSupportsCS8 in AtomicLong with our stub
         if (access and ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
@@ -84,7 +85,9 @@ internal class ManagedStrategyTransformer(
             mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (constructTraceRepresentation) mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        if (constructTraceRepresentation) {
+            mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        }
         mv = AtomicPrimitiveAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -94,7 +97,9 @@ internal class ManagedStrategyTransformer(
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = AnalyzerAdapter(className, access, mname, desc, mv)
+        mv = SharedVariableAccessMethodTransformer(mname, mv, GeneratorAdapter(mv, access, mname, desc))
+        // TODO: can we move these transformers and make SharedVariableAccessMethodTransformer to be the last transformer in the chain?
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
@@ -120,7 +125,9 @@ internal class ManagedStrategyTransformer(
      * Adds invocations of ManagedStrategy methods before reads and writes of shared variables
      */
     private inner class SharedVariableAccessMethodTransformer(
-        methodName: String, adapter: GeneratorAdapter
+        methodName: String,
+        val analyzer: AnalyzerAdapter,
+        adapter: GeneratorAdapter,
     ) : ManagedStrategyMemoryTrackingTransformer(methodName, adapter) {
 
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
@@ -150,13 +157,29 @@ internal class ManagedStrategyTransformer(
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
                 AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-                    visitRead(ArrayElementMemoryLocationState(adapter), getArrayLoadType(opcode).descriptor) {
+                    val locationState = ArrayElementMemoryLocationState(adapter)
+                    val arrayElementType = getArrayLoadType(opcode)
+                    if (arrayElementType == null) {
+                        // if we do not know type of the access we cannot intercept the load
+                        // TODO: add logging for such case?
+                        super.visitInsn(opcode)
+                        return
+                    }
+                    visitRead(locationState, arrayElementType.descriptor) {
                         super.visitInsn(opcode)
                     }
                 }
 
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                    visitWrite(ArrayElementMemoryLocationState(adapter), getArrayStoreType(opcode).descriptor) {
+                    val locationState = ArrayElementMemoryLocationState(adapter)
+                    val arrayElementType = getArrayStoreType(opcode)
+                    if (arrayElementType == null) {
+                        // if we do not know type of the access we cannot intercept the store
+                        // TODO: add logging for such case?
+                        super.visitInsn(opcode)
+                        return
+                    }
+                    visitWrite(locationState, arrayElementType.descriptor) {
                         super.visitInsn(opcode)
                     }
                 }
@@ -191,8 +214,8 @@ internal class ManagedStrategyTransformer(
             }
         }
 
-        private fun getArrayStoreType(opcode: Int): Type = when (opcode) {
-            AASTORE -> OBJECT_TYPE
+        // STACK: array, index, value -> array, index, value
+        private fun getArrayStoreType(opcode: Int): Type? = when (opcode) {
             IASTORE -> Type.INT_TYPE
             FASTORE -> Type.FLOAT_TYPE
             BASTORE -> Type.BOOLEAN_TYPE
@@ -200,11 +223,12 @@ internal class ManagedStrategyTransformer(
             SASTORE -> Type.SHORT_TYPE
             LASTORE -> Type.LONG_TYPE
             DASTORE -> Type.DOUBLE_TYPE
+            AASTORE -> getArrayAccessTypeFromStack(3) // OBJECT_TYPE
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
         }
 
-        private fun getArrayLoadType(opcode: Int): Type = when (opcode) {
-            AALOAD -> OBJECT_TYPE
+        // STACK: array, index -> array, index
+        private fun getArrayLoadType(opcode: Int): Type? = when (opcode) {
             IALOAD -> Type.INT_TYPE
             FALOAD -> Type.FLOAT_TYPE
             BALOAD -> Type.BOOLEAN_TYPE
@@ -212,7 +236,22 @@ internal class ManagedStrategyTransformer(
             SALOAD -> Type.SHORT_TYPE
             LALOAD -> Type.LONG_TYPE
             DALOAD -> Type.DOUBLE_TYPE
+            AALOAD -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
+        }
+
+        /*
+         * Tries to obtain the type of array elements by inspecting the type of the array itself.
+         * In order to do this queries the analyzer to get the type of accessed array
+         * which should lie on the stack. If the analyzer does not know the type
+         * (according to the ASM docs it can happen, for example, when the visited instruction is unreachable)
+         * then return null.
+         */
+        private fun getArrayAccessTypeFromStack(offset: Int): Type? {
+            if (analyzer.stack == null) return null
+            val arrayDesc = analyzer.stack[analyzer.stack.size - offset]
+            check(arrayDesc is String)
+            return Type.getType(arrayDesc).elementType
         }
 
         // STACK: object
