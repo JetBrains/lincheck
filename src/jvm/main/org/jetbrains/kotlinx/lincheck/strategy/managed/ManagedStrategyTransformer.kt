@@ -325,17 +325,19 @@ internal class ManagedStrategyTransformer(
                         "Unexpected complex constructor for $className with descriptor $descriptor"
                     }
                     // Copy the initial value.
-                    val initialValueLocal = newLocal(argumentTypes.first())
+                    val initialValueType = argumentTypes.first()
+                    val initialValueLocal = newLocal(initialValueType)
                     copyLocal(initialValueLocal)
                     // Call the constructor.
                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     // Report the initial value to managed strategy *after* the object is initialized.
                     dup()
                     loadLocal(initialValueLocal)
+                    check(initialValueType.descriptor == innerDescriptor)
                     // Call onSharedVariableWrite.
                     visitWrite(locationState, innerDescriptor) {
-                        pop() // value
-                        pop() // location
+                        pop(initialValueType) // value
+                        pop()                 // location
                     }
                 }
             }
@@ -477,7 +479,7 @@ internal class ManagedStrategyTransformer(
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableWrite(locationState.locationName, tracePointLocal)
             interceptIfMemoryTrackingEnabled(performWrite) {
-                pop() // pops value from stack
+                pop(valueType) // pops value from stack
                 locationState.store()
                 invokeOnSharedVariableWrite(locationState, valueLocal, valueType)
             }
@@ -1900,6 +1902,18 @@ private fun GeneratorAdapter.copyLocal(local: Int) {
     storeLocal(local)
     loadLocal(local)
 }
+
+/**
+ * Generates necessary number of pop instruction to pop from stack value of type [type].
+ */
+private fun GeneratorAdapter.pop(type: Type) {
+    when (type.size) {
+        0 -> return
+        1 -> pop()
+        2 -> pop2()
+    }
+}
+
 
 /**
  * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
