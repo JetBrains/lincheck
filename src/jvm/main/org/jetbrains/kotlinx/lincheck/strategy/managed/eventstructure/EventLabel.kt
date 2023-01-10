@@ -192,12 +192,23 @@ abstract class EventLabel(
 
     /**
      * Recipient object for the operation represented by the label.
-     * For example, for object field memory access labels this is the accessed object,
-     * for lock/unlock labels this is mutex object, etc.
+     * For example, for object field memory access labels this is the accessed object.
      * If particular subclass of labels does not have natural recipient object
      * then this property is null.
      */
     open val recipient: Any? = null
+
+    /**
+     * An index of a label which is used to group semantically similar and
+     * potentially concurrent labels operating on the same object or location.
+     * For example, for object field memory access labels this is the accessed memory location.
+     * Note that [index] and [recipient] do not necessarily match. In case of object field memory access labels,
+     * the [index] is a tuple of accessed object, accessed field name and class name,
+     * while [recipient] is only the accessed object itself.
+     * If particular subclass of labels does not have natural index
+     * then this property is null.
+     */
+    open val index: Any? = null
 
     /**
      * Replays this label using another label given as argument.
@@ -566,6 +577,12 @@ sealed class MemoryAccessLabel(
         get() = location.recipient
 
     /**
+     * Index of a memory access label is equal to accessed memory location.
+     */
+    override val index: Any?
+        get() = location
+
+    /**
      * Replays this memory access label using another memory access label given as argument.
      * Replaying can substitute accessed memory location and read/written value of the memory access.
      *
@@ -651,8 +668,8 @@ data class ReadAccessLabel(
         (isRequest && label is WriteAccessLabel && location == label.location) ->
             completeRequest(label.value)
 
-        (isRequest && label is InitializationLabel) ->
-            completeRequest(OpaqueValue.default(kClass))
+        // (isRequest && label is InitializationLabel) ->
+        //     completeRequest(OpaqueValue.default(kClass))
 
         else -> super.synchronize(label)
     }
@@ -685,9 +702,9 @@ data class ReadAccessLabel(
             value == label.value
         -> true
 
-        label is InitializationLabel &&
-            value == OpaqueValue.default(kClass)
-        -> true
+        // label is InitializationLabel &&
+        //     value == OpaqueValue.default(kClass)
+        // -> true
 
         else -> false
     }
@@ -762,6 +779,13 @@ sealed class MutexLabel(
      */
     override val recipient: Any?
         get() = mutex
+
+    /**
+     * Index of a mutex label is the mutex object itself.
+     */
+    override val index: Any?
+        // TODO: get() = mutex
+        get() = null
 
     /**
      * Replays this mutex label using another mutex label given as argument.
@@ -1004,6 +1028,7 @@ sealed class ParkingEventLabel(
     }
 
     // TODO: should we override `recipient` of `ParkingLabel` to be the thread id of the parked/unparked thread?
+    // TODO: should we override `index` of `ParkingLabel` to be the thread id of the parked/unparked thread?
 }
 
 /**

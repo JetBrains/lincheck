@@ -24,10 +24,10 @@ import java.util.*
 import java.util.concurrent.atomic.*
 
 interface MemoryLocation {
-    val isAtomic: Boolean
-
     // TODO: rename?
     val recipient: Any?
+
+    val isAtomic: Boolean
 
     fun read(): Any?
     fun write(value: Any?)
@@ -81,14 +81,13 @@ internal class StaticFieldMemoryLocation(
     val fieldName: String
 ) : MemoryLocation {
 
-    override val isAtomic = false
-
     override val recipient = null
 
+    override val isAtomic = false
+
     private val field by lazy {
-        // TODO: is it correct to use this class loader here?
-        val classLoader = (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
-        classLoader.loadClass(className).getDeclaredField(fieldName).apply { isAccessible = true }
+        getClass(className = className).getDeclaredField(fieldName)
+            .apply { isAccessible = true }
     }
 
     override fun read(): Any? = field.get(null)
@@ -129,9 +128,8 @@ internal class ObjectFieldMemoryLocation(
     override val recipient get() = obj
 
     private val field by lazy {
-        // TODO: is it correct to use this class loader here?
-        val classLoader = (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
-        classLoader.loadClass(className).getDeclaredField(fieldName).apply { isAccessible = true }
+        getClass(obj, className = className).getDeclaredField(fieldName)
+            .apply { isAccessible = true }
     }
 
     override fun read(): Any? = field.get(obj)
@@ -161,7 +159,9 @@ internal class ObjectFieldMemoryLocation(
     override fun hashCode(): Int =
         Objects.hash(System.identityHashCode(obj), fieldName)
 
-    override fun toString(): String = "${opaqueString(obj)}.$className::$fieldName"
+    override fun toString(): String =
+        // TODO: also print className if it does not match actual name of the obj's class
+        "${opaqueString(obj)}::$fieldName"
 
 }
 
@@ -181,6 +181,18 @@ internal class ArrayElementMemoryLocation(
         else -> false
     }
 
+    private val getMethod by lazy {
+        // TODO: can we use getOpaque() for atomic arrays here?
+        getClass(array).methods.first { it.name == "get" }
+            .apply { isAccessible = true }
+    }
+
+    private val setMethod by lazy {
+        // TODO: can we use setOpaque() for atomic arrays here?
+        getClass(array).methods.first { it.name == "set" }
+            .apply { isAccessible = true }
+    }
+
     override fun read(): Any? = when (array) {
         is IntArray     -> (array as IntArray)[index]
         is ByteArray    -> (array as ByteArray)[index]
@@ -190,12 +202,14 @@ internal class ArrayElementMemoryLocation(
         is DoubleArray  -> (array as DoubleArray)[index]
         is CharArray    -> (array as CharArray)[index]
         is BooleanArray -> (array as BooleanArray)[index]
+        is Array<*>     -> (array as Array<*>)[index]
+
         // TODO: can we use getOpaque() here?
         is AtomicIntegerArray       -> (array as AtomicIntegerArray)[index]
         is AtomicLongArray          -> (array as AtomicLongArray)[index]
         is AtomicReferenceArray<*>  -> (array as AtomicReferenceArray<*>)[index]
 
-        else -> throw IllegalStateException("Object $array is not array!")
+        else -> getMethod.invoke(array, index)
     }
 
     override fun write(value: Any?) = when (array) {
@@ -207,12 +221,14 @@ internal class ArrayElementMemoryLocation(
         is DoubleArray  -> (array as DoubleArray)[index]  = (value as Double)
         is CharArray    -> (array as CharArray)[index]    = (value as Char)
         is BooleanArray -> (array as BooleanArray)[index] = (value as Boolean)
-        // TODO: can we use setOpaque() here?
-        is AtomicIntegerArray       -> (array as AtomicIntegerArray)[index]        = (value as Int)
-        is AtomicLongArray          -> (array as AtomicLongArray)[index]           = (value as Long)
-        is AtomicReferenceArray<*>  -> (array as AtomicReferenceArray<Any>)[index] = value
+        is Array<*>     -> (array as Array<Any?>)[index]  = value
 
-        else -> throw IllegalStateException("Object $array is not array!")
+        // TODO: can we use setOpaque() here?
+        is AtomicIntegerArray       -> (array as AtomicIntegerArray)[index]         = (value as Int)
+        is AtomicLongArray          -> (array as AtomicLongArray)[index]            = (value as Long)
+        is AtomicReferenceArray<*>  -> (array as AtomicReferenceArray<Any?>)[index] = value
+
+        else -> { setMethod.invoke(array, index, value); Unit }
     }
 
     override fun replay(location: MemoryLocation, remapping: Remapping) {
@@ -244,9 +260,21 @@ internal class AtomicPrimitiveMemoryLocation(
 
     val primitive: Any get() = _primitive
 
+    override val recipient get() = primitive
+
     override val isAtomic = true
 
-    override val recipient get() = primitive
+    private val getMethod by lazy {
+        // TODO: can we use getOpaque() here?
+        getClass(primitive).methods.first { it.name == "get" }
+            .apply { isAccessible = true }
+    }
+
+    private val setMethod by lazy {
+        // TODO: can we use setOpaque() here?
+        getClass(primitive).methods.first { it.name == "set" }
+            .apply { isAccessible = true }
+    }
 
     override fun read(): Any? = when (primitive) {
         // TODO: can we use getOpaque() here?
@@ -254,7 +282,7 @@ internal class AtomicPrimitiveMemoryLocation(
         is AtomicInteger        -> (primitive as AtomicInteger).get()
         is AtomicLong           -> (primitive as AtomicLong).get()
         is AtomicReference<*>   -> (primitive as AtomicReference<*>).get()
-        else                    -> throw IllegalStateException("Primitive $primitive is not atomic!")
+        else                    -> getMethod.invoke(primitive)
     }
 
     override fun write(value: Any?) = when (primitive) {
@@ -263,7 +291,7 @@ internal class AtomicPrimitiveMemoryLocation(
         is AtomicInteger        -> (primitive as AtomicInteger).set(value as Int)
         is AtomicLong           -> (primitive as AtomicLong).set(value as Long)
         is AtomicReference<*>   -> (primitive as AtomicReference<Any>).set(value)
-        else                    -> throw IllegalStateException("Primitive $primitive is not atomic!")
+        else                    -> { setMethod.invoke(primitive, value); Unit }
     }
 
     override fun replay(location: MemoryLocation, remapping: Remapping) {
@@ -286,6 +314,15 @@ internal class AtomicPrimitiveMemoryLocation(
 
     override fun toString(): String = opaqueString(primitive)
 
+}
+
+private fun getClass(obj: Any? = null, className: String? = null): Class<*> {
+    if (className == null)
+        return obj!!.javaClass
+    // TODO: is it correct to use this class loader here?
+    val classLoader = obj?.javaClass?.classLoader ?:
+        (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
+    return classLoader.loadClass(className)
 }
 
 // TODO: move to another place

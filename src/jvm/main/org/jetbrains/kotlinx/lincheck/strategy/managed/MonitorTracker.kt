@@ -39,6 +39,8 @@ interface MonitorTracker {
 
     fun reentranceDepth(iThread: Int, monitor: Any): Int
 
+    fun reset()
+
 }
 
 /**
@@ -147,6 +149,12 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
     override fun reentranceDepth(iThread: Int, monitor: Any): Int {
         val info = acquiredMonitors[monitor]?.takeIf { it.iThread == iThread } ?: return 0
         return info.timesAcquired
+    }
+
+    override fun reset() {
+        acquiredMonitors.clear()
+        acquiringMonitors.fill(null)
+        waitForNotify.fill(false)
     }
 
     fun copy(): MapMonitorTracker {

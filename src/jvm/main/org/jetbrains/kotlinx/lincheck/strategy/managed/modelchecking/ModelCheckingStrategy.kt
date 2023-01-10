@@ -110,9 +110,6 @@ internal class ModelCheckingStrategy(
 
     override fun initializeInvocation() {
         currentInterleaving.initialize()
-        memoryTracker = PlainMemoryTracker()
-        monitorTracker = MapMonitorTracker(nThreads)
-        parkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = true)
         super.initializeInvocation()
     }
 

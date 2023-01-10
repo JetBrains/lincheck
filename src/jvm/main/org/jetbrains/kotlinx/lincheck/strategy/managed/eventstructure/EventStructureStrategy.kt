@@ -62,7 +62,7 @@ class EventStructureStrategy(
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
     // Tracker of monitors operations.
-    override var monitorTracker: MonitorTracker = EventStructureMonitorTracker(eventStructure)
+    override val monitorTracker: MonitorTracker = EventStructureMonitorTracker(eventStructure)
     // Tracker of thread parking
     override val parkingTracker: ParkingTracker = EventStructureParkingTracker(eventStructure)
 
@@ -209,17 +209,17 @@ class EventStructureStrategy(
     override fun initializeInvocation() {
         super.initializeInvocation()
         eventStructure.initializeExploration()
-        eventStructure.addThreadStartEvent(eventStructure.initialThreadId)
+        eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
     }
 
     override fun beforeParallelPart() {
         super.beforeParallelPart()
-        eventStructure.addThreadForkEvent(eventStructure.initialThreadId, (0 until nThreads).toSet())
+        eventStructure.addThreadForkEvent(eventStructure.mainThreadId, (0 until nThreads).toSet())
     }
 
     override fun afterParallelPart() {
         super.afterParallelPart()
-        eventStructure.addThreadJoinEvent(eventStructure.initialThreadId, (0 until nThreads).toSet())
+        eventStructure.addThreadJoinEvent(eventStructure.mainThreadId, (0 until nThreads).toSet())
     }
 
     override fun onStart(iThread: Int) {
@@ -240,6 +240,13 @@ class EventStructureStrategy(
 }
 
 private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
+
+    override fun isInitialized(location: MemoryLocation): Boolean =
+        location in eventStructure.initializationMap
+
+    override fun initialize(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
+        eventStructure.addInitialWriteEvent(iThread, location, kClass, value)
+    }
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
         eventStructure.addWriteEvent(iThread, location, kClass, value)
@@ -289,6 +296,19 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
         eventStructure.addWriteEvent(iThread, location, kClass, value, isExclusive = true)
         return readValue
     }
+
+    override fun dumpMemory() {
+        for (location in eventStructure.initializedMemoryLocations) {
+            val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier().toVectorClock())
+            // we choose one of the racy final writes non-deterministically and dump it to the memory
+            val write = finalWrites.firstOrNull() ?: continue
+            check(write.label is WriteAccessLabel)
+            location.write(write.label.value?.unwrap())
+        }
+    }
+
+    override fun reset() {}
+
 }
 
 private class EventStructureMonitorTracker(private val eventStructure: EventStructure) : MonitorTracker {
@@ -319,6 +339,8 @@ private class EventStructureMonitorTracker(private val eventStructure: EventStru
         return eventStructure.lockReentranceDepth(iThread, monitor)
     }
 
+    override fun reset() {}
+
 }
 
 private class EventStructureParkingTracker(private val eventStructure: EventStructure) : ParkingTracker {
@@ -333,5 +355,7 @@ private class EventStructureParkingTracker(private val eventStructure: EventStru
 
     override fun isParked(iThread: Int): Boolean =
         eventStructure.isParked(iThread)
+
+    override fun reset() {}
 
 }

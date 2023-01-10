@@ -918,15 +918,21 @@ internal class ManagedStrategyTransformer(
         private val isClinit = methodName == "<clinit>"
 
         override fun visitCode() {
-            if (isClinit)
+            if (isClinit) {
                 invokeBeforeIgnoredSectionEntering()
+                invokeBeforeUntrackingSectionEntering()
+            }
             mv.visitCode()
         }
 
         override fun visitInsn(opcode: Int) {
             if (isClinit) {
                 when (opcode) {
-                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
+                    // TODO: use visitEnd instead?
+                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
+                        invokeAfterUntrackingSectionLeaving()
+                        invokeAfterIgnoredSectionLeaving()
+                    }
                     else -> { }
                 }
             }
@@ -1659,6 +1665,18 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
+        }
+
+        protected fun invokeBeforeUntrackingSectionEntering() {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_UNTRACKING_SECTION_METHOD)
+        }
+
+        protected fun invokeAfterUntrackingSectionLeaving() {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_UNTRACKING_SECTION_METHOD)
         }
 
         protected fun invokeMakeStateRepresentation() {

@@ -184,6 +184,12 @@ abstract class ManagedStrategy(
         isSuspended.fill(false)
         currentActorId.fill(-1)
         loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
+        runUntracking(nThreads) {
+            memoryTracker.dumpMemory()
+        }
+        memoryTracker.reset()
+        monitorTracker.reset()
+        parkingTracker.reset()
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
@@ -466,6 +472,7 @@ abstract class ManagedStrategy(
      * @param location the memory location identifier.
      */
     internal fun onSharedVariableRead(iThread: Int, location: MemoryLocation, kClass: KClass<*>): Any? {
+        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.readValue(iThread, location, kClass)?.unwrap()
     }
 
@@ -488,6 +495,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onCompareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: Any?, desired: Any?): Boolean {
+        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.compareAndSet(iThread, location, kClass, expected?.opaque(kClass), desired?.opaque(kClass))
     }
 
@@ -499,6 +507,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onAddAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
+        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.addAndGet(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
@@ -510,6 +519,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onGetAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
+        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.getAndAdd(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
@@ -521,7 +531,15 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onGetAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?): Any? {
+        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.getAndSet(iThread, location, kClass, value?.opaque(kClass))?.unwrap()
+    }
+
+    private fun initializeSharedVariable(iThread: Int, location: MemoryLocation, kClass: KClass<*>) {
+        if (!memoryTracker.isInitialized(location)) {
+            val initValue = runUntracking(iThread) { location.read() }
+            memoryTracker.initialize(iThread, location, kClass, initValue?.opaque())
+        }
     }
 
     /**
@@ -743,6 +761,15 @@ abstract class ManagedStrategy(
     internal fun leaveUntrackingSection(iThread: Int) {
         if (iThread < untrackingSectionDepth.size)
             untrackingSectionDepth[iThread]--
+    }
+
+    internal fun<T> runUntracking(iThread: Int, block: () -> T): T {
+        return try {
+            enterUntrackingSection(iThread)
+            block()
+        } finally {
+            leaveUntrackingSection(iThread)
+        }
     }
 
     // == LOGGING METHODS ==

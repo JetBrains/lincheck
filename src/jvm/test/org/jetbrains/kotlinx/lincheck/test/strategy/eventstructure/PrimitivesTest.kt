@@ -286,7 +286,6 @@ class PrimitivesTest {
     }
 
     @Test
-    @Ignore
     fun testGlobalAtomicVariable() {
         val read = GlobalAtomicVariable::read
         val write = GlobalAtomicVariable::write

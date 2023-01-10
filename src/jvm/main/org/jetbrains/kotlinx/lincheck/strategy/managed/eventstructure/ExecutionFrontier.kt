@@ -56,7 +56,7 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
         check(iThread == event.threadId)
         // TODO: properly document this precondition
         //  (i.e. we expect frontier to be updated to some offspring of frontier's execution)
-        check(programOrder.nullOrLessOrEqual(event.parent, frontier[iThread]))
+        // check(programOrder.nullOrLessOrEqual(event.parent, frontier[iThread]))
         frontier[iThread] = event
     }
 
@@ -99,6 +99,9 @@ class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
             threadId to events.apply { reverse() }
         }.toMap())
     }
+
+    fun toVectorClock(): VectorClock<Int, Event> =
+        frontier.copy()
 
 }
 

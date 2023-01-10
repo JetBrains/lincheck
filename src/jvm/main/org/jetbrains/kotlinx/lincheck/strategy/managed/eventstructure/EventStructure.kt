@@ -30,9 +30,10 @@ class EventStructure(
     val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
     val lockAwareScheduling: Boolean = true,
 ) {
-    val initialThreadId = nThreads
-    val rootThreadId = nThreads + 1
-    val maxThreadId = rootThreadId
+    val mainThreadId = nThreads
+    val initThreadId = nThreads + 1
+
+    private val maxThreadId = initThreadId
 
     val root: Event
 
@@ -44,6 +45,10 @@ class EventStructure(
      * List of events of the event structure.
      */
     val events: SortedList<Event> = _events
+
+    // TODO: this pattern is covered by explicit backing fields KEEP
+    //   https://github.com/Kotlin/KEEP/issues/278
+    private val _initializationMap = mutableMapOf<Any, Event>()
 
     lateinit var currentExplorationRoot: Event
         private set
@@ -58,6 +63,26 @@ class EventStructure(
     private var playedFrontier: ExecutionFrontier = ExecutionFrontier()
 
     private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
+
+    /**
+     * Mapping from an index to initialization event for this index.
+     */
+    val initializationMap: Map<Any, Event>
+        get() = _initializationMap
+
+    /**
+     * Mapping from a memory location to initialization write for this location.
+     */
+    val initializationWrites: Map<MemoryLocation, Event>
+        get() = initializationMap.mapNotNull { (index, event) ->
+            if (index is MemoryLocation) (index to event) else null
+        }.toMap()
+
+    val initializedMemoryLocations: Collection<MemoryLocation>
+        get() = initializationMap.keys.mapNotNull { index ->
+            if (index is MemoryLocation) index else null
+        }
+
 
     private val currentRemapping: Remapping = Remapping()
 
@@ -79,12 +104,6 @@ class EventStructure(
     init {
         root = addRootEvent()
     }
-
-    private fun emptyFrontier(): ExecutionFrontier =
-        ExecutionFrontier().apply { set(rootThreadId, root) }
-
-    private fun emptyExecution(): Execution =
-        emptyFrontier().toExecution()
 
     fun getThreadRoot(iThread: Int): Event? =
         currentExecution.firstEvent(iThread)?.also { event ->
@@ -109,7 +128,8 @@ class EventStructure(
     }
 
     fun initializeExploration() {
-        playedFrontier = emptyFrontier()
+        playedFrontier = ExecutionFrontier()
+        playedFrontier[initThreadId] = currentExecution[initThreadId]!!.last()
     }
 
     fun abortExploration() {
@@ -125,10 +145,13 @@ class EventStructure(
     private fun resetExploration(event: Event) {
         check(delayedConsistencyCheckBuffer.isEmpty())
         currentExplorationRoot = event
+        // TODO: filter unused initialization events
         _currentExecution = event.frontier.toExecution()
         pinnedEvents = event.pinnedEvents.copy()
+        _initializationMap.clear()
         currentRemapping.reset()
-        monitorTracker = createMonitorTracker()
+        monitorTracker.reset()
+        parkingTracker.reset()
         pendingEvents.clear().also { populatePendingEvents() }
         detectedInconsistency = null
     }
@@ -199,9 +222,12 @@ class EventStructure(
     }
 
     // should only be called in replay phase!
+    fun getNextEventToReplay(iThread: Int): HyperEvent =
+        currentExecution.nextAtomicEvent(iThread, playedFrontier.getNextPosition(iThread))!!
+
+    // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
-        val nextPosition = playedFrontier.getNextPosition(iThread)
-        val atomicEvent = currentExecution.nextAtomicEvent(iThread, nextPosition)!!
+        val atomicEvent = getNextEventToReplay(iThread)
         // delay replaying the last event till all other events are replayed;
         if (currentExplorationRoot == atomicEvent.events.last()) {
             // TODO: prettify
@@ -242,6 +268,7 @@ class EventStructure(
                 dependencies = dependencies.filter { it != parent },
                 frontier = currentExecution.toFrontier().cut(conflicts),
                 pinnedEvents = pinnedEvents.cut(conflicts),
+                isInitialization = (iThread == initThreadId),
             )
         else null
     }
@@ -292,14 +319,61 @@ class EventStructure(
     private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
         if (visit) { event.visit() }
         val isReplayedEvent = inReplayPhase(event.threadId)
-        if (!isReplayedEvent)
+        if (!isReplayedEvent) {
             _currentExecution.addEvent(event)
+        }
         playedFrontier.update(event)
-        if (synchronize)
+        // take an opportunity to treat event performed in the main thread as the initialization event
+        // if (event.threadId == mainThreadId &&
+        //     event.label.kind == LabelKind.Send &&
+        //     event.label.index != null &&
+        //     event.label.index !in initializationMap) {
+        //     _initializationMap[event.label.index!!] = event
+        // }
+        if (synchronize) {
             addSynchronizedEvents(event)
+        }
         // TODO: set suddenInvocationResult instead
         if (detectedInconsistency == null) {
             detectedInconsistency = checkConsistencyIncrementally(event, isReplayedEvent)
+        }
+    }
+
+    private fun isInitialized(label: EventLabel): Boolean =
+        label.index?.let { it in initializationMap } ?: true
+
+    private fun addInitializationEvent(iThread: Int, label: EventLabel) {
+        if (label.index == null || label.index in initializationMap)
+            return
+        val initEvent = if (inReplayPhase(iThread)) {
+            val atomicEvent = getNextEventToReplay(iThread)
+            val requestEvent = atomicEvent.events[0]
+            check(requestEvent.label.isRequest)
+            currentExecution[initThreadId]!!
+                .filter { it.label.index == requestEvent.label.index }
+                .ensure { it.size == 1 }
+                .first()
+                .also { initEvent ->
+                    check(initEvent in playedFrontier)
+                    initEvent.label.replay(label, currentRemapping)
+                }
+            // check(atomicEvent.dependencies.count { it.threadId == initThreadId } == 1) {
+            //     "hehn't"
+            // }
+            // atomicEvent.dependencies.first { it.threadId == initThreadId }.also { initEvent ->
+            //     check(initEvent in playedFrontier)
+            //     initEvent.label.replay(label, currentRemapping)
+            // }
+        } else {
+            val parent = currentExecution.lastEvent(initThreadId)
+            addEvent(initThreadId, label, parent, dependencies = listOf())!!.also { initEvent ->
+                addEventToCurrentExecution(initEvent, visit = true, synchronize = false)
+            }
+        }
+        _initializationMap.put(label.index!!, initEvent).also {
+            check(it == null) {
+                "Index ${label.index} cannot be initialized by event $initEvent because it is already initialized by event $it!"
+            }
         }
     }
 
@@ -405,7 +479,7 @@ class EventStructure(
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel()
-        return addEvent(rootThreadId, label, parent = null, dependencies = emptyList())!!.also {
+        return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also {
             addEventToCurrentExecution(it, visit = false)
         }
     }
@@ -428,6 +502,7 @@ class EventStructure(
 
     private fun addRequestEvent(iThread: Int, label: EventLabel): Event {
         require(label.isRequest)
+        check(isInitialized(label))
         tryReplayEvent(iThread)?.let { event ->
             event.label.replay(label, currentRemapping)
             addEventToCurrentExecution(event)
@@ -441,6 +516,7 @@ class EventStructure(
 
     private fun addResponseEvents(requestEvent: Event): Pair<Event?, List<Event>> {
         require(requestEvent.label.isRequest)
+        check(isInitialized(requestEvent.label))
         tryReplayEvent(requestEvent.threadId)?.let { event ->
             check(event.label.isResponse)
             check(event.parent == requestEvent)
@@ -515,7 +591,7 @@ class EventStructure(
         val label = ThreadStartLabel(
             threadId = iThread,
             kind = LabelKind.Request,
-            isMainThread = (iThread == initialThreadId)
+            isMainThread = (iThread == mainThreadId)
         )
         val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, responseEvents) = addResponseEvents(requestEvent)
@@ -549,6 +625,17 @@ class EventStructure(
         checkNotNull(responseEvent)
         check(responseEvents.size == 1)
         return responseEvent
+    }
+
+    fun addInitialWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
+        check(location !in initializationMap)
+        val label = WriteAccessLabel(
+            location_ = location,
+            value_ = value,
+            kClass = kClass,
+            isExclusive = false,
+        )
+        addInitializationEvent(iThread, label)
     }
 
     fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,
@@ -729,6 +816,47 @@ class EventStructure(
         else
             LockReentranceCounter(maxThreadId)
 
+    /**
+     * Calculates the view for specific memory location observed at the given point of execution
+     * given by [observation] vector clock. Memory location view is a vector clock itself
+     * that maps each thread id to the last write access event to the given memory location at the given thread.
+     *
+     * @param location the memory location.
+     * @param observation the vector clock specifying the point of execution for the view calculation.
+     * @return the view (i.e. vector clock) for the given memory location.
+     *
+     * TODO: move to Execution?
+     */
+    fun calculateMemoryLocationView(location: MemoryLocation, observation: VectorClock<Int, Event>): VectorClock<Int, Event> =
+        VectorClock(programOrder, observation.clock.mapNotNull { (threadId, event) ->
+            check(event in currentExecution)
+            var lastWrite = event
+            while (!(lastWrite.label is WriteAccessLabel && (lastWrite.label as WriteAccessLabel).location == location)) {
+                lastWrite = event.parent ?: return@mapNotNull null
+            }
+            (threadId to lastWrite)
+        }.toMap())
+
+    /**
+     * Calculates a list of all racy writes to specific memory location observed at the given point of execution
+     * given by [observation] vector clock. In other words, the resulting list contains all program-order maximal
+     * racy writes observed at the given point.
+     *
+     * @param location the memory location.
+     * @param observation the vector clock specifying the point of execution for the view calculation.
+     * @return list of program-order maximal racy write events.
+     *
+     * TODO: move to Execution?
+     */
+    fun calculateRacyWrites(location: MemoryLocation, observation: VectorClock<Int, Event>): List<Event> {
+        val view = calculateMemoryLocationView(location, observation)
+        return view.clock.values.filter { write ->
+            view.clock.values.all { other ->
+                !causalityOrder.lessThan(write, other)
+            }
+        }
+    }
+
 }
 
 private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
@@ -754,5 +882,9 @@ private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
     override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {}
 
     override fun isWaiting(iThread: Int): Boolean = false
+
+    override fun reset() {
+        map.clear()
+    }
 
 }

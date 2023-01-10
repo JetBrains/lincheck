@@ -28,6 +28,10 @@ import kotlin.reflect.KClass
  */
 abstract class MemoryTracker {
 
+    abstract fun isInitialized(location: MemoryLocation): Boolean
+
+    abstract fun initialize(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
+
     abstract fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
 
     abstract fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue?
@@ -39,6 +43,11 @@ abstract class MemoryTracker {
     abstract fun getAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue?
 
     abstract fun getAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue?
+
+    abstract fun dumpMemory()
+
+    abstract fun reset()
+
 }
 
 /**
@@ -49,13 +58,19 @@ abstract class MemoryTracker {
  * TODO: add dynamic type-checks (via kClass)
  */
 internal class PlainMemoryTracker : MemoryTracker() {
-    private val values = HashMap<MemoryLocation, OpaqueValue?>()
+    private val memory = HashMap<MemoryLocation, OpaqueValue?>()
+
+    override fun isInitialized(location: MemoryLocation): Boolean =
+        location in memory
+
+    override fun initialize(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
+        memory.set(location, value)
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
-        values.set(location, value)
+        memory.set(location, value)
 
     override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? =
-        values.getOrElse(location) { OpaqueValue.default(kClass) }
+        memory.getOrElse(location) { OpaqueValue.default(kClass) }
 
     override fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
         if (expected == readValue(iThread, location, kClass)) {
@@ -79,14 +94,24 @@ internal class PlainMemoryTracker : MemoryTracker() {
         return result
     }
 
+    override fun reset() {
+        memory.clear()
+    }
+
+    override fun dumpMemory() {
+        for ((location, value) in memory.entries) {
+            location.write(value?.unwrap())
+        }
+    }
+
     fun copy(): PlainMemoryTracker =
-        PlainMemoryTracker().also { it.values += values }
+        PlainMemoryTracker().also { it.memory += memory }
 
     override fun equals(other: Any?): Boolean {
-        return (other is PlainMemoryTracker) && (values == other.values)
+        return (other is PlainMemoryTracker) && (memory == other.memory)
     }
 
     override fun hashCode(): Int {
-        return values.hashCode()
+        return memory.hashCode()
     }
 }

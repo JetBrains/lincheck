@@ -31,6 +31,8 @@ interface ParkingTracker {
 
     fun isParked(iThread: Int): Boolean
 
+    fun reset()
+
 }
 
 class PlainParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
@@ -50,5 +52,9 @@ class PlainParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean =
 
     override fun isParked(iThread: Int): Boolean =
         parked[iThread] && !allowSpuriousWakeUps
+
+    override fun reset() {
+        parked.fill(false)
+    }
 
 }
