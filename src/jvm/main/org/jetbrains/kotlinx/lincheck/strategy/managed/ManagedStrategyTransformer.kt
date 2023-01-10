@@ -134,7 +134,7 @@ internal class ManagedStrategyTransformer(
             if (isFinalField(owner, name) || isSuspendStateMachine(owner)
                 // TODO: this is only required if we intercept shared variable reads/writes,
                 //   then we don't need to intercept accesses to `value` field inside atomic classes
-                // || isAtomicPrimitive(owner)
+                || isAtomicPrimitive(owner)
             ) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
