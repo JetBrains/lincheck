@@ -49,7 +49,7 @@ abstract class HyperEvent(val events: List<Event>) {
     open val dependencies: List<Event> =
         mutableListOf<Event>().apply {
             events.forEach { addAll(it.dependencies) }
-            retainAll { it !in this }
+            retainAll { it !in events }
         }
 }
 

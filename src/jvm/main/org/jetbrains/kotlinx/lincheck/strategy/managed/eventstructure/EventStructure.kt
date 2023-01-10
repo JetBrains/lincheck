@@ -349,21 +349,17 @@ class EventStructure(
             val atomicEvent = getNextEventToReplay(iThread)
             val requestEvent = atomicEvent.events[0]
             check(requestEvent.label.isRequest)
-            currentExecution[initThreadId]!!
+            val initEvent = currentExecution[initThreadId]!!
                 .filter { it.label.index == requestEvent.label.index }
+                .ensure { it.size <= 1 }
+                .firstOrNull()
+                ?: atomicEvent.dependencies
+                .filter { it.threadId == initThreadId }
                 .ensure { it.size == 1 }
                 .first()
-                .also { initEvent ->
-                    check(initEvent in playedFrontier)
-                    initEvent.label.replay(label, currentRemapping)
-                }
-            // check(atomicEvent.dependencies.count { it.threadId == initThreadId } == 1) {
-            //     "hehn't"
-            // }
-            // atomicEvent.dependencies.first { it.threadId == initThreadId }.also { initEvent ->
-            //     check(initEvent in playedFrontier)
-            //     initEvent.label.replay(label, currentRemapping)
-            // }
+            check(initEvent in playedFrontier)
+            initEvent.label.replay(label, currentRemapping)
+            initEvent
         } else {
             val parent = currentExecution.lastEvent(initThreadId)
             addEvent(initThreadId, label, parent, dependencies = listOf())!!.also { initEvent ->
