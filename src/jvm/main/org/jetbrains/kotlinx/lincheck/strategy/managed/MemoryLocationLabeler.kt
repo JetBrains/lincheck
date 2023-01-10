@@ -42,7 +42,7 @@ interface MemoryLocation {
  * accessed directly or through reflections (e.g., through AFU or VarHandle).
 */
 internal class MemoryLocationLabeler {
-    private val fieldLocationByReflection =  IdentityHashMap<Any, Pair<String, String>>()
+    private val fieldLocationByReflection = IdentityHashMap<Any, AtomicReflectionAccessDescriptor>()
 
     fun labelStaticField(className: String, fieldName: String): MemoryLocation =
         StaticFieldMemoryLocation(className, fieldName)
@@ -56,22 +56,41 @@ internal class MemoryLocationLabeler {
     fun labelAtomicPrimitive(primitive: Any): MemoryLocation =
         AtomicPrimitiveMemoryLocation(primitive)
 
-    fun labelAtomicReflectionAccess(reflection: Any, obj: Any): MemoryLocation {
-        val (className, fieldName) = fieldLocationByReflection[reflection].let {
-            check(it != null) {
-                "AFU is used but was not registered. Do you create AFU not with AFU.newUpdater(...)?"
-            }
-            it
-        }
-        return ObjectFieldMemoryLocation(obj, className, fieldName, isAtomic = true)
+    fun labelAtomicReflectionFieldAccess(reflection: Any, obj: Any): MemoryLocation {
+        val descriptor = getAtomicReflectionDescriptor(reflection) as AtomicReflectionFieldAccessDescriptor
+        return ObjectFieldMemoryLocation(obj, descriptor.className, descriptor.fieldName, isAtomic = true)
+    }
+
+    fun labelAtomicReflectionArrayAccess(reflection: Any, array: Any, index: Int): MemoryLocation {
+        val descriptor = getAtomicReflectionDescriptor(reflection) as AtomicReflectionArrayAccessDescriptor
+        return ArrayElementMemoryLocation(array, index)
     }
 
     fun registerAtomicFieldReflection(reflection: Any, clazz: Class<*>, fieldName: String) {
-        fieldLocationByReflection.put(reflection, Pair(clazz.canonicalName, fieldName)).also {
+        val descriptor = AtomicReflectionFieldAccessDescriptor(clazz.canonicalName, fieldName)
+        registerAtomicReflectionDescriptor(reflection, descriptor)
+    }
+
+    fun registerAtomicArrayReflection(reflection: Any, elemClazz: Class<*>) {
+        val descriptor = AtomicReflectionArrayAccessDescriptor(elemClazz.canonicalName)
+        registerAtomicReflectionDescriptor(reflection, descriptor)
+    }
+
+    private fun registerAtomicReflectionDescriptor(reflection: Any, descriptor: AtomicReflectionAccessDescriptor) {
+        fieldLocationByReflection.put(reflection, descriptor).also {
             check(it == null) {
-                "The same AFU should not be registered twice"
+                "Atomic reflection object ${opaqueString(reflection)} cannot be registered to access $descriptor," +
+                    "because it is already registered to access $it!"
             }
         }
+    }
+
+    private fun getAtomicReflectionDescriptor(reflection: Any): AtomicReflectionAccessDescriptor {
+        val descriptor = fieldLocationByReflection[reflection]
+        check(descriptor != null) {
+            "Cannot access memory via unregistered reflection object ${opaqueString(reflection)}"
+        }
+        return descriptor
     }
 
 }
@@ -324,6 +343,18 @@ private fun getClass(obj: Any? = null, className: String? = null): Class<*> {
         (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
     return classLoader.loadClass(className)
 }
+
+private sealed class AtomicReflectionAccessDescriptor
+
+private data class AtomicReflectionFieldAccessDescriptor(
+    val className: String,
+    val fieldName: String
+): AtomicReflectionAccessDescriptor()
+
+private data class AtomicReflectionArrayAccessDescriptor(
+    val elementClassName: String,
+): AtomicReflectionAccessDescriptor()
+
 
 // TODO: move to another place
 // TODO: make value class?

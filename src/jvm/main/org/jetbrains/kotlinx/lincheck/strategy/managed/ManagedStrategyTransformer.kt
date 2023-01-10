@@ -285,124 +285,47 @@ internal class ManagedStrategyTransformer(
             val isAtomicPrimitive = isAtomicPrimitive(owner)
             val isAtomicArray = isAtomicArray(owner)
             val isAtomicReflection = isAtomicReflection(owner)
-            if (!isAtomicPrimitive && !isAtomicArray && !isAtomicReflection) {
+            if (!isAtomicPrimitive && !isAtomicArray && !isAtomicReflection || name !in atomicMethods) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
-            if (name !in atomicMethods) {
-                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            if (name in atomicReflectionConstructors) {
+                visitAtomicReflectionConstructor(opcode, owner, name, descriptor, isInterface)
                 return
             }
-
             val atomicOwner = getAtomicPrimitiveClassName(owner)
             val innerDescriptor = atomicInnerDescriptor(atomicOwner ?: owner, name, descriptor) // e.g., Int for AtomicInteger
             val locationState = when {
                 // TODO: pass actual field names
-                isAtomicPrimitive -> AtomicPrimitiveMemoryLocationState(null, adapter)
-                isAtomicArray -> AtomicArrayElementMemoryLocationState(null, adapter)
-                else -> AtomicReflectionMemoryLocationState(null, adapter)
+                isAtomicPrimitive   -> AtomicPrimitiveMemoryLocationState(null, adapter)
+                isAtomicArray       -> AtomicArrayElementMemoryLocationState(null, adapter)
+                else                -> AtomicReflectionMemoryLocationState(owner, name, descriptor, null, adapter)
             }
-
-            when {
-                name == "<init>" && isAtomicPrimitive ->
-                    visitAtomicPrimitiveConstructor(opcode, owner, name, descriptor, isInterface, locationState, innerDescriptor)
-
-                name == "<init>" && isAtomicArray ->
-                    visitAtomicArrayConstructor(opcode, owner, name, descriptor, isInterface, locationState, innerDescriptor)
-
-                name in atomicFieldUpdaterMethods ->
-                    visitAtomicReflectionConstructor(opcode, owner, name, descriptor, isInterface, locationState, innerDescriptor)
-
-                name in atomicSetMethods ->
+            when (name) {
+                in atomicSetMethods ->
                     visitWrite(locationState, innerDescriptor) {
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     }
-
-                name in atomicGetMethods ->
+                in atomicGetMethods ->
                     visitRead(locationState, innerDescriptor) {
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     }
-
-                name in atomicGetAndSetMethods ||
-                name in atomicGetAndAddMethods ||
-                name in atomicIncrementMethods ||
-                name in atomicDecrementMethods ||
-                name in atomicCompareAndSetMethods ->
-                    visitAtomicMethod(AtomicMethodDescriptor.fromName(name), locationState, innerDescriptor) {
+                in atomicUpdateMethods ->
+                    visitAtomicUpdateMethod(AtomicUpdateMethodDescriptor.fromName(name), locationState, innerDescriptor) {
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     }
-
                 else -> super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
         }
 
-        private fun visitAtomicPrimitiveConstructor(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean,
-                                                    locationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
-            // Constructors of atomic primitive take either zero or one argument (initial value)
-            val argumentTypes = Type.getArgumentTypes(descriptor)
-            if (!isAtomicClassName(owner) && !showedInheritedAtomicConstructorTransformationWarning) {
-                showedInheritedAtomicConstructorTransformationWarning = true
-                System.err.println("""
-                    If your code uses non-default constructor of java.util.concurrent.Atomic* in inherited class, 
-                    please note that some model checking strategies may not support it.
-                """.trimIndent())
-            }
-            when {
-                // Assume default constructor was called in inheritor
-                // TODO: can we do better? maybe try to read actual value after constructor finishes?
-                !isAtomicClassName(owner) -> {
-                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                }
-
-                // Default constructor. Do nothing. The initial value is default
-                argumentTypes.isEmpty() -> {
-                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                }
-
-                else -> {
-                    check(argumentTypes.size == 1) {
-                        "Unexpected complex constructor for $className with descriptor $descriptor"
-                    }
-                    // Copy the initial value.
-                    val initialValueType = argumentTypes.first()
-                    val initialValueLocal = newLocal(initialValueType)
-                    copyLocal(initialValueLocal)
-                    // Call the constructor.
-                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                    // Report the initial value to managed strategy *after* the object is initialized.
-                    dup()
-                    loadLocal(initialValueLocal)
-                    check(initialValueType.descriptor == innerDescriptor)
-                    // Call onSharedVariableWrite.
-                    visitWrite(locationState, innerDescriptor) {
-                        pop(initialValueType) // value
-                        pop()                 // location
-                    }
-                }
-            }
-        }
-
-        private fun visitAtomicArrayConstructor(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean,
-                                                locationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
-            // Constructor of an atomic array.
-            if (descriptor != "I") {
-                if (!showedAtomicArrayConstructorTransformationWarning) {
-                    showedAtomicArrayConstructorTransformationWarning = true;
-                    System.err.println("If your code uses java.util.concurrent.Atomic*Array(int[]) constructor, " +
-                        "please note that some model checking strategies may not support it.")
-                }
-            }
-            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-        }
-
-        private fun visitAtomicReflectionConstructor(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean,
-                                                     locationState: MemoryLocationState, innerDescriptor: String) = adapter.run {
+        private fun visitAtomicReflectionConstructor(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
             // AFU or VarHandle constructor
             val classLocal = newLocal(CLASS_TYPE)
             val fieldNameLocal = newLocal(STRING_TYPE)
-            // val
+            var kind: AtomicReflectionMemoryLocationKind? = null
             when (name) {
                 "newUpdater" -> {
+                    kind = AtomicReflectionMemoryLocationKind.ObjectField
                     val isAtomicReferenceFieldUpdater = when (owner.canonicalClassName) {
                         AtomicReferenceFieldUpdater::class.qualifiedName -> true
                         AtomicIntegerFieldUpdater::class.qualifiedName -> false
@@ -427,6 +350,7 @@ internal class ManagedStrategyTransformer(
                     }
                 }
                 "findVarHandle" -> {
+                    kind = AtomicReflectionMemoryLocationKind.ObjectField
                     // STACK: tgt_class, field_name, field_class
                     val fieldClassLocal = newLocal(CLASS_TYPE)
                     storeLocal(fieldClassLocal)
@@ -436,6 +360,12 @@ internal class ManagedStrategyTransformer(
                     loadLocal(fieldNameLocal)
                     loadLocal(fieldClassLocal)
                 }
+                "arrayElementVarHandle" -> {
+                    kind = AtomicReflectionMemoryLocationKind.ArrayElement
+                    // STACK: elem_class
+                    storeLocal(classLocal)
+                    loadLocal(classLocal)
+                }
                 else -> unreachable()
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
@@ -443,8 +373,15 @@ internal class ManagedStrategyTransformer(
             loadMemoryLocationLabeler()
             loadLocal(afuLocal)
             loadLocal(classLocal)
-            loadLocal(fieldNameLocal)
-            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_ATOMIC_REFLECTION)
+            when (kind) {
+                AtomicReflectionMemoryLocationKind.ObjectField -> {
+                    loadLocal(fieldNameLocal)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_ATOMIC_FIELD_REFLECTION)
+                }
+                AtomicReflectionMemoryLocationKind.ArrayElement -> {
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_ATOMIC_ARRAY_REFLECTION)
+                }
+            }
         }
 
         private fun atomicInnerDescriptor(owner: String, name: String, desc: String): String = when (owner) {
@@ -471,21 +408,6 @@ internal class ManagedStrategyTransformer(
                 types.last().descriptor
             }
         }
-
-        private fun isAtomicArray(owner: String): Boolean = when {
-            owner.startsWith("java/util/concurrent/atomic/") ->
-                owner.removePrefix("java/util/concurrent/atomic/") in listOf(
-                        AtomicIntegerArray::class.simpleName,
-                        AtomicReferenceArray::class.simpleName,
-                        AtomicLongArray::class.simpleName,
-                )
-            else -> false
-        }
-
-        private fun isAtomicReflection(owner: String): Boolean =
-                owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater") ||
-                        owner == "java/lang/invoke/VarHandle" ||
-                        owner == "java/lang/invoke/MethodHandles\$Lookup"
 
     }
 
@@ -530,8 +452,8 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: [location args ...], [value args ...] -> method result
-        protected fun visitAtomicMethod(methodDescriptor: AtomicMethodDescriptor, locationState: MemoryLocationState, descriptor: String,
-                                        performMethod: () -> Unit) = adapter.run {
+        protected fun visitAtomicUpdateMethod(methodDescriptor: AtomicUpdateMethodDescriptor, locationState: MemoryLocationState, descriptor: String,
+                                              performMethod: () -> Unit) = adapter.run {
             val valueType = Type.getType(descriptor)
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
@@ -616,9 +538,9 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> method result
-        private fun invokeOnAtomicMethod(methodDescriptor: AtomicMethodDescriptor, locationState: MemoryLocationState,
+        private fun invokeOnAtomicMethod(methodDescriptor: AtomicUpdateMethodDescriptor, locationState: MemoryLocationState,
                                          cmpValueLocal: Int?, updValueLocal: Int, valueType: Type) = adapter.run {
-            require((methodDescriptor == AtomicMethodDescriptor.CMP_AND_SET) implies (cmpValueLocal != null))
+            require((methodDescriptor == AtomicUpdateMethodDescriptor.CMP_AND_SET) implies (cmpValueLocal != null))
             loadStrategy()                                          // STACK: strategy
             loadCurrentThreadNumber()                               // STACK: strategy, threadId
             invokeLabelMemoryLocation(locationState)                // STACK: strategy, threadId, location
@@ -669,7 +591,7 @@ internal class ManagedStrategyTransformer(
 
     }
 
-    enum class AtomicMethodDescriptor {
+    enum class AtomicUpdateMethodDescriptor {
         CMP_AND_SET, GET_AND_SET,
         GET_AND_ADD, ADD_AND_GET,
         GET_AND_INC, INC_AND_GET,
@@ -709,7 +631,7 @@ internal class ManagedStrategyTransformer(
         }
 
         companion object {
-            fun fromName(name: String): AtomicMethodDescriptor = when (name) {
+            fun fromName(name: String): AtomicUpdateMethodDescriptor = when (name) {
                 "getAndSet"         -> GET_AND_SET
                 "getAndAdd"         -> GET_AND_ADD
                 "addAndGet"         -> ADD_AND_GET
@@ -723,10 +645,9 @@ internal class ManagedStrategyTransformer(
         }
     }
 
-    private abstract inner class MemoryLocationState(
+    private abstract class MemoryLocationState(
         val adapter: GeneratorAdapter,
-        val locationName: String?,
-        val labelMethod: Method
+        val locationName: String?
     ) {
         /*
          * Saves the memory location data stored on the stack
@@ -737,13 +658,15 @@ internal class ManagedStrategyTransformer(
          * Loads the saved memory location data back to the stack
          */
         abstract fun load()
+
+        abstract val labelMethod: Method
     }
 
-    private inner class StaticFieldMemoryLocationState(
+    private class StaticFieldMemoryLocationState(
         val className: String,
         val fieldName: String,
         adapter: GeneratorAdapter
-    ) : MemoryLocationState(adapter, locationName = fieldName, labelMethod = LABEL_STATIC_FIELD) {
+    ) : MemoryLocationState(adapter, locationName = fieldName) {
 
         // STACK: (empty) -> (empty)
         override fun store() = adapter.run { }
@@ -753,13 +676,15 @@ internal class ManagedStrategyTransformer(
             push(className)
             push(fieldName)
         }
+
+        override val labelMethod: Method = LABEL_STATIC_FIELD
     }
 
-    private inner class ObjectFieldMemoryLocationState(
+    private class ObjectFieldMemoryLocationState(
         val className: String,
         val fieldName: String,
         adapter: GeneratorAdapter
-    ) : MemoryLocationState(adapter, locationName = fieldName, labelMethod = LABEL_OBJECT_FIELD) {
+    ) : MemoryLocationState(adapter, locationName = fieldName) {
         var objectLocal = -1 // not initialized
 
         // STACK: object -> (empty)
@@ -775,19 +700,21 @@ internal class ManagedStrategyTransformer(
             push(className)
             push(fieldName)
         }
+
+        override val labelMethod: Method = LABEL_OBJECT_FIELD
     }
 
-    private inner class ArrayElementMemoryLocationState(
+    private class ArrayElementMemoryLocationState(
         adapter: GeneratorAdapter
-    ) : MemoryLocationState(adapter, locationName = "", labelMethod = LABEL_ARRAY_ELEMENT) {
+    ) : MemoryLocationState(adapter, locationName = "") {
         var arrayLocal = -1   // not initialized
         var indexLocal = -1   // not initialized
 
         // STACK: array, index -> (empty)
         override fun store() = adapter.run {
+            arrayLocal = newLocal(OBJECT_TYPE)
             indexLocal = newLocal(Type.INT_TYPE)
             storeLocal(indexLocal)
-            arrayLocal = newLocal(OBJECT_TYPE)
             storeLocal(arrayLocal)
         }
 
@@ -798,12 +725,14 @@ internal class ManagedStrategyTransformer(
             loadLocal(arrayLocal)
             loadLocal(indexLocal)
         }
+
+        override val labelMethod: Method = LABEL_ARRAY_ELEMENT
     }
 
-    private inner class AtomicPrimitiveMemoryLocationState(
+    private class AtomicPrimitiveMemoryLocationState(
         atomicClassName: String?,
         adapter: GeneratorAdapter
-    ) : MemoryLocationState(adapter, locationName = atomicClassName, labelMethod = LABEL_ATOMIC_PRIMITIVE) {
+    ) : MemoryLocationState(adapter, locationName = atomicClassName) {
         var atomicPrimitiveLocal = -1 // not initialized
 
         // STACK: atomic -> (empty)
@@ -817,20 +746,22 @@ internal class ManagedStrategyTransformer(
             check(atomicPrimitiveLocal != -1)
             loadLocal(atomicPrimitiveLocal)
         }
+
+        override val labelMethod: Method = LABEL_ATOMIC_PRIMITIVE
     }
 
-    private inner class AtomicArrayElementMemoryLocationState(
+    private class AtomicArrayElementMemoryLocationState(
         atomicArrayClassName: String?,
         adapter: GeneratorAdapter
-    ) : MemoryLocationState(adapter, locationName = atomicArrayClassName, labelMethod = LABEL_ARRAY_ELEMENT) {
+    ) : MemoryLocationState(adapter, locationName = atomicArrayClassName) {
         var atomicArrayLocal = -1   // not initialized
         var indexLocal = -1         // not initialized
 
         // STACK: array, index -> (empty)
         override fun store() = adapter.run {
+            atomicArrayLocal = newLocal(OBJECT_TYPE)
             indexLocal = newLocal(Type.INT_TYPE)
             storeLocal(indexLocal)
-            atomicArrayLocal = newLocal(OBJECT_TYPE)
             storeLocal(atomicArrayLocal)
         }
 
@@ -841,30 +772,75 @@ internal class ManagedStrategyTransformer(
             loadLocal(atomicArrayLocal)
             loadLocal(indexLocal)
         }
+
+        override val labelMethod: Method = LABEL_ARRAY_ELEMENT
     }
 
-    private inner class AtomicReflectionMemoryLocationState(
+    private enum class AtomicReflectionMemoryLocationKind { ObjectField, ArrayElement }
+
+    private class AtomicReflectionMemoryLocationState(
+        methodOwner: String,
+        methodName: String,
+        methodDesc: String,
         fieldName: String?,
         adapter: GeneratorAdapter
-    ) : MemoryLocationState(adapter, locationName = fieldName, labelMethod = LABEL_ATOMIC_REFLECTION_ACCESS) {
+    ) : MemoryLocationState(adapter, locationName = fieldName) {
         var atomicReflectionLocal = -1  // not initialized
         var objectLocal = -1            // not initialized
+        var indexLocal = -1             // not initialized
 
-        // STACK: afu, object -> (empty)
+        init {
+            check(isAtomicFieldUpdater(methodOwner) ||
+                  isVarHandle(methodOwner))
+            check(methodName in atomicGetMethods ||
+                  methodName in atomicSetMethods ||
+                  methodName in atomicUpdateMethods)
+        }
+
+        private val kind: AtomicReflectionMemoryLocationKind = when {
+            isAtomicFieldUpdater(methodOwner) -> AtomicReflectionMemoryLocationKind.ObjectField
+            else -> {
+                val methodType = Type.getType(methodDesc)
+                val recipientType = methodType.argumentTypes[0]
+                when (recipientType.sort) {
+                    Type.ARRAY  -> AtomicReflectionMemoryLocationKind.ArrayElement
+                    Type.OBJECT -> AtomicReflectionMemoryLocationKind.ObjectField
+                    else -> throw IllegalStateException(
+                        "Cannot determine reflection access kind of $methodOwner::$methodName method with descriptor $methodDesc!"
+                    )
+                }
+            }
+        }
+
+        // STACK: afu, object, [args ...] -> (empty)
         override fun store() = adapter.run {
-            objectLocal = newLocal(OBJECT_TYPE)
-            storeLocal(objectLocal)
             atomicReflectionLocal = newLocal(OBJECT_TYPE)
+            objectLocal = newLocal(OBJECT_TYPE)
+            indexLocal = newLocal(Type.INT_TYPE)
+            if (kind == AtomicReflectionMemoryLocationKind.ArrayElement) {
+                storeLocal(indexLocal)
+            }
+            storeLocal(objectLocal)
             storeLocal(atomicReflectionLocal)
         }
 
-        // STACK: (empty) -> afu, object
+        // STACK: (empty) -> afu, object, [args ...]
         override fun load() = adapter.run {
             check(atomicReflectionLocal != -1)
             check(objectLocal != -1)
             loadLocal(atomicReflectionLocal)
             loadLocal(objectLocal)
+            if (kind == AtomicReflectionMemoryLocationKind.ArrayElement) {
+                check(indexLocal != -1)
+                loadLocal(indexLocal)
+            }
         }
+
+        override val labelMethod: Method = when (kind) {
+            AtomicReflectionMemoryLocationKind.ObjectField -> LABEL_ATOMIC_REFLECTION_FIELD_ACCESS
+            AtomicReflectionMemoryLocationKind.ArrayElement -> LABEL_ATOMIC_REFLECTION_ARRAY_ACCESS
+        }
+
     }
 
     /**
@@ -1119,7 +1095,7 @@ internal class ManagedStrategyTransformer(
      */
     private inner class AFUTrackingTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitMethodInsn(opcode: Int, owner: String, mname: String, desc: String, isInterface: Boolean) = adapter.run {
-            val isAFUCreation = opcode == INVOKESTATIC && mname == "newUpdater" && isAFU(owner)
+            val isAFUCreation = opcode == INVOKESTATIC && mname == "newUpdater" && isAtomicFieldUpdater(owner)
             when {
                 isAFUCreation -> {
                     val nameLocal = newLocal(STRING_TYPE)
@@ -1903,8 +1879,10 @@ private val LABEL_STATIC_FIELD = Method.getMethod(MemoryLocationLabeler::labelSt
 private val LABEL_OBJECT_FIELD = Method.getMethod(MemoryLocationLabeler::labelObjectField.javaMethod)
 private val LABEL_ARRAY_ELEMENT = Method.getMethod(MemoryLocationLabeler::labelArrayElement.javaMethod)
 private val LABEL_ATOMIC_PRIMITIVE = Method.getMethod(MemoryLocationLabeler::labelAtomicPrimitive.javaMethod)
-private val LABEL_ATOMIC_REFLECTION_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionAccess.javaMethod)
-private val REGISTER_ATOMIC_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicFieldReflection.javaMethod)
+private val LABEL_ATOMIC_REFLECTION_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionFieldAccess.javaMethod)
+private val LABEL_ATOMIC_REFLECTION_ARRAY_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionArrayAccess.javaMethod)
+private val REGISTER_ATOMIC_FIELD_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicFieldReflection.javaMethod)
+private val REGISTER_ATOMIC_ARRAY_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicArrayReflection.javaMethod)
 private val GET_KCLASS_FROM_DESCRIPTOR = Method.getMethod(::getKClassFromDescriptor.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
@@ -2073,19 +2051,22 @@ private val atomicDecrementMethods = listOf(
     "getAndDecrement", "decrementAndGet"
 )
 
-private val atomicFieldUpdaterMethods = listOf(
-    "newUpdater", "findVarHandle"
+private val atomicUpdateMethods = listOf(
+    atomicGetAndSetMethods, atomicCompareAndSetMethods,
+    atomicGetAndAddMethods, atomicIncrementMethods, atomicDecrementMethods,
+).flatten()
+
+private val atomicReflectionConstructors = listOf(
+    "newUpdater", "findVarHandle", "arrayElementVarHandle"
 )
 
 private val atomicMethods = listOf(
     listOf("<init>"),
-    atomicGetMethods, atomicSetMethods,
-    atomicGetAndSetMethods, atomicCompareAndSetMethods,
-    atomicGetAndAddMethods, atomicIncrementMethods, atomicDecrementMethods,
-    atomicFieldUpdaterMethods
+    atomicGetMethods,
+    atomicSetMethods,
+    atomicUpdateMethods,
+    atomicReflectionConstructors
 ).flatten()
-
-private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 
 private fun isAtomicClassName(className: String): Boolean {
     val atomicClassNames = listOf(
@@ -2125,6 +2106,28 @@ private fun getAtomicPrimitiveClassName(className: String): String? {
 private fun isAtomicPrimitive(owner: String): Boolean =
     getAtomicPrimitiveClassName(owner) != null
 
+private fun isAtomicArray(owner: String): Boolean = when {
+    owner.startsWith("java/util/concurrent/atomic/") ->
+        owner.removePrefix("java/util/concurrent/atomic/") in listOf(
+            AtomicIntegerArray::class.simpleName,
+            AtomicLongArray::class.simpleName,
+            AtomicReferenceArray::class.simpleName,
+        )
+    else -> false
+}
+
+private fun isAtomicFieldUpdater(owner: String) =
+    owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
+
+private fun isVarHandle(owner: String) =
+    owner == "java/lang/invoke/VarHandle"
+
+private fun isMethodHandles(owner: String) =
+    (owner == "java/lang/invoke/MethodHandles" || owner == "java/lang/invoke/MethodHandles\$Lookup")
+
+private fun isAtomicReflection(owner: String): Boolean =
+    isAtomicFieldUpdater(owner) || isVarHandle(owner) || isMethodHandles(owner)
+
 // returns true only the method is declared in this class and is not inherited
 private fun isClassMethod(owner: String, methodName: String, desc: String): Boolean =
     Class.forName(owner.canonicalClassName).declaredMethods.any {
@@ -2133,7 +2136,7 @@ private fun isClassMethod(owner: String, methodName: String, desc: String): Bool
     }
 
 private fun isAFUMethodCall(opcode: Int, owner: String, methodName: String, desc: String) =
-    opcode == INVOKEVIRTUAL && isAFU(owner) && isClassMethod(owner, methodName, desc)
+    opcode == INVOKEVIRTUAL && isAtomicFieldUpdater(owner) && isClassMethod(owner, methodName, desc)
 
 private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/internal/misc/Unsafe"
 
