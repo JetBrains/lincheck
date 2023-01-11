@@ -22,6 +22,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import java.util.*
 import java.util.concurrent.atomic.*
+import kotlin.reflect.full.*
+import kotlin.reflect.jvm.*
 
 interface MemoryLocation {
     // TODO: rename?
@@ -147,8 +149,10 @@ internal class ObjectFieldMemoryLocation(
     override val recipient get() = obj
 
     private val field by lazy {
-        getClass(obj, className = className).getDeclaredField(fieldName)
-            .apply { isAccessible = true }
+        val clazz = getClass(obj, className = className)
+        val fields = clazz.fields + clazz.declaredFields
+        fields.first { it.name == fieldName }
+              .apply { isAccessible = true }
     }
 
     override fun read(): Any? = field.get(obj)
@@ -336,12 +340,22 @@ internal class AtomicPrimitiveMemoryLocation(
 }
 
 private fun getClass(obj: Any? = null, className: String? = null): Class<*> {
-    if (className == null)
+    if (className == null) {
         return obj!!.javaClass
-    // TODO: is it correct to use this class loader here?
-    val classLoader = obj?.javaClass?.classLoader ?:
-        (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
-    return classLoader.loadClass(className)
+    }
+    if (obj == null) {
+        // TODO: is it correct to use this class loader here?
+        val classLoader = (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
+        return classLoader.loadClass(className)
+    }
+    if (obj.javaClass.name.endsWith(className)) {
+        return obj.javaClass
+    }
+    for (superClass in obj.javaClass.kotlin.allSuperclasses) {
+        if (superClass.jvmName.endsWith(className))
+            return superClass.java
+    }
+    throw IllegalStateException("Cannot find class $className for object $obj")
 }
 
 private sealed class AtomicReflectionAccessDescriptor
