@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import java.util.*
+import java.lang.reflect.*
 import java.util.concurrent.atomic.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
@@ -150,9 +151,8 @@ internal class ObjectFieldMemoryLocation(
 
     private val field by lazy {
         val clazz = getClass(obj, className = className)
-        val fields = clazz.fields + clazz.declaredFields
-        fields.first { it.name == fieldName }
-              .apply { isAccessible = true }
+        getField(clazz, className, fieldName)
+            .apply { isAccessible = true }
     }
 
     override fun read(): Any? = field.get(obj)
@@ -339,6 +339,9 @@ internal class AtomicPrimitiveMemoryLocation(
 
 }
 
+private fun matchClassName(clazz: Class<*>, className: String) =
+    clazz.name.endsWith(className) || (clazz.canonicalName?.endsWith(className) ?: false)
+
 private fun getClass(obj: Any? = null, className: String? = null): Class<*> {
     if (className == null) {
         return obj!!.javaClass
@@ -348,14 +351,26 @@ private fun getClass(obj: Any? = null, className: String? = null): Class<*> {
         val classLoader = (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
         return classLoader.loadClass(className)
     }
-    if (obj.javaClass.name.endsWith(className)) {
+    if (matchClassName(obj.javaClass, className)) {
         return obj.javaClass
     }
-    for (superClass in obj.javaClass.kotlin.allSuperclasses) {
-        if (superClass.jvmName.endsWith(className))
-            return superClass.java
+    var superClass = obj.javaClass.superclass
+    while (superClass != null) {
+        if (matchClassName(superClass, className))
+            return superClass
+        superClass = superClass.superclass
     }
-    throw IllegalStateException("Cannot find class $className for object $obj")
+    throw IllegalStateException("Cannot find class $className for object $obj!")
+}
+
+private fun getField(clazz: Class<*>, className: String, fieldName: String): Field {
+    var currentClass: Class<*>? = clazz
+    do {
+        currentClass?.fields?.firstOrNull { it.name == fieldName }?.let { return it }
+        currentClass?.declaredFields?.firstOrNull { it.name == fieldName }?.let { return it }
+        currentClass = currentClass?.superclass
+    } while (currentClass != null)
+    throw IllegalStateException("Cannot find field $className::$fieldName for class $clazz!")
 }
 
 private sealed class AtomicReflectionAccessDescriptor
