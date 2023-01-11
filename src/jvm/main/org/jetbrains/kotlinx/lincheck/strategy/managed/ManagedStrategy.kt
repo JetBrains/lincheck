@@ -81,7 +81,7 @@ abstract class ManagedStrategy(
     // Ihe number of entered but not left (yet) blocks where memory operations should not be tracked.
     private val untrackingSectionDepth = IntArray(nThreads + 1) { if (memoryTrackingEnabled) 0 else 1 }
     // Detector of loops or hangs (i.e. active locks).
-    private lateinit var loopDetector: LoopDetector
+    private var loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
     // Whether strategy should always switch when requested
     protected open val alwaysMustSwitch: Boolean = false
 
@@ -183,7 +183,7 @@ abstract class ManagedStrategy(
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
-        loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
+        loopDetector.reset()
         runUntracking(nThreads) {
             memoryTracker.dumpMemory()
         }
@@ -962,6 +962,12 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
     fun reset(iThread: Int) {
         operationCounts.clear()
         lastIThread = iThread
+    }
+
+    fun reset() {
+        operationCounts.clear()
+        lastIThread = -1
+        totalOperations = 0
     }
 }
 
