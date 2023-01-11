@@ -131,10 +131,11 @@ internal class ManagedStrategyTransformer(
     ) : ManagedStrategyMemoryTrackingTransformer(methodName, adapter) {
 
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
-            if (isFinalField(owner, name) || isSuspendStateMachine(owner)
+            if (isFinalField(owner, name) ||
+                isSuspendStateMachine(owner) ||
                 // TODO: this is only required if we intercept shared variable reads/writes,
                 //   then we don't need to intercept accesses to `value` field inside atomic classes
-                || isAtomicPrimitive(owner)
+                (isAtomicClassName(owner) && name == "value")
             ) {
                 super.visitFieldInsn(opcode, owner, name, desc)
                 return
