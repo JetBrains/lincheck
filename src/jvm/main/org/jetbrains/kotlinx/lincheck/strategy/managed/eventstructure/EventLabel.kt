@@ -867,12 +867,22 @@ data class LockLabel(
     val isReentry: Boolean =
         (reentranceDepth - reentranceCount > 0)
 
+    private fun completeRequest(): LockLabel {
+        require(isRequest)
+        return LockLabel(
+            kind = LabelKind.Response,
+            mutex_ = mutex,
+            reentranceDepth = reentranceDepth,
+            reentranceCount = reentranceCount,
+        )
+    }
+
     override fun synchronize(label: EventLabel): EventLabel? = when {
         (isRequest && !isReentry && label is UnlockLabel && !label.isReentry && mutex == label.mutex) ->
-            LockLabel(LabelKind.Response, mutex)
+            completeRequest()
 
         (isRequest && label is InitializationLabel) ->
-            LockLabel(LabelKind.Response, mutex)
+            completeRequest()
 
         else -> super.synchronize(label)
     }

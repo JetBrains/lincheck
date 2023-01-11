@@ -293,7 +293,7 @@ class EventStructure(
                 val unlock = dependencies.first()
                 currentExecution.forEach { event ->
                     if (event.label is LockLabel && event.label.isResponse &&
-                        event.label.mutex == label.mutex && event.locksFrom == unlock) {
+                        event.label.mutex === label.mutex && event.locksFrom == unlock) {
                         conflicts.add(event)
                     }
                 }
@@ -306,7 +306,7 @@ class EventStructure(
                     return@run
                 currentExecution.forEach { event ->
                     if (event.label is WaitLabel && event.label.isResponse &&
-                        event.label.mutex == label.mutex && event.notifiedBy == notify) {
+                        event.label.mutex === label.mutex && event.notifiedBy == notify) {
                         conflicts.add(event)
                     }
                 }
