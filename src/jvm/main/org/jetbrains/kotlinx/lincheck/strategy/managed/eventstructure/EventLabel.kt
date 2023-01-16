@@ -752,6 +752,7 @@ data class WriteAccessLabel(
  */
 sealed class MutexLabel(
     kind: LabelKind,
+    // TODO: make mutex OpaqueValue!
     protected open var mutex_: Any,
     isBlocking: Boolean = false,
     unblocked: Boolean = true,
@@ -878,7 +879,7 @@ data class LockLabel(
     }
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-        (isRequest && !isReentry && label is UnlockLabel && !label.isReentry && mutex == label.mutex) ->
+        (isRequest && !isReentry && label is UnlockLabel && !label.isReentry && mutex === label.mutex) ->
             completeRequest()
 
         (isRequest && label is InitializationLabel) ->
@@ -889,8 +890,8 @@ data class LockLabel(
 
     override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
-        label is LockLabel && label.isRequest && mutex == label.mutex -> true
-        label is UnlockLabel && !label.isReentry && !isReentry && mutex == label.mutex -> true
+        label is LockLabel && label.isRequest && mutex === label.mutex -> true
+        label is UnlockLabel && !label.isReentry && !isReentry && mutex === label.mutex -> true
         label is InitializationLabel -> true
         else -> false
     }
@@ -958,7 +959,7 @@ data class WaitLabel(
         // (isRequest && label is InitializationLabel) ->
         //     WaitLabel(LabelKind.Response, mutex)
 
-        (isRequest && label is NotifyLabel && mutex == label.mutex) ->
+        (isRequest && label is NotifyLabel && mutex === label.mutex) ->
             WaitLabel(LabelKind.Response, mutex)
 
         else -> super.synchronize(label)
@@ -966,8 +967,8 @@ data class WaitLabel(
 
     override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
-        label is WaitLabel && label.isRequest && mutex == label.mutex -> true
-        label is NotifyLabel && mutex == label.mutex -> true
+        label is WaitLabel && label.isRequest && mutex === label.mutex -> true
+        label is NotifyLabel && mutex === label.mutex -> true
         // TODO: provide an option to enable spurious wake-ups
         // label is InitializationLabel -> true
         else -> false

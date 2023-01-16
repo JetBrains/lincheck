@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import java.util.IdentityHashMap
 import kotlin.reflect.KClass
 
 class EventStructure(
@@ -227,7 +228,7 @@ class EventStructure(
     // should only be called in replay phase!
     private fun isDanglingRequestReplay(iThread: Int): Boolean {
         val nextEvent = currentExecution[iThread, playedFrontier.getNextPosition(iThread)]!!
-        return nextEvent.label.isRequest && nextEvent == currentExecution[iThread]?.last()
+        return nextEvent.label.isRequest && nextEvent == currentExecution[iThread]?.last() // && nextEvent !in pendingEvents
     }
 
     // should only be called in replay phase!
@@ -872,7 +873,7 @@ class EventStructure(
 }
 
 private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
-    private val map = mutableMapOf<Any, IntArray>()
+    private val map = IdentityHashMap<Any, IntArray>()
 
     override fun acquire(iThread: Int, monitor: Any): Boolean {
         val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }

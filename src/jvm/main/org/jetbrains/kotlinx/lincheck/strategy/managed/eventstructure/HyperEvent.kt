@@ -226,7 +226,7 @@ class UnlockAndWait(
     init {
         require(unlock.label is UnlockLabel)
         require(waitRequest.label is WaitLabel && waitRequest.label.isRequest)
-        require(waitRequest.label.mutex == unlock.label.mutex)
+        require(waitRequest.label.mutex === unlock.label.mutex)
         require(waitRequest.parent == unlock)
         check(unlock.dependencies.isEmpty() && waitRequest.dependencies.isEmpty())
     }
@@ -249,7 +249,7 @@ class WakeUpAndTryLock(
     init {
         require(waitResponse.label is WaitLabel && waitResponse.label.isResponse)
         require(lockRequest.label is LockLabel && lockRequest.label.isRequest)
-        require(lockRequest.label.mutex == waitResponse.label.mutex)
+        require(lockRequest.label.mutex === waitResponse.label.mutex)
         require(lockRequest.parent == waitResponse)
         check(lockRequest.dependencies.isEmpty())
     }
@@ -277,7 +277,7 @@ fun List<Event>.nextCriticalSectionEvents(firstEvent: Event): List<CriticalSecti
     var counter = 0
     while (pos < size) {
         val event = get(pos++)
-        if (event.label !is MutexLabel || event.label.mutex != mutex)
+        if (event.label !is MutexLabel || event.label.mutex !== mutex)
             continue
         when (event.label) {
             is LockLabel -> if (event.label.isResponse) {
@@ -349,8 +349,8 @@ class CriticalSectionEvent(events: List<Event>) : HyperEvent(events) {
             var counter = 0
             for (event in events) {
                 when(event.label) {
-                    is LockLabel    -> if (event.label.mutex == mutex) counter++
-                    is UnlockLabel  -> if (event.label.mutex == mutex) counter--
+                    is LockLabel    -> if (event.label.mutex === mutex) counter++
+                    is UnlockLabel  -> if (event.label.mutex === mutex) counter--
                 }
             }
             return (counter == 0)
