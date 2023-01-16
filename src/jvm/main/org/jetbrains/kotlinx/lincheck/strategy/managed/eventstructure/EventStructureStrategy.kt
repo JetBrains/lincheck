@@ -231,9 +231,10 @@ class EventStructureStrategy(
         // TODO: refactor, make `switchCurrentThread` private again in ManagedStrategy,
         //   call overridden `onStart` and `onFinish` methods only when thread is active
         //   and the `currentThread` lock is held
-        while (!isActive(iThread)) {
-            switchCurrentThread(iThread, mustSwitch = true)
-        }
+        awaitTurn(iThread)
+        // while (!isActive(iThread)) {
+        //     switchCurrentThread(iThread, mustSwitch = true)
+        // }
         eventStructure.addThreadFinishEvent(iThread)
         super.onFinish(iThread)
     }
