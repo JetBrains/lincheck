@@ -23,8 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import java.util.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
-import kotlin.reflect.full.*
-import kotlin.reflect.jvm.*
 
 interface MemoryLocation {
     // TODO: rename?
