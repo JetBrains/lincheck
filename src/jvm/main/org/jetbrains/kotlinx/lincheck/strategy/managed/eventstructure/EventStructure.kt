@@ -221,17 +221,33 @@ class EventStructure(
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
 
+    fun onlyThreadInReplayPhase(iThread: Int): Boolean =
+        (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
+
     // should only be called in replay phase!
-    fun getNextEventToReplay(iThread: Int): HyperEvent =
+    private fun isDanglingRequestReplay(iThread: Int): Boolean {
+        val nextEvent = currentExecution[iThread, playedFrontier.getNextPosition(iThread)]!!
+        return nextEvent.label.isRequest && nextEvent == currentExecution[iThread]?.last()
+    }
+
+    // should only be called in replay phase!
+    private fun getNextEventToReplay(iThread: Int): HyperEvent =
         currentExecution.nextAtomicEvent(iThread, playedFrontier.getNextPosition(iThread))!!
 
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
+        // delay replaying dangling request events
+        // TODO: remove it!
+        if (isDanglingRequestReplay(iThread)) {
+            return (0 .. maxThreadId).all {
+                it == iThread || it == currentExplorationRoot.threadId ||
+                (inReplayPhase(it) implies { isDanglingRequestReplay(it) })
+            }
+        }
         val atomicEvent = getNextEventToReplay(iThread)
         // delay replaying the last event till all other events are replayed;
         if (currentExplorationRoot == atomicEvent.events.last()) {
-            // TODO: prettify
-            return (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
+            return onlyThreadInReplayPhase(iThread)
         }
         return atomicEvent.dependencies.all { dependency ->
             dependency in playedFrontier
