@@ -57,8 +57,6 @@ class EventStructureStrategy(
             atomicityChecker,
         )
 
-    override val alwaysMustSwitch: Boolean = true
-
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
     // Tracker of monitors operations.
