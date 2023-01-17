@@ -146,8 +146,12 @@ class EventStructure(
     private fun resetExploration(event: Event) {
         currentExplorationRoot = event
         // TODO: filter unused initialization events
-        _currentExecution = event.frontier.toExecution()
-        pinnedEvents = event.pinnedEvents.copy()
+        _currentExecution = event.frontier.toExecution().apply {
+            removeDanglingRequestEvents()
+        }
+        pinnedEvents = event.pinnedEvents.copy().ensure {
+            it.mapping.values.all { pinned -> pinned in currentExecution }
+        }
         _initializationMap.clear()
         currentRemapping.reset()
         monitorTracker.reset()
@@ -155,18 +159,6 @@ class EventStructure(
         pendingEvents.clear().also { populatePendingEvents() }
         delayedConsistencyCheckBuffer.clear()
         detectedInconsistency = null
-        removeDanglingRequests()
-    }
-
-    private fun removeDanglingRequests() {
-        for (threadId in currentExecution.threads) {
-            val lastEvent = currentExecution[threadId]?.lastOrNull() ?: continue
-            if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
-                check(lastEvent !in pinnedEvents)
-                lastEvent.parent?.label?.ensure { !it.isRequest }
-                _currentExecution.removeLastEvent(lastEvent)
-            }
-        }
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -201,9 +193,12 @@ class EventStructure(
         // in order to give it more lightweight incremental checker
         // an opportunity to find inconsistency earlier.
         if (isReplayedEvent) {
-            val replayedExecution = currentExplorationRoot.frontier.toExecution()
-            // we temporarily remove new event in order to reset incremental checker
-            replayedExecution.removeLastEvent(currentExplorationRoot)
+            val replayedExecution = currentExplorationRoot.frontier.toExecution().apply {
+                // remove dangling request events, similarly as we do in `resetExploration`
+                removeDanglingRequestEvents()
+                // temporarily remove new event in order to reset incremental checker
+                removeLastEvent(currentExplorationRoot)
+            }
             // reset internal state of incremental checker
             incrementalChecker.reset(replayedExecution)
             // copy delayed events from the buffer and reset it

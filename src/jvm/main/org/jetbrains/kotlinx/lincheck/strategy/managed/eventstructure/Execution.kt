@@ -182,6 +182,16 @@ class MutableExecution(
         threadEvents?.removeLast()
     }
 
+    fun removeDanglingRequestEvents() {
+        for (threadId in threads) {
+            val lastEvent = get(threadId)?.lastOrNull() ?: continue
+            if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
+                lastEvent.parent?.label?.ensure { !it.isRequest }
+                removeLastEvent(lastEvent)
+            }
+        }
+    }
+
 }
 
 abstract class ExecutionRelation(
