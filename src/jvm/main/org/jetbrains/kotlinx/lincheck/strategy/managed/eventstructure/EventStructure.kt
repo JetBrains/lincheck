@@ -144,7 +144,6 @@ class EventStructure(
     }
 
     private fun resetExploration(event: Event) {
-        check(delayedConsistencyCheckBuffer.isEmpty())
         currentExplorationRoot = event
         // TODO: filter unused initialization events
         _currentExecution = event.frontier.toExecution()
@@ -154,6 +153,7 @@ class EventStructure(
         monitorTracker.reset()
         parkingTracker.reset()
         pendingEvents.clear().also { populatePendingEvents() }
+        delayedConsistencyCheckBuffer.clear()
         detectedInconsistency = null
     }
 
@@ -223,29 +223,30 @@ class EventStructure(
     }
 
     fun onlyThreadInReplayPhase(iThread: Int): Boolean =
-        (0 .. maxThreadId).all { it == iThread || !inReplayPhase(it) }
+        (0 .. maxThreadId).all {
+            it == iThread ||
+            !inReplayPhase(it) ||
+            getNextEventToReplay(it) in pendingEvents
+        }
 
     // should only be called in replay phase!
-    private fun isDanglingRequestReplay(iThread: Int): Boolean {
-        val nextEvent = currentExecution[iThread, playedFrontier.getNextPosition(iThread)]!!
-        return nextEvent.label.isRequest && nextEvent == currentExecution[iThread]?.last() // && nextEvent !in pendingEvents
+    fun isDanglingRequestReplay(iThread: Int): Boolean {
+        val nextEvent = getNextEventToReplay(iThread)
+        return nextEvent.label.isRequest &&
+            nextEvent == currentExecution[iThread]?.last()
     }
 
     // should only be called in replay phase!
-    private fun getNextEventToReplay(iThread: Int): HyperEvent =
+    fun getNextEventToReplay(iThread: Int): Event =
+        currentExecution[iThread, playedFrontier.getNextPosition(iThread)]!!
+
+    // should only be called in replay phase!
+    private fun getNextHyperEventToReplay(iThread: Int): HyperEvent =
         currentExecution.nextAtomicEvent(iThread, playedFrontier.getNextPosition(iThread))!!
 
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
-        // delay replaying dangling request events
-        // TODO: remove it!
-        if (isDanglingRequestReplay(iThread)) {
-            return (0 .. maxThreadId).all {
-                it == iThread || it == currentExplorationRoot.threadId ||
-                (inReplayPhase(it) implies { isDanglingRequestReplay(it) })
-            }
-        }
-        val atomicEvent = getNextEventToReplay(iThread)
+        val atomicEvent = getNextHyperEventToReplay(iThread)
         // delay replaying the last event till all other events are replayed;
         if (currentExplorationRoot == atomicEvent.events.last()) {
             return onlyThreadInReplayPhase(iThread)
@@ -363,7 +364,7 @@ class EventStructure(
         if (label.index == null || label.index in initializationMap)
             return
         val initEvent = if (inReplayPhase(iThread)) {
-            val atomicEvent = getNextEventToReplay(iThread)
+            val atomicEvent = getNextHyperEventToReplay(iThread)
             val requestEvent = atomicEvent.events[0]
             check(requestEvent.label.isRequest)
             val initEvent = currentExecution[initThreadId]!!
@@ -397,10 +398,14 @@ class EventStructure(
             return emptyList()
         // consider all candidates in current execution and apply some general filters
         val candidates = currentExecution.asSequence()
-            // for send event we filter out all of its causal predecessors,
-            // because an attempt to synchronize with these predecessors will result in causality cycle
+            // for send event we filter out ...
             .runIf(event.label.isSend) { filter {
-                !causalityOrder.lessThan(it, event) && !pinnedEvents.contains(it)
+                // (1) all of its causal predecessors, because an attempt to synchronize with
+                //     these predecessors will result in causality cycle
+                !causalityOrder.lessThan(it, event) &&
+                // (2) pinned events, because their response part is pinned (i.e. fixed),
+                //     unless pinned event is blocking pending event
+                (!pinnedEvents.contains(it) || pendingEvents.contains(it))
             }}
         return when {
             // for read-request events we search for the last write to the same memory location

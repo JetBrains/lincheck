@@ -178,7 +178,9 @@ class EventStructureStrategy(
         // we should wait until replaying the next event become possible
         // (i.e. when all the dependencies will be replayed too)
         if (eventStructure.inReplayPhase(iThread)) {
-            return !eventStructure.canReplayNextEvent(iThread)
+            return !eventStructure.canReplayNextEvent(iThread) ||
+                    // we additionally postpone handling of dangling request events
+                    eventStructure.isDanglingRequestReplay(iThread)
         }
         // For event structure strategy enforcing context switches is not necessary,
         // because it is guaranteed that the strategy will explore all
@@ -195,7 +197,10 @@ class EventStructureStrategy(
     override fun chooseThread(iThread: Int): Int {
         // see comment in `shouldSwitch` method
         // TODO: make scheduling strategy configurable
-        return switchableThreads(iThread).first()
+        val threads = switchableThreads(iThread)
+        return threads
+            .find { eventStructure.inReplayPhase(it) implies { !eventStructure.isDanglingRequestReplay(it) } }
+            ?: threads.first()
     }
 
     override fun isActive(iThread: Int): Boolean {
