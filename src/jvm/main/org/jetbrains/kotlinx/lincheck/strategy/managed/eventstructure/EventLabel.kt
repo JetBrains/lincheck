@@ -752,8 +752,7 @@ data class WriteAccessLabel(
  */
 sealed class MutexLabel(
     kind: LabelKind,
-    // TODO: make mutex OpaqueValue!
-    protected open var mutex_: Any,
+    protected open var mutex_: OpaqueValue,
     isBlocking: Boolean = false,
     unblocked: Boolean = true,
 ): EventLabel(kind, SynchronizationType.Binary, isBlocking, unblocked) {
@@ -761,7 +760,7 @@ sealed class MutexLabel(
     /**
      * Lock object affected by this operation.
      */
-    val mutex: Any
+    val mutex: OpaqueValue
         get() = mutex_
 
     /**
@@ -809,12 +808,12 @@ sealed class MutexLabel(
             }) {
             "Event label $this cannot be replayed by $label"
         }
-        remapping[mutex] = label.mutex
+        remapping[mutex.unwrap()] = label.mutex.unwrap()
         mutex_ = label.mutex
     }
 
     override fun remap(remapping: Remapping) {
-        remapping[mutex]?.also { mutex_ = it }
+        remapping[mutex.unwrap()]?.also { mutex_ = it.opaque() }
     }
 
     override fun toString(): String {
@@ -823,7 +822,7 @@ sealed class MutexLabel(
             LabelKind.Request -> "^req"
             LabelKind.Response -> "^rsp"
         }
-        return "${operationKind}${kindString}(${opaqueString(mutex)})"
+        return "${operationKind}${kindString}($mutex)"
     }
 
 }
@@ -850,7 +849,7 @@ enum class MutexOperationKind { Lock, Unlock, Wait, Notify }
  */
 data class LockLabel(
     override val kind: LabelKind,
-    override var mutex_: Any,
+    override var mutex_: OpaqueValue,
     val reentranceDepth: Int = 1,
     val reentranceCount: Int = 1,
 ) : MutexLabel(
@@ -879,7 +878,7 @@ data class LockLabel(
     }
 
     override fun synchronize(label: EventLabel): EventLabel? = when {
-        (isRequest && !isReentry && label is UnlockLabel && !label.isReentry && mutex === label.mutex) ->
+        (isRequest && !isReentry && label is UnlockLabel && !label.isReentry && mutex == label.mutex) ->
             completeRequest()
 
         (isRequest && label is InitializationLabel) ->
@@ -890,8 +889,8 @@ data class LockLabel(
 
     override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
-        label is LockLabel && label.isRequest && mutex === label.mutex -> true
-        label is UnlockLabel && !label.isReentry && !isReentry && mutex === label.mutex -> true
+        label is LockLabel && label.isRequest && mutex == label.mutex -> true
+        label is UnlockLabel && !label.isReentry && !isReentry && mutex == label.mutex -> true
         label is InitializationLabel -> true
         else -> false
     }
@@ -911,14 +910,16 @@ data class LockLabel(
  * @see MutexLabel
  */
 data class UnlockLabel(
-    override var mutex_: Any,
+    override var mutex_: OpaqueValue,
     val reentranceDepth: Int = 1,
     val reentranceCount: Int = 1,
 ) : MutexLabel(LabelKind.Send, mutex_) {
 
     init {
         // TODO: checks for non-reentrant locks
-        require(reentranceDepth - reentranceCount >= 0)
+        require(reentranceDepth - reentranceCount >= 0) {
+            "hehn't"
+        }
     }
 
     val isReentry: Boolean =
@@ -947,7 +948,7 @@ data class UnlockLabel(
  */
 data class WaitLabel(
     override val kind: LabelKind,
-    override var mutex_: Any,
+    override var mutex_: OpaqueValue,
 ) : MutexLabel(
     kind = kind,
     mutex_ = mutex_,
@@ -959,7 +960,7 @@ data class WaitLabel(
         // (isRequest && label is InitializationLabel) ->
         //     WaitLabel(LabelKind.Response, mutex)
 
-        (isRequest && label is NotifyLabel && mutex === label.mutex) ->
+        (isRequest && label is NotifyLabel && mutex == label.mutex) ->
             WaitLabel(LabelKind.Response, mutex)
 
         else -> super.synchronize(label)
@@ -967,8 +968,8 @@ data class WaitLabel(
 
     override fun synchronizedFrom(label: EventLabel): Boolean = when {
         !isResponse -> false
-        label is WaitLabel && label.isRequest && mutex === label.mutex -> true
-        label is NotifyLabel && mutex === label.mutex -> true
+        label is WaitLabel && label.isRequest && mutex == label.mutex -> true
+        label is NotifyLabel && mutex == label.mutex -> true
         // TODO: provide an option to enable spurious wake-ups
         // label is InitializationLabel -> true
         else -> false
@@ -991,7 +992,7 @@ data class WaitLabel(
  * @see MutexLabel
  */
 data class NotifyLabel(
-    override var mutex_: Any,
+    override var mutex_: OpaqueValue,
     val isBroadcast: Boolean
 ) : MutexLabel(LabelKind.Send, mutex_) {
 

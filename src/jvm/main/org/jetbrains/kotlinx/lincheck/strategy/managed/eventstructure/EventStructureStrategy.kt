@@ -312,21 +312,21 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
 
 private class EventStructureMonitorTracker(private val eventStructure: EventStructure) : MonitorTracker {
 
-    override fun acquire(iThread: Int, monitor: Any): Boolean {
+    override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
         val event = eventStructure.addLockEvent(iThread, monitor)
         return event.label.isResponse
     }
 
-    override fun release(iThread: Int, monitor: Any) {
+    override fun release(iThread: Int, monitor: OpaqueValue) {
         eventStructure.addUnlockEvent(iThread, monitor)
     }
 
-    override fun wait(iThread: Int, monitor: Any): Boolean {
+    override fun wait(iThread: Int, monitor: OpaqueValue): Boolean {
         val event = eventStructure.addWaitEvent(iThread, monitor)
         return event.label.isRequest
     }
 
-    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {
+    override fun notify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean) {
         eventStructure.addNotifyEvent(iThread, monitor, notifyAll)
     }
 
@@ -334,7 +334,7 @@ private class EventStructureMonitorTracker(private val eventStructure: EventStru
         return eventStructure.isWaiting(iThread)
     }
 
-    override fun reentranceDepth(iThread: Int, monitor: Any): Int {
+    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int {
         return eventStructure.lockReentranceDepth(iThread, monitor)
     }
 

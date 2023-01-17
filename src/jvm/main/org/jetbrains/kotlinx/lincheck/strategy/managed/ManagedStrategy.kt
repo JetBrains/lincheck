@@ -562,7 +562,7 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         // Try to acquire the monitor
-        while (!monitorTracker.acquire(iThread, monitor)) {
+        while (!monitorTracker.acquire(iThread, monitor.opaque())) {
             failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a lock has been found" }
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
@@ -579,7 +579,7 @@ abstract class ManagedStrategy(
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
-        monitorTracker.release(iThread, monitor)
+        monitorTracker.release(iThread, monitor.opaque())
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
@@ -596,7 +596,7 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
         failIfObstructionFreedomIsRequired { "Obstruction-freedom is required but a waiting on a monitor block has been found" }
         if (withTimeout) return false // timeouts occur instantly
-        while (monitorTracker.wait(iThread, monitor)) {
+        while (monitorTracker.wait(iThread, monitor.opaque())) {
             val mustSwitch = monitorTracker.isWaiting(iThread)
             // switch to another thread and wait till a notify event happens
             switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, mustSwitch)
@@ -611,7 +611,7 @@ abstract class ManagedStrategy(
      */
     internal fun beforeNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
-        monitorTracker.notify(iThread, monitor, notifyAll)
+        monitorTracker.notify(iThread, monitor.opaque(), notifyAll)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }

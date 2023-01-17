@@ -310,7 +310,7 @@ class EventStructure(
                 val unlock = dependencies.first()
                 currentExecution.forEach { event ->
                     if (event.label is LockLabel && event.label.isResponse &&
-                        event.label.mutex === label.mutex && event.locksFrom == unlock) {
+                        event.label.mutex == label.mutex && event.locksFrom == unlock) {
                         conflicts.add(event)
                     }
                 }
@@ -323,7 +323,7 @@ class EventStructure(
                     return@run
                 currentExecution.forEach { event ->
                     if (event.label is WaitLabel && event.label.isResponse &&
-                        event.label.mutex === label.mutex && event.notifiedBy == notify) {
+                        event.label.mutex == label.mutex && event.notifiedBy == notify) {
                         conflicts.add(event)
                     }
                 }
@@ -686,7 +686,7 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addLockEvent(iThread: Int, mutex: Any): Event {
+    fun addLockEvent(iThread: Int, mutex: OpaqueValue): Event {
         val depth = 1 + monitorTracker.reentranceDepth(iThread, mutex)
         val label = LockLabel(
             kind = LabelKind.Request,
@@ -711,7 +711,7 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addUnlockEvent(iThread: Int, mutex: Any): Event {
+    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue): Event {
         val depth = monitorTracker.reentranceDepth(iThread, mutex)
         val label = UnlockLabel(
             mutex_ = mutex,
@@ -722,7 +722,7 @@ class EventStructure(
         }
     }
 
-    fun addWaitEvent(iThread: Int, mutex: Any): Event {
+    fun addWaitEvent(iThread: Int, mutex: OpaqueValue): Event {
         val label = WaitLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
@@ -766,7 +766,7 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addNotifyEvent(iThread: Int, mutex: Any, isBroadcast: Boolean): Event {
+    fun addNotifyEvent(iThread: Int, mutex: OpaqueValue, isBroadcast: Boolean): Event {
         // TODO: we currently ignore isBroadcast flag and handle `notify` similarly as `notifyAll`.
         //   It is correct wrt. Java's semantics, since `wait` can wake-up spuriously according to the spec.
         //   Thus multiple wake-ups due to single notify can be interpreted as spurious.
@@ -811,7 +811,7 @@ class EventStructure(
         }
     }
 
-    fun lockReentranceDepth(iThread: Int, monitor: Any): Int =
+    fun lockReentranceDepth(iThread: Int, monitor: OpaqueValue): Int =
         monitorTracker.reentranceDepth(iThread, monitor)
 
     fun isWaiting(iThread: Int): Boolean =
@@ -877,26 +877,26 @@ class EventStructure(
 }
 
 private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
-    private val map = IdentityHashMap<Any, IntArray>()
+    private val map = mutableMapOf<OpaqueValue, IntArray>()
 
-    override fun acquire(iThread: Int, monitor: Any): Boolean {
+    override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
         val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
         reentrance[iThread]++
         return true
     }
 
-    override fun release(iThread: Int, monitor: Any) {
+    override fun release(iThread: Int, monitor: OpaqueValue) {
         val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
         check(reentrance[iThread] > 0)
         reentrance[iThread]--
     }
 
-    override fun reentranceDepth(iThread: Int, monitor: Any): Int =
+    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int =
         map[monitor]?.get(iThread) ?: 0
 
-    override fun wait(iThread: Int, monitor: Any): Boolean = false
+    override fun wait(iThread: Int, monitor: OpaqueValue): Boolean = false
 
-    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {}
+    override fun notify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean) {}
 
     override fun isWaiting(iThread: Int): Boolean = false
 
