@@ -194,8 +194,6 @@ class EventStructure(
             replayedExecution.removeLastEvent(currentExplorationRoot)
             // reset internal state of incremental checker
             incrementalChecker.reset(replayedExecution)
-            // add current exploration root to delayed buffer too
-            delayedConsistencyCheckBuffer.add(currentExplorationRoot)
             // copy delayed events from the buffer and reset it
             val delayedEvents = delayedConsistencyCheckBuffer.toMutableList()
             delayedConsistencyCheckBuffer.clear()
@@ -247,10 +245,6 @@ class EventStructure(
     // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
         val atomicEvent = getNextHyperEventToReplay(iThread)
-        // delay replaying the last event till all other events are replayed;
-        if (currentExplorationRoot == atomicEvent.events.last()) {
-            return onlyThreadInReplayPhase(iThread)
-        }
         return atomicEvent.dependencies.all { dependency ->
             dependency in playedFrontier
         }
@@ -353,7 +347,7 @@ class EventStructure(
         }
         // TODO: set suddenInvocationResult instead
         if (detectedInconsistency == null) {
-            detectedInconsistency = checkConsistencyIncrementally(event, isReplayedEvent)
+            detectedInconsistency = checkConsistencyIncrementally(event, isReplayedEvent && event != currentExplorationRoot)
         }
     }
 
