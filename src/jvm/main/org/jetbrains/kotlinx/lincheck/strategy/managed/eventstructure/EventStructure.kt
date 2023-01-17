@@ -155,6 +155,18 @@ class EventStructure(
         pendingEvents.clear().also { populatePendingEvents() }
         delayedConsistencyCheckBuffer.clear()
         detectedInconsistency = null
+        removeDanglingRequests()
+    }
+
+    private fun removeDanglingRequests() {
+        for (threadId in currentExecution.threads) {
+            val lastEvent = currentExecution[threadId]?.lastOrNull() ?: continue
+            if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
+                check(lastEvent !in pinnedEvents)
+                lastEvent.parent?.label?.ensure { !it.isRequest }
+                _currentExecution.removeLastEvent(lastEvent)
+            }
+        }
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -226,13 +238,6 @@ class EventStructure(
             !inReplayPhase(it) ||
             getNextEventToReplay(it) in pendingEvents
         }
-
-    // should only be called in replay phase!
-    fun isDanglingRequestReplay(iThread: Int): Boolean {
-        val nextEvent = getNextEventToReplay(iThread)
-        return nextEvent.label.isRequest &&
-            nextEvent == currentExecution[iThread]?.last()
-    }
 
     // should only be called in replay phase!
     fun getNextEventToReplay(iThread: Int): Event =
