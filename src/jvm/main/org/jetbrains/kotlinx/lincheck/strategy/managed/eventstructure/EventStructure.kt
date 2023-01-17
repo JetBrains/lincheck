@@ -752,7 +752,8 @@ class EventStructure(
         val lockLabel = LockLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
-            reentranceDepth = depth
+            reentranceDepth = depth,
+            reentranceCount = depth,
         )
         val lockRequestEvent = addRequestEvent(iThread, lockLabel)
         val (lockResponseEvent, _) = addResponseEvents(lockRequestEvent)
