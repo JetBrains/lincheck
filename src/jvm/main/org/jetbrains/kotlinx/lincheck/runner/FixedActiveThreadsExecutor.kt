@@ -123,12 +123,11 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private fun submitTask(iThread: Int, task: Any) {
-        if (tasks[iThread].compareAndSet(null, task)) return
-        // CAS failed => a test thread is parked.
-        // Submit the task and unpark the waiting thread.
-        val thread = tasks[iThread].value as TestThread
-        tasks[iThread].value = task
-        LockSupport.unpark(thread)
+        // TODO document me
+        tasks[iThread].getAndSet(task).let {
+            if (it is TestThread) LockSupport.unpark(it)
+            assert(it == null || task === SHUTDOWN)
+        }
     }
 
     private fun await(timeoutMs: Long) {
