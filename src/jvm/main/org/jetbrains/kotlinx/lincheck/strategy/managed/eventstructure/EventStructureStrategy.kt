@@ -60,7 +60,8 @@ class EventStructureStrategy(
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
     // Tracker of monitors operations.
-    override val monitorTracker: MonitorTracker = EventStructureMonitorTracker(eventStructure)
+    override val monitorTracker: MonitorTracker =
+        EventStructureMonitorTracker(eventStructure, MapMonitorTracker(nThreads))
     // Tracker of thread parking
     override val parkingTracker: ParkingTracker = EventStructureParkingTracker(eventStructure)
 
@@ -310,20 +311,91 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
 
 }
 
-private class EventStructureMonitorTracker(private val eventStructure: EventStructure) : MonitorTracker {
+private class EventStructureMonitorTracker(
+    private val eventStructure: EventStructure,
+    private val monitorTracker: MonitorTracker,
+) : MonitorTracker {
 
     override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
-        val event = eventStructure.addLockEvent(iThread, monitor)
-        return event.label.isResponse
+        val lockRequest = eventStructure.getBlockedRequest(iThread)
+            ?: eventStructure.addLockRequestEvent(iThread, monitor)
+        // if lock is acquired by another thread then postpone addition of lock-response event
+        if (!monitorTracker.acquire(iThread, monitor)) {
+            return false
+        }
+        val lockResponse = eventStructure.addLockResponseEvent(lockRequest)
+        // if we cannot add lock-response currently then release the lock and return
+        if (lockResponse == null) {
+            monitorTracker.release(iThread, monitor)
+            return false
+        }
+        return true
     }
 
     override fun release(iThread: Int, monitor: OpaqueValue) {
+        monitorTracker.release(iThread, monitor)
         eventStructure.addUnlockEvent(iThread, monitor)
     }
 
+    override fun owner(monitor: OpaqueValue): Int? =
+        monitorTracker.owner(monitor)
+
+    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int {
+        return monitorTracker.reentranceDepth(iThread, monitor)
+    }
+
     override fun wait(iThread: Int, monitor: OpaqueValue): Boolean {
-        val event = eventStructure.addWaitEvent(iThread, monitor)
-        return event.label.isRequest
+        var unlockEvent: Event? = null
+        var waitRequestEvent: Event? = null
+        var waitResponseEvent: Event? = null
+        var lockRequestEvent: Event? = null
+        var lockResponseEvent: Event? = null
+        val blockedEvent = eventStructure.getBlockedRequest(iThread)
+        if (blockedEvent != null) {
+            check(blockedEvent.label is WaitLabel || blockedEvent.label is LockLabel)
+            if (blockedEvent.label is WaitLabel) {
+                waitRequestEvent = blockedEvent
+            }
+            if (blockedEvent.label is LockLabel) {
+                lockRequestEvent = blockedEvent.ensure { it.label.isRequest && it.label is LockLabel }
+                waitResponseEvent = lockRequestEvent.parent!!.ensure { it.label.isResponse && it.label is WaitLabel }
+                waitRequestEvent = waitResponseEvent.parent!!.ensure { it.label.isRequest && it.label is WaitLabel }
+            }
+            unlockEvent = waitRequestEvent!!.parent!!.ensure { it.label is UnlockLabel }
+        }
+        if (unlockEvent == null) {
+            val depth = monitorTracker.reentranceDepth(iThread, monitor).ensure { it > 0 }
+            monitorTracker.release(iThread, monitor, times = depth)
+            unlockEvent = eventStructure.addUnlockEvent(iThread, monitor,
+                reentranceDepth = depth, reentranceCount = depth
+            )
+        }
+        if (waitRequestEvent == null) {
+            waitRequestEvent = eventStructure.addWaitRequestEvent(iThread, monitor)
+        }
+        if (waitResponseEvent == null) {
+            waitResponseEvent = eventStructure.addWaitResponseEvent(waitRequestEvent)
+            if (waitResponseEvent == null)
+                return true
+        }
+        if (lockRequestEvent == null) {
+            val depth = (unlockEvent.label as UnlockLabel).reentranceDepth
+            val count = (unlockEvent.label as UnlockLabel).reentranceCount
+            lockRequestEvent = eventStructure.addLockRequestEvent(iThread, monitor,
+                reentranceDepth = depth, reentranceCount = count,
+            )
+        }
+        val count = (lockRequestEvent.label as LockLabel).reentranceCount
+        // if lock is acquired by another thread then postpone addition of lock-response event
+        if (!monitorTracker.acquire(iThread, monitor, times = count)) {
+            return true
+        }
+        lockResponseEvent = eventStructure.addLockResponseEvent(lockRequestEvent)
+        // if we cannot add lock-response currently then release the lock and return
+        if (lockResponseEvent == null) {
+            monitorTracker.release(iThread, monitor, times = count)
+        }
+        return false
     }
 
     override fun notify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean) {
@@ -331,29 +403,38 @@ private class EventStructureMonitorTracker(private val eventStructure: EventStru
     }
 
     override fun isWaiting(iThread: Int): Boolean {
-        return eventStructure.isWaiting(iThread)
+        if (monitorTracker.isWaiting(iThread))
+            return true
+        val blockedEvent = eventStructure.getBlockedAwaitingRequest(iThread)
+            ?: return false
+        return blockedEvent.label is LockLabel || blockedEvent.label is WaitLabel
     }
 
-    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int {
-        return eventStructure.lockReentranceDepth(iThread, monitor)
+    override fun reset() {
+        monitorTracker.reset()
     }
-
-    override fun reset() {}
 
 }
 
-private class EventStructureParkingTracker(private val eventStructure: EventStructure) : ParkingTracker {
+private class EventStructureParkingTracker(
+    private val eventStructure: EventStructure,
+) : ParkingTracker {
 
     override fun park(iThread: Int) {
-        eventStructure.addParkEvent(iThread)
+        eventStructure.addParkRequestEvent(iThread)
     }
 
     override fun unpark(iThread: Int, unparkingThreadId: Int) {
         eventStructure.addUnparkEvent(iThread, unparkingThreadId)
     }
 
-    override fun isParked(iThread: Int): Boolean =
-        eventStructure.isParked(iThread)
+    override fun isParked(iThread: Int): Boolean {
+        val parkRequest = eventStructure.getBlockedRequest(iThread)
+            ?.takeIf { it.label is ParkLabel }
+            ?: return false
+        val parkResponse = eventStructure.addParkResponseEvent(parkRequest)
+        return (parkResponse == null)
+    }
 
     override fun reset() {}
 

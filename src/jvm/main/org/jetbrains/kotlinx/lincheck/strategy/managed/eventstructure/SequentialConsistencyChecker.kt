@@ -144,7 +144,7 @@ private data class SequentialConsistencyReplayer(
                 this
 
             event.label is LockLabel && event.label.isResponse ->
-                if (this.monitorTracker.canAcquireMonitor(event.threadId, event.label.mutex)) {
+                if (this.monitorTracker.canAcquire(event.threadId, event.label.mutex)) {
                     this.copy().apply { monitorTracker.acquire(event.threadId, event.label.mutex).ensure() }
                 } else null
 
@@ -155,7 +155,7 @@ private data class SequentialConsistencyReplayer(
                 this.copy().apply { monitorTracker.wait(event.threadId, event.label.mutex).ensure() }
 
             event.label is WaitLabel && event.label.isResponse ->
-                if (this.monitorTracker.canAcquireMonitor(event.threadId, event.label.mutex)) {
+                if (this.monitorTracker.canAcquire(event.threadId, event.label.mutex)) {
                     this.copy().takeIf { !it.monitorTracker.wait(event.threadId, event.label.mutex) }
                 } else null
 

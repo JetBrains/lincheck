@@ -29,15 +29,40 @@ interface MonitorTracker {
 
     fun acquire(iThread: Int, monitor: OpaqueValue): Boolean
 
+    fun acquire(iThread: Int, monitor: OpaqueValue, times: Int): Boolean {
+        require(times > 0)
+        if (!acquire(iThread, monitor))
+            return false
+        repeat(times - 1) {
+            acquire(iThread, monitor)
+                // TODO: use ensure
+                .also { check(it) }
+        }
+        return true
+    }
+
     fun release(iThread: Int, monitor: OpaqueValue)
+
+    fun release(iThread: Int, monitor: OpaqueValue, times: Int) {
+        require(times > 0)
+        require(reentranceDepth(iThread, monitor) >= times)
+        repeat(times) {
+            release(iThread, monitor)
+        }
+    }
+
+    fun canAcquire(iThread: Int, monitor: OpaqueValue): Boolean =
+        owner(monitor)?.let { it == iThread } ?: true
+
+    fun owner(monitor: OpaqueValue): Int?
+
+    fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int
 
     fun wait(iThread: Int, monitor: OpaqueValue): Boolean
 
     fun notify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean)
 
     fun isWaiting(iThread: Int): Boolean
-
-    fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int
 
     fun reset()
 
@@ -89,6 +114,19 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
             acquiredMonitors.remove(monitor)
     }
 
+    override fun canAcquire(iThread: Int, monitor: OpaqueValue): Boolean {
+        val info = acquiredMonitors[monitor] ?: return true
+        return info.iThread == iThread
+    }
+
+    override fun owner(monitor: OpaqueValue): Int? =
+        acquiredMonitors[monitor]?.iThread
+
+    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int {
+        val info = acquiredMonitors[monitor]?.takeIf { it.iThread == iThread } ?: return 0
+        return info.timesAcquired
+    }
+
     /**
      * Performs a logical wait, [isWaiting] for the specified thread
      * returns `true` until the corresponding [notify] or [notifyAll] is invoked.
@@ -123,7 +161,8 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
      */
     override fun notify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean) {
         acquiringMonitors.forEachIndexed { t, info ->
-            if (monitor == info?.monitor) waitForNotify[t] = false
+            if (monitor == info?.monitor)
+                waitForNotify[t] = false
         }
     }
 
@@ -134,21 +173,7 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
         val monitor = acquiringMonitors[iThread]?.monitor ?: return false
         if (waitForNotify[iThread] && !allowSpuriousWakeUps)
             return true
-        return !canAcquireMonitor(iThread, monitor)
-    }
-
-    /**
-     * Returns `true` if the monitor is already acquired by
-     * the thread [iThread], or if this monitor is free to acquire.
-     */
-    fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
-        val info = acquiredMonitors[monitor] ?: return true
-        return info.iThread == iThread
-    }
-
-    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int {
-        val info = acquiredMonitors[monitor]?.takeIf { it.iThread == iThread } ?: return 0
-        return info.timesAcquired
+        return !canAcquire(iThread, monitor)
     }
 
     override fun reset() {

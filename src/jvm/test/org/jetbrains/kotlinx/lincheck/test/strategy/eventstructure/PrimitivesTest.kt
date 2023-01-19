@@ -411,8 +411,7 @@ class PrimitivesTest {
         // strategy should explore only 1 interleaving
         // naive strategy may explore more interleavings (due to context-switches before/after locks)
         val outcomes = setOf(1)
-        // TODO: investigate why there are 2 executions instead of 1
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes, executionCount = 2) { results ->
+        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
             getValue<Int>(results.parallelResults[1][0])
         }
     }

@@ -625,8 +625,12 @@ abstract class ManagedStrategy(
     @Suppress("UNUSED_PARAMETER")
     internal fun beforePark(iThread: Int, codeLocation: Int, tracePoint: ParkTracePoint?, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return false // TODO: return true?
-        parkingTracker.park(iThread)
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        parkingTracker.park(iThread)
+        while (parkingTracker.isParked(iThread)) {
+            // switch to another thread and wait till an unpark event happens
+            switchCurrentThread(iThread, SwitchReason.PARK_WAIT, true)
+        }
         return false
     }
 

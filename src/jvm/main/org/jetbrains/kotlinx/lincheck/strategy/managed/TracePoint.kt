@@ -278,6 +278,7 @@ enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),
+    PARK_WAIT("thread is parked"),
     SUSPENDED("coroutine is suspended"),
     STRATEGY_SWITCH("");
 

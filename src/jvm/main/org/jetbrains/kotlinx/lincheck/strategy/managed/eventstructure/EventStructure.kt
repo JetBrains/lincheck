@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import java.util.IdentityHashMap
 import kotlin.reflect.KClass
 
 class EventStructure(
@@ -91,16 +90,11 @@ class EventStructure(
 
     private var detectedInconsistency: Inconsistency? = null
 
-    private var monitorTracker = createMonitorTracker()
-
-    private var parkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = false)
-
     /*
-     * Map from pending blocked events to their responses.
-     * If event is pending but the corresponding response has not arrived yet
-     * then it is mapped to null.
+     * Map from blocked dangling events to their responses.
+     * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
      */
-    private val pendingEvents = mutableMapOf<Event, Event?>()
+    private val danglingEvents = mutableMapOf<Event, Event?>()
 
     init {
         root = addRootEvent()
@@ -154,9 +148,7 @@ class EventStructure(
         }
         _initializationMap.clear()
         currentRemapping.reset()
-        monitorTracker.reset()
-        parkingTracker.reset()
-        pendingEvents.clear().also { populatePendingEvents() }
+        danglingEvents.clear()
         delayedConsistencyCheckBuffer.clear()
         detectedInconsistency = null
     }
@@ -226,13 +218,6 @@ class EventStructure(
         val frontEvent = playedFrontier[iThread]?.ensure { it in _currentExecution }
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
-
-    fun onlyThreadInReplayPhase(iThread: Int): Boolean =
-        (0 .. maxThreadId).all {
-            it == iThread ||
-            !inReplayPhase(it) ||
-            getNextEventToReplay(it) in pendingEvents
-        }
 
     // should only be called in replay phase!
     fun getNextEventToReplay(iThread: Int): Event =
@@ -329,12 +314,24 @@ class EventStructure(
     }
 
     private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
-        if (visit) { event.visit() }
+        if (visit) {
+            event.visit()
+        }
         val isReplayedEvent = inReplayPhase(event.threadId)
         if (!isReplayedEvent) {
             _currentExecution.addEvent(event)
         }
         playedFrontier.update(event)
+        // mark last replayed blocking event as dangling
+        if (event.label.isRequest && event.label.isBlocking &&
+            isReplayedEvent && !inReplayPhase(event.threadId)) {
+            markBlockedDanglingRequest(event)
+        }
+        // unmark dangling request if its response was added
+        if (event.label.isResponse && event.label.isBlocking &&
+            event.parent in danglingEvents) {
+            unmarkBlockedDanglingRequest(event.parent!!)
+        }
         // take an opportunity to treat event performed in the main thread as the initialization event
         // if (event.threadId == mainThreadId &&
         //     event.label.kind == LabelKind.Send &&
@@ -386,10 +383,6 @@ class EventStructure(
     }
 
     private fun synchronizationCandidates(event: Event): List<Event> {
-        // pending events should not synchronize themselves and should wait
-        // for appropriate send event to appear
-        if (event in pendingEvents)
-            return emptyList()
         // consider all candidates in current execution and apply some general filters
         val candidates = currentExecution.asSequence()
             // for send event we filter out ...
@@ -398,8 +391,8 @@ class EventStructure(
                 //     these predecessors will result in causality cycle
                 !causalityOrder.lessThan(it, event) &&
                 // (2) pinned events, because their response part is pinned (i.e. fixed),
-                //     unless pinned event is blocking pending event
-                (!pinnedEvents.contains(it) || pendingEvents.contains(it))
+                //     unless pinned event is blocking dangling event
+                (!pinnedEvents.contains(it) || danglingEvents.contains(it))
             }}
         return when {
             // for read-request events we search for the last write to the same memory location
@@ -440,17 +433,21 @@ class EventStructure(
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
         val candidateEvents = synchronizationCandidates(event)
-        val events = when(event.label.syncType) {
+        val syncEvents = when(event.label.syncType) {
             SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidateEvents)
             SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidateEvents)
         }
-        // if there are responses to pending requests,
-        // then set the response of one of these requests
-        events.forEach {
-            if (it.parent != null && isPendingEvent(it.parent))
-                setPendingResponse(it)
+        // if there are responses to blocked dangling requests, then set the response of one of these requests
+        for (syncEvent in syncEvents) {
+            val requestEvent = syncEvent.parent
+                ?.takeIf { it.label.isRequest && it.label.isBlocking }
+                ?: continue
+            if (requestEvent in danglingEvents) {
+                setUnblockingResponse(syncEvent)
+                break
+            }
         }
-        return events
+        return syncEvents
     }
 
     private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
@@ -532,6 +529,14 @@ class EventStructure(
         tryReplayEvent(requestEvent.threadId)?.let { event ->
             check(event.label.isResponse)
             check(event.parent == requestEvent)
+            // TODO: refactor & move to other replay-related functions
+            val readyToReplay = event.dependencies.all {
+                dependency -> dependency in playedFrontier
+            }
+            if (!readyToReplay) {
+                return (null to listOf())
+            }
+            // TODO: replace with `synchronizesInto` check
             val label = event.dependencies.fold (event.parent.label) { label: EventLabel?, dependency ->
                 label?.synchronize(dependency.label)
             }
@@ -540,63 +545,81 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
-        tryCompletePendingRequest(requestEvent)?.let { event ->
+        if (requestEvent.label.isBlocking && requestEvent in danglingEvents) {
+            val event = getUnblockingResponse(requestEvent)
+                ?: return (null to listOf())
             check(event.label.isResponse)
             check(event.parent == requestEvent)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
         val responseEvents = addSynchronizedEvents(requestEvent)
+        if (responseEvents.isEmpty()) {
+            markBlockedDanglingRequest(requestEvent)
+            return (null to listOf())
+        }
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
-        val chosenEvent = responseEvents.lastOrNull()?.also { event ->
+        val chosenEvent = responseEvents.last().also { event ->
             addEventToCurrentExecution(event)
         }
         return (chosenEvent to responseEvents)
     }
 
-    private fun getBlockedEvent(iThread: Int, label: EventLabel): Event? {
-        require(label.isRequest && label.isBlocking)
-        return playedFrontier[iThread]?.takeIf { it.label == label }
+    fun isBlockedRequest(request: Event): Boolean {
+        require(request.label.isRequest && request.label.isBlocking)
+        return (request == playedFrontier[request.threadId])
     }
 
-    private fun isBlockedEvent(event: Event): Boolean {
-        require(event.label.isRequest && event.label.isBlocking)
-        require(event == playedFrontier[event.threadId])
-        // block pending events
-        if (isPendingEvent(event))
-            return true
-        // block event if its response part cannot be replayed yet
-        if (inReplayPhase(event.threadId) && !canReplayNextEvent(event.threadId))
-            return true
-        // TODO: do we need to handle other cases?
+    fun isBlockedDanglingRequest(request: Event): Boolean {
+        require(request.label.isRequest && request.label.isBlocking)
+        return (request == currentExecution[request.threadId]?.last())
+    }
+
+    fun isBlockedAwaitingRequest(request: Event): Boolean {
+        require(isBlockedRequest(request))
+        if (inReplayPhase(request.threadId)) {
+            return !canReplayNextEvent(request.threadId)
+        }
+        if (request in danglingEvents) {
+            return danglingEvents[request] == null
+        }
         return false
     }
 
-    private fun addPendingRequest(event: Event) {
-        require(event.label.isRequest && event.label.isBlocking)
-        pendingEvents.put(event, null).ensureNull()
+    fun getBlockedRequest(iThread: Int): Event? =
+        playedFrontier[iThread]?.takeIf { it.label.isRequest && it.label.isBlocking }
+
+    fun getBlockedAwaitingRequest(iThread: Int): Event? =
+        getBlockedRequest(iThread)?.takeIf { isBlockedAwaitingRequest(it) }
+
+    private fun markBlockedDanglingRequest(request: Event) {
+        require(isBlockedDanglingRequest(request))
+        check(request !in danglingEvents)
+        check(danglingEvents.keys.all { it.threadId != request.threadId })
+        danglingEvents.put(request, null).ensureNull()
     }
 
-    private fun populatePendingEvents() {
-        for (tid in currentExecution.threads) {
-            val event = currentExecution[tid]?.lastOrNull() ?: continue
-            if (event.label.isRequest && event.label.isBlocking)
-                addPendingRequest(event)
-        }
+    private fun unmarkBlockedDanglingRequest(request: Event) {
+        require(request.label.isRequest && request.label.isBlocking)
+        require(!isBlockedDanglingRequest(request))
+        require(request in danglingEvents)
+        danglingEvents.remove(request)
     }
 
-    private fun isPendingEvent(event: Event) =
-        (event in pendingEvents && pendingEvents[event] == null)
-
-    private fun setPendingResponse(event: Event) {
-        require(event.label.isResponse)
-        require(event.parent in pendingEvents)
-        pendingEvents.put(event.parent!!, event).ensure { it == null }
+    private fun setUnblockingResponse(response: Event) {
+        require(response.label.isResponse && response.label.isBlocking)
+        val request = response.parent
+            .ensure { it != null }
+            .ensure { isBlockedDanglingRequest(it!!) }
+            .ensure { it in danglingEvents }
+        danglingEvents.put(request!!, response).ensureNull()
     }
 
-    private fun tryCompletePendingRequest(event: Event): Event? {
-        return pendingEvents[event]
+    private fun getUnblockingResponse(request: Event): Event? {
+        require(isBlockedDanglingRequest(request))
+        require(request in danglingEvents)
+        return danglingEvents[request]
     }
 
     fun addThreadStartEvent(iThread: Int): Event {
@@ -681,85 +704,42 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addLockEvent(iThread: Int, mutex: OpaqueValue): Event {
-        val depth = 1 + monitorTracker.reentranceDepth(iThread, mutex)
+    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1): Event {
         val label = LockLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
-            reentranceDepth = depth
+            reentranceDepth = reentranceDepth,
+            reentranceCount = reentranceCount,
         )
-        // take the last lock-request event or create new one
-        val requestEvent = getBlockedEvent(iThread, label)
-            ?: addRequestEvent(iThread, label)
-        // if event is blocked then postpone addition of lock-response event
-        if (isBlockedEvent(requestEvent))
-            return requestEvent
-        // if lock is acquired by another thread then also postpone addition of lock-response event
-        if (!monitorTracker.acquire(iThread, mutex))
-            return requestEvent
-        // otherwise add lock-response event
-        val (responseEvent, _) = addResponseEvents(requestEvent)
-        // if lock-response is currently unavailable return lock-request
-        if (responseEvent == null) {
-            return requestEvent
-        }
-        return responseEvent
+        return addRequestEvent(iThread, label)
     }
 
-    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue): Event {
-        val depth = monitorTracker.reentranceDepth(iThread, mutex)
+    fun addLockResponseEvent(lockRequest: Event): Event? {
+        require(lockRequest.label.isRequest && lockRequest.label is LockLabel)
+        return addResponseEvents(lockRequest).first
+    }
+
+    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1): Event {
         val label = UnlockLabel(
             mutex_ = mutex,
-            reentranceDepth = depth
+            reentranceDepth = reentranceDepth,
+            reentranceCount = reentranceCount,
         )
-        return addSendEvent(iThread, label).also {
-            monitorTracker.release(iThread, mutex)
-        }
+        return addSendEvent(iThread, label)
     }
 
-    fun addWaitEvent(iThread: Int, mutex: OpaqueValue): Event {
+    fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): Event {
         val label = WaitLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
         )
-        // take the last wait-request event or create new one
-        val requestEvent = getBlockedEvent(iThread, label) ?: run {
-            // also add releasing unlock event before wait-request
-            val depth = monitorTracker.reentranceDepth(iThread, mutex)
-            val unlockLabel = UnlockLabel(
-                mutex,
-                reentranceDepth = depth,
-                reentranceCount = depth,
-            )
-            addSendEvent(iThread, unlockLabel)
-            addRequestEvent(iThread, label)
-        }
-        // if we need to wait then postpone addition of the wait-response event
-        if (monitorTracker.wait(iThread, mutex)) {
-            return requestEvent
-        }
-        // if event is blocked then postpone addition of wait-response event
-        if (isBlockedEvent(requestEvent))
-            return requestEvent
-        // otherwise try to add the wait-response event
-        val (responseEvent, _) = addResponseEvents(requestEvent)
-        // if wait-response is currently unavailable return wait-request
-        if (responseEvent == null) {
-            return requestEvent
-        }
-        // otherwise also add acquiring lock event
-        val depth = monitorTracker.reentranceDepth(iThread, mutex)
-        val lockLabel = LockLabel(
-            kind = LabelKind.Request,
-            mutex_ = mutex,
-            reentranceDepth = depth,
-            reentranceCount = depth,
-        )
-        val lockRequestEvent = addRequestEvent(iThread, lockLabel)
-        val (lockResponseEvent, _) = addResponseEvents(lockRequestEvent)
-        checkNotNull(lockResponseEvent)
-        // finally, return wait-response event
-        return responseEvent
+        return addRequestEvent(iThread, label)
+
+    }
+
+    fun addWaitResponseEvent(waitRequest: Event): Event? {
+        require(waitRequest.label.isRequest && waitRequest.label is WaitLabel)
+        return addResponseEvents(waitRequest).first
     }
 
     fun addNotifyEvent(iThread: Int, mutex: OpaqueValue, isBroadcast: Boolean): Event {
@@ -769,65 +749,23 @@ class EventStructure(
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
         val label = NotifyLabel(mutex, isBroadcast)
-        return addSendEvent(iThread, label).also {
-            monitorTracker.notify(iThread, mutex, isBroadcast)
-        }
+        return addSendEvent(iThread, label)
     }
 
-    fun addParkEvent(iThread: Int): Event {
+    fun addParkRequestEvent(iThread: Int): Event {
         val label = ParkLabel(LabelKind.Request, iThread)
-        // take the last park-request event or create new one
-        val requestEvent = getBlockedEvent(iThread, label)
-            ?: addRequestEvent(iThread, label)
-        // if event is blocked then postpone addition of park-response event
-        if (isBlockedEvent(requestEvent))
-            return requestEvent
-        // if we already parked and haven't been unparked yet then postpone addition of the park-response event
-        if (parkingTracker.isParked(iThread)) {
-            return requestEvent
-        }
-        // try to add park-response event
-        val (responseEvent, _) = addResponseEvents(requestEvent)
-        // if park-response is currently unavailable then park and return park-request
-        if (responseEvent == null) {
-            // TODO: implement a uniform approach to handle pending events ---
-            //   in addResponseEvents check for conflicts on blocking response events
-            //   and return null in such cases, putting the request into pending events set
-            addPendingRequest(requestEvent)
-            parkingTracker.park(iThread)
-            return requestEvent
-        }
-        return responseEvent
+        return addRequestEvent(iThread, label)
+    }
+
+    fun addParkResponseEvent(parkRequest: Event): Event? {
+        require(parkRequest.label.isRequest && parkRequest.label is ParkLabel)
+        return addResponseEvents(parkRequest).first
     }
 
     fun addUnparkEvent(iThread: Int, unparkingThreadId: Int): Event {
         val label = UnparkLabel(unparkingThreadId)
-        return addSendEvent(iThread, label).also {
-            parkingTracker.unpark(iThread, unparkingThreadId)
-        }
+        return addSendEvent(iThread, label)
     }
-
-    fun lockReentranceDepth(iThread: Int, monitor: OpaqueValue): Int =
-        monitorTracker.reentranceDepth(iThread, monitor)
-
-    fun isWaiting(iThread: Int): Boolean =
-        monitorTracker.isWaiting(iThread)
-
-    fun isParked(iThread: Int): Boolean =
-        parkingTracker.isParked(iThread)
-
-    private fun createMonitorTracker(): MonitorTracker =
-        if (lockAwareScheduling)
-            /* Spurious wake-ups are handled on the level of event structure:
-             * by default we require wait events to synchronize with notify events
-             * in order to proceed (see [addWaitEvent] method).
-             * However, we need to allow spurious wake-ups here in order
-             * to make event structure construction independent of the scheduler
-             * (i.e. we allow notifies arrive earlier than waits).
-             */
-            MapMonitorTracker(maxThreadId, allowSpuriousWakeUps = true)
-        else
-            LockReentranceCounter(maxThreadId)
 
     /**
      * Calculates the view for specific memory location observed at the given point of execution
@@ -868,36 +806,6 @@ class EventStructure(
                 !causalityOrder.lessThan(write, other)
             }
         }
-    }
-
-}
-
-private class LockReentranceCounter(val nThreads: Int) : MonitorTracker {
-    private val map = mutableMapOf<OpaqueValue, IntArray>()
-
-    override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
-        val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
-        reentrance[iThread]++
-        return true
-    }
-
-    override fun release(iThread: Int, monitor: OpaqueValue) {
-        val reentrance = map.computeIfAbsent(monitor) { IntArray(nThreads) }
-        check(reentrance[iThread] > 0)
-        reentrance[iThread]--
-    }
-
-    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int =
-        map[monitor]?.get(iThread) ?: 0
-
-    override fun wait(iThread: Int, monitor: OpaqueValue): Boolean = false
-
-    override fun notify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean) {}
-
-    override fun isWaiting(iThread: Int): Boolean = false
-
-    override fun reset() {
-        map.clear()
     }
 
 }
