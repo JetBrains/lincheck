@@ -126,7 +126,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         // TODO document me
         tasks[iThread].getAndSet(task).let {
             if (it is TestThread) LockSupport.unpark(it)
-            assert(it == null || task === SHUTDOWN)
         }
     }
 
