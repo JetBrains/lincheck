@@ -333,12 +333,12 @@ class EventStructure(
             unmarkBlockedDanglingRequest(event.parent!!)
         }
         // take an opportunity to treat event performed in the main thread as the initialization event
-        // if (event.threadId == mainThreadId &&
-        //     event.label.kind == LabelKind.Send &&
-        //     event.label.index != null &&
-        //     event.label.index !in initializationMap) {
-        //     _initializationMap[event.label.index!!] = event
-        // }
+        if (event.threadId == mainThreadId &&
+            event.label.kind == LabelKind.Send &&
+            event.label.index != null &&
+            event.label.index !in initializationMap) {
+            _initializationMap[event.label.index!!] = event
+        }
         if (synchronize) {
             addSynchronizedEvents(event)
         }
