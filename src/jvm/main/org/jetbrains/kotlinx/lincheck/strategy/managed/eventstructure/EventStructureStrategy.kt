@@ -317,8 +317,11 @@ private class EventStructureMonitorTracker(
 ) : MonitorTracker {
 
     override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
-        val lockRequest = eventStructure.getBlockedRequest(iThread)
-            ?: eventStructure.addLockRequestEvent(iThread, monitor)
+        var lockRequest = eventStructure.getBlockedRequest(iThread)
+        if (lockRequest == null) {
+            val depth = monitorTracker.reentranceDepth(iThread, monitor)
+            lockRequest = eventStructure.addLockRequestEvent(iThread, monitor, reentranceDepth = depth + 1)
+        }
         // if lock is acquired by another thread then postpone addition of lock-response event
         if (!monitorTracker.acquire(iThread, monitor)) {
             return false
@@ -333,8 +336,9 @@ private class EventStructureMonitorTracker(
     }
 
     override fun release(iThread: Int, monitor: OpaqueValue) {
+        val depth = monitorTracker.reentranceDepth(iThread, monitor)
         monitorTracker.release(iThread, monitor)
-        eventStructure.addUnlockEvent(iThread, monitor)
+        eventStructure.addUnlockEvent(iThread, monitor, reentranceDepth = depth - 1)
     }
 
     override fun owner(monitor: OpaqueValue): Int? =
