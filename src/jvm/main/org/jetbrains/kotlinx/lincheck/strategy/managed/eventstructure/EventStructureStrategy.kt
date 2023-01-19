@@ -338,7 +338,7 @@ private class EventStructureMonitorTracker(
     override fun release(iThread: Int, monitor: OpaqueValue) {
         val depth = monitorTracker.reentranceDepth(iThread, monitor)
         monitorTracker.release(iThread, monitor)
-        eventStructure.addUnlockEvent(iThread, monitor, reentranceDepth = depth - 1)
+        eventStructure.addUnlockEvent(iThread, monitor, reentranceDepth = depth)
     }
 
     override fun owner(monitor: OpaqueValue): Int? =
