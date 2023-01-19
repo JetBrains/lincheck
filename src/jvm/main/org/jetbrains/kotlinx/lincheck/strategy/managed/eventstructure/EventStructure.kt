@@ -442,7 +442,7 @@ class EventStructure(
             val requestEvent = syncEvent.parent
                 ?.takeIf { it.label.isRequest && it.label.isBlocking }
                 ?: continue
-            if (requestEvent in danglingEvents) {
+            if (requestEvent in danglingEvents && getUnblockingResponse(requestEvent) == null) {
                 setUnblockingResponse(syncEvent)
                 break
             }
