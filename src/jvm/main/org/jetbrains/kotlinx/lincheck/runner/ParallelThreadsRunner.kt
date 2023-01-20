@@ -222,8 +222,13 @@ internal open class ParallelThreadsRunner(
         // by the resuming thread, and invoke the follow-up part in this case
         if (completion.resWithCont.get() !== null) {
             // Suspended thread got result of the suspension point and continuation to resume
-            val resumedValue = completion.resWithCont.get().first
-            completion.resWithCont.get().second.resumeWith(resumedValue)
+            val resWithCont = completion.resWithCont.get()
+            completion.resWithCont.set(null)
+            resWithCont.second.resumeWith(resWithCont.first)
+        }
+        if (suspensionPointResults[iThread][actorId] == NoResult) {
+            completionStatuses[iThread].set(actorId, null)
+            return waitAndInvokeFollowUp(iThread, actorId)
         }
         return suspensionPointResults[iThread][actorId]
     }
