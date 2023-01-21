@@ -1,6 +1,7 @@
 package org.jetbrains.kotlinx.lincheck
 
-import java.io.Serializable
+import org.jetbrains.kotlinx.lincheck.runner.NoResultError
+import org.jetbrains.kotlinx.lincheck.runner.ParkedThreadFinish
 import kotlin.coroutines.*
 
 /*
@@ -83,7 +84,12 @@ data class ExceptionResult private constructor(val tClazz: Class<out Throwable>,
 }
 // for byte-code generation
 @JvmSynthetic
-fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
+fun createExceptionResult(tClazz: Class<out Throwable>) =
+    if (tClazz.name == ParkedThreadFinish::class.java.name) Suspended
+    else if (tClazz.name == NoResultError::class.java.name) NoResult
+    else if (tClazz.name == InterruptedException::class.java.name) Cancelled
+    else ExceptionResult.create(tClazz, false)
+
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet

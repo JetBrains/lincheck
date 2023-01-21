@@ -56,13 +56,13 @@ internal fun executeActor(
 ): Result {
     try {
         val m = getMethod(instance, actor.method)
-        val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
+        val args = (if (actor.isSuspendable || m.isSuspendable()) actor.arguments + completion else actor.arguments)
             .map { it.convertForLoader(instance.javaClass.classLoader) }
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
         val eClass = (invE.cause ?: invE).javaClass.normalize()
-        for (ec in actor.handledExceptions) {
+        for (ec in actor.handledExceptionsPublic) {
             if (ec.isAssignableFrom(eClass))
                 return ExceptionResult.create(eClass)
         }
@@ -122,6 +122,10 @@ internal fun getMethod(instance: Any, method: Method): Method {
 private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method =
     methods.find { method ->
         method.name == name && method.parameterTypes.map { it.name } == parameterTypes.map { it.name }
+    } ?: methods.find { method ->
+        method.name == name &&
+                method.parameterTypes.isNotEmpty() && method.parameterTypes.last().name.contains("Continuation") &&
+                method.parameterTypes.dropLast(1).map { it.name } == parameterTypes.map { it.name }
     } ?: throw NoSuchMethodException("${getName()}.$name(${parameterTypes.joinToString(",")})")
 
 /**
@@ -139,7 +143,16 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  */
 internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
-    res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
+    res != null && res is Throwable -> {
+        when (res) {
+            is ParkedThreadFinish -> Suspended
+            is InterruptedException -> Cancelled
+            else -> {
+                if (res.javaClass.name.contains("Parked")) error("WTF is going on??!")
+                ExceptionResult.create(res.javaClass, wasSuspended)
+            }
+        }
+    }
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
     else -> ValueResult(res.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)

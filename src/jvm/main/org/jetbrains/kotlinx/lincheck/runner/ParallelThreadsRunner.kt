@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import kotlinx.atomicfu.AtomicIntArray
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
@@ -28,7 +29,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.objectweb.asm.*
+import java.lang.Error
 import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
@@ -53,7 +56,7 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, this, runnerHash) // shoukd be closed in `close()`
 
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
@@ -169,6 +172,8 @@ internal open class ParallelThreadsRunner(
         }
         // reset stored continuations
         executor.threads.forEach { it.cont = null }
+        currentActor.fill(-1)
+        repeat(scenario.threads) { threadParkStatus[it].value = 0 }
     }
 
     /**
@@ -192,11 +197,39 @@ internal open class ParallelThreadsRunner(
                 Cancelled
             } else waitAndInvokeFollowUp(iThread, actorId)
         } else createLincheckResult(res)
-        val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
-        if (isLastActor && finalResult !== Suspended)
-            completedOrSuspendedThreads.incrementAndGet()
         suspensionPointResults[iThread][actorId] = NoResult
         return finalResult
+    }
+
+    private val threadParkStatus = AtomicIntArray(scenario.threads)
+
+    override fun onFinish(iThread: Int) {
+        currentActor[iThread] = -1
+        completedOrSuspendedThreads.incrementAndGet()
+        super.onFinish(iThread)
+    }
+
+    fun beforePark(iThread: Int) {
+        // TODO support spurious wake-ups
+        val actor = scenario.parallelExecution[iThread][currentActor[iThread]]
+        if (actor.cancelOnSuspension) throw InterruptedException()
+        completedOrSuspendedThreads.incrementAndGet()
+        threadParkStatus[iThread].incrementAndGet()
+        if (threadParkStatus[iThread].value > 0)
+            (strategy as? ManagedStrategy)?.afterThreadSuspended(iThread)
+        var i = 1
+        while (threadParkStatus[iThread].value > 0) {
+            if (completedOrSuspendedThreads.get() >= scenario.threads) {
+                throw ParkedThreadFinish()
+            }
+            if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
+        }
+        completedOrSuspendedThreads.decrementAndGet()
+    }
+
+    fun afterUnpark(iThreadResumed: Int) {
+        (strategy as? ManagedStrategy)?.afterThreadResumed(iThreadResumed)
+        threadParkStatus[iThreadResumed].decrementAndGet()
     }
 
     private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
@@ -210,7 +243,7 @@ internal open class ParallelThreadsRunner(
         var i = 1
         while (!isCoroutineResumed(iThread, actorId)) {
             // Check whether the scenario is completed and the current suspended operation cannot be resumed.
-            if (completedOrSuspendedThreads.get() == scenario.threads) {
+            if (completedOrSuspendedThreads.get() >= scenario.threads) {
                 suspensionPointResults[iThread][actorId] = NoResult
                 return Suspended
             }
@@ -319,6 +352,15 @@ internal open class ParallelThreadsRunner(
         return CompletedInvocationResult(results)
     }
 
+    private val currentActor = IntArray(scenario.threads) { -1 }
+
+    override fun onActorStart(iThread: Int) {
+        if (threadParkStatus[iThread].value > 0) throw NoResultError()
+        Thread.interrupted() // clean the interrupted flag
+        currentActor[iThread]++
+        super.onActorStart(iThread)
+    }
+
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
@@ -334,7 +376,7 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun needsTransformation() = true
-    override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
+    override fun createTransformer(cv: ClassVisitor) = CancellabilityAndParkUnparkSupportClassTransformer(cv)
 
     override fun constructStateRepresentation() =
         stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
@@ -350,3 +392,6 @@ internal enum class UseClocks { ALWAYS, RANDOM }
 internal enum class CompletionStatus { CANCELLED, RESUMED }
 
 private const val MAX_SPINNING_TIME_BEFORE_YIELD = 2_000_000
+
+internal class ParkedThreadFinish : Error()
+internal class NoResultError : Error()

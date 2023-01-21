@@ -22,14 +22,54 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import kotlin.reflect.jvm.*
 
 internal class CancellabilitySupportClassTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
     override fun visitMethod(access: Int, methodName: String?, desc: String?, signature: String?, exceptions: Array<String>?): MethodVisitor {
-        val mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        return CancellabilitySupportMethodTransformer(access, methodName, desc, mv)
+        var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        mv = CancellabilitySupportMethodTransformer(access, methodName, desc, mv)
+        return mv
+    }
+}
+
+internal class CancellabilityAndParkUnparkSupportClassTransformer(cv: ClassVisitor) : ClassVisitor(ASM_API, cv) {
+    override fun visitMethod(access: Int, methodName: String?, desc: String?, signature: String?, exceptions: Array<String>?): MethodVisitor {
+        var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        mv = CancellabilitySupportMethodTransformer(access, methodName, desc, mv)
+        mv = ParkUnparkTransformer(access, methodName, desc, mv)
+        return mv
+    }
+}
+
+private class ParkUnparkTransformer(access: Int, methodName: String?, desc: String?, mv: MethodVisitor) :
+    AdviceAdapter(ASM_API, mv, access, methodName, desc)
+{
+    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+        val isPark = owner.isUnsafe() && name == "park"
+        if (isPark) invokeBeforePark()
+        val isUnpark = owner.isUnsafe() && name == "unpark"
+        if (isUnpark) {
+            dup2()
+        }
+        super.visitMethodInsn(opcode, owner, name, desc, itf)
+        if (isUnpark) {
+            invokeAfterUnpark()
+            pop()
+        }
+    }
+
+    // STACK: withTimeout
+    private fun invokeBeforePark() {
+        invokeStatic(parkUnparkRunnerType, beforeParkMethod)
+    }
+
+    // STACK: thread
+    private fun invokeAfterUnpark() {
+        invokeStatic(parkUnparkRunnerType, afterUnparkMethod)
     }
 }
 
@@ -47,5 +87,23 @@ private class CancellabilitySupportMethodTransformer(access: Int, methodName: St
     }
 }
 
+internal object ParkUnparkRunner {
+    @JvmStatic
+    fun beforePark() {
+        (Thread.currentThread() as FixedActiveThreadsExecutor.TestThread).beforePark()
+    }
+
+    @JvmStatic
+    fun afterUnpark(thread: Any) {
+        (Thread.currentThread() as FixedActiveThreadsExecutor.TestThread).afterUnpark(thread)
+    }
+}
+
 private val storeCancellableContMethod = Method.getMethod(::storeCancellableContinuation.javaMethod)
 private val storeCancellableContOwnerType = Type.getType(::storeCancellableContinuation.javaMethod!!.declaringClass)
+
+private val parkUnparkRunnerType = Type.getType(ParkUnparkRunner::class.java)
+private val beforeParkMethod = Method.getMethod(ParkUnparkRunner::beforePark.javaMethod)
+private val afterUnparkMethod = Method.getMethod(ParkUnparkRunner::afterUnpark.javaMethod)
+
+private val OBJECT_TYPE = Type.getType(Any::class.java)

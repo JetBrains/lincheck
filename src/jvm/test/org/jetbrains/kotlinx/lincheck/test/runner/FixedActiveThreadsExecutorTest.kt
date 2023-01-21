@@ -27,7 +27,7 @@ import java.util.concurrent.*
 
 class FixedActiveThreadsExecutorTest {
     @Test
-    fun testSubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
+    fun testSubmit() = FixedActiveThreadsExecutor(2, null, 0).use { executor ->
         val executed = arrayOf(false, false)
         val tasks = Array<TestThreadExecution>(2) {
             object : TestThreadExecution() {
@@ -41,7 +41,7 @@ class FixedActiveThreadsExecutorTest {
     }
 
     @Test
-    fun testResubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
+    fun testResubmit() = FixedActiveThreadsExecutor(2, null, 0).use { executor ->
         val executed = arrayOf(false, false)
         val tasks = Array<TestThreadExecution>(2) {
             object : TestThreadExecution() {
@@ -57,7 +57,7 @@ class FixedActiveThreadsExecutorTest {
     }
 
     @Test(timeout = 100_000)
-    fun testSubmitTimeout() = FixedActiveThreadsExecutor(2, 0).use { executor ->
+    fun testSubmitTimeout() = FixedActiveThreadsExecutor(2, null, 0).use { executor ->
         val tasks = Array<TestThreadExecution>(2) { iThread ->
             object : TestThreadExecution() {
                 override fun run() {
@@ -78,7 +78,7 @@ class FixedActiveThreadsExecutorTest {
     fun testShutdown() {
         // executor with unique runner hash
         val uniqueRunnerHash = 1337
-        FixedActiveThreadsExecutor(2, uniqueRunnerHash).close()
+        FixedActiveThreadsExecutor(2, null, uniqueRunnerHash).close()
         while (true) {
             // check that all test threads are finished
             if (Thread.getAllStackTraces().keys.all { it !is FixedActiveThreadsExecutor.TestThread || it.runnerHash != uniqueRunnerHash })

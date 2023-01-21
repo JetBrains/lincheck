@@ -22,6 +22,8 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.runner.NoResultError
+import org.jetbrains.kotlinx.lincheck.runner.ParkedThreadFinish
 import java.lang.reflect.Method
 import kotlin.reflect.jvm.*
 
@@ -50,13 +52,15 @@ data class Actor @JvmOverloads constructor(
         }
     }
 
+    val handledExceptionsPublic get() = (handledExceptions.toSet() + setOf(NoResultError::class.java, ParkedThreadFinish::class.java, InterruptedException::class.java)).toList()
+
     override fun toString() = method.name +
         arguments.joinToString(prefix = "(", postfix = ")", separator = ", ") { it.toString() } +
         (if (cancelOnSuspension) " + " else "") +
         (if (promptCancellation) "prompt_" else "") +
         (if (cancelOnSuspension) "cancel" else "")
 
-    val handlesExceptions = handledExceptions.isNotEmpty()
+    val handlesExceptions = handledExceptionsPublic.isNotEmpty()
 }
 
 fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false
