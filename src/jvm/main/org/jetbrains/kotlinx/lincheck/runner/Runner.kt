@@ -138,7 +138,7 @@ abstract class Runner protected constructor(
      * Is invoked before each actor execution from the specified thread.
      * The invocations are inserted into the generated code.
      */
-    fun onActorStart(iThread: Int) {
+    open fun onActorStart(iThread: Int) {
         strategy.onActorStart(iThread)
     }
 
@@ -152,5 +152,5 @@ abstract class Runner protected constructor(
      * Used by generated code.
      */
     val isParallelExecutionCompleted: Boolean
-        get() = completedOrSuspendedThreads.get() == scenario.threads
+        get() = completedOrSuspendedThreads.get() >= scenario.threads
 }

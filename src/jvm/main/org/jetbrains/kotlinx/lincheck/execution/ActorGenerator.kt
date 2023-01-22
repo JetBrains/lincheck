@@ -35,13 +35,12 @@ class ActorGenerator(
     private val parameterGenerators: List<ParameterGenerator<*>>,
     private val handledExceptions: List<Class<out Throwable?>>,
     val useOnce: Boolean,
-    cancellableOnSuspension: Boolean,
+    private val cancellableOnSuspension: Boolean,
     private val allowExtraSuspension: Boolean,
     private val blocking: Boolean,
     private val causesBlocking: Boolean,
     promptCancellation: Boolean
 ) {
-    private val cancellableOnSuspension = cancellableOnSuspension && isSuspendable
     private val promptCancellation = cancellableOnSuspension && promptCancellation
 
     fun generate(threadId: Int): Actor {

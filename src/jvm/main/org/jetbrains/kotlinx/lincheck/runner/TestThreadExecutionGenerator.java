@@ -79,7 +79,7 @@ public class TestThreadExecutionGenerator {
 
     private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
     private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
-    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
+    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", RESULT_TYPE, new Type[] {CLASS_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
 
@@ -190,7 +190,7 @@ public class TestThreadExecutionGenerator {
             Label actorCatchBlockEnd = mv.newLabel();
             if (actor.getHandlesExceptions()) {
                 handledExceptionHandler = mv.newLabel();
-                for (Class<? extends Throwable> ec : actor.getHandledExceptions())
+                for (Class<? extends Throwable> ec : actor.getHandledExceptionsPublic())
                     mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExceptionHandler, getType(ec).getInternalName());
             }
             // Catch those exceptions that has not been caught yet

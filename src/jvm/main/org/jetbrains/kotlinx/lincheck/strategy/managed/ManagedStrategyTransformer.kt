@@ -1470,7 +1470,7 @@ private fun isClassMethod(owner: String, methodName: String, desc: String): Bool
 private fun isAFUMethodCall(opcode: Int, owner: String, methodName: String, desc: String) =
     opcode == INVOKEVIRTUAL && isAFU(owner) && isClassMethod(owner, methodName, desc)
 
-private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/internal/misc/Unsafe"
+internal fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/internal/misc/Unsafe"
 
 /**
  * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.

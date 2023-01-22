@@ -68,7 +68,7 @@ public @interface Operation {
      * specification. The one may consider this as a relaxation of the
      * dual data structures formalism.
      */
-    boolean allowExtraSuspension() default false;
+    boolean allowExtraSuspension() default true;
 
     /**
      * Specifies whether this operation is blocking.

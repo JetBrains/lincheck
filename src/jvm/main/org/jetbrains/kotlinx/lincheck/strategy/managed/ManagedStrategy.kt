@@ -366,7 +366,7 @@ abstract class ManagedStrategy(
     /**
      * A regular context thread switch to another thread.
      */
-    private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+    internal fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
@@ -547,6 +547,14 @@ abstract class ManagedStrategy(
         }
     }
 
+    internal fun afterThreadSuspended(iThread: Int) {
+        isSuspended[iThread] = true
+        switchCurrentThread(iThread, SwitchReason.SUSPENDED, true)
+    }
+
+    internal fun afterThreadResumed(iThread: Int) {
+        isSuspended[iThread] = false
+    }
     /**
      * This method is invoked by a test thread
      * if a coroutine was resumed.

@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution;
  * and define generated {@link TestThreadExecution test executions}.
  */
 public class ExecutionClassLoader extends ClassLoader {
+    @SuppressWarnings("unchecked")
     public Class<? extends TestThreadExecution> defineClass(String className, byte[] bytecode) {
         return (Class<? extends TestThreadExecution>) super.defineClass(className, bytecode, 0, bytecode.length);
     }

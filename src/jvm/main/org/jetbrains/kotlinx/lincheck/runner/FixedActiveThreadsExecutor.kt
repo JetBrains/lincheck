@@ -37,7 +37,7 @@ import kotlin.math.*
  * is that this executor keeps the re-using threads "hot" (active) as long as
  * possible, so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
+internal class FixedActiveThreadsExecutor(private val nThreads: Int, runner: ParallelThreadsRunner?, runnerHash: Int) : Closeable {
     // Threads used in this runner.
     val threads: List<TestThread>
     /**
@@ -79,7 +79,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     init {
         threads = (0 until nThreads).map { iThread ->
-            TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
+            TestThread(runner, iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
         }
     }
 
@@ -221,8 +221,17 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         }
     }
 
-    class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {
+    class TestThread(val runner: ParallelThreadsRunner?, val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {
         var cont: CancellableContinuation<*>? = null
+
+        fun beforePark() {
+            runner!!.beforePark(iThread)
+        }
+
+        fun afterUnpark(thread: Any?) {
+            thread as TestThread
+            runner!!.afterUnpark(thread.iThread)
+        }
     }
 
     companion object {
