@@ -18,19 +18,16 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
+package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.blocking
 
-import org.jetbrains.kotlinx.lincheck.NoResult
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.runner.NoResultError
-import org.jetbrains.kotlinx.lincheck.runner.ParkedThreadFinish
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
-class ReentrantLockTest : AbstractLincheckTest() {
+class SemaphoreTest : AbstractLincheckTest() {
     private val semaphore = java.util.concurrent.Semaphore(1, true)
 
-    @Operation(cancellableOnSuspension = false, allowExtraSuspension = true)
+    @Operation(cancellableOnSuspension = true)
     fun acquire() {
         semaphore.acquire()
     }
