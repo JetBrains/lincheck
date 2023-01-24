@@ -400,18 +400,17 @@ class EventStructure(
             // because these events are "obsolete" --- reading from them will result in coherence cycle
             // and will violate consistency
             event.label is MemoryAccessLabel && event.label.isRequest -> {
-                require(event.label.isRead)
-                val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
-                    it.label is WriteAccessLabel && it.label.location == event.label.location
-                } ?: root
-                candidates.filter { !causalityOrder.lessThan(it, threadLastWrite) }
+                // val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
+                //     it.label is WriteAccessLabel && it.label.location == event.label.location
+                // } ?: root
+                // candidates.filter { !causalityOrder.lessThan(it, threadLastWrite) }
+                val view = calculateMemoryLocationView(event.label.location, event.causalityClock)
+                candidates.filter { !view.outdated(it.threadId, it) }
             }
-
             // re-entry lock-request synchronizes only with the initial event
             event.label is LockLabel && event.label.isRequest && event.label.isReentry -> {
                 return listOf(root)
             }
-
             // re-entry unlock synchronizes with nothing
             event.label is UnlockLabel && event.label.isReentry -> {
                 return listOf(root)
@@ -783,7 +782,7 @@ class EventStructure(
             check(event in currentExecution)
             var lastWrite = event
             while (!(lastWrite.label is WriteAccessLabel && (lastWrite.label as WriteAccessLabel).location == location)) {
-                lastWrite = event.parent ?: return@mapNotNull null
+                lastWrite = lastWrite.parent ?: return@mapNotNull null
             }
             (threadId to lastWrite)
         }.toMap())

@@ -38,6 +38,9 @@ class VectorClock<P, T>(val partialOrder: PartialOrder<T>, clock: Map<P, T> = ma
     fun observes(part: P, timestamp: T): Boolean =
         clock[part]?.let { partialOrder.lessOrEqual(timestamp, it) } ?: false
 
+    fun outdated(part: P, timestamp: T): Boolean =
+        clock[part]?.let { partialOrder.lessThan(timestamp, it) } ?: false
+
     operator fun set(part: P, timestamp: T) {
         _clock[part] = timestamp
     }
