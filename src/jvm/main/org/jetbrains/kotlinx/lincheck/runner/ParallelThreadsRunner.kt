@@ -53,7 +53,10 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // should be closed in `close()`
+
+    // TODO: a hacky way to quickly fix problem with exceptions and deadlocks in init/post part
+    private val sequentialPartExecutor = Executors.newSingleThreadExecutor()
 
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
@@ -248,27 +251,65 @@ internal open class ParallelThreadsRunner(
 
     override fun run(): InvocationResult {
         reset()
-        val initResults = scenario.initExecution.mapIndexed { i, initActor ->
-            executeActor(testInstance, initActor).also {
-                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                    val s = ExecutionScenario(
-                        scenario.initExecution.subList(0, i + 1),
-                        emptyList(),
-                        emptyList()
-                    )
-                    return ValidationFailureInvocationResult(s, functionName, exception)
-                }
-            }
-        }
+        val initResults = runInitPart { failure -> return failure }
         val afterInitStateRepresentation = constructStateRepresentation()
         beforeParallelPart()
+        val parallelResultsWithClock = runParallelPart { failure -> return failure }
+        val afterParallelStateRepresentation = constructStateRepresentation()
+        afterParallelPart()
+        val postResults = runPostPart { failure -> return failure }
+        val afterPostStateRepresentation = constructStateRepresentation()
+        val results = ExecutionResult(
+            initResults, afterInitStateRepresentation,
+            parallelResultsWithClock, afterParallelStateRepresentation,
+            postResults, afterPostStateRepresentation
+        )
+        return CompletedInvocationResult(results)
+    }
+
+    private inline fun runInitPart(onFailure: (InvocationResult) -> Unit): List<Result> {
+        var results: List<Result>? = null
+        var failure: InvocationResult? = null
+        try {
+            sequentialPartExecutor.submit {
+                results = scenario.initExecution.mapIndexed { i, initActor ->
+                    val result = if (failure != null) {
+                        NoResult
+                    } else {
+                        executeActor(testInstance, initActor)
+                    }
+                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                        val s = ExecutionScenario(
+                            scenario.initExecution.subList(0, i + 1),
+                            emptyList(),
+                            emptyList()
+                        )
+                        failure = ValidationFailureInvocationResult(s, functionName, exception)
+                    }
+                    if (failure == null) result else NoResult
+                }
+            }.get(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (e: TimeoutException) {
+            val threadDump = collectThreadDump(this)
+            failure = DeadlockInvocationResult(threadDump)
+        } catch (e: ExecutionException) {
+            failure = UnexpectedExceptionInvocationResult(e.cause!!)
+        }
+        if (failure != null)
+            onFailure(failure!!)
+        return results!!
+    }
+
+    private inline fun runParallelPart(onFailure: (InvocationResult) -> Unit): List<List<ResultWithClock>> {
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
-            return DeadlockInvocationResult(threadDump)
+            val failure = DeadlockInvocationResult(threadDump)
+            onFailure(failure)
         } catch (e: ExecutionException) {
-            return UnexpectedExceptionInvocationResult(e.cause!!)
+            val failure = UnexpectedExceptionInvocationResult(e.cause!!)
+            onFailure(failure)
         }
         val parallelResultsWithClock = testThreadExecutions.map { ex ->
             ex.results.zip(ex.clocks).map { ResultWithClock(it.first, HBClock(it.second)) }
@@ -279,39 +320,50 @@ internal open class ParallelThreadsRunner(
                 scenario.parallelExecution,
                 emptyList()
             )
-            return ValidationFailureInvocationResult(s, functionName, exception)
+            val failure = ValidationFailureInvocationResult(s, functionName, exception)
+            onFailure(failure)
         }
-        val afterParallelStateRepresentation = constructStateRepresentation()
-        afterParallelPart()
+        return parallelResultsWithClock
+    }
+
+    private inline fun runPostPart(onFailure: (InvocationResult) -> Unit): List<Result> {
+        var results: List<Result>? = null
+        var failure: InvocationResult? = null
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
-        val postResults = scenario.postExecution.mapIndexed { i, postActor ->
-            // no actors are executed after suspension of a post part
-            val result = if (postPartSuspended) {
-                NoResult
-            } else {
-                // post part may contain suspendable actors if there aren't any in the parallel part, invoke with dummy continuation
-                executeActor(testInstance, postActor, dummyCompletion).also {
-                    postPartSuspended = it.wasSuspended
+        try {
+            sequentialPartExecutor.submit {
+                results = scenario.postExecution.mapIndexed { i, postActor ->
+                    // no actors are executed after suspension of a post part
+                    // or after failure is found
+                    val result = if (postPartSuspended || failure != null) {
+                        NoResult
+                    } else {
+                        // post part may contain suspendable actors if there aren't any in the parallel part, invoke with dummy continuation
+                        executeActor(testInstance, postActor, dummyCompletion).also {
+                            postPartSuspended = it.wasSuspended
+                        }
+                    }
+                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                        val s = ExecutionScenario(
+                            scenario.initExecution,
+                            scenario.parallelExecution,
+                            scenario.postExecution.subList(0, i + 1)
+                        )
+                        failure = ValidationFailureInvocationResult(s, functionName, exception)
+                    }
+                    if (failure == null) result else NoResult
                 }
-            }
-            executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                val s = ExecutionScenario(
-                    scenario.initExecution,
-                    scenario.parallelExecution,
-                    scenario.postExecution.subList(0, i + 1)
-                )
-                return ValidationFailureInvocationResult(s, functionName, exception)
-            }
-            result
+            }.get(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (e: TimeoutException) {
+            val threadDump = collectThreadDump(this)
+            failure = DeadlockInvocationResult(threadDump)
+        } catch (e: ExecutionException) {
+            failure = UnexpectedExceptionInvocationResult(e.cause!!)
         }
-        val afterPostStateRepresentation = constructStateRepresentation()
-        val results = ExecutionResult(
-            initResults, afterInitStateRepresentation,
-            parallelResultsWithClock, afterParallelStateRepresentation,
-            postResults, afterPostStateRepresentation
-        )
-        return CompletedInvocationResult(results)
+        if (failure != null)
+            onFailure(failure!!)
+        return results!!
     }
 
     override fun onStart(iThread: Int) {
