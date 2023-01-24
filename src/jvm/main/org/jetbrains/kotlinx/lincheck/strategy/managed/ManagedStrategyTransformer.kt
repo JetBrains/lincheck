@@ -224,7 +224,7 @@ internal class ManagedStrategyTransformer(
             SASTORE -> Type.SHORT_TYPE
             LASTORE -> Type.LONG_TYPE
             DASTORE -> Type.DOUBLE_TYPE
-            AASTORE -> getArrayAccessTypeFromStack(3) // OBJECT_TYPE
+            AASTORE -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
         }
 
@@ -237,7 +237,7 @@ internal class ManagedStrategyTransformer(
             SALOAD -> Type.SHORT_TYPE
             LALOAD -> Type.LONG_TYPE
             DALOAD -> Type.DOUBLE_TYPE
-            AALOAD -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
+            AALOAD -> getArrayAccessTypeFromStack(1) // OBJECT_TYPE
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
         }
 
@@ -250,8 +250,10 @@ internal class ManagedStrategyTransformer(
          */
         private fun getArrayAccessTypeFromStack(offset: Int): Type? {
             if (analyzer.stack == null) return null
-            val arrayDesc = analyzer.stack[analyzer.stack.size - offset]
+            val arrayDesc = analyzer.stack[analyzer.stack.size - offset - 1]
             check(arrayDesc is String)
+            if (Type.getType(arrayDesc).dimensions > 1)
+                return Type.getType(arrayDesc.substring(1))
             return Type.getType(arrayDesc).elementType
         }
 
