@@ -235,7 +235,11 @@ abstract class EventLabel(
      * @throws IllegalStateException if shapes of labels do not match or
      *   [remapping] already contains a binding that contradicts the replaying.
      */
-    open fun replay(label: EventLabel, remapping: Remapping) {}
+    open fun replay(label: EventLabel, remapping: Remapping) {
+        check(this == label) {
+            "Event label $this cannot be replayed by $label"
+        }
+    }
 
     /**
      * Changes the internal state of this label using given [remapping].
@@ -917,9 +921,7 @@ data class UnlockLabel(
 
     init {
         // TODO: checks for non-reentrant locks
-        require(reentranceDepth - reentranceCount >= 0) {
-            "hehn't"
-        }
+        require(reentranceDepth - reentranceCount >= 0)
     }
 
     val isReentry: Boolean =
