@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 
 import org.junit.Assert
 
-private const val UNIQUE_OUTCOMES = -1
+const val UNIQUE_OUTCOMES = -1
 
 internal fun<Outcome> litmusTest(
     testClass: Class<*>,
