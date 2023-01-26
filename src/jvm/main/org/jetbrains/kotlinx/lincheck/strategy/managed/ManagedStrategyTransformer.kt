@@ -126,7 +126,6 @@ internal class ManagedStrategyTransformer(
      */
     private inner class SharedVariableAccessMethodTransformer(
         methodName: String,
-        val analyzer: AnalyzerAdapter,
         adapter: GeneratorAdapter,
     ) : ManagedStrategyMemoryTrackingTransformer(methodName, adapter) {
 
@@ -189,32 +188,6 @@ internal class ManagedStrategyTransformer(
             }
         }
 
-        // STACK: array, index, value -> array, index, value, arr
-        private fun dupArrayOnArrayStore(opcode: Int) = adapter.run {
-            val type = getArrayStoreType(opcode)
-            val value = newLocal(type)
-            storeLocal(value)
-            dup2() // array, index, array, index
-            pop() // array, index, array
-            val array: Int = adapter.newLocal(OBJECT_TYPE)
-            storeLocal(array) // array, index
-            loadLocal(value) // array, index, value
-            loadLocal(array) // array, index, value, array
-        }
-
-        // STACK: object, value -> object, value, object
-        private fun dupOwnerOnPutField(desc: String) = adapter.run {
-            if ("J" != desc && "D" != desc) {
-                dup2() // object, value, object, value
-                pop() // object, value, object
-            } else {
-                // double or long. Value takes 2 machine words.
-                dup2X1() // value, object, value
-                pop2() // value, object
-                dupX2() // object, value, object
-            }
-        }
-
         // STACK: array, index, value -> array, index, value
         private fun getArrayStoreType(opcode: Int): Type? = when (opcode) {
             IASTORE -> Type.INT_TYPE
@@ -224,7 +197,7 @@ internal class ManagedStrategyTransformer(
             SASTORE -> Type.SHORT_TYPE
             LASTORE -> Type.LONG_TYPE
             DASTORE -> Type.DOUBLE_TYPE
-            AASTORE -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
+            AASTORE -> getArrayAccessTypeFromStack(3) // OBJECT_TYPE
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
         }
 
@@ -237,7 +210,7 @@ internal class ManagedStrategyTransformer(
             SALOAD -> Type.SHORT_TYPE
             LALOAD -> Type.LONG_TYPE
             DALOAD -> Type.DOUBLE_TYPE
-            AALOAD -> getArrayAccessTypeFromStack(1) // OBJECT_TYPE
+            AALOAD -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
         }
 
@@ -248,13 +221,14 @@ internal class ManagedStrategyTransformer(
          * (according to the ASM docs it can happen, for example, when the visited instruction is unreachable)
          * then return null.
          */
-        private fun getArrayAccessTypeFromStack(offset: Int): Type? {
+        private fun getArrayAccessTypeFromStack(position: Int): Type? {
             if (analyzer.stack == null) return null
-            val arrayDesc = analyzer.stack[analyzer.stack.size - offset - 1]
+            val arrayDesc = analyzer.stack[analyzer.stack.size - position]
             check(arrayDesc is String)
-            if (Type.getType(arrayDesc).dimensions > 1)
-                return Type.getType(arrayDesc.substring(1))
-            return Type.getType(arrayDesc).elementType
+            val arrayType = Type.getType(arrayDesc)
+            check(arrayType.sort == Type.ARRAY)
+            check(arrayType.dimensions > 0)
+            return Type.getType(arrayDesc.substring(1))
         }
 
         // STACK: object
