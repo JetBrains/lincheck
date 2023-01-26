@@ -127,7 +127,29 @@ class EventStructure(
     }
 
     fun abortExploration() {
-        _currentExecution = playedFrontier.toExecution()
+        // _currentExecution = playedFrontier.toExecution()
+        for (lastEvent in playedFrontier.mapping.values) {
+            when {
+                // we handle blocking request in a special way --- we include their response part
+                // in order to detect potential blocking response uniqueness violations
+                // (e.g. two lock events unblocked by the same unlock event)
+                // TODO: too complicated, try to simplify
+                lastEvent.label.isRequest && lastEvent.label.isBlocking -> {
+                    val responseEvent = _currentExecution[lastEvent.threadId, lastEvent.threadPosition + 1]
+                    if (responseEvent == null || responseEvent.dependencies.any { it !in playedFrontier }) {
+                        _currentExecution[lastEvent.threadId]!!.cutTo(lastEvent.threadPosition)
+                        continue
+                    }
+                    check(responseEvent.label.isResponse)
+                    responseEvent.label.remap(currentRemapping)
+                    _currentExecution[lastEvent.threadId]!!.cutTo(responseEvent.threadPosition)
+                }
+                // otherwise just cut last replayed event
+                else -> {
+                    _currentExecution[lastEvent.threadId]!!.cutTo(lastEvent.threadPosition)
+                }
+            }
+        }
     }
 
     private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {

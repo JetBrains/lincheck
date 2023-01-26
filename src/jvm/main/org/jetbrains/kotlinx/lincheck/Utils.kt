@@ -366,3 +366,8 @@ fun unreachable(message: String? = null): Nothing {
 infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
+
+fun<T> MutableList<T>.cutTo(index: Int) {
+    require(index < size)
+    subList(index + 1, size).clear()
+}
