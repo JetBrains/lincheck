@@ -97,8 +97,12 @@ internal class ManagedStrategyTransformer(
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = AnalyzerAdapter(className, access, mname, desc, mv)
-        mv = SharedVariableAccessMethodTransformer(mname, mv, GeneratorAdapter(mv, access, mname, desc))
+        mv = run {
+            val sv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+            val aa = AnalyzerAdapter(className, access, mname, desc, sv)
+            sv.analyzer = aa
+            aa
+        }
         // TODO: can we move these transformers and make SharedVariableAccessMethodTransformer to be the last transformer in the chain?
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -128,6 +132,9 @@ internal class ManagedStrategyTransformer(
         methodName: String,
         adapter: GeneratorAdapter,
     ) : ManagedStrategyMemoryTrackingTransformer(methodName, adapter) {
+
+        // TODO: enforce that analyzer can only be set once?
+        lateinit var analyzer: AnalyzerAdapter
 
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
             if (isFinalField(owner, name) ||
