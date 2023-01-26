@@ -2068,23 +2068,16 @@ private fun isAtomicClassName(className: String): Boolean {
 private fun getAtomicPrimitiveClassName(className: String): String? {
     if (isAtomicClassName(className))
         return className
-    try {
-        val clazz = Class.forName(className.canonicalClassName)
-        val metadata = clazz.declaredAnnotations.firstOrNull { ann -> ann is Metadata }
-        // kotlin refection would not work with other kinds
-        if (metadata != null && (metadata as Metadata).kind != 1 /* Class */)
+    val clazz = Class.forName(className.canonicalClassName)
+    var superClass = clazz.superclass
+    while (superClass != null) {
+        val superClassName = superClass.canonicalName?.internalClassName ?:
             return null
-        val atomicClasses = clazz.kotlin.allSuperclasses.filter { kSuperClass ->
-            kSuperClass.qualifiedName?.let { isAtomicClassName(it.internalClassName) } ?: false
-        }
-        if (atomicClasses.isEmpty())
-            return null
-        check(atomicClasses.size == 1)
-        return atomicClasses.first().let { it.qualifiedName?.internalClassName }
-    } catch (exception: Throwable) {
-        // System.err.println(exception)
-        return null
+        if (isAtomicClassName(superClassName))
+            return superClassName
+        superClass = superClass.superclass
     }
+    return null
 }
 
 private fun isAtomicPrimitive(owner: String): Boolean =
