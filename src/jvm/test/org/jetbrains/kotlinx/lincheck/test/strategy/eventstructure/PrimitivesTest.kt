@@ -386,7 +386,7 @@ class PrimitivesTest {
             Triple(1, 2, 2),
             Triple(2, 1, 2)
         )
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes, executionCount = 3) { results ->
+        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
             val r1 = getValue<Int>(results.parallelResults[0][0])
             val r2 = getValue<Int>(results.parallelResults[1][0])
             val r3 = getValue<Int>(results.postResults[0])

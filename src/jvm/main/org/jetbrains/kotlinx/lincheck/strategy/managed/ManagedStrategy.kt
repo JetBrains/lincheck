@@ -481,6 +481,7 @@ abstract class ManagedStrategy(
      * @param value the value to be written.
      */
     internal fun onSharedVariableWrite(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?) {
+        initializeSharedVariable(iThread, location, kClass)
         memoryTracker.writeValue(iThread, location, kClass, value?.opaque(kClass))
     }
 

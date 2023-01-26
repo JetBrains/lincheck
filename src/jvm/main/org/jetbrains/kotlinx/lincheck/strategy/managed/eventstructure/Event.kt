@@ -60,12 +60,6 @@ class Event private constructor(
      * considering for branching in an exploration starting from this event.
      */
     val pinnedEvents: ExecutionFrontier,
-    /**
-     * Flag indicating that this event is an initialization event.
-     *
-     * TODO: if we fix initialization thread id then this property can be derived from thread id
-     */
-    val isInitialization: Boolean
 ) : Comparable<Event> {
 
     var visited: Boolean = false
@@ -89,7 +83,6 @@ class Event private constructor(
             dependencies: List<Event>,
             frontier: ExecutionFrontier,
             pinnedEvents: ExecutionFrontier,
-            isInitialization: Boolean,
         ): Event {
             val id = nextId++
             val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
@@ -106,7 +99,7 @@ class Event private constructor(
                 causalityClock = causalityClock,
                 frontier = frontier,
                 pinnedEvents = pinnedEvents,
-                isInitialization = isInitialization
+                // isInitialization = isInitialization
             ).apply {
                 calculateJumps(this)
                 causalityClock.update(threadId, this)
@@ -270,7 +263,7 @@ val programOrder: PartialOrder<Event> = PartialOrder.ofLessThan { x, y ->
 }
 
 val causalityOrder: PartialOrder<Event> = PartialOrder.ofLessOrEqual { x, y ->
-    y.causalityClock.observes(x.threadId, x) || (x.isInitialization && !y.isInitialization)
+    y.causalityClock.observes(x.threadId, x)
 }
 
 val externalCausalityCovering: Covering<Event> = Covering { y ->

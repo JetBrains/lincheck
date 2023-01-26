@@ -46,10 +46,6 @@ class EventStructure(
      */
     val events: SortedList<Event> = _events
 
-    // TODO: this pattern is covered by explicit backing fields KEEP
-    //   https://github.com/Kotlin/KEEP/issues/278
-    private val _initializationMap = mutableMapOf<Any, Event>()
-
     lateinit var currentExplorationRoot: Event
         private set
 
@@ -64,6 +60,9 @@ class EventStructure(
 
     private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
 
+    // TODO: this pattern is covered by explicit backing fields KEEP
+    //   https://github.com/Kotlin/KEEP/issues/278
+    private val _initializationMap = mutableMapOf<Any, Event>()
     /**
      * Mapping from an index to initialization event for this index.
      */
@@ -265,7 +264,6 @@ class EventStructure(
                 dependencies = dependencies.filter { it != parent },
                 frontier = currentExecution.toFrontier().cut(conflicts),
                 pinnedEvents = pinnedEvents.cut(conflicts),
-                isInitialization = (iThread == initThreadId),
             )
         else null
     }
@@ -356,10 +354,10 @@ class EventStructure(
             return
         val initEvent = if (inReplayPhase(iThread)) {
             val atomicEvent = getNextHyperEventToReplay(iThread)
-            val requestEvent = atomicEvent.events[0]
-            check(requestEvent.label.isRequest)
+            val index = atomicEvent.events[0].label.index
+            check(index != null)
             val initEvent = currentExecution[initThreadId]!!
-                .filter { it.label.index == requestEvent.label.index }
+                .filter { it.label.index == index }
                 .ensure { it.size <= 1 }
                 .firstOrNull()
                 ?: atomicEvent.dependencies
@@ -404,8 +402,9 @@ class EventStructure(
                 //     it.label is WriteAccessLabel && it.label.location == event.label.location
                 // } ?: root
                 // candidates.filter { !causalityOrder.lessThan(it, threadLastWrite) }
-                val view = calculateMemoryLocationView(event.label.location, event.causalityClock)
-                candidates.filter { !view.outdated(it.threadId, it) }
+                val writes = calculateRacyWrites(event.label.location, event.causalityClock)
+                    // calculateMemoryLocationView(event.label.location, event.causalityClock)
+                candidates.filter { !writes.any { write -> causalityOrder.lessThan(it, write) }}
             }
             // re-entry lock-request synchronizes only with the initial event
             event.label is LockLabel && event.label.isRequest && event.label.isReentry -> {
@@ -494,6 +493,7 @@ class EventStructure(
 
     private fun addSendEvent(iThread: Int, label: EventLabel): Event {
         require(label.isSend)
+        check(isInitialized(label))
         tryReplayEvent(iThread)?.let { event ->
             // TODO: also check custom event/label specific rules when replaying,
             //   e.g. upon replaying write-exclusive check its location equal to
@@ -503,7 +503,15 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
+        val dependencies = mutableListOf<Event>()
+        // make sure the created send event depends on the initialization event
+        if (label.index != null) {
+            val initEvent = initializationMap[label.index]!!
+            if (parent == null || !causalityOrder.lessOrEqual(initEvent, parent)) {
+                dependencies.add(initEvent)
+            }
+        }
+        return addEvent(iThread, label, parent, dependencies)!!.also { event ->
             addEventToCurrentExecution(event, synchronize = true)
         }
     }
