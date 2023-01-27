@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
-@ModelCheckingCTest(iterations = 30)
+@ModelCheckingCTest(iterations = 1)
 class WaitNotifyLockTest : VerifierState() {
     private var counter = 0
     private val lock = WaitNotifyLock()

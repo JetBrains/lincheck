@@ -544,6 +544,7 @@ internal class ManagedStrategyTransformer(
         // Stack: (empty) -> location
         private fun invokeLabelMemoryLocation(locationState: MemoryLocationState) = adapter.run {
             loadMemoryLocationLabeler()
+            loadStrategy()
             locationState.load()
             invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, locationState.labelMethod)
         }

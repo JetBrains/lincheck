@@ -45,26 +45,26 @@ interface MemoryLocation {
 internal class MemoryLocationLabeler {
     private val fieldLocationByReflection = IdentityHashMap<Any, AtomicReflectionAccessDescriptor>()
 
-    fun labelStaticField(className: String, fieldName: String): MemoryLocation =
-        StaticFieldMemoryLocation(className, fieldName)
+    fun labelStaticField(strategy: ManagedStrategy, className: String, fieldName: String): MemoryLocation =
+        StaticFieldMemoryLocation(strategy, className, fieldName)
 
-    fun labelObjectField(obj: Any, className: String, fieldName: String): MemoryLocation =
-        ObjectFieldMemoryLocation(obj, className, fieldName)
+    fun labelObjectField(strategy: ManagedStrategy, obj: Any, className: String, fieldName: String): MemoryLocation =
+        ObjectFieldMemoryLocation(strategy, obj, className, fieldName)
 
-    fun labelArrayElement(array: Any, position: Int): MemoryLocation =
-        ArrayElementMemoryLocation(array, position)
+    fun labelArrayElement(strategy: ManagedStrategy, array: Any, position: Int): MemoryLocation =
+        ArrayElementMemoryLocation(strategy, array, position)
 
-    fun labelAtomicPrimitive(primitive: Any): MemoryLocation =
-        AtomicPrimitiveMemoryLocation(primitive)
+    fun labelAtomicPrimitive(strategy: ManagedStrategy, primitive: Any): MemoryLocation =
+        AtomicPrimitiveMemoryLocation(strategy, primitive)
 
-    fun labelAtomicReflectionFieldAccess(reflection: Any, obj: Any): MemoryLocation {
+    fun labelAtomicReflectionFieldAccess(strategy: ManagedStrategy, reflection: Any, obj: Any): MemoryLocation {
         val descriptor = getAtomicReflectionDescriptor(reflection) as AtomicReflectionFieldAccessDescriptor
-        return ObjectFieldMemoryLocation(obj, descriptor.className, descriptor.fieldName, isAtomic = true)
+        return ObjectFieldMemoryLocation(strategy, obj, descriptor.className, descriptor.fieldName, isAtomic = true)
     }
 
-    fun labelAtomicReflectionArrayAccess(reflection: Any, array: Any, index: Int): MemoryLocation {
-        val descriptor = getAtomicReflectionDescriptor(reflection) as AtomicReflectionArrayAccessDescriptor
-        return ArrayElementMemoryLocation(array, index)
+    fun labelAtomicReflectionArrayAccess(strategy: ManagedStrategy, reflection: Any, array: Any, index: Int): MemoryLocation {
+        check(getAtomicReflectionDescriptor(reflection) is AtomicReflectionArrayAccessDescriptor)
+        return ArrayElementMemoryLocation(strategy, array, index)
     }
 
     fun registerAtomicFieldReflection(reflection: Any, clazz: Class<*>, fieldName: String) {
@@ -97,6 +97,7 @@ internal class MemoryLocationLabeler {
 }
 
 internal class StaticFieldMemoryLocation(
+    private val strategy: ManagedStrategy,
     val className: String,
     val fieldName: String
 ) : MemoryLocation {
@@ -106,7 +107,7 @@ internal class StaticFieldMemoryLocation(
     override val isAtomic = false
 
     private val field by lazy {
-        getClass(className = className).getDeclaredField(fieldName)
+        getClass(strategy, className = className).getDeclaredField(fieldName)
             .apply { isAccessible = true }
     }
 
@@ -137,6 +138,7 @@ internal class StaticFieldMemoryLocation(
 }
 
 internal class ObjectFieldMemoryLocation(
+    private val strategy: ManagedStrategy,
     private var _obj: Any,
     val className: String,
     val fieldName: String,
@@ -148,7 +150,7 @@ internal class ObjectFieldMemoryLocation(
     override val recipient get() = obj
 
     private val field by lazy {
-        val clazz = getClass(obj, className = className)
+        val clazz = getClass(strategy, obj, className = className)
         getField(clazz, className, fieldName)
             .apply { isAccessible = true }
     }
@@ -187,6 +189,7 @@ internal class ObjectFieldMemoryLocation(
 }
 
 internal class ArrayElementMemoryLocation(
+    private val strategy: ManagedStrategy,
     private var _array: Any,
     val index: Int
 ) : MemoryLocation {
@@ -204,13 +207,13 @@ internal class ArrayElementMemoryLocation(
 
     private val getMethod by lazy {
         // TODO: can we use getOpaque() for atomic arrays here?
-        getClass(array).methods.first { it.name == "get" }
+        getClass(strategy, array).methods.first { it.name == "get" }
             .apply { isAccessible = true }
     }
 
     private val setMethod by lazy {
         // TODO: can we use setOpaque() for atomic arrays here?
-        getClass(array).methods.first { it.name == "set" }
+        getClass(strategy, array).methods.first { it.name == "set" }
             .apply { isAccessible = true }
     }
 
@@ -276,6 +279,7 @@ internal class ArrayElementMemoryLocation(
 }
 
 internal class AtomicPrimitiveMemoryLocation(
+    private val strategy: ManagedStrategy,
     private var _primitive: Any
 ) : MemoryLocation {
 
@@ -287,13 +291,13 @@ internal class AtomicPrimitiveMemoryLocation(
 
     private val getMethod by lazy {
         // TODO: can we use getOpaque() here?
-        getClass(primitive).methods.first { it.name == "get" }
+        getClass(strategy, primitive).methods.first { it.name == "get" }
             .apply { isAccessible = true }
     }
 
     private val setMethod by lazy {
         // TODO: can we use setOpaque() here?
-        getClass(primitive).methods.first { it.name == "set" }
+        getClass(strategy, primitive).methods.first { it.name == "set" }
             .apply { isAccessible = true }
     }
 
@@ -340,14 +344,12 @@ internal class AtomicPrimitiveMemoryLocation(
 private fun matchClassName(clazz: Class<*>, className: String) =
     clazz.name.endsWith(className) || (clazz.canonicalName?.endsWith(className) ?: false)
 
-private fun getClass(obj: Any? = null, className: String? = null): Class<*> {
+private fun getClass(strategy: ManagedStrategy, obj: Any? = null, className: String? = null): Class<*> {
     if (className == null) {
         return obj!!.javaClass
     }
     if (obj == null) {
-        // TODO: is it correct to use this class loader here?
-        val classLoader = (ManagedStrategyStateHolder.strategy as ManagedStrategy).classLoader
-        return classLoader.loadClass(className)
+        return strategy.classLoader.loadClass(className)
     }
     if (matchClassName(obj.javaClass, className)) {
         return obj.javaClass

@@ -53,7 +53,7 @@ class LocalObjectEliminationTest : VerifierState() {
         return (a.any as A).array.sum()
     }
 
-    @Test(timeout = 100_000)
+    @Test(timeout = 10_000)
     fun test() {
         LinChecker.check(this::class.java)
     }
