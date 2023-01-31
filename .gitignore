@@ -1,0 +1,20 @@
+#IntelliJ IDEA
+.idea/*
+!.idea/vcs.xml
+!.idea/copyright
+*.iml
+
+# Gradle
+.gradle
+.gradletasknamecache
+build
+out
+target
+local.properties
+
+# Common
+*~
+*.bak
+.DS_Store
+.DS_Store?
+._*
