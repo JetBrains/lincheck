@@ -165,7 +165,7 @@ class ReadModifyWriteEvent(
     init {
         require(readResponse.isValidResponse(readRequest))
         require(writeSend.isWritePartOfAtomicUpdate(readResponse))
-        check(readRequest.dependencies.isEmpty() && writeSend.dependencies.isEmpty())
+        check(readRequest.dependencies.isEmpty())
         check(readRequestPart !in readResponsePart.dependencies)
     }
 
@@ -178,8 +178,11 @@ class ReadModifyWriteEvent(
     val writeSendPart: Event
         get() = events[2]
 
-    override val dependencies: List<Event>
-        get() = readResponsePart.dependencies
+    override val dependencies: List<Event> =
+        // optimization for the common case when write part has no dependencies
+        if (writeSendPart.dependencies.isEmpty())
+            readResponsePart.dependencies
+        else readResponsePart.dependencies + writeSendPart.dependencies
 
 }
 

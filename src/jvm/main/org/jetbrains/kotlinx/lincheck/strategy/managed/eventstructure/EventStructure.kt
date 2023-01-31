@@ -220,6 +220,10 @@ class EventStructure(
             // run incremental checker on delayed events
             for (delayedEvent in delayedEvents) {
                 replayedExecution.addEvent(delayedEvent)
+                // TODO: refactor this check!!!
+                if (delayedEvent.label.isSend) {
+                    addSynchronizedEvents(delayedEvent)
+                }
                 incrementalChecker.check(delayedEvent)?.let { return it }
             }
             // to make sure that we have incrementally checked all newly added events
@@ -359,7 +363,7 @@ class EventStructure(
             event.label.index !in initializationMap) {
             _initializationMap[event.label.index!!] = event
         }
-        if (synchronize) {
+        if (synchronize && !inReplayPhase()) {
             addSynchronizedEvents(event)
         }
         // TODO: set suddenInvocationResult instead
@@ -392,7 +396,7 @@ class EventStructure(
         } else {
             val parent = currentExecution.lastEvent(initThreadId)
             addEvent(initThreadId, label, parent, dependencies = listOf())!!.also { initEvent ->
-                addEventToCurrentExecution(initEvent, visit = true, synchronize = false)
+                addEventToCurrentExecution(initEvent, visit = true)
             }
         }
         _initializationMap.put(label.index!!, initEvent).also {
@@ -693,6 +697,10 @@ class EventStructure(
 
     fun addInitialWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
         check(location !in initializationMap)
+        if (value == kClass.defaultValue()) {
+            _initializationMap[location] = root
+            return
+        }
         val label = WriteAccessLabel(
             location_ = location,
             value_ = value,
@@ -811,7 +819,10 @@ class EventStructure(
         VectorClock(programOrder, observation.clock.mapNotNull { (threadId, event) ->
             check(event in currentExecution)
             var lastWrite = event
-            while (!(lastWrite.label is WriteAccessLabel && (lastWrite.label as WriteAccessLabel).location == location)) {
+            while (
+                lastWrite.label !is InitializationLabel &&
+                !(lastWrite.label is WriteAccessLabel && (lastWrite.label as WriteAccessLabel).location == location)
+            ) {
                 lastWrite = lastWrite.parent ?: return@mapNotNull null
             }
             (threadId to lastWrite)

@@ -672,8 +672,8 @@ data class ReadAccessLabel(
         (isRequest && label is WriteAccessLabel && location == label.location) ->
             completeRequest(label.value)
 
-        // (isRequest && label is InitializationLabel) ->
-        //     completeRequest(OpaqueValue.default(kClass))
+        (isRequest && label is InitializationLabel) ->
+            completeRequest(OpaqueValue.default(kClass))
 
         else -> super.synchronize(label)
     }
@@ -706,9 +706,9 @@ data class ReadAccessLabel(
             value == label.value
         -> true
 
-        // label is InitializationLabel &&
-        //     value == OpaqueValue.default(kClass)
-        // -> true
+        label is InitializationLabel &&
+            value == OpaqueValue.default(kClass)
+        -> true
 
         else -> false
     }
