@@ -20,6 +20,7 @@ dependencies {
     implementation(kotlin("reflect"))
     testImplementation(kotlin("test"))
     implementation("org.jctools:jctools-core:3.1.0")
+    implementation("com.googlecode.concurrent-trees:concurrent-trees:2.6.1")
     val junitVersion: String by project
     testImplementation("junit:junit:$junitVersion")
     val lincheckVersion: String by project
@@ -36,6 +37,8 @@ tasks {
     withType<Test> {
         // Remove these arguments for Java 8 and older versions
         jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
+            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED")
+        maxHeapSize = "1g"
     }
 }
