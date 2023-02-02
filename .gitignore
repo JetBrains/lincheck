@@ -1,4 +1,5 @@
 #IntelliJ IDEA
+.idea
 .idea/*
 !.idea/vcs.xml
 !.idea/copyright
