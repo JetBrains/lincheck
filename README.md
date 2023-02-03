@@ -3,8 +3,8 @@
 This repository consists a set of bugs originally discovered with Lincheck.
 
 ## `ConcurrentLinkedDeque` in Java
-Source: Java Standard Library (still present in the latest JDK version)
-The bug [was originally detected](https://bugs.openjdk.org/browse/JDK-8256833) by Lincheck.
+Source: Java Standard Library (still present in the latest JDK version).  
+The bug [was originally detected](https://bugs.openjdk.org/browse/JDK-8256833) using Lincheck.
 
 ## `NonBlockingHashMapLong` in JCTools
 Source: [JCTools](https://github.com/JCTools/JCTools) 3.1.0 or older.  
