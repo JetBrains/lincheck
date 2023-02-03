@@ -2,33 +2,68 @@
 
 This repository consists a set of bugs originally discovered with Lincheck.
 
-## `ConcurrentLinkedDeque` in Java
+Surprisingly, we find many errors in concurrent data structures both from widely used libraries and algorithm implementations from top-tier concurrency conferences.  
+
+## `ConcurrentLinkedDeque` in Java Standard Library
 Source: Java Standard Library (still present in the latest JDK version).  
-The bug [was originally detected](https://bugs.openjdk.org/browse/JDK-8256833) using Lincheck.
+Test: [ConcurrentLinkedDequeTest](src/test/kotlin/ConcurrentLinkedDequeTest.kt)
+
+This bug has long-standing history. At least twice `ConcurrentLinkedDeque` was reported to be not linearizable before. At least twice this issue was "fixed" ([one](https://bugs.openjdk.org/browse/JDK-8188900), [two](https://bugs.openjdk.org/browse/JDK-8189387)).
+
+Even after all these fixes, we still are able to detect non-linearizability with a simple Lincheck test.  We reported the error [here](https://bugs.openjdk.org/browse/JDK-8256833) and the issue is currently unresolved.
+The whole situation shows how hard it is to test linearizability and how easy errors persist if there are no good linearizability tests.
+
+An example of non-linearizable behaviour found by Lincheck is when `ConcurrentLinkedDeque.pollFirst()` removes an element, which is known to be not first, due to concurrent modifications.
 
 ## `NonBlockingHashMapLong` in JCTools
 Source: [JCTools](https://github.com/JCTools/JCTools) 3.1.0 or older.  
+Test: [NonBlockingHashMapLongTest](src/test/kotlin/NonBlockingHashMapLongTest.kt)
+
 This bug [was found](https://github.com/JCTools/JCTools/issues/319) and later fixed using Lincheck.
+
+The issue was that, for high performance, failed modifications sometimes pretended that they were linearized before the operation that caused the failure. This optimization leads to non-linearizability when operations should return the old value. 
 
 ## `SnapTree` by Bronson et al. 
 Source: [authors' implementation](https://github.com/nbronson/snaptree).  
-N. G. Bronson, J. Casper, H. Chafi and K. Olukotun. A practical concurrent binary search tree. In PPoPP, 2010.
+N. G. Bronson, J. Casper, H. Chafi and K. Olukotun. A practical concurrent binary search tree. In PPoPP, 2010.    
+Test: [SnapTreeTest](src/test/kotlin/SnapTreeTest.kt)
+
+We also discover an error in well-known Bronson et al. AVL tree, which was one of the first scalable concurrent search trees, and whose concurrency protocols were adopted by many other concurrent trees. 
+
+The error lies in an incorrect assumption during `firstKey`/`lastKey` searches. Since the rightmost and leftmost nodes of the tree are not internal (i.e. do not have both children), the author assumed that they will not be marked as removed, because only internal nodes can be marked as removed. However, due to concurrency the found extreme nodes can become internal and later be marked, so the implementation throws an expection in this case.
 
 ## `LogicalOrderingAVL` by Drachsler et al. 
-Source: [authors' implementation](https://github.com/gramoli/synchrobench/blob/master/java/src/trees/lockbased/LogicalOrderingAVL.java).  
+Source: [authors' implementation](https://github.com/gramoli/synchrobench/blob/master/java/src/trees/lockbased/LogicalOrderingAVL.java).    
 D. Drachsler, M. Vechev and E. Yahav. Practical concurrent binary search trees via logical ordering. In PPoPP, 2014.
+Test: [LogicalOrderingAVLTest](src/test/kotlin/LogicalOrderingAVLTest.kt)
+
+We believe that the flaw in Drachsler et al. deadlock-freedom argument was originally found by Trevor Brown. The argument was based on the invariant that parents are locked before children. However, during rebalancing, due to rotations this order can change. 
+
+The deadlock is easily found by Lincheck when two concurrent threads simultaneously modify the tree. Basically, due to concurrent tree rotation, operations try to take two locks in different order, and thus, come to a deadlock.
 
 ## `CATree` by Sagonas and Winblad 
-Source: [authors' implementation](https://github.com/gramoli/synchrobench/blob/master/java/src/trees/lockbased/CATreeMapAVL.java).  
-K. Sagonas and K. Winblad. Contention Adapting Search Trees. In ISPDC, 2015.
+Source: [authors' implementation](https://github.com/gramoli/synchrobench/blob/master/java/src/trees/lockbased/CATreeMapAVL.java).    
+K. Sagonas and K. Winblad. Contention Adapting Search Trees. In ISPDC, 2015.  
+Test: [CATreeTest](src/test/kotlin/CATreeTest.kt)
+
+Another deadlock is present in Contention Adapting Search Tree. When a thread tries to lock the whole tree (e.g., for `size` operation) and another thread clears the data structure changing the root, the
+first thread can accidentally try to unlock the new root, which it did not
+lock, making the root locked forever. 
 
 ## `ConcurrencyOptimalTree` by Aksenov et al. 
-Source: [authors' implementation](https://github.com/gramoli/synchrobench/blob/master/java/src/trees/lockbased/ConcurrencyOptimalTreeMap.java).  
-V. Aksenov, V. Gramoli, P. Kuznetsov, A. Malova, S. Ravi. A Concurrency-Optimal Binary Search Tree. In Euro-Par, 2017. arXiv:1705.02851
+Source: [authors' implementation](https://github.com/gramoli/synchrobench/blob/master/java/src/trees/lockbased/ConcurrencyOptimalTreeMap.java).    
+V. Aksenov, V. Gramoli, P. Kuznetsov, A. Malova, S. Ravi. A Concurrency-Optimal Binary Search Tree. In Euro-Par, 2017. arXiv:1705.02851  
+Test: [ConcurrencyOptimalMapTest](src/test/kotlin/ConcurrencyOptimalMapTest.kt)
 
-## `ConcurrentSuffixTree` by Gallagher et al. 
-Source: [implementation](https://github.com/npgall/concurrent-trees), [artifact](https://mvnrepository.com/artifact/com.googlecode.concurrent-trees/concurrent-trees).
+In Concurrency Optimal Search Tree, two concurrent `putIfAbsent` operations can throw `NullPointerException`. Basically, if an operation re-tries, while the tree is
+still empty, this operation does an illegal memory access, since the authors
+simply forgot to handle this case. 
 
+## `ConcurrentSuffixTree` & `ConcurrentRadixTree` by Gallagher et al. 
+Source: [implementation](https://github.com/npgall/concurrent-trees), [artifact](https://mvnrepository.com/artifact/com.googlecode.concurrent-trees/concurrent-trees).  
+Tests: [ConcurrentSuffixTreeTest](src/test/kotlin/ConcurrentSuffixTreeTest.kt), [ConcurrentRadixTreeTest](src/test/kotlin/ConcurrentRadixTreeTest.kt)
+
+In this popular concurrency library, the authors claim that their trees offer a consistent view for readers. However, as can be seen in the Lincheck test reports, when a modification is in progress, a reader thread can see keys for some string `s` in `getKeysContaining(s)`, but not see these keys for a substring of `s`, which is clearly not a consistent view, even in terms of sequential properties of the data structure.
 
 # Running Tests
 All these bugs can be reproduced by running the following command:
@@ -36,7 +71,7 @@ All these bugs can be reproduced by running the following command:
 ./gradlew test
 ```
 
-The report will be located in `/test/kotlin/`.  
+For your convenience, alternatively, instead of running the tests, you can find the results [**here**](reports.md).
 
 # Acknowledgements
 We thank Anton Udovichenko for [finding](https://github.com/AnthonyUdovichenko/concurrent-algorithms-testing) many of these bugs.

@@ -89,9 +89,6 @@ abstract class IntIntAbstractConcurrentMapTest<MAP : ConcurrentMap<Int, Int>>(va
     fun containsKey(@Param(name = "key") key: Int): Boolean = map.containsKey(key)
 
     @Operation
-    fun containsValue(@Param(name = "value") value: Int): Boolean = map.containsValue(value)
-
-    @Operation
     fun putIfAbsent(@Param(name = "key") key: Int, @Param(name = "value") value: Int): Int? = map.putIfAbsent(key, value)
 
     @Operation
