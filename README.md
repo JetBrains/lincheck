@@ -5,8 +5,8 @@ This repository consists a set of bugs originally discovered with Lincheck.
 Surprisingly, we find many errors in concurrent data structures both from widely used libraries and algorithm implementations from top-tier concurrency conferences.  
 
 ## `ConcurrentLinkedDeque` in Java Standard Library
-Source: Java Standard Library (still present in the latest JDK version).  
-Test: [ConcurrentLinkedDequeTest](src/test/kotlin/ConcurrentLinkedDequeTest.kt)
+Source: Java Standard Library (still present in the latest JDK version).    
+Test: [ConcurrentLinkedDequeTest](src/test/kotlin/ConcurrentLinkedDequeTest.kt)  
 
 This bug has long-standing history. At least twice `ConcurrentLinkedDeque` was reported to be not linearizable before. At least twice this issue was "fixed" ([one](https://bugs.openjdk.org/browse/JDK-8188900), [two](https://bugs.openjdk.org/browse/JDK-8189387)).
 
@@ -14,6 +14,14 @@ Even after all these fixes, we still are able to detect non-linearizability with
 The whole situation shows how hard it is to test linearizability and how easy errors persist if there are no good linearizability tests.
 
 An example of non-linearizable behaviour found by Lincheck is when `ConcurrentLinkedDeque.pollFirst()` removes an element, which is known to be not first, due to concurrent modifications.
+
+## `Semaphore`/`AbstractQueueSynchronizer` in Java Standard Library
+Source: Java Standard Library (still present in the latest JDK version).  
+Test: [SemaphoreTest](src/test/kotlin/SemaphoreTest.kt)  
+
+Notably, this bug was introduced in the latest JDK versions (17+).
+
+One interrupted `Semaphore.acquire` can lead to a state when all threads are waiting (parked), while there is still a semaphore available.
 
 ## `NonBlockingHashMapLong` in JCTools
 Source: [JCTools](https://github.com/JCTools/JCTools) 3.1.0 or older.  

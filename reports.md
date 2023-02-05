@@ -31,6 +31,55 @@ Parallel part trace:
 |   thread is finished                                                                                      |                      |
 ```
 
+## `Semaphore` in Java Standard Library
+```agsl
+This test has failed with an unexpected error: 
+ = Invalid execution results =
+Parallel part:
+| release(): void [-,-,2] | acquire():          S [-,-,2] | acquire() + cancel: void                          |
+|                         | acquire() + cancel: - [1,1,2] | acquire() + cancel: SUSPENDED + CANCELLED [-,-,1] |
+---
+values in "[..]" brackets indicate the number of completed operations 
+in each of the parallel threads seen at the beginning of the current operation
+---
+
+= The following interleaving leads to the error =
+Parallel part trace:
+|                      |                                                                                                                                                                  | acquire() + cancel: void                  |
+|                      |                                                                                                                                                                  | acquire() + cancel: SUSPENDED + CANCELLED |
+|                      |                                                                                                                                                                  |   thread is finished                      |
+|                      | acquire()                                                                                                                                                        |                                           |
+|                      |   acquire(): threw ParkedThreadFinish at SemaphoreTest.acquire(SemaphoreTest.kt:32)                                                                              |                                           |
+|                      |     acquireSharedInterruptibly(1): threw ParkedThreadFinish at Semaphore.acquire(Semaphore.java:318)                                                             |                                           |
+|                      |       tryAcquireShared(1): -1 at AbstractQueuedSynchronizer.acquireSharedInterruptibly(AbstractQueuedSynchronizer.java:1046)                                     |                                           |
+|                      |       acquire(null,1,true,true,false,0): threw ParkedThreadFinish at AbstractQueuedSynchronizer.acquireSharedInterruptibly(AbstractQueuedSynchronizer.java:1047) |                                           |
+|                      |         tryAcquireShared(1): -1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:670)                                                       |                                           |
+|                      |         tryAcquireShared(1): -1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:670)                                                       |                                           |
+|                      |         tail.READ: SharedNode@1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:698)                                                       |                                           |
+|                      |         setPrevRelaxed(SharedNode@1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:699)                                                  |                                           |
+|                      |         casTail(SharedNode@1,SharedNode@2): true at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:702)                                      |                                           |
+|                      |         next.WRITE(SharedNode@2) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:705)                                                      |                                           |
+|                      |         prev.READ: SharedNode@1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                                                       |                                           |
+|                      |         head.READ: ExclusiveNode@1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                                                    |                                           |
+|                      |         status.READ: 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:658)                                                                |                                           |
+|                      |         prev.READ: ExclusiveNode@1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:661)                                                    |                                           |
+|                      |         status.READ: 0 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                                                |                                           |
+|                      |         status.WRITE(1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:710)                                                               |                                           |
+|                      |         prev.READ: SharedNode@1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                                                       |                                           |
+|                      |         head.READ: ExclusiveNode@1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                                                    |                                           |
+|                      |         status.READ: 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:658)                                                                |                                           |
+|                      |         prev.READ: ExclusiveNode@1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:661)                                                    |                                           |
+|                      |         status.READ: 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                                                |                                           |
+|                      |         park(FairSync@1): threw ParkedThreadFinish at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:715)                                    |                                           |
+|                      |           setBlocker(TestThread@2,FairSync@1) at LockSupport.park(LockSupport.java:210)                                                                          |                                           |
+|                      |           switch (reason: coroutine is suspended)                                                                                                                |                                           |
+|                      |   result: S                                                                                                                                                      |                                           |
+| release(): void      |                                                                                                                                                                  |                                           |
+|   thread is finished |                                                                                                                                                                  |                                           |
+|                      | acquire() + cancel: -                                                                                                                                            |                                           |
+|                      |   thread is finished                                                                                                                                             |                                           |
+```
+
 ## `NonBlockingHashMapLong` in JCTools
 ###
 
