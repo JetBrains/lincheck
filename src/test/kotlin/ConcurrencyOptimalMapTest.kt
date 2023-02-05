@@ -27,7 +27,6 @@ class ConcurrencyOptimalMapTest {
 
     @Test
     fun test() {
-        ModelCheckingOptions()
-            .check(this::class)
+        ModelCheckingOptions().check(this::class)
     }
 }

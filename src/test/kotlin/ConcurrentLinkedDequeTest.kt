@@ -28,9 +28,6 @@ class ConcurrentLinkedDequeTest() {
 
     @Test
     fun test() {
-        print(System.getProperty("java.version"))
-
-        ModelCheckingOptions()
-            .check(this::class)
+        ModelCheckingOptions().check(this::class)
     }
 }

@@ -21,6 +21,7 @@ dependencies {
     testImplementation(kotlin("test"))
     implementation("org.jctools:jctools-core:3.1.0")
     implementation("com.googlecode.concurrent-trees:concurrent-trees:2.6.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     val junitVersion: String by project
     testImplementation("junit:junit:$junitVersion")
     val lincheckVersion: String by project

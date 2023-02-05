@@ -26,9 +26,6 @@ class ConcurrentRadixTreeTest {
 
     @Test
     fun test() {
-        ModelCheckingOptions()
-            .logLevel(LoggingLevel.INFO)
-            .check(this::class)
+        ModelCheckingOptions().check(this::class)
     }
-
 }
