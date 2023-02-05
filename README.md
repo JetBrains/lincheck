@@ -65,6 +65,14 @@ Tests: [ConcurrentSuffixTreeTest](src/test/kotlin/ConcurrentSuffixTreeTest.kt), 
 
 In this popular concurrency library, the authors claim that their trees offer a consistent view for readers. However, as can be seen in the Lincheck test reports, when a modification is in progress, a reader thread can see keys for some string `s` in `getKeysContaining(s)`, but not see these keys for a substring of `s`, which is clearly not a consistent view, even in terms of sequential properties of the data structure.
 
+## `Mutex` in Kotlin Coroutines
+Source: Kotlin Coroutines 1.5.0 or older.  
+Tests: [MutexTest](src/test/kotlin/MutexTest.kt)
+
+Lincheck [helped to find](https://github.com/Kotlin/kotlinx.coroutines/issues/2590) this bug in Kotlin Coroutines library and to fix it.
+
+The error is caused not by non-linearizability but by violation of progress guarantees. The code was expected to be lock-free, however, it was possible to reach a state where a thread is trapped in a live lock loop.
+
 # Running Tests
 All these bugs can be reproduced by running the following command:
 ```
