@@ -15,13 +15,14 @@ The whole situation shows how hard it is to test linearizability and how easy er
 
 An example of non-linearizable behaviour found by Lincheck is when `ConcurrentLinkedDeque.pollFirst()` removes an element, which is known to be not first, due to concurrent modifications.
 
-## `Semaphore`/`AbstractQueueSynchronizer` in Java Standard Library
+## `AbstractQueueSynchronizer` in Java Standard Library
 Source: Java Standard Library (still present in the latest JDK version).  
 Test: [SemaphoreTest](src/test/kotlin/SemaphoreTest.kt)  
 
 Notably, this bug was introduced in the latest JDK versions (17+).
 
-One interrupted `Semaphore.acquire` can lead to a state when all threads are waiting (parked), while there is still a semaphore available.
+We show this `AbstractQueueSynchronizer` bug on `Semaphore` primitive, but many other Java concurrency primitives (such as `CyclicBarrier` and `CountDownLatch`) also employ this data structure, and thus, have the same bug.
+In the case of `Semaphore`, one interrupted `Semaphore.acquire` can lead to a state when all threads are waiting (parked), while there is still a semaphore available.
 
 ## `NonBlockingHashMapLong` in JCTools
 Source: [JCTools](https://github.com/JCTools/JCTools) 3.1.0 or older.  

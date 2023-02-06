@@ -31,7 +31,7 @@ Parallel part trace:
 |   thread is finished                                                                                      |                      |
 ```
 
-## `Semaphore` in Java Standard Library
+## `AbstractQueueSynchronizer` / `Semaphore` in Java Standard Library
 ```agsl
 This test has failed with an unexpected error: 
  = Invalid execution results =
