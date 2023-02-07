@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import java.util.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
+import org.jetbrains.kotlinx.lincheck.*
 
 interface MemoryLocation {
     // TODO: rename?
@@ -67,13 +68,15 @@ internal class MemoryLocationLabeler {
         return ArrayElementMemoryLocation(strategy, array, index)
     }
 
-    fun registerAtomicFieldReflection(reflection: Any, clazz: Class<*>, fieldName: String) {
-        val descriptor = AtomicReflectionFieldAccessDescriptor(clazz.canonicalName, fieldName)
+    fun registerAtomicFieldReflection(strategy: ManagedStrategy, reflection: Any, clazz: Class<*>, fieldName: String) {
+        val className = (strategy.classLoader as TransformationClassLoader).removeRemappingPrefix(clazz.name)
+        val descriptor = AtomicReflectionFieldAccessDescriptor(className, fieldName)
         registerAtomicReflectionDescriptor(reflection, descriptor)
     }
 
-    fun registerAtomicArrayReflection(reflection: Any, elemClazz: Class<*>) {
-        val descriptor = AtomicReflectionArrayAccessDescriptor(elemClazz.canonicalName)
+    fun registerAtomicArrayReflection(strategy: ManagedStrategy, reflection: Any, elemClazz: Class<*>) {
+        val elemClassName = (strategy.classLoader as TransformationClassLoader).removeRemappingPrefix(elemClazz.name)
+        val descriptor = AtomicReflectionArrayAccessDescriptor(elemClassName)
         registerAtomicReflectionDescriptor(reflection, descriptor)
     }
 

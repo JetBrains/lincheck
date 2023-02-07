@@ -355,6 +355,7 @@ internal class ManagedStrategyTransformer(
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             val afuLocal = newLocal(OBJECT_TYPE).also { copyLocal(it) }
             loadMemoryLocationLabeler()
+            loadStrategy()
             loadLocal(afuLocal)
             loadLocal(classLocal)
             when (kind) {

@@ -26,9 +26,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.LockSupport.*
+import java.lang.invoke.*
 
 import org.junit.Test
-import org.junit.Ignore
+
 
 /**
  * These tests check that [EventStructureStrategy] correctly handles all basic concurrent primitives.
@@ -312,6 +313,90 @@ class PrimitivesTest {
     }
 
     // TODO: handle IntRef (var variables accessed from multiple threads)
+
+    class VolatileReferenceVariable {
+        @Volatile
+        private var variable: String? = null
+
+        companion object {
+            private var updater =
+                AtomicReferenceFieldUpdater.newUpdater(VolatileReferenceVariable::class.java, String::class.java, "variable")
+
+            private var handle = run {
+                val lookup = MethodHandles.lookup()
+                lookup.findVarHandle(VolatileReferenceVariable::class.java, "variable", String::class.java)
+            }
+        }
+
+        fun write(value: String?) {
+            variable = value
+        }
+
+        fun afuWrite(value: String?) {
+            updater.set(this, value)
+        }
+
+        fun vhWrite(value: String?) {
+            handle.set(this, value)
+        }
+
+        fun read(): String? {
+            return variable
+        }
+
+        fun afuRead(): String? {
+            return updater.get(this)
+        }
+
+        fun vhRead(): String? {
+            return handle.get(this) as String?
+        }
+
+        // TODO: also add Unsafe accessors once they are supported
+
+    }
+
+    @Test
+    fun testMixedAccessMethods() {
+        val read = VolatileReferenceVariable::read
+        val afuRead = VolatileReferenceVariable::afuRead
+        val vhRead = VolatileReferenceVariable::vhRead
+        val write = VolatileReferenceVariable::write
+        val afuWrite = VolatileReferenceVariable::afuWrite
+        val vhWrite = VolatileReferenceVariable::vhWrite
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, "a")
+                }
+                thread {
+                    actor(afuWrite, "b")
+                }
+                thread {
+                    actor(vhWrite, "c")
+                }
+                thread {
+                    actor(read)
+                }
+                thread {
+                    actor(afuRead)
+                }
+                thread {
+                    actor(vhRead)
+                }
+            }
+        }
+        val values = setOf(null, "a", "b", "c")
+        val outcomes: Set<Triple<String?, String?, String?>> =
+            values.flatMap { a -> values.flatMap { b -> values.flatMap { c -> listOf(Triple(a, b, c)) } } }
+                .toSet()
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+            val a = getValue<String?>(results.parallelResults[3][0])
+            val b = getValue<String?>(results.parallelResults[4][0])
+            val c = getValue<String?>(results.parallelResults[5][0])
+            Triple(a, b, c)
+        }
+    }
 
     class SynchronizedVariable {
 

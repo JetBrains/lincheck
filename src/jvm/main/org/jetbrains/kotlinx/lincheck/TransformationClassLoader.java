@@ -90,7 +90,6 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                className.startsWith("com.intellij.rt.coverage.") ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
                    !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                   // TODO: disabled ManagedStrategyStateHolder transformation in order to access it from MemoryLocation code
                    !className.equals(ManagedStrategyStateHolder.class.getName())
                ) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
@@ -114,6 +113,14 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             String internalName = className.replace('.', '/');
             String remappedInternalName = remapper.mapType(internalName);
             return remappedInternalName.replace('/', '.');
+        }
+        return className;
+    }
+
+    public String removeRemappingPrefix(String className) {
+        String prefix = REMAPPED_PACKAGE_CANONICAL_NAME;
+        if (className.startsWith(prefix)) {
+            return className.substring(prefix.length());
         }
         return className;
     }
