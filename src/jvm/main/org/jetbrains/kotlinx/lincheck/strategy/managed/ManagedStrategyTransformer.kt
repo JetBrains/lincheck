@@ -72,39 +72,48 @@ internal class ManagedStrategyTransformer(
             val mv = super.visitMethod(access and ACC_NATIVE.inv(), mname, desc, signature, exceptions)
             return VMSupportsCS8MethodGenerator(GeneratorAdapter(mv, access and ACC_NATIVE.inv(), mname, desc))
         }
+        // disable synchronized flag
         val isSynchronized = access and ACC_SYNCHRONIZED != 0
         if (isSynchronized) {
-            access = access xor ACC_SYNCHRONIZED // disable synchronized
+            access = access xor ACC_SYNCHRONIZED
         }
+        // add basic transformers
         var mv = super.visitMethod(access, mname, desc, signature, exceptions)
         mv = JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
+        // static initialization transformer
+        mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // atomics transformers has to be put here for some reason
+        // TODO: investigate what is wrong with order of transformations here
+        if (constructTraceRepresentation) {
+            mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        }
+        // TODO: put AtomicPrimitiveAccessMethodTransformer near other memory access transformers
+        mv = AtomicPrimitiveAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // methods logging transformers
+        mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // blocking synchronization primitives transformers
         mv = SynchronizedBlockTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (isSynchronized) {
             // synchronized method is replaced with synchronized lock
             mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
         }
-        mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (constructTraceRepresentation) {
-            mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        }
-        mv = AtomicPrimitiveAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // memory access transformers
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = run {
             val sv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
             val aa = AnalyzerAdapter(className, access, mname, desc, sv)
             sv.analyzer = aa
             aa
         }
-        // TODO: can we move these transformers and make SharedVariableAccessMethodTransformer to be the last transformer in the chain?
+        // special methods intercepting transformers
+        mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
