@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.unreachable
+import org.jetbrains.kotlinx.lincheck.ensure
 
 /**
  * Execution represents a set of events belonging to single program's execution.

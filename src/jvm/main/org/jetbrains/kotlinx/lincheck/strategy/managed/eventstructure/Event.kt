@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import  org.jetbrains.kotlinx.lincheck.ensure
+
 typealias EventID = Int
 
 class Event private constructor(

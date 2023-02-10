@@ -367,6 +367,66 @@ infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
 
+inline fun Boolean.ensure(): Boolean {
+    // TODO: add contract?
+    // contract {
+    //     returns() implies this
+    // }
+    check(this)
+    return this
+}
+
+inline fun Boolean.ensure(lazyMessage: () -> Any): Boolean {
+    check(this, lazyMessage)
+    return this
+}
+
+inline fun Boolean.ensureFalse(): Boolean {
+    check(!this)
+    return this
+}
+
+inline fun Boolean.ensureFalse(lazyMessage: () -> Any): Boolean {
+    check(!this, lazyMessage)
+    return this
+}
+
+inline fun<T> T?.ensureNull(): T? {
+    check(this == null)
+    return this
+}
+
+inline fun<T> T?.ensureNull(lazyMessage: () -> Any): T? {
+    check(this == null, lazyMessage)
+    return this
+}
+
+inline fun<T> T?.ensureNotNull(): T {
+    checkNotNull(this)
+    return this
+}
+
+inline fun<T> T?.ensureNotNull(lazyMessage: () -> Any): T {
+    checkNotNull(this, lazyMessage)
+    return this
+}
+
+inline fun<T> T?.expect(x: T): T? {
+    check(this == x)
+    return this
+}
+
+inline fun<T> T?.expect(x: T, lazyMessage: () -> Any): T? {
+    check(this == x, lazyMessage)
+    return this
+}
+
+inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
+    check(predicate(this))
+    return this
+}
+
+
 fun<T> MutableList<T>.cutTo(index: Int) {
     require(index < size)
     subList(index + 1, size).clear()

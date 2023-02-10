@@ -44,34 +44,6 @@ fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: (T,
 fun <T : Comparable<T>> List<T>.isSorted(fromIndex : Int = 0, toIndex : Int = size): Boolean =
     isChain(fromIndex, toIndex) { x, y -> x <= y }
 
-inline fun Boolean.ensure(): Boolean {
-    // TODO: add contract?
-    // contract {
-    //     returns() implies this
-    // }
-    check(this)
-    return this
-}
-
-inline fun Boolean.ensureFalse(): Boolean {
-    // TODO: add contract?
-    // contract {
-    //     returns() implies !this
-    // }
-    check(!this)
-    return this
-}
-
-inline fun<T> T?.ensureNull(): T? {
-    check(this == null)
-    return this
-}
-
-inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
-    check(predicate(this))
-    return this
-}
-
 inline fun<T> T.runIf(boolean: Boolean, block: T.() -> T): T =
     if (boolean) block() else this
 
