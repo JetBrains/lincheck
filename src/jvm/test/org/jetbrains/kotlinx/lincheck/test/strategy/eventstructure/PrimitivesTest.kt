@@ -18,18 +18,22 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
+// this line is required to import jdk.internal.misc.Unsafe
+// TODO: better solution?
+@file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
+
 package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.LockSupport.*
-import java.lang.invoke.*
+import java.lang.invoke.MethodHandles
+import jdk.internal.misc.Unsafe
 
 import org.junit.Test
-
 
 /**
  * These tests check that [EventStructureStrategy] correctly handles all basic concurrent primitives.
@@ -326,6 +330,11 @@ class PrimitivesTest {
                 val lookup = MethodHandles.lookup()
                 lookup.findVarHandle(VolatileReferenceVariable::class.java, "variable", String::class.java)
             }
+
+            private val U = Unsafe.getUnsafe()
+
+            private val offset = U.objectFieldOffset(VolatileReferenceVariable::class.java, "variable")
+
         }
 
         fun write(value: String?) {
@@ -340,6 +349,10 @@ class PrimitivesTest {
             handle.set(this, value)
         }
 
+        fun unsafeWrite(value: String?) {
+            U.putReference(this, offset, value)
+        }
+
         fun read(): String? {
             return variable
         }
@@ -352,8 +365,33 @@ class PrimitivesTest {
             return handle.get(this) as String?
         }
 
-        // TODO: also add Unsafe accessors once they are supported
+        fun unsafeRead(): String? {
+            return U.getReference(this, offset) as String?
+        }
 
+    }
+
+    @Test
+    fun testUnsafeReferenceAccess() {
+        val read = VolatileReferenceVariable::unsafeRead
+        val write = VolatileReferenceVariable::unsafeWrite
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, "a")
+                }
+                thread {
+                    actor(read)
+                }
+                thread {
+                    actor(write, "b")
+                }
+            }
+        }
+        val outcomes: Set<String?> = setOf(null, "a", "b")
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+            getValue(results.parallelResults[1][0])
+        }
     }
 
     @Test
@@ -364,6 +402,7 @@ class PrimitivesTest {
         val write = VolatileReferenceVariable::write
         val afuWrite = VolatileReferenceVariable::afuWrite
         val vhWrite = VolatileReferenceVariable::vhWrite
+        // TODO: also add Unsafe accessors once they are supported
         val testScenario = scenario {
             parallel {
                 thread {
