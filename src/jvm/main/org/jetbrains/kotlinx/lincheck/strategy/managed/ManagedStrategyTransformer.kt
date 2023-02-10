@@ -103,7 +103,7 @@ internal class ManagedStrategyTransformer(
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // memory access transformers
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = UnsafeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = run {
             val sv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
             val aa = AnalyzerAdapter(className, access, mname, desc, sv)
@@ -838,6 +838,37 @@ internal class ManagedStrategyTransformer(
 
     }
 
+    private class UnsafeObjectFieldMemoryLocationState(
+        adapter: GeneratorAdapter
+    ) : MemoryLocationState(adapter, locationName = null) {
+        var unsafeLocal = -1   // not initialized
+        var objectLocal = -1   // not initialized
+        var offsetLocal = -1   // not initialized
+
+        // STACK: Unsafe, object, offset -> (empty)
+        override fun store() = adapter.run {
+            unsafeLocal = newLocal(OBJECT_TYPE)
+            objectLocal = newLocal(OBJECT_TYPE)
+            offsetLocal = newLocal(Type.LONG_TYPE)
+            storeLocal(offsetLocal)
+            storeLocal(objectLocal)
+            storeLocal(unsafeLocal)
+        }
+
+        // STACK: (empty) -> Unsafe, object, offset
+        override fun load() = adapter.run {
+            check(unsafeLocal != -1)
+            check(objectLocal != -1)
+            check(offsetLocal != -1)
+            loadLocal(unsafeLocal)
+            loadLocal(objectLocal)
+            loadLocal(offsetLocal)
+        }
+
+        override val labelMethod: Method = LABEL_UNSAFE_FIELD_ACCESS
+
+    }
+
     /**
      * Add strategy method invocations corresponding to ManagedGuarantee guarantees.
      * CallStackTraceTransformer should be an earlier transformer than this transformer, because
@@ -1070,17 +1101,77 @@ internal class ManagedStrategyTransformer(
      * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`, because
      * transformed java.util classes can not access Unsafe directly after transformation.
      */
-    private class UnsafeTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+    private inner class UnsafeTransformer(
+        methodName: String,
+        adapter: GeneratorAdapter
+    ) : ManagedStrategyMemoryTrackingTransformer(methodName, adapter) {
+
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
             if (owner.isUnsafe() && name == "getUnsafe") {
                 // load Unsafe
-                adapter.push(owner.canonicalClassName)
-                adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
-                adapter.checkCast(Type.getType("L${owner};"))
+                push(owner.canonicalClassName)
+                invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
+                checkCast(Type.getType("L${owner};"))
                 return
             }
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            if (owner.isUnsafe() && name == "objectFieldOffset") {
+                val classLocal = newLocal(CLASS_TYPE)
+                val fieldNameLocal = newLocal(STRING_TYPE)
+                val fieldReflectionLocal = newLocal(FIELD_TYPE)
+                val argumentTypes = Type.getType(descriptor).argumentTypes
+                var byName = false
+                var byReflection = false
+                when (argumentTypes.size) {
+                    2 -> {
+                        // STACK: class, fieldName
+                        check(argumentTypes[0] == CLASS_TYPE)
+                        check(argumentTypes[1] == STRING_TYPE)
+                        copyLocal(classLocal, fieldNameLocal)
+                        byName = true
+                    }
+                    1 -> {
+                        // STACK: field
+                        check(argumentTypes[0] == FIELD_TYPE)
+                        copyLocal(fieldReflectionLocal)
+                        byReflection = true
+                    }
+                    else -> unreachable()
+                }
+                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                val offsetLocal = newLocal(Type.LONG_TYPE).also { copyLocal(it) }
+                loadMemoryLocationLabeler()
+                loadStrategy()
+                when {
+                    byName -> {
+                        loadLocal(classLocal)
+                        loadLocal(fieldNameLocal)
+                        loadLocal(offsetLocal)
+                        invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_UNSAFE_FIELD_OFFSET)
+                    }
+                    byReflection -> {
+                        loadLocal(fieldReflectionLocal)
+                        TODO()
+                    }
+                }
+                return
+            }
+            if (owner.isUnsafe() && name == "getReference") {
+                val locationState = UnsafeObjectFieldMemoryLocationState(adapter)
+                visitRead(locationState, OBJECT_TYPE.descriptor) {
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                }
+                return
+            }
+            if (owner.isUnsafe() && name == "putReference") {
+                val locationState = UnsafeObjectFieldMemoryLocationState(adapter)
+                visitWrite(locationState, OBJECT_TYPE.descriptor) {
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                }
+                return
+            }
+            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
+
     }
 
     /**
@@ -1817,6 +1908,7 @@ private val RANDOM_TYPE = Type.getType(Random::class.java)
 private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
 private val STRING_TYPE = Type.getType(String::class.java)
 private val CLASS_TYPE = Type.getType(Class::class.java)
+private val FIELD_TYPE = Type.getType(Field::class.java)
 private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
 private val TRACE_POINT_TYPE = Type.getType(TracePoint::class.java)
 private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteTracePoint::class.java)
@@ -1876,8 +1968,10 @@ private val LABEL_ARRAY_ELEMENT = Method.getMethod(MemoryLocationLabeler::labelA
 private val LABEL_ATOMIC_PRIMITIVE = Method.getMethod(MemoryLocationLabeler::labelAtomicPrimitive.javaMethod)
 private val LABEL_ATOMIC_REFLECTION_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionFieldAccess.javaMethod)
 private val LABEL_ATOMIC_REFLECTION_ARRAY_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionArrayAccess.javaMethod)
+private val LABEL_UNSAFE_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelUnsafeFieldAccess.javaMethod)
 private val REGISTER_ATOMIC_FIELD_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicFieldReflection.javaMethod)
 private val REGISTER_ATOMIC_ARRAY_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicArrayReflection.javaMethod)
+private val REGISTER_UNSAFE_FIELD_OFFSET = Method.getMethod(MemoryLocationLabeler::registerUnsafeFieldOffset.javaMethod)
 private val GET_KCLASS_FROM_DESCRIPTOR = Method.getMethod(::getKClassFromDescriptor.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
@@ -1927,10 +2021,25 @@ private fun GeneratorAdapter.loadLocals(locals: IntArray) {
 
 /**
  * Saves the top value on the stack without changing stack.
+ *
+ * @param local index of local to save top value
  */
 private fun GeneratorAdapter.copyLocal(local: Int) {
     storeLocal(local)
     loadLocal(local)
+}
+
+/**
+ * Saves the top 2 values on the stack without changing stack.
+ *
+ * @param local2 index of local to save top-2 value
+ * @param local1 index of local to save top-1 value
+ */
+private fun GeneratorAdapter.copyLocal(local2: Int, local1: Int) {
+    storeLocal(local1)
+    storeLocal(local2)
+    loadLocal(local2)
+    loadLocal(local1)
 }
 
 /**

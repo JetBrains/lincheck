@@ -396,8 +396,8 @@ inline fun<T> T?.ensureNull(): T? {
     return this
 }
 
-inline fun<T> T?.ensureNull(lazyMessage: () -> Any): T? {
-    check(this == null, lazyMessage)
+inline fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
+    check(this == null) { lazyMessage(this) }
     return this
 }
 
@@ -411,21 +411,15 @@ inline fun<T> T?.ensureNotNull(lazyMessage: () -> Any): T {
     return this
 }
 
-inline fun<T> T?.expect(x: T): T? {
-    check(this == x)
-    return this
-}
-
-inline fun<T> T?.expect(x: T, lazyMessage: () -> Any): T? {
-    check(this == x, lazyMessage)
-    return this
-}
-
 inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
     check(predicate(this))
     return this
 }
 
+inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
+    check(predicate(this)) { lazyMessage(this) }
+    return this
+}
 
 fun<T> MutableList<T>.cutTo(index: Int) {
     require(index < size)

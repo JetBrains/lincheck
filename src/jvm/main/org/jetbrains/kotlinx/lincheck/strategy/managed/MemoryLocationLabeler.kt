@@ -45,6 +45,7 @@ interface MemoryLocation {
 */
 internal class MemoryLocationLabeler {
     private val fieldLocationByReflection = IdentityHashMap<Any, AtomicReflectionAccessDescriptor>()
+    private val fieldNameByOffsetMap = mutableMapOf<UnsafeFieldAccessDescriptor, String>()
 
     fun labelStaticField(strategy: ManagedStrategy, className: String, fieldName: String): MemoryLocation =
         StaticFieldMemoryLocation(strategy, className, fieldName)
@@ -59,43 +60,75 @@ internal class MemoryLocationLabeler {
         AtomicPrimitiveMemoryLocation(strategy, primitive)
 
     fun labelAtomicReflectionFieldAccess(strategy: ManagedStrategy, reflection: Any, obj: Any): MemoryLocation {
-        val descriptor = getAtomicReflectionDescriptor(reflection) as AtomicReflectionFieldAccessDescriptor
+        val descriptor = lookupAtomicReflectionDescriptor(reflection) as AtomicReflectionFieldAccessDescriptor
         return ObjectFieldMemoryLocation(strategy, obj, descriptor.className, descriptor.fieldName, isAtomic = true)
     }
 
     fun labelAtomicReflectionArrayAccess(strategy: ManagedStrategy, reflection: Any, array: Any, index: Int): MemoryLocation {
-        check(getAtomicReflectionDescriptor(reflection) is AtomicReflectionArrayAccessDescriptor)
+        check(lookupAtomicReflectionDescriptor(reflection) is AtomicReflectionArrayAccessDescriptor)
         return ArrayElementMemoryLocation(strategy, array, index)
     }
 
+    fun labelUnsafeFieldAccess(strategy: ManagedStrategy, unsafe: Any, obj: Any, offset: Long): MemoryLocation {
+        val className = normalizeClassName(strategy, obj.javaClass.name)
+        val fieldName = lookupFieldNameByOffset(strategy, obj, offset)
+        return ObjectFieldMemoryLocation(strategy, obj, className, fieldName)
+    }
+
     fun registerAtomicFieldReflection(strategy: ManagedStrategy, reflection: Any, clazz: Class<*>, fieldName: String) {
-        val className = (strategy.classLoader as TransformationClassLoader).removeRemappingPrefix(clazz.name)
+        val className = normalizeClassName(strategy, clazz.name)
         val descriptor = AtomicReflectionFieldAccessDescriptor(className, fieldName)
-        registerAtomicReflectionDescriptor(reflection, descriptor)
+        registerAtomicReflectionDescriptor(descriptor, reflection)
     }
 
     fun registerAtomicArrayReflection(strategy: ManagedStrategy, reflection: Any, elemClazz: Class<*>) {
-        val elemClassName = (strategy.classLoader as TransformationClassLoader).removeRemappingPrefix(elemClazz.name)
+        val elemClassName = normalizeClassName(strategy, elemClazz.name)
         val descriptor = AtomicReflectionArrayAccessDescriptor(elemClassName)
-        registerAtomicReflectionDescriptor(reflection, descriptor)
+        registerAtomicReflectionDescriptor(descriptor, reflection)
     }
 
-    private fun registerAtomicReflectionDescriptor(reflection: Any, descriptor: AtomicReflectionAccessDescriptor) {
-        fieldLocationByReflection.put(reflection, descriptor).also {
-            check(it == null) {
-                "Atomic reflection object ${opaqueString(reflection)} cannot be registered to access $descriptor," +
-                    "because it is already registered to access $it!"
-            }
+    fun registerUnsafeFieldOffset(strategy: ManagedStrategy, clazz: Class<*>, fieldName: String, offset: Long) {
+        val className = normalizeClassName(strategy, clazz.name)
+        val descriptor = UnsafeFieldAccessDescriptor(className, offset)
+        registerUnsafeFieldAccessDescriptor(descriptor, fieldName)
+    }
+
+    private fun registerAtomicReflectionDescriptor(descriptor: AtomicReflectionAccessDescriptor, reflection: Any) {
+        fieldLocationByReflection.put(reflection, descriptor).ensureNull {
+            "Atomic reflection object ${opaqueString(reflection)} cannot be registered to access $descriptor," +
+                "because it is already registered to access $it!"
         }
     }
 
-    private fun getAtomicReflectionDescriptor(reflection: Any): AtomicReflectionAccessDescriptor {
-        val descriptor = fieldLocationByReflection[reflection]
-        check(descriptor != null) {
-            "Cannot access memory via unregistered reflection object ${opaqueString(reflection)}"
+    private fun registerUnsafeFieldAccessDescriptor(descriptor: UnsafeFieldAccessDescriptor, fieldName: String) {
+        fieldNameByOffsetMap.put(descriptor, fieldName).ensure({ it == null || it == fieldName }) {
+            "Offset ${descriptor.offset} for class ${descriptor.className} cannot be registered to access field $fieldName " +
+                "because it is already registered to access field $it!"
         }
-        return descriptor
     }
+
+
+    private fun lookupAtomicReflectionDescriptor(reflection: Any): AtomicReflectionAccessDescriptor =
+        fieldLocationByReflection[reflection].ensureNotNull {
+            "Cannot access memory via unregistered reflection object ${opaqueString(reflection)}!"
+        }
+
+    private fun lookupFieldNameByOffset(strategy: ManagedStrategy, obj: Any, offset: Long): String =
+        lookupFieldNameByOffset(strategy, obj.javaClass, offset).ensureNotNull {
+            "Cannot access object ${opaqueString(obj)} via unregistered offset $offset!"
+        }
+
+    private fun lookupFieldNameByOffset(strategy: ManagedStrategy, clazz: Class<*>, offset: Long): String? {
+        val className = normalizeClassName(strategy, clazz.name)
+        val descriptor = UnsafeFieldAccessDescriptor(className, offset)
+        fieldNameByOffsetMap[descriptor]?.let { return it }
+        return clazz.superclass
+            ?.let { lookupFieldNameByOffset(strategy, it, offset) }
+            ?.also { registerUnsafeFieldAccessDescriptor(descriptor, it) }
+    }
+
+    private fun normalizeClassName(strategy: ManagedStrategy, className: String): String =
+        (strategy.classLoader as TransformationClassLoader).removeRemappingPrefix(className)
 
 }
 
@@ -387,6 +420,10 @@ private data class AtomicReflectionArrayAccessDescriptor(
     val elementClassName: String,
 ): AtomicReflectionAccessDescriptor()
 
+private data class UnsafeFieldAccessDescriptor(
+    val className: String,
+    val offset: Long,
+)
 
 // TODO: move to another place
 // TODO: make value class?
