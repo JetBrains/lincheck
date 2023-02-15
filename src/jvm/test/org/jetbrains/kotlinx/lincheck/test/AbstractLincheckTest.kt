@@ -21,14 +21,14 @@
  */
 package org.jetbrains.kotlinx.lincheck.test
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
-import kotlin.reflect.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.junit.Test
+import kotlin.reflect.KClass
 
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>

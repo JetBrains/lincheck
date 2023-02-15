@@ -21,12 +21,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
-import java.math.*
-import kotlin.coroutines.*
-import kotlin.coroutines.intrinsics.*
+import java.math.BigDecimal
+import java.math.BigInteger
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
 
@@ -308,7 +308,7 @@ private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalN
         kotlinx.coroutines.internal.Symbol::class.java,
     ).map { it.canonicalName } +
     listOf(
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonList",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonMap",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonSet"
+        "java.util.Collections.SingletonList",
+        "java.util.Collections.SingletonMap",
+        "java.util.Collections.SingletonSet"
     )

@@ -21,15 +21,14 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.atomicfu.*
+import kotlinx.atomicfu.atomicArrayOfNulls
 import kotlinx.coroutines.CancellableContinuation
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import java.io.*
-import java.lang.*
-import java.util.concurrent.*
-import java.util.concurrent.locks.*
-import kotlin.math.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import java.io.Closeable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.locks.LockSupport
+import kotlin.math.min
 
 /**
  * This executor maintains the specified number of threads and is used by
@@ -172,7 +171,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
             try {
                 runnable.run()
             } catch(e: Throwable) {
-                setResult(iThread, wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e))
+                setResult(iThread, e)
                 continue@loop
             }
             setResult(iThread, DONE)

@@ -46,6 +46,7 @@ kotlin {
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
             val reflectionsVersion: String by project
+            val byte_buddy_version: String by project
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -54,6 +55,8 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+                api("net.bytebuddy:byte-buddy:$byte_buddy_version")
+                api("net.bytebuddy:byte-buddy-agent:$byte_buddy_version")
             }
         }
 

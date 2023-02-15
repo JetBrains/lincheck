@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
+import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.ParallelThreadRunnerInterceptor
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
@@ -79,8 +80,7 @@ internal open class ParallelThreadsRunner(
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
 
-    override fun initialize() {
-        super.initialize()
+    init {
         testThreadExecutions = Array(scenario.threads) { t ->
             TestThreadExecutionGenerator.create(this, t, scenario.parallelExecution[t], completions[t], scenario.hasSuspendableActors())
         }
@@ -304,13 +304,11 @@ internal open class ParallelThreadsRunner(
             result
         }
         val afterPostStateRepresentation = constructStateRepresentation()
-        // Combine the results and convert them for the standard class loader (if of non-primitive types).
-        // We do not want the byte-code transformation to be known outside of runner and strategy classes.
         val results = ExecutionResult(
             initResults, afterInitStateRepresentation,
             parallelResultsWithClock, afterParallelStateRepresentation,
             postResults, afterPostStateRepresentation
-        ).convertForLoader(LinChecker::class.java.classLoader)
+        )
         return CompletedInvocationResult(results)
     }
 

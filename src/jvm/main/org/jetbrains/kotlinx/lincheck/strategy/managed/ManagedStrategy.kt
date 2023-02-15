@@ -108,7 +108,6 @@ abstract class ManagedStrategy(
         try {
             // Initialize ManagedStrategyStateHolder - it can be used during test class construction.
             ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
-            runner.initialize()
         } catch (t: Throwable) {
             runner.close()
             throw t
@@ -214,7 +213,6 @@ abstract class ManagedStrategy(
         runner.close()
         runner = createRunner()
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
-        runner.initialize()
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
         val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
@@ -331,7 +329,7 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
     }
 
     override fun onActorStart(iThread: Int) {

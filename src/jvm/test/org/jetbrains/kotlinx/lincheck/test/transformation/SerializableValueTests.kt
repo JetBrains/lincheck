@@ -21,15 +21,14 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
-import org.junit.Assert.assertFalse
-import org.junit.Test
-import java.io.Serializable
-import java.util.concurrent.atomic.*
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class SerializableResultTest : AbstractLincheckTest() {
     private val counter = AtomicReference(ValueHolder(0))
@@ -76,20 +75,6 @@ class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectRe
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
-    }
-}
-
-class SerializableNullResultTest {
-    @Test
-    fun test() {
-        val a = ValueResult(null)
-        val value = ValueHolder(0)
-        val loader = TransformationClassLoader { CancellabilitySupportClassTransformer(it) }
-        val transformedValue = value.convertForLoader(loader)
-        val b = ValueResult(transformedValue)
-        // check that no exception was thrown
-        assertFalse(a == b)
-        assertFalse(b == a)
     }
 }
 
@@ -152,7 +137,7 @@ class JavaUtilGen(conf: String) : ParameterGenerator<List<Int>> {
     override fun generate() = listOf(1, 2)
 }
 
-data class ValueHolder(val value: Int) : Serializable
+data class ValueHolder(val value: Int)
 
 @Param(name = "key", gen = NullGen::class)
 class SerializableNullParameterTest : AbstractLincheckTest() {

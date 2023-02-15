@@ -22,12 +22,16 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.LoggingLevel.INFO
+import org.jetbrains.kotlinx.lincheck.LoggingLevel.WARN
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import java.io.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.appendTrace
+import java.io.PrintStream
+import java.io.PrintWriter
+import java.io.StringWriter
 
 class Reporter constructor(val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -187,7 +191,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
         stackTrace.map {
-            StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
+            StackTraceElement(it.className, it.methodName, it.fileName, it.lineNumber)
         }.map { it.toString() }.filter { line ->
             "org.jetbrains.kotlinx.lincheck.strategy" !in line
                 && "org.jetbrains.kotlinx.lincheck.runner" !in line

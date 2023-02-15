@@ -21,11 +21,17 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlin.reflect.*
+import net.bytebuddy.agent.ByteBuddyAgent
+import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckClassFileTransformer
+import org.jetbrains.kotlinx.lincheck.strategy.managed.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
+import org.jetbrains.kotlinx.lincheck.strategy.managed.isImpossibleToTransformApiClass
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.instrument.ClassDefinition
+import java.lang.instrument.Instrumentation
+import kotlin.reflect.KClass
 
 /**
  * This class runs concurrent tests.
@@ -54,12 +60,84 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      * @return TestReport with information about concurrent test run.
      */
     internal fun checkImpl(): LincheckFailure? {
+        val instrumentation = ByteBuddyAgent.install()
+        val transformer = LincheckClassFileTransformer(this)
+        instrumentation.addTransformer(transformer, true)
+
+        val loadedClasses = instrumentation.allLoadedClasses
+            .filter(instrumentation::isModifiableClass)
+            .filter { shouldTransform(it.name, it) }
+        instrumentation.retransformClasses(*loadedClasses.toTypedArray())
+
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
             val failure = testCfg.checkImpl()
-            if (failure != null) return failure
+            if (failure != null) {
+                instrumentation.removeTransformer(transformer)
+                undoTransformation(instrumentation, transformer)
+                return failure
+            }
         }
+        instrumentation.removeTransformer(transformer)
+        undoTransformation(instrumentation, transformer)
+
         return null
+    }
+
+    private fun undoTransformation(instrumentation: Instrumentation, transformer: LincheckClassFileTransformer) {
+        val allLoadedClasses = instrumentation.allLoadedClasses.associateBy { it.name }
+
+        val classDefinitions = transformer.oldClasses.mapNotNull { entry ->
+            allLoadedClasses[entry.key]?.let { ClassDefinition(it, entry.value) }
+        }
+
+        instrumentation.redefineClasses(*classDefinitions.toTypedArray())
+    }
+
+    fun shouldTransform(canonicalClassName: String, clazz: Class<*>? = null): Boolean {
+        if (canonicalClassName.startsWith("org.gradle.")) return false
+        if (canonicalClassName.startsWith("worker.org.gradle.")) return false
+        if (canonicalClassName.startsWith("org.objectweb.asm.")) return false
+        if (canonicalClassName.startsWith("net.bytebuddy.")) return false
+        if (canonicalClassName.startsWith("org.junit.")) return false
+        if (canonicalClassName.startsWith("junit.framework.")) return false
+        if (canonicalClassName.startsWith("com.sun.tools.")) return false
+        if (canonicalClassName.startsWith("java.util.")) {
+            if (clazz == null) return true
+            // transformation of exceptions causes a lot of trouble with catching expected exceptions
+            val isException = Throwable::class.java.isAssignableFrom(clazz)
+            // function package is not transformed, because AFU uses it, and thus, there will be transformation problems
+            val inFunctionPackage = canonicalClassName.startsWith("java.util.function.")
+            // some api classes that provide low-level access can not be transformed
+            val isImpossibleToTransformApi = isImpossibleToTransformApiClass(canonicalClassName)
+            // classes are transformed by default and are in the special set when they should not be transformed
+            val isTransformedClass = !clazz.isInterface && canonicalClassName.internalClassName !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
+            // no need to transform enum
+            val isEnum = clazz.isEnum
+            if (!isImpossibleToTransformApi && !isException && !inFunctionPackage && !isEnum && isTransformedClass)
+                return true
+            return false
+        }
+
+        if (canonicalClassName.startsWith("java.util.concurrent.atomic.Atomic") && canonicalClassName.endsWith("FieldUpdater"))
+            return false
+
+        if (canonicalClassName.startsWith("sun.") ||
+            canonicalClassName.startsWith("java.") ||
+            canonicalClassName.startsWith("jdk.internal.") ||
+            canonicalClassName.startsWith("kotlin.") &&
+            !canonicalClassName.startsWith("kotlin.collections.") &&  // transform kotlin collections
+            !(canonicalClassName.startsWith("kotlin.jvm.internal.Array") && canonicalClassName.contains("Iterator")) &&
+            !canonicalClassName.startsWith("kotlin.ranges.") ||
+            canonicalClassName.startsWith("com.intellij.rt.coverage.") ||
+            canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+            !canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
+            canonicalClassName == "kotlinx.coroutines.CancellableContinuation" ||
+            canonicalClassName == "kotlinx.coroutines.CoroutineExceptionHandler" ||
+            canonicalClassName == "kotlinx.coroutines.CoroutineDispatcher"
+        ) return false
+
+        return true
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {

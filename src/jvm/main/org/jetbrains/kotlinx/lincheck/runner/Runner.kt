@@ -22,12 +22,12 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
+import java.io.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import java.io.*
 
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
@@ -36,25 +36,14 @@ import java.io.*
  */
 abstract class Runner protected constructor(
     protected val strategy: Strategy,
-    private val _testClass: Class<*>, // will be transformed later
+    protected val testClass: Class<*>, // will be transformed later
     protected val validationFunctions: List<Method>,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
-    protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
-    protected lateinit var testClass: Class<*> // not available before `initialize` call
+    protected val scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     @Suppress("LeakingThis")
-    val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
-                                            else ExecutionClassLoader()
+    val classLoader = ExecutionClassLoader()
     protected val completedOrSuspendedThreads = AtomicInteger(0)
-
-    /**
-     * This method is a part of `Runner` initialization and should be invoked after this runner
-     * creation. It is separated from the constructor to perform the strategy initialization at first.
-     */
-    open fun initialize() {
-        scenario = strategy.scenario.convertForLoader(classLoader)
-        testClass = loadClass(_testClass.typeName)
-    }
 
     /**
      * Returns the current state representation of the test instance constructed via
@@ -65,11 +54,6 @@ abstract class Runner protected constructor(
      * However, it is fine to call it if the execution is paused somewhere in the middle.
      */
     open fun constructStateRepresentation(): String? = null
-
-    /**
-     * Loads the specified class via this runner' class loader.
-     */
-    private fun loadClass(className: String): Class<*> = classLoader.loadClass(className)
 
     /**
      * Creates a transformer required for this runner.

@@ -22,7 +22,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -45,7 +44,7 @@ internal class ManagedStrategyTransformer(
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
     private val codeLocationIdProvider: CodeLocationIdProvider
-) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
+) : ClassVisitor(ASM_API, cv) {
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
@@ -87,7 +86,6 @@ internal class ManagedStrategyTransformer(
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -565,23 +563,6 @@ internal class ManagedStrategyTransformer(
 
         private fun isInternalCoroutineCall(owner: String, name: String) =
             owner == "kotlin/coroutines/intrinsics/IntrinsicsKt" && name == "getCOROUTINE_SUSPENDED"
-    }
-
-    /**
-     * Replaces `Unsafe.getUnsafe` with `UnsafeHolder.getUnsafe`, because
-     * transformed java.util classes can not access Unsafe directly after transformation.
-     */
-    private class UnsafeTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            if (owner.isUnsafe() && name == "getUnsafe") {
-                // load Unsafe
-                adapter.push(owner.canonicalClassName)
-                adapter.invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
-                adapter.checkCast(Type.getType("L${owner};"))
-                return
-            }
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-        }
     }
 
     /**
@@ -1277,20 +1258,6 @@ internal val NOT_TRANSFORMED_JAVA_UTIL_CLASSES = setOf(
     "java/util/Random", // will be thread safe after `RandomTransformer` transformation
     "java/util/concurrent/ThreadLocalRandom"
 )
-internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
-    "java/util/concurrent/CompletionStage", // because it uses `java.util.concurrent.CompletableFuture`
-    "java/util/Observer", // uses `java.util.Observable`
-    "java/util/concurrent/RejectedExecutionHandler",
-    "java/util/concurrent/ForkJoinPool\$ForkJoinWorkerThreadFactory",
-    "java/util/jar/Pack200\$Packer",
-    "java/util/jar/Pack200\$Unpacker",
-    "java/util/prefs/PreferencesFactory",
-    "java/util/ResourceBundle\$CacheKeyReference",
-    "java/util/prefs/PreferenceChangeListener",
-    "java/util/prefs/NodeChangeListener",
-    "java/util/logging/Filter",
-    "java/util/spi/ResourceBundleControlProvider"
-)
 
 private val OBJECT_TYPE = Type.getType(Any::class.java)
 private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
@@ -1298,7 +1265,6 @@ private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStrategyStateHolder:
 private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
 private val OBJECT_MANAGER_TYPE = Type.getType(ObjectManager::class.java)
 private val RANDOM_TYPE = Type.getType(Random::class.java)
-private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
 private val STRING_TYPE = Type.getType(String::class.java)
 private val CLASS_TYPE = Type.getType(Class::class.java)
 private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
@@ -1335,7 +1301,6 @@ private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::isLocalObje
 private val ADD_DEPENDENCY_METHOD = Method.getMethod(ObjectManager::addDependency.javaMethod)
 private val SET_OBJECT_NAME = Method.getMethod(ObjectManager::setObjectName.javaMethod)
 private val GET_OBJECT_NAME = Method.getMethod(ObjectManager::getObjectName.javaMethod)
-private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
 private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
 private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteTracePoint::initializeWrittenValue.javaMethod)
 private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadTracePoint::initializeReadValue.javaMethod)
@@ -1393,12 +1358,8 @@ private fun GeneratorAdapter.copyLocal(local: Int) {
 /**
  * Get non-static final fields that belong to the class. Note that final fields of super classes won't be returned.
  */
-private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
-    var ownerInternal = ownerInternal
-    if (ownerInternal.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
-        ownerInternal = ownerInternal.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
-    }
-    return try {
+private fun getNonStaticFinalFields(ownerInternal: String): List<Field> =
+    try {
         val clazz = Class.forName(ownerInternal.canonicalClassName)
         val fields = clazz.declaredFields
         Arrays.stream(fields)
@@ -1407,15 +1368,10 @@ private fun getNonStaticFinalFields(ownerInternal: String): List<Field> {
     } catch (e: ClassNotFoundException) {
         throw RuntimeException(e)
     }
-}
 
 private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
-    var internalName = ownerInternal
-    if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
-        internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
-    }
     return try {
-        val clazz = Class.forName(internalName.canonicalClassName)
+        val clazz = Class.forName(ownerInternal.canonicalClassName)
         val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
         field.modifiers and Modifier.FINAL == Modifier.FINAL
     } catch (e: ClassNotFoundException) {
@@ -1480,27 +1436,3 @@ internal fun isImpossibleToTransformApiClass(className: String) =
         className == "jdk.internal.misc.Unsafe" ||
         className == "java.lang.invoke.VarHandle" ||
         className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
-
-/**
- * This class is used for getting the [sun.misc.Unsafe] or [jdk.internal.misc.Unsafe] instance.
- * We need it in some transformed classes from the `java.util.` package,
- * and it cannot be accessed directly after the transformation.
- */
-internal object UnsafeHolder {
-    @Volatile
-    private var theUnsafe: Any? = null
-
-    @JvmStatic
-    fun getUnsafe(unsafeClass: String): Any {
-        if (theUnsafe == null) {
-            try {
-                val f = Class.forName(unsafeClass).getDeclaredField("theUnsafe")
-                f.isAccessible = true
-                theUnsafe = f.get(null)
-            } catch (e: Exception) {
-                throw RuntimeException(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e))
-            }
-        }
-        return theUnsafe!!
-    }
-}

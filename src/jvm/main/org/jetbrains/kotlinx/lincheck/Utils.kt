@@ -21,23 +21,26 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Job
 import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.objectweb.asm.*
-import org.objectweb.asm.commons.*
-import java.io.*
-import java.lang.ref.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
+import org.jetbrains.kotlinx.lincheck.runner.Runner
+import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
+import org.objectweb.asm.Opcodes
+import java.lang.ref.WeakReference
 import java.lang.reflect.Method
 import java.util.*
-import kotlin.coroutines.*
-import kotlin.coroutines.intrinsics.*
-import kotlin.reflect.full.*
-import kotlin.reflect.jvm.*
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
@@ -57,7 +60,6 @@ internal fun executeActor(
     try {
         val m = getMethod(instance, actor.method)
         val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
-            .map { it.convertForLoader(instance.javaClass.classLoader) }
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
@@ -142,7 +144,7 @@ internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = wh
     res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
-    else -> ValueResult(res.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
+    else -> ValueResult(res, wasSuspended)
 }
 
 private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
@@ -151,7 +153,7 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
             // Throwable was returned as a successful result
             is Throwable -> ValueResult(value::class.java, wasSuspended)
-            else -> ValueResult(value.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
+            else -> ValueResult(value, wasSuspended)
         }
     } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
 
@@ -209,9 +211,6 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
 
 internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!
-
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
  */
@@ -232,95 +231,6 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     }
 }
 
-internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = ExecutionScenario(
-    initExecution,
-    parallelExecution.map { actors ->
-        actors.map { a ->
-            val args = a.arguments.map { it.convertForLoader(loader) }
-            // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
-            Actor(
-                method = a.method.convertForLoader(loader),
-                arguments = args,
-                handledExceptions = a.handledExceptions,
-                cancelOnSuspension = a.cancelOnSuspension,
-                allowExtraSuspension = a.allowExtraSuspension,
-                blocking = a.blocking,
-                causesBlocking = a.causesBlocking,
-                promptCancellation = a.promptCancellation,
-                isSuspendable = a.isSuspendable
-            )
-        }
-    },
-    postExecution
-)
-
-internal fun ExecutionResult.convertForLoader(loader: ClassLoader) = ExecutionResult(
-        initResults.map { it.convertForLoader(loader) },
-        afterInitStateRepresentation,
-        parallelResultsWithClock.map { results -> results.map { it.convertForLoader(loader) } },
-        afterParallelStateRepresentation,
-        postResults.map { it.convertForLoader(loader) },
-        afterPostStateRepresentation
-)
-
-/**
- * Finds the same method but loaded by the specified (class loader)[loader],
- * the signature can be changed according to the [TransformationClassLoader]'s remapper.
- */
-private fun Method.convertForLoader(loader: ClassLoader): Method {
-    if (loader !is TransformationClassLoader) return this
-    val clazz = declaringClass.convertForLoader(loader)
-    val parameterTypes = parameterTypes.map { it.convertForLoader(loader) }
-    return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
-}
-
-private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
-
-private fun ResultWithClock.convertForLoader(loader: ClassLoader): ResultWithClock =
-        ResultWithClock(result.convertForLoader(loader), clockOnStart)
-
-private fun Result.convertForLoader(loader: ClassLoader): Result = when (this) {
-    is ValueResult -> ValueResult(value.convertForLoader(loader), wasSuspended)
-    else -> this // does not need to be transformed
-}
-
-/**
- * Move the value from its current class loader to the specified [loader].
- * For primitive values, does nothing.
- * Non-primitive values need to be [Serializable] for this to succeed.
- */
-internal fun Any?.convertForLoader(loader: ClassLoader) = when {
-    this == null -> this
-    this::class.java.classLoader == null -> this // primitive class, no need to convert
-    this::class.java.classLoader == loader -> this // already in this loader
-    loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
-    this is Serializable -> serialize().run { deserialize(loader) }
-    else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
-                  " or implement Serializable interface.")
-}
-
-internal fun Any?.serialize(): ByteArray = ByteArrayOutputStream().use {
-    val oos = ObjectOutputStream(it)
-    oos.writeObject(this)
-    it.toByteArray()
-}
-
-internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(this).use {
-    CustomObjectInputStream(loader, it).run { readObject() }
-}
-
-/**
- * ObjectInputStream that uses custom class loader.
- */
-private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
-    override fun resolveClass(desc: ObjectStreamClass): Class<*> {
-        // add `TRANSFORMED_PACKAGE_NAME` prefix in case of TransformationClassLoader and remove otherwise
-        val className = if (loader is TransformationClassLoader) loader.remapClassName(desc.name)
-                        else desc.name.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME)
-        return Class.forName(className, true, loader)
-    }
-}
-
 /**
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
@@ -329,27 +239,7 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
     t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
 }
 
-/**
- * This method helps to encapsulate remapper logic from strategy interface.
- * The remapper is determined based on the used transformers.
- */
-internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
-    when {
-        classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
-        else -> null
-    }
-
 internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
 
-fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e: Throwable): Throwable {
-    if (e.message?.contains("to unnamed module") ?: false) {
-        return RuntimeException(ADD_OPENS_MESSAGE, e)
-    }
-    return e
-}
-
-private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
-    "Please add the following lines to your test running configuration:\n" +
-    "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
-    "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+const val ASM_API = Opcodes.ASM9
