@@ -22,7 +22,7 @@ class ConcurrentHashMapTest {
     @Operation
     public fun put(key: Int, value: Int) = map.put(key, value)
 
-    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    // @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions()
         .actorsBefore(1)

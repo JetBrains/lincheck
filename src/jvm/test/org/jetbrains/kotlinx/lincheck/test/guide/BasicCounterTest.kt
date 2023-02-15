@@ -34,11 +34,11 @@ class BasicCounterTest {
     @Operation
     fun get() = c.get()
 
-    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    // @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun stressTest() = StressOptions().check(this::class) // the magic button
 
-    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    // @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }
