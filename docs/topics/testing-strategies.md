@@ -1,7 +1,7 @@
 [//]: # (title: Stress testing and model checking)
 
 Lincheck provides two testing strategies: stress testing and model checking. Learn what happens under the hood of both
-testing strategies using the `Counter` example from the [previous step](introduction.md):
+testing strategies using the `Counter` example, defined in the `BasicCounterTest.kt` file, from the [previous step](introduction.md):
 
 ```kotlin
 class Counter {
@@ -32,14 +32,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
-
-class Counter {
-    @Volatile
-    private var value = 0
-
-    fun inc(): Int = ++value
-    fun get() = value
-}
 
 class CounterTest {
     private val c = Counter() // Initial state
@@ -86,14 +78,6 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
-class Counter {
-    @Volatile
-    private var value = 0
-
-    fun inc(): Int = ++value
-    fun get() = value
-}
-
 class CounterTest {
     private val c = Counter() // Initial state
 
@@ -118,6 +102,12 @@ class CounterTest {
 >
 > They are required if the testing code uses classes from the `java.util` package since
 > some of them use `jdk.internal.misc.Unsafe` or similar internal classes under the hood.
+> If you use Gradle, add the following lines to `build.gradle.kts`:
+>
+> ```
+> tasks.withType<Test> {
+>     jvmArgs("--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.util=ALL-UNNAMED")
+> }
 >
 {type="tip"}
 
@@ -160,16 +150,7 @@ To configure the testing strategy, set options in the `<TestingMode>Options` cla
     import org.jetbrains.kotlinx.lincheck.annotations.*
     import org.jetbrains.kotlinx.lincheck.check
     import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-    import org.jetbrains.kotlinx.lincheck.verifier.*
     import org.junit.*
-    
-    class Counter {
-        @Volatile
-        private var value = 0
-    
-        fun inc(): Int = ++value
-        fun get() = value
-    }
     
     class CounterTest {
         private val c = Counter()
@@ -244,15 +225,7 @@ states in the trace, add the `stateRepresentation()` function to the `CounterTes
     import org.jetbrains.kotlinx.lincheck.check
     import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
     import org.junit.Test
-    
-    class Counter {
-        @Volatile
-        private var value = 0
-    
-        fun inc(): Int = ++value
-        fun get() = value
-    }
-    
+
     class CounterTest {
         private val c = Counter()
     
@@ -279,20 +252,21 @@ printed at the switch points that modify the counter state (they start with `STA
     Parallel part:
     | inc(): 1 | inc(): 1 |
     STATE: 1
+    
     = The following interleaving leads to the error =
     Parallel part trace:
-    |                      | inc()                                                |
-    |                      |   inc(): 1 at CounterTest.inc(CounterTest.kt:42)     |
-    |                      |     value.READ: 0 at Counter.inc(CounterTest.kt:35)  |
-    |                      |     switch                                           |
-    | inc(): 1             |                                                      |
-    | STATE: 1             |                                                      |
-    |   thread is finished |                                                      |
-    |                      |     value.WRITE(1) at Counter.inc(CounterTest.kt:35) |
-    |                      |     STATE: 1                                         |
-    |                      |     value.READ: 1 at Counter.inc(CounterTest.kt:35)  |
-    |                      |   result: 1                                          |
-    |                      |   thread is finished                                 |
+    |                      | inc()                                                     |
+    |                      |   inc(): 1 at CounterTest.inc(CounterTest.kt:10)          |
+    |                      |     value.READ: 0 at Counter.inc(BasicCounterTest.kt:10)  |
+    |                      |     switch                                                |
+    | inc(): 1             |                                                           |
+    | STATE: 1             |                                                           |
+    |   thread is finished |                                                           |
+    |                      |     value.WRITE(1) at Counter.inc(BasicCounterTest.kt:10) |
+    |                      |     STATE: 1                                              |
+    |                      |     value.READ: 1 at Counter.inc(BasicCounterTest.kt:10)  |
+    |                      |   result: 1                                               |
+    |                      |   thread is finished                                      |
     ```
 
 In case of stress testing, Lincheck prints the state representation right before and after the parallel part of the scenario,
