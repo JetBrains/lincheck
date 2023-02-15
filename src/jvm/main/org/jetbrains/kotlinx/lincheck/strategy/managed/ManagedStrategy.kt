@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.TracePointConstructors.tracePointConstructors
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
@@ -55,9 +56,6 @@ abstract class ManagedStrategy(
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     private var runner: Runner
-    // Shares location ids between class transformers in order
-    // to keep them different in different code locations.
-    private val codeLocationIdProvider = CodeLocationIdProvider()
 
     // == EXECUTION CONTROL FIELDS ==
 
@@ -87,9 +85,6 @@ abstract class ManagedStrategy(
     private var collectTrace = false
     // Whether state representations (see `@StateRepresentation`) should be collected after interleaving events.
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
-    // Trace point constructors, where `tracePointConstructors[id]`
-    // stores a constructor for the corresponding code location.
-    private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
@@ -115,18 +110,12 @@ abstract class ManagedStrategy(
         }
     }
 
+    fun collectTrace(): Boolean = collectTrace
+
     private fun createRunner(): Runner =
         ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
-    override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
-        cv = cv,
-        tracePointConstructors = tracePointConstructors,
-        guarantees = testCfg.guarantees,
-        eliminateLocalObjects = testCfg.eliminateLocalObjects,
-        collectStateRepresentation = collectStateRepresentation,
-        constructTraceRepresentation = collectTrace,
-        codeLocationIdProvider = codeLocationIdProvider
-    )
+    override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(cv)
 
     override fun needsTransformation(): Boolean = true
 
@@ -597,9 +586,8 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      */
     @Suppress("UNUSED_PARAMETER")
-    internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint) {
-        if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
-            check(collectTrace) { "This method should be called only when logging is enabled" }
+    internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint?) {
+        if (collectTrace && isTestThread(iThread) && !inIgnoredSection(iThread)) {
             val callStackTrace = callStackTrace[iThread]
             val suspendedMethodStack = suspendedFunctionsStack[iThread]
             val methodId = if (suspendedMethodStack.isNotEmpty()) {
@@ -612,7 +600,7 @@ abstract class ManagedStrategy(
                 methodCallNumber++
             }
             // code location of the new method call is currently the last
-            callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
+            callStackTrace.add(CallStackTraceElement(tracePoint!!, methodId))
         }
     }
 
@@ -622,11 +610,10 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      * @param tracePoint the corresponding trace point for the invocation
      */
-    internal fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
-            check(collectTrace) { "This method should be called only when logging is enabled" }
+    internal fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint?) {
+        if (collectTrace && isTestThread(iThread) && !inIgnoredSection(iThread)) {
             val callStackTrace = callStackTrace[iThread]
-            if (tracePoint.wasSuspended) {
+            if (tracePoint!!.wasSuspended) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
                 suspendedFunctionsStack[iThread].add(callStackTrace.last().identifier)
             }
@@ -671,8 +658,7 @@ abstract class ManagedStrategy(
      * after each write operation and atomic method invocation.
      */
     fun addStateRepresentation(iThread: Int) {
-        if (!inIgnoredSection(iThread)) {
-            check(collectTrace) { "This method should be called only when logging is enabled" }
+        if (collectTrace && !inIgnoredSection(iThread)) {
             traceCollector?.addStateRepresentation(iThread)
         }
     }
@@ -715,7 +701,7 @@ abstract class ManagedStrategy(
         }
 
         fun addStateRepresentation(iThread: Int) {
-            val stateRepresentation = runner.constructStateRepresentation()!!
+            val stateRepresentation = runner.constructStateRepresentation() ?: return
             // use call stack trace of the previous trace point
             val callStackTrace = _trace.last().callStackTrace.toList()
             _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace)
