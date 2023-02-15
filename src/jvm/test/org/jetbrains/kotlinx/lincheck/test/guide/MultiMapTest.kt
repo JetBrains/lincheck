@@ -20,14 +20,17 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
-import java.util.concurrent.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.junit.Ignore
+import org.junit.Test
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.set
 
 class MultiMap<K, V> {
     private val map = ConcurrentHashMap<K, List<V>>()
@@ -75,6 +78,7 @@ class MultiMapTest {
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Ignore
     @Test(expected = AssertionError::class)
     fun modularTest() = ModelCheckingOptions()
         .addGuarantee(forClasses(ConcurrentHashMap::class).allMethods().treatAsAtomic())
