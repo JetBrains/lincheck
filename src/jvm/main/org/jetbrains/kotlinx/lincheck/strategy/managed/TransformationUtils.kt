@@ -22,8 +22,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.CancellabilitySupportClassTransformer
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.jetbrains.kotlinx.lincheck.internalClassName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
@@ -31,8 +31,9 @@ import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
 import kotlin.collections.set
 
-class LincheckClassFileTransformer(val lincheck: LinChecker) : ClassFileTransformer {
+object LincheckClassFileTransformer : ClassFileTransformer {
     val oldClasses = HashMap<String, ByteArray>()
+    val transformedClasses = HashMap<String, ByteArray>()
 
     override fun transform(
         loader: ClassLoader?,
@@ -41,17 +42,65 @@ class LincheckClassFileTransformer(val lincheck: LinChecker) : ClassFileTransfor
         protectionDomain: ProtectionDomain?,
         classfileBuffer: ByteArray
     ): ByteArray {
-        if (!lincheck.shouldTransform(className.canonicalClassName)) return classfileBuffer
-        val reader = ClassReader(classfileBuffer)
-        val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
+        if (!shouldTransform(className.canonicalClassName)) return classfileBuffer
+        return transformedClasses.computeIfAbsent(className) {
+            val reader = ClassReader(classfileBuffer)
+            val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
 
-        var classVisitor: ClassVisitor = writer
-        classVisitor = CancellabilitySupportClassTransformer(classVisitor)
+            var classVisitor: ClassVisitor = writer
+            classVisitor = CancellabilitySupportClassTransformer(classVisitor)
 
-        reader.accept(classVisitor, ClassReader.EXPAND_FRAMES)
+            reader.accept(classVisitor, ClassReader.EXPAND_FRAMES)
 
-        oldClasses[className] = classfileBuffer
+            oldClasses[className] = classfileBuffer
 
-        return writer.toByteArray()
+            writer.toByteArray()
+        }
+    }
+
+    fun shouldTransform(canonicalClassName: String, clazz: Class<*>? = null): Boolean {
+        if (canonicalClassName.startsWith("org.gradle.")) return false
+        if (canonicalClassName.startsWith("worker.org.gradle.")) return false
+        if (canonicalClassName.startsWith("org.objectweb.asm.")) return false
+        if (canonicalClassName.startsWith("net.bytebuddy.")) return false
+        if (canonicalClassName.startsWith("org.junit.")) return false
+        if (canonicalClassName.startsWith("junit.framework.")) return false
+        if (canonicalClassName.startsWith("com.sun.tools.")) return false
+        if (canonicalClassName.startsWith("java.util.")) {
+            if (clazz == null) return true
+            // transformation of exceptions causes a lot of trouble with catching expected exceptions
+            val isException = Throwable::class.java.isAssignableFrom(clazz)
+            // function package is not transformed, because AFU uses it, and thus, there will be transformation problems
+            val inFunctionPackage = canonicalClassName.startsWith("java.util.function.")
+            // some api classes that provide low-level access can not be transformed
+            val isImpossibleToTransformApi = isImpossibleToTransformApiClass(canonicalClassName)
+            // classes are transformed by default and are in the special set when they should not be transformed
+            val isTransformedClass = !clazz.isInterface && canonicalClassName.internalClassName !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
+            // no need to transform enum
+            val isEnum = clazz.isEnum
+            if (!isImpossibleToTransformApi && !isException && !inFunctionPackage && !isEnum && isTransformedClass)
+                return true
+            return false
+        }
+
+        if (canonicalClassName.startsWith("java.util.concurrent.atomic.Atomic") && canonicalClassName.endsWith("FieldUpdater"))
+            return false
+
+        if (canonicalClassName.startsWith("sun.") ||
+            canonicalClassName.startsWith("java.") ||
+            canonicalClassName.startsWith("jdk.internal.") ||
+            canonicalClassName.startsWith("kotlin.") &&
+            !canonicalClassName.startsWith("kotlin.collections.") &&  // transform kotlin collections
+            !(canonicalClassName.startsWith("kotlin.jvm.internal.Array") && canonicalClassName.contains("Iterator")) &&
+            !canonicalClassName.startsWith("kotlin.ranges.") ||
+            canonicalClassName.startsWith("com.intellij.rt.coverage.") ||
+            canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+            !canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
+            canonicalClassName == "kotlinx.coroutines.CancellableContinuation" ||
+            canonicalClassName == "kotlinx.coroutines.CoroutineExceptionHandler" ||
+            canonicalClassName == "kotlinx.coroutines.CoroutineDispatcher"
+        ) return false
+
+        return true
     }
 }
