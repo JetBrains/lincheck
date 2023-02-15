@@ -60,11 +60,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     internal fun checkImpl(): LincheckFailure? {
         val instrumentation = ByteBuddyAgent.install()
         instrumentation.addTransformer(LincheckClassFileTransformer, true)
-
-        val loadedClasses = instrumentation.allLoadedClasses
-            .filter(instrumentation::isModifiableClass)
-            .filter { LincheckClassFileTransformer.shouldTransform(it.name, it) }
-        instrumentation.retransformClasses(*loadedClasses.toTypedArray())
+        synchronized(LincheckClassFileTransformer) {
+            val loadedClasses = instrumentation.allLoadedClasses
+                .filter(instrumentation::isModifiableClass)
+                .filter { LincheckClassFileTransformer.shouldTransform(it.name, it) }
+            instrumentation.retransformClasses(*loadedClasses.toTypedArray())
+        }
 
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
@@ -81,13 +82,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun undoTransformation(instrumentation: Instrumentation) {
-        val allLoadedClasses = instrumentation.allLoadedClasses.associateBy { it.name }
-
-        val classDefinitions = LincheckClassFileTransformer.oldClasses.mapNotNull { entry ->
-            allLoadedClasses[entry.key]?.let { ClassDefinition(it, entry.value) }
+    private fun undoTransformation(instrumentation: Instrumentation) = synchronized(LincheckClassFileTransformer) {
+        val classDefinitions = instrumentation.allLoadedClasses.mapNotNull { clazz ->
+            val key = Pair(clazz.classLoader, clazz.name)
+            val bytes = LincheckClassFileTransformer.oldClasses[key]
+            bytes?.let { ClassDefinition(clazz, it) }
         }
-
         instrumentation.redefineClasses(*classDefinitions.toTypedArray())
     }
 

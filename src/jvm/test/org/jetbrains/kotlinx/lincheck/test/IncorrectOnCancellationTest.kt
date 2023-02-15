@@ -24,9 +24,7 @@ import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.junit.Ignore
 
-@Ignore
 class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     @Volatile
     var canEnterForbiddenSection = false

@@ -32,8 +32,8 @@ import java.security.ProtectionDomain
 import kotlin.collections.set
 
 object LincheckClassFileTransformer : ClassFileTransformer {
-    val oldClasses = HashMap<String, ByteArray>()
-    val transformedClasses = HashMap<String, ByteArray>()
+    val oldClasses = HashMap<Pair<ClassLoader?, String>, ByteArray>()
+    val transformedClasses = HashMap<Pair<ClassLoader?, String>, ByteArray>()
 
     override fun transform(
         loader: ClassLoader?,
@@ -41,9 +41,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         classBeingRedefined: Class<*>?,
         protectionDomain: ProtectionDomain?,
         classfileBuffer: ByteArray
-    ): ByteArray {
+    ): ByteArray = synchronized(LincheckClassFileTransformer) {
         if (!shouldTransform(className.canonicalClassName)) return classfileBuffer
-        return transformedClasses.computeIfAbsent(className) {
+        return transformedClasses.computeIfAbsent(loader to className) {
             val reader = ClassReader(classfileBuffer)
             val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
 
@@ -52,7 +52,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
             reader.accept(classVisitor, ClassReader.EXPAND_FRAMES)
 
-            oldClasses[className] = classfileBuffer
+            oldClasses[loader to className] = classfileBuffer
 
             writer.toByteArray()
         }
@@ -95,10 +95,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             !canonicalClassName.startsWith("kotlin.ranges.") ||
             canonicalClassName.startsWith("com.intellij.rt.coverage.") ||
             canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-            !canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
-            canonicalClassName == "kotlinx.coroutines.CancellableContinuation" ||
-            canonicalClassName == "kotlinx.coroutines.CoroutineExceptionHandler" ||
-            canonicalClassName == "kotlinx.coroutines.CoroutineDispatcher"
+            !canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.test.")
         ) return false
 
         return true
