@@ -82,7 +82,7 @@ When creating a project, use the Gradle build system.
    ```
 
    This Lincheck test automatically: 
-   * Generates several random concurrent scenarios with the specified `inc()` and `dec()` operations.
+   * Generates several random concurrent scenarios with the specified `inc()` and `get()` operations.
    * Performs a lot of invocations for each of the generated scenarios.
    * Verifies that each invocation result is correct.
 
