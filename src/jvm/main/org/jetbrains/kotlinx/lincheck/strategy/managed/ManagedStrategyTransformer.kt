@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_GUARANTEES
 import org.jetbrains.kotlinx.lincheck.strategy.managed.TracePointConstructors.tracePointConstructors
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
@@ -388,9 +389,9 @@ internal class ManagedStrategyTransformer(
          */
         private fun classifyGuaranteeType(className: String, methodName: String): ManagedGuaranteeType? {
             // TODO add guarantees back
-//            for (guarantee in guarantees)
-//                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.canonicalClassName))
-//                    return guarantee.type
+            for (guarantee in DEFAULT_GUARANTEES)
+                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.canonicalClassName))
+                    return guarantee.type
             return null
         }
 
