@@ -21,20 +21,27 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.ASM_API
+import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.jetbrains.kotlinx.lincheck.inTestingCode
+import org.jetbrains.kotlinx.lincheck.storeCancellableContinuation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_GUARANTEES
 import org.jetbrains.kotlinx.lincheck.strategy.managed.TracePointConstructors.tracePointConstructors
-import org.objectweb.asm.*
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
-import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.AdviceAdapter
+import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.GeneratorAdapter.GT
 import org.objectweb.asm.commons.Method
-import java.lang.reflect.*
+import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.util.*
-import java.util.stream.*
-import kotlin.reflect.full.*
-import kotlin.reflect.jvm.*
+import java.util.stream.Collectors
+import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.jvm.javaMethod
 
 /**
  * This transformer inserts [ManagedStrategy] methods invocations.
@@ -59,54 +66,48 @@ internal class ManagedStrategyTransformer(
 
     override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
         // do not transform strategy methods
-        if (isStrategyMethod(className)) return super.visitMethod(access, mname, desc, signature, exceptions)
-        var access = access
-        // replace native method VMSupportsCS8 in AtomicLong with our stub
-        if (access and ACC_NATIVE != 0 && mname == "VMSupportsCS8") {
-            val mv = super.visitMethod(access and ACC_NATIVE.inv(), mname, desc, signature, exceptions)
-            return VMSupportsCS8MethodGenerator(GeneratorAdapter(mv, access and ACC_NATIVE.inv(), mname, desc))
-        }
-        val isSynchronized = access and ACC_SYNCHRONIZED != 0
-        if (isSynchronized) {
-            access = access xor ACC_SYNCHRONIZED // disable synchronized
-        }
+        if (className.startsWith("org/jetbrains/kotlinx/lincheck/strategy"))
+            return super.visitMethod(access, mname, desc, signature, exceptions)
+        if (access and ACC_NATIVE != 0)
+            return super.visitMethod(access, mname, desc, signature, exceptions)
+//        val isSynchronized = access and ACC_SYNCHRONIZED != 0
+//        var access = access
+//        if (isSynchronized) {
+//            access = access xor ACC_SYNCHRONIZED // disable synchronized
+//        }
         var mv = super.visitMethod(access, mname, desc, signature, exceptions)
-        mv = JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions)
-        mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
-        mv = SynchronizedBlockTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (isSynchronized) {
-            // synchronized method is replaced with synchronized lock
-            mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
-        }
-        mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = CancellabilitySupportMethodTransformer(mv, access, mname, desc)
+//        mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
+//        mv = SynchronizedBlockTransformer(mv, access, mname, desc)
+//        if (isSynchronized) {
+//            // synchronized method is replaced with synchronized lock
+//            mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
+//        }
+//        mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
+//        mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+//        mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
+//        mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
+//        mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
 
-
-
-    /**
-     * Generates body of a native method VMSupportsCS8.
-     * Native methods in java.util can not be transformed properly, so should be replaced with stubs
-     */
-    private class VMSupportsCS8MethodGenerator(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, null) {
-        override fun visitEnd() = adapter.run {
-                visitCode()
-                push(true) // suppose that we always have CAS for Long
-                returnValue()
-                visitMaxs(1, 0)
-                visitEnd()
-            }
+    private inline fun <MV: MethodVisitor> MV.invokeIfInTestingCode(original: MV.() -> Unit, code: MV.() -> Unit) {
+        val codeStart = Label()
+        val end = Label()
+        visitMethodInsn(INVOKESTATIC, IN_TESTING_CODE_METHOD_OWNER.descriptor, IN_TESTING_CODE_METHOD.name, IN_TESTING_CODE_METHOD.descriptor, false);
+        visitJumpInsn(IFEQ, codeStart)
+        original()
+        visitJumpInsn(GOTO, end)
+        visitLabel(codeStart)
+        code()
+        visitLabel(end)
     }
 
     /**
@@ -704,59 +705,47 @@ internal class ManagedStrategyTransformer(
     /**
      * Adds invocations of ManagedStrategy methods before monitorenter and monitorexit instructions
      */
-    private inner class SynchronizedBlockTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        override fun visitInsn(opcode: Int) = adapter.run {
+    private inner class SynchronizedBlockTransformer(mv: MethodVisitor, access: Int, mname: String, desc: String)
+        : GeneratorAdapter(ASM_API, mv, access, mname, desc)
+    {
+        override fun visitInsn(opcode: Int) {
             when (opcode) {
-                MONITORENTER -> {
-                    val opEnd = newLabel()
-                    val skipMonitorEnter: Label = newLabel()
-                    dup()
-                    invokeBeforeLockAcquire()
-                    // check whether the lock should be really acquired
-                    ifZCmp(GeneratorAdapter.EQ, skipMonitorEnter)
-                    monitorEnter()
-                    goTo(opEnd)
-                    visitLabel(skipMonitorEnter)
-                    pop()
-                    visitLabel(opEnd)
-                }
-                MONITOREXIT -> {
-                    val opEnd = newLabel()
-                    val skipMonitorExit: Label = newLabel()
-                    dup()
-                    invokeBeforeLockRelease()
-                    ifZCmp(GeneratorAdapter.EQ, skipMonitorExit)
-                    // check whether the lock should be really released
-                    monitorExit()
-                    goTo(opEnd)
-                    visitLabel(skipMonitorExit)
-                    pop()
-                    visitLabel(opEnd)
-                }
-                else -> visitInsn(opcode)
+//                MONITORENTER -> {
+//                    invokeIfInTestingCode(
+//                        original = { monitorEnter() },
+//                        code = { monitorEnter() }
+//                    )
+//                }
+//                MONITOREXIT -> {
+//                    invokeIfInTestingCode(
+//                        original = { monitorExit() },
+//                        code = { monitorExit() }
+//                    )
+//                }
+                else -> super.visitInsn(opcode)
             }
         }
 
-        // STACK: monitor
-        private fun invokeBeforeLockAcquire() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterTracePoint, MONITORENTER_TRACE_POINT_TYPE)
-        }
+//        // STACK: monitor
+//        private fun invokeBeforeLockAcquire() {
+//            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterTracePoint, MONITORENTER_TRACE_POINT_TYPE)
+//        }
+//
+//        // STACK: monitor
+//        private fun invokeBeforeLockRelease() {
+//            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitTracePoint, MONITOREXIT_TRACE_POINT_TYPE)
+//        }
 
         // STACK: monitor
-        private fun invokeBeforeLockRelease() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitTracePoint, MONITOREXIT_TRACE_POINT_TYPE)
-        }
-
-        // STACK: monitor
-        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
-            val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
-            adapter.storeLocal(monitorLocal)
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(null, tracePointType, codeLocationConstructor)
-            adapter.loadLocal(monitorLocal)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
-        }
+//        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
+//            val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
+//            adapter.storeLocal(monitorLocal)
+//            loadStrategy()
+//            loadCurrentThreadNumber()
+//            loadNewCodeLocationAndTracePoint(null, tracePointType, codeLocationConstructor)
+//            adapter.loadLocal(monitorLocal)
+//            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+//        }
     }
 
     /**
@@ -817,6 +806,13 @@ internal class ManagedStrategyTransformer(
      */
     private inner class WaitNotifyTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+//            val analysys = newLabel()
+//            val end = newLabel()
+//            adapter.invokeStatic(IN_TESTING_CODE_METHOD_OWNER, IN_TESTING_CODE_METHOD)
+//            adapter.ifZCmp(GT, analysys)
+//            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+//            adapter.goTo(end)
+//            adapter.visitLabel(analysys)
             var skipWaitOrNotify = newLabel()
             val isWait = isWait(opcode, name, desc)
             val isNotify = isNotify(opcode, name, desc)
@@ -865,6 +861,7 @@ internal class ManagedStrategyTransformer(
             }
             visitMethodInsn(opcode, owner, name, desc, itf)
             visitLabel(skipWaitOrNotify)
+//            adapter.visitLabel(end)
         }
 
         private fun isWait(opcode: Int, name: String, desc: String): Boolean {
@@ -1333,6 +1330,8 @@ private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallTraceP
 private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTracePoint::initializeThrownException.javaMethod)
 private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
+private val IN_TESTING_CODE_METHOD = Method.getMethod(::inTestingCode.javaMethod)
+private val IN_TESTING_CODE_METHOD_OWNER = Type.getType(::inTestingCode.javaMethod!!.declaringClass)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
@@ -1453,13 +1452,22 @@ private fun isAFUMethodCall(opcode: Int, owner: String, methodName: String, desc
 
 private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/internal/misc/Unsafe"
 
-/**
- * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.
- */
-internal fun isImpossibleToTransformApiClass(className: String) =
-    className == "sun.misc.Unsafe" ||
-        className == "jdk.internal.misc.Unsafe" ||
-        className == "java.lang.invoke.VarHandle" ||
-        className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
-
 private const val eliminateLocalObjects = true
+
+
+private class CancellabilitySupportMethodTransformer(mv: MethodVisitor, access: Int, methodName: String?, desc: String?)
+    : AdviceAdapter(ASM_API, mv, access, methodName, desc)
+{
+    override fun visitMethodInsn(opcodeAndSource: Int, className: String?, methodName: String?, descriptor: String?, isInterface: Boolean) {
+        val isGetResult = ("kotlinx/coroutines/CancellableContinuation" == className || "kotlinx/coroutines/CancellableContinuationImpl" == className)
+                && "getResult" == methodName
+        if (isGetResult) {
+            this.dup()
+            this.invokeStatic(storeCancellableContOwnerType, storeCancellableContMethod)
+        }
+        super.visitMethodInsn(opcodeAndSource, className, methodName, descriptor, isInterface)
+    }
+}
+
+private val storeCancellableContMethod = Method.getMethod(::storeCancellableContinuation.javaMethod)
+private val storeCancellableContOwnerType = Type.getType(::storeCancellableContinuation.javaMethod!!.declaringClass)

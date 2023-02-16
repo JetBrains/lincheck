@@ -19,21 +19,42 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.CancellabilitySupportClassTransformer
+import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.internalClassName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
+import java.lang.instrument.ClassDefinition
 import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
 import kotlin.collections.set
 
 object LincheckClassFileTransformer : ClassFileTransformer {
-    val oldClasses = HashMap<Pair<ClassLoader?, String>, ByteArray>()
-    val transformedClasses = HashMap<Pair<ClassLoader?, String>, ByteArray>()
+    private val transformedClasses = HashMap<Any, ByteArray>()
+    private val oldClasses = HashMap<Any, ByteArray>()
+
+    private val instrumentation = ByteBuddyAgent.install()
+
+    fun install() = synchronized(this) {
+        instrumentation.addTransformer(LincheckClassFileTransformer, true)
+        val loadedClasses = instrumentation.allLoadedClasses
+            .filter(instrumentation::isModifiableClass)
+            .filter { shouldTransform(it.name, it) }
+        instrumentation.retransformClasses(*loadedClasses.toTypedArray())
+    }
+
+    fun uninstall() = synchronized(this) {
+        instrumentation.removeTransformer(LincheckClassFileTransformer)
+        val classDefinitions = instrumentation.allLoadedClasses.mapNotNull { clazz ->
+            val bytes = LincheckClassFileTransformer.oldClasses[classKey(clazz.classLoader, clazz.name)]
+            bytes?.let { ClassDefinition(clazz, it) }
+        }
+        instrumentation.redefineClasses(*classDefinitions.toTypedArray())
+    }
 
     override fun transform(
         loader: ClassLoader?,
@@ -43,16 +64,17 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         classfileBuffer: ByteArray
     ): ByteArray = synchronized(LincheckClassFileTransformer) {
         if (!shouldTransform(className.canonicalClassName)) return classfileBuffer
-        return transformedClasses.computeIfAbsent(loader to className) {
+        return transformedClasses.computeIfAbsent(classKey(loader, className)) {
+            println(className)
             val reader = ClassReader(classfileBuffer)
             val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
 
             var classVisitor: ClassVisitor = writer
-            classVisitor = CancellabilitySupportClassTransformer(classVisitor)
+            classVisitor = ManagedStrategyTransformer(classVisitor)
 
             reader.accept(classVisitor, ClassReader.EXPAND_FRAMES)
 
-            oldClasses[loader to className] = classfileBuffer
+            oldClasses[classKey(loader, className)] = classfileBuffer
 
             writer.toByteArray()
         }
@@ -67,6 +89,12 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         if (canonicalClassName.startsWith("junit.framework.")) return false
         if (canonicalClassName.startsWith("com.sun.tools.")) return false
         if (canonicalClassName.startsWith("java.util.")) {
+            if (canonicalClassName.startsWith("java.util.zip")) return false
+            if (canonicalClassName.startsWith("java.util.regex")) return false
+            if (canonicalClassName.startsWith("java.util.jar")) return false
+            if (canonicalClassName.startsWith("java.util.Immutable")) return false
+            if (canonicalClassName.startsWith("java.util.logging")) return false
+            if (canonicalClassName.startsWith("java.util.ServiceLoader")) return false
             if (clazz == null) return true
             // transformation of exceptions causes a lot of trouble with catching expected exceptions
             val isException = Throwable::class.java.isAssignableFrom(clazz)
@@ -95,9 +123,25 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             !canonicalClassName.startsWith("kotlin.ranges.") ||
             canonicalClassName.startsWith("com.intellij.rt.coverage.") ||
             canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-            !canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.test.")
+            !canonicalClassName.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
+            canonicalClassName == "kotlinx.coroutines.DispatchedTask"
         ) return false
 
         return true
     }
+
+
 }
+
+/**
+ * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.
+ */
+internal fun isImpossibleToTransformApiClass(className: String) =
+    className == "sun.misc.Unsafe" ||
+            className == "jdk.internal.misc.Unsafe" ||
+            className == "java.lang.invoke.VarHandle" ||
+            className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
+
+private fun classKey(loader: ClassLoader?, className: String) =
+    if (loader == null) className
+    else loader to className

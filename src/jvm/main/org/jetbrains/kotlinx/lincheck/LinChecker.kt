@@ -21,14 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import java.lang.instrument.ClassDefinition
-import java.lang.instrument.Instrumentation
 import kotlin.reflect.KClass
 
 /**
@@ -58,37 +55,17 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      * @return TestReport with information about concurrent test run.
      */
     internal fun checkImpl(): LincheckFailure? {
-        val instrumentation = ByteBuddyAgent.install()
-        instrumentation.addTransformer(LincheckClassFileTransformer, true)
-        synchronized(LincheckClassFileTransformer) {
-            val loadedClasses = instrumentation.allLoadedClasses
-                .filter(instrumentation::isModifiableClass)
-                .filter { LincheckClassFileTransformer.shouldTransform(it.name, it) }
-            instrumentation.retransformClasses(*loadedClasses.toTypedArray())
-        }
-
-        check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
-        for (testCfg in testConfigurations) {
-            val failure = testCfg.checkImpl()
-            if (failure != null) {
-                instrumentation.removeTransformer(LincheckClassFileTransformer)
-                undoTransformation(instrumentation)
-                return failure
+        LincheckClassFileTransformer.install()
+        try {
+            check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
+            for (testCfg in testConfigurations) {
+                val failure = testCfg.checkImpl()
+                if (failure != null) return failure
             }
+            return null
+        } finally {
+            LincheckClassFileTransformer.uninstall()
         }
-        instrumentation.removeTransformer(LincheckClassFileTransformer)
-        undoTransformation(instrumentation)
-
-        return null
-    }
-
-    private fun undoTransformation(instrumentation: Instrumentation) = synchronized(LincheckClassFileTransformer) {
-        val classDefinitions = instrumentation.allLoadedClasses.mapNotNull { clazz ->
-            val key = Pair(clazz.classLoader, clazz.name)
-            val bytes = LincheckClassFileTransformer.oldClasses[key]
-            bytes?.let { ClassDefinition(clazz, it) }
-        }
-        instrumentation.redefineClasses(*classDefinitions.toTypedArray())
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {

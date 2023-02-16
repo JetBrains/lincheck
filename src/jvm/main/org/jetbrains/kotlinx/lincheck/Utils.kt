@@ -243,3 +243,9 @@ internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
 
 const val ASM_API = Opcodes.ASM9
+
+fun inTestingCode(): Boolean {
+    val t = Thread.currentThread()
+    if (t !is FixedActiveThreadsExecutor.TestThread) return false
+    return t.inTestingCode
+}

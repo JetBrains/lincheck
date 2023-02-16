@@ -114,10 +114,6 @@ abstract class ManagedStrategy(
     private fun createRunner(): Runner =
         ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
-    override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(cv)
-
-    override fun needsTransformation(): Boolean = true
-
     override fun run(): LincheckFailure? = runImpl().also { close() }
 
     // == STRATEGY INTERFACE METHODS ==

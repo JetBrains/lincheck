@@ -92,9 +92,6 @@ tasks {
     }
     withType<Test> {
         maxParallelForks = 1
-        jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-                "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
-                "-Xmx40G")
     }
 
     withType<Jar> {
