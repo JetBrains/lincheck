@@ -21,9 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.runner
 
-import org.jetbrains.kotlinx.lincheck.runner.*
-import org.junit.*
-import java.util.concurrent.*
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
+import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
+import org.junit.Test
+import sun.nio.ch.lincheck.TestThread
+import java.util.concurrent.TimeoutException
 
 class FixedActiveThreadsExecutorTest {
     @Test
@@ -81,7 +83,7 @@ class FixedActiveThreadsExecutorTest {
         FixedActiveThreadsExecutor(2, uniqueRunnerHash).close()
         while (true) {
             // check that all test threads are finished
-            if (Thread.getAllStackTraces().keys.all { it !is FixedActiveThreadsExecutor.TestThread || it.runnerHash != uniqueRunnerHash })
+            if (Thread.getAllStackTraces().keys.all { it !is TestThread || it.runnerHash != uniqueRunnerHash })
                 return
         }
     }

@@ -109,6 +109,7 @@ public class TestThreadExecutionGenerator {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
         List<Object> objArgs = new ArrayList<>();
+        // TODO: load via Byte-Buddy
         Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
                 generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {

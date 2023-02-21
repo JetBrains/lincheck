@@ -26,9 +26,9 @@ import org.jetbrains.kotlinx.lincheck.LoggingLevel.INFO
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.WARN
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.appendTrace
+import sun.nio.ch.lincheck.TestThread
 import java.io.PrintStream
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -188,7 +188,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     appendExecutionScenario(failure.scenario)
     appendLine()
     for ((t, stackTrace) in failure.threadDump) {
-        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
+        val threadNumber = if (t is TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
         stackTrace.map {
             StackTraceElement(it.className, it.methodName, it.fileName, it.lineNumber)

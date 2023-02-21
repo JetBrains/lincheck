@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.reflect.KClass
 

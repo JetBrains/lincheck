@@ -24,13 +24,12 @@ package org.jetbrains.kotlinx.lincheck
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
-import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor
 import org.jetbrains.kotlinx.lincheck.runner.Runner
 import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification
 import org.objectweb.asm.Opcodes
+import sun.nio.ch.lincheck.TestThread
 import java.lang.ref.WeakReference
 import java.lang.reflect.Method
 import java.util.*
@@ -218,34 +217,15 @@ fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellat
 
 private val cancellationByLincheckException = Exception("Cancelled by lincheck")
 
-object CancellableContinuationHolder {
-    var storedLastCancellableCont: CancellableContinuation<*>? = null
-}
-
-fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
-    val t = Thread.currentThread()
-    if (t is FixedActiveThreadsExecutor.TestThread) {
-        t.cont = cont
-    } else {
-        storedLastCancellableCont = cont
-    }
-}
-
 /**
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
  */
 internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
-    t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
+    t is TestThread && t.runnerHash == runner.hashCode()
 }
 
 internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
 
 const val ASM_API = Opcodes.ASM9
-
-fun inTestingCode(): Boolean {
-    val t = Thread.currentThread()
-    if (t !is FixedActiveThreadsExecutor.TestThread) return false
-    return t.inTestingCode
-}

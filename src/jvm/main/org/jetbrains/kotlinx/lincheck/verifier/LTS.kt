@@ -25,9 +25,9 @@ package org.jetbrains.kotlinx.lincheck.verifier
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Job
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.State
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
+import sun.nio.ch.lincheck.Injections.storedLastCancellableCont
 import java.util.*
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -238,7 +238,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
             }
         }
         if (res === Suspended) {
-            val cont = storedLastCancellableCont
+            val cont = storedLastCancellableCont as CancellableContinuation<*>?
             storedLastCancellableCont = null
             if (cont !== null) continuationsMap[this] = cont
             // Operation suspended it's execution.

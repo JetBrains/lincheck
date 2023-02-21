@@ -22,8 +22,8 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.atomicfu.atomicArrayOfNulls
-import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import sun.nio.ch.lincheck.TestThread
 import java.io.Closeable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
@@ -218,12 +218,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         if (hangDetected) {
             for (t in threads) t.stop()
         }
-    }
-
-    class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {
-        var cont: CancellableContinuation<*>? = null
-
-        var inTestingCode = false
     }
 
     companion object {

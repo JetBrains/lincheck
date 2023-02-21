@@ -30,10 +30,16 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.TracePointConstructors.tracePointConstructors
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
+import sun.nio.ch.lincheck.Injections.inTestingCode
+import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
+
+internal object TracePointConstructors {
+    val tracePointConstructors = ArrayList<TracePointConstructor>()
+}
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -424,13 +430,12 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually acquired
      */
-    internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
-        if (!isTestThread(iThread)) return true
-        if (inIgnoredSection(iThread)) return false
+    internal fun beforeLockAcquire(codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
+        check(inTestingCode())
+        val iThread = currentThreadNumber()
         newSwitchPoint(iThread, codeLocation, tracePoint)
         // Try to acquire the monitor
         if (!monitorTracker.acquireMonitor(iThread, monitor)) {
@@ -445,13 +450,12 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually released
      */
-    internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
-        if (!isTestThread(iThread)) return true
-        if (inIgnoredSection(iThread)) return false
+    internal fun beforeLockRelease(codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
+        check(inTestingCode())
+        // TODO: newSwitchPoint?
         monitorTracker.releaseMonitor(monitor)
         traceCollector?.passCodeLocation(tracePoint)
         return false
@@ -667,7 +671,7 @@ abstract class ManagedStrategy(
      */
     fun currentThreadNumber(): Int {
         val t = Thread.currentThread()
-        return if (t is FixedActiveThreadsExecutor.TestThread) {
+        return if (t is TestThread) {
             t.iThread
         } else {
             nThreads
