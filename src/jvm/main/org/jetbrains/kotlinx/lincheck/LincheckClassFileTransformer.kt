@@ -41,15 +41,15 @@ internal object TransformationInjectionsInitializer {
         val typePool: TypePool = TypePool.Default.ofSystemLoader()
 
         listOf(
-            "sun.nio.ch.lincheck.Injections",
+            "kotlin.jvm.internal.Intrinsics",
+            "sun.nio.ch.lincheck.WeakIdentityHashMap",
+            "sun.nio.ch.lincheck.WeakIdentityHashMap\$Ref",
+            "sun.nio.ch.lincheck.AtomicFieldNameMapper",
             "sun.nio.ch.lincheck.CodeLocations",
             "sun.nio.ch.lincheck.TestThread",
             "sun.nio.ch.lincheck.SharedEventsTracker",
-            "sun.nio.ch.lincheck.DummySharedEventsTracker",
-            "sun.nio.ch.lincheck.AtomicFieldNameMapper",
-            "sun.nio.ch.lincheck.WeakIdentityHashMap",
-            "sun.nio.ch.lincheck.WeakIdentityHashMap\$Ref",
-            "kotlin.jvm.internal.Intrinsics",
+            "sun.nio.ch.lincheck.SharedEventsTracker\$Companion",
+            "sun.nio.ch.lincheck.Injections",
         ).forEach { className ->
             ByteBuddy().redefine<Any>(
                 typePool.describe(className).resolve(),
@@ -157,10 +157,31 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
         return true
     }
-
-
 }
 
 private fun classKey(loader: ClassLoader?, className: String) =
     if (loader == null) className
     else loader to className
+
+private val NOT_TRANSFORMED_JAVA_UTIL_CLASSES = setOf(
+    "java/util/ServiceLoader", // can not be transformed because of access to `SecurityManager`
+    "java/util/concurrent/TimeUnit", // many not transformed interfaces such as `java.util.concurrent.BlockingQueue` use it
+    "java/util/OptionalDouble", // used by `java.util.stream.DoubleStream`. Is an immutable collection
+    "java/util/OptionalLong",
+    "java/util/OptionalInt",
+    "java/util/Optional",
+    "java/util/Locale", // is an immutable class too
+    "java/util/Locale\$Category",
+    "java/util/Locale\$FilteringMode",
+    "java/util/Currency",
+    "java/util/Date",
+    "java/util/Calendar",
+    "java/util/TimeZone",
+    "java/util/DoubleSummaryStatistics", // this class is mutable, but `java.util.stream.DoubleStream` interface better be not transformed
+    "java/util/LongSummaryStatistics",
+    "java/util/IntSummaryStatistics",
+    "java/util/Formatter",
+    "java/util/stream/PipelineHelper",
+    "java/util/Random", // will be thread safe after `RandomTransformer` transformation
+    "java/util/concurrent/ThreadLocalRandom"
+).map { it.canonicalClassName }.toSet()

@@ -114,9 +114,9 @@ internal object Injections {
     }
 
     @JvmStatic
-    fun beforeReadField(obj: Any?, fieldName: String, codeLocation: Int) {
+    fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
         if (obj == null) return // Ignore, NullPointerException will be thrown
-        sharedEventsTracker.beforeReadField(obj, fieldName, codeLocation)
+        sharedEventsTracker.beforeReadField(obj, className, fieldName, codeLocation)
     }
 
     @JvmStatic
@@ -136,9 +136,9 @@ internal object Injections {
     }
 
     @JvmStatic
-    fun beforeWriteField(obj: Any?, fieldName: String, value: Any?, codeLocation: Int) {
+    fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int) {
         if (obj == null) return // Ignore, NullPointerException will be thrown
-        sharedEventsTracker.beforeWriteField(obj, fieldName, value, codeLocation)
+        sharedEventsTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
     }
 
     @JvmStatic
@@ -152,6 +152,52 @@ internal object Injections {
         sharedEventsTracker.beforeWriteArrayElement(array, index, value, codeLocation)
     }
 
+    // owner == null for static methods
+    @JvmStatic
+    fun beforeMethodCall0(owner: Any?, className: String, methodName: String, codeLocation: Int) {
+        sharedEventsTracker.beforeMethodCall0(owner, className, methodName, codeLocation)
+    }
+
+    @JvmStatic
+    fun beforeMethodCall1(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?) {
+        sharedEventsTracker.beforeMethodCall1(owner, className, methodName, codeLocation, param1)
+    }
+
+    @JvmStatic
+    fun beforeMethodCall2(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?) {
+        sharedEventsTracker.beforeMethodCall2(owner, className, methodName, codeLocation, param1, param2)
+    }
+
+    @JvmStatic
+    fun beforeMethodCall3(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?) {
+        sharedEventsTracker.beforeMethodCall3(owner, className, methodName, codeLocation, param1, param2, param3)
+    }
+
+    @JvmStatic
+    fun beforeMethodCall4(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?) {
+        sharedEventsTracker.beforeMethodCall4(owner, className, methodName, codeLocation, param1, param2, param3, param4)
+    }
+
+    @JvmStatic
+    fun beforeMethodCall5(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?, param5: Any?) {
+        sharedEventsTracker.beforeMethodCall5(owner, className, methodName, codeLocation, param1, param2, param3, param4, param5)
+    }
+
+    @JvmStatic
+    fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
+        sharedEventsTracker.beforeMethodCall(owner, className, methodName, codeLocation, params)
+    }
+
+    @JvmStatic
+    fun onMethodCallFinishedSuccessfully(result: Any?) {
+
+    }
+
+    @JvmStatic
+    fun onMethodCallThrewException(t: Throwable) {
+
+    }
+
     @JvmStatic
     fun onNewAtomicFieldUpdater(updater: Any?, name: String) {
         AtomicFieldNameMapper.newAtomic(updater!!, name)
@@ -159,9 +205,9 @@ internal object Injections {
 
     @JvmStatic
     private val currentThreadId: Int get() =
-        (Thread.currentThread() as TestThread).iThread
+        (Thread.currentThread() as? TestThread)?.iThread ?: 0
 
     @JvmStatic
     private val sharedEventsTracker: SharedEventsTracker
-        get() = SharedEventsTracker.analyzer!! // should be non-null
+        get() = SharedEventsTracker.currentTracker!! // should be non-null
 }

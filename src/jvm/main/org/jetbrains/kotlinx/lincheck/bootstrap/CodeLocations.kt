@@ -51,9 +51,11 @@ internal object CodeLocations {
 internal object AtomicFieldNameMapper {
     private val names = WeakIdentityHashMap<Any, String>()
 
+    @Synchronized
     fun newAtomic(atomicObject: Any, name: String) {
         names.put(atomicObject, name)
     }
 
+    @Synchronized
     fun name(atomicObject: Any): String? = names[atomicObject]
 }

@@ -21,15 +21,13 @@
 package sun.nio.ch.lincheck
 
 import java.util.*
-import java.util.concurrent.locks.LockSupport
-import java.util.concurrent.locks.ReentrantLock
 
 // we need to use some "legal" package for the bootstrap class loader
 
 internal interface SharedEventsTracker {
     companion object {
         @JvmStatic
-        var analyzer: SharedEventsTracker? = null
+        var currentTracker: SharedEventsTracker? = null
     }
 
     fun lock(monitor: Any, codeLocation: Int)
@@ -41,65 +39,23 @@ internal interface SharedEventsTracker {
     fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean)
     fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean)
 
-    fun beforeReadField(obj: Any, fieldName: String, codeLocation: Int)
+    fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int)
     fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int)
     fun beforeReadArrayElement(array: Array<*>, index: Int, codeLocation: Int)
     fun onReadValue(value: Any?)
 
-    fun beforeWriteField(obj: Any, fieldName: String, value: Any?, codeLocation: Int)
+    fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int)
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int)
     fun beforeWriteArrayElement(array: Array<*>, index: Int, value: Any?, codeLocation: Int)
 
     fun getRandom(currentThreadId: Int): Random
-}
-
-internal object DummySharedEventsTracker : SharedEventsTracker {
-    private val locks = WeakIdentityHashMap<Any, ReentrantLock>()
-
-    override fun lock(monitor: Any, codeLocation: Int) {
-        val lock = synchronized(locks) {
-            if (locks[monitor] == null) locks.put(monitor, ReentrantLock())
-            locks[monitor]
-        }
-        lock.lock()
-    }
-
-    override fun unlock(monitor: Any, codeLocation: Int) {
-        val lock = synchronized(locks) {
-            locks[monitor]!!
-        }
-        lock.unlock()
-    }
-
-    override fun park(codeLocation: Int) {
-        LockSupport.park()
-    }
-
-    override fun unpark(thread: Thread, codeLocation: Int) {
-        LockSupport.unpark(thread)
-    }
-
-    override fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean) {
-        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-        (monitor as Object).wait(if (withTimeout) 1 else 0)
-    }
-
-    override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean) {
-        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-        monitor as Object
-        if (notifyAll) monitor.notifyAll() else monitor.notify()
-    }
-
-    override fun beforeReadField(obj: Any, fieldName: String, codeLocation: Int) {}
-    override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) {}
-    override fun beforeReadArrayElement(array: Array<*>, index: Int, codeLocation: Int) {}
-    override fun onReadValue(value: Any?) {}
-
-    override fun beforeWriteField(obj: Any, fieldName: String, value: Any?, codeLocation: Int) {}
-    override fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int) {}
-    override fun beforeWriteArrayElement(array: Array<*>, index: Int, value: Any?, codeLocation: Int) {}
-
-    override fun getRandom(currentThreadId: Int) = Random()
+    fun beforeMethodCall0(owner: Any?, className: String, methodName: String, codeLocation: Int)
+    fun beforeMethodCall1(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?)
+    fun beforeMethodCall2(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?)
+    fun beforeMethodCall3(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?)
+    fun beforeMethodCall4(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?)
+    fun beforeMethodCall5(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?, param5: Any?)
+    fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
 }
 
 /**
