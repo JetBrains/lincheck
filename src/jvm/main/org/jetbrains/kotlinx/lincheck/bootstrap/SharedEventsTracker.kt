@@ -48,8 +48,6 @@ internal interface SharedEventsTracker {
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int)
     fun beforeWriteArrayElement(array: Array<*>, index: Int, value: Any?, codeLocation: Int)
 
-    fun getRandom(currentThreadId: Int): Random
-
     fun beforeMethodCall0(owner: Any?, className: String, methodName: String, codeLocation: Int)
     fun beforeMethodCall1(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?)
     fun beforeMethodCall2(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?)
@@ -57,6 +55,10 @@ internal interface SharedEventsTracker {
     fun beforeMethodCall4(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?)
     fun beforeMethodCall5(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?, param5: Any?)
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+    fun onMethodCallFinishedSuccessfully(result: Any?)
+    fun onMethodCallThrewException(t: Throwable)
+
+    fun getRandom(currentThreadId: Int): Random
 }
 
 /**
@@ -67,9 +69,8 @@ NB: we need to load this class in the bootstrap class loader, as the transformat
  */
 internal class TestThread(
     val iThread: Int,
-    val runnerHash: Int,
     r: Runnable
-) : Thread(r, "Lincheck@$runnerHash-$iThread") {
+) : Thread(r, "Lincheck-$iThread") {
     @JvmField
     var cont: Any? = null // The suspended continuation, if present.
 

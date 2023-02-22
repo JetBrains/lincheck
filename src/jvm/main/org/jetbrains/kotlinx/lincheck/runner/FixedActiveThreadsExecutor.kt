@@ -78,7 +78,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     init {
         threads = (0 until nThreads).map { iThread ->
-            TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
+            TestThread(iThread, testThreadRunnable(iThread)).also { it.start() }
         }
     }
 

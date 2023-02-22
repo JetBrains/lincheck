@@ -57,7 +57,7 @@ abstract class AbstractLincheckTest(
         runInternalTest()
     }
 
-//    @Test(timeout = TIMEOUT)
+    @Test(timeout = TIMEOUT)
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
         invocationsPerIteration(1_000)
         commonConfiguration()

@@ -45,8 +45,6 @@ sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callSta
 }
 
 internal typealias CallStackTrace = List<CallStackTraceElement>
-internal typealias TracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace) -> TracePoint
-internal typealias CodeLocationTracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace, StackTraceElement) -> TracePoint
 
 internal class SwitchEventTracePoint(
     iThread: Int, actorId: Int,

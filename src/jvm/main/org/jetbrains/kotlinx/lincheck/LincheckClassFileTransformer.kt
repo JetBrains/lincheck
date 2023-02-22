@@ -216,11 +216,11 @@ internal class LincheckClassVisitorTransformer(cw: ClassWriter) : ClassVisitor(A
             GeneratorAdapter(mv, access, mname, desc)
         ) // TODO: implement in code instead
         mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = MethodCallTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (mname != "<init>" && mname != "<clinit>") // TODO: fix me
             mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = MethodCallTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = DetermenisticHashCodeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = DeterministicRandomTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -744,10 +744,18 @@ internal class LincheckClassVisitorTransformer(cw: ClassWriter) : ClassVisitor(A
             // TODO: ignore coroutine internals
             // TODO: ignore safe calls
             // TODO: do not ignore <init>
-            if (isInternalCoroutineCall(owner, name) || opcode == INVOKEDYNAMIC || name == "<init>") {
+            if (isInternalCoroutineCall(owner, name) || opcode == INVOKEDYNAMIC || name == "<init>" ||
+                owner == "kotlin/jvm/internal/Intrinsics" || owner == "java/util/Objects" ||
+                owner == "sun/nio/ch/lincheck/Injections" || owner == "java/lang/StringBuilder" ||
+                owner == "java/util/Locale" || owner == "java/lang/String" ||
+                owner == "org/slf4j/helpers/Util" || owner == "java/util/Properties" ||
+                owner == "java/lang/Boolean" || owner == "java/lang/Integer" ||
+                owner == "java/lang/Long" || owner == "jdk/internal/misc/Unsafe")
+            {
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
+            val key = "$owner.$name$desc"
             invokeIfInTestingCode(
                 original = {
                     visitMethodInsn(opcode, owner, name, desc, itf)
@@ -1065,4 +1073,3 @@ private inline fun GeneratorAdapter.invokeIfInTestingCode(
 }
 
 private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/internal/misc/Unsafe"
-

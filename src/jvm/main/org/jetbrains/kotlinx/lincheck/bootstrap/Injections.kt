@@ -190,12 +190,12 @@ internal object Injections {
 
     @JvmStatic
     fun onMethodCallFinishedSuccessfully(result: Any?) {
-
+        sharedEventsTracker.onMethodCallFinishedSuccessfully(result)
     }
 
     @JvmStatic
     fun onMethodCallThrewException(t: Throwable) {
-
+        sharedEventsTracker.onMethodCallThrewException(t)
     }
 
     @JvmStatic

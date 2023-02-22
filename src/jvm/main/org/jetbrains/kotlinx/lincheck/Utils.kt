@@ -222,7 +222,7 @@ private val cancellationByLincheckException = Exception("Cancelled by lincheck")
  * threads that are related to the specified [runner].
  */
 internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
-    t is TestThread && t.runnerHash == runner.hashCode()
+    t is TestThread
 }
 
 internal val String.canonicalClassName get() = this.replace('/', '.')

@@ -33,7 +33,8 @@ internal object CodeLocations {
      * Creates a new code locations specified via [stackTraceElement] and returns its id.
      */
     @JvmStatic
-    fun newCodeLocation(stackTraceElement: StackTraceElement): Int = synchronized(this) {
+    @Synchronized
+    fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
         val id = codeLocations.size
         codeLocations.add(stackTraceElement)
         return id
@@ -43,8 +44,9 @@ internal object CodeLocations {
      * Gets the [StackTraceElement] associated with the specified [code location][codeLocationId].
      */
     @JvmStatic
-    fun stackTrace(codeLocationId: Int): StackTraceElement = synchronized(this) {
-        codeLocations[codeLocationId]
+    @Synchronized
+    fun stackTrace(codeLocationId: Int): StackTraceElement {
+        return codeLocations[codeLocationId]
     }
 }
 
