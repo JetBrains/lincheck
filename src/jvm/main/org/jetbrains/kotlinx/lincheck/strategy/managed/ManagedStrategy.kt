@@ -664,7 +664,7 @@ abstract class ManagedStrategy(
     // == UTILITY METHODS ==
 
     /**
-     * This method is invoked by transformed via [ManagedStrategyTransformer] code,
+     * This method is invoked by transformed via [LincheckClassVisitorTransformer] code,
      * it helps to determine the number of thread we are executing on.
      *
      * @return the number of the current thread according to the [execution scenario][ExecutionScenario].

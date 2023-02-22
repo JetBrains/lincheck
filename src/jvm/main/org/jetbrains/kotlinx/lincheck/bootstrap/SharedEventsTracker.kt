@@ -49,6 +49,7 @@ internal interface SharedEventsTracker {
     fun beforeWriteArrayElement(array: Array<*>, index: Int, value: Any?, codeLocation: Int)
 
     fun getRandom(currentThreadId: Int): Random
+
     fun beforeMethodCall0(owner: Any?, className: String, methodName: String, codeLocation: Int)
     fun beforeMethodCall1(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?)
     fun beforeMethodCall2(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?)
