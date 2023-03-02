@@ -119,15 +119,17 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             oldClasses[classKey(loader, className)] = classfileBuffer
             val reader = ClassReader(classfileBuffer)
             val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
-            reader.accept(LincheckClassVisitorTransformer(writer), ClassReader.EXPAND_FRAMES)
+            reader.accept(LincheckClassVisitor(writer), ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
         }
     }
 
     private fun shouldTransform(className: String): Boolean {
+        if (className.startsWith("sun.nio.ch.lincheck.")) return false
         if (className == "kotlin.collections.ArraysKt___ArraysKt") return false
         if (className == "kotlin.collections.CollectionsKt___CollectionsKt") return false
 
+        if (className.startsWith("kotlinx.atomicfu.")) return false
         if (className.startsWith("sun.nio.ch.")) return false
         if (className.startsWith("org.gradle.")) return false
         if (className.startsWith("worker.org.gradle.")) return false
@@ -171,7 +173,7 @@ private fun classKey(loader: ClassLoader?, className: String) =
     else loader to className
 
 
-internal class LincheckClassVisitorTransformer(cw: ClassWriter) : ClassVisitor(ASM_API, cw) {
+internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw) {
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
@@ -521,6 +523,7 @@ internal class LincheckClassVisitorTransformer(cw: ClassWriter) : ClassVisitor(A
                             code = {
                                 loadNewCodeLocationId()
                                 invokeStatic(Injections::unpark)
+                                pop() // pop Unsafe object
                             }
                         )
                     }

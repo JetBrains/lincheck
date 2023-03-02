@@ -20,11 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
-import java.util.concurrent.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.junit.Test
+import java.util.concurrent.ConcurrentLinkedDeque
 
 class ConcurrentLinkedDequeTest {
     private val deque = ConcurrentLinkedDeque<Int>()
@@ -47,7 +47,7 @@ class ConcurrentLinkedDequeTest {
     @Operation
     fun peekLast() = deque.peekLast()
 
-    // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
+     @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
+//    @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }

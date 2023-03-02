@@ -192,11 +192,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
         appendLine("Thread-$threadNumber:")
         stackTrace.map {
             StackTraceElement(it.className, it.methodName, it.fileName, it.lineNumber)
-        }.map { it.toString() }.filter { line ->
-            "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
-        }.forEach { appendLine("\t$it") }
+        }.map { it.toString() }.forEach { appendLine("\t$it") }
     }
     return this
 }

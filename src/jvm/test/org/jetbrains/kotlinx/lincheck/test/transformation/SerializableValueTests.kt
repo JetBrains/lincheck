@@ -30,11 +30,11 @@ import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-class SerializableResultTest : AbstractLincheckTest() {
-    private val counter = AtomicReference(ValueHolder(0))
+class CustomResultTest : AbstractLincheckTest() {
+    private val counter = AtomicReference(CustomValue(0))
 
     @Operation
-    fun getAndSet(key: Int) = counter.getAndSet(ValueHolder(key))
+    fun getAndSet(key: Int) = counter.getAndSet(CustomValue(key))
 
     override fun extractState(): Any = counter.get().value
 
@@ -45,22 +45,7 @@ class SerializableResultTest : AbstractLincheckTest() {
     }
 }
 
-class SerializableJavaUtilResultTest : AbstractLincheckTest() {
-    private val value = listOf(1, 2)
-
-    @Operation
-    fun get(key: Int) = value
-
-    override fun extractState(): Any = value
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
-    }
-}
-
-class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+class ListAsResultIncorrectTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     private val value = mutableListOf(1, 2)
 
     @Operation
@@ -79,11 +64,11 @@ class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectRe
 }
 
 @Param(name = "key", gen = ValueHolderGen::class)
-class SerializableParameterTest : AbstractLincheckTest() {
+class CustomParameterTest : AbstractLincheckTest() {
     private val counter = AtomicInteger(0)
 
     @Operation
-    fun operation(@Param(name = "key") key: ValueHolder): Int = counter.addAndGet(key.value)
+    fun operation(@Param(name = "key") key: CustomValue): Int = counter.addAndGet(key.value)
 
     override fun extractState(): Any = counter.get()
 
@@ -95,11 +80,11 @@ class SerializableParameterTest : AbstractLincheckTest() {
 }
 
 @Param(name = "key", gen = ValueHolderGen::class)
-class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+class CustomParameterIncorrectTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     private var counter = 0
 
     @Operation
-    fun operation(@Param(name = "key") key: ValueHolder): Int {
+    fun operation(@Param(name = "key") key: CustomValue): Int {
         counter += key.value
         return counter
     }
@@ -113,14 +98,14 @@ class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResults
     }
 }
 
-class ValueHolderGen(conf: String) : ParameterGenerator<ValueHolder> {
-    override fun generate(): ValueHolder {
-        return listOf(ValueHolder(1), ValueHolder(2)).random()
+class ValueHolderGen(conf: String) : ParameterGenerator<CustomValue> {
+    override fun generate(): CustomValue {
+        return listOf(CustomValue(1), CustomValue(2)).random()
     }
 }
 
 @Param(name = "key", gen = JavaUtilGen::class)
-class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
+class ListAsParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
 
@@ -137,10 +122,10 @@ class JavaUtilGen(conf: String) : ParameterGenerator<List<Int>> {
     override fun generate() = listOf(1, 2)
 }
 
-data class ValueHolder(val value: Int)
+data class CustomValue(val value: Int)
 
 @Param(name = "key", gen = NullGen::class)
-class SerializableNullParameterTest : AbstractLincheckTest() {
+class CustomNullParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>?): Int = key?.sum() ?: 0
 

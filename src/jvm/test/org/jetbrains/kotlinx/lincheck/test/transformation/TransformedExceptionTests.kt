@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
 class ExpectedTransformedExceptionTest : AbstractLincheckTest() {

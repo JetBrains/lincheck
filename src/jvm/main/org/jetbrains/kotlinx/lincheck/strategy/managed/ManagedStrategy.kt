@@ -269,8 +269,6 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
     open fun onStart(iThread: Int) {
-        (Thread.currentThread() as TestThread).inTestingCode = true
-        (Thread.currentThread() as TestThread).ignoredSectionDepth = 0
         awaitTurn(iThread)
     }
 
@@ -292,6 +290,7 @@ abstract class ManagedStrategy(
      * @param exception the exception that was thrown
      */
     open fun onFailure(iThread: Int, exception: Throwable) {
+        (Thread.currentThread() as TestThread).inTestingCode = false
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
@@ -300,10 +299,14 @@ abstract class ManagedStrategy(
     }
 
     override fun onActorStart(iThread: Int) {
+        val t = (Thread.currentThread() as TestThread)
+        t.inTestingCode = false
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
         loopDetector.reset(iThread)
+        t.inTestingCode = true
+        t.ignoredSectionDepth = 0
     }
 
     /**
@@ -321,10 +324,22 @@ abstract class ManagedStrategy(
      */
     private fun awaitTurn(iThread: Int) {
         // Wait actively until the thread is allowed to continue
-        while (currentThread != iThread) {
+        var curThread = currentThread
+        while (curThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
+//            val t = (runner as ParallelThreadsRunner).executor.threads[curThread]
+//            check(t.iThread == curThread)
+//            if (t.state == Thread.State.BLOCKED) {
+//                synchronized(this) {
+//                    if (curThread == currentThread) {
+//                        // We need a deterministic wait to decide
+//                        switchCurrentThread(curThread, SwitchReason.STRATEGY_SWITCH, true)
+//                    }
+//                }
+//            }
             Thread.yield()
+            curThread = currentThread
         }
     }
 
@@ -571,7 +586,7 @@ abstract class ManagedStrategy(
     // == UTILITY METHODS ==
 
     /**
-     * This method is invoked by transformed via [LincheckClassVisitorTransformer] code,
+     * This method is invoked by transformed via [LincheckClassVisitor] code,
      * it helps to determine the number of thread we are executing on.
      *
      * @return the number of the current thread according to the [execution scenario][ExecutionScenario].
@@ -630,7 +645,7 @@ abstract class ManagedStrategy(
             null
         }
         if (tracePoint != null) {
-            lastReadTracePoint = tracePoint
+            lastReadTracePoint.set(tracePoint)
         }
         beforeSharedVariableRead(iThread, codeLocation, tracePoint)
     }
@@ -644,7 +659,7 @@ abstract class ManagedStrategy(
             null
         }
         if (tracePoint != null) {
-            lastReadTracePoint = tracePoint
+            lastReadTracePoint.set(tracePoint)
         }
         beforeSharedVariableRead(iThread, codeLocation, tracePoint)
     }
@@ -658,23 +673,25 @@ abstract class ManagedStrategy(
             null
         }
         if (tracePoint != null) {
-            lastReadTracePoint = tracePoint
+            lastReadTracePoint.set(tracePoint)
         }
         beforeSharedVariableRead(iThread, codeLocation, tracePoint)
     }
 
-    private var lastReadTracePoint: ReadTracePoint? = null
+    private var lastReadTracePoint = ThreadLocal<ReadTracePoint?>()
 
     override fun onReadValue(value: Any?) = runInIgnoredSection {
-        lastReadTracePoint?.initializeReadValue(value)
-        lastReadTracePoint = null
+        lastReadTracePoint.get()?.initializeReadValue(value)
+        lastReadTracePoint.set(null)
     }
 
     override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
-                fieldName, CodeLocations.stackTrace(codeLocation))
+                fieldName, CodeLocations.stackTrace(codeLocation)).also {
+                    it.initializeWrittenValue(value)
+            }
         } else {
             null
         }
@@ -685,7 +702,9 @@ abstract class ManagedStrategy(
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
-                fieldName, CodeLocations.stackTrace(codeLocation))
+                fieldName, CodeLocations.stackTrace(codeLocation)).also {
+                it.initializeWrittenValue(value)
+            }
         } else {
             null
         }
@@ -696,7 +715,9 @@ abstract class ManagedStrategy(
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
-                "Array[$index]", CodeLocations.stackTrace(codeLocation))
+                "Array[$index]", CodeLocations.stackTrace(codeLocation)).also {
+                it.initializeWrittenValue(value)
+            }
         } else {
             null
         }
