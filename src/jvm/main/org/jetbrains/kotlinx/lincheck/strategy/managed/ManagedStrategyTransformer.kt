@@ -838,7 +838,7 @@ internal class ManagedStrategyTransformer(
 
     }
 
-    private class UnsafeObjectFieldMemoryLocationState(
+    private class UnsafeAccessMemoryLocationState(
         adapter: GeneratorAdapter
     ) : MemoryLocationState(adapter, locationName = null) {
         var unsafeLocal = -1   // not initialized
@@ -1107,70 +1107,167 @@ internal class ManagedStrategyTransformer(
     ) : ManagedStrategyMemoryTrackingTransformer(methodName, adapter) {
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
-            if (owner.isUnsafe() && name == "getUnsafe") {
-                // load Unsafe
-                push(owner.canonicalClassName)
-                invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
-                checkCast(Type.getType("L${owner};"))
-                return
-            }
-            if (owner.isUnsafe() && name == "objectFieldOffset") {
-                val classLocal = newLocal(CLASS_TYPE)
-                val fieldNameLocal = newLocal(STRING_TYPE)
-                val fieldReflectionLocal = newLocal(FIELD_TYPE)
-                val argumentTypes = Type.getType(descriptor).argumentTypes
-                var byName = false
-                var byReflection = false
-                when (argumentTypes.size) {
-                    2 -> {
-                        // STACK: class, fieldName
-                        check(argumentTypes[0] == CLASS_TYPE)
-                        check(argumentTypes[1] == STRING_TYPE)
-                        copyLocal(classLocal, fieldNameLocal)
-                        byName = true
-                    }
-                    1 -> {
-                        // STACK: field
-                        check(argumentTypes[0] == FIELD_TYPE)
-                        copyLocal(fieldReflectionLocal)
-                        byReflection = true
-                    }
-                    else -> unreachable()
-                }
+            if (!owner.isUnsafe()) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                val offsetLocal = newLocal(Type.LONG_TYPE).also { copyLocal(it) }
-                loadMemoryLocationLabeler()
-                loadStrategy()
-                when {
-                    byName -> {
-                        loadLocal(classLocal)
-                        loadLocal(fieldNameLocal)
-                        loadLocal(offsetLocal)
-                        invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_UNSAFE_FIELD_OFFSET)
-                    }
-                    byReflection -> {
-                        loadLocal(fieldReflectionLocal)
-                        TODO()
-                    }
-                }
                 return
             }
-            if (owner.isUnsafe() && name == "getReference") {
-                val locationState = UnsafeObjectFieldMemoryLocationState(adapter)
-                visitRead(locationState, OBJECT_TYPE.descriptor) {
+            val emitMethod = {
+                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            }
+            when (name) {
+                "getUnsafe" -> visitGetUnsafeMethod(owner)
+
+                "objectFieldOffset" -> visitObjectFieldOffsetMethod(Type.getType(descriptor)) {
                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 }
-                return
-            }
-            if (owner.isUnsafe() && name == "putReference") {
-                val locationState = UnsafeObjectFieldMemoryLocationState(adapter)
-                visitWrite(locationState, OBJECT_TYPE.descriptor) {
+
+                "arrayBaseOffset" -> visitArrayBaseOffsetMethod {
                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 }
-                return
+
+                "arrayIndexScale" -> visitArrayIndexScaleMethod {
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                }
+
+                in unsafeGetMethods -> visitGetMethod(name) {
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                }
+
+                in unsafePutMethods -> visitPutMethod(name) {
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                }
+
+                else -> super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
-            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
+
+        private fun visitGetUnsafeMethod(owner: String) = adapter.run {
+            push(owner.canonicalClassName)
+            invokeStatic(UNSAFE_HOLDER_TYPE, GET_UNSAFE_METHOD)
+            checkCast(Type.getType("L${owner};"))
+        }
+
+        private fun visitObjectFieldOffsetMethod(type: Type, emitMethod: () -> Unit) = adapter.run {
+            val classLocal = newLocal(CLASS_TYPE)
+            val fieldNameLocal = newLocal(STRING_TYPE)
+            val fieldReflectionLocal = newLocal(FIELD_TYPE)
+            val argumentTypes = type.argumentTypes
+            var byName = false
+            var byReflection = false
+            when (argumentTypes.size) {
+                2 -> {
+                    // STACK: class, fieldName
+                    check(argumentTypes[0] == CLASS_TYPE)
+                    check(argumentTypes[1] == STRING_TYPE)
+                    copyLocal(classLocal, fieldNameLocal)
+                    byName = true
+                }
+                1 -> {
+                    // STACK: field
+                    check(argumentTypes[0] == FIELD_TYPE)
+                    copyLocal(fieldReflectionLocal)
+                    byReflection = true
+                }
+                else -> unreachable()
+            }
+            emitMethod()
+            val offsetLocal = newLocal(Type.LONG_TYPE).also { copyLocal(it) }
+            loadMemoryLocationLabeler()
+            loadStrategy()
+            when {
+                byName -> {
+                    loadLocal(classLocal)
+                    loadLocal(fieldNameLocal)
+                    loadLocal(offsetLocal)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_UNSAFE_FIELD_OFFSET_BY_NAME)
+                }
+                byReflection -> {
+                    loadLocal(fieldReflectionLocal)
+                    loadLocal(offsetLocal)
+                    invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_UNSAFE_FIELD_OFFSET_BY_REFLECTION)
+                }
+            }
+        }
+
+        private fun visitArrayBaseOffsetMethod(emitMethod: () -> Unit) = adapter.run {
+            // STACK: class
+            val classLocal = newLocal(CLASS_TYPE).also { copyLocal(it) }
+            emitMethod()
+            val offsetLocal = newLocal(Type.LONG_TYPE).also { copyLocal(it) }
+            loadMemoryLocationLabeler()
+            loadStrategy()
+            loadLocal(classLocal)
+            loadLocal(offsetLocal)
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_UNSAFE_ARRAY_BASE_OFFSET)
+        }
+
+        private fun visitArrayIndexScaleMethod(emitMethod: () -> Unit) = adapter.run {
+            // STACK: class
+            val classLocal = newLocal(CLASS_TYPE).also { copyLocal(it) }
+            emitMethod()
+            val indexScale = newLocal(Type.INT_TYPE).also { copyLocal(it) }
+            loadMemoryLocationLabeler()
+            loadStrategy()
+            loadLocal(classLocal)
+            loadLocal(indexScale)
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, REGISTER_UNSAFE_ARRAY_INDEX_SCALE)
+        }
+
+        // STACK: obj, offset -> value
+        private fun visitGetMethod(methodName: String, emitMethod: () -> Unit) = adapter.run {
+            val locationState = UnsafeAccessMemoryLocationState(adapter)
+            val accessType = getAccessType(methodName)
+            visitRead(locationState, accessType.descriptor, emitMethod)
+        }
+
+        // STACK: obj, offset, value -> (empty)
+        private fun visitPutMethod(methodName: String, emitMethod: () -> Unit) = adapter.run {
+            val locationState = UnsafeAccessMemoryLocationState(adapter)
+            val accessType = getAccessType(methodName)
+            visitWrite(locationState, accessType.descriptor, emitMethod)
+        }
+
+        private val typeNames = listOf(
+            "Boolean", "Byte", "Short", "Int", "Long", "Float", "Double", "Reference"
+        )
+
+        private fun getAccessType(methodName: String): Type {
+            val typeName = methodName
+                .removePrefix("get")
+                .removePrefix("put")
+                .removeSuffix("Opaque")
+                .removeSuffix("Acquire")
+                .removeSuffix("Release")
+                .removeSuffix("Volatile")
+            return when (typeName) {
+                "Boolean"   -> Type.BOOLEAN_TYPE
+                "Byte"      -> Type.BYTE_TYPE
+                "Short"     -> Type.SHORT_TYPE
+                "Int"       -> Type.INT_TYPE
+                "Long"      -> Type.LONG_TYPE
+                "Float"     -> Type.FLOAT_TYPE
+                "Double"    -> Type.DOUBLE_TYPE
+                "Reference" -> OBJECT_TYPE
+                else        -> unreachable()
+            }
+        }
+
+
+        private val loadAccessModes = listOf(
+            "", "Opaque", "Acquire", "Volatile"
+        )
+
+        private val storeAccessModes = listOf(
+            "", "Opaque", "Release", "Volatile"
+        )
+
+        private val unsafeGetMethods = typeNames.flatMap { typeName -> loadAccessModes.flatMap { accessMode ->
+            listOf("get$typeName$accessMode")
+        }}
+
+        private val unsafePutMethods = typeNames.flatMap { typeName -> storeAccessModes.flatMap { accessMode ->
+            listOf("put$typeName$accessMode")
+        }}
 
     }
 
@@ -1968,10 +2065,13 @@ private val LABEL_ARRAY_ELEMENT = Method.getMethod(MemoryLocationLabeler::labelA
 private val LABEL_ATOMIC_PRIMITIVE = Method.getMethod(MemoryLocationLabeler::labelAtomicPrimitive.javaMethod)
 private val LABEL_ATOMIC_REFLECTION_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionFieldAccess.javaMethod)
 private val LABEL_ATOMIC_REFLECTION_ARRAY_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionArrayAccess.javaMethod)
-private val LABEL_UNSAFE_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelUnsafeFieldAccess.javaMethod)
+private val LABEL_UNSAFE_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelUnsafeAccess.javaMethod)
 private val REGISTER_ATOMIC_FIELD_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicFieldReflection.javaMethod)
 private val REGISTER_ATOMIC_ARRAY_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicArrayReflection.javaMethod)
-private val REGISTER_UNSAFE_FIELD_OFFSET = Method.getMethod(MemoryLocationLabeler::registerUnsafeFieldOffset.javaMethod)
+private val REGISTER_UNSAFE_FIELD_OFFSET_BY_NAME = Method.getMethod(MemoryLocationLabeler::registerUnsafeFieldOffsetByName.javaMethod)
+private val REGISTER_UNSAFE_FIELD_OFFSET_BY_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerUnsafeFieldOffsetByReflection.javaMethod)
+private val REGISTER_UNSAFE_ARRAY_BASE_OFFSET = Method.getMethod(MemoryLocationLabeler::registerUnsafeArrayBaseOffset.javaMethod)
+private val REGISTER_UNSAFE_ARRAY_INDEX_SCALE = Method.getMethod(MemoryLocationLabeler::registerUnsafeArrayIndexScale.javaMethod)
 private val GET_KCLASS_FROM_DESCRIPTOR = Method.getMethod(::getKClassFromDescriptor.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")

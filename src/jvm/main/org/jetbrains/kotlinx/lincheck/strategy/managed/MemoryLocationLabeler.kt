@@ -20,10 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import java.util.*
-import java.lang.reflect.*
-import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.*
+import java.lang.reflect.*
+import java.util.*
+import java.util.concurrent.atomic.*
 
 interface MemoryLocation {
     // TODO: rename?
@@ -44,8 +44,9 @@ interface MemoryLocation {
  * accessed directly or through reflections (e.g., through AFU or VarHandle).
 */
 internal class MemoryLocationLabeler {
-    private val fieldLocationByReflection = IdentityHashMap<Any, AtomicReflectionAccessDescriptor>()
+    private val fieldLocationByReflectionMap = IdentityHashMap<Any, AtomicReflectionAccessDescriptor>()
     private val fieldNameByOffsetMap = mutableMapOf<UnsafeFieldAccessDescriptor, String>()
+    private val unsafeArrayDescriptorByClassMap = mutableMapOf<Class<*>, UnsafeArrayAccessDescriptor>()
 
     fun labelStaticField(strategy: ManagedStrategy, className: String, fieldName: String): MemoryLocation =
         StaticFieldMemoryLocation(strategy, className, fieldName)
@@ -69,7 +70,12 @@ internal class MemoryLocationLabeler {
         return ArrayElementMemoryLocation(strategy, array, index)
     }
 
-    fun labelUnsafeFieldAccess(strategy: ManagedStrategy, unsafe: Any, obj: Any, offset: Long): MemoryLocation {
+    fun labelUnsafeAccess(strategy: ManagedStrategy, unsafe: Any, obj: Any, offset: Long): MemoryLocation {
+        if (isArrayObject(obj)) {
+            val descriptor = lookupUnsafeArrayDescriptor(strategy, obj)
+            val index = (offset - descriptor.baseOffset) shr descriptor.indexShift
+            return ArrayElementMemoryLocation(strategy, obj, index.toInt())
+        }
         val className = normalizeClassName(strategy, obj.javaClass.name)
         val fieldName = lookupFieldNameByOffset(strategy, obj, offset)
         return ObjectFieldMemoryLocation(strategy, obj, className, fieldName)
@@ -87,14 +93,36 @@ internal class MemoryLocationLabeler {
         registerAtomicReflectionDescriptor(descriptor, reflection)
     }
 
-    fun registerUnsafeFieldOffset(strategy: ManagedStrategy, clazz: Class<*>, fieldName: String, offset: Long) {
+    fun registerUnsafeFieldOffsetByReflection(strategy: ManagedStrategy, field: Field, offset: Long) {
+        registerUnsafeFieldOffsetByName(strategy, field.declaringClass, field.name, offset)
+    }
+
+    fun registerUnsafeFieldOffsetByName(strategy: ManagedStrategy, clazz: Class<*>, fieldName: String, offset: Long) {
         val className = normalizeClassName(strategy, clazz.name)
         val descriptor = UnsafeFieldAccessDescriptor(className, offset)
         registerUnsafeFieldAccessDescriptor(descriptor, fieldName)
     }
 
+    fun registerUnsafeArrayBaseOffset(strategy: ManagedStrategy, clazz: Class<*>, baseOffset: Long) {
+        unsafeArrayDescriptorByClassMap.compute(clazz) { _, descriptor -> when {
+            descriptor == null          -> UnsafeArrayAccessDescriptor(baseOffset = baseOffset)
+            descriptor.baseOffset <  0L -> descriptor.copy(baseOffset = baseOffset)
+            descriptor.baseOffset >= 0L -> descriptor.ensure { it.baseOffset == baseOffset }
+            else -> unreachable()
+        }}
+    }
+
+    fun registerUnsafeArrayIndexScale(strategy: ManagedStrategy, clazz: Class<*>, indexScale: Int) {
+        unsafeArrayDescriptorByClassMap.compute(clazz) { _, descriptor -> when {
+            descriptor == null          -> UnsafeArrayAccessDescriptor(indexScale = indexScale)
+            descriptor.indexScale <= 0L -> descriptor.copy(indexScale = indexScale)
+            descriptor.baseOffset >  0L -> descriptor.ensure { it.indexScale == indexScale }
+            else -> unreachable()
+        }}
+    }
+
     private fun registerAtomicReflectionDescriptor(descriptor: AtomicReflectionAccessDescriptor, reflection: Any) {
-        fieldLocationByReflection.put(reflection, descriptor).ensureNull {
+        fieldLocationByReflectionMap.put(reflection, descriptor).ensureNull {
             "Atomic reflection object ${opaqueString(reflection)} cannot be registered to access $descriptor," +
                 "because it is already registered to access $it!"
         }
@@ -107,9 +135,8 @@ internal class MemoryLocationLabeler {
         }
     }
 
-
     private fun lookupAtomicReflectionDescriptor(reflection: Any): AtomicReflectionAccessDescriptor =
-        fieldLocationByReflection[reflection].ensureNotNull {
+        fieldLocationByReflectionMap[reflection].ensureNotNull {
             "Cannot access memory via unregistered reflection object ${opaqueString(reflection)}!"
         }
 
@@ -125,6 +152,12 @@ internal class MemoryLocationLabeler {
         return clazz.superclass
             ?.let { lookupFieldNameByOffset(strategy, it, offset) }
             ?.also { registerUnsafeFieldAccessDescriptor(descriptor, it) }
+    }
+
+    private fun lookupUnsafeArrayDescriptor(strategy: ManagedStrategy, obj: Any): UnsafeArrayAccessDescriptor {
+        return unsafeArrayDescriptorByClassMap[obj.javaClass].ensureNotNull {
+            "Cannot unsafely access array ${opaqueString(obj)} via unregistered class ${obj.javaClass}!"
+        }.ensure { it.isValid() }
     }
 
     private fun normalizeClassName(strategy: ManagedStrategy, className: String): String =
@@ -222,6 +255,23 @@ internal class ObjectFieldMemoryLocation(
         // TODO: also print className if it does not match actual name of the obj's class
         "${opaqueString(obj)}::$fieldName"
 
+}
+
+private fun isArrayObject(obj: Any): Boolean = when (obj) {
+    is ByteArray,
+    is ShortArray,
+    is IntArray,
+    is LongArray,
+    is FloatArray,
+    is DoubleArray,
+    is CharArray,
+    is BooleanArray,
+    is Array<*>,
+    is AtomicIntegerArray,
+    is AtomicLongArray,
+    is AtomicReferenceArray<*>
+            -> true
+    else    -> false
 }
 
 internal class ArrayElementMemoryLocation(
@@ -424,6 +474,18 @@ private data class UnsafeFieldAccessDescriptor(
     val className: String,
     val offset: Long,
 )
+
+private data class UnsafeArrayAccessDescriptor(
+    val baseOffset: Long = -1L,
+    val indexScale: Int = -1,
+) {
+    fun isValid() = (baseOffset >= 0) && (indexScale > 0)
+        // check scale is power of two
+        && ((indexScale and indexScale - 1) != 0)
+
+    val indexShift: Int
+        get() = Integer.numberOfLeadingZeros(indexScale)
+}
 
 // TODO: move to another place
 // TODO: make value class?

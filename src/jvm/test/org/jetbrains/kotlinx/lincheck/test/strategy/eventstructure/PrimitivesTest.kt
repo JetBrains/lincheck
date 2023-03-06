@@ -578,43 +578,43 @@ class PrimitivesTest {
         }
 
         fun writeByte(index: Int, value: Byte) {
-            U.putByte(byteArray, (index.toLong() shl byteIndexScale) + byteArrayOffset, value)
+            U.putByte(byteArray, (index.toLong() * byteIndexScale) + byteArrayOffset, value)
         }
 
         fun writeShort(index: Int, value: Short) {
-            U.putShort(shortArray, (index.toLong() shl shortIndexScale) + shortArrayOffset, value)
+            U.putShort(shortArray, (index.toLong() * shortIndexScale) + shortArrayOffset, value)
         }
 
         fun writeInt(index: Int, value: Int) {
-            U.putInt(intArray, (index.toLong() shl intIndexScale) + intArrayOffset, value)
+            U.putInt(intArray, (index.toLong() * intIndexScale) + intArrayOffset, value)
         }
 
         fun writeLong(index: Int, value: Long) {
-            U.putLong(longArray, (index.toLong() shl longIndexScale) + longArrayOffset, value)
+            U.putLong(longArray, (index.toLong() * longIndexScale) + longArrayOffset, value)
         }
 
         fun writeReference(index: Int, value: String) {
-            U.putReference(referenceArray, (index.toLong() shl referenceIndexScale) + referenceArrayOffset, value)
+            U.putReference(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset, value)
         }
 
         fun readByte(index: Int): Byte {
-            return U.getByte(byteArray, (index.toLong() shl byteIndexScale) + byteArrayOffset)
+            return U.getByte(byteArray, (index.toLong() * byteIndexScale) + byteArrayOffset)
         }
 
         fun readShort(index: Int): Short {
-            return U.getShort(shortArray, (index.toLong() shl shortIndexScale) + shortArrayOffset)
+            return U.getShort(shortArray, (index.toLong() * shortIndexScale) + shortArrayOffset)
         }
 
         fun readInt(index: Int): Int {
-            return U.getInt(intArray, (index.toLong() shl intIndexScale) + intArrayOffset)
+            return U.getInt(intArray, (index.toLong() * intIndexScale) + intArrayOffset)
         }
 
         fun readLong(index: Int): Long {
-            return U.getLong(longArray, (index.toLong() shl longIndexScale) + longArrayOffset)
+            return U.getLong(longArray, (index.toLong() * longIndexScale) + longArrayOffset)
         }
 
         fun readReference(index: Int): String {
-            return U.getReference(referenceArray, (index.toLong() shl referenceIndexScale) + referenceArrayOffset) as String
+            return U.getReference(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset) as String
         }
 
     }
