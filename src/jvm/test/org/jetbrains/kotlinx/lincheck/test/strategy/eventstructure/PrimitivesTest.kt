@@ -553,6 +553,192 @@ class PrimitivesTest {
         }
     }
 
+    class UnsafeArrays {
+        private var byteArray: ByteArray = ByteArray(8)
+        private var shortArray: ShortArray = ShortArray(8)
+        private var intArray: IntArray = IntArray(8)
+        private var longArray: LongArray = LongArray(8)
+        private var referenceArray: Array<String> = Array<String>(8) { "" }
+
+        companion object {
+            private val U = Unsafe.getUnsafe()
+
+            private val byteArrayOffset = U.arrayBaseOffset(ByteArray::class.java)
+            private val shortArrayOffset = U.arrayBaseOffset(ShortArray::class.java)
+            private val intArrayOffset = U.arrayBaseOffset(IntArray::class.java)
+            private val longArrayOffset = U.arrayBaseOffset(LongArray::class.java)
+            private val referenceArrayOffset = U.arrayBaseOffset(Array<String>::class.java)
+
+            private val byteIndexScale = U.arrayIndexScale(ByteArray::class.java)
+            private val shortIndexScale = U.arrayIndexScale(ShortArray::class.java)
+            private val intIndexScale = U.arrayIndexScale(IntArray::class.java)
+            private val longIndexScale = U.arrayIndexScale(LongArray::class.java)
+            private val referenceIndexScale = U.arrayIndexScale(Array<String>::class.java)
+
+        }
+
+        fun writeByte(index: Int, value: Byte) {
+            U.putByte(byteArray, (index.toLong() shl byteIndexScale) + byteArrayOffset, value)
+        }
+
+        fun writeShort(index: Int, value: Short) {
+            U.putShort(shortArray, (index.toLong() shl shortIndexScale) + shortArrayOffset, value)
+        }
+
+        fun writeInt(index: Int, value: Int) {
+            U.putInt(intArray, (index.toLong() shl intIndexScale) + intArrayOffset, value)
+        }
+
+        fun writeLong(index: Int, value: Long) {
+            U.putLong(longArray, (index.toLong() shl longIndexScale) + longArrayOffset, value)
+        }
+
+        fun writeReference(index: Int, value: String) {
+            U.putReference(referenceArray, (index.toLong() shl referenceIndexScale) + referenceArrayOffset, value)
+        }
+
+        fun readByte(index: Int): Byte {
+            return U.getByte(byteArray, (index.toLong() shl byteIndexScale) + byteArrayOffset)
+        }
+
+        fun readShort(index: Int): Short {
+            return U.getShort(shortArray, (index.toLong() shl shortIndexScale) + shortArrayOffset)
+        }
+
+        fun readInt(index: Int): Int {
+            return U.getInt(intArray, (index.toLong() shl intIndexScale) + intArrayOffset)
+        }
+
+        fun readLong(index: Int): Long {
+            return U.getLong(longArray, (index.toLong() shl longIndexScale) + longArrayOffset)
+        }
+
+        fun readReference(index: Int): String {
+            return U.getReference(referenceArray, (index.toLong() shl referenceIndexScale) + referenceArrayOffset) as String
+        }
+
+    }
+
+    @Test
+    fun testUnsafeByteArrayAccesses() {
+        val read = UnsafeArrays::readByte
+        val write = UnsafeArrays::writeByte
+        val index = 2
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, index, 1.toByte())
+                }
+                thread {
+                    actor(read, index)
+                }
+                thread {
+                    actor(write, index, 2.toByte())
+                }
+            }
+        }
+        val outcomes: Set<Byte> = setOf(0, 1, 2)
+        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+            getValue<Byte>(results.parallelResults[1][0])
+        }
+    }
+
+    @Test
+    fun testUnsafeShortArrayAccesses() {
+        val read = UnsafeArrays::readShort
+        val write = UnsafeArrays::writeShort
+        val index = 2
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, index, 1.toShort())
+                }
+                thread {
+                    actor(read, index)
+                }
+                thread {
+                    actor(write, index, 2.toShort())
+                }
+            }
+        }
+        val outcomes: Set<Short> = setOf(0, 1, 2)
+        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+            getValue<Short>(results.parallelResults[1][0])
+        }
+    }
+
+    @Test
+    fun testUnsafeIntArrayAccesses() {
+        val read = UnsafeArrays::readInt
+        val write = UnsafeArrays::writeInt
+        val index = 2
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, index, 1)
+                }
+                thread {
+                    actor(read, index)
+                }
+                thread {
+                    actor(write, index, 2)
+                }
+            }
+        }
+        val outcomes: Set<Int> = setOf(0, 1, 2)
+        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+            getValue<Int>(results.parallelResults[1][0])
+        }
+    }
+
+    @Test
+    fun testUnsafeLongArrayAccesses() {
+        val read = UnsafeArrays::readLong
+        val write = UnsafeArrays::writeLong
+        val index = 2
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, index, 1L)
+                }
+                thread {
+                    actor(read, index)
+                }
+                thread {
+                    actor(write, index, 2L)
+                }
+            }
+        }
+        val outcomes: Set<Long> = setOf(0, 1, 2)
+        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+            getValue<Long>(results.parallelResults[1][0])
+        }
+    }
+
+    @Test
+    fun testUnsafeReferenceArrayAccesses() {
+        val read = UnsafeArrays::readReference
+        val write = UnsafeArrays::writeReference
+        val index = 2
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, index, "a")
+                }
+                thread {
+                    actor(read, index)
+                }
+                thread {
+                    actor(write, index, "b")
+                }
+            }
+        }
+        val outcomes: Set<String> = setOf("", "a", "b")
+        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+            getValue<String>(results.parallelResults[1][0])
+        }
+    }
+
     class SynchronizedVariable {
 
         private var variable: Int = 0
