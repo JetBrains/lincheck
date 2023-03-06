@@ -24,15 +24,13 @@
 
 package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.LockSupport.*
 import java.lang.invoke.MethodHandles
 import jdk.internal.misc.Unsafe
-
 import org.junit.Test
 
 /**
@@ -42,7 +40,7 @@ import org.junit.Test
  */
 class PrimitivesTest {
 
-    class PlainVariable {
+    class PlainPrimitiveVariable {
         private var variable: Int = 0
 
         fun write(value: Int) {
@@ -55,9 +53,9 @@ class PrimitivesTest {
     }
 
     @Test
-    fun testPlainAccesses() {
-        val write = PlainVariable::write
-        val read = PlainVariable::read
+    fun testPlainPrimitiveAccesses() {
+        val write = PlainPrimitiveVariable::write
+        val read = PlainPrimitiveVariable::read
         val testScenario = scenario {
             parallel {
                 thread {
@@ -71,19 +69,51 @@ class PrimitivesTest {
                 }
             }
         }
-        // strategy should explore only 3 interleavings
-        // (by the number of distinct possible read values)
-        // naive strategy would explore 6 interleavings
         // TODO: when we will implement various access modes,
         //   we should probably report races on plain variables as errors (or warnings at least)
         val outcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(PlainVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(PlainPrimitiveVariable::class.java, testScenario, outcomes) { results ->
             getValue<Int>(results.parallelResults[1][0])
         }
     }
 
-    class ArrayVariable {
-        private val array = Array<Int>(10) { 0 }
+    class PlainReferenceVariable {
+        private var variable: String = ""
+
+        fun write(value: String) {
+            variable = value
+        }
+
+        fun read(): String {
+            return variable
+        }
+    }
+
+    @Test
+    fun testPlainReferenceAccesses() {
+        val write = PlainReferenceVariable::write
+        val read = PlainReferenceVariable::read
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, "a")
+                }
+                thread {
+                    actor(read)
+                }
+                thread {
+                    actor(write, "b")
+                }
+            }
+        }
+        val outcomes: Set<String> = setOf("", "a", "b")
+        litmusTest(PlainReferenceVariable::class.java, testScenario, outcomes) { results ->
+            getValue<String>(results.parallelResults[1][0])
+        }
+    }
+
+    class PrimitiveArray {
+        private val array = IntArray(8)
 
         fun write(index: Int, value: Int) {
             array[index] = value
@@ -95,30 +125,62 @@ class PrimitivesTest {
     }
 
     @Test
-    fun testArrayAccesses() {
-        val write = ArrayVariable::write
-        val read = ArrayVariable::read
+    fun testPrimitiveArrayAccesses() {
+        val write = PrimitiveArray::write
+        val read = PrimitiveArray::read
+        val index = 2
         val testScenario = scenario {
             parallel {
                 thread {
-                    actor(write, 0, 1)
+                    actor(write, index, 1)
                 }
                 thread {
-                    actor(read, 0)
+                    actor(read, index)
                 }
                 thread {
-                    actor(write, 0, 2)
+                    actor(write, index, 2)
                 }
             }
         }
-        // strategy should explore only 3 interleavings
-        // (by the number of distinct possible read values)
-        // naive strategy would explore 6 interleavings
-        // TODO: when we will implement various access modes,
-        //   we should probably report races on plain variables as errors (or warnings at least)
         val outcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(ArrayVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(PrimitiveArray::class.java, testScenario, outcomes) { results ->
             getValue<Int>(results.parallelResults[1][0])
+        }
+    }
+
+    class ReferenceArray {
+        private val array = Array<String>(8) { "" }
+
+        fun write(index: Int, value: String) {
+            array[index] = value
+        }
+
+        fun read(index: Int): String {
+            return array[index]
+        }
+    }
+
+    @Test
+    fun testReferenceArrayAccesses() {
+        val write = ReferenceArray::write
+        val read = ReferenceArray::read
+        val index = 2
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, index, "a")
+                }
+                thread {
+                    actor(read, index)
+                }
+                thread {
+                    actor(write, index, "b")
+                }
+            }
+        }
+        val outcomes: Set<String> = setOf("", "a", "b")
+        litmusTest(ReferenceArray::class.java, testScenario, outcomes) { results ->
+            getValue<String>(results.parallelResults[1][0])
         }
     }
 
@@ -149,7 +211,7 @@ class PrimitivesTest {
     }
 
     @Test
-    fun testAtomicVariable() {
+    fun testAtomicAccesses() {
         val read = AtomicVariable::read
         val write = AtomicVariable::write
         val testScenario = scenario {
@@ -165,9 +227,6 @@ class PrimitivesTest {
                 }
             }
         }
-        // strategy should explore only 3 interleavings
-        // (by the number of distinct possible read values)
-        // naive strategy would explore 6 interleavings
         val outcomes: Set<Int> = setOf(0, 1, 2)
         litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
             getValue<Int>(results.parallelResults[1][0])
@@ -191,8 +250,6 @@ class PrimitivesTest {
                 actor(read)
             }
         }
-        // strategy should explore only 2 interleavings
-        // naive strategy also explores 2 interleavings
         val outcomes: Set<Triple<Boolean, Boolean, Int>> = setOf(
             Triple(true, false, 1),
             Triple(false, true, 1)
@@ -222,8 +279,6 @@ class PrimitivesTest {
                 actor(read)
             }
         }
-        // strategy should explore only 2 interleavings
-        // naive strategy also explores 2 interleavings
         val outcomes: Set<Triple<Int, Int, Int>> = setOf(
             Triple(0, 1, 2),
             Triple(1, 0, 2)
@@ -253,8 +308,6 @@ class PrimitivesTest {
                 actor(read)
             }
         }
-        // strategy should explore only 2 interleavings
-        // naive strategy also explores 2 interleavings
         val outcomes: Set<Triple<Int, Int, Int>> = setOf(
             Triple(1, 2, 2),
             Triple(2, 1, 2)
@@ -268,6 +321,12 @@ class PrimitivesTest {
     }
 
     class GlobalAtomicVariable {
+
+        companion object {
+            // TODO: In the future we would likely want to switch to atomicfu primitives.
+            //   However, atomicfu currently does not support various access modes that we intend to test here.
+            private val globalVariable = AtomicInteger(0)
+        }
 
         fun write(value: Int) {
             globalVariable.set(value)
@@ -291,7 +350,7 @@ class PrimitivesTest {
     }
 
     @Test
-    fun testGlobalAtomicVariable() {
+    fun testGlobalAtomicAccesses() {
         val read = GlobalAtomicVariable::read
         val write = GlobalAtomicVariable::write
         val testScenario = scenario {
@@ -307,9 +366,6 @@ class PrimitivesTest {
                 }
             }
         }
-        // strategy should explore only 3 interleavings
-        // (by the number of distinct possible read values)
-        // naive strategy would explore 6 interleavings
         val outcomes: Set<Int> = setOf(0, 1, 2)
         litmusTest(GlobalAtomicVariable::class.java, testScenario, outcomes) { results ->
             getValue<Int>(results.parallelResults[1][0])
@@ -372,7 +428,53 @@ class PrimitivesTest {
     }
 
     @Test
-    fun testUnsafeReferenceAccess() {
+    fun testAtomicFieldUpdaterAccesses() {
+        val read = VolatileReferenceVariable::afuRead
+        val write = VolatileReferenceVariable::afuWrite
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, "a")
+                }
+                thread {
+                    actor(read)
+                }
+                thread {
+                    actor(write, "b")
+                }
+            }
+        }
+        val outcomes: Set<String?> = setOf(null, "a", "b")
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+            getValue(results.parallelResults[1][0])
+        }
+    }
+
+    @Test
+    fun testVarHandleAccesses() {
+        val read = VolatileReferenceVariable::vhRead
+        val write = VolatileReferenceVariable::vhWrite
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(write, "a")
+                }
+                thread {
+                    actor(read)
+                }
+                thread {
+                    actor(write, "b")
+                }
+            }
+        }
+        val outcomes: Set<String?> = setOf(null, "a", "b")
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+            getValue(results.parallelResults[1][0])
+        }
+    }
+
+    @Test
+    fun testUnsafeAccesses() {
         val read = VolatileReferenceVariable::unsafeRead
         val write = VolatileReferenceVariable::unsafeWrite
         val testScenario = scenario {
@@ -394,14 +496,20 @@ class PrimitivesTest {
         }
     }
 
+    private data class Quad<out A, out B, out C, out D>(
+        val first: A, val second: B, val third: C, val forth: D
+    )
+
     @Test
-    fun testMixedAccessMethods() {
+    fun testMixedAccesses() {
         val read = VolatileReferenceVariable::read
         val afuRead = VolatileReferenceVariable::afuRead
         val vhRead = VolatileReferenceVariable::vhRead
+        val unsafeRead = VolatileReferenceVariable::unsafeRead
         val write = VolatileReferenceVariable::write
         val afuWrite = VolatileReferenceVariable::afuWrite
         val vhWrite = VolatileReferenceVariable::vhWrite
+        val unsafeWrite = VolatileReferenceVariable::unsafeWrite
         // TODO: also add Unsafe accessors once they are supported
         val testScenario = scenario {
             parallel {
@@ -415,6 +523,9 @@ class PrimitivesTest {
                     actor(vhWrite, "c")
                 }
                 thread {
+                    actor(unsafeWrite, "d")
+                }
+                thread {
                     actor(read)
                 }
                 thread {
@@ -423,17 +534,22 @@ class PrimitivesTest {
                 thread {
                     actor(vhRead)
                 }
+                thread {
+                    actor(unsafeRead)
+                }
             }
         }
-        val values = setOf(null, "a", "b", "c")
-        val outcomes: Set<Triple<String?, String?, String?>> =
-            values.flatMap { a -> values.flatMap { b -> values.flatMap { c -> listOf(Triple(a, b, c)) } } }
-                .toSet()
+        val values = setOf(null, "a", "b", "c", "d")
+        val outcomes: Set<Quad<String?, String?, String?, String?>> =
+            values.flatMap { a -> values.flatMap { b -> values.flatMap { c -> values.flatMap { d ->
+                listOf(Quad(a, b, c, d))
+            }}}}.toSet()
         litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
-            val a = getValue<String?>(results.parallelResults[3][0])
-            val b = getValue<String?>(results.parallelResults[4][0])
-            val c = getValue<String?>(results.parallelResults[5][0])
-            Triple(a, b, c)
+            val a = getValue<String?>(results.parallelResults[4][0])
+            val b = getValue<String?>(results.parallelResults[5][0])
+            val c = getValue<String?>(results.parallelResults[6][0])
+            val d = getValue<String?>(results.parallelResults[7][0])
+            Quad(a, b, c, d)
         }
     }
 
@@ -504,8 +620,6 @@ class PrimitivesTest {
                 actor(read)
             }
         }
-        // strategy should explore only 2 interleavings
-        // naive strategy may explore more interleavings (due to context-switches before/after locks)
         val outcomes: Set<Triple<Int, Int, Int>> = setOf(
             Triple(1, 2, 2),
             Triple(2, 1, 2)
@@ -532,8 +646,6 @@ class PrimitivesTest {
                 }
             }
         }
-        // strategy should explore only 1 interleaving
-        // naive strategy may explore more interleavings (due to context-switches before/after locks)
         val outcomes = setOf(1)
         litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
             getValue<Int>(results.parallelResults[1][0])
@@ -583,8 +695,6 @@ class PrimitivesTest {
                 }
             }
         }
-        // strategy should explore only 3 interleaving
-        // naive strategy may explore more interleavings (due to context-switches before/after park)
         val outcomes = setOf(null, 1)
         litmusTest(ParkLatchedVariable::class.java, testScenario, outcomes, executionCount = 3) { results ->
             getValue<Int?>(results.parallelResults[1][0])
@@ -592,7 +702,3 @@ class PrimitivesTest {
     }
 
 }
-
-// TODO: In the future we would likely want to switch to atomicfu primitives.
-//   However, atomicfu currently does not support various access modes that we intend to test here.
-private val globalVariable = AtomicInteger(0)
