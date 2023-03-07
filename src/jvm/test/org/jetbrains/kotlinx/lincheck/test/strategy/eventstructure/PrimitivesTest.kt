@@ -393,6 +393,22 @@ class PrimitivesTest {
 
         }
 
+        fun read(): String? {
+            return variable
+        }
+
+        fun afuRead(): String? {
+            return updater.get(this)
+        }
+
+        fun vhRead(): String? {
+            return handle.get(this) as String?
+        }
+
+        fun unsafeRead(): String? {
+            return U.getReference(this, offset) as String?
+        }
+
         fun write(value: String?) {
             variable = value
         }
@@ -409,20 +425,16 @@ class PrimitivesTest {
             U.putReference(this, offset, value)
         }
 
-        fun read(): String? {
-            return variable
+        fun afuCompareAndSet(expected: String?, desired: String?): Boolean {
+            return updater.compareAndSet(this, expected, desired)
         }
 
-        fun afuRead(): String? {
-            return updater.get(this)
+        fun vhCompareAndSet(expected: String?, desired: String?): Boolean {
+            return handle.compareAndSet(this, expected, desired)
         }
 
-        fun vhRead(): String? {
-            return handle.get(this) as String?
-        }
-
-        fun unsafeRead(): String? {
-            return U.getReference(this, offset) as String?
+        fun unsafeCompareAndSet(expected: String?, desired: String?): Boolean {
+            return U.compareAndSetReference(this, offset, expected, desired)
         }
 
     }
@@ -493,6 +505,93 @@ class PrimitivesTest {
         val outcomes: Set<String?> = setOf(null, "a", "b")
         litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
             getValue(results.parallelResults[1][0])
+        }
+    }
+
+    @Test
+    fun testAtomicFieldUpdaterCompareAndSet() {
+        val read = VolatileReferenceVariable::afuRead
+        val compareAndSet = VolatileReferenceVariable::afuCompareAndSet
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(compareAndSet, null, "a")
+                }
+                thread {
+                    actor(compareAndSet, null, "a")
+                }
+            }
+            post {
+                actor(read)
+            }
+        }
+        val outcomes: Set<Triple<Boolean, Boolean, String?>> = setOf(
+            Triple(true, false, "a"),
+            Triple(false, true, "a")
+        )
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Boolean>(results.parallelResults[0][0])
+            val r2 = getValue<Boolean>(results.parallelResults[1][0])
+            val r3 = getValue<String?>(results.postResults[0])
+            Triple(r1, r2, r3)
+        }
+    }
+
+    @Test
+    fun testVarHandleCompareAndSet() {
+        val read = VolatileReferenceVariable::vhRead
+        val compareAndSet = VolatileReferenceVariable::vhCompareAndSet
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(compareAndSet, null, "a")
+                }
+                thread {
+                    actor(compareAndSet, null, "a")
+                }
+            }
+            post {
+                actor(read)
+            }
+        }
+        val outcomes: Set<Triple<Boolean, Boolean, String?>> = setOf(
+            Triple(true, false, "a"),
+            Triple(false, true, "a")
+        )
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Boolean>(results.parallelResults[0][0])
+            val r2 = getValue<Boolean>(results.parallelResults[1][0])
+            val r3 = getValue<String?>(results.postResults[0])
+            Triple(r1, r2, r3)
+        }
+    }
+
+    @Test
+    fun testUnsafeCompareAndSet() {
+        val read = VolatileReferenceVariable::unsafeRead
+        val compareAndSet = VolatileReferenceVariable::unsafeCompareAndSet
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(compareAndSet, null, "a")
+                }
+                thread {
+                    actor(compareAndSet, null, "a")
+                }
+            }
+            post {
+                actor(read)
+            }
+        }
+        val outcomes: Set<Triple<Boolean, Boolean, String?>> = setOf(
+            Triple(true, false, "a"),
+            Triple(false, true, "a")
+        )
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Boolean>(results.parallelResults[0][0])
+            val r2 = getValue<Boolean>(results.parallelResults[1][0])
+            val r3 = getValue<String?>(results.postResults[0])
+            Triple(r1, r2, r3)
         }
     }
 
