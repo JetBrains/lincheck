@@ -1111,9 +1111,6 @@ internal class ManagedStrategyTransformer(
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
-            val emitMethod = {
-                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            }
             when (name) {
                 "getUnsafe" -> visitGetUnsafeMethod(owner)
 
@@ -1193,7 +1190,7 @@ internal class ManagedStrategyTransformer(
             // STACK: class
             val classLocal = newLocal(CLASS_TYPE).also { copyLocal(it) }
             emitMethod()
-            val offsetLocal = newLocal(Type.LONG_TYPE).also { copyLocal(it) }
+            val offsetLocal = newLocal(Type.INT_TYPE).also { copyLocal(it) }
             loadMemoryLocationLabeler()
             loadStrategy()
             loadLocal(classLocal)

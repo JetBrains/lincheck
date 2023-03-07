@@ -103,7 +103,7 @@ internal class MemoryLocationLabeler {
         registerUnsafeFieldAccessDescriptor(descriptor, fieldName)
     }
 
-    fun registerUnsafeArrayBaseOffset(strategy: ManagedStrategy, clazz: Class<*>, baseOffset: Long) {
+    fun registerUnsafeArrayBaseOffset(strategy: ManagedStrategy, clazz: Class<*>, baseOffset: Int) {
         unsafeArrayDescriptorByClassMap.compute(clazz) { _, descriptor -> when {
             descriptor == null          -> UnsafeArrayAccessDescriptor(baseOffset = baseOffset)
             descriptor.baseOffset <  0L -> descriptor.copy(baseOffset = baseOffset)
@@ -476,12 +476,12 @@ private data class UnsafeFieldAccessDescriptor(
 )
 
 private data class UnsafeArrayAccessDescriptor(
-    val baseOffset: Long = -1L,
+    val baseOffset: Int = -1,
     val indexScale: Int = -1,
 ) {
     fun isValid() = (baseOffset >= 0) && (indexScale > 0)
         // check scale is power of two
-        && ((indexScale and indexScale - 1) != 0)
+        && ((indexScale and indexScale - 1) == 0)
 
     val indexShift: Int
         get() = Integer.numberOfLeadingZeros(indexScale)
