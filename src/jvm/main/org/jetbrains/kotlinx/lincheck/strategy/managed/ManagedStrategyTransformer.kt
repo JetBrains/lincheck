@@ -118,8 +118,6 @@ internal class ManagedStrategyTransformer(
         return mv
     }
 
-
-
     /**
      * Generates body of a native method VMSupportsCS8.
      * Native methods in java.util can not be transformed properly, so should be replaced with stubs
@@ -307,7 +305,8 @@ internal class ManagedStrategyTransformer(
                     visitAtomicUpdateMethod(AtomicUpdateMethodDescriptor.fromName(name), locationState, innerDescriptor) {
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     }
-                else -> super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                else ->
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
         }
 
@@ -1134,7 +1133,12 @@ internal class ManagedStrategyTransformer(
                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 }
 
-                else -> super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                in unsafeAtomicUpdateMethods -> visitAtomicUpdateMethod(name) {
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                }
+
+                else ->
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
         }
 
@@ -1224,19 +1228,64 @@ internal class ManagedStrategyTransformer(
             visitWrite(locationState, accessType.descriptor, emitMethod)
         }
 
+        // STACK: obj, offset, [value args ...] -> method result
+        private fun visitAtomicUpdateMethod(methodName: String, emitMethod: () -> Unit) = adapter.run {
+            val methodDescriptor = AtomicUpdateMethodDescriptor.fromName(methodName
+                .removeTypeName()
+                .removeAccessMode()
+            )
+            val locationState = UnsafeAccessMemoryLocationState(adapter)
+            val accessType = getAccessType(methodName)
+            visitAtomicUpdateMethod(methodDescriptor, locationState, accessType.descriptor, emitMethod)
+        }
+
         private val typeNames = listOf(
             "Boolean", "Byte", "Short", "Int", "Long", "Float", "Double", "Reference"
         )
 
+        private val loadAccessModes = listOf(
+            "Plain", "Opaque", "Acquire", "Volatile"
+        )
+
+        private val storeAccessModes = listOf(
+            "Plain", "Opaque", "Release", "Volatile"
+        )
+
+        private val accessModes = listOf(
+            "Plain", "Opaque", "Acquire", "Release", "Volatile"
+        )
+
+        private val unsafeGetMethods = typeNames.flatMap { typeName -> loadAccessModes.flatMap { accessMode ->
+            listOf("get$typeName${accessMode.takeIf { it != "Plain" } ?: ""}")
+        }}
+
+        private val unsafePutMethods = typeNames.flatMap { typeName -> storeAccessModes.flatMap { accessMode ->
+            listOf("put$typeName${accessMode.takeIf { it != "Plain" } ?: ""}")
+        }}
+
+        private val unsafeAtomicUpdateMethods = run {
+            val names = listOf(
+                "compareAndSet", "weakCompareAndSet", "getAndSet", "getAndAdd"
+            )
+            names.flatMap { name -> typeNames.flatMap { typeName -> accessModes.flatMap { accessMode ->
+                listOf("$name$typeName${accessMode.takeIf { it != "Volatile" } ?: ""}")
+            }}}
+        }
+
+        private fun String.removeTypeName(): String {
+            val regex = Regex(typeNames.joinToString(separator = "|"))
+            return this.replace(regex, "")
+        }
+
+        private fun String.removeAccessMode(): String {
+            val regex = Regex(accessModes.joinToString(separator = "|"))
+            return this.replace(regex, "")
+        }
+
         private fun getAccessType(methodName: String): Type {
-            val typeName = methodName
-                .removePrefix("get")
-                .removePrefix("put")
-                .removeSuffix("Opaque")
-                .removeSuffix("Acquire")
-                .removeSuffix("Release")
-                .removeSuffix("Volatile")
-            return when (typeName) {
+            val regex = Regex(typeNames.joinToString(separator = "|"))
+            val match = regex.find(methodName)
+            return when (match?.value) {
                 "Boolean"   -> Type.BOOLEAN_TYPE
                 "Byte"      -> Type.BYTE_TYPE
                 "Short"     -> Type.SHORT_TYPE
@@ -1248,23 +1297,6 @@ internal class ManagedStrategyTransformer(
                 else        -> unreachable()
             }
         }
-
-
-        private val loadAccessModes = listOf(
-            "", "Opaque", "Acquire", "Volatile"
-        )
-
-        private val storeAccessModes = listOf(
-            "", "Opaque", "Release", "Volatile"
-        )
-
-        private val unsafeGetMethods = typeNames.flatMap { typeName -> loadAccessModes.flatMap { accessMode ->
-            listOf("get$typeName$accessMode")
-        }}
-
-        private val unsafePutMethods = typeNames.flatMap { typeName -> storeAccessModes.flatMap { accessMode ->
-            listOf("put$typeName$accessMode")
-        }}
 
     }
 
