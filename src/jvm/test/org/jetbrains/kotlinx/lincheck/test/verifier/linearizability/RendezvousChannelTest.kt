@@ -21,12 +21,16 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.test.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ClosedSendChannelException
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
 @ExperimentalCoroutinesApi
 @InternalCoroutinesApi
@@ -41,7 +45,7 @@ class RendezvousChannelTest : AbstractLincheckTest() {
     suspend fun receive() = ch.receive()
 
     @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
-    suspend fun receiveOrNull() = ch.receiveOrNull()
+    suspend fun receiveOrNull() = ch.receiveCatching().getOrNull()
 
     @Operation
     fun close() = ch.close()

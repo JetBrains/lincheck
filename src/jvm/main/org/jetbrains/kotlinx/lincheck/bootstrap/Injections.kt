@@ -20,6 +20,7 @@
 
 package sun.nio.ch.lincheck
 
+import java.lang.invoke.VarHandle
 import java.util.*
 
 internal object Injections {
@@ -156,45 +157,90 @@ internal object Injections {
     @JvmStatic
     fun beforeMethodCall0(owner: Any?, className: String, methodName: String, codeLocation: Int) {
         sharedEventsTracker.beforeMethodCall0(owner, className, methodName, codeLocation)
+        if (owner is VarHandle) {
+            val t = Thread.currentThread() as TestThread
+            t.ignoredSectionDepth++
+            t.enteredIgnoredSectionByInjector = true
+        }
     }
 
     @JvmStatic
     fun beforeMethodCall1(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?) {
         sharedEventsTracker.beforeMethodCall1(owner, className, methodName, codeLocation, param1)
+        if (owner is VarHandle) {
+            val t = Thread.currentThread() as TestThread
+            t.ignoredSectionDepth++
+            t.enteredIgnoredSectionByInjector = true
+        }
     }
 
     @JvmStatic
     fun beforeMethodCall2(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?) {
         sharedEventsTracker.beforeMethodCall2(owner, className, methodName, codeLocation, param1, param2)
+        if (owner is VarHandle) {
+            val t = Thread.currentThread() as TestThread
+            t.ignoredSectionDepth++
+            t.enteredIgnoredSectionByInjector = true
+        }
     }
 
     @JvmStatic
     fun beforeMethodCall3(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?) {
         sharedEventsTracker.beforeMethodCall3(owner, className, methodName, codeLocation, param1, param2, param3)
+        if (owner is VarHandle) {
+            val t = Thread.currentThread() as TestThread
+            t.ignoredSectionDepth++
+            t.enteredIgnoredSectionByInjector = true
+        }
     }
 
     @JvmStatic
     fun beforeMethodCall4(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?) {
         sharedEventsTracker.beforeMethodCall4(owner, className, methodName, codeLocation, param1, param2, param3, param4)
+        if (owner is VarHandle) {
+            val t = Thread.currentThread() as TestThread
+            t.ignoredSectionDepth++
+            t.enteredIgnoredSectionByInjector = true
+        }
     }
 
     @JvmStatic
     fun beforeMethodCall5(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?, param5: Any?) {
         sharedEventsTracker.beforeMethodCall5(owner, className, methodName, codeLocation, param1, param2, param3, param4, param5)
+        if (owner is VarHandle) {
+            val t = Thread.currentThread() as TestThread
+            t.ignoredSectionDepth++
+            t.enteredIgnoredSectionByInjector = true
+        }
     }
 
     @JvmStatic
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
         sharedEventsTracker.beforeMethodCall(owner, className, methodName, codeLocation, params)
+        if (owner is VarHandle) {
+            val t = Thread.currentThread() as TestThread
+            t.ignoredSectionDepth++
+            t.enteredIgnoredSectionByInjector = true
+        }
     }
 
     @JvmStatic
     fun onMethodCallFinishedSuccessfully(result: Any?) {
+        val currentThread = Thread.currentThread() as TestThread
+        if (currentThread.enteredIgnoredSectionByInjector) {
+            currentThread.ignoredSectionDepth--
+            currentThread.enteredIgnoredSectionByInjector = false
+        }
         sharedEventsTracker.onMethodCallFinishedSuccessfully(result)
     }
 
     @JvmStatic
     fun onMethodCallThrewException(t: Throwable) {
+        val currentThread = Thread.currentThread() as TestThread
+        if (currentThread.enteredIgnoredSectionByInjector) {
+            currentThread.ignoredSectionDepth--
+            currentThread.enteredIgnoredSectionByInjector = false
+        }
         sharedEventsTracker.onMethodCallThrewException(t)
     }
 

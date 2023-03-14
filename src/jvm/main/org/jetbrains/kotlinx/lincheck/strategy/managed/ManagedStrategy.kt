@@ -30,11 +30,16 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import sun.nio.ch.lincheck.CodeLocations
+import sun.nio.ch.lincheck.FinalFields
 import sun.nio.ch.lincheck.SharedEventsTracker
 import sun.nio.ch.lincheck.TestThread
 import java.io.*
+import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
+import java.util.concurrent.atomic.AtomicLongFieldUpdater
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.collections.set
 
 /**
@@ -313,10 +318,13 @@ abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e. is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
-        !finished[iThread] &&
-        !monitorTracker.isWaiting(iThread) &&
-        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
+    private fun isActive(iThread: Int): Boolean {
+        if (iThread < 0)
+            error("WTF: $iThread")
+        return  !finished[iThread] &&
+                !monitorTracker.isWaiting(iThread) &&
+                !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
+    }
 
     /**
      * Waits until the specified thread can continue
@@ -637,6 +645,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
+        if (isFinalField(className, fieldName)) return@runInIgnoredSection
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -651,6 +660,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
+        if (isFinalField(className, fieldName)) return@runInIgnoredSection
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -685,6 +695,10 @@ abstract class ManagedStrategy(
         lastReadTracePoint.set(null)
     }
 
+    private fun isFinalField(className: String, field: String): Boolean {
+        return FinalFields.isFinalField(className, field)
+    }
+
     override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
@@ -698,7 +712,7 @@ abstract class ManagedStrategy(
         beforeSharedVariableWrite(iThread, codeLocation, tracePoint)
     }
 
-    override fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection{
+    override fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -755,6 +769,9 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         params: Array<Any?>
     ) = runInIgnoredSection {
+        if (owner is AtomicLongFieldUpdater<*> || owner is AtomicIntegerFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *> || owner is VarHandle) {
+            beforeAtomicMethodCall(currentThread, codeLocation)
+        }
         if (!collectTrace) return
         val iThread = currentThreadNumber()
         val tracePoint = MethodCallTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread], methodName, CodeLocations.stackTrace(codeLocation)).also {
@@ -765,7 +782,6 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeMethodCall0(owner: Any?, className: String, methodName: String, codeLocation: Int) {
-        if (!collectTrace) return
         beforeMethodCall(owner, className, methodName, codeLocation, arrayOf())
     }
 
@@ -776,7 +792,6 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         param1: Any?
     ) {
-        if (!collectTrace) return
         beforeMethodCall(owner, className, methodName, codeLocation, arrayOf(param1))
     }
 
@@ -788,7 +803,6 @@ abstract class ManagedStrategy(
         param1: Any?,
         param2: Any?
     ) {
-        if (!collectTrace) return
         beforeMethodCall(owner, className, methodName, codeLocation, arrayOf(param1, param2))
     }
 
@@ -801,7 +815,6 @@ abstract class ManagedStrategy(
         param2: Any?,
         param3: Any?
     ) {
-        if (!collectTrace) return
         beforeMethodCall(owner, className, methodName, codeLocation, arrayOf(param1, param2, param3))
     }
 
@@ -815,7 +828,6 @@ abstract class ManagedStrategy(
         param3: Any?,
         param4: Any?
     ) {
-        if (!collectTrace) return
         beforeMethodCall(owner, className, methodName, codeLocation, arrayOf(param1, param2, param3, param4))
     }
 
@@ -830,7 +842,6 @@ abstract class ManagedStrategy(
         param4: Any?,
         param5: Any?
     ) {
-        if (!collectTrace) return
         beforeMethodCall(owner, className, methodName, codeLocation, arrayOf(param1, param2, param3, param4, param5))
     }
 

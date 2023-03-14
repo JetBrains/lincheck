@@ -126,7 +126,7 @@ internal class WriteTracePoint(
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val methodName: String,
+    private val methodName: String, // TODO: owner
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var returnedValue: Any? = NO_VALUE

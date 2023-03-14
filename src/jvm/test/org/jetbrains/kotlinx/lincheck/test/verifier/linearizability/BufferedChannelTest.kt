@@ -21,12 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.test.*
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
@@ -40,10 +41,10 @@ class BufferedChannelTest : AbstractLincheckTest() {
     suspend fun receive() = c.receive()
 
     @Operation
-    fun poll() = c.poll()
+    fun poll() = c.tryReceive().getOrNull()
 
     @Operation
-    fun offer(@Param(name = "value") value: Int) = c.offer(value)
+    fun offer(@Param(name = "value") value: Int) = c.trySend(value).isSuccess
 
     override fun <O : Options<O, *>> O.customize() {
         sequentialSpecification(SequentiaBuffered2IntChannel::class.java)

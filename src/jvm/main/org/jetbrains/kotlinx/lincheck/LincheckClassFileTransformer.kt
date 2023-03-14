@@ -27,10 +27,14 @@ import net.bytebuddy.dynamic.loading.ClassInjector
 import net.bytebuddy.pool.TypePool
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
-import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.AdviceAdapter
+import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.GeneratorAdapter.GT
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
+import org.objectweb.asm.commons.JSRInlinerAdapter
+import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.CodeLocations
+import sun.nio.ch.lincheck.FinalFields
 import sun.nio.ch.lincheck.Injections
 import java.lang.instrument.ClassDefinition
 import java.lang.instrument.ClassFileTransformer
@@ -53,6 +57,7 @@ internal object TransformationInjectionsInitializer {
             "sun.nio.ch.lincheck.WeakIdentityHashMap",
             "sun.nio.ch.lincheck.WeakIdentityHashMap\$Ref",
             "sun.nio.ch.lincheck.AtomicFieldNameMapper",
+            "sun.nio.ch.lincheck.FinalFields",
             "sun.nio.ch.lincheck.CodeLocations",
             "sun.nio.ch.lincheck.TestThread",
             "sun.nio.ch.lincheck.SharedEventsTracker",
@@ -93,6 +98,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                     instrumentation.retransformClasses(it)
                 } catch (t: Throwable) {
                     System.err.println("Failed to re-transform $it")
+                    t.printStackTrace()
                 }
             }
         }
@@ -118,9 +124,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         return transformedClasses.computeIfAbsent(classKey(loader, className)) {
             oldClasses[classKey(loader, className)] = classfileBuffer
             val reader = ClassReader(classfileBuffer)
-            val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
-            reader.accept(LincheckClassVisitor(writer), ClassReader.EXPAND_FRAMES)
-            writer.toByteArray()
+            val writer = ClassWriter(reader, ClassWriter.COMPUTE_FRAMES)
+            try {
+                reader.accept(LincheckClassVisitor(writer), ClassReader.SKIP_FRAMES)
+                writer.toByteArray()
+            } catch (e: Exception) {
+                System.err.println("Unable to transform $className")
+                e.printStackTrace()
+                classfileBuffer
+            }
         }
     }
 
@@ -178,6 +190,19 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
     private var classVersion = 0
     private var fileName: String? = null
 
+    override fun visitField(
+        access: Int,
+        fieldName: String,
+        descriptor: String?,
+        signature: String?,
+        value: Any?
+    ): FieldVisitor {
+        if (access and ACC_FINAL != 0) {
+            FinalFields.addFinalField(className, fieldName)
+        }
+        return super.visitField(access, fieldName, descriptor, signature, value)
+    }
+
     override fun visit(
         version: Int,
         access: Int,
@@ -198,34 +223,33 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
 
     override fun visitMethod(
         access: Int,
-        mname: String,
+        methodName: String,
         desc: String,
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor {
-        if (access and ACC_NATIVE != 0)
-            return super.visitMethod(access, mname, desc, signature, exceptions)
-        var mv = super.visitMethod(access, mname, desc, signature, exceptions)
-        mv = JSRInlinerAdapter(mv, access, mname, desc, signature, exceptions)
-        mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
-        mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, mname, desc)
-        mv = MonitorEnterAndExitTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (access and ACC_SYNCHRONIZED != 0) {
-            mv = SynchronizedMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
+        var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        if (access and ACC_NATIVE != 0) return mv
+        if (methodName == "<clinit>") {
+            return IgnoreClassInitializationTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         }
-        mv = IgnoreClassInitializationTransformer(
-            mname,
-            GeneratorAdapter(mv, access, mname, desc)
-        ) // TODO: implement in code instead
-        mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        if (mname != "<init>" && mname != "<clinit>") // TODO: fix me
-            mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = MethodCallTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = DetermenisticHashCodeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, mname, desc))
-        mv = DeterministicRandomTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
+        mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
+        mv = MonitorEnterAndExitTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        if (access and ACC_SYNCHRONIZED != 0) {
+            mv = SynchronizedMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc), classVersion)
+        }
+        mv = AFUTrackingTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = WaitNotifyTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = ParkUnparkTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        // TODO: fix arrays
+        if (methodName != "<init>")
+            mv = SharedVariableAccessMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = DetermenisticHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
+        mv = DeterministicRandomTransformer(GeneratorAdapter(mv, access, methodName, desc))
+//        mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         return mv
     }
 
@@ -291,10 +315,9 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
     private inner class SynchronizedMethodTransformer(
         methodName: String,
         mv: GeneratorAdapter,
-        access: Int,
         private val classVersion: Int
     ) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isStatic: Boolean = access and ACC_STATIC != 0
+        private val isStatic: Boolean = adapter.access and ACC_STATIC != 0
         private val tryLabel = Label()
         private val catchLabel = Label()
 
@@ -302,8 +325,9 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
             invokeIfInTestingCode(
                 original = {},
                 code = {
+                    loadSynchronizedMethodMonitorOwner()
                     monitorExit()
-                    loadThis()
+                    loadSynchronizedMethodMonitorOwner()
                     loadNewCodeLocationId()
                     invokeStatic(Injections::lock)
                     visitLabel(tryLabel)
@@ -320,6 +344,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                     loadSynchronizedMethodMonitorOwner()
                     loadNewCodeLocationId()
                     invokeStatic(Injections::unlock)
+                    loadSynchronizedMethodMonitorOwner()
                     monitorEnter()
                     throwException()
                     visitTryCatchBlock(tryLabel, catchLabel, catchLabel, null)
@@ -337,6 +362,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                             loadSynchronizedMethodMonitorOwner()
                             loadNewCodeLocationId()
                             invokeStatic(Injections::unlock)
+                            loadSynchronizedMethodMonitorOwner()
                             monitorEnter()
                         }
                     )
@@ -367,21 +393,20 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
      */
     private inner class IgnoreClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
-        private val isClassInitializationMethod = methodName == "<clinit>"
+
+        init {
+            check(methodName == "<clinit>")
+        }
 
         override fun visitCode() = adapter.run {
-            if (isClassInitializationMethod) {
-                invokeStatic(Injections::enterIgnoredSection)
-            }
+            invokeStatic(Injections::enterIgnoredSection)
             visitCode()
         }
 
         override fun visitInsn(opcode: Int) = adapter.run {
-            if (isClassInitializationMethod) {
-                when (opcode) {
-                    ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                        invokeStatic(Injections::leaveIgnoredSection)
-                    }
+            when (opcode) {
+                ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
+                    invokeStatic(Injections::leaveIgnoredSection)
                 }
             }
             visitInsn(opcode)
@@ -541,13 +566,9 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
-        override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-            // TODO do not analyze final fields and coroutine internals
-//            if (isFinalField(owner, fieldName)) {
-//                visitFieldInsn(opcode, owner, fieldName, desc)
-//                return
-//            }
 
+        override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
+            // TODO: finals
             when (opcode) {
                 GETSTATIC -> {
                     invokeIfInTestingCode(
@@ -579,10 +600,10 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                             // STACK: owner: Object
                             dup()
                             // STACK: owner: Object, owner: Object
-                            push(className)
+                            push(owner)
                             push(fieldName)
                             loadNewCodeLocationId()
-                            // STACK: owner: Object, owner: Object, fieldName: String, fieldName: String, codeLocation: Int
+                            // STACK: owner: Object, owner: Object, className: String, fieldName: String, codeLocation: Int
                             invokeStatic(Injections::beforeReadField)
                             // STACK: owner: Object
                             visitFieldInsn(opcode, owner, fieldName, desc)
@@ -653,49 +674,48 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
 
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
-                AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-                    invokeIfInTestingCode(
-                        original = {
-                            visitInsn(opcode)
-                        },
-                        code = {
-                            // STACK: array: Array, index: Int
-                            dup()
-                            // STACK: array: Array, index: Int, array: Array, index: Int
-                            loadNewCodeLocationId()
-                            // STACK: array: Array, index: Int, array: Array, index: Int, codeLocation: Int
-                            invokeStatic(Injections::beforeReadArrayElement)
-                            // STACK: array: Array, index: Int
-                            visitInsn(opcode)
-                            // STACK: value
-                            invokeReadValue(getArrayElementType(opcode))
-                            // STACK: value
-                        }
-                    )
-                }
+//                AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
+//                    invokeIfInTestingCode(
+//                        original = {
+//                            visitInsn(opcode)
+//                        },
+//                        code = {
+//                            // STACK: array: Array, index: Int
+//                            dup2()
+//                            // STACK: array: Array, index: Int, array: Array, index: Int
+//                            loadNewCodeLocationId()
+//                            // STACK: array: Array, index: Int, array: Array, index: Int, codeLocation: Int
+//                            invokeStatic(Injections::beforeReadArrayElement)
+//                            // STACK: array: Array, index: Int
+//                            visitInsn(opcode)
+//                            // STACK: value
+//                            invokeReadValue(getArrayElementType(opcode))
+//                            // STACK: value
+//                        }
+//                    )
+//                }
 
-                AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                    invokeIfInTestingCode(
-                        original = {},
-                        code = {
-                            // STACK: array: Array, index: Int, value: Object
-                            val valueLocal =
-                                newLocal(getArrayElementType(opcode)) // we cannot use DUP as long/double require DUP2
-                            storeLocal(valueLocal)
-                            // STACK: array: Array, index: Int
-                            dup2()
-                            // STACK: array: Array, index: Int, array: Array, index: Int
-                            loadLocal(valueLocal)
-                            loadNewCodeLocationId()
-                            // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
-                            invokeStatic(Injections::beforeWriteArrayElement)
-                            // STACK: array: Array, index: Int
-                            loadLocal(valueLocal)
-                            // STACK: array: Array, index: Int, value: Object
-                        }
-                    )
-                    visitInsn(opcode)
-                }
+//                AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
+//                    invokeIfInTestingCode(
+//                        original = {},
+//                        code = {
+//                            // STACK: array: Array, index: Int, value: Object
+//                            val valueLocal = newLocal(getArrayElementType(opcode)) // we cannot use DUP as long/double require DUP2
+//                            storeLocal(valueLocal)
+//                            // STACK: array: Array, index: Int
+//                            dup2()
+//                            // STACK: array: Array, index: Int, array: Array, index: Int
+//                            loadLocal(valueLocal)
+//                            loadNewCodeLocationId()
+//                            // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
+//                            invokeStatic(Injections::beforeWriteArrayElement)
+//                            // STACK: array: Array, index: Int
+//                            loadLocal(valueLocal)
+//                            // STACK: array: Array, index: Int, value: Object
+//                        }
+//                    )
+//                    visitInsn(opcode)
+//                }
 
                 else -> {
                     visitInsn(opcode)
@@ -753,12 +773,11 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                 owner == "java/util/Locale" || owner == "java/lang/String" ||
                 owner == "org/slf4j/helpers/Util" || owner == "java/util/Properties" ||
                 owner == "java/lang/Boolean" || owner == "java/lang/Integer" ||
-                owner == "java/lang/Long" || owner == "jdk/internal/misc/Unsafe")
+                owner == "java/lang/Long")
             {
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            val key = "$owner.$name$desc"
             invokeIfInTestingCode(
                 original = {
                     visitMethodInsn(opcode, owner, name, desc, itf)
@@ -908,6 +927,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                                     visitMethodInsn(opcode, owner, name, desc, itf)
                                 },
                                 code = {
+                                    loadNewCodeLocationId()
                                     invokeStatic(Injections::wait)
                                 }
                             )
@@ -920,6 +940,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                                 },
                                 code = {
                                     pop2() // timeMillis
+                                    loadNewCodeLocationId()
                                     invokeStatic(Injections::waitWithTimeout)
                                 }
                             )
@@ -933,6 +954,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                                 code = {
                                     pop() // timeNanos
                                     pop2() // timeMillis
+                                    loadNewCodeLocationId()
                                     invokeStatic(Injections::waitWithTimeout)
                                 }
                             )
@@ -944,6 +966,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                                     visitMethodInsn(opcode, owner, name, desc, itf)
                                 },
                                 code = {
+                                    loadNewCodeLocationId()
                                     invokeStatic(Injections::notify)
                                 }
                             )
@@ -955,6 +978,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                                     visitMethodInsn(opcode, owner, name, desc, itf)
                                 },
                                 code = {
+                                    loadNewCodeLocationId()
                                     invokeStatic(Injections::notifyAll)
                                 }
                             )

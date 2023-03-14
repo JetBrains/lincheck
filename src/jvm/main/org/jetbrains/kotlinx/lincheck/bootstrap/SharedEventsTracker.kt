@@ -87,4 +87,7 @@ internal class TestThread(
     // When it is >=0, the analysis is disabled.
     @JvmField
     var ignoredSectionDepth = 0
+
+    @JvmField
+    var enteredIgnoredSectionByInjector = false
 }

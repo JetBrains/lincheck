@@ -61,3 +61,16 @@ internal object AtomicFieldNameMapper {
     @Synchronized
     fun name(atomicObject: Any): String? = names[atomicObject]
 }
+
+internal object FinalFields {
+    private val finalFields = HashSet<String>() // <className, fieldName>
+
+    fun addFinalField(className: String, fieldName: String) {
+        finalFields.add(className + DELIMITER + fieldName)
+    }
+
+    fun isFinalField(className: String, fieldName: String) =
+        finalFields.contains(className + DELIMITER + fieldName)
+
+    private const val DELIMITER = "$^&*-#"
+}
