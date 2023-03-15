@@ -37,9 +37,7 @@ import java.io.*
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import java.util.concurrent.atomic.AtomicLongFieldUpdater
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import java.util.concurrent.atomic.*
 import kotlin.collections.set
 
 /**
@@ -181,7 +179,6 @@ abstract class ManagedStrategy(
             // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
             return null
         }
-        // Re-transform class constructing trace
         collectTrace = true
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
@@ -769,7 +766,10 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         params: Array<Any?>
     ) = runInIgnoredSection {
-        if (owner is AtomicLongFieldUpdater<*> || owner is AtomicIntegerFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *> || owner is VarHandle) {
+        if (owner is AtomicLongFieldUpdater<*> || owner is AtomicIntegerFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>
+            || owner is VarHandle || owner is AtomicReference<*> || owner is AtomicLong || owner is AtomicBoolean
+            || owner is AtomicInteger || owner is AtomicIntegerArray || owner is AtomicLongArray || owner is AtomicReferenceArray<*>)
+        {
             beforeAtomicMethodCall(currentThread, codeLocation)
         }
         if (!collectTrace) return
@@ -866,7 +866,7 @@ abstract class ManagedStrategy(
         val trace: List<TracePoint> = _trace
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
-            _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
+            _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread])
         }
 
         fun finishThread(iThread: Int) {

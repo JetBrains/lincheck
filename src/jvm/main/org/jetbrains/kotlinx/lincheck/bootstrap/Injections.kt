@@ -40,7 +40,8 @@ internal object Injections {
 
     @JvmStatic
     fun deterministicHashCode(obj: Any): Int {
-        return 0 // TODO This solution is incorrect, see #131
+        val hashCode = obj.hashCode() // TODO: this is a dirty hack
+        return if (hashCode == System.identityHashCode(obj)) 0 else hashCode
     }
 
     @JvmStatic

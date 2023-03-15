@@ -39,7 +39,8 @@ data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
  * [callStackTrace] helps to understand whether two events
  * happened in the same, nested, or disjoint methods.
  */
-sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callStackTrace: CallStackTrace) {
+sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace) {
+    internal val callStackTrace = callStackTrace.toList()
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
@@ -94,7 +95,7 @@ internal class ReadTracePoint(
             append("$fieldName.")
         append("READ")
         append(": ${adornedStringRepresentation(value)}")
-        append(" at ${stackTraceElement.shorten()}")
+        append(" at ${stackTraceElement.fileName + ":" + stackTraceElement.lineNumber}")
     }.toString()
 
     fun initializeReadValue(value: Any?) {
@@ -115,7 +116,7 @@ internal class WriteTracePoint(
             append("$fieldName.")
         append("WRITE(")
         append(adornedStringRepresentation(value))
-        append(") at ${stackTraceElement.shorten()}")
+        append(") at ${stackTraceElement.fileName + ":" + stackTraceElement.lineNumber}")
     }.toString()
 
     fun initializeWrittenValue(value: Any?) {
@@ -147,7 +148,7 @@ internal class MethodCallTracePoint(
             append(": ${adornedStringRepresentation(returnedValue)}")
         else if (thrownException != null && thrownException != ForcibleExecutionFinishException)
             append(": threw ${thrownException!!.javaClass.simpleName}")
-        append(" at ${stackTraceElement.shorten()}")
+        append(" at ${stackTraceElement.fileName + ":" + stackTraceElement.lineNumber}")
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
@@ -173,7 +174,7 @@ internal class MonitorEnterTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class MonitorExitTracePoint(
@@ -181,7 +182,7 @@ internal class MonitorExitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class WaitTracePoint(
@@ -189,7 +190,7 @@ internal class WaitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "WAIT at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class NotifyTracePoint(
@@ -197,7 +198,7 @@ internal class NotifyTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class ParkTracePoint(
@@ -205,7 +206,7 @@ internal class ParkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "PARK at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class UnparkTracePoint(
@@ -213,7 +214,7 @@ internal class UnparkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class CoroutineCancellationTracePoint(

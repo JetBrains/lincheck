@@ -47,7 +47,7 @@ class ConcurrentLinkedDequeTest {
     @Operation
     fun peekLast() = deque.peekLast()
 
-     @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-//    @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions().verboseTrace().check(this::class)
+//     @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }

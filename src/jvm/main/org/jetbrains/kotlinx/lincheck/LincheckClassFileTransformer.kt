@@ -27,12 +27,9 @@ import net.bytebuddy.dynamic.loading.ClassInjector
 import net.bytebuddy.pool.TypePool
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
-import org.objectweb.asm.commons.AdviceAdapter
-import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.GeneratorAdapter.GT
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
-import org.objectweb.asm.commons.JSRInlinerAdapter
-import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.CodeLocations
 import sun.nio.ch.lincheck.FinalFields
 import sun.nio.ch.lincheck.Injections
@@ -234,6 +231,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
             return IgnoreClassInitializationTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
+        mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
         mv = MonitorEnterAndExitTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         if (access and ACC_SYNCHRONIZED != 0) {
@@ -243,13 +241,11 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
         mv = WaitNotifyTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = ParkUnparkTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         // TODO: fix arrays
-        if (methodName != "<init>")
-            mv = SharedVariableAccessMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        if (methodName != "<init>") mv = SharedVariableAccessMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        mv = DetermenisticHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = DeterministicHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicRandomTransformer(GeneratorAdapter(mv, access, methodName, desc))
-//        mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         return mv
     }
 
@@ -419,7 +415,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
      * which typically returns memory address of the object. There is no guarantee that
      * memory addresses will be the same in different runs.
      */
-    private inner class DetermenisticHashCodeTransformer(methodName: String, adapter: GeneratorAdapter) :
+    private inner class DeterministicHashCodeTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
@@ -568,7 +564,6 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
         ManagedStrategyMethodVisitor(methodName, adapter) {
 
         override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-            // TODO: finals
             when (opcode) {
                 GETSTATIC -> {
                     invokeIfInTestingCode(
@@ -767,7 +762,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
             // TODO: ignore coroutine internals
             // TODO: ignore safe calls
             // TODO: do not ignore <init>
-            if (isInternalCoroutineCall(owner, name) || opcode == INVOKEDYNAMIC || name == "<init>" ||
+            if (isInternalCoroutineCall(owner, name) || name == "<init>" ||
                 owner == "kotlin/jvm/internal/Intrinsics" || owner == "java/util/Objects" ||
                 owner == "sun/nio/ch/lincheck/Injections" || owner == "java/lang/StringBuilder" ||
                 owner == "java/util/Locale" || owner == "java/lang/String" ||
@@ -794,8 +789,8 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                     }
                     // STACK [INVOKEVIRTUAL]: owner, owner
                     // STACK [INVOKESTATIC]: <empty>, null
-                    push(className)
-                    push(methodName)
+                    push(owner)
+                    push(name)
                     loadNewCodeLocationId()
                     // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
                     // STACK [INVOKESTATIC]: <empty>, null, className, methodName, codeLocation
