@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.runner.DeadlockInvocationResult
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -92,13 +93,16 @@ class HangingAbortTest {
         // repeat the test several times in order to try to check that aborted invocation
         // does not interfere with the subsequent invocations
         val strategy = createStrategy()
-        repeat(10) {
-            val failure: LincheckFailure? = strategy.run()
-            assert(failure is DeadlockWithDumpFailure)
+        repeat(10) { i ->
+            val (result, _) = strategy.runNextExploration()
+                ?: return
+            println("Iteration $i:")
+            assert(result is DeadlockInvocationResult)
         }
     }
 
     fun EventStructureOptions.customize() {
+        // invocationsPerIteration(10)
         requireStateEquivalenceImplCheck(false)
         minimizeFailedScenario(false)
         invocationTimeout(100)

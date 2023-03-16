@@ -220,7 +220,9 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         // submit the shutdown task.
         submitTasks(Array(nThreads) { SHUTDOWN })
         if (hangDetected) {
-            for (t in threads) t.stop()
+            for (t in threads) {
+                t.stop()
+            }
         }
     }
 

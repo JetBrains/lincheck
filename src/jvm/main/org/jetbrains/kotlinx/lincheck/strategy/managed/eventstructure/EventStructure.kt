@@ -128,7 +128,14 @@ class EventStructure(
 
     fun abortExploration() {
         // _currentExecution = playedFrontier.toExecution()
-        for (lastEvent in playedFrontier.mapping.values) {
+        // println("played frontier: ${playedFrontier.mapping}")
+        // TODO: bugfix --- cut threads absent in playedFrontier.mapping.values to 0 !!!
+        for (threadId in currentExecution.threads) {
+            val lastEvent = playedFrontier[threadId]
+            if (lastEvent == null) {
+                _currentExecution[threadId]!!.cutTo(0)
+                continue
+            }
             when {
                 // we handle blocking request in a special way --- we include their response part
                 // in order to detect potential blocking response uniqueness violations
@@ -142,11 +149,11 @@ class EventStructure(
                     }
                     check(responseEvent.label.isResponse)
                     responseEvent.label.remap(currentRemapping)
-                    _currentExecution[lastEvent.threadId]!!.cutTo(responseEvent.threadPosition)
+                    _currentExecution[threadId]!!.cutTo(responseEvent.threadPosition)
                 }
                 // otherwise just cut last replayed event
                 else -> {
-                    _currentExecution[lastEvent.threadId]!!.cutTo(lastEvent.threadPosition)
+                    _currentExecution[threadId]!!.cutTo(lastEvent.threadPosition)
                 }
             }
         }

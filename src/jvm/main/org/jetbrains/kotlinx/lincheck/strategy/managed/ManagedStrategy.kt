@@ -264,8 +264,13 @@ abstract class ManagedStrategy(
     protected fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result = runner.run()
+        if (result.isAbortedInvocation()) {
+            return result
+        }
         // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let { return it  }
+        suddenInvocationResult?.let {
+            return it
+        }
         return result
     }
 
@@ -288,6 +293,7 @@ abstract class ManagedStrategy(
                 }.filterNotNull().any { it.causesBlocking }
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
+        // println("interleaving events count: $interleavingEventsCount")
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
             suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
             // Forcibly finish the current execution by throwing an exception.
@@ -827,12 +833,9 @@ abstract class ManagedStrategy(
      * @return the number of the current thread according to the [execution scenario][ExecutionScenario].
      */
     fun currentThreadNumber(): Int {
-        val t = Thread.currentThread()
-        return if (t is FixedActiveThreadsExecutor.TestThread) {
-            t.iThread
-        } else {
-            nThreads
-        }
+        val thread = Thread.currentThread() as FixedActiveThreadsExecutor.TestThread
+        check(thread.runnerHash == (runner as ParallelThreadsRunner).runnerHash)
+        return thread.iThread
     }
 
     /**

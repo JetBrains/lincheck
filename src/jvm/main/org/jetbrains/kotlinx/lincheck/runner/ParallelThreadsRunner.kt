@@ -30,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
+import java.util.Objects
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
@@ -52,11 +53,42 @@ internal open class ParallelThreadsRunner(
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
-    private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // should be closed in `close()`
+
+    val runnerHashAtomic = AtomicInteger(-1)
+
+    // helps to distinguish this runner threads from others
+    val runnerHash: Int
+        get() = runnerHashAtomic.get()
+
+    // should be closed in `close()`
+    private lateinit var executor : FixedActiveThreadsExecutor
 
     // TODO: a hacky way to quickly fix problem with exceptions and deadlocks in init/post part
-    private val sequentialPartExecutor = Executors.newSingleThreadExecutor()
+    private var sequentialPartThread: TestThread? = null
+    private lateinit var sequentialPartExecutor: ExecutorService
+
+    private fun setupExecutor() {
+        runnerHashAtomic.set(Objects.hash(this, Random.nextInt()))
+        sequentialPartThread = null
+        val factory = ThreadFactory { runnable ->
+            check(sequentialPartThread == null)
+            sequentialPartThread = TestThread(scenario.threads, runnerHash, runnable)
+            sequentialPartThread
+        }
+        sequentialPartExecutor = Executors.newSingleThreadExecutor(factory)
+        executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash)
+    }
+
+    init {
+        setupExecutor()
+    }
+
+    private fun resetExecutor() {
+        sequentialPartExecutor.shutdown()
+        // sequentialPartThread?.stop()
+        executor.close()
+        setupExecutor()
+    }
 
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
@@ -146,7 +178,9 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun reset() {
-        testInstance = testClass.newInstance()
+        sequentialPartExecutor.submit {
+            testInstance = testClass.newInstance()
+        }.get()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
             val threads = scenario.threads
@@ -251,24 +285,38 @@ internal open class ParallelThreadsRunner(
 
     override fun run(): InvocationResult {
         reset()
-        val initResults = runInitPart { failure -> return failure }
-        val afterInitStateRepresentation = constructStateRepresentation()
+        val processFailure: (InvocationResult) -> Unit = { failure ->
+            if (failure is DeadlockInvocationResult) {
+                resetExecutor()
+            }
+        }
+        val (initResults, afterInitStateRepresentation) = runInitPart { failure ->
+            processFailure(failure)
+            return failure
+        }
         beforeParallelPart()
-        val parallelResultsWithClock = runParallelPart { failure -> return failure }
-        val afterParallelStateRepresentation = constructStateRepresentation()
+        val parallelResultsWithClock = runParallelPart { failure ->
+            processFailure(failure)
+            return failure
+        }
+        // val afterParallelStateRepresentation = constructStateRepresentation()
         afterParallelPart()
-        val postResults = runPostPart { failure -> return failure }
-        val afterPostStateRepresentation = constructStateRepresentation()
+        val postResults = runPostPart { failure ->
+            processFailure(failure)
+            return failure
+        }
+        // val afterPostStateRepresentation = constructStateRepresentation()
         val results = ExecutionResult(
-            initResults, afterInitStateRepresentation,
-            parallelResultsWithClock, afterParallelStateRepresentation,
-            postResults, afterPostStateRepresentation
+            initResults, null,
+            parallelResultsWithClock, null,
+            postResults, null
         )
         return CompletedInvocationResult(results)
     }
 
-    private inline fun runInitPart(onFailure: (InvocationResult) -> Unit): List<Result> {
+    private inline fun runInitPart(onFailure: (InvocationResult) -> Unit): Pair<List<Result>, String?> {
         var results: List<Result>? = null
+        var stateRepresentation: String? = null
         var failure: InvocationResult? = null
         try {
             sequentialPartExecutor.submit {
@@ -288,6 +336,7 @@ internal open class ParallelThreadsRunner(
                     }
                     if (failure == null) result else NoResult
                 }
+                // stateRepresentation = constructStateRepresentation()
             }.get(timeoutMs, TimeUnit.MILLISECONDS)
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
@@ -297,7 +346,7 @@ internal open class ParallelThreadsRunner(
         }
         if (failure != null)
             onFailure(failure!!)
-        return results!!
+        return (results!! to stateRepresentation)
     }
 
     private inline fun runParallelPart(onFailure: (InvocationResult) -> Unit): List<List<ResultWithClock>> {

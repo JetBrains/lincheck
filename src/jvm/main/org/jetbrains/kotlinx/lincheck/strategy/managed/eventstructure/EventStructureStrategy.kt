@@ -75,35 +75,36 @@ class EventStructureStrategy(
         // TODO: move invocation counting logic to ManagedStrategy class
         // TODO: should we count failed inconsistent executions as used invocations?
         outer@while (stats.totalInvocations < maxInvocations) {
-            inner@while (eventStructure.startNextExploration()) {
-                val result = try {
-                    runInvocation()
-                } catch (e: Throwable) {
-                    UnexpectedExceptionInvocationResult(e)
-                }
-                // if invocation was aborted we also abort the current execution inside event structure
-                if (result.isAbortedInvocation()) {
-                    eventStructure.abortExploration()
-                }
-                // patch clocks
-                if (result is CompletedInvocationResult) {
-                    patchResultsClock(result.results)
-                }
-                // println(eventStructure.currentExecution)
-
-                val inconsistency = eventStructure.checkConsistency()
-                stats.update(result, inconsistency)
-                // println(stats)
-                // println()
-
-                if (inconsistency == null) {
-                    checkResult(result, shouldCollectTrace = false)?.let { return it }
-                }
-                continue@outer
-            }
-            break
+            val (result, inconsistency) = runNextExploration()
+                ?: break
+            if (inconsistency == null)
+                checkResult(result, shouldCollectTrace = false)?.let { return it }
         }
+        println(stats)
         return null
+    }
+
+    // TODO: rename & refactor!
+    fun runNextExploration(): Pair<InvocationResult, Inconsistency?>? {
+        // check that we have next invocation to explore
+        if (!eventStructure.startNextExploration())
+            return null
+        val result = runInvocation()
+        // if invocation was aborted we also abort the current execution inside event structure
+        if (result.isAbortedInvocation()) {
+            // println("============ Before abort =================")
+            // println(eventStructure.currentExecution)
+            eventStructure.abortExploration()
+            // println("============ After abort =================")
+            // println(eventStructure.currentExecution)
+        }
+        // patch clocks
+        if (result is CompletedInvocationResult) {
+            patchResultsClock(result.results)
+        }
+        val inconsistency = eventStructure.checkConsistency()
+        stats.update(result, inconsistency)
+        return (result to inconsistency)
     }
 
     class Stats {
@@ -170,6 +171,10 @@ class EventStructureStrategy(
         }
     }
 
+    // Number of steps given to each thread before context-switch
+    private val SCHEDULER_THREAD_STEPS_NUM: Int = 3
+    private var thread_steps = 0
+
     override fun shouldSwitch(iThread: Int): Boolean {
         // If strategy is in replay phase we first need to execute replaying threads
         if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
@@ -181,16 +186,30 @@ class EventStructureStrategy(
         if (eventStructure.inReplayPhase(iThread)) {
             return !eventStructure.canReplayNextEvent(iThread)
         }
-        // For event structure strategy enforcing context switches is not necessary,
-        // because it is guaranteed that the strategy will explore all
-        // executions anyway, no matter of the order of context switches.
-        // Therefore we explore threads in fixed static order,
-        // and thus this method always returns false.
-        // In practice, however, the order of context switches may influence performance
-        // of the model checking, and time-to-first-bug-discovered metric.
-        // Thus we might want to customize scheduling strategy.
-        // TODO: make scheduling strategy configurable
-        return false
+
+        /* For event structure strategy enforcing context switches is not necessary,
+         * because it is guaranteed that the strategy will explore all
+         * executions anyway, no matter of the order of context switches.
+         * Thus, in principle it is possible to explore threads in fixed static order,
+         * (e.g. always return false here).
+         * In practice, however, the order of context switches may influence performance
+         * of the model checking, and time-to-first-bug-discovered metric.
+         * Thus we might want to customize scheduling strategy.
+         * TODO: make scheduling strategy configurable
+
+         * Another important consideration for scheduling strategy is fairness.
+         * In case of live-locks (e.g. spin-loops) unfair scheduler
+         * is likely to prioritize wasteful exploration of spinning executions.
+         * For example, when checking typical spin-lock implementation,
+         * unfair scheduler might give bias to a thread waiting in spin-loop
+         *
+         * Thus we currently employ simple fair strategy that gives equal number of steps
+         * to every threads before switch.
+         */
+        // if (++thread_steps <= SCHEDULER_THREAD_STEPS_NUM)
+        //     return false
+        // thread_steps = 0
+        return true
     }
 
     override fun chooseThread(iThread: Int): Int {
@@ -207,6 +226,7 @@ class EventStructureStrategy(
 
     override fun initializeInvocation() {
         super.initializeInvocation()
+        thread_steps = 0
         eventStructure.initializeExploration()
         eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
     }
