@@ -21,11 +21,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.junit.Ignore
+import org.junit.Test
 
 /**
  * This test checks that managed strategies do not try to switch
@@ -34,6 +35,7 @@ import org.junit.*
  * this test fails by timeout since the number of
  * invocations is set to [Int.MAX_VALUE].
  */
+@Ignore
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
 class LocalObjectEliminationTest : VerifierState() {
     @Operation

@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
 /**
@@ -32,11 +33,12 @@ import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 class KotlinStdlibTransformationTest : AbstractLincheckTest() {
     var hashCode = 0
 
+
     @Operation
     fun operation() {
         val intArray = IntArray(2)
+        val intRange = (1..2)
         val objectArray = Array(2) { "" }
-        val intProgression = (1..2)
         val objectList: List<String> = listOf("a", "b")
         intArray.iterator()
         intArray.forEach {
@@ -48,8 +50,11 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
             // do something
             hashCode = it.hashCode()
         }
-        intProgression.iterator()
-        intProgression.forEach {
+        val it = intRange.iterator()
+        while (it.hasNext()) {
+            it.nextInt()
+        }
+        intRange.forEach {
             // do something
             hashCode = it.hashCode()
         }
@@ -61,11 +66,12 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
         objectArray.toList().toTypedArray()
         intArray.toHashSet().sum()
         objectArray.toSortedSet()
-        intProgression.toSet()
+        intRange.toSet()
     }
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
+        (this as? ModelCheckingOptions)?.verboseTrace()
     }
 
     override fun extractState(): Any = 0 // constant state

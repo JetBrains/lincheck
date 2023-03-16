@@ -74,6 +74,14 @@ internal object TransformationInjectionsInitializer {
 }
 
 
+internal inline fun <R> withLincheckTransformer(block: () -> R): R {
+    LincheckClassFileTransformer.install()
+    return try {
+        block()
+    } finally {
+        LincheckClassFileTransformer.uninstall()
+    }
+}
 
 object LincheckClassFileTransformer : ClassFileTransformer {
     private val transformedClasses = HashMap<Any, ByteArray>()
@@ -163,13 +171,12 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         if (className.startsWith("sun.") ||
             className.startsWith("java.") ||
             className.startsWith("jdk.internal.") ||
-            className.startsWith("kotlin.") &&
-            !className.startsWith("kotlin.collections.") &&  // transform kotlin collections
-            !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) &&
-            !className.startsWith("kotlin.ranges.") ||
+//            className.startsWith("kotlin.") &&
+//            !className.startsWith("kotlin.collections.") &&  // transform kotlin collections
+//            !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) &&
+//            !className.startsWith("kotlin.ranges.") ||
             className.startsWith("com.intellij.rt.coverage.") ||
-            className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-            !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
+            className.startsWith("org.jetbrains.kotlinx.lincheck.") && !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
             className.startsWith("kotlinx.coroutines.DispatchedTask")
         ) return false
 
@@ -227,7 +234,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (access and ACC_NATIVE != 0) return mv
-        if (methodName == "<clinit>") {
+        if (methodName == "<clinit>" || methodName == "<init>") {
             return IgnoreClassInitializationTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
@@ -240,8 +247,12 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
         mv = AFUTrackingTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = WaitNotifyTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = ParkUnparkTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        // TODO: fix arrays
-        if (methodName != "<init>") mv = SharedVariableAccessMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = run {
+            val sv = SharedVariableAccessMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+            val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
+            sv.analyzer = aa
+            aa
+        }
         mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
@@ -391,7 +402,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
         ManagedStrategyMethodVisitor(methodName, adapter) {
 
         init {
-            check(methodName == "<clinit>")
+            check(methodName == "<clinit>" || methodName == "<init>")
         }
 
         override fun visitCode() = adapter.run {
@@ -487,18 +498,29 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                         )
                         return
                     }
-                }
-                if (opcode == INVOKEVIRTUAL && isRandomMethod(name, desc)) {
+                } else if (opcode == INVOKEVIRTUAL && isRandomMethod(name, desc)) {
                     invokeIfInTestingCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         code = {
-                            val locals = storeArguments(desc)
-                            pop()
-                            invokeStatic(Injections::deterministicRandom) // TODO check that this is a random class
-                            loadLocals(locals)
+                            val arguments = storeArguments(desc)
+                            val ownerLocal = newLocal(Type.getType("L$owner;"))
+                            storeLocal(ownerLocal)
+                            loadLocal(ownerLocal)
+                            invokeStatic(Injections::isRandom)
+                            val ifBranchStart = newLabel()
+                            val end = newLabel()
+                            ifZCmp(GT, ifBranchStart)
+                            loadLocal(ownerLocal)
+                            loadLocals(arguments)
+                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            goTo(end)
+                            visitLabel(ifBranchStart)
+                            invokeStatic(Injections::deterministicRandom)
+                            loadLocals(arguments)
                             visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
+                            visitLabel(end)
                         }
                     )
                     return
@@ -562,6 +584,8 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
      */
     private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
+
+        lateinit var analyzer: AnalyzerAdapter
 
         override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
             when (opcode) {
@@ -669,48 +693,51 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
 
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
-//                AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-//                    invokeIfInTestingCode(
-//                        original = {
-//                            visitInsn(opcode)
-//                        },
-//                        code = {
-//                            // STACK: array: Array, index: Int
-//                            dup2()
-//                            // STACK: array: Array, index: Int, array: Array, index: Int
-//                            loadNewCodeLocationId()
-//                            // STACK: array: Array, index: Int, array: Array, index: Int, codeLocation: Int
-//                            invokeStatic(Injections::beforeReadArrayElement)
-//                            // STACK: array: Array, index: Int
-//                            visitInsn(opcode)
-//                            // STACK: value
-//                            invokeReadValue(getArrayElementType(opcode))
-//                            // STACK: value
-//                        }
-//                    )
-//                }
+                AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
+                    invokeIfInTestingCode(
+                        original = {
+                            visitInsn(opcode)
+                        },
+                        code = {
+                            // STACK: array: Array, index: Int
+                            val arrayElementType = getArrayElementType(opcode)
+                            dup2()
+                            // STACK: array: Array, index: Int, array: Array, index: Int
+                            loadNewCodeLocationId()
+                            // STACK: array: Array, index: Int, array: Array, index: Int, codeLocation: Int
+                            invokeStatic(Injections::beforeReadArray)
+                            // STACK: array: Array, index: Int
+                            visitInsn(opcode)
+                            // STACK: value
+                            invokeReadValue(arrayElementType)
+                            // STACK: value
+                        }
+                    )
+                }
 
-//                AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-//                    invokeIfInTestingCode(
-//                        original = {},
-//                        code = {
-//                            // STACK: array: Array, index: Int, value: Object
-//                            val valueLocal = newLocal(getArrayElementType(opcode)) // we cannot use DUP as long/double require DUP2
-//                            storeLocal(valueLocal)
-//                            // STACK: array: Array, index: Int
-//                            dup2()
-//                            // STACK: array: Array, index: Int, array: Array, index: Int
-//                            loadLocal(valueLocal)
-//                            loadNewCodeLocationId()
-//                            // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
-//                            invokeStatic(Injections::beforeWriteArrayElement)
-//                            // STACK: array: Array, index: Int
-//                            loadLocal(valueLocal)
-//                            // STACK: array: Array, index: Int, value: Object
-//                        }
-//                    )
-//                    visitInsn(opcode)
-//                }
+                AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
+                    invokeIfInTestingCode(
+                        original = {},
+                        code = {
+                            // STACK: array: Array, index: Int, value: Object
+                            val arrayElementType = getArrayElementType(opcode)
+                            val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
+                            storeLocal(valueLocal)
+                            // STACK: array: Array, index: Int
+                            dup2()
+                            // STACK: array: Array, index: Int, array: Array, index: Int
+                            loadLocal(valueLocal)
+                            box(arrayElementType)
+                            loadNewCodeLocationId()
+                            // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
+                            invokeStatic(Injections::beforeWriteArray)
+                            // STACK: array: Array, index: Int
+                            loadLocal(valueLocal)
+                            // STACK: array: Array, index: Int, value: Object
+                        }
+                    )
+                    visitInsn(opcode)
+                }
 
                 else -> {
                     visitInsn(opcode)
@@ -732,7 +759,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
 
         private fun getArrayElementType(opcode: Int): Type = when (opcode) {
             // Load
-            AALOAD -> OBJECT_TYPE
+            AALOAD -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
             IALOAD -> Type.INT_TYPE
             FALOAD -> Type.FLOAT_TYPE
             BALOAD -> Type.BOOLEAN_TYPE
@@ -741,7 +768,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
             LALOAD -> Type.LONG_TYPE
             DALOAD -> Type.DOUBLE_TYPE
             // Store
-            AASTORE -> OBJECT_TYPE
+            AASTORE -> getArrayAccessTypeFromStack(3) // OBJECT_TYPE
             IASTORE -> Type.INT_TYPE
             FASTORE -> Type.FLOAT_TYPE
             BASTORE -> Type.BOOLEAN_TYPE
@@ -750,6 +777,23 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
             LASTORE -> Type.LONG_TYPE
             DASTORE -> Type.DOUBLE_TYPE
             else -> throw IllegalStateException("Unexpected opcode: $opcode")
+        }
+
+        /*
+       * Tries to obtain the type of array elements by inspecting the type of the array itself.
+       * In order to do this queries the analyzer to get the type of accessed array
+       * which should lie on the stack. If the analyzer does not know the type
+       * (according to the ASM docs it can happen, for example, when the visited instruction is unreachable)
+       * then return null.
+       */
+        private fun getArrayAccessTypeFromStack(position: Int): Type {
+            if (analyzer.stack == null) return OBJECT_TYPE // better than throwing an exception
+            val arrayDesc = analyzer.stack[analyzer.stack.size - position]
+            check(arrayDesc is String)
+            val arrayType = Type.getType(arrayDesc)
+            check(arrayType.sort == Type.ARRAY)
+            check(arrayType.dimensions > 0)
+            return Type.getType(arrayDesc.substring(1))
         }
     }
 

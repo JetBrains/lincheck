@@ -116,6 +116,11 @@ internal object Injections {
     }
 
     @JvmStatic
+    fun isRandom(any: Any?): Boolean {
+        return any is Random
+    }
+
+    @JvmStatic
     fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
         if (obj == null) return // Ignore, NullPointerException will be thrown
         sharedEventsTracker.beforeReadField(obj, className, fieldName, codeLocation)
@@ -127,7 +132,7 @@ internal object Injections {
     }
 
     @JvmStatic
-    fun beforeReadArrayElement(array: Array<*>?, index: Int, codeLocation: Int) {
+    fun beforeReadArray(array: Any?, index: Int, codeLocation: Int) {
         if (array == null) return // Ignore, NullPointerException will be thrown
         sharedEventsTracker.beforeReadArrayElement(array, index, codeLocation)
     }
@@ -149,7 +154,7 @@ internal object Injections {
     }
 
     @JvmStatic
-    fun beforeWriteArrayElement(array: Array<*>?, index: Int, value: Any?, codeLocation: Int) {
+    fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int) {
         if (array == null) return // Ignore, NullPointerException will be thrown
         sharedEventsTracker.beforeWriteArrayElement(array, index, value, codeLocation)
     }

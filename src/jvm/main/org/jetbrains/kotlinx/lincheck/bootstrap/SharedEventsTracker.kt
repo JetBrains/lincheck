@@ -41,12 +41,12 @@ internal interface SharedEventsTracker {
 
     fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int)
     fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int)
-    fun beforeReadArrayElement(array: Array<*>, index: Int, codeLocation: Int)
+    fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int)
     fun onReadValue(value: Any?)
 
     fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int)
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int)
-    fun beforeWriteArrayElement(array: Array<*>, index: Int, value: Any?, codeLocation: Int)
+    fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int)
 
     fun beforeMethodCall0(owner: Any?, className: String, methodName: String, codeLocation: Int)
     fun beforeMethodCall1(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?)

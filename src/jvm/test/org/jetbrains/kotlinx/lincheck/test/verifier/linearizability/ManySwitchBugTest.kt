@@ -21,12 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
-import java.lang.IllegalStateException
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.junit.Test
 
 /**
  * This test checks that model checking strategy can find a many switch bug.

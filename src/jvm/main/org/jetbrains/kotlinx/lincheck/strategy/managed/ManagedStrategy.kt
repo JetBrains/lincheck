@@ -559,12 +559,12 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint?) {
-            val callStackTrace = callStackTrace[iThread]
-            if (tracePoint!!.wasSuspended) {
-                // if a method call is suspended, save its identifier to reuse for continuation resuming
-                suspendedFunctionsStack[iThread].add(callStackTrace.last().identifier)
-            }
-            callStackTrace.removeAt(callStackTrace.lastIndex)
+        val callStackTrace = callStackTrace[iThread]
+        if (tracePoint!!.wasSuspended) {
+            // if a method call is suspended, save its identifier to reuse for continuation resuming
+            suspendedFunctionsStack[iThread].add(callStackTrace.last().identifier)
+        }
+        callStackTrace.removeLast()
     }
 
     // == LOGGING METHODS ==
@@ -671,7 +671,7 @@ abstract class ManagedStrategy(
         beforeSharedVariableRead(iThread, codeLocation, tracePoint)
     }
 
-    override fun beforeReadArrayElement(array: Array<*>, index: Int, codeLocation: Int) = runInIgnoredSection {
+    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int) = runInIgnoredSection {
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -722,7 +722,7 @@ abstract class ManagedStrategy(
         beforeSharedVariableWrite(iThread, codeLocation, tracePoint)
     }
 
-    override fun beforeWriteArrayElement(array: Array<*>, index: Int, value: Any?, codeLocation: Int) = runInIgnoredSection {
+    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int) = runInIgnoredSection {
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -1028,7 +1028,7 @@ private class MonitorTracker(nThreads: Int) {
     fun releaseMonitor(monitor: Any) {
         // Decrement the reentrancy depth and remove the acquisition info
         // if the monitor becomes free to acquire by another thread.
-        val ai = acquiredMonitors[monitor]!!
+        val ai = acquiredMonitors[monitor] ?: error("The monitor is not acquired: $monitor")
         ai.timesAcquired--
         if (ai.timesAcquired == 0) acquiredMonitors.remove(monitor)
     }

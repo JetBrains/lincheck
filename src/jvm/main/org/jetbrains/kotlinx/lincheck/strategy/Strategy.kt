@@ -22,8 +22,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.commons.Remapper
 
 /**
  * Implementation of this class describes how to run the generated execution.
@@ -35,11 +33,6 @@ import org.objectweb.asm.commons.Remapper
 abstract class Strategy protected constructor(
     val scenario: ExecutionScenario
 ) {
-    open fun needsTransformation() = false
-    open fun createTransformer(cv: ClassVisitor): ClassVisitor {
-        throw UnsupportedOperationException("$javaClass strategy does not transform classes")
-    }
-
     abstract fun run(): LincheckFailure?
 
     /**
