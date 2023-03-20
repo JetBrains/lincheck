@@ -25,11 +25,6 @@ import java.util.*
 // we need to use some "legal" package for the bootstrap class loader
 
 internal interface SharedEventsTracker {
-    companion object {
-        @JvmStatic
-        var currentTracker: SharedEventsTracker? = null
-    }
-
     fun lock(monitor: Any, codeLocation: Int)
     fun unlock(monitor: Any, codeLocation: Int)
 
@@ -59,6 +54,8 @@ internal interface SharedEventsTracker {
     fun onMethodCallThrewException(t: Throwable)
 
     fun getRandom(currentThreadId: Int): Random
+
+    fun shouldAnalyzeCurrentThread(): Boolean
 }
 
 /**
@@ -71,6 +68,9 @@ internal class TestThread(
     val iThread: Int,
     r: Runnable
 ) : Thread(r, "Lincheck-$iThread") {
+    @JvmField
+    var sharedEventsTracker: SharedEventsTracker? = null
+
     @JvmField
     var cont: Any? = null // The suspended continuation, if present.
 

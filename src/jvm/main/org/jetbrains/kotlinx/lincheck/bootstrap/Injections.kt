@@ -261,5 +261,5 @@ internal object Injections {
 
     @JvmStatic
     private val sharedEventsTracker: SharedEventsTracker
-        get() = SharedEventsTracker.currentTracker!! // should be non-null
+        get() = (Thread.currentThread() as TestThread).sharedEventsTracker!! // should be non-null
 }

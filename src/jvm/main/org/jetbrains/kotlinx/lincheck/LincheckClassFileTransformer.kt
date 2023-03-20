@@ -56,9 +56,8 @@ internal object TransformationInjectionsInitializer {
             "sun.nio.ch.lincheck.AtomicFieldNameMapper",
             "sun.nio.ch.lincheck.FinalFields",
             "sun.nio.ch.lincheck.CodeLocations",
-            "sun.nio.ch.lincheck.TestThread",
             "sun.nio.ch.lincheck.SharedEventsTracker",
-            "sun.nio.ch.lincheck.SharedEventsTracker\$Companion",
+            "sun.nio.ch.lincheck.TestThread",
             "sun.nio.ch.lincheck.Injections",
         ).forEach { className ->
             ByteBuddy().redefine<Any>(
@@ -162,7 +161,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("java.util.Immutable")) return false
             if (className.startsWith("java.util.logging")) return false
             if (className.startsWith("java.util.ServiceLoader")) return false
-            if (className.startsWith("java.util.concurrent.atomic.")) return false
+            if (className.startsWith("java.util.concurrent.atomic.") && className.contains("Atomic")) return false
             if (className.startsWith("java.util.function.")) return false
             if (className.contains("Exception")) return false
             return true
@@ -256,7 +255,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
         mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
-        mv = DeterministicRandomTransformer(GeneratorAdapter(mv, access, methodName, desc))
+        mv = DeterministicRandomTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         return mv
     }
 
@@ -462,16 +461,16 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
             }
     }
 
+    private companion object {
+        private val randomMethods = Random::class.java.declaredMethods.map { Method.getMethod(it) }
+    }
+
     /**
      * Makes java.util.Random and all classes that extend it deterministic.
      * In every Random method invocation replaces the owner with Random from ManagedStateHolder.
      * TODO: Kotlin's random support
      */
-    private class DeterministicRandomTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
-        companion object {
-            private val randomMethods = Random::class.java.declaredMethods.map { Method.getMethod(it) }
-        }
-
+    private inner class DeterministicRandomTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
                 if (owner == "java/util/concurrent/ThreadLocalRandom" || owner == "java/util/concurrent/atomic/Striped64") {
@@ -507,20 +506,22 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                             val arguments = storeArguments(desc)
                             val ownerLocal = newLocal(Type.getType("L$owner;"))
                             storeLocal(ownerLocal)
-                            loadLocal(ownerLocal)
-                            invokeStatic(Injections::isRandom)
-                            val ifBranchStart = newLabel()
-                            val end = newLabel()
-                            ifZCmp(GT, ifBranchStart)
-                            loadLocal(ownerLocal)
-                            loadLocals(arguments)
-                            visitMethodInsn(opcode, owner, name, desc, itf)
-                            goTo(end)
-                            visitLabel(ifBranchStart)
-                            invokeStatic(Injections::deterministicRandom)
-                            loadLocals(arguments)
-                            visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
-                            visitLabel(end)
+                            ifStatement(
+                                condition = {
+                                    loadLocal(ownerLocal)
+                                    invokeStatic(Injections::isRandom)
+                                },
+                                ifClause = {
+                                    invokeStatic(Injections::deterministicRandom)
+                                    loadLocals(arguments)
+                                    visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
+                                },
+                                elseClause = {
+                                    loadLocal(ownerLocal)
+                                    loadLocals(arguments)
+                                    visitMethodInsn(opcode, owner, name, desc, itf)
+                                }
+                            )
                         }
                     )
                     return
@@ -1110,32 +1111,40 @@ private fun GeneratorAdapter.storeTopToLocal(local: Int) {
     loadLocal(local)
 }
 
+private val functionToDeclaringClassMap = HashMap<KFunction<*>, Pair<Type, Method>>()
 
 private fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
-    function.javaMethod!!.let {
-        invokeStatic(Type.getType(it.declaringClass), Method.getMethod(it))
+    val (clazz, method) = functionToDeclaringClassMap.computeIfAbsent(function) {
+        function.javaMethod!!.let {
+            Type.getType(it.declaringClass) to Method.getMethod(it)
+        }
     }
+    invokeStatic(clazz, method)
 }
 
-private fun GeneratorAdapter.invokeVirtual(function: KFunction<*>) {
-    function.javaMethod!!.let {
-        invokeVirtual(Type.getType(it.declaringClass), Method.getMethod(it))
-    }
+private inline fun GeneratorAdapter.ifStatement(
+    condition: GeneratorAdapter.() -> Unit,
+    ifClause: GeneratorAdapter.() -> Unit,
+    elseClause: GeneratorAdapter.() -> Unit
+) {
+    val ifClauseStart = newLabel()
+    val end = newLabel()
+    condition()
+    ifZCmp(GT, ifClauseStart)
+    elseClause()
+    goTo(end)
+    visitLabel(ifClauseStart)
+    ifClause()
+    visitLabel(end)
 }
 
 private inline fun GeneratorAdapter.invokeIfInTestingCode(
     original: GeneratorAdapter.() -> Unit,
     code: GeneratorAdapter.() -> Unit
-) {
-    val codeStart = newLabel()
-    val end = newLabel()
-    invokeStatic(Injections::inTestingCode)
-    ifZCmp(GT, codeStart)
-    original()
-    goTo(end)
-    visitLabel(codeStart)
-    code()
-    visitLabel(end)
-}
+) = ifStatement(
+    condition = { invokeStatic(Injections::inTestingCode) },
+    ifClause = code,
+    elseClause = original
+)
 
 private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/internal/misc/Unsafe"

@@ -53,6 +53,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     /**
      * @return TestReport with information about concurrent test run.
      */
+    @Synchronized
     internal fun checkImpl(): LincheckFailure? {
         LincheckClassFileTransformer.install()
         try {

@@ -144,7 +144,8 @@ abstract class ManagedStrategy(
         suddenInvocationResult = null
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
-        SharedEventsTracker.currentTracker = this
+        randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
+        (runner as ParallelThreadsRunner).executor.threads.forEach { it.sharedEventsTracker = this }
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -233,7 +234,6 @@ abstract class ManagedStrategy(
     }
 
     override fun close() {
-        SharedEventsTracker.currentTracker = null
         runner.close()
     }
 
@@ -347,6 +347,10 @@ abstract class ManagedStrategy(
             curThread = currentThread
         }
     }
+
+    override fun shouldAnalyzeCurrentThread(): Boolean =
+        Thread.currentThread() in (runner as ParallelThreadsRunner).executor.threads
+
 
     /**
      * A regular context thread switch to another thread.
@@ -723,7 +727,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int) = runInIgnoredSection {
-        val iThread = currentThreadNumber()
+        val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
                 "Array[$index]", CodeLocations.stackTrace(codeLocation)).also {
@@ -735,7 +739,7 @@ abstract class ManagedStrategy(
         beforeSharedVariableWrite(iThread, codeLocation, tracePoint)
     }
 
-    private val randoms = (0 until nThreads + 2).map { Random(239L + it) }
+    private val randoms = (0 until nThreads + 2).map { Random() }
 
     override fun getRandom(currentThreadId: Int): Random = runInIgnoredSection {
         return randoms[currentThreadId]
