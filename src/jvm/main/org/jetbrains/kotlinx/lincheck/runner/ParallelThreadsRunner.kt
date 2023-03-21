@@ -54,7 +54,7 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
+    val executor = FixedActiveThreadsExecutor(testClass.simpleName, scenario.threads, runnerHash) // shoukd be closed in `close()`
 
     private lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>

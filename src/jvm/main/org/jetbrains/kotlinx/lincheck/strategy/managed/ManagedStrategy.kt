@@ -55,7 +55,7 @@ abstract class ManagedStrategy(
     private val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
-) : Strategy(scenario), SharedEventsTracker, Closeable {
+) : Strategy(scenario), SharedEventsTracker {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.parallelExecution.size
     // Runner for scenario invocations,
@@ -85,7 +85,7 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether additional information requires for the trace construction should be collected.
-    private var collectTrace = false
+    private var collectTrace = true
     // Whether state representations (see `@StateRepresentation`) should be collected after interleaving events.
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
     // Collector of all events in the execution such as thread switches.
@@ -158,9 +158,9 @@ abstract class ManagedStrategy(
     protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
         is CompletedInvocationResult -> {
             if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
+            else IncorrectResultsFailure(scenario, result.results, Trace(traceCollector!!.trace, testCfg.verboseTrace))
         }
-        else -> result.toLincheckFailure(scenario, collectTrace(result))
+        else -> result.toLincheckFailure(scenario, Trace(traceCollector!!.trace, testCfg.verboseTrace))
     }
 
     /**
@@ -1032,7 +1032,8 @@ private class MonitorTracker(nThreads: Int) {
     fun releaseMonitor(monitor: Any) {
         // Decrement the reentrancy depth and remove the acquisition info
         // if the monitor becomes free to acquire by another thread.
-        val ai = acquiredMonitors[monitor] ?: error("The monitor is not acquired: $monitor")
+        val ai = acquiredMonitors[monitor] ?:
+            error("The monitor is not acquired: $monitor")
         ai.timesAcquired--
         if (ai.timesAcquired == 0) acquiredMonitors.remove(monitor)
     }

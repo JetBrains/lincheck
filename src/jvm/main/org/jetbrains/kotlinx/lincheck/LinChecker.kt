@@ -157,7 +157,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
-        ).run()
+        ).use { it.run() }
 
     private fun ExecutionScenario.copy() = ExecutionScenario(
         ArrayList(initExecution),

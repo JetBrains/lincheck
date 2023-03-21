@@ -65,9 +65,10 @@ See its usages to get more insight.
 NB: we need to load this class in the bootstrap class loader, as the transformation requires it.
  */
 internal class TestThread(
+    testName: String,
     val iThread: Int,
     r: Runnable
-) : Thread(r, "Lincheck-$iThread") {
+) : Thread(r, "Lincheck-${testName}-$iThread") {
     @JvmField
     var sharedEventsTracker: SharedEventsTracker? = null
 

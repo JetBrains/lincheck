@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import java.io.Closeable
 
 /**
  * Implementation of this class describes how to run the generated execution.
@@ -32,11 +33,13 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
  */
 abstract class Strategy protected constructor(
     val scenario: ExecutionScenario
-) {
+) : Closeable {
     abstract fun run(): LincheckFailure?
 
     /**
      * Is invoked before each actor execution.
      */
     open fun onActorStart(iThread: Int) {}
+
+    open override fun close() {}
 }

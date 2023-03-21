@@ -36,7 +36,7 @@ import kotlin.math.min
  * is that this executor keeps the re-using threads "hot" (active) as long as
  * possible, so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
+internal class FixedActiveThreadsExecutor(testName: String, private val nThreads: Int, runnerHash: Int) : Closeable {
     // Threads used in this runner.
     val threads: List<TestThread>
     /**
@@ -78,7 +78,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     init {
         threads = (0 until nThreads).map { iThread ->
-            TestThread(iThread, testThreadRunnable(iThread)).also { it.start() }
+            TestThread(testName, iThread, testThreadRunnable(iThread)).also { it.start() }
         }
     }
 

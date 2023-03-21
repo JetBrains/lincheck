@@ -21,9 +21,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.runner
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicBoolean
 
