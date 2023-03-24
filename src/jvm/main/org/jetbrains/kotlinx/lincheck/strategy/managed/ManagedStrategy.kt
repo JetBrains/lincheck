@@ -264,13 +264,13 @@ abstract class ManagedStrategy(
     protected fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result = runner.run()
-        if (result.isAbortedInvocation()) {
-            return result
-        }
         // Has strategy already determined the invocation result?
         suddenInvocationResult?.let {
             return it
         }
+        // if (result.isAbortedInvocation()) {
+        //     return result
+        // }
         return result
     }
 

@@ -295,21 +295,19 @@ internal open class ParallelThreadsRunner(
             return failure
         }
         beforeParallelPart()
-        val parallelResultsWithClock = runParallelPart { failure ->
+        val (parallelResultsWithClock, afterParallelStateRepresentation) = runParallelPart { failure ->
             processFailure(failure)
             return failure
         }
-        // val afterParallelStateRepresentation = constructStateRepresentation()
         afterParallelPart()
-        val postResults = runPostPart { failure ->
+        val (postResults, afterPostStateRepresentation) = runPostPart { failure ->
             processFailure(failure)
             return failure
         }
-        // val afterPostStateRepresentation = constructStateRepresentation()
         val results = ExecutionResult(
-            initResults, null,
-            parallelResultsWithClock, null,
-            postResults, null
+            initResults, afterInitStateRepresentation,
+            parallelResultsWithClock, afterParallelStateRepresentation,
+            postResults, afterPostStateRepresentation
         )
         return CompletedInvocationResult(results)
     }
@@ -336,7 +334,7 @@ internal open class ParallelThreadsRunner(
                     }
                     if (failure == null) result else NoResult
                 }
-                // stateRepresentation = constructStateRepresentation()
+                stateRepresentation = constructStateRepresentation()
             }.get(timeoutMs, TimeUnit.MILLISECONDS)
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
@@ -349,7 +347,7 @@ internal open class ParallelThreadsRunner(
         return (results!! to stateRepresentation)
     }
 
-    private inline fun runParallelPart(onFailure: (InvocationResult) -> Unit): List<List<ResultWithClock>> {
+    private inline fun runParallelPart(onFailure: (InvocationResult) -> Unit): Pair<List<List<ResultWithClock>>, String?> {
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
         } catch (e: TimeoutException) {
@@ -372,11 +370,16 @@ internal open class ParallelThreadsRunner(
             val failure = ValidationFailureInvocationResult(s, functionName, exception)
             onFailure(failure)
         }
-        return parallelResultsWithClock
+        var stateRepresentation: String? = null
+        sequentialPartExecutor.submit {
+            stateRepresentation = constructStateRepresentation()
+        }.get(timeoutMs, TimeUnit.MILLISECONDS)
+        return (parallelResultsWithClock to stateRepresentation)
     }
 
-    private inline fun runPostPart(onFailure: (InvocationResult) -> Unit): List<Result> {
+    private inline fun runPostPart(onFailure: (InvocationResult) -> Unit): Pair<List<Result>, String?> {
         var results: List<Result>? = null
+        var stateRepresentation: String? = null
         var failure: InvocationResult? = null
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
@@ -403,6 +406,7 @@ internal open class ParallelThreadsRunner(
                     }
                     if (failure == null) result else NoResult
                 }
+                stateRepresentation = constructStateRepresentation()
             }.get(timeoutMs, TimeUnit.MILLISECONDS)
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
@@ -412,7 +416,7 @@ internal open class ParallelThreadsRunner(
         }
         if (failure != null)
             onFailure(failure!!)
-        return results!!
+        return (results!! to stateRepresentation)
     }
 
     override fun onStart(iThread: Int) {
