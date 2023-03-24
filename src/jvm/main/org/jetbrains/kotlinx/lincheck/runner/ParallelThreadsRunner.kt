@@ -60,6 +60,11 @@ internal open class ParallelThreadsRunner(
     val runnerHash: Int
         get() = runnerHashAtomic.get()
 
+    // TODO: this is very bad idea to have non-stable (changeable) hash code, REFACTOR IT!!!
+    override fun hashCode(): Int {
+        return runnerHash
+    }
+
     // should be closed in `close()`
     private lateinit var executor : FixedActiveThreadsExecutor
 

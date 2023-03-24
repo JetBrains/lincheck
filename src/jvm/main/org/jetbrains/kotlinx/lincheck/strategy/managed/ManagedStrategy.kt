@@ -338,7 +338,8 @@ abstract class ManagedStrategy(
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
+        if (exception === ForcibleExecutionFinishException || exception is ThreadDeath)
+            return // not a forcible execution finish
         suddenInvocationResult = UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
     }
 
