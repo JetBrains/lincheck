@@ -834,7 +834,8 @@ abstract class ManagedStrategy(
      * @return the number of the current thread according to the [execution scenario][ExecutionScenario].
      */
     fun currentThreadNumber(): Int {
-        val thread = Thread.currentThread() as FixedActiveThreadsExecutor.TestThread
+        val thread = (Thread.currentThread() as? FixedActiveThreadsExecutor.TestThread)
+            ?: return scenario.threads + 2
         check(thread.runnerHash == (runner as ParallelThreadsRunner).runnerHash)
         return thread.iThread
     }
