@@ -393,10 +393,15 @@ class EventStructure(
                 .filter { it.label.index == index }
                 .ensure { it.size <= 1 }
                 .firstOrNull()
+                ?: currentExecution[mainThreadId]
+                ?.filter { it.label.index == index }
+                ?.ensure { it.size <= 1 }
+                ?.firstOrNull()
                 ?: atomicEvent.dependencies
                 .filter { it.threadId == initThreadId }
-                .ensure { it.size == 1 }
-                .first()
+                .ensure { it.size <= 1 }
+                .firstOrNull()
+                ?: root
             check(initEvent in playedFrontier)
             initEvent.label.replay(label, currentRemapping)
             initEvent
