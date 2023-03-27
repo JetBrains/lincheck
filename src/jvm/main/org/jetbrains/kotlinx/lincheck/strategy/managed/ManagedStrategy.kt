@@ -182,9 +182,6 @@ abstract class ManagedStrategy(
         isSuspended.fill(false)
         currentActorId.fill(-1)
         loopDetector.reset()
-        runUntracking(nThreads) {
-            memoryTracker.dumpMemory()
-        }
         memoryTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()

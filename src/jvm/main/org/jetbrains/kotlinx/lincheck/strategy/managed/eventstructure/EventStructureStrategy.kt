@@ -77,8 +77,12 @@ class EventStructureStrategy(
         outer@while (stats.totalInvocations < maxInvocations) {
             val (result, inconsistency) = runNextExploration()
                 ?: break
-            if (inconsistency == null)
+            if (inconsistency == null) {
+                runUntracking(nThreads) {
+                    memoryTracker.dumpMemory()
+                }
                 checkResult(result, shouldCollectTrace = false)?.let { return it }
+            }
         }
         println(stats)
         return null
@@ -322,7 +326,9 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
             val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier().toVectorClock())
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
-            check(write.label is WriteAccessLabel)
+            if (write.label is InitializationLabel)
+                continue
+            check(write.label is WriteAccessLabel )
             location.write(write.label.value?.unwrap())
         }
     }
