@@ -24,10 +24,11 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck.test.util.logVerbosePart
 import org.junit.*
 
 /**
- * This test checks `verboseTrace` option that makes Lincheck log all execution events.
+ * This test checks that makes Lincheck log all execution events in detailed part of output.
  */
 class VerboseTraceTest {
     private var levelZeroCounter = 0
@@ -60,17 +61,23 @@ class VerboseTraceTest {
             .actorsBefore(0)
             .actorsPerThread(1)
             .requireStateEquivalenceImplCheck(false)
-            .verboseTrace(true)
             .checkImpl(this::class.java)
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
-        check("  criticalSection" in log) { "An intermediate method call was not logged or has an incorrect indentation" }
-        check("    counter.READ" in log)
-        check("  levelZeroCounter" in log)
-        check("  levelOneEvent" in log) { "An intermediate method call was not logged or has an incorrect indentation" }
-        check("    levelOneCounter" in log)
-        check("    levelTwoEvent" in log) { "An intermediate method call was not logged or has an incorrect indentation" }
-        check("      levelTwoCounter" in log)
+
+        check(Messages.PARALLEL_PART in log) { "No short trace in log output" }
+        check(Messages.DETAILED_PARALLEL_PART in log) { "No verbose trace in log output" }
+
+        val verboseTraceLog = logVerbosePart(log)
+
+        check("  criticalSection" in verboseTraceLog) { "An intermediate method call was not logged or has an incorrect indentation" }
+        check("    counter.READ" in verboseTraceLog)
+        check("  levelZeroCounter" in verboseTraceLog)
+        check("  levelOneEvent" in verboseTraceLog) { "An intermediate method call was not logged or has an incorrect indentation" }
+        check("    levelOneCounter" in verboseTraceLog)
+        check("    levelTwoEvent" in verboseTraceLog) { "An intermediate method call was not logged or has an incorrect indentation" }
+        check("      levelTwoCounter" in verboseTraceLog)
+
         checkTraceHasNoLincheckEvents(log)
     }
 }

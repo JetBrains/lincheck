@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
-import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.appendFailure
@@ -30,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck.test.util.logWithoutVerbosePart
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.IllegalStateException
@@ -65,7 +65,7 @@ open class ModelCheckingStateReportingTest {
         check("STATE: 0" in log)
         check("STATE: 1" in log)
         check("STATE: 4" in log)
-        check(log.split("incrementAndGet(): 1").size - 1 == 1) { "A method call is logged twice in the trace" }
+        check(logWithoutVerbosePart(log).split("incrementAndGet(): 1").size - 1 == 1) { "A method call is logged twice in the trace" }
         checkTraceHasNoLincheckEvents(log)
     }
 }

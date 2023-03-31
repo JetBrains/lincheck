@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck.test.util.logWithoutVerbosePart
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -66,7 +67,7 @@ class CapturedValueRepresentationTest : VerifierState() {
         val log = failure.toString()
         check(" OuterDataClass@1" in log)
         check(" InnerClass@1" in log)
-        check(log.split(" InnerClass@1").size - 1 == 2) { "two reads of innerClass should return same result" }
+        check(logWithoutVerbosePart(log).split(" InnerClass@1").size - 1 == 2) { "two reads of innerClass should return same result" }
         check(" InnerClass@2" in log) { "Two different InnerClass objects were read, but the same was reported" }
         check(" int[]@1" in log)
         check(" String[]@1" in log)

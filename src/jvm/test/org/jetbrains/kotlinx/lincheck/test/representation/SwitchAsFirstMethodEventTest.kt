@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck.test.util.logWithoutVerbosePart
 import org.junit.*
 import java.lang.StringBuilder
 
@@ -70,12 +71,15 @@ class SwitchAsFirstMethodEventTest {
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check(SwitchAsFirstMethodEventTest::incAndGet.name in log)
-        check(SwitchAsFirstMethodEventTest::incAndGetImpl.name !in log) {
+
+        val logWithoutVerbosePart = logWithoutVerbosePart(log)
+        check(SwitchAsFirstMethodEventTest::incAndGetImpl.name !in logWithoutVerbosePart) {
             "When the switch is lifted out of methods, there is no point at reporting this method"
         }
-        check("incrementAndGet" !in log) {
+        check("incrementAndGet" !in logWithoutVerbosePart) {
             "When the switch is lifted out of methods, there is no point at reporting this method"
         }
+
         checkTraceHasNoLincheckEvents(log)
     }
 }

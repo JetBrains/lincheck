@@ -53,7 +53,6 @@ class CoroutineCancellationTraceReportingTest : VerifierState() {
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
-            .verboseTrace(true)
             .checkImpl(this::class.java)
         checkNotNull(failure) { "the test should fail" }
         val log = failure.toString()

@@ -21,12 +21,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
-import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck.test.util.logWithoutVerbosePart
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
@@ -69,7 +69,7 @@ class SuspendTraceReportingTest : VerifierState() {
         val log = failure.toString()
         check("label" !in log) { "suspend state machine related fields should not be reported" }
         check("L$0" !in log) { "suspend state machine related fields should not be reported" }
-        check(log.numberOfOccurrences("foo()") == 2) {
+        check(logWithoutVerbosePart(log).numberOfOccurrences("foo()") == 2) {
             "suspended function should be mentioned exactly twice (once in parallel and once in parallel execution)"
         }
         check("barStarted.READ: true" in log) { "this code location after suspension should be reported" }
