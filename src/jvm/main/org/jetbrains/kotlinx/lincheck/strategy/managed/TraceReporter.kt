@@ -37,13 +37,13 @@ internal fun StringBuilder.appendTrace(
 ) {
     val startTraceGraphNode = constructTraceGraph(scenario, results, trace)
 
-    appendln(Messages.PARALLEL_PART)
+    appendln(PARALLEL_PART)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
     appendTraceRepresentation(scenario, traceRepresentation)
     appendln()
 
     appendln()
-    appendln(Messages.DETAILED_PARALLEL_PART)
+    appendln(DETAILED_PARALLEL_PART)
     val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
     appendTraceRepresentation(scenario, traceRepresentationVerbose)
 
@@ -358,3 +358,7 @@ internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeratio
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
 private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
+
+const val DETAILED_PARALLEL_PART = "Detailed parallel part trace:"
+
+const val PARALLEL_PART = "Parallel part trace:"

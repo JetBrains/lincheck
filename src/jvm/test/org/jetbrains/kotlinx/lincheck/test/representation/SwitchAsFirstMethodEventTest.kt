@@ -21,13 +21,10 @@
 package org.jetbrains.kotlinx.lincheck.test.representation
 
 import kotlinx.atomicfu.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.test.*
-import org.jetbrains.kotlinx.lincheck.test.util.logWithoutVerbosePart
+import org.jetbrains.kotlinx.lincheck.test.util.lincheckOutputTest
 import org.junit.*
-import java.lang.StringBuilder
 
 /**
  * This test checks that all switches that are the first events in methods are lifted out of the methods in the trace.
@@ -61,25 +58,12 @@ class SwitchAsFirstMethodEventTest {
     private fun incAndGetImpl() = counter.incrementAndGet()
 
     @Test
-    fun test() {
-        val options = ModelCheckingOptions()
+    fun test() = lincheckOutputTest(
+        options = ModelCheckingOptions()
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
-            .requireStateEquivalenceImplCheck(false)
-        val failure = options.checkImpl(this::class.java)
-        check(failure != null) { "the test should fail" }
-        val log = StringBuilder().appendFailure(failure).toString()
-        check(SwitchAsFirstMethodEventTest::incAndGet.name in log)
-
-        val logWithoutVerbosePart = logWithoutVerbosePart(log)
-        check(SwitchAsFirstMethodEventTest::incAndGetImpl.name !in logWithoutVerbosePart) {
-            "When the switch is lifted out of methods, there is no point at reporting this method"
-        }
-        check("incrementAndGet" !in logWithoutVerbosePart) {
-            "When the switch is lifted out of methods, there is no point at reporting this method"
-        }
-
-        checkTraceHasNoLincheckEvents(log)
-    }
+            .requireStateEquivalenceImplCheck(false),
+        expectedLogFileName = "switch_as_first_method_event.txt"
+    )
 }

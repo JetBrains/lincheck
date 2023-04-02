@@ -20,8 +20,37 @@
 
 package org.jetbrains.kotlinx.lincheck.test.util
 
-import org.jetbrains.kotlinx.lincheck.Messages
+import org.jetbrains.kotlinx.lincheck.appendFailure
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import java.io.File
+import java.lang.StringBuilder
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.fail
 
-internal fun logWithoutVerbosePart(log: String) = log.substringBefore(Messages.DETAILED_PARALLEL_PART)
+private const val TEST_RESOURCES_EXPECTED_OUTPUT_PATH = "src/jvm/test/resources/output"
+internal fun Any.lincheckOutputTest(
+    options: ModelCheckingOptions,
+    expectedLogFileName: String
+) {
+    val testClass = this::class.java
+    val failure = options.checkImpl(testClass)
 
-internal fun logVerbosePart(log: String) = log.substringAfter(Messages.DETAILED_PARALLEL_PART)
+    check(failure != null) { "the test should fail" }
+
+    val log = StringBuilder().appendFailure(failure).toString()
+    val expectedFullFileName = TEST_RESOURCES_EXPECTED_OUTPUT_PATH + File.separator + expectedLogFileName
+    val expectedLogFile = File(expectedFullFileName)
+
+    if (!expectedLogFile.exists()) {
+        fail { "Supplied file: $expectedFullFileName does not exist" }
+    }
+    val expectedLogLines = expectedLogFile.readLines()
+    val actualLogLines = log.lines()
+
+    expectedLogLines.zip(actualLogLines).forEachIndexed { index, (expectedLine, actualLine) ->
+        assertEquals(expectedLine, actualLine) { "Expected output doesn't match actual at line number: ${index + 1}" }
+    }
+
+    assertEquals(expectedLogLines.size, actualLogLines.size) { "Expected log size doesn't match actual" }
+}

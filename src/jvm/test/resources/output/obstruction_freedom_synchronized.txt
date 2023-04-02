@@ -1,0 +1,18 @@
+= Obstruction-freedom is required but a lock has been found =
+Execution scenario (parallel part):
+| operation() | operation() |
+
+= The following interleaving leads to the error =
+Parallel part trace:
+|                                                                                                                          | operation()                                                                                                              |
+|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |
+|                                                                                                                          |   switch                                                                                                                 |
+| operation()                                                                                                              |                                                                                                                          |
+|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |                                                                                                                          |
+
+Detailed parallel part trace:
+|                                                                                                                          | operation()                                                                                                              |
+|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |
+|                                                                                                                          |   switch                                                                                                                 |
+| operation()                                                                                                              |                                                                                                                          |
+|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |                                                                                                                          |

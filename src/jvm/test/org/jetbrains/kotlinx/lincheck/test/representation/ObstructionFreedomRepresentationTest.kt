@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
-import org.jetbrains.kotlinx.lincheck.test.util.logWithoutVerbosePart
+import org.jetbrains.kotlinx.lincheck.test.util.lincheckOutputTest
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.lang.StringBuilder
@@ -88,17 +88,13 @@ class ObstructionFreedomSynchronizedRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
-    fun test() {
-        val options = ModelCheckingOptions()
+    fun test() = lincheckOutputTest(
+        options = ModelCheckingOptions()
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
             .threads(2)
-            .checkObstructionFreedom(true)
-        val failure = options.checkImpl(this::class.java)
-        check(failure != null) { "the test should fail" }
-        val log = StringBuilder().appendFailure(failure).toString()
-        check(logWithoutVerbosePart(log).split("MONITORENTER").size - 1 == 2) { "MONITORENTER should be reported twice" }
-        checkTraceHasNoLincheckEvents(log)
-    }
+            .checkObstructionFreedom(true),
+        expectedLogFileName = "obstruction_freedom_synchronized.txt"
+    )
 }
