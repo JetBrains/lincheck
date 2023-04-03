@@ -61,13 +61,10 @@ kotlin {
             kotlin.srcDir("src/jvm/test")
 
             val junitVersion: String by project
-            val junit5Version: String by project
             val jctoolsVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
-                implementation("org.junit.jupiter:junit-jupiter-api:$junit5Version")
-                implementation("org.junit.jupiter:junit-jupiter-engine:$junit5Version")
             }
         }
     }
