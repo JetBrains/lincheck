@@ -185,8 +185,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         parallelExecution.map { it.size }.sum() == 0
 
 
-    private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean): Verifier {
-        return verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
+    private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
+        verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
             if (!checkStateEquivalence) return@also
             val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
             if (!stateEquivalenceCorrect) {
@@ -198,7 +198,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 }
             }
         }
-    }
 
     private fun CTestConfiguration.createExecutionGenerator() =
         generatorClass.getConstructor(

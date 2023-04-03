@@ -76,11 +76,10 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
         // write message in an appropriate column
         result[columnId].add(event.representation)
         val neededSize = result[columnId].size
-        for (column in result) {
-            if (column.size != neededSize) {
+        // establish columns size equals
+        for (column in result)
+            if (column.size != neededSize)
                 column.add("")
-            }
-        }
     }
     return result
 }
@@ -154,13 +153,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                 }
                 val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
                 val node = traceGraphNodes.createAndAppend { lastNode ->
-                    TraceLeafEvent(
-                        iThread,
-                        lastNode,
-                        innerNode.callDepth + 1,
-                        event,
-                        isLastExecutedEvent
-                    )
+                    TraceLeafEvent(iThread, lastNode, innerNode.callDepth + 1, event, isLastExecutedEvent)
                 }
                 innerNode.addInternalEvent(node)
             }
@@ -173,8 +166,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                 // insert an ActorResultNode between the last actor event and the next event after it
                 val lastEvent = it.lastInternalEvent
                 val lastEventNext = lastEvent.next
-                val resultNode =
-                    ActorResultNode(iThread, lastEvent, it.callDepth + 1, results[iThread, actorId])
+                val resultNode = ActorResultNode(iThread, lastEvent, it.callDepth + 1, results[iThread, actorId])
                 it.addInternalEvent(resultNode)
                 resultNode.next = lastEventNext
             }
@@ -242,7 +234,8 @@ private class TraceLeafEvent(
     private val event: TracePoint,
     private val lastExecutedEvent: Boolean = false
 ) : TraceNode(iThread, last, callDepth) {
-    override val lastState: String? = if (event is StateRepresentationTracePoint) event.stateRepresentation else null
+    override val lastState: String? =
+        if (event is StateRepresentationTracePoint) event.stateRepresentation else null
     override val lastInternalEvent: TraceNode = this
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
         return lastExecutedEvent || event is SwitchEventTracePoint || verboseTrace
