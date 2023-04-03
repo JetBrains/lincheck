@@ -67,7 +67,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         }
         for (int i = 0; i < nonParallelGroups.size(); i++) {
             threadGens.get(i % threadGens.size()).nonParallelActorGenerators
-                    .addAll(nonParallelGroups.get(i).actors);
+                .addAll(nonParallelGroups.get(i).actors);
         }
         List<ThreadGen> tgs2 = new ArrayList<>(threadGens);
         while (!threadGens.isEmpty()) {
