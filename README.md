@@ -76,7 +76,7 @@ If an operation should be called at most once during the test execution, you can
 If an operation can throw an exception and this is a normal result (e.g. `remove` method in `Queue` implementation throws `NoSuchElementException` if the queue is empty), it can be handled as a result if `@Operation(handleExceptionsAsResult = ...)` options are specified. See the example below where `NoSuchElementException` is processed as a normal result.
 
 ```java
-@Operation(handleExceptionsAsResult = NoSuchElementException.class)
+@Operation(handleExceptionsAsResult = [NoSuchElementException.class])
 public int remove() { return queue.remove(); }
 ```
 
