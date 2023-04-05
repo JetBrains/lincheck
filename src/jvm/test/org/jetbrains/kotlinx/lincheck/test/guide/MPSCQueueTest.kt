@@ -20,23 +20,24 @@
 
 package org.jetbrains.kotlinx.lincheck.test.guide
 
-import org.jctools.queues.atomic.*
-import org.jetbrains.kotlinx.lincheck.*
+import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.junit.Test
 
+@OpGroupConfig(name = "consumer", nonParallel = true)
 class MPSCQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
 
     @Operation
     public fun offer(x: Int) = queue.offer(x)
 
-    @Operation
+    @Operation(group = "consumer")
     public fun poll(): Int? = queue.poll()
 
-    @Operation
+    @Operation(group = "consumer")
     public fun peek(): Int? = queue.peek()
 
     @Test
