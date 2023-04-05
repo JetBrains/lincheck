@@ -20,13 +20,27 @@
 
 package org.jetbrains.kotlinx.lincheck.test.util
 
-import org.jetbrains.kotlinx.lincheck.appendFailure
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
-import java.io.File
-import java.lang.StringBuilder
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.Assert.*
+import java.io.*
+
+internal fun verifyOutput(testName: String) {
+    val classLoader = LinChecker::class.java.classLoader
+    classLoader.getResourceAsStream("output/$testName").use {
+        // TODO: see StackTraceRecoveryChannelsTest in KotlinCoroutines and verifyStackTrace in Stacktraces.kt
+//        public fun verifyStackTrace(path: String, e: Throwable) {
+//            val resource = Job::class.java.classLoader.getResourceAsStream("stacktraces/$path.txt")
+//            val lines = resource.reader().readLines()
+//            verifyStackTrace(e, *lines.toTypedArray())
+//        }
+    }
+
+}
+
+internal fun Any.runModelCheckingTestAndCheckOutput(testName: String, testConfiguration: ModelCheckingOptions.() -> Unit) {
+    // TODO: implement me
+}
 
 private const val TEST_RESOURCES_EXPECTED_OUTPUT_PATH = "src/jvm/test/resources/output"
 internal fun Any.lincheckOutputTest(

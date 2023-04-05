@@ -1,6 +1,7 @@
 = Invalid execution results =
 Parallel part:
 | incTwiceAndGet(): 3 | incTwiceAndGet(): 4 |
+
 = The following interleaving leads to the error =
 Parallel part trace:
 |                      | incTwiceAndGet()                                                                                    |

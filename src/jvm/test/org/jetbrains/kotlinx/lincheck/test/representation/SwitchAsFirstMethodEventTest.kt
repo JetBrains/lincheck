@@ -22,8 +22,7 @@ package org.jetbrains.kotlinx.lincheck.test.representation
 
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.test.util.lincheckOutputTest
+import org.jetbrains.kotlinx.lincheck.test.util.*
 import org.junit.*
 
 /**
@@ -58,12 +57,11 @@ class SwitchAsFirstMethodEventTest {
     private fun incAndGetImpl() = counter.incrementAndGet()
 
     @Test
-    fun test() = lincheckOutputTest(
-        options = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .requireStateEquivalenceImplCheck(false),
-        expectedLogFileName = "switch_as_first_method_event.txt"
-    )
+    fun test() = runModelCheckingTestAndCheckOutput("switch_as_first_method_event.txt") {
+        // TODO: fix other tests
+        actorsPerThread(1)
+        actorsBefore(0)
+        actorsAfter(0)
+        requireStateEquivalenceImplCheck(false)
+    }
 }

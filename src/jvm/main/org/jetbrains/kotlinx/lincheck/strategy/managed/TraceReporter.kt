@@ -34,13 +34,13 @@ internal fun StringBuilder.appendTrace(
 ) {
     val startTraceGraphNode = constructTraceGraph(scenario, results, trace)
 
-    appendln(PARALLEL_PART)
+    appendln(PARALLEL_PART_TITLE)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
     appendTraceRepresentation(scenario, traceRepresentation)
     appendln()
 
     appendln()
-    appendln(DETAILED_PARALLEL_PART)
+    appendln(DETAILED_PARALLEL_PART_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
     appendTraceRepresentation(scenario, traceRepresentationVerbose)
 
@@ -113,13 +113,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             val nextActor = ++lastHandledActor[iThread]
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
-                ActorNode(
-                    iThread = iThread,
-                    last = lastNode,
-                    callDepth = 0,
-                    actor = scenario.parallelExecution[iThread][nextActor],
-                    result = results[iThread, nextActor]
-                )
+                ActorNode(iThread, lastNode, 0, scenario.parallelExecution[iThread][nextActor], results[iThread, nextActor])
             }
             actorNodes[iThread][nextActor] = actorNode
             traceGraphNodes.add(actorNode)
@@ -349,6 +343,5 @@ internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeratio
 
 private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
-const val DETAILED_PARALLEL_PART = "Detailed parallel part trace:"
-
-const val PARALLEL_PART = "Parallel part trace:"
+const val DETAILED_PARALLEL_PART_TITLE = "Detailed parallel part trace:"
+const val PARALLEL_PART_TITLE = "Parallel part trace:"
