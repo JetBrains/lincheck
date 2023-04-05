@@ -22,8 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.test.util.lincheckOutputTest
+import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -55,14 +54,11 @@ class CapturedValueRepresentationTest : VerifierState() {
     }
 
     @Test
-    fun test() = lincheckOutputTest(
-        options = ModelCheckingOptions()
-            .actorsAfter(0)
-            .actorsBefore(0)
-            .actorsPerThread(1),
-        expectedLogFileName = "captured_value.txt"
-    )
-
+    fun test() = runModelCheckingTestAndCheckOutput("captured_value.txt") {
+        actorsAfter(0)
+        actorsBefore(0)
+        actorsPerThread(1)
+    }
     override fun extractState(): Any = counter
 
     private class InnerClass

@@ -23,48 +23,31 @@ package org.jetbrains.kotlinx.lincheck.test.util
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.Assert.*
-import java.io.*
 
-internal fun verifyOutput(testName: String) {
-    val classLoader = LinChecker::class.java.classLoader
-    classLoader.getResourceAsStream("output/$testName").use {
-        // TODO: see StackTraceRecoveryChannelsTest in KotlinCoroutines and verifyStackTrace in Stacktraces.kt
-//        public fun verifyStackTrace(path: String, e: Throwable) {
-//            val resource = Job::class.java.classLoader.getResourceAsStream("stacktraces/$path.txt")
-//            val lines = resource.reader().readLines()
-//            verifyStackTrace(e, *lines.toTypedArray())
-//        }
-    }
-
-}
-
-internal fun Any.runModelCheckingTestAndCheckOutput(testName: String, testConfiguration: ModelCheckingOptions.() -> Unit) {
-    // TODO: implement me
-}
-
-private const val TEST_RESOURCES_EXPECTED_OUTPUT_PATH = "src/jvm/test/resources/output"
-internal fun Any.lincheckOutputTest(
-    options: ModelCheckingOptions,
-    expectedLogFileName: String
+internal fun Any.runModelCheckingTestAndCheckOutput(
+    expectedLogsFile: String,
+    testConfiguration: ModelCheckingOptions.() -> Unit
 ) {
-    val testClass = this::class.java
-    val failure = options.checkImpl(testClass)
+    val modelCheckingOptions = ModelCheckingOptions()
+    testConfiguration(modelCheckingOptions)
+    val failure = modelCheckingOptions.checkImpl(this::class.java)
 
-    check(failure != null) { "the test should fail" }
+    check(failure != null) { "The test should fail" }
 
-    val log = StringBuilder().appendFailure(failure).toString()
-    val expectedFullFileName = TEST_RESOURCES_EXPECTED_OUTPUT_PATH + File.separator + expectedLogFileName
-    val expectedLogFile = File(expectedFullFileName)
-
-    if (!expectedLogFile.exists()) {
-        fail("Supplied file: $expectedFullFileName does not exist")
-    }
-    val expectedLogLines = expectedLogFile.readLines()
-    val actualLogLines = log.lines()
+    val actualLogLines = StringBuilder().appendFailure(failure).toString().lines()
+    val expectedLogLines = getExpectedLogFromResources(expectedLogsFile)
 
     expectedLogLines.zip(actualLogLines).forEachIndexed { index, (expectedLine, actualLine) ->
         assertEquals("Expected output doesn't match actual at line number: ${index + 1}", expectedLine, actualLine)
     }
 
     assertEquals("Expected log size doesn't match actual", expectedLogLines.size, actualLogLines.size)
+}
+
+private fun Any.getExpectedLogFromResources(testFileName: String): List<String> {
+    val resourceName = "expected_logs/$testFileName.txt"
+    val expectedLogResource = this::class.java.classLoader.getResourceAsStream(resourceName)
+        ?: error("Expected log resource: $resourceName does not exist")
+
+    return expectedLogResource.reader().readLines()
 }

@@ -23,8 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.representation
 
 import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.test.util.lincheckOutputTest
+import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
@@ -57,13 +56,9 @@ class SuspendTraceReportingTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
-    fun test()= lincheckOutputTest(
-        options = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0),
-        expectedLogFileName = "suspend_trace_reporting.txt"
-    )
-
-    private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
+    fun test() = runModelCheckingTestAndCheckOutput("suspend_trace_reporting.txt") {
+        actorsPerThread(1)
+        actorsBefore(0)
+        actorsAfter(0)
+    }
 }
