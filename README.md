@@ -288,6 +288,14 @@ some of them use `jdk.internal.misc.Unsafe` or similar internal classes under th
 --add-exports java.base/jdk.internal.util=ALL-UNNAMED
 ```
 
+If you're running the test through Gradle, be aware that Gradle launches a separate JVM for running tests. One way of adding the above flags
+to the test JVM is (Kotlin syntax):
+```
+    tasks.withType<Test> {
+        jvmArgs("--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.util=ALL-UNNAMED")
+    }
+```
+
 ## State representation
 For both the stress testing and the model checking strategies, it is possible to enable state reporting. For this purpose, a method that returns `String` state representation should be annotated with `@StateRepresentation` and be located in the testing class. This method should be thread-safe, non-blocking, and should not modify the data structure. In case of the stress testing, the state representation is printed after each operation in the init and post execution parts as well as after the parallel part. In contrast, for model checking it is possible print the current state representation after each read or write event.
 
