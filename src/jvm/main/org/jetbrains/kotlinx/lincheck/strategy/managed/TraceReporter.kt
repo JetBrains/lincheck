@@ -22,12 +22,9 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.printInColumnsCustom
+import org.jetbrains.kotlinx.lincheck.execution.*
 import java.util.*
-import kotlin.math.min
+import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
@@ -117,11 +114,11 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
                 ActorNode(
-                    iThread,
-                    lastNode,
-                    0,
-                    scenario.parallelExecution[iThread][nextActor],
-                    results[iThread, nextActor]
+                    iThread = iThread,
+                    last = lastNode,
+                    callDepth = 0,
+                    actor = scenario.parallelExecution[iThread][nextActor],
+                    result = results[iThread, nextActor]
                 )
             }
             actorNodes[iThread][nextActor] = actorNode
