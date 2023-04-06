@@ -1,6 +1,7 @@
 = Invalid execution results =
 Parallel part:
 | bar(): -1 | foo(): SUSPENDED + void |
+
 = The following interleaving leads to the error =
 Parallel part trace:
 | bar()                                                                                                 |                                                                                                          |

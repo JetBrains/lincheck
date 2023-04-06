@@ -1,6 +1,7 @@
 = Invalid execution results =
 Parallel part:
 | operation(): 2 | operation(): 1 |
+
 = The following interleaving leads to the error =
 Parallel part trace:
 |                      | operation()                                                                                                          |

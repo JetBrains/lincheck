@@ -45,7 +45,7 @@ internal fun Any.runModelCheckingTestAndCheckOutput(
 }
 
 private fun Any.getExpectedLogFromResources(testFileName: String): List<String> {
-    val resourceName = "expected_logs/$testFileName.txt"
+    val resourceName = "expected_logs/$testFileName"
     val expectedLogResource = this::class.java.classLoader.getResourceAsStream(resourceName)
         ?: error("Expected log resource: $resourceName does not exist")
 

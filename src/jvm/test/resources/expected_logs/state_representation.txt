@@ -3,6 +3,7 @@ STATE: 0
 Parallel part:
 | operation(): 2 | operation(): 3 |
 STATE: 4
+
 = The following interleaving leads to the error =
 Parallel part trace:
 |                      | operation()                                                                                                 |

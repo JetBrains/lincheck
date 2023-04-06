@@ -1,6 +1,7 @@
 = Invalid execution results =
 Parallel part:
 | cancelledOp() + cancel: SUSPENDED + CANCELLED | isAbsurd(): true |
+
 = The following interleaving leads to the error =
 Parallel part trace:
 |                                                                                                                                                  | isAbsurd()                                                                                                               |
