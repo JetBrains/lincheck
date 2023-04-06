@@ -22,11 +22,15 @@ package org.jetbrains.kotlinx.lincheck.test.util
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.junit.Assert.*
 
+/*
+    Runs lincheck test in model checking model.
+    Implemented as an extension to Any to avoid passing test class as an argument.
+ */
 internal fun Any.runModelCheckingTestAndCheckOutput(
-    expectedLogsFile: String,
-    testConfiguration: ModelCheckingOptions.() -> Unit
+    expectedOutputFile: String, testConfiguration: ModelCheckingOptions.() -> Unit
 ) {
     val modelCheckingOptions = ModelCheckingOptions()
     testConfiguration(modelCheckingOptions)
@@ -34,20 +38,62 @@ internal fun Any.runModelCheckingTestAndCheckOutput(
 
     check(failure != null) { "The test should fail" }
 
-    val actualLogLines = StringBuilder().appendFailure(failure).toString().lines()
-    val expectedLogLines = getExpectedLogFromResources(expectedLogsFile)
+    val actualOutput = StringBuilder().appendFailure(failure).toString()
+    val actualOutputLines = actualOutput.lines()
+    val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
+    val expectedOutputLines = expectedOutput.lines()
 
-    expectedLogLines.zip(actualLogLines).forEachIndexed { index, (expectedLine, actualLine) ->
-        assertEquals("Expected output doesn't match actual at line number: ${index + 1}", expectedLine, actualLine)
+    expectedOutputLines.zip(actualOutputLines).forEachIndexed { index, (expectedLine, actualLine) ->
+        assertValuesEqualsAndPrintAllOutputsIfFailed(
+            expectedValue = expectedLine,
+            actualValue = actualLine,
+            expectedOutput = expectedOutput,
+            actualOutput = actualOutput
+        ) { "Expected output doesn't match actual at line number: ${index + 1}" }
     }
 
-    assertEquals("Expected log size doesn't match actual", expectedLogLines.size, actualLogLines.size)
+    assertValuesEqualsAndPrintAllOutputsIfFailed(
+        expectedValue = expectedOutputLines.size,
+        actualValue = actualOutputLines.size,
+        expectedOutput = expectedOutput,
+        actualOutput = actualOutput
+    ) { "Expected output size doesn't match actual" }
 }
 
-private fun Any.getExpectedLogFromResources(testFileName: String): List<String> {
+private fun assertValuesEqualsAndPrintAllOutputsIfFailed(
+    expectedValue: Any,
+    actualValue: Any,
+    expectedOutput: String,
+    actualOutput: String,
+    messageSupplier: () -> String
+) {
+    if (expectedValue != actualValue) {
+        fail(
+            // Multiline string is not used here as to .trimIndent function considers lincheck indents and makes ugly output
+            buildString {
+                appendLine(messageSupplier())
+
+                appendLine()
+                appendLine("Expected:")
+                appendLine(expectedValue)
+                appendLine("Actual:")
+                appendLine(actualValue)
+
+                appendLine()
+                appendLine("Expected full output:")
+                appendLine(expectedOutput)
+                appendLine()
+                appendLine("Actual full output:")
+                appendLine(actualOutput)
+            }
+        )
+    }
+}
+
+private fun getExpectedLogFromResources(testFileName: String): String {
     val resourceName = "expected_logs/$testFileName"
-    val expectedLogResource = this::class.java.classLoader.getResourceAsStream(resourceName)
+    val expectedLogResource = LTS::class.java.classLoader.getResourceAsStream(resourceName)
         ?: error("Expected log resource: $resourceName does not exist")
 
-    return expectedLogResource.reader().readLines()
+    return expectedLogResource.reader().readText()
 }

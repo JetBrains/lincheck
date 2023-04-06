@@ -58,7 +58,6 @@ class SwitchAsFirstMethodEventTest {
 
     @Test
     fun test() = runModelCheckingTestAndCheckOutput("switch_as_first_method_event.txt") {
-        // TODO: fix other tests
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
