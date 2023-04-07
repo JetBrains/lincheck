@@ -25,9 +25,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.junit.Assert.*
 
-/*
-    Runs lincheck test in model checking model.
-    Implemented as an extension to Any to avoid passing test class as an argument.
+/**
+ * Runs lincheck test in model checking mode.
+ *
+ * Implemented as an extension to Any to avoid passing test class as an argument.
+ *
+ * @receiver The test instance, its class will be passed to [checkImpl] as testClass.
+ * @param expectedOutputFile file name from resources/expected_logs, the expected lincheck output
+ * @param testConfiguration options configuration action
  */
 internal fun Any.runModelCheckingTestAndCheckOutput(
     expectedOutputFile: String, testConfiguration: ModelCheckingOptions.() -> Unit
