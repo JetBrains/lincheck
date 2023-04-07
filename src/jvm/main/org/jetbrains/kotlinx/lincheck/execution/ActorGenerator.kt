@@ -66,4 +66,5 @@ class ActorGenerator(
     override fun toString() = method.toString()
 }
 
+// Will be removed is the scope of https://github.com/Kotlin/kotlinx-lincheck/issues/148
 private val DETERMINISTIC_RANDOM = Random(42)

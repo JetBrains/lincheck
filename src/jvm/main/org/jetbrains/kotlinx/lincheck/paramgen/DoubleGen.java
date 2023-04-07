@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.RandomFactory;
 import java.util.Random;
 
 public class DoubleGen implements ParameterGenerator<Double> {
@@ -29,7 +30,7 @@ public class DoubleGen implements ParameterGenerator<Double> {
     private static final float DEFAULT_END = 10;
     private static final float DEFAULT_STEP = 0.1f;
 
-    private final Random random = new Random(0);
+    private final Random random = RandomFactory.doubleGeneratorRandom();
     private final double begin;
     private final double end;
     private final double step;

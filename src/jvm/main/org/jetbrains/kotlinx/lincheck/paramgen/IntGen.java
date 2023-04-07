@@ -22,13 +22,15 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.RandomFactory;
+
 import java.util.Random;
 
 public class IntGen implements ParameterGenerator<Integer> {
     private static final int DEFAULT_BEGIN = -10;
     private static final int DEFAULT_END = 10;
 
-    private final Random random = new Random(0);
+    private final Random random = RandomFactory.intGeneratorRandom();
     private final int begin;
     private final int end;
 
