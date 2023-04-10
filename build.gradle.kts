@@ -81,6 +81,9 @@ sourceSets.main {
 
 sourceSets.test {
     java.srcDirs("src/jvm/test")
+    resources {
+        srcDir("src/jvm/test/resources")
+    }
 }
 
 tasks {
@@ -89,17 +92,20 @@ tasks {
     }
     withType<Test> {
         maxParallelForks = 1
-        jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-                "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
+        jvmArgs(
+            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED"
+        )
     }
 
     withType<Jar> {
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
-            attributes("Copyright" to
-                "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
-                "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
+            attributes(
+                "Copyright" to
+                        "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
+                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
             )
         }
     }

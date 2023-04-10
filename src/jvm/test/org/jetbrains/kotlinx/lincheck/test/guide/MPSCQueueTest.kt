@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
-import java.util.*
 
 @OpGroupConfig(name = "consumer", nonParallel = true)
 class MPSCQueueTest {

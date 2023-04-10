@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.execution
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import java.lang.reflect.*
-import kotlin.random.*
+import java.util.Random
 
 /**
  * Implementations of this class generate [actors][Actor]
@@ -44,12 +44,12 @@ class ActorGenerator(
     private val cancellableOnSuspension = cancellableOnSuspension && isSuspendable
     private val promptCancellation = cancellableOnSuspension && promptCancellation
 
-    fun generate(threadId: Int): Actor {
+    fun generate(threadId: Int, random: Random): Actor {
         val parameters = parameterGenerators
             .map { it.generate() }
             .map { if (it === THREAD_ID_TOKEN) threadId else it }
-        val cancelOnSuspension = this.cancellableOnSuspension and DETERMINISTIC_RANDOM.nextBoolean()
-        val promptCancellation = cancelOnSuspension and this.promptCancellation and DETERMINISTIC_RANDOM.nextBoolean()
+        val cancelOnSuspension = this.cancellableOnSuspension and random.nextBoolean()
+        val promptCancellation = cancelOnSuspension and this.promptCancellation and random.nextBoolean()
         return Actor(
             method = method,
             arguments = parameters,
@@ -65,5 +65,3 @@ class ActorGenerator(
     val isSuspendable: Boolean get() = method.isSuspendable()
     override fun toString() = method.toString()
 }
-
-private val DETERMINISTIC_RANDOM = Random(42)

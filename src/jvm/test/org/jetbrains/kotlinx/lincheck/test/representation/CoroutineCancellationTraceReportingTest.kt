@@ -21,10 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.test.representation
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
@@ -48,17 +46,10 @@ class CoroutineCancellationTraceReportingTest : VerifierState() {
     override fun extractState(): Any = correct
 
     @Test
-    fun test() {
-        val failure = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .verboseTrace(true)
-            .checkImpl(this::class.java)
-        checkNotNull(failure) { "the test should fail" }
-        val log = failure.toString()
-        check("CANCELLED BEFORE RESUMPTION" in log) { "The cancellation event should be reported" }
-        check("setCorrect(false)" in log) { "The `onCancellation` handler events should be reported" }
-        checkTraceHasNoLincheckEvents(log)
+    fun test() = runModelCheckingTestAndCheckOutput( "coroutine_cancellation.txt") {
+        actorsPerThread(1)
+        actorsBefore(0)
+        actorsAfter(0)
     }
+
 }

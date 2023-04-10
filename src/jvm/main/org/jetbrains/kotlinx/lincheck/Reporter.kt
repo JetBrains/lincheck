@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 
-class Reporter constructor(val logLevel: LoggingLevel) {
+class Reporter constructor(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
     private val outErr: PrintStream = System.err
 
@@ -160,11 +160,11 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
-        appendln()
-        appendln("= The following interleaving leads to the error =")
+        appendLine()
+        appendLine("= The following interleaving leads to the error =")
         appendTrace(failure.scenario, results, failure.trace)
         if (failure is DeadlockWithDumpFailure) {
-            appendln()
+            appendLine()
             append("All threads are in deadlock")
         }
     }
@@ -207,19 +207,16 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
         appendln("STATE: ${failure.results.afterInitStateRepresentation}")
     appendln("Parallel part:")
     val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
-    append(printInColumns(parallelExecutionData))
+    appendln(printInColumns(parallelExecutionData))
     if (failure.results.afterParallelStateRepresentation != null) {
-        appendln()
-        append("STATE: ${failure.results.afterParallelStateRepresentation}")
+        appendln("STATE: ${failure.results.afterParallelStateRepresentation}")
     }
     if (failure.scenario.postExecution.isNotEmpty()) {
-        appendln()
         appendln("Post part:")
-        append(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
+        appendln(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
     }
     if (failure.results.afterPostStateRepresentation != null && failure.scenario.postExecution.isNotEmpty()) {
-        appendln()
-        append("STATE: ${failure.results.afterPostStateRepresentation}")
+        appendln("STATE: ${failure.results.afterPostStateRepresentation}")
     }
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
         appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +

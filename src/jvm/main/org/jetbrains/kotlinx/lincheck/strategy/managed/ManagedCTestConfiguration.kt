@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -35,7 +34,7 @@ abstract class ManagedCTestConfiguration(
     generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
     val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean,
+    sequentialSpecification: Class<*>, timeoutMs: Long, val eliminateLocalObjects: Boolean,
     customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
     testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
@@ -46,7 +45,6 @@ abstract class ManagedCTestConfiguration(
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
         const val DEFAULT_ELIMINATE_LOCAL_OBJECTS = true
         const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
-        const val DEFAULT_VERBOSE_TRACE = false
         const val LIVELOCK_EVENTS_THRESHOLD = 10001
         val DEFAULT_GUARANTEES = listOf( // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
