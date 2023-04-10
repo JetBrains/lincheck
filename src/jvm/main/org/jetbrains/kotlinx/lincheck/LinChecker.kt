@@ -30,7 +30,7 @@ import kotlin.reflect.*
 /**
  * This class runs concurrent tests.
  */
-class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
+class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
@@ -39,7 +39,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
         reporter = Reporter(logLevel)
         testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
-                             else createFromTestClassAnnotations(testClass)
+        else createFromTestClassAnnotations(testClass)
     }
 
     /**
@@ -64,16 +64,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         val exGen = createExecutionGenerator()
-        var isFirstVerifier = true
         for (i in customScenarios.indices) {
-            val verifier = createVerifier(checkStateEquivalence = isFirstVerifier).also { isFirstVerifier = false }
+            val verifier = createVerifier()
             val scenario = customScenarios[i]
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) return failure
         }
-        var verifier = createVerifier(checkStateEquivalence = isFirstVerifier).also { isFirstVerifier = false }
+        var verifier = createVerifier()
         repeat(iterations) { i ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
@@ -81,14 +80,14 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             // from re-using LTS and limit the size of potential memory leak.
             // https://github.com/Kotlin/kotlinx-lincheck/issues/124
             if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
-                verifier = createVerifier(checkStateEquivalence = false)
+                verifier = createVerifier()
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure
-                                               else failure.minimize(this)
+                else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
@@ -130,7 +129,11 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
+    private fun ExecutionScenario.tryMinimize(
+        threadId: Int,
+        position: Int,
+        testCfg: CTestConfiguration
+    ): LincheckFailure? {
         val newScenario = this.copy()
         val actors = newScenario[threadId] as MutableList<Actor>
         actors.removeAt(position)
@@ -139,7 +142,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             newScenario.parallelExecution.removeAt(threadId - 1)
         }
         return if (newScenario.isValid) {
-            val verifier = testCfg.createVerifier(checkStateEquivalence = false)
+            val verifier = testCfg.createVerifier()
             newScenario.run(testCfg, verifier)
         } else null
     }
@@ -177,27 +180,20 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         }
     }
 
-    private val ExecutionScenario.hasSuspendableActorsInInitPart get() =
-        initExecution.stream().anyMatch(Actor::isSuspendable)
-    private val ExecutionScenario.hasPostPartAndSuspendableActors get() =
-        (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
-    private val ExecutionScenario.isParallelPartEmpty get() =
-        parallelExecution.map { it.size }.sum() == 0
+    private val ExecutionScenario.hasSuspendableActorsInInitPart
+        get() =
+            initExecution.stream().anyMatch(Actor::isSuspendable)
+    private val ExecutionScenario.hasPostPartAndSuspendableActors
+        get() =
+            (parallelExecution.stream()
+                .anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
+    private val ExecutionScenario.isParallelPartEmpty
+        get() =
+            parallelExecution.map { it.size }.sum() == 0
 
 
-    private fun CTestConfiguration.createVerifier(checkStateEquivalence: Boolean) =
-        verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification).also {
-            if (!checkStateEquivalence) return@also
-            val stateEquivalenceCorrect = it.checkStateEquivalenceImplementation()
-            if (!stateEquivalenceCorrect) {
-                if (requireStateEquivalenceImplCheck) {
-                    val errorMessage = StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
-                    error(errorMessage)
-                } else {
-                    reporter.logStateEquivalenceViolation(sequentialSpecification)
-                }
-            }
-        }
+    private fun CTestConfiguration.createVerifier() =
+        verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
 
     private fun CTestConfiguration.createExecutionGenerator() =
         generatorClass.getConstructor(

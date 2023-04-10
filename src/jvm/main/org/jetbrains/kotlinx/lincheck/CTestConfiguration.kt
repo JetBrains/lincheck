@@ -45,7 +45,6 @@ abstract class CTestConfiguration(
     val actorsAfter: Int,
     val generatorClass: Class<out ExecutionGenerator>,
     val verifierClass: Class<out Verifier>,
-    val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: Class<*>,
     val timeoutMs: Long,
@@ -69,22 +68,43 @@ abstract class CTestConfiguration(
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->
-            StressCTestConfiguration(testClass, ann.iterations,
-                ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.invocationsPerIteration,
-                ann.requireStateEquivalenceImplCheck, ann.minimizeFailedScenario,
-                chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                DEFAULT_TIMEOUT_MS, emptyList()
+            StressCTestConfiguration(
+                testClass = testClass,
+                iterations = ann.iterations,
+                threads = ann.threads,
+                actorsPerThread = ann.actorsPerThread,
+                actorsBefore = ann.actorsBefore,
+                actorsAfter = ann.actorsAfter,
+                generatorClass = ann.generator.java,
+                verifierClass = ann.verifier.java,
+                invocationsPerIteration = ann.invocationsPerIteration,
+                minimizeFailedScenario = ann.minimizeFailedScenario,
+                sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
+                timeoutMs = DEFAULT_TIMEOUT_MS,
+                customScenarios = emptyList()
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
         .map { ann: ModelCheckingCTest ->
-            ModelCheckingCTestConfiguration(testClass, ann.iterations,
-                ann.threads, ann.actorsPerThread, ann.actorsBefore, ann.actorsAfter,
-                ann.generator.java, ann.verifier.java, ann.checkObstructionFreedom, ann.hangingDetectionThreshold,
-                ann.invocationsPerIteration, ManagedCTestConfiguration.DEFAULT_GUARANTEES, ann.requireStateEquivalenceImplCheck,
-                ann.minimizeFailedScenario, chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                DEFAULT_TIMEOUT_MS, DEFAULT_ELIMINATE_LOCAL_OBJECTS, DEFAULT_VERBOSE_TRACE, emptyList()
+            ModelCheckingCTestConfiguration(
+                testClass = testClass,
+                iterations = ann.iterations,
+                threads = ann.threads,
+                actorsPerThread = ann.actorsPerThread,
+                actorsBefore = ann.actorsBefore,
+                actorsAfter = ann.actorsAfter,
+                generatorClass = ann.generator.java,
+                verifierClass = ann.verifier.java,
+                checkObstructionFreedom = ann.checkObstructionFreedom,
+                hangingDetectionThreshold = ann.hangingDetectionThreshold,
+                invocationsPerIteration = ann.invocationsPerIteration,
+                guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
+                minimizeFailedScenario = ann.minimizeFailedScenario,
+                sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
+                timeoutMs = DEFAULT_TIMEOUT_MS,
+                eliminateLocalObjects = DEFAULT_ELIMINATE_LOCAL_OBJECTS,
+                verboseTrace = DEFAULT_VERBOSE_TRACE,
+                customScenarios = emptyList()
             )
         }
     return stressConfigurations + modelCheckingConfigurations

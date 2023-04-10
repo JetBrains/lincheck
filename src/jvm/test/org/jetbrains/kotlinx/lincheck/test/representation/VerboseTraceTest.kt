@@ -59,7 +59,6 @@ class VerboseTraceTest {
             .actorsAfter(0)
             .actorsBefore(0)
             .actorsPerThread(1)
-            .requireStateEquivalenceImplCheck(false)
             .verboseTrace(true)
             .checkImpl(this::class.java)
         checkNotNull(failure) { "test should fail" }

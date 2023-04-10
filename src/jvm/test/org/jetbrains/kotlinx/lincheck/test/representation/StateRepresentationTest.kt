@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
-import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.appendFailure
@@ -58,7 +57,6 @@ open class ModelCheckingStateReportingTest {
                 .actorsPerThread(1)
                 .actorsBefore(0)
                 .actorsAfter(0)
-                .requireStateEquivalenceImplCheck(false)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()

@@ -65,7 +65,6 @@ class SwitchAsFirstMethodEventTest {
             .actorsPerThread(1)
             .actorsBefore(0)
             .actorsAfter(0)
-            .requireStateEquivalenceImplCheck(false)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()

@@ -113,13 +113,6 @@ public @interface ModelCheckingCTest {
     int invocationsPerIteration() default DEFAULT_INVOCATIONS;
 
     /**
-     * Require correctness check of test instance state equivalency relation, which is defined by the user.
-     * Essentially, it checks whether two new instances of the test class are equal.
-     * If the check fails, an {@link IllegalStateException} is thrown.
-     */
-    boolean requireStateEquivalenceImplCheck() default false;
-
-    /**
      * If this feature is enabled and an invalid interleaving has been found,
      * *lincheck* tries to minimize the corresponding scenario in order to
      * construct a smaller one so that the test fails on it as well.

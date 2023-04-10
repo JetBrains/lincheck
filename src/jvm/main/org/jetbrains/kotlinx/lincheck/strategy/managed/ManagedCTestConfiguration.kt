@@ -21,7 +21,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -30,16 +29,37 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
  * A common configuration for managed strategies.
  */
 abstract class ManagedCTestConfiguration(
-    testClass: Class<*>, iterations: Int,
-    threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-    generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-    val checkObstructionFreedom: Boolean, val hangingDetectionThreshold: Int, val invocationsPerIteration: Int,
-    val guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>, timeoutMs: Long, val eliminateLocalObjects: Boolean, val verboseTrace: Boolean,
+    testClass: Class<*>,
+    iterations: Int,
+    threads: Int,
+    actorsPerThread: Int,
+    actorsBefore: Int,
+    actorsAfter: Int,
+    generatorClass: Class<out ExecutionGenerator>,
+    verifierClass: Class<out Verifier>,
+    val checkObstructionFreedom: Boolean,
+    val hangingDetectionThreshold: Int,
+    val invocationsPerIteration: Int,
+    val guarantees: List<ManagedStrategyGuarantee>,
+    minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>,
+    timeoutMs: Long,
+    val eliminateLocalObjects: Boolean,
+    val verboseTrace: Boolean,
     customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
-    testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-    requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs, customScenarios
+    testClass = testClass,
+    iterations = iterations,
+    threads = threads,
+    actorsPerThread = actorsPerThread,
+    actorsBefore = actorsBefore,
+    actorsAfter = actorsAfter,
+    generatorClass = generatorClass,
+    verifierClass = verifierClass,
+    minimizeFailedScenario = minimizeFailedScenario,
+    sequentialSpecification = sequentialSpecification,
+    timeoutMs = timeoutMs,
+    customScenarios = customScenarios
 ) {
     companion object {
         const val DEFAULT_INVOCATIONS = 10000

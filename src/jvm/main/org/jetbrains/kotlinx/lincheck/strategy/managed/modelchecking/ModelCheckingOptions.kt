@@ -29,10 +29,25 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
  */
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
     override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
-        return ModelCheckingCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
-                executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
-                guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects,
-                verboseTrace, customScenarios)
+        return ModelCheckingCTestConfiguration(
+            testClass = testClass,
+            iterations = iterations,
+            threads = threads,
+            actorsPerThread = actorsPerThread,
+            actorsBefore = actorsBefore,
+            actorsAfter = actorsAfter,
+            generatorClass = executionGenerator,
+            verifierClass = verifier,
+            checkObstructionFreedom = checkObstructionFreedom,
+            hangingDetectionThreshold = hangingDetectionThreshold,
+            invocationsPerIteration = invocationsPerIteration,
+            guarantees = guarantees,
+            minimizeFailedScenario = minimizeFailedScenario,
+            sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
+            timeoutMs = timeoutMs,
+            eliminateLocalObjects = eliminateLocalObjects,
+            verboseTrace = verboseTrace,
+            customScenarios = customScenarios
+        )
     }
 }

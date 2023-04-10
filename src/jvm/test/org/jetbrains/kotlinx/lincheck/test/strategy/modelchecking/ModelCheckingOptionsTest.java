@@ -55,7 +55,6 @@ public class ModelCheckingOptionsTest {
             .hangingDetectionThreshold(30)
             .logLevel(LoggingLevel.WARN)
             .addGuarantee(forClasses("java.util.WeakHashMap").allMethods().ignore())
-            .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
         LinChecker.check(ModelCheckingOptionsTest.class, opts);
     }

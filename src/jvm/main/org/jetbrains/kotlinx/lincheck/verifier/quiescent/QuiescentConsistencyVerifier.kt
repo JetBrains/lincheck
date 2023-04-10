@@ -39,8 +39,6 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
     private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
     private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = WeakHashMap()
 
-    override fun checkStateEquivalenceImplementation(): Boolean = linearizabilityVerifier.checkStateEquivalenceImplementation()
-
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
         val convertedScenario = scenario.converted
         val convertedResults = results.convert(scenario, convertedScenario.threads)

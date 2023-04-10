@@ -72,7 +72,6 @@ class ManySwitchBugTest {
             .actorsAfter(0)
             .actorsBefore(0)
             .actorsPerThread(1)
-            .requireStateEquivalenceImplCheck(false)
             .checkImpl(this::class.java)
         check(failure is UnexpectedExceptionFailure) { "The test should fail" }
     }

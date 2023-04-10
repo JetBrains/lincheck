@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
 import org.junit.Test;
 
-@ModelCheckingCTest(requireStateEquivalenceImplCheck = false, iterations = 1)
+@ModelCheckingCTest(iterations = 1)
 public class FieldInheritedFromInterfaceTest implements InterfaceWithField {
     @Operation
     public int get() { return INTERFACE_CONSTANT.getValue(); }

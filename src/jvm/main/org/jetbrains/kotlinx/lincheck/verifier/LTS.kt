@@ -281,12 +281,6 @@ class LTS(sequentialSpecification: Class<*>) {
 
     private fun createInitialStateInstance() = sequentialSpecification.newInstance()
 
-    fun checkStateEquivalenceImplementation(): Boolean {
-        val i1 = createInitialStateInstance()
-        val i2 = createInitialStateInstance()
-        return i1.hashCode() == i2.hashCode() && i1 == i2
-    }
-
     private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction? {
         if (maxTicket == NO_TICKET) return null
         val rf = IntArray(maxTicket + 1) { NO_TICKET }

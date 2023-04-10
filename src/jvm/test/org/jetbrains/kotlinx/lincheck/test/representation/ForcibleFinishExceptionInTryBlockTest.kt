@@ -49,7 +49,6 @@ class ForcibleFinishExceptionInTryBlockTest {
             .actorsBefore(0)
             .actorsAfter(0)
             .threads(2)
-            .requireStateEquivalenceImplCheck(false)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val forcibleFinishExceptionName = ForcibleExecutionFinishException::class.simpleName!!

@@ -42,6 +42,5 @@ class TransformInterfaceFromJUCWithRemappedClassTest : AbstractLincheckTest() {
         threads(1)
         actorsPerThread(1)
         actorsAfter(0)
-        requireStateEquivalenceImplCheck(false)
     }
 }

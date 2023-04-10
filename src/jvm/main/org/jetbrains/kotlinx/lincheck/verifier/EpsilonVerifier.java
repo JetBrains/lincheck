@@ -34,9 +34,4 @@ public class EpsilonVerifier implements Verifier {
     public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
         return true; // Always correct results :)
     }
-
-    @Override
-    public boolean checkStateEquivalenceImplementation() {
-        return true;
-    }
 }
