@@ -55,13 +55,17 @@ class BufferedChannelCustomTest : VerifierState() {
     }
 
     fun poll() = try {
-        ch.poll()
+        val result = ch.tryReceive()
+        if (result.isSuccess) result.getOrThrow()
+        else result.exceptionOrNull().let { if (it == null) null else throw it }
     } catch (e: NumberedCancellationException) {
         e.testResult
     }
 
     fun offer(value: Int) = try {
-        ch.offer(value)
+        val results = ch.trySend(value)
+        if (results.isSuccess) true
+        else results.exceptionOrNull().let { if (it == null) false else throw it }
     } catch (e: NumberedCancellationException) {
         e.testResult
     }

@@ -40,10 +40,10 @@ class BufferedChannelTest : AbstractLincheckTest() {
     suspend fun receive() = c.receive()
 
     @Operation
-    fun poll() = c.poll()
+    fun poll() = c.tryReceive().getOrNull()
 
     @Operation
-    fun offer(@Param(name = "value") value: Int) = c.offer(value)
+    fun offer(@Param(name = "value") value: Int) = c.trySend(value).isSuccess
 
     override fun <O : Options<O, *>> O.customize() {
         sequentialSpecification(SequentiaBuffered2IntChannel::class.java)

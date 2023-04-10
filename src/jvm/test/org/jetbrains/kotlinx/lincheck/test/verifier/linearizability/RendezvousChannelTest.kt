@@ -41,7 +41,7 @@ class RendezvousChannelTest : AbstractLincheckTest() {
     suspend fun receive() = ch.receive()
 
     @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
-    suspend fun receiveOrNull() = ch.receiveOrNull()
+    suspend fun receiveOrNull() = ch.receiveCatching().getOrNull()
 
     @Operation
     fun close() = ch.close()
