@@ -207,7 +207,7 @@ public class CTestStructure {
         defaultGens.put(Byte.class, defaultGens.get(byte.class));
         defaultGens.put(short.class, new ShortGen(""));
         defaultGens.put(Short.class, defaultGens.get(short.class));
-        defaultGens.put(int.class, new IntGen(""));
+        defaultGens.put(int.class, new IntGen(0, 0, -10, 10));
         defaultGens.put(Integer.class, defaultGens.get(int.class));
         defaultGens.put(long.class, new LongGen(""));
         defaultGens.put(Long.class, defaultGens.get(long.class));

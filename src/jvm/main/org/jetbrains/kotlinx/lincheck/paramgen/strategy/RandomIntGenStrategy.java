@@ -26,7 +26,7 @@ public abstract class RandomIntGenStrategy {
 
     protected final Random random = new Random(0);
 
-    abstract int nextInt();
+    public abstract int nextInt();
 
     protected int generateFromRandomRange(int rangeLowerBoundInclusive, int rangeUpperBoundInclusive) {
         return rangeLowerBoundInclusive + random.nextInt(rangeUpperBoundInclusive - rangeLowerBoundInclusive + 1);
