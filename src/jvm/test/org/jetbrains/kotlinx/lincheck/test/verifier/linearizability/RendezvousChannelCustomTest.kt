@@ -21,7 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.test.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -38,11 +38,11 @@ class RendezvousChannelCustomTest : VerifierState() {
         value + 2
     }
 
-    fun offer(value: Int) = ch.offer(value)
-    fun poll() = ch.poll()
+    fun offer(value: Int) = ch.trySend(value).isSuccess
+    fun poll() = ch.tryReceive().getOrNull()
 
     suspend fun receive(): Int = ch.receive() + 100
-    suspend fun receiveOrNull(): Int? = ch.receiveOrNull()?.plus(100)
+    suspend fun receiveOrNull(): Int? = ch.receiveCatching().getOrNull()?.plus(100)
 
     private val receiveFun = RendezvousChannelCustomTest::receive
     private val rOrNull = RendezvousChannelCustomTest::receiveOrNull

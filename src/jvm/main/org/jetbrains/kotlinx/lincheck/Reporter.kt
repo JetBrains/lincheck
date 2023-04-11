@@ -69,7 +69,7 @@ internal fun <T> printInColumnsCustom(
         groupedObjects: List<List<T>>,
         joinColumns: (List<String>) -> String
 ): String {
-    val nRows = groupedObjects.map { it.size }.max() ?: 0
+    val nRows = groupedObjects.map { it.size }.maxOrNull() ?: 0
     val nColumns = groupedObjects.size
     val rows = (0 until nRows).map { rowIndex ->
         (0 until nColumns)
@@ -77,7 +77,7 @@ internal fun <T> printInColumnsCustom(
                 .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
     }
     val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
-        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max() ?: 0
+        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.maxOrNull() ?: 0
     }
     return (0 until nRows)
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
@@ -117,8 +117,8 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
     val actorRepresentations = actors.map { it.toString() }
     val resultRepresentations = results.map { it.result.toString() }
-    val maxActorLength = actorRepresentations.map { it.length }.max()!!
-    val maxResultLength = resultRepresentations.map { it.length }.max()!!
+    val maxActorLength = actorRepresentations.map { it.length }.maxOrNull()!!
+    val maxResultLength = resultRepresentations.map { it.length }.maxOrNull()!!
     return actors.indices.map { i ->
         val actorRepr = actorRepresentations[i]
         val resultRepr = resultRepresentations[i]

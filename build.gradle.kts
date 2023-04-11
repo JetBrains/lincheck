@@ -1,6 +1,6 @@
-import groovy.util.Node
-import groovy.util.NodeList
-import kotlinx.team.infra.mavenPublicationsPom
+
+import groovy.util.*
+import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
 
 // atomicfu
@@ -16,7 +16,6 @@ plugins {
     java
     kotlin("multiplatform")
     id("maven-publish")
-    id("maven")
     id("kotlinx.team.infra") version "0.3.0-dev-64"
 }
 
@@ -30,11 +29,11 @@ kotlin {
         withJava()
 
         val main by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
+            kotlinOptions.jvmTarget = "11"
         }
 
         val test by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
+            kotlinOptions.jvmTarget = "11"
         }
     }
 
@@ -71,8 +70,8 @@ kotlin {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 sourceSets.main {
