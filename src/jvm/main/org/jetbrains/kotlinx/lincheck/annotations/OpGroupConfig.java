@@ -32,11 +32,15 @@ import java.lang.annotation.Target;
 /**
  * Set some restrictions to the group with the specified name,
  * used during the scenario generation phase.
+ *
+ * @deprecated use {@link Operation#nonParallelGroup()} instead.
  */
+@SuppressWarnings("DeprecatedIsStillUsed")
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(OpGroupConfig.OpGroupConfigs.class)
 @Inherited
+@Deprecated(forRemoval = true)
 public @interface OpGroupConfig {
     /**
      * Name of this group used by {@link Operation#group()}.

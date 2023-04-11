@@ -78,6 +78,7 @@ public class CTestStructure {
         return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation);
     }
 
+    @SuppressWarnings("removal")
     private static void readTestStructureFromClass(Class<?> clazz, Map<String, ParameterGenerator<?>> namedGens,
                                                    Map<String, OperationGroup> groupConfigs,
                                                    List<ActorGenerator> actorGenerators,
@@ -128,6 +129,11 @@ public class CTestStructure {
                     if (operationGroup == null)
                         throw new IllegalStateException("Operation group " + opGroup + " is not configured");
                     operationGroup.actors.add(actorGenerator);
+                }
+                String opNonParallelGroupName = opAnn.nonParallelGroup();
+                if (!opNonParallelGroupName.equals("")) { // is `nonParallelGroup` specified?
+                    groupConfigs.computeIfAbsent(opNonParallelGroupName, name -> new OperationGroup(name, true));
+                    groupConfigs.get(opNonParallelGroupName).actors.add(actorGenerator);
                 }
             }
             if (m.isAnnotationPresent(Validate.class)) {
