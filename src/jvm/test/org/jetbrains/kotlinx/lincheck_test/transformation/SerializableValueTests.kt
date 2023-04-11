@@ -25,13 +25,12 @@ class SerializableResultTest : AbstractLincheckTest() {
     @Operation
     fun getAndSet(key: Int) = counter.getAndSet(ValueHolder(key))
 
-    override fun extractState(): Any = counter.get().value
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class SerializableJavaUtilResultTest : AbstractLincheckTest() {
@@ -40,13 +39,12 @@ class SerializableJavaUtilResultTest : AbstractLincheckTest() {
     @Operation
     fun get(key: Int) = value
 
-    override fun extractState(): Any = value
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
@@ -58,13 +56,7 @@ class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectRe
         return value
     }
 
-    override fun extractState(): Any = value
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
-    }
+    override val testPlanningConstraints: Boolean = false
 }
 
 class SerializableNullResultTest {
@@ -88,13 +80,12 @@ class SerializableParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: ValueHolder): Int = counter.addAndGet(key.value)
 
-    override fun extractState(): Any = counter.get()
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 @Param(name = "key", gen = ValueHolderGen::class)
@@ -107,13 +98,7 @@ class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResults
         return counter
     }
 
-    override fun extractState(): Any = counter
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
-    }
+    override val testPlanningConstraints: Boolean = false
 }
 
 class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<ValueHolder> {
@@ -125,13 +110,12 @@ class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
 
-    override fun extractState(): Any = 0 // constant state
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class JavaUtilGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>> {
@@ -145,13 +129,12 @@ class SerializableNullParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>?): Int = key?.sum() ?: 0
 
-    override fun extractState(): Any = 0 // constant state
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class NullGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>?> {

@@ -30,6 +30,8 @@ class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure:
     }
 
     override fun extractState(): Any = canEnterForbiddenSection
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
@@ -42,4 +44,6 @@ class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(Unexpec
     }
 
     override fun extractState(): Any = 0 // constant state
+
+    override val testPlanningConstraints: Boolean = false
 }

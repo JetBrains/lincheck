@@ -19,7 +19,6 @@ import org.junit.*
  * Checks that [Object.hashCode] is replaced with a deterministic
  * implementations in the model checking mode.
  */
-@ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
 class HashCodeStubTest : VerifierState() {
     @Volatile
     private var a: Any = Any()
@@ -37,7 +36,10 @@ class HashCodeStubTest : VerifierState() {
 
     @Test
     fun test() {
-        LinChecker.check(this::class.java)
+        LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
+        }.check(this::class.java)
     }
 
     override fun extractState(): Any = 0 // constant state

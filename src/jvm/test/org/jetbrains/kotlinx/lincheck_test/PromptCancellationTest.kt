@@ -14,7 +14,6 @@ import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.coroutines.*
@@ -64,13 +63,13 @@ abstract class AbstractPromptCancellationTest(
         return returnResult
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        actorsBefore(0)
-        threads(2)
-        actorsPerThread(1)
-        actorsAfter(0)
-        sequentialSpecification?.let { sequentialSpecification(it.java) }
+    override fun LincheckOptionsImpl.customize() {
+        this@AbstractPromptCancellationTest.sequentialSpecification?.let {
+            sequentialImplementation = it.java
+        }
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class CorrectPromptCancellationTest : AbstractPromptCancellationTest()

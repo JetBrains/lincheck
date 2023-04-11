@@ -24,14 +24,14 @@ class UnexpectedExceptionInCancellationHandlerTest: AbstractLincheckTest(Unexpec
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(100)
-        actorsBefore(0)
-        actorsAfter(0)
-        threads(1)
-        actorsPerThread(1)
-        sequentialSpecification(UnexpectedExceptionInCancellationHandlerTestSequential::class.java)
+    override fun LincheckOptionsImpl.customize() {
+        maxThreads = 1
+        maxOperationsInThread = 1
+        generateBeforeAndAfterParts = false
+        sequentialImplementation = UnexpectedExceptionInCancellationHandlerTestSequential::class.java
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class UnexpectedExceptionInCancellationHandlerTestSequential() {

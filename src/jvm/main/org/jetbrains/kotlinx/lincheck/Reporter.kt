@@ -21,9 +21,15 @@ class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
     private val outErr: PrintStream = System.err
 
-    fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
-        appendLine("\n= Iteration $iteration / $maxIterations =")
+    fun logIteration(iteration: Int, scenario: ExecutionScenario) = log(INFO) {
+        appendLine("\n= Iteration $iteration =")
         appendExecutionScenario(scenario)
+    }
+
+    fun logIterationStatistics(invocations: Int, runningTimeNano: Long, remainingTimeNano: Long?) = log(INFO) {
+        val runningTime = nanoTimeToString(runningTimeNano)
+        val remainingString = remainingTimeNano?.let { String.format(", remaining time ${nanoTimeToString(it)}s") } ?: ""
+        appendLine("= Statistics: #invocations=$invocations, running time ${runningTime}s${remainingString} =")
     }
 
     fun logFailedIteration(failure: LincheckFailure) = log(INFO) {
@@ -35,7 +41,6 @@ class Reporter(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
-
     private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
@@ -45,7 +50,7 @@ class Reporter(private val logLevel: LoggingLevel) {
     }
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = WARN
+@JvmField val DEFAULT_LOG_LEVEL = INFO
 enum class LoggingLevel {
     INFO, WARN
 }
@@ -561,8 +566,8 @@ private fun StringBuilder.appendHints(hints: List<String>) {
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
     appendLine("= Validation function ${failure.functionName} has failed =")
     appendExecutionScenario(failure.scenario)
-    appendln()
-    appendln()
+    appendLine()
+    appendLine()
     appendException(failure.exception)
     return this
 }
@@ -580,3 +585,7 @@ private fun StringBuilder.appendException(t: Throwable) {
 }
 
 private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
+
+
+internal fun nanoTimeToString(timeNano: Long, decimalPlaces: Int = 3) =
+    String.format("%.${decimalPlaces}f", timeNano.toDouble() / 1_000_000_000)

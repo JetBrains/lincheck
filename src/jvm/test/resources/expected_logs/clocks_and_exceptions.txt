@@ -2,24 +2,10 @@
 | ----------------------------------------------------------------------- |
 |         Thread 1         |                   Thread 2                   |
 | ----------------------------------------------------------------------- |
-| operation2(): void       |                                              |
-| operation1(): void       |                                              |
-| operation1(): void       |                                              |
-| operation2(): void       |                                              |
-| operation2(): void       |                                              |
-| ----------------------------------------------------------------------- |
 | operation1(): void       | operation2(): IllegalStateException #1 [1,0] |
-| operation1(): void [1,0] | operation1(): void [1,1]                     |
-| ----------------------------------------------------------------------- |
-| operation1(): void       |                                              |
-| operation1(): void       |                                              |
-| operation1(): void       |                                              |
-| operation2(): void       |                                              |
-| operation1(): void       |                                              |
+| operation1(): void [1,0] |                                              |
 | ----------------------------------------------------------------------- |
 
----
-All operations above the horizontal line | ----- | happen before those below the line
 ---
 Values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
@@ -31,24 +17,13 @@ The following interleaving leads to the error:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                            Thread 1                                                            |                Thread 2                |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation2()                                                                                                                   |                                        |
-| operation1()                                                                                                                   |                                        |
-| operation1()                                                                                                                   |                                        |
-| operation2()                                                                                                                   |                                        |
-| operation2()                                                                                                                   |                                        |
 | operation1()                                                                                                                   |                                        |
 | operation1()                                                                                                                   |                                        |
 |   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                        |
 |   switch                                                                                                                       |                                        |
 |                                                                                                                                | operation2(): IllegalStateException #1 |
-|                                                                                                                                | operation1()                           |
 |   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                        |
 |   result: void                                                                                                                 |                                        |
-| operation1()                                                                                                                   |                                        |
-| operation1()                                                                                                                   |                                        |
-| operation1()                                                                                                                   |                                        |
-| operation2()                                                                                                                   |                                        |
-| operation1()                                                                                                                   |                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
@@ -56,59 +31,19 @@ Exception stack traces:
 	at org.jetbrains.kotlinx.lincheck_test.representation.ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                            Thread 1                                                            |                                                            Thread 2                                                            |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation2()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.READ: false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)  |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation2()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.READ: false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)  |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation2()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.READ: false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)  |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   switch                                                                                                                       |                                                                                                                                |
-|                                                                                                                                | operation2(): IllegalStateException #1                                                                                         |
-|                                                                                                                                |   canEnterForbiddenSection.READ: true at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)   |
-|                                                                                                                                |   result: IllegalStateException #1                                                                                             |
-|                                                                                                                                | operation1()                                                                                                                   |
-|                                                                                                                                |   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |
-|                                                                                                                                |   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |
-|                                                                                                                                |   result: void                                                                                                                 |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation2()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.READ: false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)  |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                |
-|   result: void                                                                                                                 |                                                                                                                                |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                            Thread 1                                                            |                                                           Thread 2                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation1()                                                                                                                   |                                                                                                                              |
+|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                              |
+|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                              |
+|   result: void                                                                                                                 |                                                                                                                              |
+| operation1()                                                                                                                   |                                                                                                                              |
+|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                              |
+|   switch                                                                                                                       |                                                                                                                              |
+|                                                                                                                                | operation2(): IllegalStateException #1                                                                                       |
+|                                                                                                                                |   canEnterForbiddenSection.READ: true at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34) |
+|                                                                                                                                |   result: IllegalStateException #1                                                                                           |
+|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                              |
+|   result: void                                                                                                                 |                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
@@ -63,8 +62,9 @@ class TraceReportingTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions().apply {
-            iterations(0)
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
             addCustomScenario {
                 parallel {
                     thread {
@@ -75,6 +75,7 @@ class TraceReportingTest {
                     }
                 }
             }
+            generateRandomScenarios = false
         }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting.txt")
         checkTraceHasNoLincheckEvents(failure.toString())
@@ -95,9 +96,10 @@ class TraceReportingTest {
 
     @Test
     fun testInitPostParts() {
-        val failure = ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario {
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
+            addCustomScenario {
                 initial {
                     actor(::enterInit)
                 }
@@ -113,7 +115,9 @@ class TraceReportingTest {
                     actor(::enterPost)
                 }
             }
-            .checkImpl(this::class.java)
+            generateRandomScenarios = false
+            minimizeFailedScenario = false
+        }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting_init_post_parts.txt")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
@@ -125,17 +129,19 @@ class TraceReportingTest {
 
     @Test
     fun testEmptyTrace() {
-        val failure = ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario {
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
+            addCustomScenario {
                 parallel {
                     thread {
                         actor(::notImplemented)
                     }
                 }
             }
-            .sequentialSpecification(EmptySequentialImplementation::class.java)
-            .checkImpl(this::class.java)
+            generateRandomScenarios = false
+            sequentialImplementation = EmptySequentialImplementation::class.java
+        }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting_empty.txt")
     }
 

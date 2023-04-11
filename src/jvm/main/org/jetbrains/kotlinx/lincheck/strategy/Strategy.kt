@@ -9,9 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.ClassVisitor
+import java.io.Closeable
 
 /**
  * Implementation of this class describes how to run the generated execution.
@@ -22,13 +26,60 @@ import org.objectweb.asm.ClassVisitor
  */
 abstract class Strategy protected constructor(
     val scenario: ExecutionScenario
-) {
+) : Closeable {
     open fun needsTransformation() = false
+
     open fun createTransformer(cv: ClassVisitor): ClassVisitor {
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    abstract fun run(): LincheckFailure?
+    fun run(verifier: Verifier, planner: InvocationsPlanner, tracker: RunTracker? = null): LincheckFailure? {
+        var invocation = 0
+        while (planner.shouldDoNextInvocation(invocation)) {
+            if (!nextInvocation()) {
+                return null
+            }
+            initializeInvocation()
+            tracker.trackInvocation(invocation) { runInvocation(verifier) }
+                ?.let { return it }
+            invocation++
+        }
+        return null
+    }
+
+    fun runInvocation(verifier: Verifier): LincheckFailure? = when (val result = runInvocation()) {
+        is CompletedInvocationResult ->
+            if (!verifier.verifyResults(scenario, result.results)) {
+                IncorrectResultsFailure(scenario, result.results, result.tryCollectTrace())
+            } else null
+        else -> result.toLincheckFailure(scenario, result.tryCollectTrace())
+    }
+
+    /**
+     * Sets the internal state of strategy to run next invocation.
+     *
+     * @returns true if there is next invocation to run, false if all invocations have been studied.
+     */
+    open fun nextInvocation(): Boolean = true
+
+    /**
+     * Initializes the invocation.
+     * Should be called before each call to [runInvocation].
+     */
+    open fun initializeInvocation() {}
+
+    /**
+     * Runs the current invocation and returns its result.
+     * For deterministic strategies, consecutive calls to [runInvocation]
+     * (without intervening [nextInvocation] calls) should run the same invocation, leading to the same results.
+     *
+     * Should be called after [initializeInvocation] and only if previous call to [nextInvocation] returned `true`.
+     */
+    abstract fun runInvocation(): InvocationResult
+
+    open fun InvocationResult.tryCollectTrace(): Trace? = null
+
+    override fun close() {}
 
     open fun beforePart(part: ExecutionPart) {}
 

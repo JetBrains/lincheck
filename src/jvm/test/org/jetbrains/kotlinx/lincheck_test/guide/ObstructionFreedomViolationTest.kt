@@ -63,7 +63,7 @@ class ObstructionFreedomViolationTest  {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .check(this::class)
+    fun lincheckTest() = LincheckOptions {
+        checkObstructionFreedom = true
+    }.check(this::class)
 }

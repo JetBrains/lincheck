@@ -7,6 +7,8 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+@file:Suppress("DEPRECATION_ERROR")
+
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
@@ -23,6 +25,7 @@ import java.io.Serializable
  * Otherwise, this test fails by timeout since
  * the number of invocations is set to [Int.MAX_VALUE].
  */
+@Suppress("DEPRECATION_ERROR")
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50, minimizeFailedScenario = false)
 class FinalFieldReadingEliminationTest : VerifierState() {
     val primitiveValue: Int = 32
