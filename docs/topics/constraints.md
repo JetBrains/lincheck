@@ -10,7 +10,7 @@ from the [JCTools library](https://github.com/JCTools/JCTools). Let's write a te
 
 To meet the single-consumer restriction, ensure that all `poll()` and `peek()` consuming operations
 are called from a single thread. For that, we can set the `nonParallelGroup` parameter of the 
-corresponding `@Operation` annotations  to the same value, e.g. `"consumers"`.
+corresponding `@Operation` annotations to the same value, e.g. `"consumers"`.
 
 Here is the resulting test:
 
