@@ -35,6 +35,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("removal")
 @OpGroupConfig(name = "push_remove", nonParallel = true)
 @StressCTest(iterations = 5, actorsBefore = 0, actorsPerThread = 2, actorsAfter = 0)
 public class ResultAsParameterTest extends VerifierState {

@@ -28,17 +28,15 @@ import org.jetbrains.kotlinx.lincheck.annotations.*;
 
 import java.util.*;
 
-@OpGroupConfig(name = "producer", nonParallel = true)
-@OpGroupConfig(name = "consumer", nonParallel = true)
 public class NonParallelOpGroupTest extends AbstractLincheckTest {
     private final SpscLinkedAtomicQueue<Integer> queue = new SpscLinkedAtomicQueue<>();
 
-    @Operation(group = "producer")
+    @Operation(nonParallelGroup = "producer")
     public void offer(Integer x) {
         queue.offer(x);
     }
 
-    @Operation(group = "consumer")
+    @Operation(nonParallelGroup = "consumer")
     public Integer poll() {
         return queue.poll();
     }
