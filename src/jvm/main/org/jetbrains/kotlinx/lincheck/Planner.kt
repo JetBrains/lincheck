@@ -25,7 +25,9 @@ import kotlin.math.*
 
 interface InvocationPlanner {
     fun shouldDoNextInvocation(): Boolean
+
     fun startMeasureInvocationTime()
+
     fun endMeasureInvocationTime()
 }
 
@@ -38,7 +40,7 @@ internal inline fun InvocationPlanner.measureInvocationTime(block: () -> Invocat
     }
 }
 
-internal class OldApiInvocationPlanner(invocationsPerIteration: Int) : InvocationPlanner {
+internal class FixedInvocationPlanner(invocationsPerIteration: Int) : InvocationPlanner {
     private var remainingInvocations = invocationsPerIteration
 
     override fun shouldDoNextInvocation() = remainingInvocations > 0
@@ -57,13 +59,17 @@ internal class OldApiInvocationPlanner(invocationsPerIteration: Int) : Invocatio
  * - keep the track of deadlines and remaining time;
  * - adaptively adjusting number of test scenarios and invocations allocated per scenario.
  */
-internal class AdaptivePlanner(options: LincheckOptionsImpl) {
-
+internal class AdaptivePlanner (
     /**
      * Total amount of time in milliseconds allocated to testing.
      */
-    val testingTime: Long = 1000 * options.testingTimeInSeconds
-
+    val testingTime: Long,
+    /**
+     * A lower bound on the number of iterations that should be definitely performed, unless impossible.
+     * This number is fixed at the beginning of testing and does not change.
+     */
+    val iterationsLowerBound: Int = 0
+) : InvocationPlanner {
     /**
      * Total amount of time already spent on testing.
      */
@@ -83,19 +89,17 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
         get() = round(100 * runningTime.toDouble() / testingTime).toInt()
 
     /**
-     * The current test running mode that should be used.
+     * Current iteration number.
+      */
+    var iteration: Int = 0
+        private set
+
+    /**
+     * An optimistic upper bound on the number of iterations that are expected to be performed.
+     * If automatic adjustment of iteration number is enabled, this variable can change during testing.
      */
-    internal val mode: LincheckMode
-        get() = when (originalMode) {
-            LincheckMode.Stress         -> LincheckMode.Stress
-            LincheckMode.ModelChecking  -> LincheckMode.ModelChecking
-            LincheckMode.Hybrid         -> {
-                if (testingProgress < STRATEGY_SWITCH_THRESHOLD)
-                    LincheckMode.Stress
-                else
-                    LincheckMode.ModelChecking
-            }
-        }
+    var iterationsUpperBound: Int = max(iterationsLowerBound, INITIAL_ITERATIONS_UPPER_BOUND)
+        private set
 
     /**
      * An array keeping running time of all iterations.
@@ -104,36 +108,10 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
         get() = _iterationsRunningTime
 
     /**
-     * Current iteration number.
-      */
-    var iteration: Int = 0
-        private set
-
-    /**
      * Array keeping number of invocations executed for each iteration
      */
     val iterationsInvocationCount: List<Int>
         get() = _iterationsInvocationCount
-
-    /**
-     * A lower bound on the number of iterations that should be definitely performed,
-     * unless impossible (includes the number of custom scenarios).
-     * This number is fixed at the beginning of testing and does not change.
-     */
-    val iterationsLowerBound: Int = options.iterationsLowerBound()
-
-    /**
-     * An optimistic upper bound on the number of iterations that are expected to be performed.
-     * If automatic adjustment of iteration number is enabled, this variable can change during testing.
-     */
-    var iterationsUpperBound: Int = options.iterationsUpperBound()
-        private set
-
-    /**
-     * If automatic adjustment of iteration number is disabled,
-     * this is the number of planned iterations, otherwise null.
-     */
-    val iterationsStrictBound: Int? = options.iterationsStrictBound()
 
     /**
      * Current invocation number within current iteration.
@@ -145,13 +123,8 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
      * Number of invocations per iteration.
      * If automatic adjustment of invocations number is enabled, this variable can change during testing.
      */
-    var invocationsBound = options.invocationsPerIteration
+    var invocationsBound = INITIAL_INVOCATIONS_BOUND
         private set
-
-    private val originalMode        = options.mode
-
-    private val adjustIterations    = options.adjustIterations
-    private val adjustInvocations   = options.adjustInvocations
 
     // an array keeping running time of all iterations
     private val _iterationsRunningTime = mutableListOf<Long>()
@@ -172,7 +145,7 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
     fun shouldDoNextIteration(): Boolean =
         (remainingTime > 0) && (iteration < iterationsUpperBound)
 
-    fun shouldDoNextInvocation(): Boolean =
+    override fun shouldDoNextInvocation(): Boolean =
         (remainingTime > 0) && (invocation < invocationsBound)
 
     fun<T> measureIterationTime(block: () -> T): T {
@@ -187,29 +160,25 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
         }
     }
 
-    fun <T> measureInvocationTime(block: () -> T): T {
-        val start = System.currentTimeMillis()
-        return block().also {
-            val elapsed = System.currentTimeMillis() - start
-            runningTime += elapsed
-            invocationsRunningTime[invocationIndex] = elapsed
-            if (++invocation == ADJUSTMENT_THRESHOLD) {
-                adjustBounds()
-                invocationsRunningTime.fill(0)
-            }
+    private var lastInvocationStartTime = -1L
+
+    override fun startMeasureInvocationTime() {
+        lastInvocationStartTime = System.currentTimeMillis()
+    }
+
+    override fun endMeasureInvocationTime() {
+        val elapsed = System.currentTimeMillis() - lastInvocationStartTime
+        runningTime += elapsed
+        invocationsRunningTime[invocationIndex] = elapsed
+        if (++invocation == ADJUSTMENT_THRESHOLD) {
+            adjustBounds()
+            invocationsRunningTime.fill(0)
         }
     }
 
     private fun adjustBounds() {
-        // return if dynamic adjustment is disabled
-        if (!adjustIterations && !adjustInvocations)
-            return
-
         // first handle lower bound, make sure we are on schedule
         if (iteration < iterationsLowerBound) {
-            // if invocation number adjustment is disabled there is nothing we can do
-            if (!adjustInvocations)
-                return
             val remainingIterations = (iterationsLowerBound - iteration - 1)
             val remainingInvocations = (invocationsBound - invocation) + remainingIterations * invocationsBound
             val timeEstimate = remainingInvocations * averageInvocationTime
@@ -226,19 +195,15 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
         val remainingInvocations = (invocationsBound - invocation) + remainingIterations * invocationsBound
         val timeEstimate = remainingInvocations * averageInvocationTime
         // if we under-perform by an order of magnitude, adjust the invocations bound to fit into deadline
-        if (adjustInvocations && timeEstimate / remainingTime > INVOCATIONS_FACTOR) {
+        if (timeEstimate / remainingTime > INVOCATIONS_FACTOR) {
             invocationsBound = max(INVOCATIONS_LOWER_BOUND, invocationsBound / INVOCATIONS_FACTOR)
             return
         }
         // if we over-perform by and order of magnitude, increase the number of invocations per iteration
-        if (adjustInvocations && remainingTime / timeEstimate > INVOCATIONS_FACTOR) {
+        if (remainingTime / timeEstimate > INVOCATIONS_FACTOR) {
             invocationsBound = min(INVOCATIONS_UPPER_BOUND, invocationsBound * INVOCATIONS_FACTOR)
             return
         }
-
-        // if iteration number adjustment is disabled there is nothing else we can do
-        if (!adjustIterations)
-            return
 
         // if we under-perform, decrease the number of planned iterations
         if (remainingTime < timeEstimate) {
@@ -258,26 +223,8 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
     }
 
     companion object {
-        private fun LincheckOptionsImpl.iterationsLowerBound() =
-            if (adjustIterations)
-                // if automatic adjustment is enabled, we definitely should run custom scenarios,
-                // other scenarios only if there will be time left
-                customScenarios.size
-            else
-                // if automatic adjustment is disabled, we have should perform
-                // exactly the following number of iterations (as prescribed by the user)
-                customScenarios.size + iterations
-
-        private fun LincheckOptionsImpl.iterationsUpperBound() =
-            if (adjustIterations)
-                max(iterationsLowerBound(), iterations)
-            else
-                // if automatic adjustment is disabled, upper bound is equal to lower bound,
-                // as we should perform the exact number of iterations
-                iterationsLowerBound()
-
-        private fun LincheckOptionsImpl.iterationsStrictBound() =
-            if (!adjustIterations) iterationsLowerBound() else null
+        // initial iterations upper bound
+        private const val INITIAL_ITERATIONS_UPPER_BOUND = 30
 
         // number of iterations added/subtracted when we over- or under-perform the plan
         private const val ITERATIONS_DELTA = 5
@@ -285,6 +232,9 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
         // factor of invocations multiplied/divided by when we over- or under-perform the plan
         // by an order of magnitude
         private const val INVOCATIONS_FACTOR = 5
+
+        // initial number of invocations
+        private const val INITIAL_INVOCATIONS_BOUND = 5_000
 
         // lower bound of invocations allocated by iteration
         private const val INVOCATIONS_LOWER_BOUND = 1_000
@@ -294,10 +244,6 @@ internal class AdaptivePlanner(options: LincheckOptionsImpl) {
 
         // number of invocations performed between dynamic parameter adjustments
         private const val ADJUSTMENT_THRESHOLD = 100
-
-        // in hybrid mode: testing progress threshold (in %) after which strategy switch
-        //   from Stress to ModelChecking strategy occurs
-        private const val STRATEGY_SWITCH_THRESHOLD = 25
     }
 
 }

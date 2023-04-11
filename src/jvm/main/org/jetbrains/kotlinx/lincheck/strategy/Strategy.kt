@@ -37,9 +37,7 @@ import java.io.*
  * without any code change.
  */
 abstract class Strategy protected constructor(
-    val scenario: ExecutionScenario,
-    val verifier: Verifier,
-    val invocationPlanner: InvocationPlanner
+    val scenario: ExecutionScenario
 ) : Closeable {
     open fun needsTransformation() = false
 
@@ -47,7 +45,7 @@ abstract class Strategy protected constructor(
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    fun run(): LincheckFailure? {
+    fun run(verifier: Verifier, invocationPlanner: InvocationPlanner): LincheckFailure? {
         while (invocationPlanner.shouldDoNextInvocation()) {
             val invocationResult = invocationPlanner.measureInvocationTime {
                 runInvocation()
@@ -67,7 +65,7 @@ abstract class Strategy protected constructor(
 
     abstract fun runInvocation(): InvocationResult
 
-    abstract fun InvocationResult.tryCollectTrace(): Trace?
+    open fun InvocationResult.tryCollectTrace(): Trace? = null
 
     override fun close() {}
 

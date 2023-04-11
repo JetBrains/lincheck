@@ -47,10 +47,12 @@ abstract class ManagedStrategy(
     scenario: ExecutionScenario,
     private val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration,
-    verifier: Verifier,
-    invocationPlanner: InvocationPlanner
-) : Strategy(scenario, verifier, invocationPlanner), Closeable {
+    private val timeoutMs: Long,
+    private val checkObstructionFreedom: Boolean,
+    private val eliminateLocalObjects: Boolean,
+    private val hangingDetectionThreshold: Int,
+    private val guarantees: List<ManagedStrategyGuarantee>,
+) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.parallelExecution.size
     // Runner for scenario invocations,
@@ -121,15 +123,15 @@ abstract class ManagedStrategy(
             testClass,
             validationFunctions,
             stateRepresentationFunction,
-            testCfg.timeoutMs,
+            timeoutMs,
             UseClocks.ALWAYS
         )
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
         tracePointConstructors = tracePointConstructors,
-        guarantees = testCfg.guarantees,
-        eliminateLocalObjects = testCfg.eliminateLocalObjects,
+        guarantees = guarantees,
+        eliminateLocalObjects = eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
         codeLocationIdProvider = codeLocationIdProvider
@@ -167,7 +169,7 @@ abstract class ManagedStrategy(
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
-        loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
+        loopDetector = LoopDetector(hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
@@ -239,7 +241,7 @@ abstract class ManagedStrategy(
     protected abstract fun setNextInvocation(): Boolean
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
+        if (checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException

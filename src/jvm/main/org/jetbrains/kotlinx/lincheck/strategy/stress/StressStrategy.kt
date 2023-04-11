@@ -31,14 +31,12 @@ import java.lang.reflect.*
 
 @Suppress("DEPRECATION_ERROR")
 internal class StressStrategy(
-    testCfg: StressCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
-    verifier: Verifier,
-    invocationPlanner: InvocationPlanner
-) : Strategy(scenario, verifier, invocationPlanner) {
+    timeoutMs: Long,
+) : Strategy(scenario) {
     private val runner: Runner
 
     init {
@@ -47,7 +45,7 @@ internal class StressStrategy(
             testClass = testClass,
             validationFunctions = validationFunctions,
             stateRepresentationFunction = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
+            timeoutMs = timeoutMs,
             useClocks = UseClocks.RANDOM
         )
         try {

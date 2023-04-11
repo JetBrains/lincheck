@@ -46,15 +46,24 @@ import kotlin.random.*
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-    @Suppress("DEPRECATION_ERROR")
-    testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
-    verifier: Verifier,
-    invocationPlanner: InvocationPlanner
-) : ManagedStrategy(testClass, scenario, validationFunctions, stateRepresentationFunction, testCfg, verifier, invocationPlanner) {
+    timeoutMs: Long,
+    checkObstructionFreedom: Boolean,
+    eliminateLocalObjects: Boolean,
+    hangingDetectionThreshold: Int,
+    guarantees: List<ManagedStrategyGuarantee>,
+) : ManagedStrategy(testClass, scenario,
+    validationFunctions,
+    stateRepresentationFunction,
+    timeoutMs,
+    checkObstructionFreedom,
+    eliminateLocalObjects,
+    hangingDetectionThreshold,
+    guarantees,
+) {
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0

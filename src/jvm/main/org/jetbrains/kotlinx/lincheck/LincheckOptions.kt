@@ -21,8 +21,14 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+
+import kotlin.math.*
 import kotlin.reflect.*
 
 interface LincheckOptions {
@@ -31,7 +37,14 @@ interface LincheckOptions {
      */
     var testingTimeInSeconds: Long
 
+    /**
+     * Maximal number of threads in generated scenarios.
+     */
     var maxThreads: Int
+
+    /**
+     * Maximal number of operations in generated scenarios.
+     */
     var maxOperationsInThread: Int
 
     /**
@@ -61,8 +74,10 @@ interface LincheckOptions {
 
     /**
      * Runs the Lincheck test on the specified class.
+     *
+     * @return [LincheckFailure] if some bug has been found.
      */
-    fun check(testClass: Class<*>)
+    fun checkImpl(testClass: Class<*>): LincheckFailure?
 }
 
 /**
@@ -74,6 +89,15 @@ fun LincheckOptions(configurationBlock: LincheckOptions.() -> Unit): LincheckOpt
     val options = LincheckOptionsImpl()
     options.configurationBlock()
     return options
+}
+
+/**
+ * Runs the Lincheck test on the specified class.
+ *
+ * @throws [LincheckAssertionError] if some bug has been found.
+ */
+fun LincheckOptions.check(testClass: Class<*>) {
+    checkImpl(testClass)?.let { throw LincheckAssertionError(it) }
 }
 
 /**
@@ -92,27 +116,125 @@ internal enum class LincheckMode {
 internal class LincheckOptionsImpl : LincheckOptions {
     private val customScenarios = mutableListOf<ExecutionScenario>()
 
-    override var testingTimeInSeconds: Long = DEFAULT_TESTING_TIME
+    override var testingTimeInSeconds = DEFAULT_TESTING_TIME
+    override var maxThreads = DEFAULT_MAX_THREADS
+    override var maxOperationsInThread = DEFAULT_MAX_OPERATIONS
     override var verifier: Class<out Verifier> = LinearizabilityVerifier::class.java
     override var sequentialImplementation: Class<*>? = null
     override var checkObstructionFreedom: Boolean = false
 
     internal var mode = LincheckMode.Hybrid
+    internal var invocationTimeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS
     internal var minimizeFailedScenario = true
-    internal var invocationTimeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
+    internal var generateScenarios = true
     internal var generateBeforeAndAfterParts = true
 
     override fun addCustomScenario(scenario: ExecutionScenario) {
         customScenarios.add(scenario)
     }
 
-    override fun check(testClass: Class<*>) {
-        checkImpl(testClass)?.let { throw LincheckAssertionError(it) }
+    override fun checkImpl(testClass: Class<*>): LincheckFailure? {
+        val reporter = Reporter(DEFAULT_LOG_LEVEL)
+        val planner = AdaptivePlanner(
+            testingTime = testingTimeInSeconds * 1000,
+            iterationsLowerBound = customScenarios.size
+        )
+        val testStructure = CTestStructure.getFromTestClass(testClass)
+        val executionGenerator = options.createExecutionGenerator()
+        var verifier = createVerifier(checkStateEquivalence = true)
+        while (planner.shouldDoNextIteration()) {
+            val i = planner.iteration
+            // For performance reasons, verifier re-uses LTS from previous iterations.
+            // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
+            // This is why we periodically create a new verifier to still have increased performance
+            // from re-using LTS and limit the size of potential memory leak.
+            // https://github.com/Kotlin/kotlinx-lincheck/issues/124
+            if ((i + 1) % LinChecker.VERIFIER_REFRESH_CYCLE == 0) {
+                verifier = createVerifier(checkStateEquivalence = false)
+            }
+            // TODO: maybe we should move custom scenarios logic into Planner?
+            val isCustomScenario = (i < customScenarios.size)
+            val scenario = if (isCustomScenario)
+                customScenarios[i]
+            else
+                executionGenerator.nextExecution()
+            scenario.validate()
+            reporter.logIteration(i, scenario)
+            val currentMode = planner.currentMode()
+            val strategy = createStrategy(currentMode, testClass, scenario, testStructure)
+            val failure = planner.measureIterationTime {
+                strategy.run(verifier, planner)
+            }
+            reporter.logIterationStatistics(planner.iterationsInvocationCount[i], planner.iterationsRunningTime[i])
+            if (failure == null)
+                continue
+            // fix the number of invocations for failure minimization
+            val minimizationInvocationsCount =
+                max(2 * planner.iterationsInvocationCount[i], planner.invocationsBound)
+            var minimizedFailure = if (!isCustomScenario)
+                failure.minimize(currentMode, testCfg, minimizationInvocationsCount)
+            else
+                failure
+            if (mode == LincheckMode.Hybrid && currentMode == LincheckMode.Stress) {
+                // try to reproduce an error trace with model checking strategy
+                createStrategy(LincheckMode.ModelChecking, testClass, minimizedFailure.scenario, testStructure)
+                    .run(verifier, FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT))
+                    ?.let { minimizedFailure = it }
+            }
+            reporter.logFailedIteration(minimizedFailure)
+            return minimizedFailure
+        }
+        return null
     }
 
-    fun checkImpl(testClass: Class<*>): LincheckFailure? {
-        TODO()
+    private fun AdaptivePlanner.currentMode() = when (this@LincheckOptionsImpl.mode) {
+            LincheckMode.Stress         -> LincheckMode.Stress
+            LincheckMode.ModelChecking  -> LincheckMode.ModelChecking
+            LincheckMode.Hybrid         -> {
+                if (testingProgress < STRATEGY_SWITCH_THRESHOLD)
+                    LincheckMode.Stress
+                else
+                    LincheckMode.ModelChecking
+            }
+        }
+
+    private fun createVerifier(checkStateEquivalence: Boolean) =
+        verifier.getConstructor(Class::class.java).newInstance(sequentialImplementation)
+
+    private fun createStrategy(
+        mode: LincheckMode,
+        testClass: Class<*>,
+        scenario: ExecutionScenario,
+        testStructure: CTestStructure,
+    ): Strategy = when (mode) {
+
+        LincheckMode.Stress -> StressStrategy(testClass, scenario,
+            testStructure.validationFunctions,
+            testStructure.stateRepresentation,
+            timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
+        )
+
+        LincheckMode.ModelChecking -> ModelCheckingStrategy(testClass, scenario,
+            testStructure.validationFunctions,
+            testStructure.stateRepresentation,
+            timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
+            checkObstructionFreedom = ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM,
+            eliminateLocalObjects = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS,
+            hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD,
+            guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
+        )
+
+        else -> throw IllegalArgumentException()
     }
 }
 
-private const val DEFAULT_TESTING_TIME = 10L
+private const val DEFAULT_TESTING_TIME = 5L
+private const val DEFAULT_MAX_THREADS = 4
+private const val DEFAULT_MAX_OPERATIONS = 4
+
+// in hybrid mode: testing progress threshold (in %) after which strategy switch
+//   from Stress to ModelChecking strategy occurs
+private const val STRATEGY_SWITCH_THRESHOLD = 25
+
+private const val MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT = 10_000
+

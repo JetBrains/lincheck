@@ -150,48 +150,14 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             testClass = testClass,
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
-            stateRepresentationMethod = testStructure.stateRepresentation,
-            verifier = verifier,
-            invocationPlanner = OldApiInvocationPlanner(testCfg.invocations)
-        ).run()
+            stateRepresentationMethod = testStructure.stateRepresentation
+        ).run(verifier, FixedInvocationPlanner(testCfg.invocations))
 
     private val CTestConfiguration.invocations get() = when (this) {
         is ModelCheckingCTestConfiguration -> this.invocationsPerIteration
         is StressCTestConfiguration -> this.invocationsPerIteration
         else -> error("unexpected")
     }
-
-    private fun ExecutionScenario.copy() = ExecutionScenario(
-        ArrayList(initExecution),
-        parallelExecution.map { ArrayList(it) },
-        ArrayList(postExecution)
-    )
-
-    private val ExecutionScenario.isValid: Boolean
-        get() = !isParallelPartEmpty &&
-                (!hasSuspendableActors() || (!hasSuspendableActorsInInitPart && !hasPostPartAndSuspendableActors))
-
-    private fun ExecutionScenario.validate() {
-        require(!isParallelPartEmpty) {
-            "The generated scenario has empty parallel part"
-        }
-        if (hasSuspendableActors()) {
-            require(!hasSuspendableActorsInInitPart) {
-                "The generated scenario for the test class with suspendable methods contains suspendable actors in initial part"
-            }
-            require(!hasPostPartAndSuspendableActors) {
-                "The generated scenario  for the test class with suspendable methods has non-empty post part"
-            }
-        }
-    }
-
-    private val ExecutionScenario.hasSuspendableActorsInInitPart get() =
-        initExecution.stream().anyMatch(Actor::isSuspendable)
-    private val ExecutionScenario.hasPostPartAndSuspendableActors get() =
-        (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
-    private val ExecutionScenario.isParallelPartEmpty get() =
-        parallelExecution.map { it.size }.sum() == 0
-
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
@@ -217,10 +183,9 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             LinChecker(testClass, options).check()
         }
 
-        private const val VERIFIER_REFRESH_CYCLE = 100
+        internal const val VERIFIER_REFRESH_CYCLE = 100
     }
 }
-
 
 /**
  * This is a short-cut for the following code:
@@ -244,3 +209,35 @@ fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.jav
 
 @Suppress("DEPRECATION_ERROR")
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+
+
+internal fun ExecutionScenario.copy() = ExecutionScenario(
+    ArrayList(initExecution),
+    parallelExecution.map { ArrayList(it) },
+    ArrayList(postExecution)
+)
+
+internal val ExecutionScenario.isValid: Boolean
+    get() = !isParallelPartEmpty &&
+        (!hasSuspendableActors() || (!hasSuspendableActorsInInitPart && !hasPostPartAndSuspendableActors))
+
+internal fun ExecutionScenario.validate() {
+    require(!isParallelPartEmpty) {
+        "The generated scenario has empty parallel part"
+    }
+    if (hasSuspendableActors()) {
+        require(!hasSuspendableActorsInInitPart) {
+            "The generated scenario for the test class with suspendable methods contains suspendable actors in initial part"
+        }
+        require(!hasPostPartAndSuspendableActors) {
+            "The generated scenario  for the test class with suspendable methods has non-empty post part"
+        }
+    }
+}
+
+internal val ExecutionScenario.hasSuspendableActorsInInitPart get() =
+    initExecution.stream().anyMatch(Actor::isSuspendable)
+internal val ExecutionScenario.hasPostPartAndSuspendableActors get() =
+    (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
+internal val ExecutionScenario.isParallelPartEmpty get() =
+    parallelExecution.map { it.size }.sum() == 0
