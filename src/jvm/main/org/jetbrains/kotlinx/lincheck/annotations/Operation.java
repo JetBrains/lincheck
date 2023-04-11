@@ -47,8 +47,17 @@ public @interface Operation {
     /**
      * Specifies the operation group which can add some execution restriction.
      * @see OpGroupConfig#name()
+     *
+     * @deprecated use {@link Operation#nonParallelGroup()} instead.
      */
+    @SuppressWarnings("removal")
+    @Deprecated(forRemoval = true)
     String group() default "";
+
+    /**
+     * Operations of the same group are never executed concurrently.
+     */
+    String nonParallelGroup() default "";
 
     /**
      * Handle the specified exceptions as a result of this operation invocation.
