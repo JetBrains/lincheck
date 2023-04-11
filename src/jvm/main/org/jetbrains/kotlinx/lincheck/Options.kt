@@ -112,6 +112,17 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     }
 
     /**
+     * Does nothing, states equivalence does not always improve performance of verification.
+     *
+     * Required correctness check of test instance state equivalency relation defined by the user.
+     * It checked whether two new instances of a test class are equal.
+     * If the check failed [[IllegalStateException]] was thrown.
+     */
+    @Deprecated("Does nothing, because equals/hashcode don't always improve performance of verification")
+    @java.lang.Deprecated
+    fun requireStateEquivalenceImplCheck(require: Boolean): OPT = applyAndCast { }
+
+    /**
      * If this feature is enabled and an invalid interleaving has been found,
      * *lincheck* tries to minimize the corresponding scenario in order to
      * construct a smaller one so that the test fails on it as well.

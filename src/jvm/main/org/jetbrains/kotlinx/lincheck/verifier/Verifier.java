@@ -33,7 +33,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
  * All implementations should have {@code (Class<?> sequentialSpecification)} constructor,
  * which takes the scenario to be tested and the correct sequential implementation of the testing data structure.
  */
-@FunctionalInterface
 public interface Verifier {
     /**
      * Verifies the specified results for correctness.
