@@ -28,7 +28,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
  * [VerifierState] lazily counts the test instance state, caches it, and uses in `equals` and `hashCode` methods.
  */
 @Deprecated("Doesn't always improve performance of verification", level = DeprecationLevel.WARNING)
-@java.lang.Deprecated
 abstract class VerifierState {
     private var _state: Any? = null
     private val state: Any
