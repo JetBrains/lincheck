@@ -19,6 +19,8 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+@file:Suppress("DEPRECATION_ERROR", "DEPRECATION")
+
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -28,6 +30,11 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 /**
  * Abstract class for test options.
  */
+@Deprecated(
+    message= "Options class exposes internal API, please use LincheckOptions instead",
+    replaceWith=ReplaceWith("LincheckOptions"),
+    level=DeprecationLevel.ERROR,
+)
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal var logLevel = DEFAULT_LOG_LEVEL
     protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS

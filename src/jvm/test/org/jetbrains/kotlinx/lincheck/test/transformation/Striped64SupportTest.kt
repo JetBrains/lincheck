@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.atomic.*
 
@@ -41,9 +40,11 @@ class Striped64SupportTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions()
-            .minimizeFailedScenario(false)
-            .checkImpl(this::class.java)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
+        } as LincheckOptionsImpl
+        val failure = options.checkImpl(this::class.java)
         assert(failure is IncorrectResultsFailure) {
             "This test should fail with IncorrectResultsFailure, but another error has been detected:\n$failure"
         }

@@ -37,8 +37,8 @@ class SequentialSpecificationTest : AbstractLincheckTest(IncorrectResultsFailure
     @Operation
     fun get() = c.get() + 1
 
-    override fun <O : Options<O, *>> O.customize() {
-        sequentialSpecification(CorrectCounter::class.java)
+    override fun LincheckOptionsImpl.customize() {
+        sequentialImplementation = CorrectCounter::class.java
     }
 }
 

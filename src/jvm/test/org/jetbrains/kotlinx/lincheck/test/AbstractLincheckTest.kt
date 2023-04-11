@@ -23,20 +23,35 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
-) : VerifierState() {
-    open fun <O: Options<O, *>> O.customize() {}
-    override fun extractState(): Any = System.identityHashCode(this)
+) {
+    @Test(timeout = TIMEOUT)
+    fun testWithStressStrategy(): Unit = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.Stress
+        configure()
+    }.runTest()
 
-    private fun <O : Options<O, *>> O.runInternalTest() {
+    @Test(timeout = TIMEOUT)
+    fun testWithModelCheckingStrategy(): Unit = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+        configure()
+    }.runTest()
+
+    @Test(timeout = TIMEOUT)
+    fun testWithHybridStrategy(): Unit = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.Hybrid
+        configure()
+    }.runTest()
+
+    private fun LincheckOptions.runTest() {
+        this as LincheckOptionsImpl
         val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)
         if (failure === null) {
             assert(expectedFailures.isEmpty()) {
@@ -50,29 +65,13 @@ abstract class AbstractLincheckTest(
         }
     }
 
-    @Test(timeout = TIMEOUT)
-    fun testWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(5_000)
-        commonConfiguration()
-        runInternalTest()
-    }
-
-    @Test(timeout = TIMEOUT)
-    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(1_000)
-        commonConfiguration()
-        runInternalTest()
-    }
-
-    private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
-        iterations(30)
-        actorsBefore(2)
-        threads(3)
-        actorsPerThread(2)
-        actorsAfter(2)
-        minimizeFailedScenario(false)
+    private fun LincheckOptionsImpl.configure() {
+        testingTimeInSeconds = 5
+        minimizeFailedScenario = false
         customize()
     }
+
+    internal open fun LincheckOptionsImpl.customize() {}
 }
 
 private const val TIMEOUT = 100_000L

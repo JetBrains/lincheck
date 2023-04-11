@@ -24,13 +24,16 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
 /**
  * This class runs concurrent tests.
  */
-class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
+@Suppress("DEPRECATION_ERROR")
+class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
@@ -68,7 +71,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val verifier = createVerifier()
             val scenario = customScenarios[i]
             scenario.validate()
-            reporter.logIteration(i + 1, customScenarios.size, scenario)
+            reporter.logIteration(iteration = i + 1, scenario = scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) return failure
         }
@@ -83,7 +86,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 verifier = createVerifier()
             val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
+            reporter.logIteration(iteration = i + 1 + customScenarios.size, scenario = scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
@@ -148,8 +151,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation,
-            verifier = verifier
+            verifier = verifier,
+            invocationPlanner = OldApiInvocationPlanner(testCfg.invocations)
         ).run()
+
+    private val CTestConfiguration.invocations get() = when (this) {
+        is ModelCheckingCTestConfiguration -> this.invocationsPerIteration
+        is StressCTestConfiguration -> this.invocationsPerIteration
+        else -> error("unexpected")
+    }
 
     private fun ExecutionScenario.copy() = ExecutionScenario(
         ArrayList(initExecution),
@@ -219,6 +229,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
  *  LinChecker.check(testClass, options)
  * ```
  */
+@Suppress("DEPRECATION_ERROR")
 fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClass, this)
 
 /**
@@ -228,6 +239,8 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
  *  LinChecker.check(testClass.java, options)
  * ```
  */
+@Suppress("DEPRECATION_ERROR")
 fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
+@Suppress("DEPRECATION_ERROR")
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()

@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*
@@ -37,9 +36,9 @@ class ConcurrentLinkedQueueTest {
     fun poll(): Int? = s.poll()
 
     @Test
-    fun stressTest() = StressOptions()
-        .sequentialSpecification(SequentialQueue::class.java)
-        .check(this::class)
+    fun lincheckTest() = LincheckOptions {
+        sequentialImplementation = SequentialQueue::class.java
+    }.check(this::class)
 }
 
 class SequentialQueue {

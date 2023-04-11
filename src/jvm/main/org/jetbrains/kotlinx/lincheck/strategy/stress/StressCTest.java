@@ -22,7 +22,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress;
  * #L%
  */
 
+import kotlin.Deprecated;
+import kotlin.DeprecationLevel;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
+import org.jetbrains.kotlinx.lincheck.LincheckOptions;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
@@ -35,11 +38,17 @@ import java.lang.annotation.*;
 
 /**
  * This annotation configures concurrent test using stress strategy.
+ *
+ * @deprecated use {@link LincheckOptions} instead.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(StressCTest.StressCTests.class)
 @Inherited
+@Deprecated(
+        message = "Please use `LincheckOptions` instead",
+        level = DeprecationLevel.ERROR
+)
 public @interface StressCTest {
     /**
      * The number of different test scenarios to be executed

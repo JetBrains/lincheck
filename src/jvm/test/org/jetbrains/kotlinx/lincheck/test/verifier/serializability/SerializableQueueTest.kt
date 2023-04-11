@@ -37,12 +37,10 @@ class SerializableQueueTest : AbstractLincheckTest() {
     @Operation
     fun poll(): Int? = q.poll()
 
-    override fun <O : Options<O, *>> O.customize() {
-        actorsBefore(0)
-        actorsAfter(0)
-        actorsPerThread(2)
-        verifier(SerializabilityVerifier::class.java)
-        sequentialSpecification(SequentialIntQueue::class.java)
+    override fun LincheckOptionsImpl.customize() {
+        maxThreads = 3
+        verifier = SerializabilityVerifier::class.java
+        sequentialImplementation = SequentialIntQueue::class.java
     }
 }
 

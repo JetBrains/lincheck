@@ -28,6 +28,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*
  */
 sealed class InvocationResult
 
+object AllInterleavingsStudiedInvocationResult : InvocationResult()
+
 /**
  * The invocation completed successfully, the output [results] are provided.
  */

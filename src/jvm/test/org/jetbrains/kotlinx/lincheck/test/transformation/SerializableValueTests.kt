@@ -23,12 +23,12 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
-import org.junit.Assert.assertFalse
-import org.junit.Test
-import java.io.Serializable
+import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.test.*
+import org.junit.*
+import org.junit.Assert.*
+import java.io.*
 import java.util.concurrent.atomic.*
 
 class SerializableResultTest : AbstractLincheckTest() {
@@ -37,12 +37,8 @@ class SerializableResultTest : AbstractLincheckTest() {
     @Operation
     fun getAndSet(key: Int) = counter.getAndSet(ValueHolder(key))
 
-    override fun extractState(): Any = counter.get().value
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
 }
 
@@ -52,12 +48,8 @@ class SerializableJavaUtilResultTest : AbstractLincheckTest() {
     @Operation
     fun get(key: Int) = value
 
-    override fun extractState(): Any = value
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
 }
 
@@ -68,14 +60,6 @@ class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectRe
     fun get(key: Int): List<Int> {
         value[0]++
         return value
-    }
-
-    override fun extractState(): Any = value
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
     }
 }
 
@@ -100,12 +84,8 @@ class SerializableParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: ValueHolder): Int = counter.addAndGet(key.value)
 
-    override fun extractState(): Any = counter.get()
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
 }
 
@@ -117,14 +97,6 @@ class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResults
     fun operation(@Param(name = "key") key: ValueHolder): Int {
         counter += key.value
         return counter
-    }
-
-    override fun extractState(): Any = counter
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
     }
 }
 
@@ -139,12 +111,8 @@ class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
 
-    override fun extractState(): Any = 0 // constant state
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
 }
 
@@ -159,12 +127,8 @@ class SerializableNullParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>?): Int = key?.sum() ?: 0
 
-    override fun extractState(): Any = 0 // constant state
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
 }
 

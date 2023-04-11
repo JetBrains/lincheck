@@ -27,6 +27,12 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 /**
  * Options for [model checking][ModelCheckingStrategy] strategy.
  */
+@Deprecated(
+    message="Please use `LincheckOptions` instead, which combines stress testing and model checking",
+    replaceWith=ReplaceWith("LincheckOptions"),
+    level=DeprecationLevel.ERROR,
+)
+@Suppress("DEPRECATION_ERROR")
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
     override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
         return ModelCheckingCTestConfiguration(

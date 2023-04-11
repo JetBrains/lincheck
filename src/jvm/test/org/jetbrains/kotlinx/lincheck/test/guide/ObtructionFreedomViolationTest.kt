@@ -21,8 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.junit.*
 import java.util.concurrent.atomic.*
 
@@ -73,7 +72,7 @@ class ObstructionFreedomViolationTest  {
 
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .check(this::class)
+    fun lincheckTest() = LincheckOptions {
+        checkObstructionFreedom = true
+    }.check(this::class)
 }

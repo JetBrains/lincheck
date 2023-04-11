@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
@@ -46,13 +45,9 @@ class ScenarioGenerationParameterDiversityTest : VerifierState() {
     }
 
     @Test
-    fun test() {
-        StressOptions()
-            .invocationsPerIteration(1)
-            .iterations(100)
-            .threads(1)
-            .checkImpl(this::class.java)
-    }
+    fun test() = LincheckOptions {
+        testingTimeInSeconds = 1
+    }.check(this::class.java)
 
     override fun extractState(): Any = 0 // constant state
 }

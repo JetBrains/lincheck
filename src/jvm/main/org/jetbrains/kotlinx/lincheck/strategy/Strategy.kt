@@ -21,9 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.commons.Remapper
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.objectweb.asm.*
+import java.io.*
 
 /**
  * Implementation of this class describes how to run the generated execution.
@@ -33,14 +37,39 @@ import org.objectweb.asm.commons.Remapper
  * without any code change.
  */
 abstract class Strategy protected constructor(
-    val scenario: ExecutionScenario
-) {
+    val scenario: ExecutionScenario,
+    val verifier: Verifier,
+    val invocationPlanner: InvocationPlanner
+) : Closeable {
     open fun needsTransformation() = false
+
     open fun createTransformer(cv: ClassVisitor): ClassVisitor {
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    abstract fun run(): LincheckFailure?
+    fun run(): LincheckFailure? {
+        while (invocationPlanner.shouldDoNextInvocation()) {
+            val invocationResult = invocationPlanner.measureInvocationTime {
+                runInvocation()
+            }
+            when (invocationResult) {
+                AllInterleavingsStudiedInvocationResult -> return null
+                is CompletedInvocationResult -> {
+                    if (!verifier.verifyResults(scenario, invocationResult.results)) {
+                        return IncorrectResultsFailure(scenario, invocationResult.results, invocationResult.tryCollectTrace())
+                    }
+                }
+                else -> invocationResult.toLincheckFailure(scenario, invocationResult.tryCollectTrace())
+            }
+        }
+        return null
+    }
+
+    abstract fun runInvocation(): InvocationResult
+
+    abstract fun InvocationResult.tryCollectTrace(): Trace?
+
+    override fun close() {}
 
     /**
      * Is invoked before each actor execution.

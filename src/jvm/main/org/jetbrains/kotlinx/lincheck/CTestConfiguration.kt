@@ -51,7 +51,7 @@ abstract class CTestConfiguration(
 ) {
     abstract fun createStrategy(
         testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-        stateRepresentationMethod: Method?, verifier: Verifier
+        stateRepresentationMethod: Method?, verifier: Verifier, invocationPlanner: InvocationPlanner
     ): Strategy
 
     companion object {
@@ -67,6 +67,7 @@ abstract class CTestConfiguration(
     }
 }
 
+@Suppress("DEPRECATION_ERROR")
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->

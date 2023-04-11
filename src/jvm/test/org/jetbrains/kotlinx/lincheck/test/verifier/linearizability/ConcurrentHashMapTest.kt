@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import java.util.concurrent.*
 
@@ -41,11 +40,7 @@ class ConcurrentHashMapTest : AbstractLincheckTest() {
     @Operation
     fun remove(@Param(name = "key") key: Int) = map.remove(key)
 
-    override fun extractState(): Any = map
-
-    override fun <O : Options<O, *>> O.customize() {
-        // To obtain rare interleaving with `fullAddCount` method
-        if (this is ModelCheckingOptions)
-            invocationsPerIteration(10000)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 10
     }
 }

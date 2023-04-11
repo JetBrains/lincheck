@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.util.concurrent.atomic.*
@@ -52,10 +51,11 @@ class ValidateFunctionTest : VerifierState() {
 
     @Test
     fun test() {
-        val options = StressOptions().iterations(1)
-                                     .invocationsPerIteration(1)
-                                     .actorsBefore(3)
-                                     .actorsAfter(10)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+        }
+        options as LincheckOptionsImpl
         val f = options.checkImpl(this::class.java)!!
         assert(f is ValidationFailure && f.functionName == "validateWithError") {
             "This test should fail with a validation error"

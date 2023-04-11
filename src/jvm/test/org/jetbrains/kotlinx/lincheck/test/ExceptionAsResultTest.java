@@ -32,7 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.*;
 
-@StressCTest(iterations = 1, requireStateEquivalenceImplCheck = false)
+@StressCTest(iterations = 1, invocationsPerIteration = 1)
 public class ExceptionAsResultTest {
     private static final String MESSAGE = "iujdhfgilurtybfu";
 

@@ -21,12 +21,17 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
-import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import org.jetbrains.kotlinx.lincheck.*
 
 /**
  * Options for [stress][StressStrategy] strategy.
  */
+@Deprecated(
+    message="Please use LincheckOptions class instead, which implements automated strategy selection",
+    replaceWith=ReplaceWith("LincheckOptions"),
+    level=DeprecationLevel.ERROR,
+)
+@Suppress("DEPRECATION_ERROR")
 open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
     private var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
 

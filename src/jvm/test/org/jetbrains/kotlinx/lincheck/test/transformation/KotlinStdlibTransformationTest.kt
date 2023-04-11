@@ -21,9 +21,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
-import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.test.*
 
 /**
  * This test checks that some methods in kotlin stdlib related to
@@ -64,9 +64,7 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
         intProgression.toSet()
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
-
-    override fun extractState(): Any = 0 // constant state
 }
