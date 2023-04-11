@@ -21,9 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.test.guide
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*
@@ -43,17 +42,9 @@ class ConcurrentLinkedQueueTest {
         .check(this::class)
 }
 
-class SequentialQueue : VerifierState() {
-    val q = LinkedList<Int>()
+class SequentialQueue {
+    private val q = LinkedList<Int>()
 
     fun add(x: Int) = q.add(x)
     fun poll(): Int? = q.poll()
-
-    override fun extractState(): Any {
-        val elements = mutableListOf<Int>()
-        while(q.size != 0) {
-            elements.add(q.poll())
-        }
-        return elements.toString()
-    }
 }

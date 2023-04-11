@@ -263,6 +263,5 @@ Choose [your testing strategy and configure test execution](testing-strategies.m
 
 * [How to generate operation arguments](operation-arguments.md)
 * [Popular algorithm constraints](constraints.md)
-* [Modular testing in model checking](modular-testing.md)
 * [Checking for non-blocking progress guarantees](progress-guarantees.md)
 * [Define sequential specification of the algorithm](sequential-specification.md)
