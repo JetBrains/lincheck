@@ -306,7 +306,3 @@ as well as at the end.
 ## Next step
 
 Learn how to [configure arguments passed to the operations](operation-arguments.md) and when it can be useful.
-
-## See also
-
-See how to optimize and increase coverage of the model checking strategy using [modular testing](modular-testing.md).

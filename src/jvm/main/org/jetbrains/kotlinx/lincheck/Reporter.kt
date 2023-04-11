@@ -29,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 
-class Reporter constructor(val logLevel: LoggingLevel) {
+class Reporter constructor(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
     private val outErr: PrintStream = System.err
 
@@ -66,7 +66,7 @@ internal fun <T> printInColumnsCustom(
         groupedObjects: List<List<T>>,
         joinColumns: (List<String>) -> String
 ): String {
-    val nRows = groupedObjects.map { it.size }.max() ?: 0
+    val nRows = groupedObjects.map { it.size }.maxOrNull() ?: 0
     val nColumns = groupedObjects.size
     val rows = (0 until nRows).map { rowIndex ->
         (0 until nColumns)
@@ -74,7 +74,7 @@ internal fun <T> printInColumnsCustom(
                 .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
     }
     val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
-        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max() ?: 0
+        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.maxOrNull() ?: 0
     }
     return (0 until nRows)
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
@@ -114,8 +114,8 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
     val actorRepresentations = actors.map { it.toString() }
     val resultRepresentations = results.map { it.result.toString() }
-    val maxActorLength = actorRepresentations.map { it.length }.max()!!
-    val maxResultLength = resultRepresentations.map { it.length }.max()!!
+    val maxActorLength = actorRepresentations.map { it.length }.maxOrNull()!!
+    val maxResultLength = resultRepresentations.map { it.length }.maxOrNull()!!
     return actors.indices.map { i ->
         val actorRepr = actorRepresentations[i]
         val resultRepr = resultRepresentations[i]
@@ -157,11 +157,11 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     }
     val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
-        appendln()
-        appendln("= The following interleaving leads to the error =")
+        appendLine()
+        appendLine("= The following interleaving leads to the error =")
         appendTrace(failure.scenario, results, failure.trace)
         if (failure is DeadlockWithDumpFailure) {
-            appendln()
+            appendLine()
             append("All threads are in deadlock")
         }
     }
@@ -204,19 +204,16 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
         appendln("STATE: ${failure.results.afterInitStateRepresentation}")
     appendln("Parallel part:")
     val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
-    append(printInColumns(parallelExecutionData))
+    appendln(printInColumns(parallelExecutionData))
     if (failure.results.afterParallelStateRepresentation != null) {
-        appendln()
-        append("STATE: ${failure.results.afterParallelStateRepresentation}")
+        appendln("STATE: ${failure.results.afterParallelStateRepresentation}")
     }
     if (failure.scenario.postExecution.isNotEmpty()) {
-        appendln()
         appendln("Post part:")
-        append(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
+        appendln(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
     }
     if (failure.results.afterPostStateRepresentation != null && failure.scenario.postExecution.isNotEmpty()) {
-        appendln()
-        append("STATE: ${failure.results.afterPostStateRepresentation}")
+        appendln("STATE: ${failure.results.afterPostStateRepresentation}")
     }
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
         appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +

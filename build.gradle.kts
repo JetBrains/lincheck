@@ -1,6 +1,6 @@
-import groovy.util.Node
-import groovy.util.NodeList
-import kotlinx.team.infra.mavenPublicationsPom
+
+import groovy.util.*
+import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
 
 // atomicfu
@@ -16,7 +16,6 @@ plugins {
     java
     kotlin("multiplatform")
     id("maven-publish")
-    id("maven")
     id("kotlinx.team.infra") version "0.3.0-dev-64"
 }
 
@@ -30,11 +29,11 @@ kotlin {
         withJava()
 
         val main by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
+            kotlinOptions.jvmTarget = "11"
         }
 
         val test by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
+            kotlinOptions.jvmTarget = "11"
         }
     }
 
@@ -71,8 +70,8 @@ kotlin {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 sourceSets.main {
@@ -81,6 +80,9 @@ sourceSets.main {
 
 sourceSets.test {
     java.srcDirs("src/jvm/test")
+    resources {
+        srcDir("src/jvm/test/resources")
+    }
 }
 
 tasks {
@@ -89,17 +91,20 @@ tasks {
     }
     withType<Test> {
         maxParallelForks = 1
-        jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-                "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
+        jvmArgs(
+            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED"
+        )
     }
 
     withType<Jar> {
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
-            attributes("Copyright" to
-                "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
-                "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
+            attributes(
+                "Copyright" to
+                        "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
+                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
             )
         }
     }

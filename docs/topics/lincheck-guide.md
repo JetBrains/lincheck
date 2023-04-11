@@ -56,10 +56,9 @@ Lincheck features step-by-step:
 1. [Write your first test with Lincheck](introduction.md)
 2. [Choose your testing strategy](testing-strategies.md)
 3. [Configure operation arguments](operation-arguments.md)
-4. [Use modular testing in model checking](modular-testing.md) 
-5. [Consider popular algorithm constraints](constraints.md)
-6. [Check the algorithm for non-blocking progress guarantees](progress-guarantees.md)
-7. [Define sequential specification of the algorithm](sequential-specification.md)
+4. [Consider popular algorithm constraints](constraints.md)
+5. [Check the algorithm for non-blocking progress guarantees](progress-guarantees.md)
+6. [Define sequential specification of the algorithm](sequential-specification.md)
 
 ## Additional references
 

@@ -52,7 +52,6 @@ class SingletonCollectionInTraceTest {
     fun modelCheckingTest() {
         val failure = ModelCheckingOptions()
             .iterations(1)
-            .verboseTrace(true)
             .checkImpl(this::class.java)
         val message = failure.toString()
         assert("SingletonList" !in message)

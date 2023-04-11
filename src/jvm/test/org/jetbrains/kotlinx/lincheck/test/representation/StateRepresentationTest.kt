@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.IllegalStateException
@@ -52,19 +53,11 @@ open class ModelCheckingStateReportingTest {
     fun stateRepresentation() = counter.toString()
 
     @Test
-    fun test() {
-        val options = ModelCheckingOptions()
-                .actorsPerThread(1)
-                .actorsBefore(0)
-                .actorsAfter(0)
-        val failure = options.checkImpl(this::class.java)
-        check(failure != null) { "the test should fail" }
-        val log = StringBuilder().appendFailure(failure).toString()
-        check("STATE: 0" in log)
-        check("STATE: 1" in log)
-        check("STATE: 4" in log)
-        check(log.split("incrementAndGet(): 1").size - 1 == 1) { "A method call is logged twice in the trace" }
-        checkTraceHasNoLincheckEvents(log)
+    fun test() = runModelCheckingTestAndCheckOutput( "state_representation.txt") {
+        actorsPerThread(1)
+        actorsBefore(0)
+        actorsAfter(0)
+        requireStateEquivalenceImplCheck(false)
     }
 }
 

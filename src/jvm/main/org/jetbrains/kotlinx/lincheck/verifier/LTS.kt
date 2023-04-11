@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCa
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
 import java.util.*
-import kotlin.collections.HashMap
 import kotlin.coroutines.*
 import kotlin.math.*
 
@@ -364,8 +363,8 @@ private class StateInfo(
 
     val maxTicket: Int
         get() = max(
-            suspendedOperations.maxBy { it.ticket }?.ticket ?: NO_TICKET,
-            resumedOperations.maxBy { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
+            suspendedOperations.maxByOrNull { it.ticket }?.ticket ?: NO_TICKET,
+            resumedOperations.maxByOrNull { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
         )
 }
 

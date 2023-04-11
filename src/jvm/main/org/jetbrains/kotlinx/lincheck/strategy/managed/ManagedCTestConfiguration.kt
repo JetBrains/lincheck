@@ -45,7 +45,7 @@ abstract class ManagedCTestConfiguration(
     sequentialSpecification: Class<*>,
     timeoutMs: Long,
     val eliminateLocalObjects: Boolean,
-    val verboseTrace: Boolean,
+
     customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
     testClass = testClass,
@@ -66,7 +66,6 @@ abstract class ManagedCTestConfiguration(
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
         const val DEFAULT_ELIMINATE_LOCAL_OBJECTS = true
         const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
-        const val DEFAULT_VERBOSE_TRACE = false
         const val LIVELOCK_EVENTS_THRESHOLD = 10001
         val DEFAULT_GUARANTEES = listOf( // These classes use WeakHashMap, and thus, their code is non-deterministic.
             // Non-determinism should not be present in managed executions, but luckily the classes
