@@ -29,12 +29,25 @@ import java.lang.reflect.*
 /**
  * Configuration for [stress][StressStrategy] strategy.
  */
-class StressCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-                               generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-                               val invocationsPerIteration: Int, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-                               sequentialSpecification: Class<*>, timeoutMs: Long, customScenarios: List<ExecutionScenario>
-) : CTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, generatorClass, verifierClass,
-    requireStateEquivalenceCheck, minimizeFailedScenario, sequentialSpecification, timeoutMs, customScenarios) {
+class StressCTestConfiguration(
+    testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
+    generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
+    val invocationsPerIteration: Int, minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>, timeoutMs: Long, customScenarios: List<ExecutionScenario>
+) : CTestConfiguration(
+    testClass = testClass,
+    iterations = iterations,
+    threads = threads,
+    actorsPerThread = actorsPerThread,
+    actorsBefore = actorsBefore,
+    actorsAfter = actorsAfter,
+    generatorClass = generatorClass,
+    verifierClass = verifierClass,
+    minimizeFailedScenario = minimizeFailedScenario,
+    sequentialSpecification = sequentialSpecification,
+    timeoutMs = timeoutMs,
+    customScenarios = customScenarios
+) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
                                 stateRepresentationMethod: Method?, verifier: Verifier) =
         StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)

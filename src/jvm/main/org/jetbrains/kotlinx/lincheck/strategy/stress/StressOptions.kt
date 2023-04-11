@@ -38,8 +38,20 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
     }
 
     override fun createTestConfigurations(testClass: Class<*>): StressCTestConfiguration {
-        return StressCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter, executionGenerator,
-                verifier, invocationsPerIteration, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, customScenarios)
+        return StressCTestConfiguration(
+            testClass = testClass,
+            iterations = iterations,
+            threads = threads,
+            actorsPerThread = actorsPerThread,
+            actorsBefore = actorsBefore,
+            actorsAfter = actorsAfter,
+            generatorClass = executionGenerator,
+            verifierClass = verifier,
+            invocationsPerIteration = invocationsPerIteration,
+            minimizeFailedScenario = minimizeFailedScenario,
+            sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
+            timeoutMs = timeoutMs,
+            customScenarios = customScenarios
+        )
     }
 }

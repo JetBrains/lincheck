@@ -39,11 +39,4 @@ public interface Verifier {
      * Returns {@code true} if results are possible, {@code false} otherwise.
      */
     boolean verifyResults(ExecutionScenario scenario, ExecutionResult results);
-
-    /**
-     * Returns {@code true} when the state equivalence relation for the sequential specification
-     * is properly specified via {@link #equals(Object)} and {@link #hashCode()} methods. Returns
-     * `false` when two logically equal states do not satisfy the equals-hashCode contract.
-     */
-    boolean checkStateEquivalenceImplementation();
 }

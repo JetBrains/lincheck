@@ -49,7 +49,6 @@ public class StressOptionsTest {
             .threads(2)
             .actorsPerThread(3)
             .logLevel(LoggingLevel.WARN)
-            .requireStateEquivalenceImplCheck(false)
             .minimizeFailedScenario(false);
         LinChecker.check(StressOptionsTest.class, opts);
     }
