@@ -28,6 +28,7 @@ import org.junit.*
 import java.lang.AssertionError
 import kotlin.random.*
 
+@Suppress("DEPRECATION_ERROR")
 @StressCTest(iterations = 1, minimizeFailedScenario = false, requireStateEquivalenceImplCheck = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {
     @Operation

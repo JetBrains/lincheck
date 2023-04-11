@@ -60,6 +60,7 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter.get()
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions()
             .actorsPerThread(1)

@@ -33,7 +33,6 @@ import java.util.concurrent.*
  * Checks that [Random] and [ThreadLocalRandom] are replaced
  * with deterministic implementations in the model checking mode.
  */
-@ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
 class RandomTransformationTest : VerifierState() {
     @Volatile
     private var a: Any = Any()
@@ -58,7 +57,9 @@ class RandomTransformationTest : VerifierState() {
 
     @Test
     fun test() {
-        LinChecker.check(this::class.java)
+        LincheckOptions {
+            testingTimeInSeconds = 1
+        }.check(this::class)
     }
 
     override fun extractState(): Any = 0 // constant state

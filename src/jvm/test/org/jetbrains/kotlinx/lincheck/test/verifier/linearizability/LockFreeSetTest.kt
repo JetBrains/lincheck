@@ -45,12 +45,12 @@ class LockFreeSetTest {
                 }
             }
         }
-
-        StressOptions()
-            .addCustomScenario(scenario)
-            .invocationsPerIteration(1000000)
-            .iterations(0)
-            .check(LockFreeSet::class)
+        LincheckOptions {
+            this as LincheckOptionsImpl
+            testingTimeInSeconds = 10
+            generateScenarios = false
+            addCustomScenario(scenario)
+        }.check(LockFreeSet::class)
     }
 }
 

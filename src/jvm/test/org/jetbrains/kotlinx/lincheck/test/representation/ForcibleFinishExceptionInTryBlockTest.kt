@@ -43,6 +43,7 @@ class ForcibleFinishExceptionInTryBlockTest {
     }
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions()
             .actorsPerThread(1)

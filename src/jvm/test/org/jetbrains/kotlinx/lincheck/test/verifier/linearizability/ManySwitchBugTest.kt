@@ -68,11 +68,20 @@ class ManySwitchBugTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions()
-            .actorsAfter(0)
-            .actorsBefore(0)
-            .actorsPerThread(1)
-            .checkImpl(this::class.java)
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            generateScenarios = false
+            addCustomScenario {
+                parallel {
+                    thread {
+                        actor(::foo)
+                    }
+                    thread {
+                        actor(::bar)
+                    }
+                }
+            }
+        }.checkImpl(this::class.java)
         check(failure is UnexpectedExceptionFailure) { "The test should fail" }
     }
 }

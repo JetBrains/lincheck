@@ -45,10 +45,7 @@ class RunBlockingTest : AbstractLincheckTest() {
         }
     }
 
-    override fun extractState() = Unit
-
-    override fun <O : Options<O, *>> O.customize() {
-        minimizeFailedScenario(false)
-        iterations(1)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
 }

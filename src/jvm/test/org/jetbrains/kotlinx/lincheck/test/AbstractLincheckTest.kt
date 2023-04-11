@@ -51,7 +51,6 @@ abstract class AbstractLincheckTest(
     }.runTest()
 
     private fun LincheckOptions.runTest() {
-        this as LincheckOptionsImpl
         val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)
         if (failure === null) {
             assert(expectedFailures.isEmpty()) {

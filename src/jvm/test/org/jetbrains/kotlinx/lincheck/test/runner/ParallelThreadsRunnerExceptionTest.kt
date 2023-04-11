@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.verifier.*
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.junit.*
 import org.junit.Assert.*
 import java.util.concurrent.atomic.*
@@ -164,6 +165,6 @@ class ParallelThreadsRunnerExceptionTest {
     }
 }
 
-fun mockStrategy(scenario: ExecutionScenario) = object : Strategy(scenario) {
-    override fun run(): LincheckFailure? = error("Not yet implemented")
+private fun mockStrategy(scenario: ExecutionScenario) = object : Strategy(scenario) {
+    override fun runInvocation(): InvocationResult = error("Not yet implemented")
 }

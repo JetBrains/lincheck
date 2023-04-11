@@ -50,12 +50,10 @@ class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure:
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        minimizeFailedScenario(false)
-        invocationTimeout(200)
+    override fun LincheckOptionsImpl.customize() {
+        invocationTimeoutMs = 200
+        generateBeforeAndAfterParts = false
     }
-
-    override fun extractState(): Any = counter
 }
 
 class DeadlockOnSynchronizedWaitTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
@@ -68,13 +66,10 @@ class DeadlockOnSynchronizedWaitTest : AbstractLincheckTest(DeadlockWithDumpFail
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        actorsBefore(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(200)
+    override fun LincheckOptionsImpl.customize() {
+        invocationTimeoutMs = 200
+        generateBeforeAndAfterParts = false
     }
-
-    override fun extractState(): Any = 0 // constant
 }
 
 class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
@@ -96,11 +91,9 @@ class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
             }
         }
 
-    override fun extractState(): Any = counter
-
-    override fun <O : Options<O, *>> O.customize() {
-        minimizeFailedScenario(false)
-        invocationTimeout(200)
+    override fun LincheckOptionsImpl.customize() {
+        invocationTimeoutMs = 200
+        generateBeforeAndAfterParts = false
     }
 
     private fun AtomicBoolean.withSpinLock(block: () -> Int): Int {

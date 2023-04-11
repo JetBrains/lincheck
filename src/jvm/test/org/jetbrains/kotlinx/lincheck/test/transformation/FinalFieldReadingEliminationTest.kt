@@ -19,6 +19,8 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
+@file:Suppress("DEPRECATION_ERROR")
+
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
@@ -35,6 +37,7 @@ import java.io.Serializable
  * Otherwise, this test fails by timeout since
  * the number of invocations is set to [Int.MAX_VALUE].
  */
+@Suppress("DEPRECATION_ERROR")
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50, minimizeFailedScenario = false)
 class FinalFieldReadingEliminationTest : VerifierState() {
     val primitiveValue: Int = 32

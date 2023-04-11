@@ -34,6 +34,7 @@ import org.junit.Assert.*
  * @param expectedOutputFile file name from resources/expected_logs, the expected lincheck output
  * @param testConfiguration options configuration action
  */
+@Suppress("DEPRECATION_ERROR")
 internal fun Any.runModelCheckingTestAndCheckOutput(
     expectedOutputFile: String, testConfiguration: ModelCheckingOptions.() -> Unit
 ) {

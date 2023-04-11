@@ -43,7 +43,7 @@ class Striped64SupportTest {
         val options = LincheckOptions {
             this as LincheckOptionsImpl
             mode = LincheckMode.ModelChecking
-        } as LincheckOptionsImpl
+        }
         val failure = options.checkImpl(this::class.java)
         assert(failure is IncorrectResultsFailure) {
             "This test should fail with IncorrectResultsFailure, but another error has been detected:\n$failure"

@@ -74,6 +74,7 @@ class TraceReportingTest {
     }
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val failure = ModelCheckingOptions()
             .actorsAfter(0)

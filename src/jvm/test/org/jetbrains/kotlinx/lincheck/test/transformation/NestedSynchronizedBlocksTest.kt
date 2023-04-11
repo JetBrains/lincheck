@@ -30,7 +30,6 @@ import org.junit.*
 /**
  * This test checks that transformed code supports reentrant synchronized locking.
  */
-@ModelCheckingCTest(iterations = 1)
 class NestedSynchronizedBlocksTest : VerifierState() {
     private var counter = 0
 
@@ -43,7 +42,9 @@ class NestedSynchronizedBlocksTest : VerifierState() {
 
     @Test
     fun test() {
-        LinChecker.check(this::class.java)
+        LincheckOptions {
+            testingTimeInSeconds = 1
+        }.check(this::class)
     }
 
     override fun extractState(): Any = counter

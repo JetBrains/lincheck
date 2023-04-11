@@ -46,6 +46,7 @@ class IgnoredGuaranteeOnExceptionTest : VerifierState() {
     private fun badMethod(): Int = TODO()
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions().addGuarantee(forClasses(this.javaClass.name).methods("badMethod").ignore())
         val failure = options.checkImpl(this.javaClass)

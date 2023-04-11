@@ -33,8 +33,6 @@ abstract class AbstractCounterTest(
 ) : AbstractLincheckTest(*expectedErrors) {
     @Operation
     fun incAndGet(): Int = counter.incAndGet()
-
-    override fun extractState(): Any = counter.get()
 }
 
 class CounterCorrectTest : AbstractCounterTest(CounterCorrect())

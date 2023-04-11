@@ -55,7 +55,6 @@ class ValidateFunctionTest : VerifierState() {
             this as LincheckOptionsImpl
             mode = LincheckMode.Stress
         }
-        options as LincheckOptionsImpl
         val f = options.checkImpl(this::class.java)!!
         assert(f is ValidationFailure && f.functionName == "validateWithError") {
             "This test should fail with a validation error"

@@ -52,34 +52,22 @@ class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
         return 0 // cannot return 0, should fail
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        executionGenerator(ClocksTestScenarioGenerator::class.java)
-        iterations(1)
-        sequentialSpecification(ClocksTestSequential::class.java)
-        minimizeFailedScenario(false)
+    override fun LincheckOptionsImpl.customize() {
+        sequentialImplementation = ClocksTestSequential::class.java
+        generateScenarios = false
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::a)
+                    actor(::b)
+                }
+                thread {
+                    actor(::c)
+                    actor(::d)
+                }
+            }
+        }
     }
-}
-
-class ClocksTestScenarioGenerator(
-    testCfg: CTestConfiguration,
-    testStructure: CTestStructure,
-    randomProvider: RandomProvider
-) : ExecutionGenerator(testCfg, testStructure) {
-    override fun nextExecution() = ExecutionScenario(
-        emptyList(),
-        listOf(
-            listOf(
-                Actor(method = ClocksTest::a.javaMethod!!, arguments = emptyList()),
-                Actor(method = ClocksTest::b.javaMethod!!, arguments = emptyList())
-            ),
-            listOf(
-                Actor(method = ClocksTest::c.javaMethod!!, arguments = emptyList()),
-                Actor(method = ClocksTest::d.javaMethod!!, arguments = emptyList())
-            )
-        ),
-        emptyList()
-    )
-
 }
 
 class ClocksTestSequential {

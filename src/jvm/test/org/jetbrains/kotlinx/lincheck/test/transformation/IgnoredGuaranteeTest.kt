@@ -38,6 +38,7 @@ import org.junit.*
  * If the ignored method is not processed properly, this test fails
  * by timeout since the number of invocations is set to Int.MAX_VALUE.
  */
+@Suppress("DEPRECATION_ERROR")
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 100, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
 class IgnoredGuaranteeTest : VerifierState() {
     var value: Int = 0

@@ -31,6 +31,7 @@ import org.junit.*
  * Checks that [Object.hashCode] is replaced with a deterministic
  * implementations in the model checking mode.
  */
+@Suppress("DEPRECATION_ERROR")
 @ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
 class HashCodeStubTest : VerifierState() {
     @Volatile

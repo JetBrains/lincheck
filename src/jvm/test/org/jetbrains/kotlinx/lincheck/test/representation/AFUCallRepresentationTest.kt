@@ -57,6 +57,7 @@ class AFUCallRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions()
             .actorsPerThread(1)

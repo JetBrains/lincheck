@@ -40,7 +40,6 @@ class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure:
         check(!canEnterForbiddenSection)
     }
 
-    override fun extractState(): Any = canEnterForbiddenSection
 }
 
 class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
@@ -52,5 +51,4 @@ class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(Unexpec
         }
     }
 
-    override fun extractState(): Any = 0 // constant state
 }

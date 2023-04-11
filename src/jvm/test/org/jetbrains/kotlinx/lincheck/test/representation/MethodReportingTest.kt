@@ -75,6 +75,7 @@ class MethodReportingTest : VerifierState() {
     override fun extractState(): Any = a
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions()
             .actorsPerThread(1)

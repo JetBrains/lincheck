@@ -40,10 +40,12 @@ class FailedScenarioMinimizationTest: VerifierState() {
     override fun extractState() = counter
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun testWithoutMinimization() {
-        val options = StressOptions().actorsPerThread(10)
-                                     .invocationsPerIteration(100_000)
-                                     .minimizeFailedScenario(false)
+        val options = StressOptions()
+            .actorsPerThread(10)
+            .invocationsPerIteration(100_000)
+            .minimizeFailedScenario(false)
         try {
             LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
             fail("Should fail with AssertionError")
@@ -57,9 +59,11 @@ class FailedScenarioMinimizationTest: VerifierState() {
     }
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun testWithMinimization() {
-        val options = StressOptions().actorsPerThread(10)
-                                     .invocationsPerIteration(100_000)
+        val options = StressOptions()
+            .actorsPerThread(10)
+            .invocationsPerIteration(100_000)
         try {
             LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
             fail("Should fail with AssertionError")

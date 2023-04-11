@@ -41,29 +41,31 @@ class AddCustomScenarioTest {
 
     @Test
     fun stressTest1() {
-        val failure = StressOptions()
-            .iterations(0)
-            .addCustomScenario(scenario {
-                parallel {
-                    thread { actor(::t1) }
-                    thread { actor(::t2) }
-                }
-            })
-            .checkImpl(this::class.java)
-        assert(failure is IncorrectResultsFailure)
-    }
-
-    @Test
-    fun stressTest2() {
-        val failure = StressOptions()
-            .iterations(0)
-            .addCustomScenario {
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            generateScenarios = false
+            addCustomScenario {
                 parallel {
                     thread { actor(::t1) }
                     thread { actor(::t2) }
                 }
             }
-            .checkImpl(this::class.java)
+        }.checkImpl(this::class.java)
+        assert(failure is IncorrectResultsFailure)
+    }
+
+    @Test
+    fun stressTest2() {
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            generateScenarios = false
+            addCustomScenario {
+                parallel {
+                    thread { actor(::t1) }
+                    thread { actor(::t2) }
+                }
+            }
+        }.checkImpl(this::class.java)
         assert(failure is IncorrectResultsFailure)
     }
 }
