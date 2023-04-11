@@ -9,11 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -38,8 +36,8 @@ abstract class CTestConfiguration(
     val customScenarios: List<ExecutionScenario>
 ) {
     abstract fun createStrategy(
-        testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-        stateRepresentationMethod: Method?, verifier: Verifier
+        testClass: Class<*>, scenario: ExecutionScenario,
+        validationFunctions: List<Method>, stateRepresentationMethod: Method?
     ): Strategy
 
     companion object {
@@ -55,6 +53,7 @@ abstract class CTestConfiguration(
     }
 }
 
+@Suppress("DEPRECATION_ERROR")
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->
@@ -70,7 +69,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 invocationsPerIteration = ann.invocationsPerIteration,
                 minimizeFailedScenario = ann.minimizeFailedScenario,
                 sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                timeoutMs = DEFAULT_TIMEOUT_MS,
+                timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
                 customScenarios = emptyList()
             )
         }
@@ -95,8 +94,8 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                         ann.sequentialSpecification.java,
                         testClass
                     ),
-                    timeoutMs = DEFAULT_TIMEOUT_MS,
-                    eliminateLocalObjects = DEFAULT_ELIMINATE_LOCAL_OBJECTS,
+                    timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
+                    eliminateLocalObjects = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS,
                     customScenarios = emptyList()
                 )
             }

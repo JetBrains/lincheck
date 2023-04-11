@@ -48,6 +48,7 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter.get()
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() = ModelCheckingOptions()
         .actorsPerThread(1)
         .actorsBefore(0)
@@ -72,6 +73,7 @@ class ObstructionFreedomSynchronizedRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() = ModelCheckingOptions().apply {
         actorsPerThread(1)
         actorsBefore(0)

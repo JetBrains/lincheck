@@ -7,6 +7,8 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+@file:Suppress("DEPRECATION_ERROR")
+
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
@@ -20,6 +22,11 @@ import java.util.*
 /**
  * Common options for all managed strategies.
  */
+@Deprecated(
+    message="Please use `LincheckOptions` instead, which combines stress testing and model checking",
+    replaceWith=ReplaceWith("LincheckOptions"),
+    level=DeprecationLevel.ERROR,
+)
 abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
     protected var invocationsPerIteration = DEFAULT_INVOCATIONS
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM

@@ -23,6 +23,9 @@ abstract class AbstractCounterTest(
     fun incAndGet(): Int = counter.incAndGet()
 
     override fun extractState(): Any = counter.get()
+
+    // counter tests have small number of interleavings
+    override val testPlanningConstraints: Boolean = false
 }
 
 class CounterCorrectTest : AbstractCounterTest(CounterCorrect())

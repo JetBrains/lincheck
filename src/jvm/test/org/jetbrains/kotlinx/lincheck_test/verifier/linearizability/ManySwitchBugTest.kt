@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
 /**
@@ -54,11 +53,21 @@ class ManySwitchBugTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions()
-            .actorsAfter(0)
-            .actorsBefore(0)
-            .actorsPerThread(1)
-            .checkImpl(this::class.java)
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
+            generateRandomScenarios = false
+            addCustomScenario {
+                parallel {
+                    thread {
+                        actor(::foo)
+                    }
+                    thread {
+                        actor(::bar)
+                    }
+                }
+            }
+        }.checkImpl(this::class.java)
         check(failure is IncorrectResultsFailure) { "The test should fail" }
     }
 }

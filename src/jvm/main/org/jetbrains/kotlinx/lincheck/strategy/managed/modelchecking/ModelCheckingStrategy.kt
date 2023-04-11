@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -33,17 +34,24 @@ import kotlin.random.*
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
-        stateRepresentation: Method?,
-        verifier: Verifier
-) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
-    // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
-    private val maxInvocations = testCfg.invocationsPerIteration
-    // The number of already used invocations.
-    private var usedInvocations = 0
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunctions: List<Method>,
+    stateRepresentationFunction: Method?,
+    timeoutMs: Long,
+    checkObstructionFreedom: Boolean,
+    eliminateLocalObjects: Boolean,
+    hangingDetectionThreshold: Int,
+    guarantees: List<ManagedStrategyGuarantee>,
+) : ManagedStrategy(testClass, scenario,
+    validationFunctions,
+    stateRepresentationFunction,
+    timeoutMs,
+    checkObstructionFreedom,
+    eliminateLocalObjects,
+    hangingDetectionThreshold,
+    guarantees,
+) {
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
@@ -54,16 +62,18 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    override fun runImpl(): LincheckFailure? {
-        while (usedInvocations < maxInvocations) {
-            // get new unexplored interleaving
-            currentInterleaving = root.nextInterleaving() ?: break
-            usedInvocations++
-            // run invocation and check its results
-            checkResult(runInvocation())?.let { return it }
-        }
-        return null
+    override fun nextInvocation(): Boolean {
+        currentInterleaving = root.nextInterleaving()
+            ?: return false
+        return true
     }
+
+    override fun initializeInvocation() {
+        super.initializeInvocation()
+        currentInterleaving.initialize()
+    }
+
+    override fun InvocationResult.tryCollectTrace(): Trace? = collectTrace(this)
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
         if (mustSwitch) {

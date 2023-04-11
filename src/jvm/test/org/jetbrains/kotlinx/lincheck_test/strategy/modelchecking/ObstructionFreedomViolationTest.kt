@@ -26,6 +26,7 @@ class ObstructionFreedomViolationTest : VerifierState() {
     fun get(): Int = synchronized(this) { c }
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions()
             .checkObstructionFreedom()
