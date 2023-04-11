@@ -44,7 +44,7 @@ class ConcurrentLinkedQueueTest {
 }
 
 class SequentialQueue {
-    val s = LinkedList<Int>()
+    private val s = LinkedList<Int>()
 
     fun add(x: Int) = s.add(x)
     fun poll(): Int? = s.poll()

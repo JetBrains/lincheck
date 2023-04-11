@@ -121,15 +121,8 @@ one of the values may be overwritten and lost.
 >
 {type="note"}
 
+
 ## Next step
 
-The current `MultiMap` implementation uses a complex `j.u.c.ConcurrentHashMap` data structure as a building block,
-the internal synchronization of which significantly increases the number of possible interleavings, so it may take a while
-to find a bug. 
-
-If you consider the `j.u.c.ConcurrentHashMap` implementation correct, you can speed up testing 
-and increase coverage with the [modular testing feature](modular-testing.md) available for the model checking strategy.
-
-## See also
-
-Learn how to test data structures that set access [constraints](constraints.md) on the execution.
+Learn how to test data structures that set [access constraints on the execution](constraints.md),
+such as single-producer single-consumer queues.
