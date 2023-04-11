@@ -140,8 +140,8 @@ internal class LincheckOptionsImpl : LincheckOptions {
             iterationsLowerBound = customScenarios.size
         )
         val testStructure = CTestStructure.getFromTestClass(testClass)
-        val executionGenerator = options.createExecutionGenerator()
-        var verifier = createVerifier(checkStateEquivalence = true)
+        val executionGenerator = RandomExecutionGenerator(testStructure)
+        var verifier = createVerifier(testClass)
         while (planner.shouldDoNextIteration()) {
             val i = planner.iteration
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -150,14 +150,17 @@ internal class LincheckOptionsImpl : LincheckOptions {
             // from re-using LTS and limit the size of potential memory leak.
             // https://github.com/Kotlin/kotlinx-lincheck/issues/124
             if ((i + 1) % LinChecker.VERIFIER_REFRESH_CYCLE == 0) {
-                verifier = createVerifier(checkStateEquivalence = false)
+                verifier = createVerifier(testClass)
             }
             // TODO: maybe we should move custom scenarios logic into Planner?
             val isCustomScenario = (i < customScenarios.size)
             val scenario = if (isCustomScenario)
                 customScenarios[i]
             else
-                executionGenerator.nextExecution()
+                executionGenerator.nextExecution(maxThreads, maxOperationsInThread,
+                    if (generateBeforeAndAfterParts) maxOperationsInThread else 0,
+                    if (generateBeforeAndAfterParts) maxOperationsInThread else 0,
+                )
             scenario.validate()
             reporter.logIteration(i, scenario)
             val currentMode = planner.currentMode()
@@ -172,7 +175,10 @@ internal class LincheckOptionsImpl : LincheckOptions {
             val minimizationInvocationsCount =
                 max(2 * planner.iterationsInvocationCount[i], planner.invocationsBound)
             var minimizedFailure = if (!isCustomScenario)
-                failure.minimize(currentMode, testCfg, minimizationInvocationsCount)
+                failure.minimize(reporter) {
+                    createStrategy(currentMode, testClass, scenario, testStructure)
+                        .run(verifier, FixedInvocationPlanner(minimizationInvocationsCount))
+                }
             else
                 failure
             if (mode == LincheckMode.Hybrid && currentMode == LincheckMode.Stress) {
@@ -198,8 +204,11 @@ internal class LincheckOptionsImpl : LincheckOptions {
             }
         }
 
-    private fun createVerifier(checkStateEquivalence: Boolean) =
-        verifier.getConstructor(Class::class.java).newInstance(sequentialImplementation)
+    private fun createVerifier(testClass: Class<*>) = verifier
+        .getConstructor(Class::class.java)
+        .newInstance(
+            chooseSequentialSpecification(sequentialImplementation, testClass)
+        )
 
     private fun createStrategy(
         mode: LincheckMode,

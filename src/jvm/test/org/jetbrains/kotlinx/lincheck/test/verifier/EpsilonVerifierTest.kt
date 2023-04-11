@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
+@Suppress("DEPRECATION_ERROR")
 @StressCTest(iterations = 5, threads = 2, actorsPerThread = 2, verifier = EpsilonVerifier::class)
 class EpsilonVerifierTest : VerifierState() {
     private var i = 0

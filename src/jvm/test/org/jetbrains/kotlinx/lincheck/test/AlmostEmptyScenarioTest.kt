@@ -23,11 +23,12 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.ThreadLocalRandom
 
+@Suppress("DEPRECATION_ERROR")
 @StressCTest(iterations = 1, requireStateEquivalenceImplCheck = false, actorsBefore = 1, actorsAfter = 1, threads = 3)
 class AlmostEmptyScenarioTest {
     @Operation(runOnce = true)

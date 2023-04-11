@@ -33,11 +33,9 @@ import org.jetbrains.kotlinx.lincheck.CTestStructure;
  * All implementations should have the same constructor as {@link ExecutionGenerator} has.
  */
 public abstract class ExecutionGenerator {
-    protected final CTestConfiguration testConfiguration;
     protected final CTestStructure testStructure;
 
-    protected ExecutionGenerator(CTestConfiguration testConfiguration, CTestStructure testStructure) {
-        this.testConfiguration = testConfiguration;
+    protected ExecutionGenerator(CTestStructure testStructure) {
         this.testStructure = testStructure;
     }
 
@@ -48,5 +46,8 @@ public abstract class ExecutionGenerator {
      * If the current test contains suspendable operations, the initial part of an execution
      * should not contain suspendable actors and the post part should be empty.
      */
-    public abstract ExecutionScenario nextExecution();
+    public abstract ExecutionScenario nextExecution(
+            int threads, int operationsPerThread,
+            int operationsInInitPart, int operationsInPostPart
+    );
 }

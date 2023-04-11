@@ -42,7 +42,9 @@ class BlockingOperationTest {
         generateScenarios = false
         addCustomScenario {
             parallel {
-                actor(::blocking)
+                thread {
+                    actor(::blocking)
+                }
             }
         }
     }.check(this::class)
@@ -70,5 +72,5 @@ class CausesBlockingOperationTest {
         verifier = EpsilonVerifier::class.java
         checkObstructionFreedom = true
         generateBeforeAndAfterParts = false
-    }
+    }.check(this::class)
 }

@@ -56,7 +56,10 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     eliminateLocalObjects = eliminateLocalObjects,
     customScenarios = customScenarios
 ) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-                                stateRepresentationMethod: Method?, verifier: Verifier, invocationPlanner: InvocationPlanner): Strategy
-        = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier, invocationPlanner)
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario,
+                                validationFunctions: List<Method>, stateRepresentationMethod: Method?): Strategy =
+        ModelCheckingStrategy(testClass, scenario,
+            validationFunctions, stateRepresentationMethod,
+            timeoutMs, checkObstructionFreedom, eliminateLocalObjects, hangingDetectionThreshold, guarantees,
+        )
 }
