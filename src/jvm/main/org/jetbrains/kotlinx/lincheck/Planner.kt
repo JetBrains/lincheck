@@ -63,7 +63,7 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
     /**
      * Total amount of time in milliseconds allocated to testing.
      */
-    val testingTime: Long,
+    val testingTimeMs: Long,
     /**
      * A lower bound on the number of iterations that should be definitely performed, unless impossible.
      * This number is fixed at the beginning of testing and does not change.
@@ -79,14 +79,14 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
     /**
      * Remaining amount of time for testing.
      */
-    val remainingTime: Long
-        get() = testingTime - runningTime
+    val remainingTimeMs: Long
+        get() = testingTimeMs - runningTime
 
     /**
      * The percent of time already spent. An integer number in range [0 .. 100].
      */
     val testingProgress: Int
-        get() = round(100 * runningTime.toDouble() / testingTime).toInt()
+        get() = round(100 * runningTime.toDouble() / testingTimeMs).toInt()
 
     /**
      * Current iteration number.
@@ -143,10 +143,13 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         get() = invocationsRunningTime.average()
 
     fun shouldDoNextIteration(): Boolean =
-        (remainingTime > 0) && (iteration < iterationsUpperBound)
+        (remainingTimeMs > 0) && (iteration < iterationsUpperBound)
 
     override fun shouldDoNextInvocation(): Boolean =
-        (remainingTime > 0) && (invocation < invocationsBound)
+        ((remainingTimeMs > 0) && (invocation < invocationsBound)).also {
+            if (!it)
+                println()
+        }
 
     fun<T> measureIterationTime(block: () -> T): T {
         val runningTimeAtStart = runningTime
@@ -171,7 +174,7 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         val elapsed = System.currentTimeMillis() - lastInvocationStartTime
         runningTime += elapsed
         invocationsRunningTime[invocationIndex] = elapsed
-        if (++invocation == ADJUSTMENT_THRESHOLD) {
+        if (++invocation % ADJUSTMENT_THRESHOLD == 0) {
             adjustBounds()
             invocationsRunningTime.fill(0)
         }
@@ -184,8 +187,8 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
             val remainingInvocations = (invocationsBound - invocation) + remainingIterations * invocationsBound
             val timeEstimate = remainingInvocations * averageInvocationTime
             // if we under-perform, adjust the invocations bound to fit into deadline
-            if (timeEstimate > remainingTime) {
-                val invocationsEstimate = remainingTime.toDouble() / ((remainingIterations + 1) * averageInvocationTime)
+            if (timeEstimate > remainingTimeMs) {
+                val invocationsEstimate = remainingTimeMs.toDouble() / ((remainingIterations + 1) * averageInvocationTime)
                 invocationsBound = max(INVOCATIONS_LOWER_BOUND, floor(invocationsEstimate).toInt())
                 return
             }
@@ -196,29 +199,29 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         val remainingInvocations = (invocationsBound - invocation) + remainingIterations * invocationsBound
         val timeEstimate = remainingInvocations * averageInvocationTime
         // if we under-perform by an order of magnitude, adjust the invocations bound to fit into deadline
-        if (timeEstimate / remainingTime > INVOCATIONS_FACTOR) {
+        if (timeEstimate < remainingTimeMs) {
+            
+        }
+
+        if (timeEstimate / remainingTimeMs > INVOCATIONS_FACTOR) {
             invocationsBound = max(INVOCATIONS_LOWER_BOUND, invocationsBound / INVOCATIONS_FACTOR)
             return
         }
-        // if we over-perform by and order of magnitude, increase the number of invocations per iteration
-        if (remainingTime / timeEstimate > INVOCATIONS_FACTOR) {
+        // if we over-perform, schedule more iterations
+        val invocationsDelta = ITERATIONS_DELTA * invocationsBound
+        if (remainingTimeMs - timeEstimate > invocationsDelta * averageInvocationTime) {
+            iterationsUpperBound += ITERATIONS_DELTA
             invocationsBound = min(INVOCATIONS_UPPER_BOUND, invocationsBound * INVOCATIONS_FACTOR)
             return
         }
 
         // if we under-perform, decrease the number of planned iterations
-        if (remainingTime < timeEstimate) {
+        if (remainingTimeMs < timeEstimate) {
             // how bad is situation?
-            val delay = timeEstimate - remainingTime
+            val delay = timeEstimate - remainingTimeMs
             val delayingIterations = floor(delay / (invocationsBound * averageInvocationTime)).toInt()
             // remove the iterations we are unlikely to reach
             iterationsUpperBound -= delayingIterations
-            return
-        }
-        val invocationsDelta = ITERATIONS_DELTA * invocationsBound
-        // if we over-perform, schedule more iterations
-        if (remainingTime - timeEstimate > invocationsDelta * averageInvocationTime) {
-            iterationsUpperBound += ITERATIONS_DELTA
             return
         }
     }
@@ -241,7 +244,7 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         private const val INVOCATIONS_LOWER_BOUND = 1_000
 
         // upper bound of invocations allocated by iteration
-        private const val INVOCATIONS_UPPER_BOUND = 100_000
+        private const val INVOCATIONS_UPPER_BOUND = 30_000
 
         // number of invocations performed between dynamic parameter adjustments
         private const val ADJUSTMENT_THRESHOLD = 100

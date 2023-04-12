@@ -133,7 +133,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
     override fun checkImpl(testClass: Class<*>): LincheckFailure? {
         val reporter = Reporter(DEFAULT_LOG_LEVEL)
         val planner = AdaptivePlanner(
-            testingTime = testingTimeInSeconds * 1000,
+            testingTimeMs = testingTimeInSeconds * 1000,
             iterationsLowerBound = customScenarios.size
         )
         val testStructure = CTestStructure.getFromTestClass(testClass)

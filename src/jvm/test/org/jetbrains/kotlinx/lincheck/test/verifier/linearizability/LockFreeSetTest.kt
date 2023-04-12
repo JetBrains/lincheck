@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
 class LockFreeSetTest {
@@ -48,7 +47,6 @@ class LockFreeSetTest {
         LincheckOptions {
             this as LincheckOptionsImpl
             mode = LincheckMode.Stress
-            1000000
             testingTimeInSeconds = 10
             generateScenarios = false
             addCustomScenario(scenario)
