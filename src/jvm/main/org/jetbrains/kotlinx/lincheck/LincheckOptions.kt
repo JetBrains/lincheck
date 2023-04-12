@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+import kotlin.math.*
 import kotlin.reflect.*
 
 interface LincheckOptions {
@@ -155,11 +156,17 @@ internal class LincheckOptionsImpl : LincheckOptions {
             val isCustomScenario = (i < customScenarios.size)
             val scenario = if (isCustomScenario)
                 customScenarios[i]
-            else
-                executionGenerator.nextExecution(maxThreads, maxOperationsInThread,
-                    if (generateBeforeAndAfterParts) maxOperationsInThread else 0,
-                    if (generateBeforeAndAfterParts) maxOperationsInThread else 0,
+            else {
+                val factor = i.toDouble() / planner.iterationsUpperBound
+                val threads = ceil(maxThreads * factor).toInt().coerceAtLeast(2)
+                val operationsInThread = ceil(maxOperationsInThread * factor).toInt().coerceAtLeast(2)
+                println("$i, ${planner.iterationsUpperBound} $threads $operationsInThread $factor $maxThreads $maxOperationsInThread")
+                executionGenerator.nextExecution(
+                    threads, operationsInThread,
+                    if (generateBeforeAndAfterParts) operationsInThread else 0,
+                    if (generateBeforeAndAfterParts) operationsInThread else 0,
                 )
+            }
             scenario.validate()
             reporter.logIteration(i + 1, scenario)
             val currentMode = planner.currentMode()
@@ -252,9 +259,9 @@ internal class LincheckOptionsImpl : LincheckOptions {
     }
 }
 
-private const val DEFAULT_TESTING_TIME = 5L
-private const val DEFAULT_MAX_THREADS = 3
-private const val DEFAULT_MAX_OPERATIONS = 2
+private const val DEFAULT_TESTING_TIME = 15L
+private const val DEFAULT_MAX_THREADS = 4
+private const val DEFAULT_MAX_OPERATIONS = 4
 
 // in hybrid mode: testing progress threshold (in %) after which strategy switch
 //   from Stress to ModelChecking strategy occurs

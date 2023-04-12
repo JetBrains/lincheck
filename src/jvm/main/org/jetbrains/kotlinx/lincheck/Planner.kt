@@ -200,7 +200,7 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         val timeEstimate = remainingInvocations * averageInvocationTime
         // if we under-perform by an order of magnitude, adjust the invocations bound to fit into deadline
         if (timeEstimate < remainingTimeMs) {
-            
+
         }
 
         if (timeEstimate / remainingTimeMs > INVOCATIONS_FACTOR) {
