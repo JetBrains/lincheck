@@ -24,14 +24,13 @@ import java.util.Random
 
 private const val SEED_GENERATOR_SEED = 0L
 
-object RandomFactory {
+/**
+ * Used to provide [Random] with different seeds to parameters generators and method generator
+ * Is being created every time on each test to make an execution deterministic.
+ */
+class RandomProvider {
 
-    private var seedGenerator = Random(SEED_GENERATOR_SEED)
-
-    fun resetSeedGenerator() {
-        seedGenerator = Random(SEED_GENERATOR_SEED)
-    }
+    private val seedGenerator = Random(SEED_GENERATOR_SEED)
 
     fun createRandom(): Random = Random(seedGenerator.nextLong())
-
 }

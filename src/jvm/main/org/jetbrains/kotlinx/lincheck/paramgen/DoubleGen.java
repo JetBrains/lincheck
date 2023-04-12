@@ -22,49 +22,60 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.real.ExpandingDoubleRangeGenStrategy;
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.real.FixedRangeDoubleGenStrategy;
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.real.FixedRangeWithStepDoubleGenStrategy;
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.real.RandomDoubleGenStrategy;
+import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
 public class DoubleGen implements ParameterGenerator<Double> {
     private static final float DEFAULT_STEP = 0.1f;
-    private static final float DEFAULT_MAX_EXPANDING_RADIUS = 10f;
+    private static final float DEFAULT_BEGIN = -10f;
+    private static final float DEFAULT_END = 10f;
 
-    private final RandomDoubleGenStrategy genStrategy;
+    private final ExpandingRangeIntGenerator intGenerator;
+    private final double step;
+    private final double begin;
 
-    public DoubleGen(String configuration) {
-        if (configuration.isEmpty()) { // use default configuration
-            genStrategy = new ExpandingDoubleRangeGenStrategy(DEFAULT_MAX_EXPANDING_RADIUS, DEFAULT_STEP);
-            return;
-        }
-        String[] args = configuration.replaceAll("\\s", "").split(":");
-
+    public DoubleGen(RandomProvider randomProvider, String configuration) {
         double begin;
         double end;
-        switch (args.length) {
-            case 2: // begin:end
-                begin = Double.parseDouble(args[0]);
-                end = Double.parseDouble(args[1]);
-                genStrategy = new FixedRangeWithStepDoubleGenStrategy(begin, end, DEFAULT_STEP);
-                break;
-            case 3: // begin:step:end
-                begin = Double.parseDouble(args[0]);
-                double step = Double.parseDouble(args[1]);
-                end = Double.parseDouble(args[2]);
-                if (step == 0.0) {
-                    genStrategy = new FixedRangeDoubleGenStrategy(begin, end);
-                } else {
-                    genStrategy = new FixedRangeWithStepDoubleGenStrategy(begin, end, DEFAULT_STEP);
-                }
-                break;
-            default:
-                throw new IllegalArgumentException("Configuration should have two (begin and end) " + "or three (begin, step and end) arguments separated by colon");
+        double step = 0.0;
+
+        if (configuration.isEmpty()) { // use default configuration
+            begin = DEFAULT_BEGIN;
+            end = DEFAULT_END;
+            step = DEFAULT_STEP;
+        } else {
+            String[] args = configuration.replaceAll("\\s", "").split(":");
+
+            switch (args.length) {
+                case 2: // begin:end
+                    begin = Double.parseDouble(args[0]);
+                    end = Double.parseDouble(args[1]);
+                    break;
+                case 3: // begin:step:end
+                    begin = Double.parseDouble(args[0]);
+                    step = Double.parseDouble(args[1]);
+                    end = Double.parseDouble(args[2]);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Configuration should have two (begin and end) " + "or three (begin, step and end) arguments separated by colon");
+            }
         }
 
+        if (begin >= end) {
+            throw new IllegalArgumentException("Illegal range for type double: begin must be < end");
+        }
+
+        double delta = end - begin;
+        if (step == 0.0) {
+            step = delta / 100; // default generated step
+        }
+        int maxSteps = (int) (delta / step);
+
+        intGenerator = new ExpandingRangeIntGenerator(randomProvider.createRandom(), maxSteps / 2, maxSteps / 2, 0, maxSteps);
+        this.step = step;
+        this.begin = begin;
     }
 
     public Double generate() {
-        return genStrategy.nextDouble();
+        return begin + step * intGenerator.nextInt();
     }
 }

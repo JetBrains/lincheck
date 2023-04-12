@@ -25,7 +25,7 @@ package org.jetbrains.kotlinx.lincheck.execution;
 import org.jetbrains.kotlinx.lincheck.Actor;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.CTestStructure;
-import org.jetbrains.kotlinx.lincheck.RandomFactory;
+import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,10 +35,11 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class RandomExecutionGenerator extends ExecutionGenerator {
-    private final Random random = RandomFactory.INSTANCE.createRandom();
+    private final Random random;
 
-    public RandomExecutionGenerator(CTestConfiguration testConfiguration, CTestStructure testStructure) {
+    public RandomExecutionGenerator(CTestConfiguration testConfiguration, CTestStructure testStructure, RandomProvider randomProvider) {
         super(testConfiguration, testStructure);
+        random = randomProvider.createRandom();
     }
 
     @Override

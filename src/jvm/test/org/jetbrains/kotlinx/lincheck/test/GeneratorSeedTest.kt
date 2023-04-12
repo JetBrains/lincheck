@@ -32,7 +32,7 @@ import org.junit.Test
 /**
  * This test checks that parameter generators random use different seeds than executions generator.
  * This test fails if seeds are equals.
- * @see <a href="https://github.com/Kotlin/kotlinx-lincheck/issues/120">Corresponding bug description</a>.
+ * [Corresponding bug description](http://example.com).
  */
 @Param(name = "key", gen = IntGen::class, conf = "0:1")
 class GeneratorSeedTest {
@@ -49,4 +49,67 @@ class GeneratorSeedTest {
     @Test(expected = LincheckAssertionError::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
 
+}
+
+/**
+ *  Test checks that method with both parameters of the same type annotated with [Param] won't receive same values all the time
+ */
+@Param(name = "key", gen = IntGen::class, conf = "0:1000")
+class MethodParameterGenerationTestWithBothParametersAnnotated {
+    @Operation
+    fun operation(@Param(name = "key") first: Int, @Param(name = "key") second: Int) =
+        checkParameters(first, second)
+
+    @Test(expected = IllegalStateException::class)
+    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+
+}
+
+/**
+ *  Test checks that method with both parameters of the same type, where the first one is annotated with [Param],
+ *  won't receive same values all the time.
+ */
+@Param(name = "key", gen = IntGen::class, conf = "0:1000")
+class MethodParameterGenerationTestWithFirstParameterAnnotated {
+
+    @Operation
+    fun operation(@Param(name = "key") first: Int, second: Int) = checkParameters(first, second)
+
+    @Test(expected = IllegalStateException::class)
+    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+
+}
+
+/**
+ *  Test checks that method with both parameters of the same type, where the second one is annotated with [Param],
+ *  won't receive same values all the time.
+ */
+@Param(name = "key", gen = IntGen::class, conf = "0:1000")
+class MethodParameterGenerationTestWithSecondParameterAnnotated {
+    @Operation
+    fun operation(first: Int, @Param(name = "key") second: Int) = checkParameters(first, second)
+
+    @Test(expected = IllegalStateException::class)
+    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+
+}
+
+/**
+ *  Test checks that method with both parameters of the same type won't receive same values all the time
+ */
+class MethodParameterGenerationTest {
+    @Operation
+    fun operation(first: Int, second: Int) = checkParameters(first, second)
+
+    @Test(expected = IllegalStateException::class)
+    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+
+}
+
+private object DifferentParametersAsExpectedException : Exception()
+
+private fun checkParameters(first: Int, second: Int) {
+    if (first != second) {
+        throw DifferentParametersAsExpectedException
+    }
 }

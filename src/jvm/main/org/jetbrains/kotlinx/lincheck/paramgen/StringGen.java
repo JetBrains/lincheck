@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.RandomFactory;
+import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
 import java.util.Random;
 
@@ -30,12 +30,13 @@ public class StringGen implements ParameterGenerator<String> {
     private static final int DEFAULT_MAX_WORD_LENGTH = 15;
     private static final String DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ ";
 
-    private final Random random = RandomFactory.INSTANCE.createRandom();
+    private final Random random;
     private final int maxWordLength;
     private final String alphabet;
     private int currentWordLength = 1;
 
-    public StringGen(String configuration) {
+    public StringGen(RandomProvider randomProvider, String configuration) {
+        random = randomProvider.createRandom();
         if (configuration.isEmpty()) { // use default configuration
             maxWordLength = DEFAULT_MAX_WORD_LENGTH;
             alphabet = DEFAULT_ALPHABET;
@@ -58,7 +59,7 @@ public class StringGen implements ParameterGenerator<String> {
 
         char[] cs = new char[currentWordLength];
         for (int i = 0; i < cs.length; i++) {
-            cs[i] = alphabet.charAt(random.nextInt(alphabet.length()));
+            cs[i] = alphabet.charAt(random.nextInt(currentWordLength));
         }
 
         return new String(cs);

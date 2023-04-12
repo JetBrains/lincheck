@@ -30,7 +30,7 @@ import kotlin.reflect.*
 /**
  * This class runs concurrent tests.
  */
-class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
+class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
@@ -39,7 +39,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
         reporter = Reporter(logLevel)
         testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
-                             else createFromTestClassAnnotations(testClass)
+        else createFromTestClassAnnotations(testClass)
     }
 
     /**
@@ -63,8 +63,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
-        RandomFactory.resetSeedGenerator()
-        val exGen = createExecutionGenerator()
+        val exGen = createExecutionGenerator(testStructure.randomProvider)
         for (i in customScenarios.indices) {
             val verifier = createVerifier()
             val scenario = customScenarios[i]
@@ -129,7 +128,11 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
+    private fun ExecutionScenario.tryMinimize(
+        threadId: Int,
+        position: Int,
+        testCfg: CTestConfiguration
+    ): LincheckFailure? {
         val newScenario = this.copy()
         val actors = newScenario[threadId] as MutableList<Actor>
         actors.removeAt(position)
@@ -176,22 +179,27 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         }
     }
 
-    private val ExecutionScenario.hasSuspendableActorsInInitPart get() =
-        initExecution.stream().anyMatch(Actor::isSuspendable)
-    private val ExecutionScenario.hasPostPartAndSuspendableActors get() =
-        (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
-    private val ExecutionScenario.isParallelPartEmpty get() =
-        parallelExecution.map { it.size }.sum() == 0
+    private val ExecutionScenario.hasSuspendableActorsInInitPart
+        get() =
+            initExecution.stream().anyMatch(Actor::isSuspendable)
+    private val ExecutionScenario.hasPostPartAndSuspendableActors
+        get() =
+            (parallelExecution.stream()
+                .anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
+    private val ExecutionScenario.isParallelPartEmpty
+        get() =
+            parallelExecution.map { it.size }.sum() == 0
 
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
 
-    private fun CTestConfiguration.createExecutionGenerator() =
+    private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider) =
         generatorClass.getConstructor(
             CTestConfiguration::class.java,
-            CTestStructure::class.java
-        ).newInstance(this, testStructure)
+            CTestStructure::class.java,
+            RandomProvider::class.java
+        ).newInstance(this, testStructure, randomProvider)
 
     // This companion object is used for backwards compatibility.
     companion object {

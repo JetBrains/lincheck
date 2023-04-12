@@ -22,25 +22,17 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.ExpandingRangeIntGenStrategy;
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.FixedRangeIntGenStrategy;
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.RandomIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
 public class ByteGen implements ParameterGenerator<Byte> {
 
-    private final RandomIntGenStrategy genStrategy;
-    private static final int MAX_EXPANDING_RANGE_RADIUS = 100;
+    private final ExpandingRangeIntGenerator generator;
 
-    public ByteGen(String configuration) {
-        if (configuration.isEmpty()) { // use default configuration
-            genStrategy = new ExpandingRangeIntGenStrategy(MAX_EXPANDING_RANGE_RADIUS);
-            return;
-        }
-
-        genStrategy = new FixedRangeIntGenStrategy(configuration, Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
+    public ByteGen(RandomProvider randomProvider, String configuration) {
+        generator = ExpandingRangeIntGenerator.create(randomProvider.createRandom(), configuration, Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
     }
 
     public Byte generate() {
-        return (byte) genStrategy.nextInt();
+        return (byte) generator.nextInt();
     }
 }

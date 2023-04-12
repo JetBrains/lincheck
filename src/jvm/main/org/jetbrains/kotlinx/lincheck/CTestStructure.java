@@ -44,12 +44,15 @@ public class CTestStructure {
     public final List<Method> validationFunctions;
     public final Method stateRepresentation;
 
+    public final RandomProvider randomProvider;
+
     private CTestStructure(List<ActorGenerator> actorGenerators, List<OperationGroup> operationGroups,
-                           List<Method> validationFunctions, Method stateRepresentation) {
+                           List<Method> validationFunctions, Method stateRepresentation, RandomProvider randomProvider) {
         this.actorGenerators = actorGenerators;
         this.operationGroups = operationGroups;
         this.validationFunctions = validationFunctions;
         this.stateRepresentation = stateRepresentation;
+        this.randomProvider = randomProvider;
     }
 
     /**
@@ -62,8 +65,9 @@ public class CTestStructure {
         List<Method> validationFunctions = new ArrayList<>();
         List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
+        RandomProvider randomProvider = new RandomProvider();
         while (clazz != null) {
-            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions, stateRepresentations);
+            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, validationFunctions, stateRepresentations, randomProvider);
             clazz = clazz.getSuperclass();
         }
         if (stateRepresentations.size() > 1) {
@@ -75,7 +79,7 @@ public class CTestStructure {
         if (!stateRepresentations.isEmpty())
             stateRepresentation = stateRepresentations.get(0);
         // Create StressCTest class configuration
-        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation);
+        return new CTestStructure(actorGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation, randomProvider);
     }
 
     @SuppressWarnings("removal")
@@ -83,16 +87,17 @@ public class CTestStructure {
                                                    Map<String, OperationGroup> groupConfigs,
                                                    List<ActorGenerator> actorGenerators,
                                                    List<Method> validationFunctions,
-                                                   List<Method> stateRepresentations) {
+                                                   List<Method> stateRepresentations,
+                                                   RandomProvider randomProvider) {
         // Read named parameter paramgen (declared for class)
         for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
             if (paramAnn.name().isEmpty()) {
                 throw new IllegalArgumentException("@Param name in class declaration cannot be empty");
             }
-            namedGens.put(paramAnn.name(), createGenerator(paramAnn));
+            namedGens.put(paramAnn.name(), createGenerator(paramAnn, randomProvider));
         }
         // Create map for default (not named) gens
-        Map<Class<?>, ParameterGenerator<?>> defaultGens = createDefaultGenerators();
+        Map<Class<?>, ParameterGenerator<?>> defaultGens = createDefaultGenerators(randomProvider);
         // Read group configurations
         for (OpGroupConfig opGroupConfigAnn: clazz.getAnnotationsByType(OpGroupConfig.class)) {
             groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
@@ -114,7 +119,7 @@ public class CTestStructure {
                 int nParameters = m.getParameterCount() - (isSuspendableMethod ? 1 : 0);
                 for (int i = 0; i < nParameters; i++) {
                     String nameInOperation = opAnn.params().length > 0 ? opAnn.params()[i] : null;
-                    gens.add(getOrCreateGenerator(m, m.getParameters()[i], nameInOperation, namedGens, defaultGens));
+                    gens.add(getOrCreateGenerator(m, m.getParameters()[i], nameInOperation, namedGens, defaultGens, randomProvider));
                 }
                 // Get list of handled exceptions if they are presented
                 List<Class<? extends Throwable>> handledExceptions = Arrays.asList(opAnn.handleExceptionsAsResult());
@@ -166,9 +171,12 @@ public class CTestStructure {
         return methods;
     }
 
-    private static ParameterGenerator<?> getOrCreateGenerator(Method m, Parameter p, String nameInOperation,
-        Map<String, ParameterGenerator<?>> namedGens, Map<Class<?>, ParameterGenerator<?>> defaultGens)
-    {
+    private static ParameterGenerator<?> getOrCreateGenerator(Method m,
+                                                              Parameter p,
+                                                              String nameInOperation,
+                                                              Map<String, ParameterGenerator<?>> namedGens,
+                                                              Map<Class<?>, ParameterGenerator<?>> defaultGens,
+                                                              RandomProvider randomProvider) {
         // Read @Param annotation on the parameter
         Param paramAnn = p.getAnnotation(Param.class);
         // If this annotation not presented use named generator based on name presented in @Operation or parameter name.
@@ -194,34 +202,35 @@ public class CTestStructure {
         if (!paramAnn.name().isEmpty())
             return checkAndGetNamedGenerator(namedGens, paramAnn.name());
         // Otherwise create new parameter generator
-        return createGenerator(paramAnn);
+        return createGenerator(paramAnn, randomProvider);
     }
 
-    private static ParameterGenerator<?> createGenerator(Param paramAnn) {
+    private static ParameterGenerator<?> createGenerator(Param paramAnn, RandomProvider randomProvider) {
         try {
-            return paramAnn.gen().getConstructor(String.class).newInstance(paramAnn.conf());
+            return paramAnn.gen().getConstructor(RandomProvider.class, String.class).newInstance(randomProvider, paramAnn.conf());
         } catch (Exception e) {
             throw new IllegalStateException("Cannot create parameter gen", e);
         }
     }
 
-    private static Map<Class<?>, ParameterGenerator<?>> createDefaultGenerators() {
+    private static Map<Class<?>, ParameterGenerator<?>> createDefaultGenerators(RandomProvider randomProvider) {
         Map<Class<?>, ParameterGenerator<?>> defaultGens = new HashMap<>();
-        defaultGens.put(boolean.class, new BooleanGen(""));
+        defaultGens.put(boolean.class, new BooleanGen(randomProvider, ""));
         defaultGens.put(Boolean.class, defaultGens.get(boolean.class));
-        defaultGens.put(byte.class, new ByteGen(""));
+        defaultGens.put(byte.class, new ByteGen(randomProvider, ""));
         defaultGens.put(Byte.class, defaultGens.get(byte.class));
-        defaultGens.put(short.class, new ShortGen(""));
+        defaultGens.put(short.class, new ShortGen(randomProvider, ""));
         defaultGens.put(Short.class, defaultGens.get(short.class));
-        defaultGens.put(int.class, new IntGen(""));
+        defaultGens.put(int.class, new IntGen(randomProvider, ""));
         defaultGens.put(Integer.class, defaultGens.get(int.class));
-        defaultGens.put(long.class, new LongGen(""));
+        defaultGens.put(long.class, new LongGen(randomProvider, ""));
         defaultGens.put(Long.class, defaultGens.get(long.class));
-        defaultGens.put(float.class, new FloatGen(""));
+        defaultGens.put(float.class, new FloatGen(randomProvider, ""));
         defaultGens.put(Float.class, defaultGens.get(float.class));
-        defaultGens.put(double.class, new DoubleGen(""));
+        defaultGens.put(double.class, new DoubleGen(randomProvider, ""));
         defaultGens.put(Double.class, defaultGens.get(double.class));
-        defaultGens.put(String.class, new StringGen(""));
+        defaultGens.put(String.class, new StringGen(randomProvider, ""));
+
         return defaultGens;
     }
 

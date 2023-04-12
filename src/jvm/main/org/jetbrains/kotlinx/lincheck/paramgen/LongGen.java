@@ -22,11 +22,13 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.RandomProvider;
+
 public class LongGen implements ParameterGenerator<Long> {
     private final IntGen intGen;
 
-    public LongGen(String configuration) {
-        intGen = new IntGen(configuration);
+    public LongGen(RandomProvider randomProvider, String configuration) {
+        intGen = new IntGen(randomProvider, configuration);
     }
 
     public Long generate() {
