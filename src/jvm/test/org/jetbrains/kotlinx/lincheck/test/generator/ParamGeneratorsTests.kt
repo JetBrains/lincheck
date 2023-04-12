@@ -18,7 +18,7 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test
+package org.jetbrains.kotlinx.lincheck.test.generator
 
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
