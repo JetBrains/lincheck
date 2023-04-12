@@ -9,14 +9,14 @@ Lincheck is a practical and user-friendly framework for testing concurrent algor
 and declarative way to write concurrent tests.
 
 With the Lincheck framework, instead of describing how to perform tests, you can specify _what to test_
-by just declaring all the operations to examine. After that, Lincheck automatically 
+by just declaring all the data structure operations to examine. After that, Lincheck automatically 
 generates a set of random concurrent scenarios,
 examines them using either stress-testing or bounded model checking, and
 verifies that the results of each invocation satisfy the required correctness property (linearizability by default).
 
 ## Documentation and Presentations
 
-Please see the [official tutorial](/docs/topics/lincheck-guide.md) that shows how to use Lincheck in various scenarios.
+Please see the [official tutorial](/docs/topics/lincheck-guide.md) that showcases Lincheck features through examples.
 
 You may also be interested in the following public talks:
 
