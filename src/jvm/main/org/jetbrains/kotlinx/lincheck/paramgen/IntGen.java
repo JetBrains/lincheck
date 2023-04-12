@@ -22,24 +22,27 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.ExpandingRangeIntGenStrategy;
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.FixedRangeIntGenStrategy;
-import org.jetbrains.kotlinx.lincheck.paramgen.strategy.RandomIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.ExpandingRangeIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.FixedRangeIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.RandomIntGenStrategy;
 
 public class IntGen implements ParameterGenerator<Integer> {
+    private static final int LOWER_BOUND_MIN = -100;
+    private static final int UPPER_BOUND_MAX = 100;
 
-    private final RandomIntGenStrategy intGenStrategy;
+    private final RandomIntGenStrategy genStrategy;
 
-    public IntGen(int rangeLowerBoundInclusive, int rangeUpperBoundInclusive) {
-        intGenStrategy = new FixedRangeIntGenStrategy(rangeLowerBoundInclusive, rangeUpperBoundInclusive);
+    public IntGen(String configuration) {
+        if (configuration.isEmpty()) { // use default configuration
+            genStrategy = new ExpandingRangeIntGenStrategy(0, 0, LOWER_BOUND_MIN, UPPER_BOUND_MAX);
+            return;
+        }
+
+        genStrategy = new FixedRangeIntGenStrategy(configuration, Integer.MIN_VALUE, Integer.MAX_VALUE, "int");
     }
 
-    public IntGen(int currentRangeLowerBoundInclusive, int currentRangeUpperBoundInclusive, int minRangeLowerBoundInclusive, int maxRangeUpperBoundInclusive) {
-        intGenStrategy = new ExpandingRangeIntGenStrategy(currentRangeLowerBoundInclusive, currentRangeUpperBoundInclusive, minRangeLowerBoundInclusive, maxRangeUpperBoundInclusive);
-    }
-
-    @Override
     public Integer generate() {
-        return intGenStrategy.nextInt();
+        return genStrategy.nextInt();
     }
+
 }

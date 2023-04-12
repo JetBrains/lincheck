@@ -18,18 +18,11 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.paramgen.strategy;
+package org.jetbrains.kotlinx.lincheck.paramgen.strategy.real;
 
 import java.util.Random;
 
-public abstract class RandomIntGenStrategy {
+public interface RandomDoubleGenStrategy {
 
-    protected final Random random = new Random(0);
-
-    public abstract int nextInt();
-
-    protected int generateFromRandomRange(int rangeLowerBoundInclusive, int rangeUpperBoundInclusive) {
-        return rangeLowerBoundInclusive + random.nextInt(rangeUpperBoundInclusive - rangeLowerBoundInclusive + 1);
-    }
-
+    double nextDouble();
 }

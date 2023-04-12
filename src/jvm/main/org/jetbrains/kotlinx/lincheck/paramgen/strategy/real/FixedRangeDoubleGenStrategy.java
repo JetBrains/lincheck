@@ -18,23 +18,23 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.paramgen.strategy;
+package org.jetbrains.kotlinx.lincheck.paramgen.strategy.real;
 
-public class FixedRangeIntGenStrategy extends RandomIntGenStrategy {
+import java.util.Random;
 
-    private final int rangeLowerBoundInclusive;
-    private final int rangeUpperBoundInclusive;
+public class FixedRangeDoubleGenStrategy implements RandomDoubleGenStrategy {
 
-    public FixedRangeIntGenStrategy(int rangeLowerBoundInclusive, int rangeUpperBoundInclusive) {
-        if (rangeUpperBoundInclusive - rangeLowerBoundInclusive + 1 < 0) {
-            throw new IllegalArgumentException("rangeUpperBoundInclusive must be >= than rangeLowerBoundInclusive");
-        }
-        this.rangeLowerBoundInclusive = rangeLowerBoundInclusive;
-        this.rangeUpperBoundInclusive = rangeUpperBoundInclusive;
+    protected final Random random = new Random(0);
+    private final double delta;
+    private final double rangeLowerBound;
+
+    public FixedRangeDoubleGenStrategy(double rangeLowerBound, double rangeUpperBound) {
+        this.rangeLowerBound = rangeLowerBound;
+        this.delta = rangeUpperBound - rangeLowerBound;
     }
 
     @Override
-    public int nextInt() {
-        return generateFromRandomRange(rangeLowerBoundInclusive, rangeUpperBoundInclusive);
+    public double nextDouble() {
+        return rangeLowerBound + delta * random.nextDouble();
     }
 }

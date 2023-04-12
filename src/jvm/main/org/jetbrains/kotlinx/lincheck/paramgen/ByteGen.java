@@ -22,15 +22,26 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.ExpandingRangeIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.FixedRangeIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.RandomIntGenStrategy;
+
 public class ByteGen implements ParameterGenerator<Byte> {
-    private final IntGen intGen;
+
+    private static final int LOWER_BOUND_MIN = -100;
+    private static final int UPPER_BOUND_MAX = 100;
+    private final RandomIntGenStrategy genStrategy;
 
     public ByteGen(String configuration) {
-        intGen = new IntGen(configuration);
-        intGen.checkRange(Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
+        if (configuration.isEmpty()) { // use default configuration
+            genStrategy = new ExpandingRangeIntGenStrategy(0, 0, LOWER_BOUND_MIN, UPPER_BOUND_MAX);
+            return;
+        }
+
+        genStrategy = new FixedRangeIntGenStrategy(configuration, Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
     }
 
     public Byte generate() {
-        return (byte) (int) intGen.generate();
+        return (byte) genStrategy.nextInt();
     }
 }

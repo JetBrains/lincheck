@@ -10,27 +10,37 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.ExpandingRangeIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.FixedRangeIntGenStrategy;
+import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.RandomIntGenStrategy;
+
 public class ShortGen implements ParameterGenerator<Short> {
-    private final IntGen intGen;
+    private static final int LOWER_BOUND_MIN = -100;
+    private static final int UPPER_BOUND_MAX = 100;
+    private final RandomIntGenStrategy genStrategy;
 
     public ShortGen(String configuration) {
-        intGen = new IntGen(configuration);
-        intGen.checkRange(Short.MIN_VALUE, Short.MAX_VALUE, "short");
+        if (configuration.isEmpty()) { // use default configuration
+            genStrategy = new ExpandingRangeIntGenStrategy(0, 0, LOWER_BOUND_MIN, UPPER_BOUND_MAX);
+            return;
+        }
+
+        genStrategy = new FixedRangeIntGenStrategy(configuration, Short.MIN_VALUE, Short.MAX_VALUE, "short");
     }
 
     public Short generate() {
-        return (short) (int) intGen.generate();
+        return (short) genStrategy.nextInt();
     }
 }
