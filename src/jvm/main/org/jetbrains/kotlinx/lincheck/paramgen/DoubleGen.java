@@ -29,11 +29,13 @@ import org.jetbrains.kotlinx.lincheck.paramgen.strategy.real.RandomDoubleGenStra
 
 public class DoubleGen implements ParameterGenerator<Double> {
     private static final float DEFAULT_STEP = 0.1f;
+    private static final float DEFAULT_MAX_EXPANDING_RADIUS = 10f;
+
     private final RandomDoubleGenStrategy genStrategy;
 
     public DoubleGen(String configuration) {
         if (configuration.isEmpty()) { // use default configuration
-            genStrategy = new ExpandingDoubleRangeGenStrategy(10, DEFAULT_STEP);
+            genStrategy = new ExpandingDoubleRangeGenStrategy(DEFAULT_MAX_EXPANDING_RADIUS, DEFAULT_STEP);
             return;
         }
         String[] args = configuration.replaceAll("\\s", "").split(":");

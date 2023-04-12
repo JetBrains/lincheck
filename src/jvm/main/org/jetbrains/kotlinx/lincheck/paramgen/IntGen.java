@@ -29,10 +29,12 @@ import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.RandomIntGenStra
 public class IntGen implements ParameterGenerator<Integer> {
 
     private final RandomIntGenStrategy genStrategy;
+    private static final int MAX_EXPANDING_RANGE_RADIUS = 100;
+
 
     public IntGen(String configuration) {
         if (configuration.isEmpty()) { // use default configuration
-            genStrategy = new ExpandingRangeIntGenStrategy(100);
+            genStrategy = new ExpandingRangeIntGenStrategy(MAX_EXPANDING_RANGE_RADIUS);
             return;
         }
 
