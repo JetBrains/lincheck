@@ -21,22 +21,40 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import kotlin.math.*
+
+interface IterationPlanner {
+    fun shouldDoNextIteration(): Boolean
+
+    fun iterationStart()
+
+    fun iterationEnd()
+}
 
 interface InvocationPlanner {
     fun shouldDoNextInvocation(): Boolean
 
-    fun startMeasureInvocationTime()
+    fun invocationStart()
 
-    fun endMeasureInvocationTime()
+    fun invocationEnd()
 }
 
-internal inline fun InvocationPlanner.measureInvocationTime(block: () -> InvocationResult): InvocationResult {
-    startMeasureInvocationTime()
+inline fun IterationPlanner.trackIteration(block: () -> LincheckFailure?): LincheckFailure? {
+    iterationStart()
     try {
         return block()
     } finally {
-        endMeasureInvocationTime()
+        iterationEnd()
+    }
+}
+
+inline fun InvocationPlanner.trackInvocation(block: () -> InvocationResult): InvocationResult {
+    invocationStart()
+    try {
+        return block()
+    } finally {
+        invocationEnd()
     }
 }
 
@@ -45,9 +63,9 @@ internal class FixedInvocationPlanner(invocationsPerIteration: Int) : Invocation
 
     override fun shouldDoNextInvocation() = remainingInvocations > 0
 
-    override fun startMeasureInvocationTime() {}
+    override fun invocationStart() {}
 
-    override fun endMeasureInvocationTime() {
+    override fun invocationEnd() {
         remainingInvocations--
     }
 }
@@ -65,11 +83,11 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
      */
     val testingTimeMs: Long,
     /**
-     * A lower bound on the number of iterations that should be definitely performed, unless impossible.
-     * This number is fixed at the beginning of testing and does not change.
+     * A strict bound on the number of iterations that should be definitely performed.
+     * If negative (by default), then adaptive iterations planning is used.
      */
-    val iterationsLowerBound: Int = 0
-) : InvocationPlanner {
+    val iterationsStrictBound: Int = -1,
+) : IterationPlanner, InvocationPlanner {
     /**
      * Total amount of time already spent on testing.
      */
@@ -83,23 +101,28 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         get() = testingTimeMs - runningTime
 
     /**
-     * The percent of time already spent. An integer number in range [0 .. 100].
-     */
-    val testingProgress: Int
-        get() = round(100 * runningTime.toDouble() / testingTimeMs).toInt()
-
-    /**
      * Current iteration number.
       */
     var iteration: Int = 0
         private set
 
+    val adaptiveIterationsBound: Boolean =
+        iterationsStrictBound >= 0
+
     /**
-     * An optimistic upper bound on the number of iterations that are expected to be performed.
-     * If automatic adjustment of iteration number is enabled, this variable can change during testing.
+     * Upper bound on the number of iterations.
+     * Adjusted automatically after each iteration.
      */
-    var iterationsUpperBound: Int = max(iterationsLowerBound, INITIAL_ITERATIONS_UPPER_BOUND)
-        private set
+    private var iterationsBound = if (adaptiveIterationsBound)
+        INITIAL_ITERATIONS_BOUND
+    else
+        iterationsStrictBound
+
+    /**
+     * Number of remaining iterations, calculated based on current iterations bound.
+     */
+    private val remainingIterations: Int
+        get() = iterationsBound - iteration
 
     /**
      * An array keeping running time of all iterations.
@@ -120,17 +143,25 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         private set
 
     /**
-     * Number of invocations per iteration.
-     * If automatic adjustment of invocations number is enabled, this variable can change during testing.
+     * Upper bound on the number of invocations per iteration.
+     * Adjusted automatically during each iteration.
      */
-    var invocationsBound = INITIAL_INVOCATIONS_BOUND
-        private set
+    private var invocationsBound = INITIAL_INVOCATIONS_BOUND
 
     // an array keeping running time of all iterations
     private val _iterationsRunningTime = mutableListOf<Long>()
 
     // and array keeping number of invocations executed for each iteration
     private val _iterationsInvocationCount = mutableListOf<Int>()
+
+    // time limit allocated to current iteration
+    private var currentIterationTimeBound = -1L
+
+    private val currentIterationRemainingTime: Long
+        get() = run {
+            check(currentIterationTimeBound >= 0)
+            currentIterationTimeBound - iterationsRunningTime[iteration]
+        }
 
     // an array keeping running time of last N invocations
     private val invocationsRunningTime =
@@ -142,93 +173,91 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
     private val averageInvocationTime: Double
         get() = invocationsRunningTime.average()
 
-    fun shouldDoNextIteration(): Boolean =
-        (remainingTimeMs > 0) && (iteration < iterationsUpperBound)
+    private var lastInvocationStartTime = -1L // TODO add `Nanos` suffix
+
+    override fun shouldDoNextIteration(): Boolean =
+        (remainingTimeMs > 0) && (iteration < iterationsBound)
 
     override fun shouldDoNextInvocation(): Boolean =
-        ((remainingTimeMs > 0) && (invocation < invocationsBound)).also {
-            if (!it)
-                println()
-        }
+        (remainingTimeMs > 0) && (invocation < invocationsBound)
 
-    fun<T> measureIterationTime(block: () -> T): T {
-        val runningTimeAtStart = runningTime
-        return block().also {
-            val elapsed = runningTime - runningTimeAtStart
-            _iterationsRunningTime.add(elapsed)
-            _iterationsInvocationCount.add(invocation)
-            invocationsRunningTime.fill(0)
-            iteration += 1
-            invocation = 0
+    override fun iterationStart() {
+        _iterationsRunningTime.add(0)
+        _iterationsInvocationCount.add(0)
+        currentIterationTimeBound = remainingTimeMs / remainingIterations
+    }
+
+    override fun iterationEnd() {
+        invocationsRunningTime.fill(0)
+        iteration += 1
+        invocation = 0
+        if (adaptiveIterationsBound) {
+            adjustIterationsBound()
         }
     }
 
-    private var lastInvocationStartTime = -1L // TODO add `Nanos` suffix
-
-    override fun startMeasureInvocationTime() {
+    override fun invocationStart() {
         // TODO: Use system.nanoTime
         lastInvocationStartTime = System.currentTimeMillis()
     }
 
-    override fun endMeasureInvocationTime() {
+    override fun invocationEnd() {
+        check(lastInvocationStartTime >= 0)
         val elapsed = System.currentTimeMillis() - lastInvocationStartTime
         runningTime += elapsed
         invocationsRunningTime[invocationIndex] = elapsed
+        _iterationsRunningTime[iteration] += elapsed
+        _iterationsInvocationCount[iteration] += 1
         if (++invocation % ADJUSTMENT_THRESHOLD == 0) {
-            adjustBounds()
+            adjustInvocationBound()
             invocationsRunningTime.fill(0)
         }
     }
 
-    private fun adjustBounds() {
-        // first handle lower bound, make sure we are on schedule
-        if (iteration < iterationsLowerBound) {
-            val remainingIterations = (iterationsLowerBound - iteration - 1)
-            val remainingInvocations = (invocationsBound - invocation) + remainingIterations * invocationsBound
-            val timeEstimate = remainingInvocations * averageInvocationTime
-            // if we under-perform, adjust the invocations bound to fit into deadline
-            if (timeEstimate > remainingTimeMs) {
-                val invocationsEstimate = remainingTimeMs.toDouble() / ((remainingIterations + 1) * averageInvocationTime)
-                invocationsBound = max(INVOCATIONS_LOWER_BOUND, floor(invocationsEstimate).toInt())
-                return
+    private fun estimateRemainingTime(bound: Int) =
+        (bound - iteration) * iterationsRunningTime[iteration]
+
+    private fun adjustIterationsBound() {
+        val estimate = estimateRemainingTime(iterationsBound)
+        // if we over-perform, try to increase iterations bound
+        if (estimate < remainingTimeMs) {
+            val newIterationsBound = iterationsBound + ITERATIONS_DELTA
+            // if with the larger bound we still over-perform, then increase the bound
+            if (estimateRemainingTime(newIterationsBound) < remainingTimeMs) {
+                iterationsBound = newIterationsBound
             }
         }
-
-        // next handle the optimistic upper bound
-        val remainingIterations = (iterationsUpperBound - iteration - 1)
-        val remainingInvocations = (invocationsBound - invocation) + remainingIterations * invocationsBound
-        val timeEstimate = remainingInvocations * averageInvocationTime
-        // if we under-perform by an order of magnitude, adjust the invocations bound to fit into deadline
-        if (timeEstimate < remainingTimeMs) {
-
+        // if we under-perform, then decrease iterations bound
+        if (estimate > remainingTimeMs) {
+            val delay = (estimate - remainingTimeMs).toDouble()
+            val delayingIterations = floor(delay / iterationsRunningTime[iteration]).toInt()
+            // remove the iterations we are unlikely to have time to do
+            iterationsBound -= delayingIterations
         }
+    }
 
-        if (timeEstimate / remainingTimeMs > INVOCATIONS_FACTOR) {
-            invocationsBound = max(INVOCATIONS_LOWER_BOUND, invocationsBound / INVOCATIONS_FACTOR)
-            return
-        }
-        // if we over-perform, schedule more iterations
-        val invocationsDelta = ITERATIONS_DELTA * invocationsBound
-        if (remainingTimeMs - timeEstimate > invocationsDelta * averageInvocationTime) {
-            iterationsUpperBound += ITERATIONS_DELTA
-            invocationsBound = min(INVOCATIONS_UPPER_BOUND, invocationsBound * INVOCATIONS_FACTOR)
-            return
-        }
+    private fun estimateRemainingIterationTime(bound: Int) =
+        (bound - invocation) * averageInvocationTime
 
-        // if we under-perform, decrease the number of planned iterations
-        if (remainingTimeMs < timeEstimate) {
-            // how bad is situation?
-            val delay = timeEstimate - remainingTimeMs
-            val delayingIterations = floor(delay / (invocationsBound * averageInvocationTime)).toInt()
-            // remove the iterations we are unlikely to reach
-            iterationsUpperBound -= delayingIterations
-            return
+    private fun adjustInvocationBound() {
+        val estimate = estimateRemainingIterationTime(invocationsBound)
+        // if we over-perform, try to increase invocations bound
+        if (estimate < currentIterationRemainingTime && invocationsBound < INVOCATIONS_UPPER_BOUND) {
+            val newInvocationsBound = min(invocationsBound * INVOCATIONS_FACTOR, INVOCATIONS_UPPER_BOUND)
+            // if with the larger bound we still over-perform, then increase
+            if (estimateRemainingIterationTime(newInvocationsBound) < currentIterationRemainingTime) {
+                invocationsBound = newInvocationsBound
+            }
+        }
+        // if we under-perform, then decrease invocations bound
+        if (estimate > currentIterationRemainingTime && invocationsBound > INVOCATIONS_LOWER_BOUND) {
+            invocationsBound = max(invocationsBound / INVOCATIONS_FACTOR, INVOCATIONS_LOWER_BOUND)
         }
     }
 
     companion object {
         // initial iterations upper bound
-        private const val INITIAL_ITERATIONS_UPPER_BOUND = 30
+        private const val INITIAL_ITERATIONS_BOUND = 30
 
         // number of iterations added/subtracted when we over- or under-perform the plan
         private const val ITERATIONS_DELTA = 5

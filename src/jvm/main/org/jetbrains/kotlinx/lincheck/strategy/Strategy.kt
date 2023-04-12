@@ -47,7 +47,7 @@ abstract class Strategy protected constructor(
 
     fun run(verifier: Verifier, invocationPlanner: InvocationPlanner): LincheckFailure? {
         while (invocationPlanner.shouldDoNextInvocation()) {
-            val invocationResult = invocationPlanner.measureInvocationTime {
+            val invocationResult = invocationPlanner.trackInvocation {
                 runInvocation()
             }
             when (invocationResult) {
