@@ -90,7 +90,9 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (minimizeFailedScenario)
-                    failure.minimize(reporter) { it.run(this, verifier) }
+                    failure.minimize(reporter) {
+                        it.run(this, createVerifier(checkStateEquivalence = false))
+                    }
                else
                     failure
                 reporter.logFailedIteration(minimizedFailedIteration)
@@ -106,7 +108,9 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation
-        ).run(verifier, FixedInvocationPlanner(testCfg.invocations))
+        ).use {
+            it.run(verifier, FixedInvocationPlanner(testCfg.invocations))
+        }
 
     private val CTestConfiguration.invocations get() = when (this) {
         is ModelCheckingCTestConfiguration -> this.invocationsPerIteration

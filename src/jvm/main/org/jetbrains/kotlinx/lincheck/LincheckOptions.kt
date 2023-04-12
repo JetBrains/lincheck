@@ -161,9 +161,8 @@ internal class LincheckOptionsImpl : LincheckOptions {
             scenario.validate()
             reporter.logIteration(i, scenario)
             val currentMode = planner.currentMode()
-            val strategy = createStrategy(currentMode, testClass, scenario, testStructure)
             val failure = planner.measureIterationTime {
-                strategy.run(verifier, planner)
+                scenario.run(currentMode, testClass, testStructure, verifier, planner)
             }
             reporter.logIterationStatistics(planner.iterationsInvocationCount[i], planner.iterationsRunningTime[i])
             if (failure == null)
@@ -171,23 +170,41 @@ internal class LincheckOptionsImpl : LincheckOptions {
             // fix the number of invocations for failure minimization
             var minimizedFailure = if (!isCustomScenario) {
                 failure.minimize(reporter) {
-                    createStrategy(currentMode, testClass, scenario, testStructure)
-                        .run(createVerifier(testClass), FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT))
+                    it.run(currentMode, testClass, testStructure,
+                        createVerifier(testClass),
+                        FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT)
+                    )
                 }
             } else {
                 failure
             }
             if (mode == LincheckMode.Hybrid && currentMode == LincheckMode.Stress) {
                 // try to reproduce an error trace with model checking strategy
-                createStrategy(LincheckMode.ModelChecking, testClass, minimizedFailure.scenario, testStructure)
-                    .run(createVerifier(testClass), FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT))
-                    ?.let { minimizedFailure = it }
+                minimizedFailure.scenario.run(
+                    LincheckMode.ModelChecking,
+                    testClass, testStructure,
+                    createVerifier(testClass),
+                    FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT)
+                )?.let {
+                    minimizedFailure = it
+                }
             }
             reporter.logFailedIteration(minimizedFailure)
             return minimizedFailure
         }
         return null
     }
+
+    private fun ExecutionScenario.run(
+        currentMode: LincheckMode,
+        testClass: Class<*>,
+        testStructure: CTestStructure,
+        verifier: Verifier,
+        planner: InvocationPlanner,
+    ): LincheckFailure? =
+        createStrategy(currentMode, testClass, this, testStructure).use {
+            it.run(verifier, planner)
+        }
 
     private fun AdaptivePlanner.currentMode() = when (this@LincheckOptionsImpl.mode) {
             LincheckMode.Stress         -> LincheckMode.Stress
@@ -216,13 +233,13 @@ internal class LincheckOptionsImpl : LincheckOptions {
         LincheckMode.Stress -> StressStrategy(testClass, scenario,
             testStructure.validationFunctions,
             testStructure.stateRepresentation,
-            timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
+            timeoutMs = invocationTimeoutMs,
         )
 
         LincheckMode.ModelChecking -> ModelCheckingStrategy(testClass, scenario,
             testStructure.validationFunctions,
             testStructure.stateRepresentation,
-            timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
+            timeoutMs = invocationTimeoutMs,
             checkObstructionFreedom = ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM,
             eliminateLocalObjects = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS,
             hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD,
