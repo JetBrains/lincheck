@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.paramgen.strategy.real;
 
-import java.util.Random;
 
 public interface RandomDoubleGenStrategy {
 

@@ -63,6 +63,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
+        RandomFactory.resetSeedGenerator()
         val exGen = createExecutionGenerator()
         for (i in customScenarios.indices) {
             val verifier = createVerifier()

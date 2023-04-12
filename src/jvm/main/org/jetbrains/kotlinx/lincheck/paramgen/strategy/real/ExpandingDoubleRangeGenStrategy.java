@@ -26,32 +26,29 @@ public class ExpandingDoubleRangeGenStrategy implements RandomDoubleGenStrategy 
 
     private final ExpandingRangeIntGenStrategy intGenStrategy;
     private final double step;
-    private final double rangeLowerBound;
+    private final double begin;
 
-    public ExpandingDoubleRangeGenStrategy(double rangeLowerBound, double rangeUpperBound, double step) {
+    /**
+     * @param maxRadius  max radius of expanded range, for example if 4.0, it will generate a value in (-4.0, 4.0) bounds
+     * @param step step of this range
+     */
+    public ExpandingDoubleRangeGenStrategy(double maxRadius, double step) {
         this.step = step;
-        double delta = rangeUpperBound - rangeLowerBound;
-        this.rangeLowerBound = rangeLowerBound;
+        double delta = 2 * maxRadius;
+        this.begin = -maxRadius;
 
         if (delta / step > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Supplied step: " + step + " is to small to specified range");
         }
 
         int maxSteps = (int) (delta / step);
-        int intUpperBound;
-        int intLowerBound = -maxSteps / 2;
+        int intRadius = maxSteps / 2;
 
-        if (maxSteps % 2 == 0) {
-            intUpperBound = maxSteps / 2 - 1;
-        } else {
-            intUpperBound = maxSteps / 2;
-        }
-
-        intGenStrategy = new ExpandingRangeIntGenStrategy(0, 0, intLowerBound, intUpperBound);
+        intGenStrategy = new ExpandingRangeIntGenStrategy(intRadius);
     }
 
     @Override
     public double nextDouble() {
-        return rangeLowerBound + intGenStrategy.nextInt() * step;
+        return begin + intGenStrategy.nextInt() * step;
     }
 }

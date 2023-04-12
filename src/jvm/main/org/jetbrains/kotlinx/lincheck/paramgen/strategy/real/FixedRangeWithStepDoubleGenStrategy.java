@@ -20,19 +20,21 @@
 
 package org.jetbrains.kotlinx.lincheck.paramgen.strategy.real;
 
+import org.jetbrains.kotlinx.lincheck.RandomFactory;
+
 import java.util.Random;
 
 public class FixedRangeWithStepDoubleGenStrategy implements RandomDoubleGenStrategy {
 
-    protected final Random random = new Random(0);
+    protected final Random random = RandomFactory.INSTANCE.createRandom();
 
     private final double delta;
-    private final double rangeLowerBound;
+    private final double begin;
     private final int maxSteps;
 
-    public FixedRangeWithStepDoubleGenStrategy(double rangeLowerBound, double rangeUpperBound, double step) {
-        this.rangeLowerBound = rangeLowerBound;
-        this.delta = rangeUpperBound - rangeLowerBound;
+    public FixedRangeWithStepDoubleGenStrategy(double begin, double end, double step) {
+        this.begin = begin;
+        this.delta = end - begin;
 
         if (delta / step > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Supplied step: " + step + " is to small to specified range");
@@ -43,6 +45,6 @@ public class FixedRangeWithStepDoubleGenStrategy implements RandomDoubleGenStrat
 
     @Override
     public double nextDouble() {
-        return rangeLowerBound + delta * random.nextInt(maxSteps + 1);
+        return begin + delta * random.nextInt(maxSteps + 1);
     }
 }

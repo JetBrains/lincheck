@@ -20,81 +20,43 @@
 
 package org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer;
 
+import org.jetbrains.kotlinx.lincheck.RandomFactory;
+
 import java.util.Random;
 
 public class ExpandingRangeIntGenStrategy implements RandomIntGenStrategy {
 
-    protected final Random random = new Random(0);
+    protected final Random random = RandomFactory.INSTANCE.createRandom();
 
-    private int currentRangeLowerBound;
-    private int currentRangeUpperBound;
+    private int shiftLeft;
+    private int length;
+    private final int maxLength;
 
-    private final int maxRangeLowerBound;
-    private final int minRangeUpperBound;
-
-    private NextExpansionDirection nextExpansionDirection = NextExpansionDirection.UPPER_BOUND;
-
-    public ExpandingRangeIntGenStrategy(int currentRangeLowerBound, int currentRangeUpperBound, int minRangeLowerBound, int maxRangeUpperBound) {
-        if (currentRangeUpperBound < currentRangeLowerBound) {
-            throw new IllegalArgumentException("rangeUpperBound must be >= than rangeLowerBound");
-        }
-        if (maxRangeUpperBound < minRangeLowerBound) {
-            throw new IllegalArgumentException("rangeUpperBound must be >= than rangeLowerBound");
-        }
-        if (currentRangeUpperBound > maxRangeUpperBound) {
-            throw new IllegalArgumentException("currentRangeUpperBound must be <= than minRangeLowerBound");
-        }
-        if (currentRangeLowerBound < minRangeLowerBound) {
-            throw new IllegalArgumentException("currentRangeLowerBound must be >= than minRangeLowerBound");
+    /**
+     * @param maxRadius  max radius of expanded range. For example if 4, it will generate a value in [-4, 4] bounds
+     */
+    public ExpandingRangeIntGenStrategy(int maxRadius) {
+        if (maxRadius < 0) {
+            throw new IllegalArgumentException("maxRadius must be >= 0");
         }
 
-        this.currentRangeLowerBound = currentRangeLowerBound;
-        this.currentRangeUpperBound = currentRangeUpperBound;
-        this.maxRangeLowerBound = minRangeLowerBound;
-        this.minRangeUpperBound = maxRangeUpperBound;
+        shiftLeft = 0;
+        length = 1;
+        maxLength = maxRadius * 2 + 1;
     }
 
 
     @Override
     public int nextInt() {
-        checkRangeExpansionAbility();
-
-        if (nextExpansionDirection == NextExpansionDirection.DISABLED) {
-            return generateFromRandomRange(random, currentRangeLowerBound, currentRangeUpperBound);
+        if (length == maxLength) {
+            return shiftLeft + random.nextInt(length);
         }
-
-        boolean expandRange = random.nextBoolean();
-        if (expandRange) {
-            if (nextExpansionDirection == NextExpansionDirection.LOWER_BOUND) {
-                nextExpansionDirection = NextExpansionDirection.UPPER_BOUND;
-                currentRangeLowerBound--;
-            } else {
-                nextExpansionDirection = NextExpansionDirection.LOWER_BOUND;
-                currentRangeUpperBound++;
-            }
+        if (length % 2 != 0) {
+            shiftLeft++;
         }
+        length++;
 
-        return generateFromRandomRange(random, currentRangeLowerBound, currentRangeUpperBound);
-    }
-
-    private void checkRangeExpansionAbility() {
-        if (currentRangeUpperBound == maxRangeLowerBound && currentRangeLowerBound == minRangeUpperBound) {
-            nextExpansionDirection = NextExpansionDirection.DISABLED;
-            return;
-        }
-        if (currentRangeLowerBound == minRangeUpperBound) {
-            nextExpansionDirection = NextExpansionDirection.UPPER_BOUND;
-            return;
-        }
-        if (currentRangeUpperBound == maxRangeLowerBound) {
-            nextExpansionDirection = NextExpansionDirection.LOWER_BOUND;
-        }
-    }
-
-    private enum NextExpansionDirection {
-        UPPER_BOUND,
-        LOWER_BOUND,
-        DISABLED
+        return shiftLeft + random.nextInt(length);
     }
 
 

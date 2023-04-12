@@ -18,10 +18,20 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer;
+package org.jetbrains.kotlinx.lincheck
 
+import java.util.Random
 
-public interface RandomIntGenStrategy {
+private const val SEED_GENERATOR_SEED = 0L
 
-    int nextInt();
+object RandomFactory {
+
+    private var seedGenerator = Random(SEED_GENERATOR_SEED)
+
+    fun resetSeedGenerator() {
+        seedGenerator = Random(SEED_GENERATOR_SEED)
+    }
+
+    fun createRandom(): Random = Random(seedGenerator.nextLong())
+
 }

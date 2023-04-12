@@ -28,14 +28,12 @@ import org.jetbrains.kotlinx.lincheck.paramgen.strategy.real.FixedRangeWithStepD
 import org.jetbrains.kotlinx.lincheck.paramgen.strategy.real.RandomDoubleGenStrategy;
 
 public class DoubleGen implements ParameterGenerator<Double> {
-    private static final float DEFAULT_BEGIN = -10;
-    private static final float DEFAULT_END = 10;
     private static final float DEFAULT_STEP = 0.1f;
     private final RandomDoubleGenStrategy genStrategy;
 
     public DoubleGen(String configuration) {
         if (configuration.isEmpty()) { // use default configuration
-            genStrategy = new ExpandingDoubleRangeGenStrategy(DEFAULT_BEGIN, DEFAULT_END, DEFAULT_STEP);
+            genStrategy = new ExpandingDoubleRangeGenStrategy(10, DEFAULT_STEP);
             return;
         }
         String[] args = configuration.replaceAll("\\s", "").split(":");
@@ -59,8 +57,7 @@ public class DoubleGen implements ParameterGenerator<Double> {
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Configuration should have two (begin and end) " +
-                        "or three (begin, step and end) arguments separated by colon");
+                throw new IllegalArgumentException("Configuration should have two (begin and end) " + "or three (begin, step and end) arguments separated by colon");
         }
 
     }

@@ -28,13 +28,11 @@ import org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer.RandomIntGenStra
 
 public class ByteGen implements ParameterGenerator<Byte> {
 
-    private static final int LOWER_BOUND_MIN = -100;
-    private static final int UPPER_BOUND_MAX = 100;
     private final RandomIntGenStrategy genStrategy;
 
     public ByteGen(String configuration) {
         if (configuration.isEmpty()) { // use default configuration
-            genStrategy = new ExpandingRangeIntGenStrategy(0, 0, LOWER_BOUND_MIN, UPPER_BOUND_MAX);
+            genStrategy = new ExpandingRangeIntGenStrategy(100);
             return;
         }
 

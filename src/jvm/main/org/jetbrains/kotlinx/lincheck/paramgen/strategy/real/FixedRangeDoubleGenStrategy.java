@@ -20,21 +20,23 @@
 
 package org.jetbrains.kotlinx.lincheck.paramgen.strategy.real;
 
+import org.jetbrains.kotlinx.lincheck.RandomFactory;
+
 import java.util.Random;
 
 public class FixedRangeDoubleGenStrategy implements RandomDoubleGenStrategy {
 
-    protected final Random random = new Random(0);
+    protected final Random random = RandomFactory.INSTANCE.createRandom();
     private final double delta;
-    private final double rangeLowerBound;
+    private final double begin;
 
-    public FixedRangeDoubleGenStrategy(double rangeLowerBound, double rangeUpperBound) {
-        this.rangeLowerBound = rangeLowerBound;
-        this.delta = rangeUpperBound - rangeLowerBound;
+    public FixedRangeDoubleGenStrategy(double begin, double end) {
+        this.begin = begin;
+        this.delta = end - begin;
     }
 
     @Override
     public double nextDouble() {
-        return rangeLowerBound + delta * random.nextDouble();
+        return begin + delta * random.nextDouble();
     }
 }

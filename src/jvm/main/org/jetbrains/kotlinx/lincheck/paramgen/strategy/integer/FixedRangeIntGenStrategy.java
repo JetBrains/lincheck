@@ -20,38 +20,42 @@
 
 package org.jetbrains.kotlinx.lincheck.paramgen.strategy.integer;
 
+import org.jetbrains.kotlinx.lincheck.RandomFactory;
+
 import java.util.Random;
 
 public class FixedRangeIntGenStrategy implements RandomIntGenStrategy {
 
-    protected final Random random = new Random(0);
-    private final int rangeLowerBoundInclusive;
-    private final int rangeUpperBoundInclusive;
+    protected final Random random = RandomFactory.INSTANCE.createRandom();
+    private final int begin;
+    private final int end;
 
-    public FixedRangeIntGenStrategy(String configuration, int minRangeLowerBound, int maxRangeUpperBound, String type) {
+    public FixedRangeIntGenStrategy(String configuration, int meinBegin, int maxEnd, String type) {
         if (configuration.isEmpty()) {
             throw new IllegalArgumentException("Configuration can't be empty");
         }
         String[] args = configuration.replaceAll("\\s", "").split(":");
-        if (args.length == 2) { // begin:end
-            rangeLowerBoundInclusive = Integer.parseInt(args[0]);
-            rangeUpperBoundInclusive = Integer.parseInt(args[1]);
-            checkRange(minRangeLowerBound, maxRangeUpperBound, type);
-        } else {
+
+        if (args.length != 2) {
             throw new IllegalArgumentException("Configuration should have " +
                     "two arguments (begin and end) separated by colon");
         }
+        // begin:end
+        begin = Integer.parseInt(args[0]);
+        end = Integer.parseInt(args[1]);
+        checkRange(meinBegin, maxEnd, type);
     }
 
     private void checkRange(int min, int max, String type) {
-        if (this.rangeLowerBoundInclusive < min || this.rangeUpperBoundInclusive - 1 > max) {
+        if (this.begin < min || this.end - 1 > max) {
             throw new IllegalArgumentException("Illegal range for "
-                    + type + " type: [" + rangeLowerBoundInclusive + "; " + rangeUpperBoundInclusive + ")");
+                    + type + " type: [" + begin + "; " + end + ")");
         }
     }
 
     @Override
     public int nextInt() {
-        return generateFromRandomRange(random, rangeLowerBoundInclusive, rangeUpperBoundInclusive);
+        return begin + random.nextInt(end - begin + 1);
     }
+
 }

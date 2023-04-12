@@ -20,10 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.paramgen
 
-import kotlin.random.*
+import org.jetbrains.kotlinx.lincheck.RandomFactory
+
 
 class BooleanGen(configuration: String) : ParameterGenerator<Boolean> {
-    private val random = Random(0)
+    private val random = RandomFactory.createRandom()
 
     override fun generate() = random.nextBoolean()
 }
