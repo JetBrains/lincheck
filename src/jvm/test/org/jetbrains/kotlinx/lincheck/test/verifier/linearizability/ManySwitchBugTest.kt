@@ -70,6 +70,7 @@ class ManySwitchBugTest {
     fun test() {
         val failure = LincheckOptions {
             this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
             generateScenarios = false
             addCustomScenario {
                 parallel {

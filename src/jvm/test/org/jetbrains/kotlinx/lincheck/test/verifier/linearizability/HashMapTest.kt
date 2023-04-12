@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
+import org.jetbrains.kotlinx.lincheck.LincheckOptionsImpl
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -36,6 +37,10 @@ class HashMapTest : AbstractLincheckTest(IncorrectResultsFailure::class, Unexpec
 
     @Operation
     operator fun get(@Param(name = "key") key: Int?): Int? = m[key]
+
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 10
+    }
 
 }
 

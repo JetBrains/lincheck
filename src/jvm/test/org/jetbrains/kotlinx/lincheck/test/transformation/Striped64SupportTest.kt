@@ -43,6 +43,8 @@ class Striped64SupportTest {
         val options = LincheckOptions {
             this as LincheckOptionsImpl
             mode = LincheckMode.ModelChecking
+            testingTimeInSeconds = 10
+            minimizeFailedScenario = false
         }
         val failure = options.checkImpl(this::class.java)
         assert(failure is IncorrectResultsFailure) {

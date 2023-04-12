@@ -134,13 +134,15 @@ internal class LincheckOptionsImpl : LincheckOptions {
         val reporter = Reporter(DEFAULT_LOG_LEVEL)
         val planner = AdaptivePlanner(
             testingTime = testingTimeInSeconds * 1000,
-            iterationsLowerBound = customScenarios.size + 20
+            iterationsLowerBound = customScenarios.size
         )
         val testStructure = CTestStructure.getFromTestClass(testClass)
         val executionGenerator = RandomExecutionGenerator(testStructure)
         var verifier = createVerifier(testClass)
         while (planner.shouldDoNextIteration()) {
             val i = planner.iteration
+            if (i >= customScenarios.size && !generateScenarios)
+                break
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance
@@ -159,7 +161,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
                     if (generateBeforeAndAfterParts) maxOperationsInThread else 0,
                 )
             scenario.validate()
-            reporter.logIteration(i, scenario)
+            reporter.logIteration(i + 1, scenario)
             val currentMode = planner.currentMode()
             val failure = planner.measureIterationTime {
                 scenario.run(currentMode, testClass, testStructure, verifier, planner)
@@ -168,7 +170,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
             if (failure == null)
                 continue
             // fix the number of invocations for failure minimization
-            var minimizedFailure = if (!isCustomScenario) {
+            var minimizedFailure = if (minimizeFailedScenario && !isCustomScenario) {
                 failure.minimize(reporter) {
                     it.run(currentMode, testClass, testStructure,
                         createVerifier(testClass),
@@ -240,7 +242,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
             testStructure.validationFunctions,
             testStructure.stateRepresentation,
             timeoutMs = invocationTimeoutMs,
-            checkObstructionFreedom = ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM,
+            checkObstructionFreedom = checkObstructionFreedom,
             eliminateLocalObjects = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS,
             hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD,
             guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
@@ -251,8 +253,8 @@ internal class LincheckOptionsImpl : LincheckOptions {
 }
 
 private const val DEFAULT_TESTING_TIME = 5L
-private const val DEFAULT_MAX_THREADS = 4
-private const val DEFAULT_MAX_OPERATIONS = 4
+private const val DEFAULT_MAX_THREADS = 3
+private const val DEFAULT_MAX_OPERATIONS = 2
 
 // in hybrid mode: testing progress threshold (in %) after which strategy switch
 //   from Stress to ModelChecking strategy occurs

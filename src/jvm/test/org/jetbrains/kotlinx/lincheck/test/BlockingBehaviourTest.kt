@@ -39,14 +39,15 @@ class BlockingOperationTest {
         mode = LincheckMode.ModelChecking
         verifier = EpsilonVerifier::class.java
         checkObstructionFreedom = true
-        generateScenarios = false
-        addCustomScenario {
-            parallel {
-                thread {
-                    actor(::blocking)
-                }
-            }
-        }
+        generateBeforeAndAfterParts = false
+        // generateScenarios = false
+        // addCustomScenario {
+        //     parallel {
+        //         thread {
+        //             actor(::blocking)
+        //         }
+        //     }
+        // }
     }.check(this::class)
 
 }

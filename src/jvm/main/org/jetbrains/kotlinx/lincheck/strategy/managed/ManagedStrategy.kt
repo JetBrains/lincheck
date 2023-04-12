@@ -253,7 +253,7 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && !finished[iThread])
+                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
                         scenario.parallelExecution[iThread][actorId]
                     else null
                 }.filterNotNull().any { it.causesBlocking }

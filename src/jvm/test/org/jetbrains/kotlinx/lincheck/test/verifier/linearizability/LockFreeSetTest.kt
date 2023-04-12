@@ -47,6 +47,8 @@ class LockFreeSetTest {
         }
         LincheckOptions {
             this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            1000000
             testingTimeInSeconds = 10
             generateScenarios = false
             addCustomScenario(scenario)

@@ -23,12 +23,14 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.*
 import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
-) {
+) : VerifierState() {
+
     @Test(timeout = TIMEOUT)
     fun testWithStressStrategy(): Unit = LincheckOptions {
         this as LincheckOptionsImpl
@@ -71,6 +73,9 @@ abstract class AbstractLincheckTest(
     }
 
     internal open fun LincheckOptionsImpl.customize() {}
+
+    override fun extractState(): Any = System.identityHashCode(this)
+
 }
 
 private const val TIMEOUT = 100_000L

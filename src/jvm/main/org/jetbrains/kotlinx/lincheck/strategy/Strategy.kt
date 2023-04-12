@@ -57,7 +57,7 @@ abstract class Strategy protected constructor(
                         return IncorrectResultsFailure(scenario, invocationResult.results, invocationResult.tryCollectTrace())
                     }
                 }
-                else -> invocationResult.toLincheckFailure(scenario, invocationResult.tryCollectTrace())
+                else -> return invocationResult.toLincheckFailure(scenario, invocationResult.tryCollectTrace())
             }
         }
         return null

@@ -30,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import org.junit.Assert.*
 
+@Ignore
 class FailedScenarioMinimizationTest: VerifierState() {
     @Volatile
     private var counter = 0

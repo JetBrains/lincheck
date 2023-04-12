@@ -26,8 +26,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
-
-import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
+import org.jetbrains.kotlinx.lincheck.test.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.lang.StringBuilder

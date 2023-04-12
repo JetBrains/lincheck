@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.junit.*
 
-@Ignore
 class HangingTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
     @Operation
     fun badOperation() {
@@ -37,13 +36,6 @@ class HangingTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
 
     override fun LincheckOptionsImpl.customize() {
         invocationTimeoutMs = 100
-        generateScenarios = false
-        addCustomScenario {
-            parallel {
-                thread {
-                    actor(::badOperation)
-                }
-            }
-        }
+        generateBeforeAndAfterParts = false
     }
 }

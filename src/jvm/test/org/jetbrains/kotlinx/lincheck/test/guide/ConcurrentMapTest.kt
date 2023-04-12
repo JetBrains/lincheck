@@ -46,6 +46,7 @@ class ConcurrentSkipListMapTest {
 
     @Test
     fun lincheckTest() = LincheckOptions {
+        testingTimeInSeconds = 10
         checkObstructionFreedom = true
     }.check(this::class)
 }

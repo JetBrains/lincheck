@@ -48,5 +48,7 @@ class ConcurrentLinkedDequeTest {
 
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun lincheckTest() = LincheckOptions().check(this::class)
+    fun lincheckTest() = LincheckOptions {
+        testingTimeInSeconds = 15
+    }.check(this::class)
 }
