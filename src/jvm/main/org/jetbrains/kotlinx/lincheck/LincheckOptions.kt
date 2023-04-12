@@ -21,14 +21,11 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-
-import kotlin.math.*
 import kotlin.reflect.*
 
 interface LincheckOptions {
@@ -137,7 +134,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
         val reporter = Reporter(DEFAULT_LOG_LEVEL)
         val planner = AdaptivePlanner(
             testingTime = testingTimeInSeconds * 1000,
-            iterationsLowerBound = customScenarios.size
+            iterationsLowerBound = customScenarios.size + 20
         )
         val testStructure = CTestStructure.getFromTestClass(testClass)
         val executionGenerator = RandomExecutionGenerator(testStructure)
@@ -172,19 +169,18 @@ internal class LincheckOptionsImpl : LincheckOptions {
             if (failure == null)
                 continue
             // fix the number of invocations for failure minimization
-            val minimizationInvocationsCount =
-                max(2 * planner.iterationsInvocationCount[i], planner.invocationsBound)
-            var minimizedFailure = if (!isCustomScenario)
+            var minimizedFailure = if (!isCustomScenario) {
                 failure.minimize(reporter) {
                     createStrategy(currentMode, testClass, scenario, testStructure)
-                        .run(verifier, FixedInvocationPlanner(minimizationInvocationsCount))
+                        .run(createVerifier(testClass), FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT))
                 }
-            else
+            } else {
                 failure
+            }
             if (mode == LincheckMode.Hybrid && currentMode == LincheckMode.Stress) {
                 // try to reproduce an error trace with model checking strategy
                 createStrategy(LincheckMode.ModelChecking, testClass, minimizedFailure.scenario, testStructure)
-                    .run(verifier, FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT))
+                    .run(createVerifier(testClass), FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT))
                     ?.let { minimizedFailure = it }
             }
             reporter.logFailedIteration(minimizedFailure)

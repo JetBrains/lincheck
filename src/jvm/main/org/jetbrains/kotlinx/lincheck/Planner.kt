@@ -59,7 +59,7 @@ internal class FixedInvocationPlanner(invocationsPerIteration: Int) : Invocation
  * - keep the track of deadlines and remaining time;
  * - adaptively adjusting number of test scenarios and invocations allocated per scenario.
  */
-internal class AdaptivePlanner (
+internal class AdaptivePlanner ( // TODO: constructor with seconds
     /**
      * Total amount of time in milliseconds allocated to testing.
      */
@@ -160,9 +160,10 @@ internal class AdaptivePlanner (
         }
     }
 
-    private var lastInvocationStartTime = -1L
+    private var lastInvocationStartTime = -1L // TODO add `Nanos` suffix
 
     override fun startMeasureInvocationTime() {
+        // TODO: Use system.nanoTime
         lastInvocationStartTime = System.currentTimeMillis()
     }
 

@@ -37,5 +37,4 @@ class HangingTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
         invocationTimeoutMs = 100
         generateBeforeAndAfterParts = false
     }
-
 }
