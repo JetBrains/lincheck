@@ -89,6 +89,11 @@ class ConcurrentDequeTest {
     @Operation
     fun peekLast() = deque.peekLast()
 
+    // Run Lincheck in the stress testing mode
+    @Test
+    fun stressTest() = StressOptions().check(this::class)
+
+    // Run Lincheck in the model checking testing mode
     @Test
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }
