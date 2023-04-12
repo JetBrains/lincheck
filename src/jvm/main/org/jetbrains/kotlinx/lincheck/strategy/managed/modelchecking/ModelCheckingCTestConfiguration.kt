@@ -33,7 +33,7 @@ import java.lang.reflect.*
 class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
                                       actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
                                       checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
-                                      guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
+                                      guarantees: List<ManagedStrategyGuarantee>, minimizeFailedScenario: Boolean,
                                       sequentialSpecification: Class<*>, timeoutMs: Long, eliminateLocalObjects: Boolean,
                                       customScenarios: List<ExecutionScenario>
 ) : ManagedCTestConfiguration(
@@ -49,7 +49,6 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     hangingDetectionThreshold = hangingDetectionThreshold,
     invocationsPerIteration = invocationsPerIteration,
     guarantees = guarantees,
-    requireStateEquivalenceCheck = requireStateEquivalenceCheck,
     minimizeFailedScenario = minimizeFailedScenario,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,

@@ -42,7 +42,6 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             hangingDetectionThreshold = hangingDetectionThreshold,
             invocationsPerIteration = invocationsPerIteration,
             guarantees = guarantees,
-            requireStateEquivalenceCheck = requireStateEquivalenceImplementationCheck,
             minimizeFailedScenario = minimizeFailedScenario,
             sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
             timeoutMs = timeoutMs,

@@ -56,7 +56,6 @@ class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
         executionGenerator(ClocksTestScenarioGenerator::class.java)
         iterations(1)
         sequentialSpecification(ClocksTestSequential::class.java)
-        requireStateEquivalenceImplCheck(false)
         minimizeFailedScenario(false)
     }
 }

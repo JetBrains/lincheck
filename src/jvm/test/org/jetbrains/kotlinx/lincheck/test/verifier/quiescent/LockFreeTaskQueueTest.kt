@@ -30,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER", "SubscriberImplementation")
-@OpGroupConfig(name = "consumer", nonParallel = true)
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
 class LockFreeTaskQueueTest : AbstractLincheckTest() {
     private val q = LockFreeTaskQueue<Int>(true)
@@ -39,7 +38,7 @@ class LockFreeTaskQueueTest : AbstractLincheckTest() {
     fun addLast(@Param(name = "value") value: Int) = q.addLast(value)
 
     @QuiescentConsistent
-    @Operation(group = "consumer")
+    @Operation(nonParallelGroup = "consumer")
     fun removeFirstOrNull() = q.removeFirstOrNull()
 
     @Operation

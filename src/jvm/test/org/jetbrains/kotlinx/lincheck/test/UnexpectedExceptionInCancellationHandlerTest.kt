@@ -42,7 +42,6 @@ class UnexpectedExceptionInCancellationHandlerTest: AbstractLincheckTest(Unexpec
         actorsAfter(0)
         threads(1)
         actorsPerThread(1)
-        requireStateEquivalenceImplCheck(false)
         sequentialSpecification(UnexpectedExceptionInCancellationHandlerTestSequential::class.java)
     }
 }

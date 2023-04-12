@@ -9,11 +9,8 @@ from the [JCTools library](https://github.com/JCTools/JCTools). Let's write a te
 `peek()`, and `offer(x)` operations.
 
 To meet the single-consumer restriction, ensure that all `poll()` and `peek()` consuming operations
-are called from a single thread. For that, declare a group of operations for _non-parallel_ execution:
-
-1. Declare `@OpGroupConfig` annotation to create a group of operations for non-parallel execution, name the group,
-and set `nonParallel` parameter to `true`.
-2. Specify the group name in the `@Operation` annotation to add all non-parallel operations to this group.
+are called from a single thread. For that, we can set the `nonParallelGroup` parameter of the 
+corresponding `@Operation` annotations to the same value, e.g. `"consumers"`.
 
 Here is the resulting test:
 
@@ -24,18 +21,16 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
-// Declare a group of operations that should not be executed in parallel:
-@OpGroupConfig(name = "consumer", nonParallel = true)
 class MPSCQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
 
     @Operation
     fun offer(x: Int) = queue.offer(x)
 
-    @Operation(group = "consumer") 
+    @Operation(nonParallelGroup = "consumers") 
     fun poll(): Int? = queue.poll()
 
-    @Operation(group = "consumer")
+    @Operation(nonParallelGroup = "consumers")
     fun peek(): Int? = queue.peek()
 
     @Test

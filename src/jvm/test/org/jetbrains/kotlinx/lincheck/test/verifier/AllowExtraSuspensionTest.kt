@@ -91,7 +91,6 @@ class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
         threads(2)
         actorsPerThread(3)
         actorsAfter(0)
-        requireStateEquivalenceImplCheck(false)
     }
 }
 

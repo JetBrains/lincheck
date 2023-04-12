@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
+import kotlin.Deprecated;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.*;
@@ -113,10 +114,13 @@ public @interface ModelCheckingCTest {
     int invocationsPerIteration() default DEFAULT_INVOCATIONS;
 
     /**
+     * Does nothing, states equivalence does not always improve performance of verification.
+     * <p>
      * Require correctness check of test instance state equivalency relation, which is defined by the user.
      * Essentially, it checks whether two new instances of the test class are equal.
      * If the check fails, an {@link IllegalStateException} is thrown.
      */
+    @Deprecated(message = "Does nothing, because equals/hashcode don't always improve performance of verification")
     boolean requireStateEquivalenceImplCheck() default false;
 
     /**

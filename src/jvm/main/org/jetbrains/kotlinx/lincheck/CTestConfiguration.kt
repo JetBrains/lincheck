@@ -44,7 +44,6 @@ abstract class CTestConfiguration(
     val actorsAfter: Int,
     val generatorClass: Class<out ExecutionGenerator>,
     val verifierClass: Class<out Verifier>,
-    val requireStateEquivalenceImplCheck: Boolean,
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: Class<*>,
     val timeoutMs: Long,
@@ -81,7 +80,6 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 generatorClass = ann.generator.java,
                 verifierClass = ann.verifier.java,
                 invocationsPerIteration = ann.invocationsPerIteration,
-                requireStateEquivalenceCheck = ann.requireStateEquivalenceImplCheck,
                 minimizeFailedScenario = ann.minimizeFailedScenario,
                 sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
                 timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -104,7 +102,6 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                     hangingDetectionThreshold = ann.hangingDetectionThreshold,
                     invocationsPerIteration = ann.invocationsPerIteration,
                     guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
-                    requireStateEquivalenceCheck = ann.requireStateEquivalenceImplCheck,
                     minimizeFailedScenario = ann.minimizeFailedScenario,
                     sequentialSpecification = chooseSequentialSpecification(
                         ann.sequentialSpecification.java,

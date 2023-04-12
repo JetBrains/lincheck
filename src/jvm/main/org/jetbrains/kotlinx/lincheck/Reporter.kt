@@ -47,9 +47,6 @@ class Reporter constructor(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
-    fun logStateEquivalenceViolation(sequentialSpecification: Class<*>) = log(WARN) {
-        appendStateEquivalenceViolationMessage(sequentialSpecification)
-    }
 
     private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
@@ -241,11 +238,4 @@ private fun StringBuilder.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
-}
-
-internal fun StringBuilder.appendStateEquivalenceViolationMessage(sequentialSpecification: Class<*>) {
-    append("To make verification faster, you can specify the state equivalence relation on your sequential specification.\n" +
-        "At the current moment, `${sequentialSpecification.simpleName}` does not specify it, or the equivalence relation implementation is incorrect.\n" +
-        "To fix this, please implement `equals()` and `hashCode()` functions on `${sequentialSpecification.simpleName}`; the simplest way is to extend `VerifierState`\n" +
-        "and override the `extractState()` function, which is called at once and the result of which is used for further `equals()` and `hashCode()` invocations.")
 }
