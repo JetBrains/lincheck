@@ -30,7 +30,7 @@ import kotlin.reflect.*
 /**
  * This class runs concurrent tests.
  */
-class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
+class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
