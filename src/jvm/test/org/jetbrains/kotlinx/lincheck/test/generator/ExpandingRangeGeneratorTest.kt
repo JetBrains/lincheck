@@ -22,8 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test.generator
 
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
-import org.jetbrains.kotlinx.lincheck.RandomProvider
 import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -32,19 +30,15 @@ import java.util.Random
 class ExpandingRangeGeneratorTest {
 
     @Test
-    fun `generator should expand generated values range`() {
+    fun `generator should expand generated values range and than generate values from it`() {
         val begin = 7
         val end = 12
         val listOfRangeValues = (begin..end).toList()
         var nextRangeIndex = 0
 
-        val argument = slot<Int>()
         val mockedRandom = mockk<Random>() {
             every { nextBoolean() } returns true
-            every { nextInt(capture(argument)) } answers { listOfRangeValues[nextRangeIndex++] - begin }
-        }
-        val mockedRandomProvider = mockk<RandomProvider> {
-            every { createRandom() } returns mockedRandom
+            every { nextInt(any()) } answers { listOfRangeValues[nextRangeIndex++] - begin }
         }
         val generator = ExpandingRangeIntGenerator(mockedRandom, 9, 9, begin, end)
 
