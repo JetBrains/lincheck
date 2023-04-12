@@ -1,4 +1,3 @@
-
 import groovy.util.*
 import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
@@ -61,9 +60,11 @@ kotlin {
 
             val junitVersion: String by project
             val jctoolsVersion: String by project
+            val mockkVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
+                implementation("io.mockk:mockk:${mockkVersion}")
             }
         }
     }

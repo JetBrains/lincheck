@@ -21,6 +21,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.paramgen
 
+import org.jetbrains.kotlinx.lincheck.RandomProvider
+
 /**
  * This generator puts the number of the
  * executing thread as the parameter value.
@@ -31,7 +33,7 @@ package org.jetbrains.kotlinx.lincheck.paramgen
  *
  * Note, that this API is unstable and is subject to change.
  */
-class ThreadIdGen(configuration: String) : ParameterGenerator<Any> {
+class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Any> {
     override fun generate() = THREAD_ID_TOKEN
 }
 

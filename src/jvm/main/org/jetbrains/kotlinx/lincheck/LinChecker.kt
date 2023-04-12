@@ -63,7 +63,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
-        val exGen = createExecutionGenerator()
+        val exGen = createExecutionGenerator(testStructure.randomProvider)
         for (i in customScenarios.indices) {
             val verifier = createVerifier()
             val scenario = customScenarios[i]
@@ -186,11 +186,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
 
-    private fun CTestConfiguration.createExecutionGenerator() =
+    private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider) =
         generatorClass.getConstructor(
             CTestConfiguration::class.java,
-            CTestStructure::class.java
-        ).newInstance(this, testStructure)
+            CTestStructure::class.java,
+            RandomProvider::class.java
+        ).newInstance(this, testStructure, randomProvider)
 
     // This companion object is used for backwards compatibility.
     companion object {

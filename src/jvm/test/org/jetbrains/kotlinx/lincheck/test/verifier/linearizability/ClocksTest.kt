@@ -60,9 +60,11 @@ class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     }
 }
 
-class ClocksTestScenarioGenerator(testCfg: CTestConfiguration, testStructure: CTestStructure)
-    : ExecutionGenerator(testCfg, testStructure)
-{
+class ClocksTestScenarioGenerator(
+    testCfg: CTestConfiguration,
+    testStructure: CTestStructure,
+    randomProvider: RandomProvider
+) : ExecutionGenerator(testCfg, testStructure) {
     override fun nextExecution() = ExecutionScenario(
         emptyList(),
         listOf(
