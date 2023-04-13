@@ -252,7 +252,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
     }
 }
 
-private const val DEFAULT_TESTING_TIME = 15L
+private const val DEFAULT_TESTING_TIME = 5L
 private const val DEFAULT_MIN_THREADS = 2
 private const val DEFAULT_MAX_THREADS = 4
 private const val DEFAULT_MIN_OPERATIONS = 2

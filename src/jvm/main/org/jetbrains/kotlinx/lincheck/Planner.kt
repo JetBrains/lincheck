@@ -276,6 +276,7 @@ internal class AdaptivePlanner(
         _iterationsRunningTime.add(0)
         _iterationsInvocationCount.add(0)
         currentIterationTimeBound = remainingTimeMs / remainingIterations
+        invocationsBound = INITIAL_INVOCATIONS_BOUND
     }
 
     override fun iterationEnd() {
@@ -355,7 +356,7 @@ internal class AdaptivePlanner(
 
         // factor of invocations multiplied/divided by when we over- or under-perform the plan
         // by an order of magnitude
-        private const val INVOCATIONS_FACTOR = 5
+        private const val INVOCATIONS_FACTOR = 2
 
         // initial number of invocations
         private const val INITIAL_INVOCATIONS_BOUND = 5_000
