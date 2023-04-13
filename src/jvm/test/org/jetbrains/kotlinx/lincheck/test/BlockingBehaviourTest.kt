@@ -37,17 +37,10 @@ class BlockingOperationTest {
     fun test() = LincheckOptions {
         (this as LincheckOptionsImpl)
         mode = LincheckMode.ModelChecking
+        testingTimeInSeconds = 1
         verifier = EpsilonVerifier::class.java
         checkObstructionFreedom = true
         generateBeforeAndAfterParts = false
-        // generateScenarios = false
-        // addCustomScenario {
-        //     parallel {
-        //         thread {
-        //             actor(::blocking)
-        //         }
-        //     }
-        // }
     }.check(this::class)
 
 }

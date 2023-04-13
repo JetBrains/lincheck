@@ -127,23 +127,31 @@ internal class LincheckOptionsImpl : LincheckOptions {
     internal var generateScenarios = true
     internal var generateBeforeAndAfterParts = true
 
+    private val runningCustomScenarios: Boolean
+        get() = customScenarios.isNotEmpty()
+
     override fun addCustomScenario(scenario: ExecutionScenario) {
         customScenarios.add(scenario)
     }
 
-    override fun checkImpl(testClass: Class<*>): LincheckFailure? {
-        val reporter = Reporter(DEFAULT_LOG_LEVEL)
-        val planner = AdaptivePlanner(
-            testingTimeMs = testingTimeInSeconds * 1000,
-            iterationsLowerBound = customScenarios.size
-        )
+    override fun checkImpl(testClass: Class<*>): LincheckFailure? = when (mode) {
+        LincheckMode.Stress         -> checkImplWithMode(LincheckMode.Stress, testingTimeInSeconds * 1000, testClass)
+        LincheckMode.ModelChecking  -> checkImplWithMode(LincheckMode.ModelChecking, testingTimeInSeconds * 1000, testClass)
+        LincheckMode.Hybrid         -> run {
+            val stressTimeMs = (STRATEGY_SWITCH_THRESHOLD * testingTimeInSeconds * 1000).toLong()
+            val modelCheckingTimeMs = ((1 - STRATEGY_SWITCH_THRESHOLD) * testingTimeInSeconds * 1000).toLong()
+            checkImplWithMode(LincheckMode.Stress, stressTimeMs, testClass)?.let { return it }
+            checkImplWithMode(LincheckMode.ModelChecking, modelCheckingTimeMs, testClass)?.let { return it }
+            return null
+        }
+    }
+
+    private fun checkImplWithMode(mode: LincheckMode, testingTimeMs: Long, testClass: Class<*>): LincheckFailure? {
         val testStructure = CTestStructure.getFromTestClass(testClass)
-        val executionGenerator = RandomExecutionGenerator(testStructure)
+        val reporter = Reporter(DEFAULT_LOG_LEVEL)
         var verifier = createVerifier(testClass)
-        while (planner.shouldDoNextIteration()) {
-            val i = planner.iteration
-            if (i >= customScenarios.size && !generateScenarios)
-                break
+        val planner = createPlanner(mode, testingTimeMs, testStructure)
+        var failure = planner.runIterations { i, scenario, invocationsPlanner ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance
@@ -152,56 +160,33 @@ internal class LincheckOptionsImpl : LincheckOptions {
             if ((i + 1) % LinChecker.VERIFIER_REFRESH_CYCLE == 0) {
                 verifier = createVerifier(testClass)
             }
-            // TODO: maybe we should move custom scenarios logic into Planner?
-            val isCustomScenario = (i < customScenarios.size)
-            val scenario = if (isCustomScenario)
-                customScenarios[i]
-            else {
-                val factor = i.toDouble() / planner.iterationsUpperBound
-                val threads = ceil(maxThreads * factor).toInt().coerceAtLeast(2)
-                val operationsInThread = ceil(maxOperationsInThread * factor).toInt().coerceAtLeast(2)
-                println("$i, ${planner.iterationsUpperBound} $threads $operationsInThread $factor $maxThreads $maxOperationsInThread")
-                executionGenerator.nextExecution(
-                    threads, operationsInThread,
-                    if (generateBeforeAndAfterParts) operationsInThread else 0,
-                    if (generateBeforeAndAfterParts) operationsInThread else 0,
-                )
-            }
             scenario.validate()
             reporter.logIteration(i + 1, scenario)
-            val currentMode = planner.currentMode()
-            val failure = planner.measureIterationTime {
-                scenario.run(currentMode, testClass, testStructure, verifier, planner)
+            scenario.run(mode, testClass, testStructure, verifier, invocationsPlanner).also {
+                reporter.logIterationStatistics(i, planner.iterationsPlanner as AdaptivePlanner)
             }
-            reporter.logIterationStatistics(planner.iterationsInvocationCount[i], planner.iterationsRunningTime[i])
-            if (failure == null)
-                continue
-            // fix the number of invocations for failure minimization
-            var minimizedFailure = if (minimizeFailedScenario && !isCustomScenario) {
-                failure.minimize(reporter) {
-                    it.run(currentMode, testClass, testStructure,
-                        createVerifier(testClass),
-                        FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT)
-                    )
-                }
-            } else {
-                failure
-            }
-            if (mode == LincheckMode.Hybrid && currentMode == LincheckMode.Stress) {
-                // try to reproduce an error trace with model checking strategy
-                minimizedFailure.scenario.run(
-                    LincheckMode.ModelChecking,
-                    testClass, testStructure,
+        } ?: return null
+        if (minimizeFailedScenario && !runningCustomScenarios) {
+            failure = failure.minimize(reporter) {
+                it.run(mode, testClass, testStructure,
                     createVerifier(testClass),
-                    FixedInvocationPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT)
-                )?.let {
-                    minimizedFailure = it
-                }
+                    FixedInvocationsPlanner(MINIMIZATION_INVOCATIONS_COUNT)
+                )
             }
-            reporter.logFailedIteration(minimizedFailure)
-            return minimizedFailure
         }
-        return null
+        if (this.mode == LincheckMode.Hybrid && mode == LincheckMode.Stress) {
+            // try to reproduce an error trace with model checking strategy
+            failure.scenario.run(
+                LincheckMode.ModelChecking,
+                testClass, testStructure,
+                createVerifier(testClass),
+                FixedInvocationsPlanner(MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT)
+            )?.let {
+                failure = it
+            }
+        }
+        reporter.logFailedIteration(failure)
+        return failure
     }
 
     private fun ExecutionScenario.run(
@@ -209,22 +194,30 @@ internal class LincheckOptionsImpl : LincheckOptions {
         testClass: Class<*>,
         testStructure: CTestStructure,
         verifier: Verifier,
-        planner: InvocationPlanner,
+        planner: InvocationsPlanner,
     ): LincheckFailure? =
         createStrategy(currentMode, testClass, this, testStructure).use {
             it.run(verifier, planner)
         }
 
-    private fun AdaptivePlanner.currentMode() = when (this@LincheckOptionsImpl.mode) {
-            LincheckMode.Stress         -> LincheckMode.Stress
-            LincheckMode.ModelChecking  -> LincheckMode.ModelChecking
-            LincheckMode.Hybrid         -> {
-                if (testingProgress < STRATEGY_SWITCH_THRESHOLD)
-                    LincheckMode.Stress
-                else
-                    LincheckMode.ModelChecking
-            }
+    private fun Reporter.logIterationStatistics(iteration: Int, planner: AdaptivePlanner) {
+        logIterationStatistics(planner.iterationsInvocationCount[iteration], planner.iterationsRunningTime[iteration])
+    }
+
+    private fun createPlanner(mode: LincheckMode, testingTimeMs: Long, testStructure: CTestStructure): Planner {
+        return if (runningCustomScenarios) {
+            FixedScenariosAdaptivePlanner(mode, testingTimeMs, customScenarios)
+        } else {
+            RandomScenariosAdaptivePlanner(mode, testingTimeMs,
+                minThreads = DEFAULT_MIN_THREADS,
+                maxThreads = maxThreads,
+                minOperations = DEFAULT_MIN_OPERATIONS,
+                maxOperations = maxOperationsInThread,
+                generateBeforeAndAfterParts = generateBeforeAndAfterParts,
+                scenarioGenerator = RandomExecutionGenerator(testStructure)
+            )
         }
+    }
 
     private fun createVerifier(testClass: Class<*>) = verifier
         .getConstructor(Class::class.java)
@@ -260,12 +253,15 @@ internal class LincheckOptionsImpl : LincheckOptions {
 }
 
 private const val DEFAULT_TESTING_TIME = 15L
+private const val DEFAULT_MIN_THREADS = 2
 private const val DEFAULT_MAX_THREADS = 4
-private const val DEFAULT_MAX_OPERATIONS = 4
+private const val DEFAULT_MIN_OPERATIONS = 2
+private const val DEFAULT_MAX_OPERATIONS = 5
 
 // in hybrid mode: testing progress threshold (in %) after which strategy switch
 //   from Stress to ModelChecking strategy occurs
-private const val STRATEGY_SWITCH_THRESHOLD = 25
+private const val STRATEGY_SWITCH_THRESHOLD = 0.25
 
+private const val MINIMIZATION_INVOCATIONS_COUNT = 10_000
 private const val MODEL_CHECKING_ON_ERROR_INVOCATIONS_COUNT = 10_000
 

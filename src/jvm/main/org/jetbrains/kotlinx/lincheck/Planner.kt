@@ -20,11 +20,76 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import kotlin.math.*
 
-interface IterationPlanner {
+interface Planner {
+    val scenarios: Sequence<ExecutionScenario>
+    val iterationsPlanner: IterationsPlanner
+    val invocationsPlanner: InvocationsPlanner
+}
+
+fun Planner.runIterations(block: (Int, ExecutionScenario, InvocationsPlanner) -> LincheckFailure?): LincheckFailure? {
+    scenarios.forEachIndexed { i, scenario ->
+        if (!iterationsPlanner.shouldDoNextIteration())
+            return null
+        iterationsPlanner.trackIteration {
+            block(i, scenario, invocationsPlanner)?.let {
+                return it
+            }
+        }
+    }
+    return null
+}
+
+internal class FixedScenariosAdaptivePlanner(
+    mode: LincheckMode,
+    testingTimeMs: Long,
+    scenarios: List<ExecutionScenario>,
+) : Planner {
+    private val planner = AdaptivePlanner(mode, testingTimeMs, scenarios.size)
+    override val iterationsPlanner = planner
+    override val invocationsPlanner = planner
+    override val scenarios = scenarios.asSequence()
+}
+
+internal class RandomScenariosAdaptivePlanner(
+    mode: LincheckMode,
+    testingTimeMs: Long,
+    val minThreads: Int,
+    val maxThreads: Int,
+    val minOperations: Int,
+    val maxOperations: Int,
+    val generateBeforeAndAfterParts: Boolean,
+    scenarioGenerator: ExecutionGenerator,
+) : Planner {
+    private val planner = AdaptivePlanner(mode, testingTimeMs)
+    override val iterationsPlanner = planner
+    override val invocationsPlanner = planner
+
+    private val configurations: List<Pair<Int, Int>> = run {
+        (minThreads .. maxThreads).flatMap { threads ->
+            (minOperations .. maxOperations).flatMap { operations ->
+                listOf(threads to operations)
+            }
+        }
+    }
+
+    override val scenarios = sequence {
+        while (true) {
+            val n = floor(planner.testingProgress * configurations.size).toInt()
+            val (threads, operations) = configurations[min(n, configurations.size - 1)]
+            yield(scenarioGenerator.nextExecution(threads, operations,
+                if (generateBeforeAndAfterParts) operations else 0,
+                if (generateBeforeAndAfterParts) operations else 0,
+            ))
+        }
+    }
+}
+
+interface IterationsPlanner {
     fun shouldDoNextIteration(): Boolean
 
     fun iterationStart()
@@ -32,7 +97,7 @@ interface IterationPlanner {
     fun iterationEnd()
 }
 
-interface InvocationPlanner {
+interface InvocationsPlanner {
     fun shouldDoNextInvocation(): Boolean
 
     fun invocationStart()
@@ -40,7 +105,7 @@ interface InvocationPlanner {
     fun invocationEnd()
 }
 
-inline fun IterationPlanner.trackIteration(block: () -> LincheckFailure?): LincheckFailure? {
+inline fun<T> IterationsPlanner.trackIteration(block: () -> T): T {
     iterationStart()
     try {
         return block()
@@ -49,7 +114,7 @@ inline fun IterationPlanner.trackIteration(block: () -> LincheckFailure?): Linch
     }
 }
 
-inline fun InvocationPlanner.trackInvocation(block: () -> InvocationResult): InvocationResult {
+inline fun<T> InvocationsPlanner.trackInvocation(block: () -> T): T {
     invocationStart()
     try {
         return block()
@@ -58,8 +123,8 @@ inline fun InvocationPlanner.trackInvocation(block: () -> InvocationResult): Inv
     }
 }
 
-internal class FixedInvocationPlanner(invocationsPerIteration: Int) : InvocationPlanner {
-    private var remainingInvocations = invocationsPerIteration
+internal class FixedInvocationsPlanner(invocations: Int) : InvocationsPlanner {
+    private var remainingInvocations = invocations
 
     override fun shouldDoNextInvocation() = remainingInvocations > 0
 
@@ -77,17 +142,22 @@ internal class FixedInvocationPlanner(invocationsPerIteration: Int) : Invocation
  * - keep the track of deadlines and remaining time;
  * - adaptively adjusting number of test scenarios and invocations allocated per scenario.
  */
-internal class AdaptivePlanner ( // TODO: constructor with seconds
+internal class AdaptivePlanner(
+    /**
+     * Testing mode. It is used to calculate upper/lower bounds on the number of invocations.
+     */
+    mode: LincheckMode,
     /**
      * Total amount of time in milliseconds allocated to testing.
      */
+    // TODO: constructor with seconds
     val testingTimeMs: Long,
     /**
      * A strict bound on the number of iterations that should be definitely performed.
      * If negative (by default), then adaptive iterations planning is used.
      */
-    val iterationsStrictBound: Int = -1,
-) : IterationPlanner, InvocationPlanner {
+    iterationsStrictBound: Int = -1,
+) : IterationsPlanner, InvocationsPlanner {
     /**
      * Total amount of time already spent on testing.
      */
@@ -101,13 +171,20 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         get() = testingTimeMs - runningTime
 
     /**
+     * Testing progress: floating-point number in range [0.0 .. 1.0],
+     * representing a fraction of spent testing time.
+     */
+    val testingProgress: Double
+        get() = runningTime / testingTimeMs.toDouble()
+
+    /**
      * Current iteration number.
       */
     var iteration: Int = 0
         private set
 
     val adaptiveIterationsBound: Boolean =
-        iterationsStrictBound >= 0
+        iterationsStrictBound < 0
 
     /**
      * Upper bound on the number of iterations.
@@ -147,6 +224,20 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
      * Adjusted automatically during each iteration.
      */
     private var invocationsBound = INITIAL_INVOCATIONS_BOUND
+
+    /**
+     * Lower bound of invocations allocated by iteration
+     */
+    private val invocationsLowerBound = 1_000
+
+    /**
+     * upper bound of invocations allocated by iteration
+     */
+    private val invocationsUpperBound = when (mode) {
+        LincheckMode.Stress         -> 1_000_000
+        LincheckMode.ModelChecking  -> 20_000
+        else -> throw IllegalArgumentException()
+    }
 
     // an array keeping running time of all iterations
     private val _iterationsRunningTime = mutableListOf<Long>()
@@ -192,7 +283,7 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         iteration += 1
         invocation = 0
         if (adaptiveIterationsBound) {
-            adjustIterationsBound()
+            adjustIterationsBound(iterationsRunningTime[iteration - 1])
         }
     }
 
@@ -214,44 +305,44 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
         }
     }
 
-    private fun estimateRemainingTime(bound: Int) =
-        (bound - iteration) * iterationsRunningTime[iteration]
+    private fun estimateRemainingTime(iterationsBound: Int, iterationTimeEstimate: Long) =
+        (iterationsBound - iteration) * iterationTimeEstimate
 
-    private fun adjustIterationsBound() {
-        val estimate = estimateRemainingTime(iterationsBound)
+    private fun adjustIterationsBound(iterationTimeEstimate: Long) {
+        val estimate = estimateRemainingTime(iterationsBound, iterationTimeEstimate)
         // if we over-perform, try to increase iterations bound
         if (estimate < remainingTimeMs) {
             val newIterationsBound = iterationsBound + ITERATIONS_DELTA
             // if with the larger bound we still over-perform, then increase the bound
-            if (estimateRemainingTime(newIterationsBound) < remainingTimeMs) {
+            if (estimateRemainingTime(newIterationsBound, iterationTimeEstimate) < remainingTimeMs) {
                 iterationsBound = newIterationsBound
             }
         }
         // if we under-perform, then decrease iterations bound
         if (estimate > remainingTimeMs) {
             val delay = (estimate - remainingTimeMs).toDouble()
-            val delayingIterations = floor(delay / iterationsRunningTime[iteration]).toInt()
+            val delayingIterations = floor(delay / iterationTimeEstimate).toInt()
             // remove the iterations we are unlikely to have time to do
             iterationsBound -= delayingIterations
         }
     }
 
-    private fun estimateRemainingIterationTime(bound: Int) =
-        (bound - invocation) * averageInvocationTime
+    private fun estimateRemainingIterationTime(invocationsBound: Int) =
+        (invocationsBound - invocation) * averageInvocationTime
 
     private fun adjustInvocationBound() {
         val estimate = estimateRemainingIterationTime(invocationsBound)
         // if we over-perform, try to increase invocations bound
-        if (estimate < currentIterationRemainingTime && invocationsBound < INVOCATIONS_UPPER_BOUND) {
-            val newInvocationsBound = min(invocationsBound * INVOCATIONS_FACTOR, INVOCATIONS_UPPER_BOUND)
+        if (estimate < currentIterationRemainingTime && invocationsBound < invocationsUpperBound) {
+            val newInvocationsBound = min(invocationsBound * INVOCATIONS_FACTOR, invocationsUpperBound)
             // if with the larger bound we still over-perform, then increase
             if (estimateRemainingIterationTime(newInvocationsBound) < currentIterationRemainingTime) {
                 invocationsBound = newInvocationsBound
             }
         }
         // if we under-perform, then decrease invocations bound
-        if (estimate > currentIterationRemainingTime && invocationsBound > INVOCATIONS_LOWER_BOUND) {
-            invocationsBound = max(invocationsBound / INVOCATIONS_FACTOR, INVOCATIONS_LOWER_BOUND)
+        if (estimate > currentIterationRemainingTime && invocationsBound > invocationsLowerBound) {
+            invocationsBound = max(invocationsBound / INVOCATIONS_FACTOR, invocationsLowerBound)
         }
     }
 
@@ -268,12 +359,6 @@ internal class AdaptivePlanner ( // TODO: constructor with seconds
 
         // initial number of invocations
         private const val INITIAL_INVOCATIONS_BOUND = 5_000
-
-        // lower bound of invocations allocated by iteration
-        private const val INVOCATIONS_LOWER_BOUND = 1_000
-
-        // upper bound of invocations allocated by iteration
-        private const val INVOCATIONS_UPPER_BOUND = 30_000
 
         // number of invocations performed between dynamic parameter adjustments
         private const val ADJUSTMENT_THRESHOLD = 100

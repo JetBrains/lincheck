@@ -109,7 +109,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation
         ).use {
-            it.run(verifier, FixedInvocationPlanner(testCfg.invocations))
+            it.run(verifier, FixedInvocationsPlanner(testCfg.invocations))
         }
 
     private val CTestConfiguration.invocations get() = when (this) {
