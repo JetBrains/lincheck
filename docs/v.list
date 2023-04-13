@@ -4,6 +4,6 @@
 
 <vars>
 
-<var name="lincheckVersion" value="2.16" type="string"/>
+<var name="lincheckVersion" value="2.17" type="string"/>
 
 </vars>
