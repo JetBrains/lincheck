@@ -68,6 +68,8 @@ abstract class AbstractLincheckTest(
 
     private fun LincheckOptionsImpl.configure() {
         testingTimeInSeconds = 5
+        maxThreads = 3
+        maxOperationsInThread = 2
         minimizeFailedScenario = false
         customize()
     }
