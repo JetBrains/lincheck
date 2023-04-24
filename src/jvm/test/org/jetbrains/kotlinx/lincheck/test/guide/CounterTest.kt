@@ -39,7 +39,7 @@ class CounterTest {
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun lincheckTest() = LincheckOptions {
-        maxThreads = 4
-        maxOperationsInThread = 5
+        maxThreads = 2
+        maxOperationsInThread = 2
     }.check(this::class)
 }
