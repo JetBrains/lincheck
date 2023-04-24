@@ -47,17 +47,16 @@ abstract class Strategy protected constructor(
 
     fun run(verifier: Verifier, invocationsPlanner: InvocationsPlanner): LincheckFailure? {
         while (invocationsPlanner.shouldDoNextInvocation()) {
-            val invocationResult = invocationsPlanner.trackInvocation {
-                runInvocation()
-            }
-            when (invocationResult) {
-                AllInterleavingsStudiedInvocationResult -> return null
-                is CompletedInvocationResult -> {
-                    if (!verifier.verifyResults(scenario, invocationResult.results)) {
-                        return IncorrectResultsFailure(scenario, invocationResult.results, invocationResult.tryCollectTrace())
+            invocationsPlanner.trackInvocation {
+                when (val result = runInvocation()) {
+                    AllInterleavingsStudiedInvocationResult -> return null
+                    is CompletedInvocationResult -> {
+                        if (!verifier.verifyResults(scenario, result.results)) {
+                            return IncorrectResultsFailure(scenario, result.results, result.tryCollectTrace())
+                        }
                     }
+                    else -> return result.toLincheckFailure(scenario, result.tryCollectTrace())
                 }
-                else -> return invocationResult.toLincheckFailure(scenario, invocationResult.tryCollectTrace())
             }
         }
         return null
