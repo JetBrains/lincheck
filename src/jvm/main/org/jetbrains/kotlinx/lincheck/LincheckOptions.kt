@@ -26,7 +26,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import kotlin.math.*
 import kotlin.reflect.*
 
 interface LincheckOptions {
@@ -201,7 +200,10 @@ internal class LincheckOptionsImpl : LincheckOptions {
         }
 
     private fun Reporter.logIterationStatistics(iteration: Int, planner: AdaptivePlanner) {
-        logIterationStatistics(planner.iterationsInvocationCount[iteration], planner.iterationsRunningTime[iteration])
+        logIterationStatistics(
+            planner.iterationsInvocationCount[iteration],
+            planner.iterationsRunningTimeNano[iteration]
+        )
     }
 
     private fun createPlanner(mode: LincheckMode, testingTimeMs: Long, testStructure: CTestStructure): Planner {

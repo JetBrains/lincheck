@@ -38,8 +38,9 @@ class Reporter constructor(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
-    fun logIterationStatistics(invocations: Int, timeMs: Long) = log(INFO) {
-        appendln("= Statistics: #invocations=$invocations, running time ${String.format("%.3f", timeMs.toDouble() / 1000)}s =")
+    fun logIterationStatistics(invocations: Int, timeNano: Long) = log(INFO) {
+        val timeSec = timeNano.toDouble() / 1_000_000_000
+        appendln("= Statistics: #invocations=$invocations, running time ${String.format("%.3f", timeSec)}s =")
     }
 
     fun logFailedIteration(failure: LincheckFailure) = log(INFO) {
