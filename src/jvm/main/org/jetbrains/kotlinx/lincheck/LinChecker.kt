@@ -91,7 +91,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             if (failure != null) {
                 val minimizedFailedIteration = if (minimizeFailedScenario)
                     failure.minimize(reporter) {
-                        it.run(this, createVerifier(checkStateEquivalence = false))
+                        it.run(this, createVerifier())
                     }
                else
                     failure

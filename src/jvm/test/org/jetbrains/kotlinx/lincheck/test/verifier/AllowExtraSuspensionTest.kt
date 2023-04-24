@@ -84,17 +84,6 @@ class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
         if (c == 6) return
         suspendCancellableCoroutine<Unit> {  }
     }
-<<<<<<< HEAD
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(10)
-        actorsBefore(0)
-        threads(2)
-        actorsPerThread(3)
-        actorsAfter(0)
-    }
-=======
->>>>>>> LincheckOptions
 }
 
 class CounterSequential : VerifierState() {

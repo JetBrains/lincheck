@@ -216,7 +216,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
                 minOperations = DEFAULT_MIN_OPERATIONS,
                 maxOperations = maxOperationsInThread,
                 generateBeforeAndAfterParts = generateBeforeAndAfterParts,
-                scenarioGenerator = RandomExecutionGenerator(testStructure)
+                scenarioGenerator = RandomExecutionGenerator(testStructure, testStructure.randomProvider)
             )
         }
     }

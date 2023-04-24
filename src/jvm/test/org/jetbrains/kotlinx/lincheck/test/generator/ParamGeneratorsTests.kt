@@ -17,6 +17,7 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
+@file:Suppress("DEPRECATION_ERROR", "DEPRECATION")
 
 package org.jetbrains.kotlinx.lincheck.test.generator
 
