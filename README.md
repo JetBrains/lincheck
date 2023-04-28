@@ -39,7 +39,7 @@ The following tests check correct data structures for evaluating Lincheck's perf
 * `ConcurrentHashMapTest` (hashtable implementation in the standard Java library)
 * `ConcurrentLinkedQueueTest` (Michael-Scott queue implementation in the standard Java library)
 * `LockFreeTaskQueueTest` (quiescent consistent queue in Kotlin Coroutines internals)
-* `SemaphoreTest` (semaphore implementation in Kotlin Coroutines)
+* `SemaphoreTest` (semaphore implementation for Kotlin Coroutines)
 
 Other tests should fail; check the build report in `./build/reports/tests/test/index.html`.
 For your convenience, you can also access these reports without running the tests in [Reports](REPORTS.md) page.
