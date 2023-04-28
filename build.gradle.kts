@@ -47,9 +47,9 @@ tasks {
 }
 
 sourceSets.main {
-    java.srcDir("data_structures")
+    java.srcDir("src")
 }
 
 sourceSets.test {
-    java.srcDir("tests")
+    java.srcDir("test")
 }
