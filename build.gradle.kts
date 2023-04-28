@@ -29,8 +29,8 @@ dependencies {
 }
 
 kotlin {
-    // Use or download latest jdk.
-    // Remove to use custom jdk version.
+    // Use or download the latest jdk.
+    // Remove the next line to use custom jdk version.
     jvmToolchain(19)
 }
 

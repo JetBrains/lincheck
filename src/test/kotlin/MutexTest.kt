@@ -15,10 +15,9 @@ class MutexTest : AbstractLincheckTest() {
     @Operation(handleExceptionsAsResult = [IllegalStateException::class])
     fun unlock() = mutex.unlock()
 
-
     override fun <O : Options<O, *>> O.customize() {
         actorsBefore(0)
-//        actorsPerThread(3)
+        actorsAfter(0)
         if (this is ModelCheckingOptions)
             checkObstructionFreedom()
     }

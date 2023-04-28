@@ -1,9 +1,9 @@
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import java.util.concurrent.ConcurrentLinkedQueue
 
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
 class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
     private val queue = ConcurrentLinkedQueue<Int>()
 
@@ -18,4 +18,9 @@ class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
 
     @Operation
     fun poll() = queue.poll()
+
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+        actorsAfter(0)
+    }
 }

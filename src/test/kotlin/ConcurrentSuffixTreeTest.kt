@@ -2,8 +2,8 @@ import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFa
 import com.googlecode.concurrenttrees.suffix.ConcurrentSuffixTree
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
-
 
 @Param(name = "key", gen = StringGen::class, conf = "4:ab")
 class ConcurrentSuffixTreeTest : AbstractLincheckTest() {

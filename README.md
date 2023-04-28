@@ -17,7 +17,7 @@ An example of non-linearizable behaviour found by Lincheck is when `ConcurrentLi
 
 ## `AbstractQueueSynchronizer` in Java Standard Library
 Source: Java Standard Library (still present in the latest JDK version).  
-Test: [SemaphoreTest](src/test/kotlin/SemaphoreTest.kt)  
+Test: [AbstractQueueSynchronizerTest](src/test/kotlin/AbstractQueueSynchronizerTest.kt)  
 
 Notably, this bug was introduced in the latest JDK versions (17+).
 

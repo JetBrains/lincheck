@@ -7,7 +7,7 @@ import org.junit.Test
 //    This test does not work in the artifact as it requires custom Lincheck branch to detect this liveliness error.
 //    Note that the report for the test is already present at reports.md
 
-class QueueSynchronizerTest {
+class AbstractQueueSynchronizerTest {
     private val semaphore = java.util.concurrent.Semaphore(1, true)
 
     @Operation(cancellableOnSuspension = true)
@@ -28,16 +28,6 @@ class QueueSynchronizerTest {
             .sequentialSpecification(SemaphoreSequential::class.java)
             .check(this::class.java)
     }
-}
 
-@Ignore
-class SemaphoreSequential {
-    private val s = kotlinx.coroutines.sync.Semaphore(100, 99)
 
-    suspend fun acquire() {
-        s.acquire()
-    }
-    fun release() {
-        s.release()
-    }
 }
