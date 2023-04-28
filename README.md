@@ -50,7 +50,7 @@ The following tests check correct data structures for evaluating Lincheck's perf
 * `SemaphoreTest` (semaphore implementation for Kotlin Coroutines)
 
 Other tests should fail; check the build report in `./build/reports/tests/test/index.html`.
-For your convenience, you can also access these reports without running the tests in [Reports](REPORTS.md) page.
+For your convenience, you can also access these reports without running the tests in [REPORTS.md](REPORTS.md) file.
 Below, we discuss these bugs in more detail.
 
 ## List of previously unknown bugs detected with Lincheck
