@@ -1,4 +1,6 @@
-# Test Reports from Lincheck
+# Test Reports by Lincheck
+
+These test reports describe the bugs detected by Lincheck.
 
 ## `ConcurrentLinkedDeque` in Java Standard Library
 

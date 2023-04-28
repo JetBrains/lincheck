@@ -37,9 +37,19 @@ kotlin {
 tasks {
     withType<Test> {
         // Remove these arguments for Java 8 and older versions
-        jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+        jvmArgs(
+            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
-            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED")
-        maxHeapSize = "2g"
+            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
+        )
+        maxHeapSize = "6g"
     }
+}
+
+sourceSets.main {
+    java.srcDir("src")
+}
+
+sourceSets.test {
+    java.srcDir("test")
 }

@@ -46,7 +46,7 @@ abstract class AbstractLincheckTest {
 
     open fun <O: Options<O, *>> O.customize() {}
 
-    fun <O: Options<O, *>> O.fastConfiguration() {
+    private fun <O: Options<O, *>> O.fastConfiguration() {
         iterations(30)
         threads(2)
         actorsPerThread(3)
@@ -58,7 +58,7 @@ abstract class AbstractLincheckTest {
         requireStateEquivalenceImplCheck(false) // removes a warning about possible optimization
     }
 
-    fun <O: Options<O, *>> O.longConfiguration() {
+    private fun <O: Options<O, *>> O.longConfiguration() {
         iterations(100)
         threads(3)
         actorsPerThread(4)
