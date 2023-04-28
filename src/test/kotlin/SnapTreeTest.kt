@@ -1,9 +1,6 @@
-package tests
-
 import SnapTree.SnapTreeMap
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 
 class SnapTreeTest : AbstractConcurrentMapTest<SnapTreeMap<Long, Int>>(SnapTreeMap()) {
     // this operation is disabled for SnapTree, since it's bugged even in the sequential case

@@ -1,13 +1,8 @@
-package tests
-
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory
 import com.googlecode.concurrenttrees.suffix.ConcurrentSuffixTree
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
 
 
 @Param(name = "key", gen = StringGen::class, conf = "4:ab")
@@ -16,11 +11,12 @@ class ConcurrentSuffixTreeTest : AbstractLincheckTest() {
 
     @Operation
     fun getKeysContaining(@Param(name = "key") key: String) =
-        // ignore the order of output strings
+        // ignore the order of output strings as it not important
         suffixTree.getKeysContaining(key).map { it.toString() }.sortedWith(String.CASE_INSENSITIVE_ORDER).toString()
 
     @Operation
     fun getKeysEndingWith(@Param(name = "key") key: String) =
+        // ignore the order of output strings as it not important
         suffixTree.getKeysEndingWith(key).map { it.toString() }.sortedWith(String.CASE_INSENSITIVE_ORDER).toString()
 
     @Operation

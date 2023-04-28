@@ -9,11 +9,6 @@ apply(plugin = "kotlinx-atomicfu")
 plugins {
     java
     kotlin("jvm") version "1.8.0"
-    application
-}
-
-application {
-    mainClass.set("ExperimentsKt")
 }
 
 repositories {

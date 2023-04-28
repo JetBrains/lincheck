@@ -1,5 +1,3 @@
-package tests
-
 import kotlinx.coroutines.sync.Mutex
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation

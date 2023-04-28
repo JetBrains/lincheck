@@ -1,8 +1,11 @@
-package tests
-
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.junit.Ignore
+import org.junit.Test
+
+//    This test does not work in the artifact as it requires custom Lincheck branch to detect this liveliness error.
+//    Note that the report for the test is already present at reports.md
 
 class QueueSynchronizerTest {
     private val semaphore = java.util.concurrent.Semaphore(1, true)
@@ -17,9 +20,7 @@ class QueueSynchronizerTest {
         semaphore.release()
     }
 
-//    TODO: does not work yet: uses custom lincheck branch.
-//    Note that the report is already present at reports.md
-//    @Test
+    @Ignore @Test
     fun test() {
         ModelCheckingOptions()
             .actorsBefore(0)
@@ -29,6 +30,7 @@ class QueueSynchronizerTest {
     }
 }
 
+@Ignore
 class SemaphoreSequential {
     private val s = kotlinx.coroutines.sync.Semaphore(100, 99)
 

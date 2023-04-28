@@ -1,27 +1,28 @@
-package tests
-
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
 
+/**
+ * Base test class with fast and long configurations.
+ */
 abstract class AbstractLincheckTest {
     @Test
     fun stressTestFast() {
         StressOptions().apply {
             fastConfiguration()
-            customize()
-            check(this::class)
+            customize() // for test-specific features
+            check(this@AbstractLincheckTest::class)
         }
     }
 
     @Test
     fun stressTestLong() {
         StressOptions().apply {
-            fastConfiguration()
-            customize()
-            check(this::class)
+            longConfiguration()
+            customize() // for test-specific features
+            check(this@AbstractLincheckTest::class)
         }
     }
 
@@ -29,8 +30,8 @@ abstract class AbstractLincheckTest {
     fun modelCheckingTestFast() {
         ModelCheckingOptions().apply {
             fastConfiguration()
-            customize()
-            check(this::class)
+            customize() // for test-specific features
+            check(this@AbstractLincheckTest::class)
         }
     }
 
@@ -38,8 +39,8 @@ abstract class AbstractLincheckTest {
     fun modelCheckingTestLong() {
         ModelCheckingOptions().apply {
             longConfiguration()
-            customize()
-            check(this::class)
+            customize() // for test-specific features
+            check(this@AbstractLincheckTest::class)
         }
     }
 
@@ -54,6 +55,7 @@ abstract class AbstractLincheckTest {
             is StressOptions -> invocationsPerIteration(1000)
             is ModelCheckingOptions -> invocationsPerIteration(1000)
         }
+        requireStateEquivalenceImplCheck(false) // removes a warning about possible optimization
     }
 
     fun <O: Options<O, *>> O.longConfiguration() {
@@ -65,5 +67,6 @@ abstract class AbstractLincheckTest {
             is StressOptions -> invocationsPerIteration(10000)
             is ModelCheckingOptions -> invocationsPerIteration(10000)
         }
+        requireStateEquivalenceImplCheck(false) // removes a warning about possible optimization
     }
 }

@@ -1,15 +1,10 @@
-package tests
-
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.LongGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
 import java.util.concurrent.ConcurrentMap
 
-@Param(name = "key", gen = LongGen::class, conf = "1:5")
+@Param(name = "key", gen = LongGen::class, conf = "1:4")
 @Param(name = "value", gen = IntGen::class, conf = "1:8")
 abstract class AbstractConcurrentMapTest<MAP : ConcurrentMap<Long, Int>>(val map: MAP) : AbstractLincheckTest() {
     @Operation

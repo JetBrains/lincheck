@@ -1,14 +1,9 @@
-package tests
-
 import CATreeMapAVL.CATreeMapAVL
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.LongGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
 
 // CATreeMapAVL does not implement ConcurrentMap interface,
 // so we cannot re-use AbstractConcurrentMapTest here
@@ -41,6 +36,5 @@ class CATreeTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
         actorsBefore(0)
         actorsAfter(0)
-//        actorsPerThread(2)
     }
 }

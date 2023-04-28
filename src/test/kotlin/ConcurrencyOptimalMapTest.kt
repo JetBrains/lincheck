@@ -1,14 +1,7 @@
-package tests
-
 import ConcurrencyOptimalTreeMap.ConcurrencyOptimalTreeMap
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.paramgen.LongGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
 @Param(name = "value", gen = IntGen::class, conf = "1:8")
