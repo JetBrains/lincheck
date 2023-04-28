@@ -42,6 +42,8 @@ tasks {
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
             "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
         )
+        exclude("**/AbstractConcurrentMapTest.class")
+        exclude("**/AbstractLincheckTest.class")
         maxHeapSize = "6g"
     }
 }
