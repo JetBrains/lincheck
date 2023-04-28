@@ -4,11 +4,11 @@
 
 Lincheck is a new practical and user-friendly framework for testing concurrent data structures on the Java Virtual Machine (JVM). It provides a simple and declarative way to write concurrent tests. Instead of describing how to perform the test, users specify what to test by declaring all the operations to examine; the framework automatically handles the rest. As a result, tests written with Lincheck are concise and easy to understand.
 
-The artifact presents a collection of Lincheck tests that discover new bugs in popular libraries and implementations from the concurrency literature -- they are listed in Table 1, Section 3. To evaluate the performance of Lincheck analysis, the collection of tests also includes those which check correct data structures and, thus, always succeed. Similarly to Table 2, Section 3, the experiments demonstrate the reasonable time to perform a test. Finally, Lincheck provides user-friendly output with an easy-to-follow trace to reproduce a detected error, significantly simplifying further investigation.
+The artifact presents a collection of Lincheck tests that discover new bugs in popular libraries and implementations from the concurrency literature -- they are listed in Table 1, Section 3. To evaluate the performance of Lincheck analysis, the collection of tests also includes those which check correct data structures, and thus always succeed. Similarly to Table 2, Section 3, the experiments demonstrate the reasonable time to perform a test. Finally, Lincheck provides user-friendly output with an easy-to-follow trace to reproduce a detected error, significantly simplifying further investigation.
 
 ## Lincheck 
 
-In addition to the paper, you may find interested the following resources:
+In addition to the paper, you may find interesting the following resources:
 
 * Official [GitHub repository](https://github.com/Kotlin/kotlinx-lincheck/) of Lincheck
 * [User guide](https://kotlinlang.org/docs/lincheck-guide.html) that showcases Lincheck features through examples
@@ -31,20 +31,22 @@ To run the tests, please use
 * `./gradlew build` on Linux or macOS
 * `gradlew build` on Windows
 
-Some tests detect bugs and fail, so it is expected for the build to fail as well.
-After executing the command, please find the report in `./build/reports/tests/test/index.html`. 
+in the main directory.
+
+Since the goal of Lincheck is to find bugs, some tests detect bugs and fail, so it is expected for the build to "fail" as well.
+After executing the command, which can take 15-30 minutes, please find the report in `./build/reports/tests/test/index.html` and open it in any browser. 
 
 > This is a standard test execution report by Gradle.
 > Press "Classes" to get a list of all (not only failed) tests.
 > After that, by pressing on the test you want to check, you will obtain the execution times of 
 > both _fast_ and _long_ configurations. However, if the test has failed, you will see the error information, 
-> which includes the Lincheck output. In this case, to see the execution time, you need to press "Tests". 
+> which includes the Lincheck output. In this case, to see the execution time, you need to press "Tests". Finally, you can get the output (e.g., error traces in the model checking mode) by clicking on the tests.
 
-The following tests check correct data structures for evaluating Lincheck's performance and, therefore, should succeed:
+The following tests check correct data structures for evaluating Lincheck's performance, and therefore should succeed:
 
-* `ConcurrentHashMapTest` (hashtable implementation in the standard Java library)
+* `ConcurrentHashMapTest` (concurrent hash table implementation in the standard Java library)
 * `ConcurrentLinkedQueueTest` (Michael-Scott queue implementation in the standard Java library)
-* `LockFreeTaskQueueTest` (quiescent consistent queue in Kotlin Coroutines internals)
+* `LockFreeTaskQueueTest` (quiescent consistent queue from Kotlin Coroutines internals)
 * `SemaphoreTest` (semaphore implementation for Kotlin Coroutines)
 
 Other tests should fail; check the build report in `./build/reports/tests/test/index.html`.
@@ -73,7 +75,7 @@ Notably, this bug was introduced in the latest JDK versions (17+).
 We show this `AbstractQueueSynchronizer` bug on `Semaphore` primitive, but many other Java concurrency primitives (such as `CyclicBarrier` and `CountDownLatch`) also employ this data structure, and thus, have the same bug.
 In the case of `Semaphore`, one interrupted `Semaphore.acquire` can lead to a state when all threads are waiting (parked), while there is still a semaphore available.
 
-> We do not provide a test to reproduce this bug, as it would require a Lincheck feature that is currently under development and has not been released yet.
+> We do not provide a test to reproduce this bug, as it would require a Lincheck feature that is currently under development, has not been released yet and is available only in our development branches.
 
 ### 3. `Mutex` in Kotlin Coroutines
 **Source:** Kotlin Coroutines 1.5.0 or older.  
