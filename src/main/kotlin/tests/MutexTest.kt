@@ -1,10 +1,11 @@
-import kotlinx.coroutines.sync.Mutex
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
+package tests
 
-class MutexLincheckTest {
+import kotlinx.coroutines.sync.Mutex
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+
+class MutexTest : AbstractLincheckTest() {
     private val mutex = Mutex()
 
     @Operation
@@ -16,12 +17,11 @@ class MutexLincheckTest {
     @Operation(handleExceptionsAsResult = [IllegalStateException::class])
     fun unlock() = mutex.unlock()
 
-    @Test
-    fun test() {
-        ModelCheckingOptions()
-            .checkObstructionFreedom()
-            .actorsBefore(0)
-            .actorsPerThread(3)
-            .check(this::class)
+
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+//        actorsPerThread(3)
+        if (this is ModelCheckingOptions)
+            checkObstructionFreedom()
     }
 }

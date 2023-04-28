@@ -1,10 +1,10 @@
-import org.jetbrains.kotlinx.lincheck.Options
+package tests
+
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
 
-class SemaphoreTest {
+class QueueSynchronizerTest {
     private val semaphore = java.util.concurrent.Semaphore(1, true)
 
     @Operation(cancellableOnSuspension = true)

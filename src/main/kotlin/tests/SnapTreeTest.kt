@@ -1,3 +1,5 @@
+package tests
+
 import SnapTree.SnapTreeMap
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -19,8 +21,8 @@ class SnapTreeTest : AbstractConcurrentMapTest<SnapTreeMap<Long, Int>>(SnapTreeM
     @Operation
     fun higherKey(@Param(name = "key") key: Long): Long? = map.higherKey(key)
 
-    override fun ModelCheckingOptions.customize(): ModelCheckingOptions =
-        iterations(400).threads(3).actorsPerThread(3)
+//    override fun ModelCheckingOptions.customize(): ModelCheckingOptions =
+//        iterations(400).threads(3).actorsPerThread(3)
             // uncomment the next lines to reproduce the bug faster
 //            .addCustomScenario {
 //                initial {

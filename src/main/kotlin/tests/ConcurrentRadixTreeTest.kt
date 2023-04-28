@@ -1,6 +1,7 @@
+package tests
+
 import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
@@ -10,7 +11,7 @@ import org.junit.Test
 
 
 @Param(name = "key", gen = StringGen::class, conf = "4:ab")
-class ConcurrentRadixTreeTest {
+class ConcurrentRadixTreeTest : AbstractLincheckTest() {
     private val radixTree = ConcurrentRadixTree<Int>(DefaultCharArrayNodeFactory())
 
     @Operation
@@ -23,9 +24,4 @@ class ConcurrentRadixTreeTest {
 
     @Operation
     fun put(@Param(name = "key") key: String, value: Int) = if (key.length != 0) radixTree.put(key, value).toString() else 0
-
-    @Test
-    fun test() {
-        ModelCheckingOptions().check(this::class)
-    }
 }

@@ -9,6 +9,11 @@ apply(plugin = "kotlinx-atomicfu")
 plugins {
     java
     kotlin("jvm") version "1.8.0"
+    application
+}
+
+application {
+    mainClass.set("ExperimentsKt")
 }
 
 repositories {
@@ -18,14 +23,14 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
-    testImplementation(kotlin("test"))
+    implementation(kotlin("test"))
     implementation("org.jctools:jctools-core:3.1.0")
     implementation("com.googlecode.concurrent-trees:concurrent-trees:2.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     val junitVersion: String by project
-    testImplementation("junit:junit:$junitVersion")
+    implementation("junit:junit:$junitVersion")
     val lincheckVersion: String by project
-    testImplementation("org.jetbrains.kotlinx:lincheck-jvm:$lincheckVersion")
+    implementation("org.jetbrains.kotlinx:lincheck-jvm:$lincheckVersion")
 }
 
 kotlin {

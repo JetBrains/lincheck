@@ -1,3 +1,5 @@
+package tests
+
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
@@ -9,7 +11,7 @@ import java.util.concurrent.ConcurrentMap
 
 @Param(name = "key", gen = LongGen::class, conf = "1:5")
 @Param(name = "value", gen = IntGen::class, conf = "1:8")
-abstract class AbstractConcurrentMapTest<MAP : ConcurrentMap<Long, Int>>(val map: MAP) {
+abstract class AbstractConcurrentMapTest<MAP : ConcurrentMap<Long, Int>>(val map: MAP) : AbstractLincheckTest() {
     @Operation
     operator fun get(@Param(name = "key") key: Long): Int? = map.get(key)
 
@@ -46,20 +48,11 @@ abstract class AbstractConcurrentMapTest<MAP : ConcurrentMap<Long, Int>>(val map
 
     @Operation
     fun getOrPut(@Param(name = "key") key: Long, @Param(name = "value") value: Int): Int? = map.getOrPut(key, { value })
-
-    open fun ModelCheckingOptions.customize(): ModelCheckingOptions = this
-
-    @Test
-    fun test() {
-        ModelCheckingOptions()
-            .customize()
-            .check(this::class)
-    }
 }
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
 @Param(name = "value", gen = IntGen::class, conf = "1:8")
-abstract class IntIntAbstractConcurrentMapTest<MAP : ConcurrentMap<Int, Int>>(val map: MAP) {
+abstract class IntIntAbstractConcurrentMapTest<MAP : ConcurrentMap<Int, Int>>(val map: MAP) : AbstractLincheckTest() {
     @Operation
     operator fun get(@Param(name = "key") key: Int): Int? = map.get(key)
 
@@ -93,13 +86,4 @@ abstract class IntIntAbstractConcurrentMapTest<MAP : ConcurrentMap<Int, Int>>(va
 
     @Operation
     fun getOrPut(@Param(name = "key") key: Int, @Param(name = "value") value: Int): Int? = map.getOrPut(key, { value })
-
-    open fun ModelCheckingOptions.customize(): ModelCheckingOptions = this
-
-    @Test
-    fun test() {
-        ModelCheckingOptions()
-            .customize()
-            .check(this::class)
-    }
 }

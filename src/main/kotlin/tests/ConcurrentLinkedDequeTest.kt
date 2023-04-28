@@ -1,10 +1,12 @@
+package tests
+
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Test
 import java.util.concurrent.ConcurrentLinkedDeque
 
-class ConcurrentLinkedDequeTest() {
+class ConcurrentLinkedDequeTest() : AbstractLincheckTest() {
     private val deque = ConcurrentLinkedDeque<Int>()
 
     @Operation
@@ -22,12 +24,6 @@ class ConcurrentLinkedDequeTest() {
     @Operation
     fun peekFirst() = deque.peekFirst()
 
-
     @Operation
     fun peekLast() = deque.peekLast()
-
-    @Test
-    fun test() {
-        ModelCheckingOptions().check(this::class)
-    }
 }

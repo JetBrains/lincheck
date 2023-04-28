@@ -1,4 +1,7 @@
+package tests
+
 import CATreeMapAVL.CATreeMapAVL
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
@@ -11,7 +14,7 @@ import org.junit.Test
 // so we cannot re-use AbstractConcurrentMapTest here
 @Param(name = "key", gen = LongGen::class, conf = "1:5")
 @Param(name = "value", gen = IntGen::class, conf = "1:8")
-class CATreeTest {
+class CATreeTest : AbstractLincheckTest() {
     private val map = CATreeMapAVL<Long, Int>()
 
     @Operation
@@ -35,12 +38,9 @@ class CATreeTest {
     @Operation
     fun clear() = map.clear()
 
-    @Test
-    fun test() {
-        ModelCheckingOptions()
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .actorsPerThread(2)
-            .check(this::class)
+    override fun <O : Options<O, *>> O.customize() {
+        actorsBefore(0)
+        actorsAfter(0)
+//        actorsPerThread(2)
     }
 }

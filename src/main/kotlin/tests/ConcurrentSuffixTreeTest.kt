@@ -1,3 +1,5 @@
+package tests
+
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory
 import com.googlecode.concurrenttrees.suffix.ConcurrentSuffixTree
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -9,7 +11,7 @@ import org.junit.Test
 
 
 @Param(name = "key", gen = StringGen::class, conf = "4:ab")
-class ConcurrentSuffixTreeTest {
+class ConcurrentSuffixTreeTest : AbstractLincheckTest() {
     private val suffixTree = ConcurrentSuffixTree<Int>(DefaultCharArrayNodeFactory())
 
     @Operation
@@ -30,10 +32,4 @@ class ConcurrentSuffixTreeTest {
 
     @Operation
     fun put(@Param(name = "key") key: String, value: Int) = if (key.length != 0) suffixTree.put(key, value).toString() else 0
-
-    @Test
-    fun test() {
-        ModelCheckingOptions().check(this::class)
-    }
-
 }
