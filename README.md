@@ -21,20 +21,17 @@ This Gradle/Kotlin project contains a collection of Lincheck tests, including th
 In the [src](./src) directory, 
 you can find implementation of the data structures from the academic literature, in which Lincheck has discovered previously unknown bugs. 
 
-The [test](./test) directory contains the main part of this artifact — the tests, 
-which are listed in Table 2 in the paper.
+The [test](./test) directory contains the main part of this artifact — the tests listed in Table 2 in the paper.
 
 ## How to run the tests
 
-To run the tests, please use
+To run the tests, please execute the following command in the main project directory:
 
 * `./gradlew build` on Linux or macOS
 * `gradlew build` on Windows
 
-in the main directory.
-
-Since the goal of Lincheck is to find bugs, some tests detect bugs and fail, so it is expected for the build to "fail" as well.
-After executing the command, which can take 15-30 minutes, please find the report in `./build/reports/tests/test/index.html` and open it in any browser. 
+The Lincheck purpose is to find bugs, so some tests detect bugs and fail, "failing" the build as well.
+After executing the command, which takes approximately 20-40 minutes, find the report in `./build/reports/tests/test/index.html` and open it in a browser. 
 
 > This is a standard test execution report by Gradle.
 > Press "Classes" to get a list of all (not only failed) tests.
