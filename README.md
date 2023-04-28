@@ -21,8 +21,8 @@ This Gradle/Kotlin project contains a collection of Lincheck tests, including th
 In the [src](./src) directory, 
 you can find implementation of the data structures from the academic literature, in which Lincheck has discovered previously unknown bugs. 
 
-In the [test](./test) directory, 
-you can find the Lincheck tests listed in Table 2 in the paper.
+The [test](./test) directory contains the main part of this artifact — the tests, 
+which are listed in Table 2 in the paper.
 
 ## How to run the tests
 
