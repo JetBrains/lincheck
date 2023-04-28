@@ -44,6 +44,7 @@ tasks {
         )
         exclude("**/AbstractConcurrentMapTest.class")
         exclude("**/AbstractLincheckTest.class")
+        exclude("**/IntIntAbstractConcurrentMapTest.class")
         maxHeapSize = "6g"
     }
 }
