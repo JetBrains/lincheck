@@ -59,7 +59,7 @@ public class StringGen implements ParameterGenerator<String> {
 
         char[] cs = new char[currentWordLength];
         for (int i = 0; i < cs.length; i++) {
-            cs[i] = alphabet.charAt(random.nextInt(currentWordLength));
+            cs[i] = alphabet.charAt(random.nextInt(alphabet.length()));
         }
 
         return new String(cs);

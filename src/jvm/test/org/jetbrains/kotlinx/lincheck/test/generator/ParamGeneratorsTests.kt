@@ -20,12 +20,15 @@
 
 package org.jetbrains.kotlinx.lincheck.test.generator
 
+import junit.framework.Assert.assertTrue
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.RandomProvider
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Test
 
@@ -112,4 +115,34 @@ private fun checkParameters(first: Int, second: Int) {
     if (first != second) {
         throw DifferentParametersAsExpectedException
     }
+}
+
+class StringParamGeneratorTest {
+
+    @Test
+    fun `should eventually increase generated word length`() {
+        val alphabet = "abcdef"
+        val maxStringLength = 10
+
+        val randomProvider = RandomProvider()
+        val alphabetSet = alphabet.toHashSet()
+        val gen = StringGen(randomProvider, "$maxStringLength:$alphabet")
+
+        val generatedStrings = (0 until 500).map {
+            gen.generate()
+        }
+
+        // check all symbols are in alphabet
+        generatedStrings.forEach { word -> assertTrue(word.all { it in alphabetSet }) }
+
+        // check that the size does not decrease
+        val generatesStringsLengths = generatedStrings.map { it.length }
+        generatesStringsLengths.windowed(2).forEach { (prevLength, nextLength) ->
+            assertTrue(prevLength <= nextLength)
+        }
+
+        // check size eventually increases
+        assertTrue(generatesStringsLengths.groupBy { it }.size > 1)
+    }
+
 }
