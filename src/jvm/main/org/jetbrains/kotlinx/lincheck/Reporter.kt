@@ -165,6 +165,13 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
             append("All threads are in deadlock")
         }
     }
+    determineTestLanguage(Thread.currentThread().stackTrace)?.let { testLanguage ->
+        appendLine()
+        appendLine()
+        appendLine("= You can add this scenario as a custom test. Insert this code in your testing options configuration =")
+        appendLine(generateTest(failure.scenario, testLanguage))
+    }
+
     return this
 }
 

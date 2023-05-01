@@ -22,7 +22,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.junit.*
 import org.junit.Assert.*
 
-class CustomScenariosDSLTest {
+class CustomScenarioKotlinDSLTest {
     @Test
     fun testMinimalScenario() {
         val scenario = scenario {}

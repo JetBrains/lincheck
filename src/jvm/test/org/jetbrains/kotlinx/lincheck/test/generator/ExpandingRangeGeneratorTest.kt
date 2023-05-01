@@ -20,11 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.test.generator
 
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
 import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Random
 
@@ -32,29 +29,29 @@ class ExpandingRangeGeneratorTest {
 
     @Test
     fun `generator should expand generated values range and than generate values from it`() {
-        val begin = 7
-        val end = 12
-        val listOfRangeValues = (begin..end).toList()
-        var nextRangeIndex = 0
-        val argument = slot<Int>()
-        val validRandomNextIntMethodRange = (0 .. 6)
-        val mockedRandom = mockk<Random>() {
-            every { nextBoolean() } returns true
-            every { nextInt(capture(argument)) } answers {
-                check(argument.captured in validRandomNextIntMethodRange) { "Request too big range from random" }
-                listOfRangeValues[nextRangeIndex++] - begin
-            }
+        val generator = ExpandingRangeIntGenerator(Random(0), 0, 0, Int.MIN_VALUE, Int.MAX_VALUE)
+
+        val batchesCount = 50
+        val batchSize = 10_000
+        val batchInfos = List(batchesCount) {
+            val batch = List(batchSize) { generator.nextInt() }
+            val averageNegative = batch.filter { it <= 0 }.average()
+            val averagePositive = batch.filter { it >= 0 }.average()
+
+            RandomValuesBatchInfo(averageNegative, averagePositive)
         }
-        val generator = ExpandingRangeIntGenerator(mockedRandom, 9, 9, begin, end)
 
-        // Checking that range is expanded
-        val generatedValues = (0 until 5).map { generator.nextInt() }
-        assertEquals("Bad generated range", listOf(10, 8, 11, 7, 12), generatedValues)
-
-        // Checking that all values after expansion are in the bound
-        val restGeneratedValues = listOfRangeValues.map { generator.nextInt() }
-        assertEquals(listOfRangeValues, restGeneratedValues)
+        batchInfos.windowed(2).forEach { (prevBatch, nextBatch) ->
+            println(nextBatch)
+            assertTrue(nextBatch.averageNegative < prevBatch.averageNegative)
+            assertTrue(nextBatch.averagePositive > prevBatch.averagePositive)
+        }
     }
+
+    private data class RandomValuesBatchInfo(
+        val averageNegative: Double,
+        val averagePositive: Double
+    )
 
 
 }
