@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck;
  * #L%
  */
 
+import kotlin.Pair;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
@@ -103,6 +104,22 @@ public class CTestStructure {
             groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
                     opGroupConfigAnn.nonParallel()));
         }
+        // Is used to check if user defined two or more methods with the same name and arguments count - it must be prohibited
+        Map<Pair<String, Integer>, Method> methodNameAndParamsCountToMethodMap = new HashMap<>();
+        // Traverse all methods in class to find such prohibited situations
+        for (Method method : clazz.getMethods()) {
+            Pair<String, Integer> methodNameAndParamsCount = new Pair<>(method.getName(), method.getParameterCount());
+            if (methodNameAndParamsCountToMethodMap.containsKey(methodNameAndParamsCount)) {
+                Method otherViolatingMethod = methodNameAndParamsCountToMethodMap.get(methodNameAndParamsCount);
+
+                throw new IllegalArgumentException("You can't have two methods with the same parameters count and the same name, "
+                        + "but the following methods have: " + getMethodRepresentationSignature(method) + " " + getMethodRepresentationSignature(otherViolatingMethod) + "."
+                        + "Please rename it or use a wrapper class.");
+            }
+            methodNameAndParamsCountToMethodMap.put(methodNameAndParamsCount, method);
+
+        }
+
         // Create actor paramgen
         for (Method m : getDeclaredMethodSorted(clazz)) {
             // Operation
@@ -155,6 +172,11 @@ public class CTestStructure {
                 stateRepresentations.add(m);
             }
         }
+    }
+
+    private static String getMethodRepresentationSignature(Method method) {
+        return method.getName() + Arrays.stream(method.getParameterTypes()).map(Class::getName)
+                .collect(Collectors.joining(",", "(", ")"));
     }
 
     /**
