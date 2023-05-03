@@ -27,21 +27,21 @@ import org.jetbrains.kotlinx.lincheck.dsl.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
-class LockFreeSetTest {
+class LockFreeSetTest: LockFreeSet() {
     @Test(expected = AssertionError::class)
     fun test() {
         val scenario = scenario {
             parallel {
                 thread {
                     repeat(3) {
-                        actor(LockFreeSet::snapshot)
+                        actor(::snapshot)
                     }
                 }
                 thread {
                     repeat(4) {
                         for (key in 1..2) {
-                            actor(LockFreeSet::add, key)
-                            actor(LockFreeSet::remove, key)
+                            actor(::add, key)
+                            actor(::remove, key)
                         }
                     }
                 }
@@ -56,7 +56,7 @@ class LockFreeSetTest {
     }
 }
 
-class LockFreeSet {
+open class LockFreeSet {
     private val head = Node(Int.MIN_VALUE, null, true) // dummy node
 
     fun add(key: Int): Boolean {

@@ -78,10 +78,8 @@ internal fun executeActor(
     }
 }
 
-internal inline fun executeValidationFunctions(
-    instance: Any, validationFunctions: List<Method>,
-    onError: (functionName: String, exception: Throwable) -> Unit
-) {
+internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
+                                               onError: (functionName: String, exception: Throwable) -> Unit) {
     for (f in validationFunctions) {
         val validationException = executeValidationFunction(instance, f)
         if (validationException != null) {
@@ -184,8 +182,7 @@ internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (t
     else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
-internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler),
-    CoroutineExceptionHandler {
+internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
     var exception: Throwable? = null
 
     override fun handleException(context: CoroutineContext, exception: Throwable) {
@@ -207,7 +204,6 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
             context[Job]!!.cancel() // we should always put a job into the context for prompt cancellation
             CancellationResult.CANCELLED_AFTER_RESUMPTION
         }
-
         else -> CancellationResult.CANCELLATION_FAILED
     }
 }
@@ -215,8 +211,7 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
 internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val cancelCompletedResultMethod =
-    DispatchedTask::class.declaredFunctions.find { it.name == "cancelCompletedResult" }!!.javaMethod!!
+private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!
 
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
@@ -280,8 +275,7 @@ private fun Method.convertForLoader(loader: ClassLoader): Method {
     return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
 }
 
-private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> =
-    if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
+private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
 
 private fun ResultWithClock.convertForLoader(loader: ClassLoader): ResultWithClock =
     ResultWithClock(result.convertForLoader(loader), clockOnStart)
@@ -302,10 +296,8 @@ internal fun Any?.convertForLoader(loader: ClassLoader) = when {
     this::class.java.classLoader == loader -> this // already in this loader
     loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
     this is Serializable -> serialize().run { deserialize(loader) }
-    else -> error(
-        "The result class should either be always loaded by the system class loader and not be transformed," +
-                " or implement Serializable interface."
-    )
+    else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
+            " or implement Serializable interface.")
 }
 
 internal fun Any?.serialize(): ByteArray = ByteArrayOutputStream().use {
@@ -321,8 +313,7 @@ internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(t
 /**
  * ObjectInputStream that uses custom class loader.
  */
-private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) :
-    ObjectInputStream(inputStream) {
+private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
     override fun resolveClass(desc: ObjectStreamClass): Class<*> {
         // add `TRANSFORMED_PACKAGE_NAME` prefix in case of TransformationClassLoader and remove otherwise
         val className = if (loader is TransformationClassLoader) loader.remapClassName(desc.name)
@@ -359,19 +350,24 @@ fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e: Throwable): Th
     return e
 }
 
-private val ADD_OPENS_MESSAGE =
-    "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
-            "Please add the following lines to your test running configuration:\n" +
-            "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
-            "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
+        "Please add the following lines to your test running configuration:\n" +
+        "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
+        "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
 
-
+@Suppress("UNCHECKED_CAST")
 internal fun actor(method: Method, arguments: List<Any?>): Actor {
-    val operationAnnotation = method.getDeclaredAnnotation(Operation::class.java) ?: return Actor(method, arguments)
+    val handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList()
+    val operationAnnotation = method.getDeclaredAnnotation(Operation::class.java) ?: return Actor(
+        method = method,
+        arguments = arguments,
+        handledExceptions = handledExceptions
+    )
 
     return Actor(
         method = method,
         arguments = arguments,
+        handledExceptions = handledExceptions,
         causesBlocking = operationAnnotation.causesBlocking,
         blocking = operationAnnotation.blocking,
         promptCancellation = operationAnnotation.promptCancellation,
