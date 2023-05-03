@@ -232,38 +232,28 @@ class KotlinExecutionScenarioTestGenerator : AbstractDSLTest() {
 
 }
 
+@Suppress("UNUSED")
 abstract class AbstractDSLTest {
-    @Suppress("UNUSED")
     fun intOperation(value: Int) = Unit
 
-    @Suppress("UNUSED")
     fun byteOperation(value: Byte) = Unit
 
-    @Suppress("UNUSED")
     fun shortOperation(value: Short) = Unit
 
-    @Suppress("UNUSED")
     fun stringOperation(value: String) = Unit
 
-    @Suppress("UNUSED")
     fun booleanOperation(value: Boolean) = Unit
 
-    @Suppress("UNUSED")
     fun longOperation(value: Long) = Unit
 
-    @Suppress("UNUSED")
     fun doubleOperation(value: Double) = Unit
 
-    @Suppress("UNUSED")
     fun floatOperation(value: Float) = Unit
 
-    @Suppress("UNUSED")
     fun charOperation(value: Char) = Unit
 
-    @Suppress("UNUSED")
     fun noArgsOperation() = Unit
 
-    @Suppress("UNUSED")
     fun twoArgsOperations(first: Int, second: Int) = Unit
 }
 

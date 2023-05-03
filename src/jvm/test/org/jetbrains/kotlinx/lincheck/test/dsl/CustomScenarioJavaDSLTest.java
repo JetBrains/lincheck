@@ -37,6 +37,7 @@ import static org.jetbrains.kotlinx.lincheck.test.util.TestUtilsKt.assertScenari
 import static org.jetbrains.kotlinx.lincheck.test.util.TestUtilsKt.getMethod;
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings("unused")
 public class CustomScenarioJavaDSLTest {
 
     private static final Method intOperation = getMethod(CustomScenarioJavaDSLTest.class, "intOperation", 0);
@@ -187,7 +188,7 @@ public class CustomScenarioJavaDSLTest {
     }
 
     @Test
-    public void shouldExtractActorParametersFromAnnotation() {
+    public void shouldInheritActorParametersFromAnnotation() {
         ExecutionScenario scenario = new ScenarioBuilder(this.getClass())
                 .initial(actor("operationWithManySettings"))
                 .build();
@@ -208,35 +209,39 @@ public class CustomScenarioJavaDSLTest {
 
     // Stub operations
 
-    @Operation
-    @SuppressWarnings("unused")
+    @Operation(
+            cancellableOnSuspension = false
+    )
     public void intOperation() {
     }
 
-
-    @Operation
-    @SuppressWarnings("unused")
+    @Operation(
+            cancellableOnSuspension = false
+    )
     public void intOperation(int value) {
     }
 
-
-    @Operation
-    @SuppressWarnings("unused")
+    @Operation(
+            cancellableOnSuspension = false
+    )
     public void intOperation(int value, int anotherValue) {
     }
 
-    @Operation
-    @SuppressWarnings("unused")
+    @Operation(
+            cancellableOnSuspension = false
+    )
     public void getOperation(int value) {
     }
 
-    @Operation
-    @SuppressWarnings("unused")
+    @Operation(
+            cancellableOnSuspension = false
+    )
     public void operationWithNoParameters() {
     }
 
-    @Operation
-    @SuppressWarnings("unused")
+    @Operation(
+            cancellableOnSuspension = false
+    )
     public void operationWithTwoParameters(int intValue, String stringValue) {
     }
 
@@ -247,7 +252,6 @@ public class CustomScenarioJavaDSLTest {
             causesBlocking = true,
             promptCancellation = false
     )
-    @SuppressWarnings("unused")
     public void operationWithManySettings() {
     }
 

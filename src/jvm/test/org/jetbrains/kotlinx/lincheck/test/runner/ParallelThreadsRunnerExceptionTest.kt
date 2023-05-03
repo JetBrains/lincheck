@@ -159,8 +159,7 @@ class ParallelThreadsRunnerExceptionTest {
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()
-            val x = runner.run()
-            val results = (x as CompletedInvocationResult).results
+            val results = (runner.run() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
     }

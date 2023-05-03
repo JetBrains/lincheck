@@ -112,9 +112,9 @@ public class CTestStructure {
             if (methodNameAndParamsCountToMethodMap.containsKey(methodNameAndParamsCount)) {
                 Method otherViolatingMethod = methodNameAndParamsCountToMethodMap.get(methodNameAndParamsCount);
 
-                throw new IllegalArgumentException("You can't have two methods with the same parameters count and the same name, "
-                        + "but the following methods have: " + getMethodRepresentationSignature(method) + " " + getMethodRepresentationSignature(otherViolatingMethod) + ". "
-                        + "Please rename it or use a wrapper class.");
+                throw new IllegalArgumentException("You can't have two operations with the same name and parameters number. "
+                        + "Please rename one of these operations: " + getMethodRepresentationSignature(method) + " " + getMethodRepresentationSignature(otherViolatingMethod)
+                );
             }
             methodNameAndParamsCountToMethodMap.put(methodNameAndParamsCount, method);
 

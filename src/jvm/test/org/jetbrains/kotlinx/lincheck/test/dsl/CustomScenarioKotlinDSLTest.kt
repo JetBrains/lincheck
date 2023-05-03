@@ -29,6 +29,7 @@ import org.junit.*
 import org.junit.Assert.*
 import java.lang.reflect.Method
 
+@Suppress("unused", "RedundantSuspendModifier")
 class CustomScenarioKotlinDSLTest {
 
     private val suspendableOperation: Method = getSuspendMethod("suspendableOperation", 0)
@@ -111,9 +112,7 @@ class CustomScenarioKotlinDSLTest {
         }
 
         val expectedScenario = ExecutionScenario(
-            emptyList(),
-            emptyList(),
-            listOf(
+            emptyList(), emptyList(), listOf(
                 Actor(regularOperationTwoArgs, listOf(2, "123")),
                 Actor(suspendableOperationWithTwoArgs, listOf(6, 7), cancelOnSuspension = true)
             )
@@ -162,14 +161,12 @@ class CustomScenarioKotlinDSLTest {
             listOf(
                 Actor(suspendableOperationWithOneArg, listOf(1), cancelOnSuspension = true),
                 Actor(suspendableOperation, emptyList(), cancelOnSuspension = true)
-            ),
-            listOf(
+            ), listOf(
                 listOf(
                     Actor(suspendableOperation, emptyList(), cancelOnSuspension = true),
                     Actor(suspendableOperationWithTwoArgs, listOf(1, 2), cancelOnSuspension = true)
                 )
-            ),
-            listOf(
+            ), listOf(
                 Actor(suspendableOperation, emptyList(), cancelOnSuspension = true)
             )
         )
@@ -199,14 +196,11 @@ class CustomScenarioKotlinDSLTest {
             listOf(
                 Actor(regularOperationOneArg, listOf(1)),
                 Actor(regularOperation, emptyList())
-            ),
-            listOf(
+            ), listOf(
                 listOf(
-                    Actor(regularOperation, emptyList()),
-                    Actor(regularOperationTwoArgs, listOf(1, 2))
+                    Actor(regularOperation, emptyList()), Actor(regularOperationTwoArgs, listOf(1, 2))
                 )
-            ),
-            listOf(
+            ), listOf(
                 Actor(regularOperation, emptyList())
             )
         )
@@ -215,7 +209,7 @@ class CustomScenarioKotlinDSLTest {
     }
 
     @Test
-    fun `should extract actor parameters from annotation`() {
+    fun `should inherit actor parameters from annotation`() {
         val scenario = scenario {
             initial {
                 actor(::operationWithManySettings, 1, 2)
@@ -236,28 +230,31 @@ class CustomScenarioKotlinDSLTest {
         assertEquals(expectedActor, actor)
     }
 
-    @Operation
+    @Operation(
+        cancellableOnSuspension = false
+    )
     @Suppress("unused")
     fun regularOperation() = Unit
 
-    @Operation
+    @Operation(
+        cancellableOnSuspension = false
+    )
     @Suppress("unused")
     fun regularOperation(arg1: Int) = Unit
 
-    @Operation
+    @Operation(
+        cancellableOnSuspension = false
+    )
     @Suppress("unused")
     fun regularOperation(arg1: Int, arg2: String) = Unit
 
     @Operation
-    @Suppress("unused", "RedundantSuspendModifier")
     suspend fun suspendableOperation() = Unit
 
     @Operation
-    @Suppress("unused", "RedundantSuspendModifier")
     suspend fun suspendableOperation(argument: Int) = Unit
 
     @Operation
-    @Suppress("unused", "RedundantSuspendModifier")
     suspend fun suspendableOperation(argument: Int, anotherArgument: String) = Unit
 
     @Operation(
@@ -267,7 +264,6 @@ class CustomScenarioKotlinDSLTest {
         causesBlocking = true,
         promptCancellation = true
     )
-    @Suppress("unused", "RedundantSuspendModifier")
     suspend fun operationWithManySettings(argument: Int, anotherArgument: String) = Unit
 
 }

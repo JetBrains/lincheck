@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.test.util
 
+import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -108,9 +110,34 @@ private fun getExpectedLogFromResources(testFileName: String): String {
 }
 
 internal fun assertScenariosEquals(expected: ExecutionScenario, actual: ExecutionScenario) {
-    assertEquals(expected.initExecution, actual.initExecution)
-    assertEquals(expected.parallelExecution, actual.parallelExecution)
-    assertEquals(expected.postExecution, actual.postExecution)
+    assertActorsSequenceEquals(expected.initExecution, actual.initExecution)
+
+    assertEquals(expected.parallelExecution.size, actual.parallelExecution.size)
+    expected.parallelExecution.zip(actual.parallelExecution).forEach { (expectedThreadActors, actualThreadActors) ->
+        assertActorsSequenceEquals(expectedThreadActors, actualThreadActors)
+    }
+
+    assertActorsSequenceEquals(expected.postExecution, actual.postExecution)
+}
+
+private fun assertActorsSequenceEquals(expected: List<Actor>, actual: List<Actor>) {
+    assertEquals(expected.size, actual.size)
+
+    expected.zip(actual).forEach { (expectedActor, actualActor) ->
+        assertActorsEquals(expectedActor, actualActor)
+    }
+}
+
+private fun assertActorsEquals(expected: Actor, actual: Actor) {
+    assertEquals(expected, actual)
+
+    val operationAnnotation = expected.method.getAnnotation(Operation::class.java) ?: return
+
+    assertEquals(operationAnnotation.cancellableOnSuspension, actual.cancelOnSuspension)
+    assertEquals(operationAnnotation.allowExtraSuspension, actual.allowExtraSuspension)
+    assertEquals(operationAnnotation.blocking, actual.blocking)
+    assertEquals(operationAnnotation.causesBlocking, actual.causesBlocking)
+    assertEquals(operationAnnotation.promptCancellation, actual.promptCancellation)
 }
 
 /**

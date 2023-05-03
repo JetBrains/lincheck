@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 /**
  * Generates test for this scenario using determined programming language.
  */
-internal fun generateTest(scenario: ExecutionScenario, testLanguage: SupportedTestLanguage): String {
+internal fun generateAddCustomScenarioBlock(scenario: ExecutionScenario, testLanguage: SupportedTestLanguage): String {
     val testGenerator = when (testLanguage) {
         SupportedTestLanguage.KOTLIN -> KotlinExecutionScenarioTestGenerator
         SupportedTestLanguage.JAVA -> JavaExecutionScenarioTestGenerator
@@ -50,7 +50,7 @@ internal fun determineTestLanguage(stackTrace: Array<StackTraceElement>): Suppor
 
     // get the class where lincheck entry point was called
     val testClassName = stackTrace[lincheckEntryPointCallIndex + 1].className
-    val testClass = Class.forName(testClassName)
+    val testClass = LinChecker::class.java.classLoader.loadClass(testClassName)
 
     return if (testClass.isAnnotationPresent(Metadata::class.java)) {
         SupportedTestLanguage.KOTLIN
