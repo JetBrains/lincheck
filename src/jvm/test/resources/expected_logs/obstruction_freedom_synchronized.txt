@@ -5,14 +5,14 @@ Execution scenario (parallel part):
 = The following interleaving leads to the error =
 Parallel part trace:
 |                                                                                                                          | operation()                                                                                                              |
-|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |
+|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:74) |
 |                                                                                                                          |   switch                                                                                                                 |
 | operation()                                                                                                              |                                                                                                                          |
-|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |                                                                                                                          |
+|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:74) |                                                                                                                          |
 
 Detailed parallel part trace:
 |                                                                                                                          | operation()                                                                                                              |
-|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |
+|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:74) |
 |                                                                                                                          |   switch                                                                                                                 |
 | operation()                                                                                                              |                                                                                                                          |
-|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:86) |                                                                                                                          |
+|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:74) |                                                                                                                          |

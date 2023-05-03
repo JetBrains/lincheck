@@ -4,37 +4,37 @@ Parallel part:
 
 = The following interleaving leads to the error =
 Parallel part trace:
-|                      | operation()                                                                                                          |
-|                      |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:108) |
-|                      |   counter.READ: 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:110)                        |
-|                      |   counter.WRITE(1) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:110)                       |
-|                      |   counter.READ: 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:111)                        |
-|                      |   switch                                                                                                             |
-| operation(): 2       |                                                                                                                      |
-|   thread is finished |                                                                                                                      |
-|                      |   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:111)                       |
-|                      |   result: 1                                                                                                          |
-|                      |   thread is finished                                                                                                 |
+|                      | operation()                                                                                                         |
+|                      |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |
+|                      |   counter.READ: 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                        |
+|                      |   counter.WRITE(1) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                       |
+|                      |   counter.READ: 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                        |
+|                      |   switch                                                                                                            |
+| operation(): 2       |                                                                                                                     |
+|   thread is finished |                                                                                                                     |
+|                      |   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                       |
+|                      |   result: 1                                                                                                         |
+|                      |   thread is finished                                                                                                |
 
 Detailed parallel part trace:
-|                                                                                                                      | operation()                                                                                                          |
-|                                                                                                                      |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:108) |
-|                                                                                                                      |     useless.READ: 0 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:116)                      |
-|                                                                                                                      |     useless.WRITE(1) at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:116)                     |
-|                                                                                                                      |   counter.READ: 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:110)                        |
-|                                                                                                                      |   counter.WRITE(1) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:110)                       |
-|                                                                                                                      |   counter.READ: 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:111)                        |
-|                                                                                                                      |   switch                                                                                                             |
-| operation()                                                                                                          |                                                                                                                      |
-|   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:108) |                                                                                                                      |
-|     useless.READ: 1 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:116)                      |                                                                                                                      |
-|     useless.WRITE(2) at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:116)                     |                                                                                                                      |
-|   counter.READ: 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:110)                        |                                                                                                                      |
-|   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:110)                       |                                                                                                                      |
-|   counter.READ: 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:111)                        |                                                                                                                      |
-|   counter.WRITE(3) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:111)                       |                                                                                                                      |
-|   result: 2                                                                                                          |                                                                                                                      |
-|   thread is finished                                                                                                 |                                                                                                                      |
-|                                                                                                                      |   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:111)                       |
-|                                                                                                                      |   result: 1                                                                                                          |
-|                                                                                                                      |   thread is finished                                                                                                 |
+|                                                                                                                     | operation()                                                                                                         |
+|                                                                                                                     |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |
+|                                                                                                                     |     useless.READ: 0 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                     |
+|                                                                                                                     |     useless.WRITE(1) at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                    |
+|                                                                                                                     |   counter.READ: 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                        |
+|                                                                                                                     |   counter.WRITE(1) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                       |
+|                                                                                                                     |   counter.READ: 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                        |
+|                                                                                                                     |   switch                                                                                                            |
+| operation()                                                                                                         |                                                                                                                     |
+|   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |                                                                                                                     |
+|     useless.READ: 1 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                     |                                                                                                                     |
+|     useless.WRITE(2) at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                    |                                                                                                                     |
+|   counter.READ: 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                        |                                                                                                                     |
+|   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                       |                                                                                                                     |
+|   counter.READ: 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                        |                                                                                                                     |
+|   counter.WRITE(3) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                       |                                                                                                                     |
+|   result: 2                                                                                                         |                                                                                                                     |
+|   thread is finished                                                                                                |                                                                                                                     |
+|                                                                                                                     |   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                       |
+|                                                                                                                     |   result: 1                                                                                                         |
+|                                                                                                                     |   thread is finished                                                                                                |
