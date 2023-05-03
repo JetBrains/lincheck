@@ -361,7 +361,8 @@ internal fun actor(method: Method, arguments: List<Any?>): Actor {
     val operationAnnotation = method.getDeclaredAnnotation(Operation::class.java) ?: return Actor(
         method = method,
         arguments = arguments,
-        handledExceptions = handledExceptions
+        handledExceptions = handledExceptions,
+        cancelOnSuspension = method.isSuspendable()
     )
 
     return Actor(
