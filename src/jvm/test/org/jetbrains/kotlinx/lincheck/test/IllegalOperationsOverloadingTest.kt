@@ -38,9 +38,8 @@ class IllegalOperationsOverloadingTest {
             ModelCheckingOptions().check(this::class.java)
         }
 
-        val expectedMessage = "You can't have two methods with the same parameters count and the same name, " +
-                "but the following methods have: operationA(java.lang.Integer) operationA(java.lang.Double). " +
-                "Please rename it or use a wrapper class."
+        val expectedMessage = "You can't have two operations with the same name and parameters number. " +
+                "Please rename one of these operations: operationA(java.lang.Integer) operationA(java.lang.Double)"
 
         assertEquals(expectedMessage, exception.message)
     }
