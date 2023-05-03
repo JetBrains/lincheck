@@ -43,3 +43,18 @@ Detailed parallel part trace:
 |                                                                                                                                                   |   correct.READ: false at CoroutineCancellationTraceReportingTest.isAbsurd(CoroutineCancellationTraceReportingTest.kt:44) |
 |                                                                                                                                                   |   result: true                                                                                                           |
 |                                                                                                                                                   |   thread is finished                                                                                                     |
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario(
+		new ScenarioBuilder(this.getClass())
+				.parallel(
+					thread(
+						actor("cancelledOp")
+					),
+					thread(
+						actor("isAbsurd")
+					)
+				)
+		.build()
+)
+

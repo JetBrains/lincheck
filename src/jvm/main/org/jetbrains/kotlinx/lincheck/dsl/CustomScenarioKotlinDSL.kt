@@ -21,8 +21,10 @@
 package org.jetbrains.kotlinx.lincheck.dsl
 
 import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.lang.IllegalStateException
+import java.lang.reflect.Method
 import kotlin.reflect.*
 import kotlin.reflect.jvm.javaMethod
 
@@ -55,11 +57,8 @@ fun scenario(block: DSLScenarioBuilder.() -> Unit): ExecutionScenario =
 internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false): Actor {
     val method = f.javaMethod ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
     require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
-    return Actor(
-        method = method,
-        arguments = args.toList(),
-        cancelOnSuspension = cancelOnSuspension
-    )
+
+    return actor(method, args.toList())
 }
 
 @ScenarioDSLMarker

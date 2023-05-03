@@ -42,9 +42,11 @@ internal fun generateTest(scenario: ExecutionScenario, testLanguage: SupportedTe
  */
 internal fun determineTestLanguage(stackTrace: Array<StackTraceElement>): SupportedTestLanguage? {
     // take index of last because in LinCheckerKt there may be many methods with the same name
-    val lincheckEntryPointCallIndex = stackTrace.indexOfLast { isLincheckEntryPoint(it) }
+    val lincheckEntryPointCallIndex = stackTrace.indexOfLast { it.className.startsWith(LINCHECK_PACKAGE_NAME) }
     if (lincheckEntryPointCallIndex == -1) return null // method call not found
-    if (lincheckEntryPointCallIndex == stackTrace.lastIndex) return null
+    if (lincheckEntryPointCallIndex == stackTrace.lastIndex) {
+        return SupportedTestLanguage.KOTLIN // entry point is internal call
+    }
 
     // get the class where lincheck entry point was called
     val testClassName = stackTrace[lincheckEntryPointCallIndex + 1].className
@@ -55,15 +57,6 @@ internal fun determineTestLanguage(stackTrace: Array<StackTraceElement>): Suppor
     } else {
         SupportedTestLanguage.JAVA
     }
-}
-
-private fun isLincheckEntryPoint(stackTraceElement: StackTraceElement): Boolean {
-    if (stackTraceElement.methodName != "check") return false
-    val className = stackTraceElement.className
-
-
-    return className == JAVA_ENTRY_POINT_CLASS_NAME ||
-            className == KOTLIN_ENTRY_POINT_CLASS_NAME
 }
 
 
@@ -272,5 +265,4 @@ private class TestCodeStringBuilder {
 
 private const val TAB = "\t"
 
-private val JAVA_ENTRY_POINT_CLASS_NAME = LinChecker::class.java.canonicalName
-private val KOTLIN_ENTRY_POINT_CLASS_NAME = "${LinChecker::class.java.canonicalName}Kt"
+private val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck"

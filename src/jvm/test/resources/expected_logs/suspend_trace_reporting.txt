@@ -164,3 +164,18 @@ Detailed parallel part trace:
 |                                                                                                                                                                                  |   canEnterForbiddenBlock.WRITE(false) at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:43)                                                 |
 |                                                                                                                                                                                  |   result: SUSPENDED + void                                                                                                                              |
 |                                                                                                                                                                                  |   thread is finished                                                                                                                                    |
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario(
+		new ScenarioBuilder(this.getClass())
+				.parallel(
+					thread(
+						actor("bar")
+					),
+					thread(
+						actor("foo")
+					)
+				)
+		.build()
+)
+

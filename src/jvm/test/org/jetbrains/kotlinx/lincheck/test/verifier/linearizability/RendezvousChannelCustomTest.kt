@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.dsl.actor
 import org.jetbrains.kotlinx.lincheck.test.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*

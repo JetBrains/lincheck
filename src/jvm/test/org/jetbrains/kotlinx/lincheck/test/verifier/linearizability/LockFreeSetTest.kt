@@ -22,6 +22,8 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.dsl.actor
+import org.jetbrains.kotlinx.lincheck.dsl.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 

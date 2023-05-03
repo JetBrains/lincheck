@@ -20,10 +20,14 @@
 
 package org.jetbrains.kotlinx.lincheck.test.util
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.appendFailure
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
+import java.lang.reflect.Method
 
 /**
  * Runs lincheck test in model checking mode.
@@ -101,4 +105,27 @@ private fun getExpectedLogFromResources(testFileName: String): String {
         ?: error("Expected log resource: $resourceName does not exist")
 
     return expectedLogResource.reader().readText()
+}
+
+internal fun assertScenariosEquals(expected: ExecutionScenario, actual: ExecutionScenario) {
+    assertEquals(expected.initExecution, actual.initExecution)
+    assertEquals(expected.parallelExecution, actual.parallelExecution)
+    assertEquals(expected.postExecution, actual.postExecution)
+}
+
+/**
+ * Convenient method to call from Kotlin to avoid passing class object directly
+ */
+internal fun Any.getMethod(methodName: String, parameterCount: Int) =
+    getMethod(this::class.java, methodName, parameterCount)
+
+/**
+ * Convenient method to call from Kotlin to avoid passing class object directly
+ */
+internal fun Any.getSuspendMethod(methodName: String, parameterCount: Int) =
+    getMethod(this::class.java, methodName, parameterCount + 1) // + 1 because of continuation parameter
+
+internal fun getMethod(clazz: Class<*>, methodName: String, parameterCount: Int): Method {
+    return clazz.declaredMethods.find { it.name == methodName && it.parameterCount == parameterCount }
+        ?: error("Method with name $methodName and parameterCount: $parameterCount not found")
 }

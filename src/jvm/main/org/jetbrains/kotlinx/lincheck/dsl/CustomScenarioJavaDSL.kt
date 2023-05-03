@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.dsl
 
 import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.actor
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
 /**
@@ -106,7 +107,7 @@ class ScenarioBuilder(private val testStructureClass: Class<*>) {
         val method = methods.first()
         val arguments = actorInfo.arguments
 
-        return Actor(method, arguments)
+        return actor(method, arguments)
     }
 
     companion object {

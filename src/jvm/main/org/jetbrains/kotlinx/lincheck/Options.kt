@@ -22,6 +22,8 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.dsl.DSLScenarioBuilder
+import org.jetbrains.kotlinx.lincheck.dsl.scenario
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
@@ -154,14 +156,14 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Examine the specified custom scenario additionally to the generated ones.
      */
-    fun addCustomScenario(scenario: ExecutionScenario) = applyAndCast {
+    fun addCustomScenario(scenario: ExecutionScenario): OPT = applyAndCast {
         customScenarios.add(scenario)
     }
 
     /**
      * Examine the specified custom scenario additionally to the generated ones.
      */
-    fun addCustomScenario(scenarioBuilder: DSLScenarioBuilder.() -> Unit) =
+    fun addCustomScenario(scenarioBuilder: DSLScenarioBuilder.() -> Unit): OPT =
         addCustomScenario(scenario { scenarioBuilder() })
 
     /**

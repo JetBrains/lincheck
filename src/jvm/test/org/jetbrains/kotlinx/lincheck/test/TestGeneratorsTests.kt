@@ -30,6 +30,8 @@ import org.jetbrains.kotlinx.lincheck.dsl.scenario
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.lang.StringBuilder
+import kotlin.coroutines.Continuation
 
 class JavaExecutionScenarioTestGeneratorTest : AbstractDSLTest() {
     @Test
@@ -271,9 +273,9 @@ class TestGeneratorsTests {
     fun `should determine java test language`() {
         val stackTrace = arrayOf(
             STUB_STACKTRACE_ELEMENT,
-            OTHER_LINCHECK_METHOD_STACKTRACE_ELEMENT,
-            JAVA_ENTRY_POINT_STACKTRACE_ELEMENT,
-            JAVA_TEST_STACKTRACE_ELEMENT,
+            LINCHECK_METHOD_STACKTRACE_ELEMENT,
+            LINCHECK_METHOD_STACKTRACE_ELEMENT,
+            JAVA_CALLER_STACKTRACE_ELEMENT,
             STUB_STACKTRACE_ELEMENT
         )
         val language = determineTestLanguage(stackTrace)
@@ -285,9 +287,9 @@ class TestGeneratorsTests {
     fun `should determine kotlin test language`() {
         val stackTrace = arrayOf(
             STUB_STACKTRACE_ELEMENT,
-            OTHER_LINCHECK_METHOD_STACKTRACE_ELEMENT,
-            KOTLIN_ENTRY_POINT_STACKTRACE_ELEMENT,
-            KOTLIN_TEST_STACKTRACE_ELEMENT,
+            LINCHECK_METHOD_STACKTRACE_ELEMENT,
+            LINCHECK_METHOD_STACKTRACE_ELEMENT,
+            KOTLIN_CALLER_STACKTRACE_ELEMENT,
             STUB_STACKTRACE_ELEMENT
         )
         val language = determineTestLanguage(stackTrace)
@@ -312,19 +314,13 @@ class TestGeneratorsTests {
     companion object {
         private val STUB_STACKTRACE_ELEMENT = StackTraceElement("stub", "stub", "stub", 1)
 
-        private val KOTLIN_ENTRY_POINT_STACKTRACE_ELEMENT =
-            StackTraceElement("${LinChecker::class.java.canonicalName}Kt", "check", "stub", 1)
+        private val JAVA_CALLER_STACKTRACE_ELEMENT =
+            StackTraceElement(StringBuilder::class.java.canonicalName, "check", "stub", 1)
 
-        private val JAVA_ENTRY_POINT_STACKTRACE_ELEMENT =
-            StackTraceElement(LinChecker::class.java.canonicalName, "check", "stub", 1)
+        private val KOTLIN_CALLER_STACKTRACE_ELEMENT =
+            StackTraceElement(Continuation::class.qualifiedName, "check", "stub", 1)
 
-        private val KOTLIN_TEST_STACKTRACE_ELEMENT =
-            StackTraceElement(TestGeneratorsTests::class.java.canonicalName, "check", "stub", 1)
-
-        private val JAVA_TEST_STACKTRACE_ELEMENT =
-            StackTraceElement(String::class.java.canonicalName, "check", "stub", 1)
-
-        private val OTHER_LINCHECK_METHOD_STACKTRACE_ELEMENT =
+        private val LINCHECK_METHOD_STACKTRACE_ELEMENT =
             StackTraceElement(LinChecker::class.java.canonicalName, "check2", "stub", 1)
     }
 

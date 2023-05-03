@@ -19,10 +19,26 @@
  */
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.dsl.scenario
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.test.util.assertScenariosEquals
+import org.jetbrains.kotlinx.lincheck.test.util.getMethod
+import org.jetbrains.kotlinx.lincheck.test.util.getSuspendMethod
 import org.junit.*
 import org.junit.Assert.*
+import java.lang.reflect.Method
 
 class CustomScenarioKotlinDSLTest {
+
+    private val suspendableOperation: Method = getSuspendMethod("suspendableOperation", 0)
+    private val suspendableOperationWithOneArg: Method = getSuspendMethod("suspendableOperation", 1)
+    private val suspendableOperationWithTwoArgs: Method = getSuspendMethod("suspendableOperation", 2)
+
+    private val regularOperation: Method = getMethod("regularOperation", 0)
+    private val regularOperationOneArg: Method = getMethod("regularOperation", 1)
+    private val regularOperationTwoArgs: Method = getMethod("regularOperation", 2)
+
     @Test
     fun testMinimalScenario() {
         val scenario = scenario {}
@@ -36,7 +52,7 @@ class CustomScenarioKotlinDSLTest {
         scenario {
             initial {}
             initial {
-                actor(Object::hashCode)
+                actor(::hashCode)
             }
         }
     }
@@ -53,7 +69,7 @@ class CustomScenarioKotlinDSLTest {
     fun testPostPartRedeclaration() {
         scenario {
             post {
-                actor(Object::hashCode)
+                actor(::hashCode)
             }
             post {}
         }
@@ -63,19 +79,19 @@ class CustomScenarioKotlinDSLTest {
     fun testAverageScenario() {
         val scenario = scenario {
             initial {
-                repeat(2) { actor(Object::hashCode) }
+                repeat(2) { actor(::hashCode) }
             }
             parallel {
                 repeat(2) {
                     thread {
                         repeat(5 + it) {
-                            actor(Object::equals, this)
+                            actor(::equals, this)
                         }
                     }
                 }
             }
             post {
-                repeat(3) { actor(Object::toString) }
+                repeat(3) { actor(::toString) }
             }
         }
         assertEquals(2, scenario.initExecution.size)
@@ -84,4 +100,174 @@ class CustomScenarioKotlinDSLTest {
         assertEquals(5, scenario.parallelExecution[0].size)
         assertEquals(6, scenario.parallelExecution[1].size)
     }
+
+    @Test
+    fun `should build scenario with suspend and regular actors`() {
+        val scenario = scenario {
+            post {
+                actor(::regularOperation, 2, "123")
+                actor(::suspendableOperation, 6, 7)
+            }
+        }
+
+        val expectedScenario = ExecutionScenario(
+            emptyList(),
+            emptyList(),
+            listOf(
+                Actor(regularOperationTwoArgs, listOf(2, "123")),
+                Actor(suspendableOperationWithTwoArgs, listOf(6, 7), cancelOnSuspension = true)
+            )
+        )
+
+        assertScenariosEquals(expectedScenario, scenario)
+    }
+
+    @Test
+    fun `should build scenario with suspend and regular operations with same params count and name`() {
+        val scenario = scenario {
+            initial {
+                actor(::regularOperation, 1, "2")
+                actor(::suspendableOperation, 3, "4")
+            }
+        }
+        val expectedScenario = ExecutionScenario(
+            listOf(
+                Actor(regularOperationTwoArgs, listOf(1, "2")),
+                Actor(suspendableOperationWithTwoArgs, listOf(3, "4"), cancelOnSuspension = true)
+            ), emptyList(), emptyList()
+        )
+
+        assertScenariosEquals(expectedScenario, scenario)
+    }
+
+    @Test
+    fun `should build scenario with suspend operations overloads`() {
+        val scenario = scenario {
+            initial {
+                actor(::suspendableOperation, 1)
+                actor(::suspendableOperation)
+            }
+            parallel {
+                thread {
+                    actor(::suspendableOperation)
+                    actor(::suspendableOperation, 1, 2)
+                }
+            }
+            post {
+                actor(::suspendableOperation)
+            }
+        }
+
+        val expectedScenario = ExecutionScenario(
+            listOf(
+                Actor(suspendableOperationWithOneArg, listOf(1), cancelOnSuspension = true),
+                Actor(suspendableOperation, emptyList(), cancelOnSuspension = true)
+            ),
+            listOf(
+                listOf(
+                    Actor(suspendableOperation, emptyList(), cancelOnSuspension = true),
+                    Actor(suspendableOperationWithTwoArgs, listOf(1, 2), cancelOnSuspension = true)
+                )
+            ),
+            listOf(
+                Actor(suspendableOperation, emptyList(), cancelOnSuspension = true)
+            )
+        )
+
+        assertScenariosEquals(expectedScenario, scenario)
+    }
+
+    @Test
+    fun `should build scenario with regular operations overloads`() {
+        val scenario = scenario {
+            initial {
+                actor(::regularOperation, 1)
+                actor(::regularOperation)
+            }
+            parallel {
+                thread {
+                    actor(::regularOperation)
+                    actor(::regularOperation, 1, 2)
+                }
+            }
+            post {
+                actor(::regularOperation)
+            }
+        }
+
+        val expectedScenario = ExecutionScenario(
+            listOf(
+                Actor(regularOperationOneArg, listOf(1)),
+                Actor(regularOperation, emptyList())
+            ),
+            listOf(
+                listOf(
+                    Actor(regularOperation, emptyList()),
+                    Actor(regularOperationTwoArgs, listOf(1, 2))
+                )
+            ),
+            listOf(
+                Actor(regularOperation, emptyList())
+            )
+        )
+
+        assertScenariosEquals(expectedScenario, scenario)
+    }
+
+    @Test
+    fun `should extract actor parameters from annotation`() {
+        val scenario = scenario {
+            initial {
+                actor(::operationWithManySettings, 1, 2)
+            }
+        }
+
+        val actor = scenario.initExecution.first()
+        val expectedActor = Actor(
+            getSuspendMethod("operationWithManySettings", 2),
+            listOf(1, 2),
+            cancelOnSuspension = true,
+            blocking = true,
+            allowExtraSuspension = true,
+            causesBlocking = true,
+            promptCancellation = true
+        )
+
+        assertEquals(expectedActor, actor)
+    }
+
+    @Operation
+    @Suppress("unused")
+    fun regularOperation() = Unit
+
+    @Operation
+    @Suppress("unused")
+    fun regularOperation(arg1: Int) = Unit
+
+    @Operation
+    @Suppress("unused")
+    fun regularOperation(arg1: Int, arg2: String) = Unit
+
+    @Operation
+    @Suppress("unused", "RedundantSuspendModifier")
+    suspend fun suspendableOperation() = Unit
+
+    @Operation
+    @Suppress("unused", "RedundantSuspendModifier")
+    suspend fun suspendableOperation(argument: Int) = Unit
+
+    @Operation
+    @Suppress("unused", "RedundantSuspendModifier")
+    suspend fun suspendableOperation(argument: Int, anotherArgument: String) = Unit
+
+    @Operation(
+        cancellableOnSuspension = true,
+        blocking = true,
+        allowExtraSuspension = true,
+        causesBlocking = true,
+        promptCancellation = true
+    )
+    @Suppress("unused", "RedundantSuspendModifier")
+    suspend fun operationWithManySettings(argument: Int, anotherArgument: String) = Unit
+
 }

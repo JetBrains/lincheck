@@ -38,3 +38,18 @@ Detailed parallel part trace:
 |                                                                                                                      |   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:111)                       |
 |                                                                                                                      |   result: 1                                                                                                          |
 |                                                                                                                      |   thread is finished                                                                                                 |
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario(
+		new ScenarioBuilder(this.getClass())
+				.parallel(
+					thread(
+						actor("operation")
+					),
+					thread(
+						actor("operation")
+					)
+				)
+		.build()
+)
+
