@@ -25,7 +25,7 @@ import org.junit.Test
 /**
  * This test checks that parameter generators random use different seeds than executions generator.
  * This test fails if seeds are equals.
- * [Corresponding bug description](http://example.com).
+ * [Corresponding bug description](https://github.com/Kotlin/kotlinx-lincheck/issues/120).
  */
 @Param(name = "key", gen = IntGen::class, conf = "0:1")
 class GeneratorSeedTest {
@@ -134,5 +134,29 @@ class StringParamGeneratorTest {
         // check size eventually increases
         assertTrue(generatesStringsLengths.groupBy { it }.size > 1)
     }
+
+}
+
+/**
+ * This test ensures that parameter generator dynamically expanding range
+ * will be shrunk to start size after each scenario run.
+ *
+ * [Corresponding issue description](https://github.com/Kotlin/kotlinx-lincheck/issues/179).
+ */
+class ParamGeneratorResetBetweenScenariosTest {
+
+    @Test
+    fun test() {
+        ModelCheckingOptions()
+            .threads(2)
+            .actorsPerThread(5)
+            .iterations(30)
+            .logLevel(LoggingLevel.INFO).check(this::class)
+    }
+
+    @Operation
+    @Suppress("UNUSED")
+    @Synchronized
+    fun operation(value: Int) = check(value in -10 .. 10)
 
 }

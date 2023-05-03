@@ -52,4 +52,9 @@ public class StringGen implements ParameterGenerator<String> {
 
         return new String(cs);
     }
+
+    @Override
+    public void restart() {
+        currentWordLength = 1;
+    }
 }

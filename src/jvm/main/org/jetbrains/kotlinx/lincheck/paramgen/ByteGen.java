@@ -23,4 +23,9 @@ public class ByteGen implements ParameterGenerator<Byte> {
     public Byte generate() {
         return (byte) generator.nextInt();
     }
+
+    @Override
+    public void restart() {
+        generator.restart();
+    }
 }

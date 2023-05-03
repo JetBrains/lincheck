@@ -66,4 +66,9 @@ public class DoubleGen implements ParameterGenerator<Double> {
     public Double generate() {
         return begin + step * intGenerator.nextInt();
     }
+
+    @Override
+    public void restart() {
+        intGenerator.restart();
+    }
 }

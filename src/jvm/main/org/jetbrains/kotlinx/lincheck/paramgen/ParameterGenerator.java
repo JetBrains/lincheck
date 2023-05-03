@@ -19,6 +19,9 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 public interface ParameterGenerator<T> {
     T generate();
 
+    default void restart() {
+    }
+
     final class Dummy implements ParameterGenerator<Object> {
         @Override
         public Object generate() {

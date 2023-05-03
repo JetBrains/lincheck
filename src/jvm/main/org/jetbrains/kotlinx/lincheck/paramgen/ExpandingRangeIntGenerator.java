@@ -19,9 +19,19 @@ import java.util.Random;
  * right or left bound. This process continues until current range bounds are equals to maximal range bounds.
  */
 public class ExpandingRangeIntGenerator {
-    private final Random random;
+    private Random random;
 
     private static final int DEFAULT_START_VALUE = 0;
+
+    /**
+     * Initial left (inclusive) bound of current range
+     */
+    private final int initialBegin;
+
+    /**
+     * Initial right (inclusive) bound of current range
+     */
+    private final int initialEnd;
 
     /**
      * Left (inclusive) bound of current range
@@ -54,10 +64,23 @@ public class ExpandingRangeIntGenerator {
      */
     public ExpandingRangeIntGenerator(Random random, int begin, int end, int minBegin, int maxEnd) {
         this.random = random;
+
+        this.initialBegin = begin;
+        this.initialEnd = end;
+
         this.begin = begin;
         this.end = end;
+
         this.minBegin = minBegin;
         this.maxEnd = maxEnd;
+    }
+
+    /**
+     * Reset bounds of this expanding range
+     */
+    public void restart() {
+        this.begin = initialBegin;
+        this.end = initialEnd;
     }
 
 

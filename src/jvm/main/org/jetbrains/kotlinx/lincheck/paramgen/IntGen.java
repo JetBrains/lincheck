@@ -24,4 +24,8 @@ public class IntGen implements ParameterGenerator<Integer> {
         return generator.nextInt();
     }
 
+    @Override
+    public void restart() {
+        generator.restart();
+    }
 }

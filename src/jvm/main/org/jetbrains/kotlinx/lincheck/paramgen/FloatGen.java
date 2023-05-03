@@ -22,4 +22,9 @@ public class FloatGen implements ParameterGenerator<Float> {
     public Float generate() {
         return (float) (double) doubleGen.generate();
     }
+
+    @Override
+    public void restart() {
+        doubleGen.restart();
+    }
 }
