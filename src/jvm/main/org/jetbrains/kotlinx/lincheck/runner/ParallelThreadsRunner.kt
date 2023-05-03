@@ -25,7 +25,8 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
+import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
+import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
@@ -76,7 +77,6 @@ internal open class ParallelThreadsRunner(
     private fun trySetCancelledStatus(iThread: Int, actorId: Int) = completionStatuses[iThread].compareAndSet(actorId, null, CompletionStatus.CANCELLED)
 
     private val uninitializedThreads = AtomicInteger(scenario.threads) // for threads synchronization
-    private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
 
     override fun initialize() {
@@ -160,13 +160,6 @@ internal open class ParallelThreadsRunner(
             AtomicReferenceArray<CompletionStatus>(scenario.parallelExecution[t].size)
         }
         uninitializedThreads.set(scenario.threads)
-        // update `spinningTimeBeforeYield` adaptively
-        if (yieldInvokedInOnStart) {
-            spinningTimeBeforeYield = (spinningTimeBeforeYield + 1) / 2
-            yieldInvokedInOnStart = false
-        } else {
-            spinningTimeBeforeYield = (spinningTimeBeforeYield * 2).coerceAtMost(MAX_SPINNING_TIME_BEFORE_YIELD)
-        }
         // reset stored continuations
         executor.threads.forEach { it.cont = null }
     }
@@ -214,7 +207,7 @@ internal open class ParallelThreadsRunner(
                 suspensionPointResults[iThread][actorId] = NoResult
                 return Suspended
             }
-            if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
+            if (i++ % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
         afterCoroutineResumed(iThread)
@@ -320,7 +313,7 @@ internal open class ParallelThreadsRunner(
         // wait for other threads to start
         var i = 1
         while (uninitializedThreads.get() != 0) {
-            if (i % spinningTimeBeforeYield == 0) {
+            if (i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) {
                 yieldInvokedInOnStart = true
                 Thread.yield()
             }
@@ -344,4 +337,4 @@ internal enum class UseClocks { ALWAYS, RANDOM }
 
 internal enum class CompletionStatus { CANCELLED, RESUMED }
 
-private const val MAX_SPINNING_TIME_BEFORE_YIELD = 2_000_000
+private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000

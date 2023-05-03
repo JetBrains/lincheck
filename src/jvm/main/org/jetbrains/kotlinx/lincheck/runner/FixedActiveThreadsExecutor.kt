@@ -29,7 +29,6 @@ import java.io.*
 import java.lang.*
 import java.util.concurrent.*
 import java.util.concurrent.locks.*
-import kotlin.math.*
 
 /**
  * This executor maintains the specified number of threads and is used by
@@ -38,37 +37,20 @@ import kotlin.math.*
  * possible, so that they should not be parked and unparked between invocations.
  */
 internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
-    // Threads used in this runner.
+    /**
+     * Threads used in this runner.
+     */
     val threads: List<TestThread>
+
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
     private val tasks = atomicArrayOfNulls<Any>(nThreads)
+
     /**
      * null, waiting in [submitAndAwait] thread, DONE, or exception
      */
     private val results = atomicArrayOfNulls<Any>(nThreads)
-    /**
-     * Specifies the number of loop cycles for threads
-     * active waiting, after that they should be parked
-     */
-    private var spinCount = 40000
-    /**
-     * An adaptive active waiting strategy is used for the case when
-     * the number of threads is greater than the number of cores.
-     * This flag is set to `true` when any of the threads was parked
-     * during the previous [submitAndAwait] call.
-     */
-    @Volatile
-    private var wasParked: Boolean = false
-    /**
-     * This balance is either increased or decreased by 1 at the
-     * end of each invocation when [wasParked] is `true` or `false`
-     * correspondingly. When the balance achieves [WAS_PARK_BALANCE_THRESHOLD],
-     * [spinCount] is doubled, and when the balance achieves
-     * -[WAS_PARK_BALANCE_THRESHOLD], [spinCount] is halved.
-     */
-    private var wasParkedBalance: Int = 0
 
     /**
      * This flag is set to `true` when [await] detects a hang.
@@ -95,30 +77,12 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         require(tasks.size == nThreads)
         submitTasks(tasks)
         await(timeoutMs)
-        updateAdaptiveSpinCount()
     }
 
     private fun submitTasks(tasks: Array<out Any>) {
         for (i in 0 until nThreads) {
             results[i].value = null
             submitTask(i, tasks[i])
-        }
-    }
-
-    private fun updateAdaptiveSpinCount() {
-        if (wasParked) {
-            wasParked = false
-            wasParkedBalance++
-            if (wasParkedBalance >= WAS_PARK_BALANCE_THRESHOLD) {
-                spinCount /= 2
-                wasParkedBalance = 0
-            }
-        } else {
-            wasParkedBalance--
-            if (wasParkedBalance <= -WAS_PARK_BALANCE_THRESHOLD) {
-                spinCount = min(spinCount * 2, MAX_SPIN_COUNT)
-                wasParkedBalance = 0
-            }
         }
     }
 
@@ -204,12 +168,11 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private inline fun spinWait(getter: () -> Any?): Any? {
-        repeat(spinCount) {
+        repeat(SPINNING_LOOP_ITERATIONS_BEFORE_PARK) {
             getter()?.let {
                 return it
             }
         }
-        wasParked = true
         return null
     }
 
@@ -224,11 +187,9 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) : Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {
         var cont: CancellableContinuation<*>? = null
     }
-
-    companion object {
-        private val SHUTDOWN = Any()
-        private val DONE = Any()
-        private const val MAX_SPIN_COUNT = 1_000_000
-        private const val WAS_PARK_BALANCE_THRESHOLD = 20
-    }
 }
+
+private const val SPINNING_LOOP_ITERATIONS_BEFORE_PARK = 1000_000
+
+private val SHUTDOWN = Any()
+private val DONE = Any()
