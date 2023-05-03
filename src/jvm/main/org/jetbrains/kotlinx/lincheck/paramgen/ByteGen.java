@@ -24,11 +24,12 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
 
 import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
-public class ByteGen implements ParameterGenerator<Byte> {
+public class ByteGen extends ParameterGenerator<Byte> {
 
     private final ExpandingRangeIntGenerator generator;
 
     public ByteGen(RandomProvider randomProvider, String configuration) {
+        super(randomProvider, configuration);
         generator = ExpandingRangeIntGenerator.create(randomProvider.createRandom(), configuration, Byte.MIN_VALUE, Byte.MAX_VALUE, "byte");
     }
 

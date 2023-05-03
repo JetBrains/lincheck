@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
 
 import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
-public class DoubleGen implements ParameterGenerator<Double> {
+public class DoubleGen extends ParameterGenerator<Double> {
     private static final float DEFAULT_STEP = 0.1f;
     private static final float DEFAULT_BEGIN = -10f;
     private static final float DEFAULT_END = 10f;
@@ -34,6 +34,7 @@ public class DoubleGen implements ParameterGenerator<Double> {
     private final double begin;
 
     public DoubleGen(RandomProvider randomProvider, String configuration) {
+        super(randomProvider, configuration);
         double begin;
         double end;
         double step = 0.0;

@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.paramgen
 import org.jetbrains.kotlinx.lincheck.RandomProvider
 
 
-class BooleanGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Boolean> {
+class BooleanGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Boolean>(randomProvider, configuration) {
     private val random = randomProvider.createRandom()
 
     override fun generate() = random.nextBoolean()

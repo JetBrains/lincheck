@@ -33,7 +33,7 @@ import org.jetbrains.kotlinx.lincheck.RandomProvider
  *
  * Note, that this API is unstable and is subject to change.
  */
-class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Any> {
+class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Any>(randomProvider, configuration) {
     override fun generate() = THREAD_ID_TOKEN
 }
 

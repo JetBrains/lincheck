@@ -24,10 +24,11 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
 
 import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
-public class FloatGen implements ParameterGenerator<Float> {
+public class FloatGen extends ParameterGenerator<Float> {
     private final DoubleGen doubleGen;
 
     public FloatGen(RandomProvider randomProvider, String configuration) {
+        super(randomProvider, configuration);
         doubleGen = new DoubleGen(randomProvider, configuration);
     }
 

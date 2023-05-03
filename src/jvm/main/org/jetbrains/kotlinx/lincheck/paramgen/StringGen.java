@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
 import java.util.Random;
 
-public class StringGen implements ParameterGenerator<String> {
+public class StringGen extends ParameterGenerator<String> {
     private static final int DEFAULT_MAX_WORD_LENGTH = 15;
     private static final String DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ ";
 
@@ -36,6 +36,7 @@ public class StringGen implements ParameterGenerator<String> {
     private int currentWordLength = 1;
 
     public StringGen(RandomProvider randomProvider, String configuration) {
+        super(randomProvider, configuration);
         random = randomProvider.createRandom();
         if (configuration.isEmpty()) { // use default configuration
             maxWordLength = DEFAULT_MAX_WORD_LENGTH;

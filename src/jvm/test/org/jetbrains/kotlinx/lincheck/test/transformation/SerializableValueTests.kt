@@ -128,7 +128,7 @@ class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResults
     }
 }
 
-class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<ValueHolder> {
+class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<ValueHolder>(randomProvider, conf) {
     override fun generate(): ValueHolder {
         return listOf(ValueHolder(1), ValueHolder(2)).random()
     }
@@ -148,7 +148,7 @@ class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     }
 }
 
-class JavaUtilGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>> {
+class JavaUtilGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>>(randomProvider, conf) {
     override fun generate() = listOf(1, 2)
 }
 
@@ -168,6 +168,6 @@ class SerializableNullParameterTest : AbstractLincheckTest() {
     }
 }
 
-class NullGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>?> {
+class NullGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>?>(randomProvider, conf) {
     override fun generate() = null
 }

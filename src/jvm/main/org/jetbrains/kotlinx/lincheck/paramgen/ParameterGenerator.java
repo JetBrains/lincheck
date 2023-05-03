@@ -22,16 +22,29 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
  * #L%
  */
 
+import org.jetbrains.kotlinx.lincheck.RandomProvider;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 
 /**
  * The implementation of this interface is used to generate parameters
  * for {@link Operation operation}.
   */
-public interface ParameterGenerator<T> {
-    T generate();
+public abstract class ParameterGenerator<T> {
+    protected final RandomProvider randomProvider;
+    protected final String configuration;
 
-    final class Dummy implements ParameterGenerator<Object> {
+    public ParameterGenerator(RandomProvider randomProvider, String configuration) {
+        this.randomProvider = randomProvider;
+        this.configuration = configuration;
+    }
+
+    public abstract T generate();
+
+    public static final class Dummy extends ParameterGenerator<Object> {
+        public Dummy(RandomProvider randomProvider, String configuration) {
+            super(randomProvider, configuration);
+        }
+
         @Override
         public Object generate() {
             throw new UnsupportedOperationException();

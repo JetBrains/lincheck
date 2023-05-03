@@ -25,11 +25,12 @@ package org.jetbrains.kotlinx.lincheck.paramgen;
 
 import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
-public class IntGen implements ParameterGenerator<Integer> {
+public class IntGen extends ParameterGenerator<Integer> {
 
     private final ExpandingRangeIntGenerator generator;
 
     public IntGen(RandomProvider randomProvider, String configuration) {
+        super(randomProvider, configuration);
         generator = ExpandingRangeIntGenerator.create(randomProvider.createRandom(), configuration, Integer.MIN_VALUE, Integer.MAX_VALUE, "int");
     }
 
