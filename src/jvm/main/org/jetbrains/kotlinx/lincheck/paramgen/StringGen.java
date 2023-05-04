@@ -54,7 +54,7 @@ public class StringGen implements ParameterGenerator<String> {
     }
 
     @Override
-    public void restart() {
+    public void resetRange() {
         currentWordLength = 1;
     }
 }

@@ -25,7 +25,7 @@ public class IntGen implements ParameterGenerator<Integer> {
     }
 
     @Override
-    public void restart() {
+    public void resetRange() {
         generator.restart();
     }
 }

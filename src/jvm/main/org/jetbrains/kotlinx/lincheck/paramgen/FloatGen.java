@@ -24,7 +24,7 @@ public class FloatGen implements ParameterGenerator<Float> {
     }
 
     @Override
-    public void restart() {
-        doubleGen.restart();
+    public void resetRange() {
+        doubleGen.resetRange();
     }
 }
