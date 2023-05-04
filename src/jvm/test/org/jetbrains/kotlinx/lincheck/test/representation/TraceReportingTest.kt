@@ -1,23 +1,11 @@
-/*-
- * #%L
+/*
  * Lincheck
- * %%
- * Copyright (C) 2019 - 2020 JetBrains s.r.o.
- * %%
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- * 
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ *
+ * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
@@ -83,8 +71,8 @@ class TraceReportingTest {
         checkNotNull(failure) { "test should fail" }
         val log = failure.toString()
         check("foo" in log)
-        check("canEnterForbiddenSection.WRITE(true) at TraceReportingTest.resetFlag(TraceReportingTest.kt:65)" in log)
-        check("canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:66)" in log)
+        check("canEnterForbiddenSection.WRITE(true) at TraceReportingTest.resetFlag(TraceReportingTest.kt:" in log)
+        check("canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:" in log)
         check("a.READ: 0 at TraceReportingTest.bar" in log)
         check("a.WRITE(1) at TraceReportingTest.bar" in log)
         check("a.READ: 1 at TraceReportingTest.bar" in log)
