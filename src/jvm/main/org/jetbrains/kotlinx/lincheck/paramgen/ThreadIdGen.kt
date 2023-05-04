@@ -23,6 +23,9 @@ import org.jetbrains.kotlinx.lincheck.RandomProvider
  */
 class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Any> {
     override fun generate() = THREAD_ID_TOKEN
+
+    override fun resetRange() {
+    }
 }
 
 internal val THREAD_ID_TOKEN = Any()

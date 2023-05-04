@@ -17,4 +17,6 @@ class BooleanGen(randomProvider: RandomProvider, configuration: String) : Parame
     private val random = randomProvider.createRandom()
 
     override fun generate() = random.nextBoolean()
+    override fun resetRange() {
+    }
 }
