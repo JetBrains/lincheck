@@ -42,6 +42,7 @@ To use model checking strategy for Java 9 and later, add the following JVM prope
 ```text
 --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 --add-exports java.base/jdk.internal.util=ALL-UNNAMED
+--add-exports java.base/sun.security.action=ALL-UNNAMED
 ```
 
 They are required if the testing code uses classes from the `java.util` package since
@@ -51,7 +52,11 @@ If you use Gradle, add the following lines to `build.gradle.kts`:
 
 ```
 tasks.withType<Test> {
-    jvmArgs("--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.util=ALL-UNNAMED")
+    jvmArgs(
+        "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED", 
+        "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED", 
+        "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
+    )
 }
 ```
 
