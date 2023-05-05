@@ -3,29 +3,22 @@
  *
  * Copyright (C) 2019 - 2023 JetBrains s.r.o.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- *
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 package org.jetbrains.kotlinx.lincheck.test.generator
 
+import junit.framework.Assert.assertTrue
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.RandomProvider
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Test
 
@@ -112,4 +105,34 @@ private fun checkParameters(first: Int, second: Int) {
     if (first != second) {
         throw DifferentParametersAsExpectedException
     }
+}
+
+class StringParamGeneratorTest {
+
+    @Test
+    fun `should eventually increase generated word length`() {
+        val alphabet = "abcdef"
+        val maxStringLength = 10
+
+        val randomProvider = RandomProvider()
+        val alphabetSet = alphabet.toHashSet()
+        val gen = StringGen(randomProvider, "$maxStringLength:$alphabet")
+
+        val generatedStrings = (0 until 500).map {
+            gen.generate()
+        }
+
+        // check all symbols are in alphabet
+        generatedStrings.forEach { word -> assertTrue(word.all { it in alphabetSet }) }
+
+        // check that the size does not decrease
+        val generatesStringsLengths = generatedStrings.map { it.length }
+        generatesStringsLengths.windowed(2).forEach { (prevLength, nextLength) ->
+            assertTrue(prevLength <= nextLength)
+        }
+
+        // check size eventually increases
+        assertTrue(generatesStringsLengths.groupBy { it }.size > 1)
+    }
+
 }

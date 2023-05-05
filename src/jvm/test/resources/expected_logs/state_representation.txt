@@ -7,36 +7,36 @@ STATE: 4
 = The following interleaving leads to the error =
 Parallel part trace:
 |                      | operation()                                                                                                 |
-|                      |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:48) |
-|                      |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:48)          |
+|                      |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
+|                      |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |
 |                      |   STATE: 1                                                                                                  |
-|                      |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:49) |
+|                      |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37) |
 |                      |   switch                                                                                                    |
 | operation(): 2       |                                                                                                             |
 | STATE: 3             |                                                                                                             |
 |   thread is finished |                                                                                                             |
-|                      |   getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:49)          |
+|                      |   getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37)          |
 |                      |   STATE: 4                                                                                                  |
 |                      |   result: 3                                                                                                 |
 |                      |   thread is finished                                                                                        |
 
 Detailed parallel part trace:
 |                                                                                                             | operation()                                                                                                 |
-|                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:48) |
-|                                                                                                             |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:48)          |
+|                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
+|                                                                                                             |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |
 |                                                                                                             |   STATE: 1                                                                                                  |
-|                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:49) |
+|                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37) |
 |                                                                                                             |   switch                                                                                                    |
 | operation()                                                                                                 |                                                                                                             |
-|   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:48) |                                                                                                             |
-|   incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:48)          |                                                                                                             |
+|   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |                                                                                                             |
+|   incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |                                                                                                             |
 |   STATE: 2                                                                                                  |                                                                                                             |
-|   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:49) |                                                                                                             |
-|   getAndIncrement(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:49)          |                                                                                                             |
+|   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37) |                                                                                                             |
+|   getAndIncrement(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37)          |                                                                                                             |
 |   STATE: 3                                                                                                  |                                                                                                             |
 |   result: 2                                                                                                 |                                                                                                             |
 |   thread is finished                                                                                        |                                                                                                             |
-|                                                                                                             |   getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:49)          |
+|                                                                                                             |   getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37)          |
 |                                                                                                             |   STATE: 4                                                                                                  |
 |                                                                                                             |   result: 3                                                                                                 |
 |                                                                                                             |   thread is finished                                                                                        |

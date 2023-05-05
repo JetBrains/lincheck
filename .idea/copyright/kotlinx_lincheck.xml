@@ -1,6 +1,6 @@
 <component name="CopyrightManager">
   <copyright>
-    <option name="notice" value="Lincheck&#10;&#10;Copyright (C) 2019 - &amp;#36;today.year JetBrains s.r.o.&#10;&#10;This program is free software: you can redistribute it and/or modify&#10;it under the terms of the GNU Lesser General Public License as&#10;published by the Free Software Foundation, either version 3 of the&#10;License, or (at your option) any later version.&#10;&#10;This program is distributed in the hope that it will be useful,&#10;but WITHOUT ANY WARRANTY; without even the implied warranty of&#10;MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the&#10;GNU General Lesser Public License for more details.&#10;&#10;You should have received a copy of the GNU General Lesser Public&#10;License along with this program.  If not, see&#10;&lt;http://www.gnu.org/licenses/lgpl-3.0.html&gt;" />
-    <option name="myName" value="kotlinx.lincheck" />
+    <option name="notice" value="Lincheck&#10;&#10;Copyright (C) 2019 - &amp;#36;today.year JetBrains s.r.o.&#10;&#10;This Source Code Form is subject to the terms of the&#10;Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed&#10;with this file, You can obtain one at http://mozilla.org/MPL/2.0/." />
+    <option name="myName" value="lincheck" />
   </copyright>
 </component>
