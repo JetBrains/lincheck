@@ -80,7 +80,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 return minimizedFailedIteration
             }
             // Reset range after each generated scenario to start from initial range bounds on next scenario and avoid very diverse values
-            testStructure.parameterGenerators.forEach(ParameterGenerator<*>::resetRange)
+            testStructure.parameterGenerators.forEach { it.resetRange() }
         }
         return null
     }

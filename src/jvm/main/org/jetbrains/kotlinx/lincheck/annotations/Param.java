@@ -10,14 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.annotations;
 
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
 
 /**
  * Use this annotation to specify parameter generators.

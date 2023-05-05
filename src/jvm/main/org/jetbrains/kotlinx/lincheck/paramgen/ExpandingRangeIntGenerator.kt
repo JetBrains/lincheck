@@ -61,7 +61,7 @@ class ExpandingRangeIntGenerator(
     /**
      * Reset bounds of this expanding range
      */
-    fun restart() {
+    fun reset() {
         currentStartInclusive = startInclusive
         currentEndInclusive = endInclusive
     }
@@ -69,7 +69,8 @@ class ExpandingRangeIntGenerator(
     /**
      * Generates next random number.
      * With 50% percent probability expands current range if can and returns an expanded bound as a value.
-     * Otherwise, returns a random value from the current range
+     * It alternates expansion direction from left to right.
+     * Otherwise, returns a random value from the current range.
      *
      * @return random value from current range or moved bound
      */
@@ -112,47 +113,51 @@ class ExpandingRangeIntGenerator(
         return rangeLowerBoundInclusive + random.nextInt(rangeUpperBoundInclusive - rangeLowerBoundInclusive + 1)
     }
 
-    companion object {
-
-        private const val DEFAULT_START_VALUE = 0
-
-        /**
-         * Creates extensible range-based random generator.
-         *
-         * @param random        random for this generator
-         * @param configuration range configuration in format start:end, may be empty
-         * @param minStart      minimal range left bound (inclusive)
-         * @param maxEnd        maximal range right bound (inclusive)
-         * @param type          name of current type for generation for exception message if such appears
-         * @return created range-based random generator§
-         */
-        @JvmStatic
-        fun create(
-            random: Random,
-            configuration: String,
-            minStart: Int,
-            maxEnd: Int,
-            type: String
-        ): ExpandingRangeIntGenerator {
-            if (configuration.isEmpty()) {
-                return ExpandingRangeIntGenerator(random, DEFAULT_START_VALUE, DEFAULT_START_VALUE, minStart, maxEnd)
-            }
-
-            // start:end
-            val args = configuration.replace("\\s", "").split(":")
-
-            require(args.size == 2) { "Configuration should have two arguments (start and end) separated by colon" }
-
-            val start = args[0].toInt()
-            val end = args[1].toInt()
-            require(start >= minStart || end - 1 <= maxEnd) { "Illegal range for $type type: [$start; $end)" }
-
-            val startValue = start + (end - start) / 2
-            require(end >= start) { "end must be >= than start" }
-            require(maxEnd >= minStart) { "maxEnd must be >= than minStart" }
-            require(end <= maxEnd) { "end must be <= than maxEnd" }
-
-            return ExpandingRangeIntGenerator(random, startValue, startValue, start, end)
-        }
-    }
 }
+
+/**
+ * Factory method to create extensible range with string configuration
+ *
+ * @param random            random for this generator
+ * @param configuration     string configuration of format startInclusive:endInclusive
+ * @param minStartInclusive minimal range left bound (inclusive)
+ * @param maxEndInclusive   maximal range right bound (inclusive)
+ * @param type              type of generator which is using this method to throw exception with this type name im message
+ */
+internal fun ExpandingRangeIntGenerator(
+    random: Random, configuration: String, minStartInclusive: Int, maxEndInclusive: Int, type: String
+): ExpandingRangeIntGenerator {
+    if (configuration.isEmpty()) return ExpandingRangeIntGenerator(
+        random = random,
+        startInclusive = DEFAULT_START_VALUE,
+        endInclusive = DEFAULT_START_VALUE,
+        minStartInclusive = minStartInclusive,
+        maxEndInclusive = maxEndInclusive
+    )
+
+    // start:end
+    val args = configuration.replace("\\s", "").split(":")
+
+    require(args.size == 2) { "Configuration should have two arguments (start and end) separated by colon" }
+
+    val startInclusive =
+        args[0].toIntOrNull() ?: error("Bad $type configuration. StartInclusive value must be a valid integer.")
+    val endInclusive =
+        args[1].toIntOrNull() ?: error("Bad $type configuration. EndInclusive value must be a valid integer.")
+    require(startInclusive >= minStartInclusive || endInclusive - 1 <= maxEndInclusive) { "Illegal range for $type type: [$startInclusive; $endInclusive)" }
+
+    val startValue = startInclusive + (endInclusive - startInclusive) / 2
+    require(endInclusive >= startInclusive) { "end must be >= than start" }
+    require(maxEndInclusive >= minStartInclusive) { "maxEnd must be >= than minStart" }
+    require(endInclusive <= maxEndInclusive) { "end must be <= than maxEnd" }
+
+    return ExpandingRangeIntGenerator(
+        random = random,
+        startInclusive = startValue,
+        endInclusive = startValue,
+        minStartInclusive = startInclusive,
+        maxEndInclusive = endInclusive
+    )
+}
+
+private const val DEFAULT_START_VALUE = 0

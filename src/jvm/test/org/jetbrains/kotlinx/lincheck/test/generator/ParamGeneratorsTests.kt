@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.RandomProvider
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.paramgen.DoubleGen
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
@@ -152,7 +153,7 @@ class ParamGeneratorResetBetweenScenariosTest {
             .threads(2)
             .actorsPerThread(5)
             .iterations(30)
-            .logLevel(LoggingLevel.INFO).check(this::class)
+            .check(this::class)
     }
 
     @Operation

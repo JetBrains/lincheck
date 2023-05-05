@@ -116,7 +116,6 @@ public class CTestStructure {
                     String nameInOperation = opAnn.params().length > 0 ? opAnn.params()[i] : null;
                     Parameter parameter = m.getParameters()[i];
                     ParameterGenerator<?> parameterGenerator = getOrCreateGenerator(m, parameter, nameInOperation, namedGens, defaultGens, randomProvider);
-
                     parameterGeneratorsMap.putIfAbsent(parameter.getType(), parameterGenerator);
                     gens.add(parameterGenerator);
                 }
