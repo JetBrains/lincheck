@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.runner
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
-import org.jetbrains.kotlinx.lincheck.dsl.actor
+import org.jetbrains.kotlinx.lincheck.actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*

@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.KotlinExecutionScenarioTestGenerator
 import org.jetbrains.kotlinx.lincheck.SupportedTestLanguage
 import org.jetbrains.kotlinx.lincheck.determineTestLanguage
 import org.jetbrains.kotlinx.lincheck.dsl.ScenarioBuilder
-import org.jetbrains.kotlinx.lincheck.dsl.scenario
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

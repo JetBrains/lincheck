@@ -18,13 +18,11 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.dsl
+@file:Suppress("PackageDirectoryMismatch")
+// Package directive does not match the file location for backward compatibility
+package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.actor
-import org.jetbrains.kotlinx.lincheck.execution.*
-import java.lang.IllegalStateException
-import java.lang.reflect.Method
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import kotlin.reflect.*
 import kotlin.reflect.jvm.javaMethod
 
@@ -68,8 +66,8 @@ class DSLThreadScenario : ArrayList<Actor>() {
      * An actor to be executed
      */
     @JvmName("actor1")
-    fun actor(f: KFunction0<*>, ) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, ))
+    fun actor(f: KFunction0<*>) {
+        add(org.jetbrains.kotlinx.lincheck.actor(f))
     }
 
     /**
@@ -77,7 +75,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor1Suspend")
     fun actor(f: KSuspendFunction0<*>) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, ))
+        add(org.jetbrains.kotlinx.lincheck.actor(f))
     }
 
     /**
@@ -85,7 +83,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor2")
     fun actor(f: KFunction1<*, *>, arg0: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0))
     }
 
     /**
@@ -93,7 +91,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor2Suspend")
     fun actor(f: KSuspendFunction1<*, *>, arg0: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0))
     }
 
     /**
@@ -101,7 +99,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor3")
     fun actor(f: KFunction2<*, *, *>, arg0: Any?, arg1: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1))
     }
 
     /**
@@ -109,7 +107,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor3Suspend")
     fun actor(f: KSuspendFunction2<*, *, *>, arg0: Any?, arg1: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1))
     }
 
     /**
@@ -117,7 +115,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor4")
     fun actor(f: KFunction3<*, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2))
     }
 
     /**
@@ -125,7 +123,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor4Suspend")
     fun actor(f: KSuspendFunction3<*, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2))
     }
 
     /**
@@ -133,7 +131,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor5")
     fun actor(f: KFunction4<*, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3))
     }
 
     /**
@@ -141,7 +139,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor5Suspend")
     fun actor(f: KSuspendFunction4<*, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3))
     }
 
     /**
@@ -149,7 +147,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor6")
     fun actor(f: KFunction5<*, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4))
     }
 
     /**
@@ -157,7 +155,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor6Suspend")
     fun actor(f: KSuspendFunction5<*, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4))
     }
 
     /**
@@ -165,7 +163,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor7")
     fun actor(f: KFunction6<*, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5))
     }
 
     /**
@@ -173,7 +171,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor7Suspend")
     fun actor(f: KSuspendFunction6<*, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5))
     }
 
     /**
@@ -181,7 +179,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor8")
     fun actor(f: KFunction7<*, *, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?, arg6: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6))
     }
 
     /**
@@ -189,7 +187,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor8Suspend")
     fun actor(f: KSuspendFunction7<*, *, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?, arg6: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6))
     }
 
     /**
@@ -197,7 +195,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor9")
     fun actor(f: KFunction8<*, *, *, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?, arg6: Any?, arg7: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7))
     }
 
     /**
@@ -205,7 +203,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor9Suspend")
     fun actor(f: KSuspendFunction8<*, *, *, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?, arg6: Any?, arg7: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7))
     }
 
     /**
@@ -213,7 +211,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor10")
     fun actor(f: KFunction9<*, *, *, *, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?, arg6: Any?, arg7: Any?, arg8: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8))
     }
 
     /**
@@ -221,7 +219,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     @JvmName("actor10Suspend")
     fun actor(f: KSuspendFunction9<*, *, *, *, *, *, *, *, *, *>, arg0: Any?, arg1: Any?, arg2: Any?, arg3: Any?, arg4: Any?, arg5: Any?, arg6: Any?, arg7: Any?, arg8: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.dsl.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8))
+        add(org.jetbrains.kotlinx.lincheck.actor(f, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8))
     }
 
 }

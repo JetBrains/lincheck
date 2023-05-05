@@ -20,7 +20,7 @@
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.dsl.scenario
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.test.util.assertScenariosEquals
 import org.jetbrains.kotlinx.lincheck.test.util.getMethod
