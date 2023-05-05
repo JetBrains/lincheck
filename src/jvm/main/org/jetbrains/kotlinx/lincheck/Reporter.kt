@@ -157,7 +157,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         appendLine()
         appendLine()
         appendLine("= You can add this scenario as a custom test. Insert this code in your testing options configuration =")
-        appendLine(generateAddCustomScenarioBlock(failure.scenario, testLanguage))
+        append(generateAddCustomScenarioBlock(failure.scenario, testLanguage))
     }
 
     return this
