@@ -172,7 +172,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
             try {
                 runnable.run()
             } catch(e: Throwable) {
-                setResult(iThread, wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e))
+                setResult(iThread, wrapExceptionIfNecessary(e))
                 continue@loop
             }
             setResult(iThread, DONE)

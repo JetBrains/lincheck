@@ -57,7 +57,6 @@ internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boole
     return Actor(
         method = method,
         arguments = args.toList(),
-        handledExceptions = (method.exceptionTypes as Array<Class<out Throwable>>).toList(),
         cancelOnSuspension = cancelOnSuspension
     )
 }

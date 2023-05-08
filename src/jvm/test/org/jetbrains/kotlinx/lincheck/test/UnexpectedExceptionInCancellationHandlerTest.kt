@@ -31,7 +31,7 @@ class UnexpectedExceptionInCancellationHandlerTest: AbstractLincheckTest(Unexpec
     suspend fun foo() {
         suspendCancellableCoroutine<Unit> { cont ->
             cont.invokeOnCancellation {
-                throw AssertionError("This exception is unexpected")
+                throw InternalLincheckException
             }
         }
     }

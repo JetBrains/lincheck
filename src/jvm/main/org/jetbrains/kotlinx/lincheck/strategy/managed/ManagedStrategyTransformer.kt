@@ -1498,7 +1498,7 @@ internal object UnsafeHolder {
                 f.isAccessible = true
                 theUnsafe = f.get(null)
             } catch (e: Exception) {
-                throw RuntimeException(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e))
+                throw RuntimeException(wrapExceptionIfNecessary(e))
             }
         }
         return theUnsafe!!

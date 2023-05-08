@@ -72,18 +72,44 @@ object Cancelled : Result() {
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
  */
 @Suppress("DataClassPrivateConstructor")
-data class ExceptionResult private constructor(val tClazz: Class<out Throwable>, override val wasSuspended: Boolean) : Result() {
+class ExceptionResult private constructor(
+    /**
+     * Exception is stored to print it's stackTrace in case of incorrect results
+     */
+    val throwable: Throwable,
+    /**
+     * Normalized version of exception class
+     */
+    val tClazz: Class<out Throwable>,
+    override val wasSuspended: Boolean
+) : Result() {
     override fun toString() = wasSuspendedPrefix + tClazz.simpleName
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ExceptionResult) return false
+
+        if (tClazz != other.tClazz) return false
+        return wasSuspended == other.wasSuspended
+    }
+
+    override fun hashCode(): Int {
+        var result = tClazz.hashCode()
+        result = 31 * result + wasSuspended.hashCode()
+        return result
+    }
+
 
     companion object {
         @Suppress("UNCHECKED_CAST")
         @JvmOverloads
-        fun create(tClazz: Class<out Throwable>, wasSuspended: Boolean = false) = ExceptionResult(tClazz.normalize(), wasSuspended)
+        fun create(throwable: Throwable, wasSuspended: Boolean = false) =
+            ExceptionResult(throwable, throwable::class.java.normalize(), wasSuspended)
     }
 }
+
 // for byte-code generation
 @JvmSynthetic
-fun createExceptionResult(tClazz: Class<out Throwable>) = ExceptionResult.create(tClazz, false)
+fun createExceptionResult(throwable: Throwable) = ExceptionResult.create(throwable, false)
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet

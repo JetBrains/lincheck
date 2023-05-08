@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.lang.IllegalStateException
+import java.lang.StringBuilder
 
 /**
  * This test checks that model checking strategy can find a many switch bug.
@@ -60,8 +61,7 @@ class ManySwitchBugTest {
             if (canEnterSection3) {
                 canEnterSection4 = true
                 canEnterSection4 = false
-                if (canEnterSection5)
-                    throw IllegalStateException()
+                if (canEnterSection5) error("Can't enter here")
             }
         }
     }
@@ -73,6 +73,6 @@ class ManySwitchBugTest {
             .actorsBefore(0)
             .actorsPerThread(1)
             .checkImpl(this::class.java)
-        check(failure is UnexpectedExceptionFailure) { "The test should fail" }
+        check(failure is IncorrectResultsFailure) { "The test should fail" }
     }
 }

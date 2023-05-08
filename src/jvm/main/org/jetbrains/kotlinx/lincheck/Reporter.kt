@@ -92,28 +92,53 @@ private class ActorWithResult(val actorRepresentation: String, val spacesAfterAc
                                     " ".repeat(spacesAfterResult) + clockRepresentation
 }
 
-private fun uniteActorsAndResultsLinear(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
+private fun uniteActorsAndResultsLinear(
+    actors: List<Actor>,
+    results: List<Result>,
+    exceptionsNumeration: Map<Throwable, Int>
+): List<ActorWithResult> {
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
     return actors.indices.map {
-        ActorWithResult("${actors[it]}", 1, "${results[it]}", 0, "")
+        val result = results[it]
+        ActorWithResult(
+            actorRepresentation = "${actors[it]}",
+            spacesAfterActor = 1,
+            resultRepresentation = resultRepresentation(result, exceptionsNumeration),
+            spacesAfterResult = 0,
+            clockRepresentation = ""
+        )
     }
 }
 
-private fun uniteParallelActorsAndResults(actors: List<List<Actor>>, results: List<List<ResultWithClock>>): List<List<ActorWithResult>> {
+private fun uniteParallelActorsAndResults(
+    actors: List<List<Actor>>,
+    results: List<List<ResultWithClock>>,
+    exceptionsNumeration: Map<Throwable, Int>
+): List<List<ActorWithResult>> {
     require(actors.size == results.size) {
         "Different numbers of threads and matching results found (${actors.size} != ${results.size})"
     }
-    return actors.mapIndexed { id, threadActors -> uniteActorsAndResultsAligned(threadActors, results[id]) }
+    return actors.mapIndexed { id, threadActors ->
+        uniteActorsAndResultsAligned(
+            threadActors,
+            results[id],
+            exceptionsNumeration
+        )
+    }
 }
 
-private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<ResultWithClock>): List<ActorWithResult> {
+private fun uniteActorsAndResultsAligned(
+    actors: List<Actor>,
+    results: List<ResultWithClock>,
+    exceptionsNumeration: Map<Throwable, Int>
+): List<ActorWithResult> {
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
     val actorRepresentations = actors.map { it.toString() }
-    val resultRepresentations = results.map { it.result.toString() }
+    val resultRepresentations = results.map { resultRepresentation(it.result, exceptionsNumeration) }
     val maxActorLength = actorRepresentations.map { it.length }.maxOrNull()!!
     val maxResultLength = resultRepresentations.map { it.length }.maxOrNull()!!
     return actors.indices.map { i ->
@@ -148,24 +173,51 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
 }
 
 internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
+    val results: ExecutionResult? = (failure as? IncorrectResultsFailure)?.results
+    val exceptionsNumeration: Map<Throwable, Int> = results?.let { collectExceptionsNumeration(it) } ?: emptyMap()
+
     when (failure) {
-        is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
+        is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionsNumeration)
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
     }
-    val results = if (failure is IncorrectResultsFailure) failure.results else null
     if (failure.trace != null) {
         appendLine()
         appendLine("= The following interleaving leads to the error =")
-        appendTrace(failure.scenario, results, failure.trace)
+        appendTrace(failure.scenario, results, failure.trace, exceptionsNumeration)
         if (failure is DeadlockWithDumpFailure) {
             appendLine()
             append("All threads are in deadlock")
         }
     }
     return this
+}
+
+internal fun resultRepresentation(result: Result, exceptionsNumeration: Map<Throwable, Int>): String {
+    return when (result) {
+        is ExceptionResult -> {
+            val exceptionIndex = exceptionsNumeration[result.throwable]?.let { " _${it}_" } ?: ""
+            "$result$exceptionIndex"
+        }
+
+        else -> result.toString()
+    }
+}
+
+private fun collectExceptionsNumeration(executionResult: ExecutionResult): Map<Throwable, Int> {
+    val exceptionsNumeration = mutableMapOf<Throwable, Int>()
+
+    (executionResult.initResults.asSequence()
+            + executionResult.parallelResults.asSequence().flatten()
+            + executionResult.postResults.asSequence())
+        .filterIsInstance<ExceptionResult>()
+        .forEachIndexed { index, exceptionResult ->
+            exceptionsNumeration[exceptionResult.throwable] = index
+        }
+
+    return exceptionsNumeration
 }
 
 private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
@@ -183,42 +235,79 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     for ((t, stackTrace) in failure.threadDump) {
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
-        stackTrace.map {
-            StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
-        }.map { it.toString() }.filter { line ->
-            "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
-        }.forEach { appendLine("\t$it") }
+        stackTraceRepresentation(stackTrace).forEach { appendLine("\t$it") }
     }
     return this
 }
 
-private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResultsFailure): StringBuilder {
+private fun StringBuilder.appendIncorrectResultsFailure(
+    failure: IncorrectResultsFailure,
+    exceptionsNumeration: Map<Throwable, Int>
+): StringBuilder {
     appendln("= Invalid execution results =")
     if (failure.scenario.initExecution.isNotEmpty()) {
         appendln("Init part:")
-        appendln(uniteActorsAndResultsLinear(failure.scenario.initExecution, failure.results.initResults))
+        appendln(
+            uniteActorsAndResultsLinear(
+                failure.scenario.initExecution,
+                failure.results.initResults,
+                exceptionsNumeration
+            )
+        )
     }
     if (failure.results.afterInitStateRepresentation != null)
         appendln("STATE: ${failure.results.afterInitStateRepresentation}")
     appendln("Parallel part:")
-    val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
+    val parallelExecutionData =
+        uniteParallelActorsAndResults(
+            failure.scenario.parallelExecution,
+            failure.results.parallelResultsWithClock,
+            exceptionsNumeration
+        )
     appendln(printInColumns(parallelExecutionData))
     if (failure.results.afterParallelStateRepresentation != null) {
         appendln("STATE: ${failure.results.afterParallelStateRepresentation}")
     }
     if (failure.scenario.postExecution.isNotEmpty()) {
         appendln("Post part:")
-        appendln(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
+        appendln(
+            uniteActorsAndResultsLinear(
+                failure.scenario.postExecution,
+                failure.results.postResults,
+                exceptionsNumeration
+            )
+        )
     }
     if (failure.results.afterPostStateRepresentation != null && failure.scenario.postExecution.isNotEmpty()) {
         appendln("STATE: ${failure.results.afterPostStateRepresentation}")
     }
-    if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
-        appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
-            "in each of the parallel threads seen at the beginning of the current operation\n---")
+
+    val hints = mutableListOf<String>()
+    if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty }) {
+        hints.add(
+            """
+                values in "[..]" brackets indicate the number of completed operations 
+                in each of the parallel threads seen at the beginning of the current operation
+            """.trimIndent()
+        )
+    }
+    if (exceptionsNumeration.isNotEmpty()) {
+        hints.add(
+            """
+                Number after exception name is used to match exception with it's 
+                stacktrace in the exceptions section below the interleaving section
+        """.trimIndent()
+        )
+    }
+    appendHints(hints)
+
     return this
+}
+
+private fun StringBuilder.appendHints(hints: List<String>) {
+    if (hints.isNotEmpty()) {
+        appendln(hints.joinToString(prefix = "\n---\n", separator = "\n---\n", postfix = "\n---"))
+    }
 }
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {

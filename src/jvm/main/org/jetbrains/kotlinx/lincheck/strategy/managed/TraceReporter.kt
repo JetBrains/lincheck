@@ -30,22 +30,41 @@ import kotlin.math.*
 internal fun StringBuilder.appendTrace(
     scenario: ExecutionScenario,
     results: ExecutionResult?,
-    trace: Trace
+    trace: Trace,
+    exceptionsNumeration: Map<Throwable, Int>
 ) {
-    val startTraceGraphNode = constructTraceGraph(scenario, results, trace)
+    val startTraceGraphNode = constructTraceGraph(scenario, results, trace, exceptionsNumeration)
 
     appendln(PARALLEL_PART_TITLE)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
     appendTraceRepresentation(scenario, traceRepresentation)
     appendln()
-
     appendln()
+
+    if (exceptionsNumeration.isNotEmpty()) {
+        appendln(EXCEPTIONS_TRACES_TITLE)
+        appendExceptionsStackTraces(exceptionsNumeration)
+        appendln()
+    }
+
     appendln(DETAILED_PARALLEL_PART_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
     appendTraceRepresentation(scenario, traceRepresentationVerbose)
 
     objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
+
+internal fun StringBuilder.appendExceptionsStackTraces(exceptionsNumeration: Map<Throwable, Int>): StringBuilder {
+    exceptionsNumeration.entries.sortedBy { it.value }.forEach { (exception, index) ->
+        append("_${index}_: ")
+
+        appendln(exception::class.java.canonicalName)
+        stackTraceRepresentation(exception.stackTrace).forEach { appendln("\tat $it") }
+    }
+
+    return this
+}
+
 
 private fun StringBuilder.appendTraceRepresentation(
     scenario: ExecutionScenario,
@@ -89,7 +108,7 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
  * `next` edges form a single-directed list in which the order of events is the same as in [trace].
  * `internalEvents` edges form a directed forest.
  */
-private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace): TraceNode? {
+private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionsNumeration: Map<Throwable, Int>): TraceNode? {
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.threads) { iThread ->
@@ -113,7 +132,14 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             val nextActor = ++lastHandledActor[iThread]
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
-                ActorNode(iThread, lastNode, 0, scenario.parallelExecution[iThread][nextActor], results[iThread, nextActor])
+                val result = results[iThread, nextActor]
+                ActorNode(
+                    iThread = iThread,
+                    last = lastNode,
+                    callDepth = 0,
+                    actor = scenario.parallelExecution[iThread][nextActor],
+                    resultRepresentation = result?.let { resultRepresentation(result, exceptionsNumeration) }
+                )
             }
             actorNodes[iThread][nextActor] = actorNode
             traceGraphNodes.add(actorNode)
@@ -157,7 +183,9 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                 // insert an ActorResultNode between the last actor event and the next event after it
                 val lastEvent = it.lastInternalEvent
                 val lastEventNext = lastEvent.next
-                val resultNode = ActorResultNode(iThread, lastEvent, it.callDepth + 1, results[iThread, actorId])
+                val result = results[iThread, actorId]
+                val resultRepresentation = result?.let { resultRepresentation(result, exceptionsNumeration) }
+                val resultNode = ActorResultNode(iThread, lastEvent, it.callDepth + 1, resultRepresentation)
                 it.addInternalEvent(resultNode)
                 resultNode.next = lastEventNext
             }
@@ -290,15 +318,16 @@ private class ActorNode(
     last: TraceNode?,
     callDepth: Int,
     private val actor: Actor,
-    private val result: Result?
+    private val resultRepresentation: String?
 ) : TraceInnerNode(iThread, last, callDepth) {
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? =
         if (!shouldBeExpanded(verboseTrace)) {
-            val representation = "$actor" + if (result != null) ": $result" else ""
-            traceRepresentation.add(TraceEventRepresentation(iThread, representation))
+            val representationWithActor = "$actor" + (resultRepresentation?.let { ": $it" } ?: "")
+
+            traceRepresentation.add(TraceEventRepresentation(iThread, representationWithActor))
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
@@ -311,7 +340,7 @@ private class ActorResultNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val result: Result?
+    private val resultRepresentation: String?
 ) : TraceNode(iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this
@@ -321,8 +350,8 @@ private class ActorResultNode(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        if (result != null)
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "result: $result"))
+        if (resultRepresentation != null)
+            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "result: $resultRepresentation"))
         return next
     }
 }
@@ -345,3 +374,4 @@ private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
 const val DETAILED_PARALLEL_PART_TITLE = "Detailed parallel part trace:"
 const val PARALLEL_PART_TITLE = "Parallel part trace:"
+private const val EXCEPTIONS_TRACES_TITLE = "Exceptions traces:"

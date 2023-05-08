@@ -76,19 +76,6 @@ public class TestThreadExecutionHelperTest {
         }, ex.results);
     }
 
-    @Test(expected = NoSuchElementException.class)
-    public void testGlobalException() throws Exception {
-        TestThreadExecution ex = TestThreadExecutionGenerator.create(runner, 0,
-            asList(
-                new Actor(Queue.class.getMethod("add", Object.class), asList(1)),
-                new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("add", Object.class), asList(2))
-            ), emptyList(), false);
-        ex.testInstance = new ArrayDeque<>();
-        ex.results = new Result[4];
-        ex.run();
-    }
 
     @Test
     public void testActorExceptionHandling() throws Exception {
@@ -96,8 +83,8 @@ public class TestThreadExecutionHelperTest {
             asList(
                 new Actor(ArrayDeque.class.getMethod("addLast", Object.class), asList(1)),
                 new Actor(Queue.class.getMethod("remove"), emptyList()),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(NoSuchElementException.class)),
-                new Actor(Queue.class.getMethod("remove"), emptyList(), asList(Exception.class, NoSuchElementException.class))
+                new Actor(Queue.class.getMethod("remove"), emptyList()),
+                new Actor(Queue.class.getMethod("remove"), emptyList())
             ), emptyList(), false);
         ex.testInstance = new ArrayDeque<>();
         ex.results = new Result[4];
@@ -108,8 +95,8 @@ public class TestThreadExecutionHelperTest {
         Assert.assertArrayEquals(new Result[]{
             VoidResult.INSTANCE,
             new ValueResult(1),
-            ExceptionResult.Companion.create(NoSuchElementException.class),
-            ExceptionResult.Companion.create(NoSuchElementException.class)
+            ExceptionResult.Companion.create(new NoSuchElementException()),
+            ExceptionResult.Companion.create(new NoSuchElementException())
         }, ex.results);
     }
 }

@@ -121,9 +121,7 @@ public class CTestStructure {
                     String nameInOperation = opAnn.params().length > 0 ? opAnn.params()[i] : null;
                     gens.add(getOrCreateGenerator(m, m.getParameters()[i], nameInOperation, namedGens, defaultGens, randomProvider));
                 }
-                // Get list of handled exceptions if they are presented
-                List<Class<? extends Throwable>> handledExceptions = Arrays.asList(opAnn.handleExceptionsAsResult());
-                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, opAnn.runOnce(),
+                ActorGenerator actorGenerator = new ActorGenerator(m, gens, opAnn.runOnce(),
                     opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
                     opAnn.promptCancellation());
                 actorGenerators.add(actorGenerator);

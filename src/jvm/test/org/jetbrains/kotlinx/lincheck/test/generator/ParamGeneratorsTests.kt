@@ -21,12 +21,9 @@
 package org.jetbrains.kotlinx.lincheck.test.generator
 
 import junit.framework.Assert.assertTrue
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
-import org.jetbrains.kotlinx.lincheck.RandomProvider
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
@@ -61,7 +58,7 @@ class GeneratorSeedTest {
 class MethodParameterGenerationTestWithBothParametersAnnotated {
     @Operation
     fun operation(@Param(name = "key") first: Int, @Param(name = "key") second: Int) =
-        checkParameters(first, second)
+        throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = IllegalStateException::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
@@ -76,7 +73,7 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
 class MethodParameterGenerationTestWithFirstParameterAnnotated {
 
     @Operation
-    fun operation(@Param(name = "key") first: Int, second: Int) = checkParameters(first, second)
+    fun operation(@Param(name = "key") first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = IllegalStateException::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
@@ -90,7 +87,7 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
 @Param(name = "key", gen = IntGen::class, conf = "0:1000")
 class MethodParameterGenerationTestWithSecondParameterAnnotated {
     @Operation
-    fun operation(first: Int, @Param(name = "key") second: Int) = checkParameters(first, second)
+    fun operation(first: Int, @Param(name = "key") second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = IllegalStateException::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
@@ -102,18 +99,16 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
  */
 class MethodParameterGenerationTest {
     @Operation
-    fun operation(first: Int, second: Int) = checkParameters(first, second)
+    fun operation(first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = IllegalStateException::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
 
 }
 
-private object DifferentParametersAsExpectedException : Exception()
-
-private fun checkParameters(first: Int, second: Int) {
+private fun throwInternalExceptionIfParamsNotEquals(first: Int, second: Int) {
     if (first != second) {
-        throw DifferentParametersAsExpectedException
+        throw InternalLincheckException
     }
 }
 
