@@ -129,8 +129,8 @@ internal fun ExpandingRangeIntGenerator(
 ): ExpandingRangeIntGenerator {
     if (configuration.isEmpty()) return ExpandingRangeIntGenerator(
         random = random,
-        startInclusive = DEFAULT_START_VALUE,
-        endInclusive = DEFAULT_START_VALUE,
+        startInclusive = 0,
+        endInclusive = 0,
         minStartInclusive = minStartInclusive,
         maxEndInclusive = maxEndInclusive
     )
@@ -159,5 +159,3 @@ internal fun ExpandingRangeIntGenerator(
         maxEndInclusive = endInclusive
     )
 }
-
-private const val DEFAULT_START_VALUE = 0

@@ -28,13 +28,17 @@ interface ParameterGenerator<T> {
      * Meanwhile, it shouldn't reset random to avoid undesired correlation between scenarios.
      */
     fun resetRange()
-    class Dummy : ParameterGenerator<Any?> {
-        override fun generate(): Any {
-            throw UnsupportedOperationException()
-        }
+}
 
-        override fun resetRange() {}
+/**
+ * Used only as a default value in [Operation] annotation, as it's impossible to use `null` as a default value in Java
+ */
+internal object Dummy : ParameterGenerator<Any?> {
+    override fun generate(): Any {
+        throw UnsupportedOperationException()
     }
+
+    override fun resetRange() {}
 }
 
 class IntGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Int> {
@@ -81,7 +85,6 @@ class ByteGen(randomProvider: RandomProvider, configuration: String) : Parameter
 }
 
 class DoubleGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Double> {
-
     private val intGenerator: ExpandingRangeIntGenerator
     private val step: Double
     private val begin: Double
@@ -89,7 +92,7 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
     init {
         val begin: Double
         val end: Double
-        var step = 0.0
+        val step: Double
 
         if (configuration.isEmpty()) { // use default configuration
             begin = DEFAULT_BEGIN.toDouble()
@@ -102,6 +105,7 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
                 2 -> {
                     begin = args[0].toDouble()
                     end = args[1].toDouble()
+                    step = (end - begin) / 100 // default generated step
                 }
 
                 3 -> {
@@ -117,11 +121,8 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
         require(begin < end) { "Illegal range for type double: begin must be < end" }
 
         val delta = end - begin
-        if (step == 0.0) {
-            step = delta / 100 // default generated step
-        }
-
         val maxSteps = (delta / step).toInt()
+
         intGenerator = ExpandingRangeIntGenerator(
             random = randomProvider.createRandom(),
             startInclusive = maxSteps / 2,
@@ -146,7 +147,6 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
 }
 
 class FloatGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Float> {
-
     private val doubleGen = DoubleGen(randomProvider, configuration)
     override fun generate(): Float = doubleGen.generate().toFloat()
 
@@ -155,7 +155,6 @@ class FloatGen(randomProvider: RandomProvider, configuration: String) : Paramete
 
 
 class LongGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Long> {
-
     private val intGen: IntGen = IntGen(randomProvider, configuration)
     override fun generate(): Long = intGen.generate().toLong()
 
@@ -163,7 +162,6 @@ class LongGen(randomProvider: RandomProvider, configuration: String) : Parameter
 }
 
 class ShortGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Short> {
-
     private val generator: ExpandingRangeIntGenerator = ExpandingRangeIntGenerator(
         random = randomProvider.createRandom(),
         configuration = configuration,
@@ -178,10 +176,9 @@ class ShortGen(randomProvider: RandomProvider, configuration: String) : Paramete
 }
 
 class StringGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<String> {
-
     private val random: Random
     private var maxWordLength: Int
-    private var alphabet: String
+    private var alphabet: CharArray
     private var currentWordLength = 1
 
     init {
@@ -197,7 +194,7 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
                 alphabet = DEFAULT_ALPHABET
             } else { // maxWordLength:alphabet
                 maxWordLength = configuration.substring(0, firstCommaIndex).toInt()
-                alphabet = configuration.substring(firstCommaIndex + 1)
+                alphabet = configuration.substring(firstCommaIndex + 1).toCharArray()
             }
         }
     }
@@ -208,7 +205,7 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
         }
         val cs = CharArray(currentWordLength)
         for (i in cs.indices) {
-            cs[i] = alphabet[random.nextInt(alphabet.length)]
+            cs[i] = alphabet[random.nextInt(alphabet.size)]
         }
         return String(cs)
     }
@@ -219,17 +216,14 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
 
     companion object {
         private const val DEFAULT_MAX_WORD_LENGTH = 15
-        private const val DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ "
+        private val DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ ".toCharArray()
     }
 }
 
 /**
- * This generator puts the number of the
- * executing thread as the parameter value.
- * The `0`-th thread specifies the init part
- * of the execution, while the `t+1`-th thread
- * references the post part (here we assume that
- * the parallel part has `t` threads).
+ * This generator puts the number of the executing thread as the parameter value.
+ * The `0`-th thread specifies the init part of the execution, while the `t+1`-th thread references the post part
+ * (here we assume that the parallel part has `t` threads).
  *
  * Note, that this API is unstable and is subject to change.
  */
@@ -241,6 +235,3 @@ class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : Param
 }
 
 internal val THREAD_ID_TOKEN = Any()
-
-
-

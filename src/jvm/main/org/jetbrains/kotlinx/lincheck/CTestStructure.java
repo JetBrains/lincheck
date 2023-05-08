@@ -194,7 +194,7 @@ public class CTestStructure {
                 + m.getName() + "\" should be specified.");
         }
         // If the @Param annotation is presented check it's correctness firstly
-        if (!paramAnn.name().isEmpty() && !(paramAnn.gen() == ParameterGenerator.Dummy.class))
+        if (!paramAnn.name().isEmpty() && !(paramAnn.gen() == Dummy.class))
             throw new IllegalStateException("@Param should have either name or gen with optionally configuration");
         // If @Param annotation specifies generator's name then return the specified generator
         if (!paramAnn.name().isEmpty())
