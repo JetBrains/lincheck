@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
@@ -80,7 +79,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 return minimizedFailedIteration
             }
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
-            testStructure.parameterGenerators.forEach { it.resetRange() }
+            testStructure.parameterGenerators.forEach { it.reset() }
         }
         return null
     }

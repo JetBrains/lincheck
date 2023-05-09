@@ -27,7 +27,7 @@ interface ParameterGenerator<T> {
      * Resets current range bounds to start, if this generator has such expanding range.
      * Meanwhile, it shouldn't reset random to avoid undesired correlation between scenarios.
      */
-    fun resetRange()
+    fun reset()
 }
 
 /**
@@ -38,7 +38,7 @@ internal object Dummy : ParameterGenerator<Any?> {
         throw UnsupportedOperationException()
     }
 
-    override fun resetRange() {}
+    override fun reset() {}
 }
 
 class IntGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Int> {
@@ -55,14 +55,14 @@ class IntGen(randomProvider: RandomProvider, configuration: String) : ParameterG
     }
 
     override fun generate(): Int = generator.nextInt()
-    override fun resetRange() = generator.reset()
+    override fun reset() = generator.reset()
 }
 
 class BooleanGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Boolean> {
     private val random = randomProvider.createRandom()
 
     override fun generate() = random.nextBoolean()
-    override fun resetRange() {
+    override fun reset() {
     }
 }
 
@@ -81,7 +81,7 @@ class ByteGen(randomProvider: RandomProvider, configuration: String) : Parameter
 
     override fun generate(): Byte = generator.nextInt().toByte()
 
-    override fun resetRange() = generator.reset()
+    override fun reset() = generator.reset()
 }
 
 class DoubleGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Double> {
@@ -137,7 +137,7 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
 
     override fun generate(): Double = begin + step * intGenerator.nextInt()
 
-    override fun resetRange() = intGenerator.reset()
+    override fun reset() = intGenerator.reset()
 
     companion object {
         private const val DEFAULT_STEP = 0.1f
@@ -150,7 +150,7 @@ class FloatGen(randomProvider: RandomProvider, configuration: String) : Paramete
     private val doubleGen = DoubleGen(randomProvider, configuration)
     override fun generate(): Float = doubleGen.generate().toFloat()
 
-    override fun resetRange() = doubleGen.resetRange()
+    override fun reset() = doubleGen.reset()
 }
 
 
@@ -158,7 +158,7 @@ class LongGen(randomProvider: RandomProvider, configuration: String) : Parameter
     private val intGen: IntGen = IntGen(randomProvider, configuration)
     override fun generate(): Long = intGen.generate().toLong()
 
-    override fun resetRange() = intGen.resetRange()
+    override fun reset() = intGen.reset()
 }
 
 class ShortGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Short> {
@@ -172,7 +172,7 @@ class ShortGen(randomProvider: RandomProvider, configuration: String) : Paramete
 
     override fun generate(): Short = generator.nextInt().toShort()
 
-    override fun resetRange() = generator.reset()
+    override fun reset() = generator.reset()
 }
 
 class StringGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<String> {
@@ -210,7 +210,7 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
         return String(cs)
     }
 
-    override fun resetRange() {
+    override fun reset() {
         currentWordLength = 1
     }
 
@@ -230,7 +230,7 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
 class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Any> {
     override fun generate() = THREAD_ID_TOKEN
 
-    override fun resetRange() {
+    override fun reset() {
     }
 }
 

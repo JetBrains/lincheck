@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.paramgen
 
+import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator.NextExpansionDirection.*
 import java.util.*
 
 
@@ -34,10 +35,8 @@ import java.util.*
  */
 class ExpandingRangeIntGenerator(
     private val random: Random,
-    private val startInclusive: Int,
-    private val endInclusive: Int,
-    private val minStartInclusive: Int,
-    private val maxEndInclusive: Int
+    private val minValueInclusive: Int,
+    private val maxValueInclusive: Int
 ) {
 
     /**
@@ -50,20 +49,21 @@ class ExpandingRangeIntGenerator(
      */
     private var currentEndInclusive: Int
 
-    private var nextExpansionDirection = NextExpansionDirection.UP
-
+    private var nextExpansionDirection = UP
 
     init {
-        currentStartInclusive = startInclusive
-        currentEndInclusive = endInclusive
+        reset()
+        currentStartInclusive = 0
+        currentEndInclusive = 0
     }
 
     /**
      * Reset bounds of this expanding range
      */
     fun reset() {
-        currentStartInclusive = startInclusive
-        currentEndInclusive = endInclusive
+        val firstValue = ((minValueInclusive.toLong() + maxValueInclusive.toLong()) / 2).toInt()
+        currentStartInclusive = firstValue
+        currentEndInclusive = firstValue
     }
 
     /**
@@ -75,31 +75,29 @@ class ExpandingRangeIntGenerator(
      * @return random value from current range or moved bound
      */
     fun nextInt(): Int {
-        checkRangeExpansionAbility()
-        if (nextExpansionDirection == NextExpansionDirection.DISABLED || !random.nextBoolean()) {
+        if (nextExpansionDirection == DISABLED || random.nextDouble() > 0.5) {
             return generateFromRandomRange(currentStartInclusive, currentEndInclusive)
         }
-
-        return if (nextExpansionDirection == NextExpansionDirection.DOWN) {
-            nextExpansionDirection = NextExpansionDirection.UP
+        val value = if (nextExpansionDirection == DOWN) {
             --currentStartInclusive
         } else {
-            nextExpansionDirection = NextExpansionDirection.DOWN
             ++currentEndInclusive
         }
+        updateExpansionDirection()
+        return value
     }
 
-    private fun checkRangeExpansionAbility() {
+    private fun updateExpansionDirection() {
         if (currentStartInclusive == minStartInclusive && currentEndInclusive == maxEndInclusive) {
-            nextExpansionDirection = NextExpansionDirection.DISABLED
+            nextExpansionDirection = DISABLED
             return
         }
         if (currentStartInclusive == minStartInclusive) {
-            nextExpansionDirection = NextExpansionDirection.UP
+            nextExpansionDirection = UP
             return
         }
         if (currentEndInclusive == maxEndInclusive) {
-            nextExpansionDirection = NextExpansionDirection.DOWN
+            nextExpansionDirection = DOWN
         }
     }
 
@@ -129,8 +127,6 @@ internal fun ExpandingRangeIntGenerator(
 ): ExpandingRangeIntGenerator {
     if (configuration.isEmpty()) return ExpandingRangeIntGenerator(
         random = random,
-        startInclusive = 0,
-        endInclusive = 0,
         minStartInclusive = minStartInclusive,
         maxEndInclusive = maxEndInclusive
     )
@@ -140,21 +136,15 @@ internal fun ExpandingRangeIntGenerator(
 
     require(args.size == 2) { "Configuration should have two arguments (start and end) separated by colon" }
 
-    val startInclusive =
-        args[0].toIntOrNull() ?: error("Bad $type configuration. StartInclusive value must be a valid integer.")
-    val endInclusive =
-        args[1].toIntOrNull() ?: error("Bad $type configuration. EndInclusive value must be a valid integer.")
+    val startInclusive = args[0].toIntOrNull() ?: error("Bad $type configuration. StartInclusive value must be a valid integer.")
+    val endInclusive = args[1].toIntOrNull() ?: error("Bad $type configuration. EndInclusive value must be a valid integer.")
     require(startInclusive >= minStartInclusive || endInclusive - 1 <= maxEndInclusive) { "Illegal range for $type type: [$startInclusive; $endInclusive)" }
 
-    val startValue = startInclusive + (endInclusive - startInclusive) / 2
-    require(endInclusive >= startInclusive) { "end must be >= than start" }
     require(maxEndInclusive >= minStartInclusive) { "maxEnd must be >= than minStart" }
     require(endInclusive <= maxEndInclusive) { "end must be <= than maxEnd" }
 
     return ExpandingRangeIntGenerator(
         random = random,
-        startInclusive = startValue,
-        endInclusive = startValue,
         minStartInclusive = startInclusive,
         maxEndInclusive = endInclusive
     )
