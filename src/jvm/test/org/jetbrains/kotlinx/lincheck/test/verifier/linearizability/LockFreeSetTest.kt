@@ -30,7 +30,7 @@ class LockFreeSetTest: LockFreeSet() {
                     repeat(4) {
                         for (key in 1..2) {
                             actor(::add, key)
-                            actor(::remove, key)
+                            actor(::removeAt, key)
                         }
                     }
                 }

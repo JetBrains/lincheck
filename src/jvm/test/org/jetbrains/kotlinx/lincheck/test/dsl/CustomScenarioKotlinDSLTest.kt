@@ -107,7 +107,7 @@ class CustomScenarioKotlinDSLTest {
         val scenario = scenario {
             post {
                 actor(::regularOperation, 2, "123")
-                actor(::suspendableOperation, 6, 7)
+                actor(::suspendableOperation, 6, "7")
             }
         }
 
@@ -149,7 +149,7 @@ class CustomScenarioKotlinDSLTest {
             parallel {
                 thread {
                     actor(::suspendableOperation)
-                    actor(::suspendableOperation, 1, 2)
+                    actor(::regularOperation, 1, "2")
                 }
             }
             post {
@@ -184,7 +184,7 @@ class CustomScenarioKotlinDSLTest {
             parallel {
                 thread {
                     actor(::regularOperation)
-                    actor(::regularOperation, 1, 2)
+                    actor(::regularOperation, 1, "2")
                 }
             }
             post {
@@ -198,7 +198,7 @@ class CustomScenarioKotlinDSLTest {
                 Actor(regularOperation, emptyList())
             ), listOf(
                 listOf(
-                    Actor(regularOperation, emptyList()), Actor(regularOperationTwoArgs, listOf(1, 2))
+                    Actor(regularOperation, emptyList()), Actor(regularOperationTwoArgs, listOf(1, "2"))
                 )
             ), listOf(
                 Actor(regularOperation, emptyList())
@@ -212,7 +212,7 @@ class CustomScenarioKotlinDSLTest {
     fun `should inherit actor parameters from annotation`() {
         val scenario = scenario {
             initial {
-                actor(::operationWithManySettings, 1, 2)
+                actor(::operationWithManySettings, 1, "2")
             }
         }
 
