@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.paramgen
 
 import org.jetbrains.kotlinx.lincheck.RandomProvider
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator.NextExpansionDirection.*
 import java.util.*
 
 /**
@@ -48,14 +49,14 @@ class IntGen(randomProvider: RandomProvider, configuration: String) : ParameterG
         generator = ExpandingRangeIntGenerator(
             random = randomProvider.createRandom(),
             configuration = configuration,
-            minStartInclusive = Int.MIN_VALUE,
-            maxEndInclusive = Int.MAX_VALUE,
+            minValueInclusive = Int.MIN_VALUE,
+            maxValueInclusive = Int.MAX_VALUE,
             type = "int"
         )
     }
 
     override fun generate(): Int = generator.nextInt()
-    override fun reset() = generator.reset()
+    override fun reset() = generator.resetRange()
 }
 
 class BooleanGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Boolean> {
@@ -66,6 +67,9 @@ class BooleanGen(randomProvider: RandomProvider, configuration: String) : Parame
     }
 }
 
+/**
+ * @param configuration configuration in format minValueInclusive:maxValueInclusive, values must be in `Byte` type bounds
+ */
 class ByteGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Byte> {
     private val generator: ExpandingRangeIntGenerator
 
@@ -73,15 +77,15 @@ class ByteGen(randomProvider: RandomProvider, configuration: String) : Parameter
         generator = ExpandingRangeIntGenerator(
             random = randomProvider.createRandom(),
             configuration = configuration,
-            minStartInclusive = Byte.MIN_VALUE.toInt(),
-            maxEndInclusive = Byte.MAX_VALUE.toInt(),
+            minValueInclusive = Byte.MIN_VALUE.toInt(),
+            maxValueInclusive = Byte.MAX_VALUE.toInt(),
             type = "byte"
         )
     }
 
     override fun generate(): Byte = generator.nextInt().toByte()
 
-    override fun reset() = generator.reset()
+    override fun reset() = generator.resetRange()
 }
 
 class DoubleGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Double> {
@@ -95,8 +99,8 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
         val step: Double
 
         if (configuration.isEmpty()) { // use default configuration
-            begin = DEFAULT_BEGIN.toDouble()
-            end = DEFAULT_END.toDouble()
+            begin = Int.MIN_VALUE.toDouble()
+            end = Int.MAX_VALUE.toDouble()
             step = DEFAULT_STEP.toDouble()
         } else {
             val args = configuration.replace("\\s", "").split(":")
@@ -125,10 +129,8 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
 
         intGenerator = ExpandingRangeIntGenerator(
             random = randomProvider.createRandom(),
-            startInclusive = maxSteps / 2,
-            endInclusive = maxSteps / 2,
-            minStartInclusive = 0,
-            maxEndInclusive = maxSteps
+            minValueInclusive = 0,
+            maxValueInclusive = maxSteps
         )
 
         this.step = step
@@ -137,12 +139,10 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
 
     override fun generate(): Double = begin + step * intGenerator.nextInt()
 
-    override fun reset() = intGenerator.reset()
+    override fun reset() = intGenerator.resetRange()
 
     companion object {
         private const val DEFAULT_STEP = 0.1f
-        private const val DEFAULT_BEGIN = -10f
-        private const val DEFAULT_END = 10f
     }
 }
 
@@ -161,18 +161,21 @@ class LongGen(randomProvider: RandomProvider, configuration: String) : Parameter
     override fun reset() = intGen.reset()
 }
 
+/**
+ * @param configuration configuration in format minValueInclusive:maxValueInclusive, values must be in `Short` type bounds
+ */
 class ShortGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Short> {
     private val generator: ExpandingRangeIntGenerator = ExpandingRangeIntGenerator(
         random = randomProvider.createRandom(),
         configuration = configuration,
-        minStartInclusive = Byte.MIN_VALUE.toInt(),
-        maxEndInclusive = Byte.MAX_VALUE.toInt(),
+        minValueInclusive = Byte.MIN_VALUE.toInt(),
+        maxValueInclusive = Byte.MAX_VALUE.toInt(),
         type = "byte"
     )
 
     override fun generate(): Short = generator.nextInt().toShort()
 
-    override fun reset() = generator.reset()
+    override fun reset() = generator.resetRange()
 }
 
 class StringGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<String> {
@@ -200,7 +203,7 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
     }
 
     override fun generate(): String {
-        if (currentWordLength < maxWordLength && random.nextBoolean()) {
+        if (currentWordLength < maxWordLength && random.nextDouble() > 0.5) {
             currentWordLength++
         }
         val cs = CharArray(currentWordLength)
@@ -215,6 +218,7 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
     }
 
     companion object {
+        // We keep this bound to avoid too big strings generation
         private const val DEFAULT_MAX_WORD_LENGTH = 15
         private val DEFAULT_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ ".toCharArray()
     }
@@ -235,3 +239,130 @@ class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : Param
 }
 
 internal val THREAD_ID_TOKEN = Any()
+
+/**
+ * Extensible range-based random generator.
+ * Takes min and max inclusive bounds of range and starts generating values from range of single value: the middle of given interval.
+ * Then with constant probability expands current range from side to side until in reaches minValueInclusive and maxValueInclusive bounds.
+ *
+ * @param random   random for this generator
+ * @param minValueInclusive minimal range left bound
+ * @param maxValueInclusive   maximal range right bound
+ */
+class ExpandingRangeIntGenerator(
+    private val random: Random,
+    private val minValueInclusive: Int,
+    private val maxValueInclusive: Int
+) {
+
+    /**
+     * Current left (inclusive) bound of current range
+     */
+    private var currentStartInclusive: Int
+
+    /**
+     * Current right (inclusive) bound of current range
+     */
+    private var currentEndInclusive: Int
+
+    private var expansionDirection = UP
+
+    init {
+        val firstValue = calculateFirstValue()
+        currentStartInclusive = firstValue
+        currentEndInclusive = firstValue
+    }
+
+    /**
+     * Reset bounds of this expanding range to single value range of middle value of min and max bounds
+     */
+    fun resetRange() {
+        val firstValue = calculateFirstValue()
+        currentStartInclusive = firstValue
+        currentEndInclusive = firstValue
+    }
+
+    /**
+     * Generates next random number.
+     * With 50% percent probability expands current range if can and returns an expanded bound as a value.
+     * It alternates expansion direction from left to right.
+     * Otherwise, returns a random value from the current range.
+     *
+     * @return random value from current range or moved bound
+     */
+    fun nextInt(): Int {
+        if (expansionDirection == DISABLED || random.nextDouble() < 0.5) {
+            return generateFromRandomRange(currentStartInclusive, currentEndInclusive)
+        }
+        val value = if (expansionDirection == DOWN) {
+            --currentStartInclusive
+        } else {
+            ++currentEndInclusive
+        }
+        expansionDirection = nextExpansionDirection()
+
+        return value
+    }
+
+    private fun nextExpansionDirection(): NextExpansionDirection {
+        if (currentStartInclusive == minValueInclusive && currentEndInclusive == maxValueInclusive) {
+            return DISABLED
+        }
+        if (currentStartInclusive == minValueInclusive) {
+            return UP
+        }
+        if (currentEndInclusive == maxValueInclusive) {
+            return DOWN
+        }
+
+        return if (expansionDirection == UP) DOWN else UP
+    }
+
+    private enum class NextExpansionDirection {
+        UP,
+        DOWN,
+        DISABLED
+    }
+
+    private fun generateFromRandomRange(rangeLowerBoundInclusive: Int, rangeUpperBoundInclusive: Int): Int {
+        return rangeLowerBoundInclusive + random.nextInt(rangeUpperBoundInclusive - rangeLowerBoundInclusive + 1)
+    }
+
+    private fun calculateFirstValue() = ((minValueInclusive.toLong() + maxValueInclusive.toLong()) / 2).toInt()
+}
+
+/**
+ * Factory method to create extensible range with string configuration
+ *
+ * @param random            random for this generator
+ * @param configuration     string configuration of format startInclusive:endInclusive
+ * @param minValueInclusive minimal range left bound (inclusive)
+ * @param maxValueInclusive   maximal range right bound (inclusive)
+ * @param type              type of generator which is using this method to throw exception with this type name im message
+ */
+internal fun ExpandingRangeIntGenerator(
+    random: Random, configuration: String, minValueInclusive: Int, maxValueInclusive: Int, type: String
+): ExpandingRangeIntGenerator {
+    if (configuration.isEmpty()) return ExpandingRangeIntGenerator(
+        random = random,
+        minValueInclusive = minValueInclusive,
+        maxValueInclusive = maxValueInclusive
+    )
+    // minValueInclusive:maxValueInclusive
+    val args = configuration.replace("\\s", "").split(":")
+
+    require(args.size == 2) { "Configuration should have two arguments (start and end) separated by colon" }
+
+    val startInclusive = args[0].toIntOrNull() ?: error("Bad $type configuration. StartInclusive value must be a valid integer.")
+    val endInclusive = args[1].toIntOrNull() ?: error("Bad $type configuration. EndInclusive value must be a valid integer.")
+
+    require(startInclusive >= minValueInclusive || endInclusive <= maxValueInclusive) { "Illegal range for $type type: [$startInclusive; $endInclusive)" }
+    require(maxValueInclusive >= minValueInclusive) { "maxEnd must be >= than minStart" }
+    require(endInclusive <= maxValueInclusive) { "end must be <= than maxEnd" }
+
+    return ExpandingRangeIntGenerator(
+        random = random,
+        minValueInclusive = startInclusive,
+        maxValueInclusive = endInclusive
+    )
+}

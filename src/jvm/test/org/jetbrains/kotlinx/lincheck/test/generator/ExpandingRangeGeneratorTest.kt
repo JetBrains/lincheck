@@ -27,15 +27,15 @@ class ExpandingRangeGeneratorTest {
         val listOfRangeValues = (begin..end).toList()
         var nextRangeIndex = 0
         val argument = slot<Int>()
-        val validRandomNextIntMethodRange = (0 .. 6)
-        val mockedRandom = mockk<Random>() {
-            every { nextBoolean() } returns true
+        val validRandomNextIntMethodRange = (0..6)
+        val mockedRandom = mockk<Random> {
+            every { nextDouble() } returns 1.0
             every { nextInt(capture(argument)) } answers {
                 check(argument.captured in validRandomNextIntMethodRange) { "Request too big range from random" }
                 listOfRangeValues[nextRangeIndex++] - begin
             }
         }
-        val generator = ExpandingRangeIntGenerator(mockedRandom, 9, 9, begin, end)
+        val generator = ExpandingRangeIntGenerator(mockedRandom, begin, end)
 
         // Checking that range is expanded
         val generatedValues = (0 until 5).map { generator.nextInt() }
