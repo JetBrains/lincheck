@@ -281,7 +281,7 @@ class ExpandingRangeIntGenerator(
      * @return random value from current range or moved bound
      */
     fun nextInt(): Int {
-        if (expansionDirection == DISABLED || random.nextDouble() < 0.5) {
+        if (expansionDirection == DISABLED || random.nextDouble() < 0.65) {
             return generateFromRandomRange(currentStartInclusive, currentEndInclusive)
         }
         val value = if (expansionDirection == DOWN) {
