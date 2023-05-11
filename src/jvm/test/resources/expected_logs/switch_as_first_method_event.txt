@@ -35,15 +35,13 @@ Detailed parallel part trace:
 |                                                                                                                      |   thread is finished                                                                                                 |
 
 = You can add this scenario as a custom test. Insert this code in your testing options configuration =
-.addCustomScenario(
-		new ScenarioBuilder(this.getClass())
-				.parallel(
-					thread(
-						actor("incTwiceAndGet")
-					),
-					thread(
-						actor("incTwiceAndGet")
-					)
-				)
-		.build()
-)
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::incTwiceAndGet)
+		}
+		thread {
+			actor(::incTwiceAndGet)
+		}
+	}
+}

@@ -1,0 +1,74 @@
+= Invalid execution results =
+Init part:
+[operation1(1, KV, 1): 1, operationNoArguments(): void]
+Parallel part:
+| operationNoArguments(): void         | operation2(1, 1.4901161193847656E-7, 1.4901161E-7, false, 1): IllegalStateException [1,-,-] | operationNoArguments(): void [1,2,-] |
+| operation1(-1, dW, -1): 1    [1,-,-] | operation2(-1, 1.4901161193847656E-7, -0.19999985, false, 1): IllegalStateException [1,1,-] | operationNoArguments(): void [1,2,1] |
+Post part:
+[operation2(2, -0.1999998539686203, 1.4901161E-7, true, 0): void, operationNoArguments(): void]
+
+---
+values in "[..]" brackets indicate the number of completed operations 
+in each of the parallel threads seen at the beginning of the current operation
+---
+
+= The following interleaving leads to the error =
+Parallel part trace:
+| operationNoArguments(): void                                                                                                                               |                                                                                     |                              |
+| operation1(-1, dW, -1)                                                                                                                                     |                                                                                     |                              |
+|   canEnterForbiddenSection.WRITE(true) at CustomScenarioTestSuggestionInOutputKotlinTest.operation1(CustomScenarioTestSuggestionInOutputKotlinTest.kt:29)  |                                                                                     |                              |
+|   switch                                                                                                                                                   |                                                                                     |                              |
+|                                                                                                                                                            | operation2(1, 1.4901161193847656E-7, 1.4901161E-7, false, 1): IllegalStateException |                              |
+|                                                                                                                                                            | operation2(-1, 1.4901161193847656E-7, -0.19999985, false, 1): IllegalStateException |                              |
+|                                                                                                                                                            |   thread is finished                                                                |                              |
+|                                                                                                                                                            |                                                                                     | operationNoArguments(): void |
+|                                                                                                                                                            |                                                                                     | operationNoArguments(): void |
+|                                                                                                                                                            |                                                                                     |   thread is finished         |
+|   canEnterForbiddenSection.WRITE(false) at CustomScenarioTestSuggestionInOutputKotlinTest.operation1(CustomScenarioTestSuggestionInOutputKotlinTest.kt:30) |                                                                                     |                              |
+|   result: 1                                                                                                                                                |                                                                                     |                              |
+|   thread is finished                                                                                                                                       |                                                                                     |                              |
+
+Detailed parallel part trace:
+| operationNoArguments(): void                                                                                                                               |                                                                                                                                                          |                              |
+| operation1(-1, dW, -1)                                                                                                                                     |                                                                                                                                                          |                              |
+|   canEnterForbiddenSection.WRITE(true) at CustomScenarioTestSuggestionInOutputKotlinTest.operation1(CustomScenarioTestSuggestionInOutputKotlinTest.kt:29)  |                                                                                                                                                          |                              |
+|   switch                                                                                                                                                   |                                                                                                                                                          |                              |
+|                                                                                                                                                            | operation2(1, 1.4901161193847656E-7, 1.4901161E-7, false, 1)                                                                                             |                              |
+|                                                                                                                                                            |   canEnterForbiddenSection.READ: true at CustomScenarioTestSuggestionInOutputKotlinTest.operation2(CustomScenarioTestSuggestionInOutputKotlinTest.kt:42) |                              |
+|                                                                                                                                                            |   result: IllegalStateException                                                                                                                          |                              |
+|                                                                                                                                                            | operation2(-1, 1.4901161193847656E-7, -0.19999985, false, 1)                                                                                             |                              |
+|                                                                                                                                                            |   canEnterForbiddenSection.READ: true at CustomScenarioTestSuggestionInOutputKotlinTest.operation2(CustomScenarioTestSuggestionInOutputKotlinTest.kt:42) |                              |
+|                                                                                                                                                            |   result: IllegalStateException                                                                                                                          |                              |
+|                                                                                                                                                            |   thread is finished                                                                                                                                     |                              |
+|                                                                                                                                                            |                                                                                                                                                          | operationNoArguments(): void |
+|                                                                                                                                                            |                                                                                                                                                          | operationNoArguments(): void |
+|                                                                                                                                                            |                                                                                                                                                          |   thread is finished         |
+|   canEnterForbiddenSection.WRITE(false) at CustomScenarioTestSuggestionInOutputKotlinTest.operation1(CustomScenarioTestSuggestionInOutputKotlinTest.kt:30) |                                                                                                                                                          |                              |
+|   result: 1                                                                                                                                                |                                                                                                                                                          |                              |
+|   thread is finished                                                                                                                                       |                                                                                                                                                          |                              |
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	initial {
+		actor(::operation1, 1, "KV", 1)
+		actor(::operationNoArguments)
+	}
+	parallel {
+		thread {
+			actor(::operationNoArguments)
+			actor(::operation1, -1, "dW", -1)
+		}
+		thread {
+			actor(::operation2, 1, 1.4901161193847656E-7, 1.4901161E-7F, false, 1L)
+			actor(::operation2, -1, 1.4901161193847656E-7, -0.19999985F, false, 1L)
+		}
+		thread {
+			actor(::operationNoArguments)
+			actor(::operationNoArguments)
+		}
+	}
+	post {
+		actor(::operation2, 2, -0.1999998539686203, 1.4901161E-7F, true, 0L)
+		actor(::operationNoArguments)
+	}
+}

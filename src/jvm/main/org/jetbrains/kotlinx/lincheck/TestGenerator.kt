@@ -65,7 +65,7 @@ internal enum class SupportedTestLanguage {
     KOTLIN
 }
 
-internal interface ExecutionScenarioTestGenerator {
+private interface ExecutionScenarioTestGenerator {
     /**
      * Generate custom scenario test code based on the supplied executionScenario
      */
@@ -135,14 +135,10 @@ internal object KotlinExecutionScenarioTestGenerator : ExecutionScenarioTestGene
         if (argument == null) return "null"
 
         return when (argument) {
-            is Double, Int, Boolean -> "$argument"
-            is Byte -> "$argument.toByte()"
-            is Short -> "$argument.toShort()"
             is Char -> "${argument.code}.toChar()"
             is String -> "\"$argument\""
             is Float -> "${argument}F"
             is Long -> "${argument}L"
-            // other types are not supported for now
             else -> argument.toString()
         }
     }
@@ -153,10 +149,10 @@ internal object JavaExecutionScenarioTestGenerator : ExecutionScenarioTestGenera
     override fun generateTestCode(executionScenario: ExecutionScenario) = TestCodeStringBuilder().apply {
         appendLine(".addCustomScenario(")
 
-        indentBlock(blockIndents = 2) {
+        indentBlock {
             appendLine("new ScenarioBuilder(this.getClass())")
 
-            indentBlock(blockIndents = 2) {
+            indentBlock {
                 appendSequentialPart("initial", executionScenario.initExecution)
                 appendParallelPart(executionScenario)
                 appendSequentialPart("post", executionScenario.postExecution)
@@ -218,14 +214,10 @@ internal object JavaExecutionScenarioTestGenerator : ExecutionScenarioTestGenera
         if (argument == null) return "null"
 
         return when (argument) {
-            is Double, Int, Boolean -> "$argument"
-            is Byte -> "(byte) $argument"
-            is Short -> "(short) $argument"
-            is Char -> "(char) ${argument.code}"
+            is Char -> "${argument.code}"
             is String -> "\"$argument\""
             is Float -> "${argument}F"
             is Long -> "${argument}L"
-            // other types are not supported for now
             else -> argument.toString()
         }
     }
@@ -265,4 +257,4 @@ private class TestCodeStringBuilder {
 
 private const val TAB = "\t"
 
-private val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck"
+private val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
