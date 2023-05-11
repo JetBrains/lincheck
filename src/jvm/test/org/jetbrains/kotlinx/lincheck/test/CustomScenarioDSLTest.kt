@@ -17,12 +17,13 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
+package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.junit.*
 import org.junit.Assert.*
 
-class CustomScenariosDSLTest {
+class CustomScenarioDSLTest {
     @Test
     fun testMinimalScenario() {
         val scenario = scenario {}
