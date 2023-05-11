@@ -104,7 +104,7 @@ class CustomScenarioKotlinDSLTest {
         val expectedScenario = ExecutionScenario(
             emptyList(), emptyList(), listOf(
                 Actor(regularOperationTwoArgs, listOf(2, "123")),
-                Actor(suspendableOperationWithTwoArgs, listOf(6, 7), cancelOnSuspension = true)
+                Actor(suspendableOperationWithTwoArgs, listOf(6, "7"), cancelOnSuspension = true)
             )
         )
 
@@ -154,7 +154,7 @@ class CustomScenarioKotlinDSLTest {
             ), listOf(
                 listOf(
                     Actor(suspendableOperation, emptyList(), cancelOnSuspension = true),
-                    Actor(suspendableOperationWithTwoArgs, listOf(1, 2), cancelOnSuspension = true)
+                    Actor(regularOperationTwoArgs, listOf(1, "2"))
                 )
             ), listOf(
                 Actor(suspendableOperation, emptyList(), cancelOnSuspension = true)
@@ -209,7 +209,7 @@ class CustomScenarioKotlinDSLTest {
         val actor = scenario.initExecution.first()
         val expectedActor = Actor(
             getSuspendMethod("operationWithManySettings", 2),
-            listOf(1, 2),
+            listOf(1, "2"),
             cancelOnSuspension = true,
             blocking = true,
             allowExtraSuspension = true,
