@@ -8,11 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.paramgen
+package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.RandomProvider
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator.NextExpansionDirection.*
+import org.jetbrains.kotlinx.lincheck.ExpandingRangeIntGenerator.NextExpansionDirection.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import java.util.*
 
 /**
@@ -28,18 +27,14 @@ interface ParameterGenerator<T> {
      * Resets current range bounds to start, if this generator has such expanding range.
      * Meanwhile, it shouldn't reset random to avoid undesired correlation between scenarios.
      */
-    fun reset()
+    fun reset() {}
 }
 
 /**
  * Used only as a default value in [Operation] annotation, as it's impossible to use `null` as a default value in Java
  */
-internal object Dummy : ParameterGenerator<Any?> {
-    override fun generate(): Any {
-        throw UnsupportedOperationException()
-    }
-
-    override fun reset() {}
+internal object DummyParameterGenerator : ParameterGenerator<Any?> {
+    override fun generate() = throw UnsupportedOperationException()
 }
 
 class IntGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Int> {
@@ -63,8 +58,6 @@ class BooleanGen(randomProvider: RandomProvider, configuration: String) : Parame
     private val random = randomProvider.createRandom()
 
     override fun generate() = random.nextBoolean()
-    override fun reset() {
-    }
 }
 
 /**
@@ -148,16 +141,16 @@ class DoubleGen(randomProvider: RandomProvider, configuration: String) : Paramet
 
 class FloatGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Float> {
     private val doubleGen = DoubleGen(randomProvider, configuration)
-    override fun generate(): Float = doubleGen.generate().toFloat()
 
+    override fun generate(): Float = doubleGen.generate().toFloat()
     override fun reset() = doubleGen.reset()
 }
 
 
 class LongGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Long> {
     private val intGen: IntGen = IntGen(randomProvider, configuration)
-    override fun generate(): Long = intGen.generate().toLong()
 
+    override fun generate(): Long = intGen.generate().toLong()
     override fun reset() = intGen.reset()
 }
 
@@ -174,7 +167,6 @@ class ShortGen(randomProvider: RandomProvider, configuration: String) : Paramete
     )
 
     override fun generate(): Short = generator.nextInt().toShort()
-
     override fun reset() = generator.resetRange()
 }
 
@@ -231,11 +223,9 @@ class StringGen(randomProvider: RandomProvider, configuration: String) : Paramet
  *
  * Note, that this API is unstable and is subject to change.
  */
+@Suppress("UNUSED_PARAMETER")
 class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Any> {
     override fun generate() = THREAD_ID_TOKEN
-
-    override fun reset() {
-    }
 }
 
 internal val THREAD_ID_TOKEN = Any()
@@ -340,7 +330,7 @@ class ExpandingRangeIntGenerator(
  * @param maxValueInclusive   maximal range right bound (inclusive)
  * @param type              type of generator which is using this method to throw exception with this type name im message
  */
-internal fun ExpandingRangeIntGenerator(
+private fun ExpandingRangeIntGenerator(
     random: Random, configuration: String, minValueInclusive: Int, maxValueInclusive: Int, type: String
 ): ExpandingRangeIntGenerator {
     if (configuration.isEmpty()) return ExpandingRangeIntGenerator(
