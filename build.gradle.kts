@@ -1,7 +1,6 @@
 buildscript {
-    val atomicfuVersion: String by project
     dependencies {
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
+        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:0.20.2")
     }
 }
 apply(plugin = "kotlinx-atomicfu")
@@ -22,10 +21,8 @@ dependencies {
     implementation("org.jctools:jctools-core:3.1.0")
     implementation("com.googlecode.concurrent-trees:concurrent-trees:2.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
-    val junitVersion: String by project
-    implementation("junit:junit:$junitVersion")
-    val lincheckVersion: String by project
-    implementation("org.jetbrains.kotlinx:lincheck-jvm:$lincheckVersion")
+    implementation("junit:junit:4.13.2")
+    implementation("org.jetbrains.kotlinx:lincheck-jvm:2.16")
 }
 
 kotlin {
@@ -45,7 +42,7 @@ tasks {
         exclude("**/AbstractConcurrentMapTest.class")
         exclude("**/AbstractLincheckTest.class")
         exclude("**/IntIntAbstractConcurrentMapTest.class")
-        maxHeapSize = "6g"
+        maxHeapSize = "3g"
     }
 }
 
