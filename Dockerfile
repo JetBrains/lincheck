@@ -1,4 +1,4 @@
-FROM openjdk:19-jdk-alpine
+FROM ubuntu
 
 WORKDIR /lincheck
 
