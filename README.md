@@ -30,19 +30,15 @@ See how easy it is to write concurrent tests with Lincheck!
 
 Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](https://docs.docker.com/desktop/install/mac-install/), [Windows](https://docs.docker.com/desktop/install/windows-install/).
 
-2) Create a directory for the output.
-
-`mkdir -p report`
-
-3) Load the docker image.
+2) Load the docker image.
 
 `docker load -i lincheck.tar`
 
-4) Run the image and enter it via bash.
+3) Run the image and enter it via bash.
 
 `docker run -it -v ./report/:/report/ lincheck sh`
 
-5) To run the tests, please execute the following command in the main project directory (inside the docker image):
+4) To run the tests, please execute the following command in the main project directory (inside the docker image):
 
 `./gradlew build`
 
@@ -50,15 +46,15 @@ Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](
 The Lincheck purpose is to find bugs, so some tests detect bugs and fail, "failing" the build as well.
 After executing the command, which takes approximately 30-40 minutes, the report is in `lincheck/build/reports/tests/test/index.html`. 
 
-6) Copy the report outside the docker.
+5) Copy the report outside the docker.
 
 `cp -r ./build/reports/tests/test/. /report`
 
-7) Exit the docker image.
+6) Exit the docker image.
 
 `exit`
 
-8) Open the report in `./report/index.html` in any browser.
+7) Open the report in `./report/index.html` in any browser.
 
 > This is a standard test execution report by Gradle.
 > Press "Classes" to get a list of all (not only failed) tests.
