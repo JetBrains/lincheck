@@ -1,3 +1,4 @@
+@file:Suppress("UNUSED")
 /*
  * Lincheck
  *
@@ -10,22 +11,16 @@
 
 package org.jetbrains.kotlinx.lincheck.test.generator
 
-import junit.framework.Assert.assertTrue
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
-import org.jetbrains.kotlinx.lincheck.RandomProvider
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
+import junit.framework.Assert.*
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.*
 
 /**
  * This test checks that parameter generators random use different seeds than executions generator.
  * This test fails if seeds are equals.
- * [Corresponding bug description](http://example.com).
+ * [Corresponding bug description](https://github.com/Kotlin/kotlinx-lincheck/issues/120).
  */
 @Param(name = "key", gen = IntGen::class, conf = "0:1")
 class GeneratorSeedTest {
@@ -134,5 +129,28 @@ class StringParamGeneratorTest {
         // check size eventually increases
         assertTrue(generatesStringsLengths.groupBy { it }.size > 1)
     }
+
+}
+
+/**
+ * This test ensures that parameter generator dynamically expanding range
+ * will be shrunk to start size after each scenario run.
+ *
+ * [Corresponding issue description](https://github.com/Kotlin/kotlinx-lincheck/issues/179).
+ */
+class ParamGeneratorResetBetweenScenariosTest {
+
+    @Test
+    fun test() {
+        ModelCheckingOptions()
+            .threads(2)
+            .actorsPerThread(5)
+            .iterations(30)
+            .check(this::class)
+    }
+
+    @Operation
+    @Synchronized
+    fun operation(value: Int) = check(value in -10..10)
 
 }

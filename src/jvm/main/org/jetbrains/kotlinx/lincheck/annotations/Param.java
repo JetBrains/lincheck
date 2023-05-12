@@ -10,14 +10,15 @@
 
 package org.jetbrains.kotlinx.lincheck.annotations;
 
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import org.jetbrains.kotlinx.lincheck.DummyParameterGenerator;
+import org.jetbrains.kotlinx.lincheck.ParameterGenerator;
 
 /**
  * Use this annotation to specify parameter generators.
@@ -38,7 +39,7 @@ public @interface Param {
     /**
      * Specifies the {@link ParameterGenerator} class which should be used for this parameter.
      */
-    Class<? extends ParameterGenerator<?>> gen() default ParameterGenerator.Dummy.class;
+    Class<? extends ParameterGenerator<?>> gen() default DummyParameterGenerator.class;
 
     /**
      * Specifies the configuration for the {@link #gen() parameter generator}.
