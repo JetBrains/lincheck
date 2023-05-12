@@ -52,7 +52,7 @@ After executing the command, which takes approximately 30-40 minutes, the report
 
 6) Copy the report outside the docker.
 
-`cp -r ./build/reports/tests/test/ ./report`
+`cp -r ./build/reports/tests/test/ /report`
 
 7) Exit the docker image.
 
