@@ -60,6 +60,8 @@ internal fun StringBuilder.appendExceptionsStackTraces(exceptionsDescription: Ma
 
         appendln(exception::class.java.canonicalName)
         description.stackTrace.forEach { appendln("\tat $it") }
+
+        if (description.number < exceptionsDescription.size) appendln()
     }
 
     return this

@@ -265,7 +265,7 @@ private fun collectExceptionsDescriptions(executionResult: ExecutionResult): Exc
                 return InternalLincheckBugResult(exception)
             }
 
-            exceptionsDescription[exception] = ExceptionDescription(index, filteredStacktrace)
+            exceptionsDescription[exception] = ExceptionDescription(index + 1, filteredStacktrace)
         }
 
     return ExceptionsDescriptionsResult(exceptionsDescription)

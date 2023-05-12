@@ -17,32 +17,31 @@
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
-package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.*
+package org.jetbrains.kotlinx.lincheck_test.representation
+
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
+import org.jetbrains.kotlinx.lincheck_test.util.runModelCheckingTestAndCheckOutput
+import org.junit.Test
 
-/**
- * This test checks that transformed code supports reentrant synchronized locking.
- */
-@ModelCheckingCTest(iterations = 1)
-class NestedSynchronizedBlocksTest : VerifierState() {
-    private var counter = 0
+@Suppress("UNUSED")
+class ClocksWithExceptionsInOutputTest {
+
+    private var canEnterForbiddenSection = false
 
     @Operation
-    fun inc() = synchronized(this) {
-            synchronized(this) {
-                counter++
-            }
-        }
-
-    @Test
-    fun test() {
-        LinChecker.check(this::class.java)
+    fun operation1() {
+        canEnterForbiddenSection = true
+        canEnterForbiddenSection = false
     }
 
-    override fun extractState(): Any = counter
+    @Operation
+    fun operation2() = check(!canEnterForbiddenSection) { "Violating exception" }
+
+    @Test
+    fun `should add stackTrace to output`() = runModelCheckingTestAndCheckOutput("clocks_and_exceptions.txt") {
+        actorsPerThread(2)
+        minimizeFailedScenario(false)
+    }
+
 }

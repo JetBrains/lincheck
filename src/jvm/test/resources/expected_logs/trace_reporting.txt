@@ -1,0 +1,48 @@
+= Invalid execution results =
+Parallel part:
+| foo(): 1 | bar(): void |
+
+= The following interleaving leads to the error =
+Parallel part trace:
+|                      | bar()                                                                                                 |
+|                      |   a.READ: 0 at TraceReportingTest.bar(TraceReportingTest.kt:54)                                       |
+|                      |   a.WRITE(1) at TraceReportingTest.bar(TraceReportingTest.kt:54)                                      |
+|                      |   a.READ: 1 at TraceReportingTest.bar(TraceReportingTest.kt:54)                                       |
+|                      |   a.WRITE(2) at TraceReportingTest.bar(TraceReportingTest.kt:54)                                      |
+|                      |   uselessIncrements(2): false at TraceReportingTest.bar(TraceReportingTest.kt:56)                     |
+|                      |   intermediateMethod() at TraceReportingTest.bar(TraceReportingTest.kt:57)                            |
+|                      |     resetFlag() at TraceReportingTest.intermediateMethod(TraceReportingTest.kt:61)                    |
+|                      |       MONITORENTER at TraceReportingTest.resetFlag(TraceReportingTest.kt:0)                           |
+|                      |       canEnterForbiddenSection.WRITE(true) at TraceReportingTest.resetFlag(TraceReportingTest.kt:66)  |
+|                      |       switch                                                                                          |
+| foo(): 1             |                                                                                                       |
+|   thread is finished |                                                                                                       |
+|                      |       canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:67) |
+|                      |       MONITOREXIT at TraceReportingTest.resetFlag(TraceReportingTest.kt:68)                           |
+|                      |   result: void                                                                                        |
+|                      |   thread is finished                                                                                  |
+
+Detailed parallel part trace:
+|                                                                                           | bar()                                                                                                 |
+|                                                                                           |   a.READ: 0 at TraceReportingTest.bar(TraceReportingTest.kt:54)                                       |
+|                                                                                           |   a.WRITE(1) at TraceReportingTest.bar(TraceReportingTest.kt:54)                                      |
+|                                                                                           |   a.READ: 1 at TraceReportingTest.bar(TraceReportingTest.kt:54)                                       |
+|                                                                                           |   a.WRITE(2) at TraceReportingTest.bar(TraceReportingTest.kt:54)                                      |
+|                                                                                           |   uselessIncrements(2): false at TraceReportingTest.bar(TraceReportingTest.kt:56)                     |
+|                                                                                           |     b.READ: 0 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:72)                       |
+|                                                                                           |     b.WRITE(1) at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:72)                      |
+|                                                                                           |     b.READ: 1 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:72)                       |
+|                                                                                           |     b.WRITE(2) at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:72)                      |
+|                                                                                           |   intermediateMethod() at TraceReportingTest.bar(TraceReportingTest.kt:57)                            |
+|                                                                                           |     resetFlag() at TraceReportingTest.intermediateMethod(TraceReportingTest.kt:61)                    |
+|                                                                                           |       MONITORENTER at TraceReportingTest.resetFlag(TraceReportingTest.kt:0)                           |
+|                                                                                           |       canEnterForbiddenSection.WRITE(true) at TraceReportingTest.resetFlag(TraceReportingTest.kt:66)  |
+|                                                                                           |       switch                                                                                          |
+| foo()                                                                                     |                                                                                                       |
+|   canEnterForbiddenSection.READ: true at TraceReportingTest.foo(TraceReportingTest.kt:45) |                                                                                                       |
+|   result: 1                                                                               |                                                                                                       |
+|   thread is finished                                                                      |                                                                                                       |
+|                                                                                           |       canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:67) |
+|                                                                                           |       MONITOREXIT at TraceReportingTest.resetFlag(TraceReportingTest.kt:68)                           |
+|                                                                                           |   result: void                                                                                        |
+|                                                                                           |   thread is finished                                                                                  |
