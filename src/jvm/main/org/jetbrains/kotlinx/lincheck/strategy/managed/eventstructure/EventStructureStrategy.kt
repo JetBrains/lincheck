@@ -316,7 +316,13 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
     }
 
     override fun dumpMemory() {
-        for (location in (eventStructure.root.label as InitializationLabel).initializedMemoryLocations) {
+        val locations = mutableSetOf<MemoryLocation>()
+        for (event in eventStructure.currentExecution) {
+            if (event.label is MemoryAccessLabel) {
+                locations.add(event.label.location)
+            }
+        }
+        for (location in locations) {
             val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier().toVectorClock())
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
