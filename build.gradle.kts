@@ -121,7 +121,7 @@ infra {
     publishing {
         include(":")
 
-        libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
+        libraryRepoUrl = "https://github.com/JetBrains/lincheck"
         sonatype {}
     }
 }
