@@ -28,10 +28,6 @@ import kotlin.reflect.KClass
  */
 abstract class MemoryTracker {
 
-    abstract fun isInitialized(location: MemoryLocation): Boolean
-
-    abstract fun initialize(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
-
     abstract fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
 
     abstract fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue?
@@ -50,6 +46,8 @@ abstract class MemoryTracker {
 
 }
 
+typealias MemoryInitializer = (MemoryLocation) -> OpaqueValue?
+
 /**
  * Simple straightforward implementation of memory tracking.
  * Represents the shared memory as a map MemoryLocation -> Value.
@@ -59,12 +57,6 @@ abstract class MemoryTracker {
  */
 internal class PlainMemoryTracker : MemoryTracker() {
     private val memory = HashMap<MemoryLocation, OpaqueValue?>()
-
-    override fun isInitialized(location: MemoryLocation): Boolean =
-        location in memory
-
-    override fun initialize(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
-        memory.set(location, value)
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
         memory.set(location, value)

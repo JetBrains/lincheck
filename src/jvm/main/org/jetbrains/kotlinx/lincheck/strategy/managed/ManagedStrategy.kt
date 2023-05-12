@@ -115,6 +115,10 @@ abstract class ManagedStrategy(
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
+    protected val memoryInitializer: MemoryInitializer = { location ->
+        runUntracking(currentThreadNumber()) { location.read() }?.opaque()
+    }
+
     init {
         runner = createRunner()
         // The managed state should be initialized before еру test class transformation.
@@ -474,7 +478,6 @@ abstract class ManagedStrategy(
      * @param location the memory location identifier.
      */
     internal fun onSharedVariableRead(iThread: Int, location: MemoryLocation, kClass: KClass<*>): Any? {
-        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.readValue(iThread, location, kClass)?.unwrap()
     }
 
@@ -485,7 +488,6 @@ abstract class ManagedStrategy(
      * @param value the value to be written.
      */
     internal fun onSharedVariableWrite(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?) {
-        initializeSharedVariable(iThread, location, kClass)
         memoryTracker.writeValue(iThread, location, kClass, value?.opaque(kClass))
     }
 
@@ -498,7 +500,6 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onCompareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: Any?, desired: Any?): Boolean {
-        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.compareAndSet(iThread, location, kClass, expected?.opaque(kClass), desired?.opaque(kClass))
     }
 
@@ -510,7 +511,6 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onAddAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
-        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.addAndGet(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
@@ -522,7 +522,6 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onGetAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
-        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.getAndAdd(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
@@ -534,15 +533,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onGetAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?): Any? {
-        initializeSharedVariable(iThread, location, kClass)
         return memoryTracker.getAndSet(iThread, location, kClass, value?.opaque(kClass))?.unwrap()
-    }
-
-    private fun initializeSharedVariable(iThread: Int, location: MemoryLocation, kClass: KClass<*>) {
-        if (!memoryTracker.isInitialized(location)) {
-            val initValue = runUntracking(iThread) { location.read() }
-            memoryTracker.initialize(iThread, location, kClass, initValue?.opaque())
-        }
     }
 
     /**

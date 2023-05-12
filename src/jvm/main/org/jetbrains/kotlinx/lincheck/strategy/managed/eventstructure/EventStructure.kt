@@ -28,6 +28,7 @@ class EventStructure(
     nThreads: Int,
     val checker: ConsistencyChecker = idleConsistencyChecker,
     val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
+    val memoryInitializer: MemoryInitializer,
     val lockAwareScheduling: Boolean = true,
 ) {
     val mainThreadId = nThreads
@@ -59,29 +60,6 @@ class EventStructure(
     private var playedFrontier: ExecutionFrontier = ExecutionFrontier()
 
     private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
-
-    // TODO: this pattern is covered by explicit backing fields KEEP
-    //   https://github.com/Kotlin/KEEP/issues/278
-    private val _initializationMap = mutableMapOf<Any, Event>()
-    /**
-     * Mapping from an index to initialization event for this index.
-     */
-    val initializationMap: Map<Any, Event>
-        get() = _initializationMap
-
-    /**
-     * Mapping from a memory location to initialization write for this location.
-     */
-    val initializationWrites: Map<MemoryLocation, Event>
-        get() = initializationMap.mapNotNull { (index, event) ->
-            if (index is MemoryLocation) (index to event) else null
-        }.toMap()
-
-    val initializedMemoryLocations: Collection<MemoryLocation>
-        get() = initializationMap.keys.mapNotNull { index ->
-            if (index is MemoryLocation) index else null
-        }
-
 
     private val currentRemapping: Remapping = Remapping()
 
@@ -174,7 +152,6 @@ class EventStructure(
         pinnedEvents = event.pinnedEvents.copy().ensure {
             it.mapping.values.all { pinned -> pinned in currentExecution }
         }
-        _initializationMap.clear()
         currentRemapping.reset()
         danglingEvents.clear()
         delayedConsistencyCheckBuffer.clear()
@@ -363,58 +340,12 @@ class EventStructure(
             event.parent in danglingEvents) {
             unmarkBlockedDanglingRequest(event.parent!!)
         }
-        // take an opportunity to treat event performed in the main thread as the initialization event
-        if (event.threadId == mainThreadId &&
-            event.label.kind == LabelKind.Send &&
-            event.label.index != null &&
-            event.label.index !in initializationMap) {
-            _initializationMap[event.label.index!!] = event
-        }
         if (synchronize && !inReplayPhase()) {
             addSynchronizedEvents(event)
         }
         // TODO: set suddenInvocationResult instead
         if (detectedInconsistency == null) {
             detectedInconsistency = checkConsistencyIncrementally(event, isReplayedEvent && event != currentExplorationRoot)
-        }
-    }
-
-    private fun isInitialized(label: EventLabel): Boolean =
-        label.index?.let { it in initializationMap } ?: true
-
-    private fun addInitializationEvent(iThread: Int, label: EventLabel) {
-        if (label.index == null || label.index in initializationMap)
-            return
-        val initEvent = if (inReplayPhase(iThread)) {
-            val atomicEvent = getNextHyperEventToReplay(iThread)
-            val index = atomicEvent.events[0].label.index
-            check(index != null)
-            val initEvent = currentExecution[initThreadId]!!
-                .filter { it.label.index == index }
-                .ensure { it.size <= 1 }
-                .firstOrNull()
-                ?: currentExecution[mainThreadId]
-                ?.filter { it.label.index == index }
-                ?.ensure { it.size <= 1 }
-                ?.firstOrNull()
-                ?: atomicEvent.dependencies
-                .filter { it.threadId == initThreadId }
-                .ensure { it.size <= 1 }
-                .firstOrNull()
-                ?: root
-            check(initEvent in playedFrontier)
-            initEvent.label.replay(label, currentRemapping)
-            initEvent
-        } else {
-            val parent = currentExecution.lastEvent(initThreadId)
-            addEvent(initThreadId, label, parent, dependencies = listOf())!!.also { initEvent ->
-                addEventToCurrentExecution(initEvent, visit = true)
-            }
-        }
-        _initializationMap.put(label.index!!, initEvent).also {
-            check(it == null) {
-                "Index ${label.index} cannot be initialized by event $initEvent because it is already initialized by event $it!"
-            }
         }
     }
 
@@ -523,7 +454,7 @@ class EventStructure(
         // we do not mark root event as visited purposefully;
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
-        val label = InitializationLabel()
+        val label = InitializationLabel(memoryInitializer)
         return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also {
             addEventToCurrentExecution(it, visit = false)
         }
@@ -531,7 +462,6 @@ class EventStructure(
 
     private fun addSendEvent(iThread: Int, label: EventLabel): Event {
         require(label.isSend)
-        check(isInitialized(label))
         tryReplayEvent(iThread)?.let { event ->
             // TODO: also check custom event/label specific rules when replaying,
             //   e.g. upon replaying write-exclusive check its location equal to
@@ -542,13 +472,6 @@ class EventStructure(
         }
         val parent = playedFrontier[iThread]
         val dependencies = mutableListOf<Event>()
-        // make sure the created send event depends on the initialization event
-        if (label.index != null) {
-            val initEvent = initializationMap[label.index]!!
-            if (parent == null || !causalityOrder.lessOrEqual(initEvent, parent)) {
-                dependencies.add(initEvent)
-            }
-        }
         return addEvent(iThread, label, parent, dependencies)!!.also { event ->
             addEventToCurrentExecution(event, synchronize = true)
         }
@@ -556,7 +479,6 @@ class EventStructure(
 
     private fun addRequestEvent(iThread: Int, label: EventLabel): Event {
         require(label.isRequest)
-        check(isInitialized(label))
         tryReplayEvent(iThread)?.let { event ->
             event.label.replay(label, currentRemapping)
             addEventToCurrentExecution(event)
@@ -570,7 +492,6 @@ class EventStructure(
 
     private fun addResponseEvents(requestEvent: Event): Pair<Event?, List<Event>> {
         require(requestEvent.label.isRequest)
-        check(isInitialized(requestEvent.label))
         tryReplayEvent(requestEvent.threadId)?.let { event ->
             check(event.label.isResponse)
             check(event.parent == requestEvent)
@@ -705,21 +626,6 @@ class EventStructure(
         checkNotNull(responseEvent)
         check(responseEvents.size == 1)
         return responseEvent
-    }
-
-    fun addInitialWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
-        check(location !in initializationMap)
-        if (value == kClass.defaultValue()) {
-            _initializationMap[location] = root
-            return
-        }
-        val label = WriteAccessLabel(
-            location_ = location,
-            value_ = value,
-            kClass = kClass,
-            isExclusive = false,
-        )
-        addInitializationEvent(iThread, label)
     }
 
     fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,

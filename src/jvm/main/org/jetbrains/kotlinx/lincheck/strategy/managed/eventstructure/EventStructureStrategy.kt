@@ -55,6 +55,7 @@ class EventStructureStrategy(
             nThreads,
             sequentialConsistencyChecker,
             atomicityChecker,
+            memoryInitializer,
         )
 
     // Tracker of shared memory accesses.
@@ -265,13 +266,6 @@ class EventStructureStrategy(
 
 private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
 
-    override fun isInitialized(location: MemoryLocation): Boolean =
-        location in eventStructure.initializationMap
-
-    override fun initialize(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
-        eventStructure.addInitialWriteEvent(iThread, location, kClass, value)
-    }
-
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
         eventStructure.addWriteEvent(iThread, location, kClass, value)
     }
@@ -322,7 +316,7 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
     }
 
     override fun dumpMemory() {
-        for (location in eventStructure.initializedMemoryLocations) {
+        for (location in (eventStructure.root.label as InitializationLabel).initializedMemoryLocations) {
             val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier().toVectorClock())
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue

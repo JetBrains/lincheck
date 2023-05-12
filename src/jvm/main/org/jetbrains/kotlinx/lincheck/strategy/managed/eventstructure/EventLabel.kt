@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.implies
+import java.util.WeakHashMap
 import kotlin.reflect.KClass
 
 /**
@@ -315,13 +316,29 @@ class EmptyLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
  * Init \+ Read^{req}(x) = Read^{rsp}(x, 0)
  * ```
  */
-class InitializationLabel : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
+class InitializationLabel(
+    val memoryInitializer: MemoryInitializer
+) : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
     // TODO: can barrier-synchronizing events also utilize InitializationLabel?
+
+    private val initValues = WeakHashMap<MemoryLocation, OpaqueValue>()
+
+    val initializedMemoryLocations: Set<MemoryLocation> =
+        initValues.keys
+
+    fun initialValue(location: MemoryLocation): OpaqueValue? =
+        initValues
+            .computeIfAbsent(location) { memoryInitializer(it) ?: NULL }
+            .takeIf { it != NULL }
 
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is InitializationLabel) null else label.synchronize(this)
 
     override fun toString(): String = "Init"
+
+    companion object {
+        private val NULL : OpaqueValue = Any().opaque()
+    }
 
 }
 
@@ -673,7 +690,7 @@ data class ReadAccessLabel(
             completeRequest(label.value)
 
         (isRequest && label is InitializationLabel) ->
-            completeRequest(OpaqueValue.default(kClass))
+            completeRequest(label.initialValue(location))
 
         else -> super.synchronize(label)
     }
@@ -707,7 +724,7 @@ data class ReadAccessLabel(
         -> true
 
         label is InitializationLabel &&
-            value == OpaqueValue.default(kClass)
+            value == label.initialValue(location)
         -> true
 
         else -> false
