@@ -70,7 +70,7 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     // Tracker of shared memory accesses.
-    override var memoryTracker: MemoryTracker = PlainMemoryTracker()
+    override var memoryTracker: MemoryTracker = PlainMemoryTracker(memoryInitializer)
     // Tracker of monitors operations.
     override var monitorTracker: MonitorTracker = MapMonitorTracker(nThreads)
     // Tracker of thread parking.

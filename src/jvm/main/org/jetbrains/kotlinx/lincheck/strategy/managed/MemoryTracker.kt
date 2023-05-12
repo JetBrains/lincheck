@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import java.util.HashMap
+import java.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -55,14 +55,18 @@ typealias MemoryInitializer = (MemoryLocation) -> OpaqueValue?
  * TODO: do not use this class for interleaving-based model checking?.
  * TODO: add dynamic type-checks (via kClass)
  */
-internal class PlainMemoryTracker : MemoryTracker() {
-    private val memory = HashMap<MemoryLocation, OpaqueValue?>()
+internal class PlainMemoryTracker(
+    val memoryInitializer: MemoryInitializer
+) : MemoryTracker() {
+    private val memory = HashMap<MemoryLocation, OpaqueValue>()
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
-        memory.set(location, value)
+        memory.set(location, value ?: NULL)
 
     override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? =
-        memory.getOrElse(location) { OpaqueValue.default(kClass) }
+        memory
+            .computeIfAbsent(location) { memoryInitializer(it) ?: NULL }
+            .takeIf { it != NULL }
 
     override fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
         if (expected == readValue(iThread, location, kClass)) {
@@ -92,12 +96,12 @@ internal class PlainMemoryTracker : MemoryTracker() {
 
     override fun dumpMemory() {
         for ((location, value) in memory.entries) {
-            location.write(value?.unwrap())
+            location.write(value.takeIf { it != NULL }?.unwrap())
         }
     }
 
     fun copy(): PlainMemoryTracker =
-        PlainMemoryTracker().also { it.memory += memory }
+        PlainMemoryTracker(memoryInitializer).also { it.memory += memory }
 
     override fun equals(other: Any?): Boolean {
         return (other is PlainMemoryTracker) && (memory == other.memory)
@@ -105,5 +109,9 @@ internal class PlainMemoryTracker : MemoryTracker() {
 
     override fun hashCode(): Int {
         return memory.hashCode()
+    }
+
+    companion object {
+        private val NULL : OpaqueValue = Any().opaque()
     }
 }
