@@ -18,6 +18,7 @@ class MutexTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
         actorsBefore(0)
         actorsAfter(0)
+        minimizeFailedScenario(false)
         if (this is ModelCheckingOptions)
             checkObstructionFreedom()
     }
