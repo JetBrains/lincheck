@@ -16,23 +16,49 @@ In addition to the paper, you may find interesting the following resources:
 
 ## Artifact structure
 
-This Gradle/Kotlin project contains a collection of Lincheck tests, including those that discover new bugs and those that check correct data structures.
+This artifact contains a docker image with Gradle/Kotlin project, which is a collection of Lincheck tests, including those that discover new bugs and those that check correct data structures.
 
-In the [src](./src) directory, 
+In the ./src directory inside the docker image, 
 you can find implementation of the data structures from the academic literature, in which Lincheck has discovered previously unknown bugs. 
 
-The [test](./test) directory contains the main part of this artifact — the tests listed in Table 2 in the paper. 
+The ./test directory inside the docker image contains the main part of this artifact — the tests listed in Table 2 in the paper. 
 See how easy it is to write concurrent tests with Lincheck!
 
 ## How to run the tests
 
-To run the tests, please execute the following command in the main project directory:
+1) Install docker using the instruction from the official site.
 
-* `./gradlew build` on Linux or macOS
-* `gradlew build` on Windows
+Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](https://docs.docker.com/desktop/install/mac-install/), [Windows](https://docs.docker.com/desktop/install/windows-install/).
+
+2) Create a directory for the output.
+
+`mkdir -p report`
+
+3) Load the docker image.
+
+`docker load -i lincheck.tar`
+
+4) Run the image and enter it via bash.
+
+`docker run -it -v ./report/:/report/ lincheck sh`
+
+5) To run the tests, please execute the following command in the main project directory (inside the docker image):
+
+`./gradlew build`
+
 
 The Lincheck purpose is to find bugs, so some tests detect bugs and fail, "failing" the build as well.
-After executing the command, which takes approximately 20-40 minutes, find the report in `./build/reports/tests/test/index.html` and open it in a browser. 
+After executing the command, which takes approximately 30-40 minutes, the report is in `lincheck/build/reports/tests/test/index.html`. 
+
+6) Copy the report outside the docker.
+
+`cp -r ./build/reports/tests/test/ ./report`
+
+7) Exit the docker image.
+
+`exit`
+
+8) Open the report in `./report/index.html` in any browser.
 
 > This is a standard test execution report by Gradle.
 > Press "Classes" to get a list of all (not only failed) tests.
