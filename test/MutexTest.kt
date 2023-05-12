@@ -6,17 +6,17 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 class MutexTest : AbstractLincheckTest() {
     private val mutex = Mutex()
 
-    @Operation(promptCancellation = true)
-    suspend fun lock() = mutex.lock()
-
     @Operation(handleExceptionsAsResult = [IllegalStateException::class])
     fun unlock() = mutex.unlock()
 
     @Operation
     fun tryLock() = mutex.tryLock()
 
+    @Operation(promptCancellation = true)
+    suspend fun lock() = mutex.lock()
+
     override fun <O : Options<O, *>> O.customize() {
-        actorsBefore(0)
+        actorsBefore(1)
         actorsAfter(0)
         minimizeFailedScenario(false)
         if (this is ModelCheckingOptions)
