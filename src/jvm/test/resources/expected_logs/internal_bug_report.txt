@@ -1,0 +1,11 @@
+It seems you've found a bug in Lincheck.
+Please report it to JetBrains.
+
+Exception stacktrace: 
+java.lang.IllegalStateException: Internal bug
+	at org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException(InternalLincheckExceptionEmulator.kt:29)
+	at org.jetbrains.kotlinx.lincheck_test.representation.InternalLincheckBugTest.operation2(InternalLincheckBugTest.kt:41)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution79.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-4(FixedActiveThreadsExecutor.kt:173)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+

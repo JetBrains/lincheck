@@ -31,9 +31,9 @@ internal fun StringBuilder.appendTrace(
     scenario: ExecutionScenario,
     results: ExecutionResult?,
     trace: Trace,
-    exceptionsNumeration: Map<Throwable, Int>
+    exceptionsDescription: Map<Throwable, ExceptionDescription>
 ) {
-    val startTraceGraphNode = constructTraceGraph(scenario, results, trace, exceptionsNumeration)
+    val startTraceGraphNode = constructTraceGraph(scenario, results, trace, exceptionsDescription)
 
     appendln(PARALLEL_PART_TITLE)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
@@ -41,9 +41,9 @@ internal fun StringBuilder.appendTrace(
     appendln()
     appendln()
 
-    if (exceptionsNumeration.isNotEmpty()) {
+    if (exceptionsDescription.isNotEmpty()) {
         appendln(EXCEPTIONS_TRACES_TITLE)
-        appendExceptionsStackTraces(exceptionsNumeration)
+        appendExceptionsStackTraces(exceptionsDescription)
         appendln()
     }
 
@@ -54,12 +54,12 @@ internal fun StringBuilder.appendTrace(
     objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
 
-internal fun StringBuilder.appendExceptionsStackTraces(exceptionsNumeration: Map<Throwable, Int>): StringBuilder {
-    exceptionsNumeration.entries.sortedBy { it.value }.forEach { (exception, index) ->
-        append("_${index}_: ")
+internal fun StringBuilder.appendExceptionsStackTraces(exceptionsDescription: Map<Throwable, ExceptionDescription>): StringBuilder {
+    exceptionsDescription.entries.sortedBy { (_, description) -> description.number }.forEach { (exception, description) ->
+        append("#${description.number}: ")
 
         appendln(exception::class.java.canonicalName)
-        stackTraceRepresentation(exception.stackTrace).forEach { appendln("\tat $it") }
+        description.stackTrace.forEach { appendln("\tat $it") }
     }
 
     return this
@@ -108,7 +108,7 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
  * `next` edges form a single-directed list in which the order of events is the same as in [trace].
  * `internalEvents` edges form a directed forest.
  */
-private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionsNumeration: Map<Throwable, Int>): TraceNode? {
+private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionsDescription: Map<Throwable, ExceptionDescription>): TraceNode? {
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.threads) { iThread ->
@@ -138,7 +138,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                     last = lastNode,
                     callDepth = 0,
                     actor = scenario.parallelExecution[iThread][nextActor],
-                    resultRepresentation = result?.let { resultRepresentation(result, exceptionsNumeration) }
+                    resultRepresentation = result?.let { resultRepresentation(result, exceptionsDescription) }
                 )
             }
             actorNodes[iThread][nextActor] = actorNode
@@ -184,7 +184,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                 val lastEvent = it.lastInternalEvent
                 val lastEventNext = lastEvent.next
                 val result = results[iThread, actorId]
-                val resultRepresentation = result?.let { resultRepresentation(result, exceptionsNumeration) }
+                val resultRepresentation = result?.let { resultRepresentation(result, exceptionsDescription) }
                 val resultNode = ActorResultNode(iThread, lastEvent, it.callDepth + 1, resultRepresentation)
                 it.addInternalEvent(resultNode)
                 resultNode.next = lastEventNext

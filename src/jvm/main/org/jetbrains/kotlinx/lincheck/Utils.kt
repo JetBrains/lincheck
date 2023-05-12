@@ -344,7 +344,7 @@ internal val String.internalClassName get() = this.replace('.', '/')
 @JvmSynthetic
 @Suppress("UNUSED")
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
-    return exception !is InternalLincheckException &&
+    return exception !is InternalLincheckTestException &&
             exception !is ForcibleExecutionFinishException &&
             !isIllegalAccessOfUnsafeDueToJavaVersion(exception)
 }
@@ -370,14 +370,15 @@ internal const val ADD_OPENS_MESSAGE =
  * Utility exception for test purposes.
  * When this exception is thrown by an operation, it will halt testing with [UnexpectedExceptionInvocationResult].
  */
-internal object InternalLincheckException : Exception()
+internal object InternalLincheckTestException : Exception()
 
 internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): List<String> {
-    return stackTrace.map {
-        StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
-    }.map { it.toString() }.filter { line ->
+    return transformStackTraceBackFromRemapped(stackTrace).map { it.toString() }.filter { line ->
         "org.jetbrains.kotlinx.lincheck.strategy" !in line
                 && "org.jetbrains.kotlinx.lincheck.runner" !in line
                 && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
     }
+}
+internal fun transformStackTraceBackFromRemapped(stackTrace: Array<StackTraceElement>) = stackTrace.map {
+    StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
 }
