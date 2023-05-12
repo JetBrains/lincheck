@@ -1,4 +1,4 @@
-# kotlinx-lincheck
+# Lincheck
 
 [![Kotlin Beta](https://kotl.in/badges/beta.svg)](https://kotlinlang.org/docs/components-stability.html)
 [![JetBrains official project](https://jb.gg/badges/official.svg)](https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub)
@@ -12,6 +12,17 @@ by just declaring all the data structure operations to examine. After that, Linc
 generates a set of random concurrent scenarios,
 examines them using either stress-testing or bounded model checking, and
 verifies that the results of each invocation satisfy the required correctness property (linearizability by default).
+
+## 📣 Package Renaming in Lincheck 2.18
+As Lincheck is not a Kotlin-specific framework, the repository has been recently moved from "Kotlin" GitHub organization to "JetBrains."
+To complete the transition, we have also changed the package of Lincheck classes from `org.jetbrains.kotlinx.lincheck` to `org.jetbrains.lincheck`.
+
+As a result, when upgrading Lincheck to version 2.18 or newer, you may encounter compile errors. However, resolving them is straightforward:
+
+1. In your project, locate all usages of the package `org.jetbrains.kotlinx.lincheck`.
+2. Replace all instances of `org.jetbrains.kotlinx.lincheck` with `org.jetbrains.lincheck`.
+
+Following these steps will successfully fix any compilation errors arising from the package renaming in Lincheck.
 
 ## Documentation and Presentations
 
@@ -32,7 +43,7 @@ repositories {
 
 dependencies {
    // Lincheck dependency
-   testImplementation("org.jetbrains.kotlinx:lincheck:2.17")
+   testImplementation("org.jetbrains.lincheck:lincheck:2.17")
 }
 ```
 
@@ -66,9 +77,9 @@ tasks.withType<Test> {
 The following Lincheck test easily finds a bug in the standard Java's `ConcurrentLinkedDeque`:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.annotations.*
+import org.jetbrains.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.*
 

@@ -42,10 +42,10 @@ For this, configure the generator for a `key: Int` parameter:
    
    ```kotlin
    import java.util.concurrent.*
-   import org.jetbrains.kotlinx.lincheck.annotations.*
-   import org.jetbrains.kotlinx.lincheck.check
-   import org.jetbrains.kotlinx.lincheck.paramgen.*
-   import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+   import org.jetbrains.lincheck.annotations.*
+   import org.jetbrains.lincheck.check
+   import org.jetbrains.lincheck.paramgen.*
+   import org.jetbrains.lincheck.strategy.stress.*
    import org.junit.*
    
    class MultiMap<K, V> {
@@ -117,7 +117,7 @@ For this, configure the generator for a `key: Int` parameter:
 Due to the small range of keys, Lincheck quickly reveals the race: when two values are being added concurrently by the same key, 
 one of the values may be overwritten and lost.
 
-> [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
+> [Get the full code](https://github.com/JetBrains/lincheck/blob/move-to-jb-organization/src/jvm/test/org/jetbrains/lincheck/test/guide/MultiMapTest.kt).
 >
 {type="note"}
 

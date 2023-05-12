@@ -28,9 +28,9 @@ Create a concurrent stress test for the `Counter`, following these steps:
 The resulting code will look like this:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.lincheck.annotations.*
+import org.jetbrains.lincheck.check
+import org.jetbrains.lincheck.strategy.stress.*
 import org.junit.*
 
 class Counter {
@@ -81,9 +81,9 @@ To change the stress testing strategy to model checking, replace `StressOptions(
 test:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.lincheck.annotations.*
+import org.jetbrains.lincheck.check
+import org.jetbrains.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
 class Counter {
@@ -157,10 +157,10 @@ To configure the testing strategy, set options in the `<TestingMode>Options` cla
 1. Set the options for scenario generation and execution for the `CounterTest`:
 
     ```kotlin
-    import org.jetbrains.kotlinx.lincheck.annotations.*
-    import org.jetbrains.kotlinx.lincheck.check
-    import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-    import org.jetbrains.kotlinx.lincheck.verifier.*
+    import org.jetbrains.lincheck.annotations.*
+    import org.jetbrains.lincheck.check
+    import org.jetbrains.lincheck.strategy.stress.*
+    import org.jetbrains.lincheck.verifier.*
     import org.junit.*
     
     class Counter {
@@ -240,9 +240,9 @@ The method should be thread-safe, non-blocking, and never modify the data struct
 states in the trace, add the `stateRepresentation()` function to the `CounterTest`:
 
     ```kotlin
-    import org.jetbrains.kotlinx.lincheck.annotations.*
-    import org.jetbrains.kotlinx.lincheck.check
-    import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+    import org.jetbrains.lincheck.annotations.*
+    import org.jetbrains.lincheck.check
+    import org.jetbrains.lincheck.strategy.managed.modelchecking.*
     import org.junit.Test
     
     class Counter {
@@ -298,8 +298,8 @@ printed at the switch points that modify the counter state (they start with `STA
 In case of stress testing, Lincheck prints the state representation right before and after the parallel part of the scenario,
 as well as at the end.
 
-> * Get the [full code of these examples](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/CounterTest.kt)
-> * See more [test examples](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/StackTest.kt)
+> * Get the [full code of these examples](https://github.com/JetBrains/lincheck/blob/move-to-jb-organization/src/jvm/test/org/jetbrains/lincheck/test/guide/CounterTest.kt)
+> * See more [test examples](https://github.com/JetBrains/lincheck/blob/move-to-jb-organization/src/jvm/test/org/jetbrains/lincheck/test/guide/StackTest.kt)
 >
 {type="note"}
 
