@@ -194,8 +194,6 @@ private data class SequentialConsistencyReplayer(
 
 }
 
-private typealias ExecutionCounter = IntArray
-
 private data class State(
     val counter: ExecutionCounter,
     val replayer: SequentialConsistencyReplayer,

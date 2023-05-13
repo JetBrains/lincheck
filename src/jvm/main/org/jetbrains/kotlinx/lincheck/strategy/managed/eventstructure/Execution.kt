@@ -92,9 +92,6 @@ open class Execution(
     override fun containsAll(elements: Collection<Event>): Boolean =
         elements.all { contains(it) }
 
-    override fun iterator(): Iterator<Event> =
-        threadsEvents.values.asSequence().flatten().iterator()
-
     override fun equals(other: Any?): Boolean {
         if (other !is Execution) return false
         return threadsEvents == other.threadsEvents
@@ -132,6 +129,38 @@ open class Execution(
         dependencies.all { e1 -> other.dependencies.any { e2 ->
             e1 equivalent e2
         }}
+
+    override fun iterator() = object : Iterator<Event> {
+
+        private val counter = ExecutionCounter(maxThreadId) { 0 }
+        private var nextEvent: Event? = null
+
+        init {
+            setNextEvent()
+        }
+
+        override fun hasNext(): Boolean =
+            nextEvent != null
+
+        override fun next(): Event =
+            nextEvent!!.also { setNextEvent() }
+
+        private fun setNextEvent() {
+            if (nextEvent != null) {
+                counter[nextEvent!!.threadId]++
+            }
+            nextEvent = null
+            for (thread in counter.indices) {
+                val pos = counter[thread]
+                if (pos >= (this@Execution[thread]?.size ?: 0))
+                    continue
+                val event = this@Execution[thread, pos]!!
+                if (nextEvent == null || event.id < nextEvent!!.id)
+                    nextEvent = event
+            }
+        }
+
+    }
 
     fun buildIndexer() = object : Indexer<Event> {
 
@@ -194,6 +223,8 @@ class MutableExecution(
     }
 
 }
+
+typealias ExecutionCounter = IntArray
 
 abstract class ExecutionRelation(
     val execution: Execution,
