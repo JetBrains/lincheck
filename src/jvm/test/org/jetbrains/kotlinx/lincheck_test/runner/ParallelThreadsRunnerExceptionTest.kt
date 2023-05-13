@@ -3,19 +3,9 @@
  *
  * Copyright (C) 2019 - 2023 JetBrains s.r.o.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- *
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.jetbrains.kotlinx.lincheck_test.runner
 
@@ -54,23 +44,22 @@ class SuspendResumeScenarios {
             continuation.set(cont)
             COROUTINE_SUSPENDED
         }
-        if (res < 100) throw TestException
+        if (res < 100) throw TestException()
         return res + 100
     }
 
     @Throws(TestException::class)
     suspend fun suspendAndThrowException(): Int {
         val res = suspendCoroutineUninterceptedOrReturn<Int> { cont ->
-            throw TestException
+            throw TestException()
         }
-        if (res < 100) throw TestException
+        if (res < 100) throw TestException()
         return res + 100
     }
 
     fun resumeWithException() {
-        while (continuation.get() == null) {
-        }
-        continuation.get()!!.resumeWithException(TestException)
+        while (continuation.get() == null) {}
+        continuation.get()!!.resumeWithException(TestException())
     }
 
     fun resumeSuccessfully(value: Int) {
@@ -79,7 +68,7 @@ class SuspendResumeScenarios {
         continuation.get()!!.resumeWith(kotlin.Result.success(value))
     }
 
-    object TestException : Throwable()
+    class TestException : Throwable()
 }
 
 /**
@@ -101,8 +90,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susWithoutException),
-                        ExceptionResult.create(SuspendResumeScenarios.TestException, wasSuspended = true)
+                        actor(susWithoutException), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -127,8 +115,7 @@ class ParallelThreadsRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susResumeThrow),
-                        ExceptionResult.create(SuspendResumeScenarios.TestException, wasSuspended = true)
+                        actor(susResumeThrow), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java, wasSuspended = true)
                     )
                 }
                 thread {
@@ -151,7 +138,7 @@ class ParallelThreadsRunnerExceptionTest {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
-                    operation(actor(susThrow), ExceptionResult.create(SuspendResumeScenarios.TestException))
+                    operation(actor(susThrow), ExceptionResult.create(SuspendResumeScenarios.TestException::class.java))
                 }
             }
         }

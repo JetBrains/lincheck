@@ -1,28 +1,14 @@
-package org.jetbrains.kotlinx.lincheck.annotations;
-
 /*
- * #%L
  * Lincheck
- * %%
- * Copyright (C) 2015 - 2018 Devexperts, LLC
- * %%
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- * 
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>.
- * #L%
+ *
+ * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
+package org.jetbrains.kotlinx.lincheck.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -30,6 +16,9 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import org.jetbrains.kotlinx.lincheck.DummyParameterGenerator;
+import org.jetbrains.kotlinx.lincheck.ParameterGenerator;
 
 /**
  * Use this annotation to specify parameter generators.
@@ -50,7 +39,7 @@ public @interface Param {
     /**
      * Specifies the {@link ParameterGenerator} class which should be used for this parameter.
      */
-    Class<? extends ParameterGenerator<?>> gen() default ParameterGenerator.Dummy.class;
+    Class<? extends ParameterGenerator<?>> gen() default DummyParameterGenerator.class;
 
     /**
      * Specifies the configuration for the {@link #gen() parameter generator}.

@@ -3,30 +3,19 @@
  *
  * Copyright (C) 2019 - 2023 JetBrains s.r.o.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- *
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
-import org.junit.Assert.assertFalse
-import org.junit.Test
-import java.io.Serializable
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.test.*
+import org.junit.*
+import org.junit.Assert.*
+import java.io.*
 import java.util.concurrent.atomic.*
 
 class SerializableResultTest : AbstractLincheckTest() {
@@ -127,9 +116,7 @@ class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResults
 }
 
 class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<ValueHolder> {
-    override fun generate(): ValueHolder {
-        return listOf(ValueHolder(1), ValueHolder(2)).random()
-    }
+    override fun generate() = listOf(ValueHolder(1), ValueHolder(2)).random()
 }
 
 @Param(name = "key", gen = JavaUtilGen::class)

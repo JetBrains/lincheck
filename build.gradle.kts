@@ -94,7 +94,8 @@ tasks {
         maxParallelForks = 1
         jvmArgs(
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED"
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
+            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
         )
     }
 
@@ -127,11 +128,11 @@ infra {
 
 mavenPublicationsPom {
     description.set("Lincheck - Framework for testing concurrent data structures")
-    val licenceName = "GNU Lesser General Public License v3.0"
+    val licenceName = "Mozilla Public License Version 2.0"
     licenses {
         license {
             name.set(licenceName)
-            url.set("https://www.gnu.org/licenses/lgpl-3.0.en.html")
+            url.set("https://www.mozilla.org/en-US/MPL/2.0/")
             distribution.set("repo")
         }
     }

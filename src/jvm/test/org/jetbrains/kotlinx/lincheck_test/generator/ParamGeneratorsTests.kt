@@ -1,21 +1,12 @@
+@file:Suppress("UNUSED")
 /*
  * Lincheck
  *
  * Copyright (C) 2019 - 2023 JetBrains s.r.o.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- *
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 package org.jetbrains.kotlinx.lincheck_test.generator
@@ -32,7 +23,7 @@ import org.junit.Test
 /**
  * This test checks that parameter generators random use different seeds than executions generator.
  * This test fails if seeds are equals.
- * [Corresponding bug description](http://example.com).
+ * [Corresponding bug description](https://github.com/Kotlin/kotlinx-lincheck/issues/120).
  */
 @Param(name = "key", gen = IntGen::class, conf = "0:1")
 class GeneratorSeedTest {
@@ -139,5 +130,28 @@ class StringParamGeneratorTest {
         // check size eventually increases
         assertTrue(generatesStringsLengths.groupBy { it }.size > 1)
     }
+
+}
+
+/**
+ * This test ensures that parameter generator dynamically expanding range
+ * will be shrunk to start size after each scenario run.
+ *
+ * [Corresponding issue description](https://github.com/Kotlin/kotlinx-lincheck/issues/179).
+ */
+class ParamGeneratorResetBetweenScenariosTest {
+
+    @Test
+    fun test() {
+        ModelCheckingOptions()
+            .threads(2)
+            .actorsPerThread(5)
+            .iterations(30)
+            .check(this::class)
+    }
+
+    @Operation
+    @Synchronized
+    fun operation(value: Int) = check(value in -10..10)
 
 }
