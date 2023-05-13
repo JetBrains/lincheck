@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.junit.Assert.*
-import java.io.File
 
 /**
  * Runs lincheck test in model checking mode.

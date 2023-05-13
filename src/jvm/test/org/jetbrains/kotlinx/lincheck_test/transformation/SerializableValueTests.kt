@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.test.*
+import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.junit.*
 import org.junit.Assert.*
 import java.io.*
