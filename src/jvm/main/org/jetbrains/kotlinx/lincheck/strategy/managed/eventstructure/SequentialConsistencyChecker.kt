@@ -201,20 +201,10 @@ private data class State(
     val replayer: SequentialConsistencyReplayer,
 ) {
     companion object {
-        fun initial(execution: Execution): State {
-            // TODO: refactor!!!
-            val initThreadId = execution.maxThreadId - 1
-            var replayer = SequentialConsistencyReplayer(execution.maxThreadId)
-            for (initEvent in execution[initThreadId]!!) {
-                replayer = replayer.replay(initEvent)!!
-            }
-            return State(
-                counter = IntArray(execution.maxThreadId),
-                replayer = replayer,
-            ).apply {
-                counter[initThreadId] = execution[initThreadId]!!.size
-            }
-        }
+        fun initial(execution: Execution) = State(
+            counter = IntArray(execution.maxThreadId),
+            replayer = SequentialConsistencyReplayer(execution.maxThreadId),
+        )
     }
 
     override fun equals(other: Any?): Boolean {
