@@ -21,9 +21,7 @@ For example, here is the test to check correctness of `j.u.c.ConcurrentLinkedQue
 ```kotlin
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*
