@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.generator
 
-import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator
+import org.jetbrains.kotlinx.lincheck.ExpandingRangeIntGenerator
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Random
@@ -19,7 +19,7 @@ class ExpandingRangeGeneratorTest {
 
     @Test
     fun `generator should expand generated values range and than generate values from it`() {
-        val generator = ExpandingRangeIntGenerator(Random(0), 0, 0, Int.MIN_VALUE, Int.MAX_VALUE)
+        val generator = ExpandingRangeIntGenerator(Random(0), Int.MIN_VALUE, Int.MAX_VALUE)
 
         val batchesCount = 50
         val batchSize = 10_000
