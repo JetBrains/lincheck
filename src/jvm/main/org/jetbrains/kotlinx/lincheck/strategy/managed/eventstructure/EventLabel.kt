@@ -321,15 +321,21 @@ class InitializationLabel(
 ) : EventLabel(LabelKind.Send, SynchronizationType.Binary) {
     // TODO: can barrier-synchronizing events also utilize InitializationLabel?
 
-    private val initValues = WeakHashMap<MemoryLocation, OpaqueValue>()
+    private val initialValues = WeakHashMap<MemoryLocation, OpaqueValue>()
 
     val initializedMemoryLocations: Set<MemoryLocation> =
-        initValues.keys
+        initialValues.keys
 
     fun initialValue(location: MemoryLocation): OpaqueValue? =
-        initValues
+        initialValues
             .computeIfAbsent(location) { memoryInitializer(it) ?: NULL }
             .takeIf { it != NULL }
+
+    fun asWriteLabel(location: MemoryLocation) = WriteAccessLabel(
+        location_ = location,
+        value_ = initialValues[location],
+        isExclusive = false,
+    )
 
     override fun synchronize(label: EventLabel): EventLabel? =
         if (label is InitializationLabel) null else label.synchronize(this)
@@ -750,7 +756,7 @@ data class ReadAccessLabel(
 data class WriteAccessLabel(
     override var location_: MemoryLocation,
     override var value_: OpaqueValue?,
-    override val kClass: KClass<*>,
+    override val kClass: KClass<*> = value_!!.unwrap()::class,
     override val isExclusive: Boolean = false
 ): MemoryAccessLabel(LabelKind.Send, location_, value_, kClass, isExclusive) {
 
