@@ -1,43 +1,43 @@
 
 = Invalid execution results =
 Init part:
-[operation1(1, KV, 1): 1, operationNoArguments(): void]
+[operation1(1, Vg, 1): 1, operationNoArguments(): void]
 Parallel part:
-| operationNoArguments(): void         | operation2(1, 1.4901161193847656E-7, 1.4901161E-7, false, 1): IllegalStateException [1,-,-] | operationNoArguments(): void [1,2,-] |
-| operation1(-1, dW, -1): 1    [1,-,-] | operation2(-1, 1.4901161193847656E-7, -0.19999985, false, 1): IllegalStateException [1,1,-] | operationNoArguments(): void [1,2,1] |
+| operationNoArguments(): void         | operation2(1, -2.040109464E9, -2.04010944E9, false, 0):  IllegalStateException [1,-,-] | operationNoArguments(): void [1,2,-] |
+| operation1(-1, 0v, 1):  1    [1,-,-] | operation2(1, -2.0401094642E9, -2.04010944E9, false, 0): IllegalStateException [1,1,-] | operationNoArguments(): void [1,2,1] |
 Post part:
-[operation2(2, -0.1999998539686203, 1.4901161E-7, true, 0): void, operationNoArguments(): void]
+[operation2(1, -2.0401094641E9, -2.04010944E9, true, 0): void, operationNoArguments(): void]
 
 ---
-values in "[..]" brackets indicate the number of completed operations 
+values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
 ---
 
 = The following interleaving leads to the error =
 Parallel part trace:
-| operationNoArguments(): void                                                                                                                             |                                                                                     |                              |
-| operation1(-1, dW, -1)                                                                                                                                   |                                                                                     |                              |
-|   canEnterForbiddenSection.WRITE(true) at CustomScenarioTestSuggestionInOutputJavaTest.operation1(CustomScenarioTestSuggestionInOutputJavaTest.java:30)  |                                                                                     |                              |
-|   switch                                                                                                                                                 |                                                                                     |                              |
-|                                                                                                                                                          | operation2(1, 1.4901161193847656E-7, 1.4901161E-7, false, 1): IllegalStateException |                              |
-|                                                                                                                                                          | operation2(-1, 1.4901161193847656E-7, -0.19999985, false, 1): IllegalStateException |                              |
-|                                                                                                                                                          |   thread is finished                                                                |                              |
-|                                                                                                                                                          |                                                                                     | operationNoArguments(): void |
-|                                                                                                                                                          |                                                                                     | operationNoArguments(): void |
-|                                                                                                                                                          |                                                                                     |   thread is finished         |
-|   canEnterForbiddenSection.WRITE(false) at CustomScenarioTestSuggestionInOutputJavaTest.operation1(CustomScenarioTestSuggestionInOutputJavaTest.java:31) |                                                                                     |                              |
-|   result: 1                                                                                                                                              |                                                                                     |                              |
-|   thread is finished                                                                                                                                     |                                                                                     |                              |
+| operationNoArguments(): void                                                                                                                             |                                                                                |                              |
+| operation1(-1, 0v, 1)                                                                                                                                    |                                                                                |                              |
+|   canEnterForbiddenSection.WRITE(true) at CustomScenarioTestSuggestionInOutputJavaTest.operation1(CustomScenarioTestSuggestionInOutputJavaTest.java:30)  |                                                                                |                              |
+|   switch                                                                                                                                                 |                                                                                |                              |
+|                                                                                                                                                          | operation2(1, -2.040109464E9, -2.04010944E9, false, 0): IllegalStateException  |                              |
+|                                                                                                                                                          | operation2(1, -2.0401094642E9, -2.04010944E9, false, 0): IllegalStateException |                              |
+|                                                                                                                                                          |   thread is finished                                                           |                              |
+|                                                                                                                                                          |                                                                                | operationNoArguments(): void |
+|                                                                                                                                                          |                                                                                | operationNoArguments(): void |
+|                                                                                                                                                          |                                                                                |   thread is finished         |
+|   canEnterForbiddenSection.WRITE(false) at CustomScenarioTestSuggestionInOutputJavaTest.operation1(CustomScenarioTestSuggestionInOutputJavaTest.java:31) |                                                                                |                              |
+|   result: 1                                                                                                                                              |                                                                                |                              |
+|   thread is finished                                                                                                                                     |                                                                                |                              |
 
 Detailed parallel part trace:
 | operationNoArguments(): void                                                                                                                             |                                                                                                                                                        |                              |
-| operation1(-1, dW, -1)                                                                                                                                   |                                                                                                                                                        |                              |
+| operation1(-1, 0v, 1)                                                                                                                                    |                                                                                                                                                        |                              |
 |   canEnterForbiddenSection.WRITE(true) at CustomScenarioTestSuggestionInOutputJavaTest.operation1(CustomScenarioTestSuggestionInOutputJavaTest.java:30)  |                                                                                                                                                        |                              |
 |   switch                                                                                                                                                 |                                                                                                                                                        |                              |
-|                                                                                                                                                          | operation2(1, 1.4901161193847656E-7, 1.4901161E-7, false, 1)                                                                                           |                              |
+|                                                                                                                                                          | operation2(1, -2.040109464E9, -2.04010944E9, false, 0)                                                                                                 |                              |
 |                                                                                                                                                          |   canEnterForbiddenSection.READ: true at CustomScenarioTestSuggestionInOutputJavaTest.operation2(CustomScenarioTestSuggestionInOutputJavaTest.java:38) |                              |
 |                                                                                                                                                          |   result: IllegalStateException                                                                                                                        |                              |
-|                                                                                                                                                          | operation2(-1, 1.4901161193847656E-7, -0.19999985, false, 1)                                                                                           |                              |
+|                                                                                                                                                          | operation2(1, -2.0401094642E9, -2.04010944E9, false, 0)                                                                                                |                              |
 |                                                                                                                                                          |   canEnterForbiddenSection.READ: true at CustomScenarioTestSuggestionInOutputJavaTest.operation2(CustomScenarioTestSuggestionInOutputJavaTest.java:38) |                              |
 |                                                                                                                                                          |   result: IllegalStateException                                                                                                                        |                              |
 |                                                                                                                                                          |   thread is finished                                                                                                                                   |                              |
@@ -52,17 +52,17 @@ Detailed parallel part trace:
 .addCustomScenario(
 	new ScenarioBuilder(this.getClass())
 		.initial(
-			actor("operation1", 1, "KV", 1),
+			actor("operation1", 1, "Vg", 1),
 			actor("operationNoArguments")
 		)
 		.parallel(
 			thread(
 				actor("operationNoArguments"),
-				actor("operation1", -1, "dW", -1)
+				actor("operation1", -1, "0v", 1)
 			),
 			thread(
-				actor("operation2", 1, 1.4901161193847656E-7, 1.4901161E-7F, false, 1L),
-				actor("operation2", -1, 1.4901161193847656E-7, -0.19999985F, false, 1L)
+				actor("operation2", 1, -2.040109464E9, -2.04010944E9F, false, 0L),
+				actor("operation2", 1, -2.0401094642E9, -2.04010944E9F, false, 0L)
 			),
 			thread(
 				actor("operationNoArguments"),
@@ -70,7 +70,7 @@ Detailed parallel part trace:
 			)
 		)
 		.post(
-			actor("operation2", 2, -0.1999998539686203, 1.4901161E-7F, true, 0L),
+			actor("operation2", 1, -2.0401094641E9, -2.04010944E9F, true, 0L),
 			actor("operationNoArguments")
 		)
 	.build()
