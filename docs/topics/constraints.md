@@ -8,6 +8,30 @@ Consider the [single-consumer queue](https://github.com/JCTools/JCTools/blob/66e
 from the [JCTools library](https://github.com/JCTools/JCTools). Let's write a test to check correctness of its `poll()`,
 `peek()`, and `offer(x)` operations.
 
+In your `build.gradle(.kts)` file, add the following dependency to the already existing ones:
+
+   <tabs group="build-script">
+   <tab title="Kotlin" group-key="kotlin">
+
+   ```kotlin
+   dependencies {
+       // jctools dependency
+       testImplementation("org.jctools:jctools-core:%jctoolsVersion%")
+   }
+   ```
+
+   </tab>
+   <tab title="Groovy" group-key="groovy">
+
+   ```groovy
+   dependencies {
+       // jctools dependency
+       testImplementation "org.jctools:jctools-core:%jctoolsVersion%"
+   }
+   ```
+   </tab>
+   </tabs>
+
 To meet the single-consumer restriction, ensure that all `poll()` and `peek()` consuming operations
 are called from a single thread. For that, we can set the `nonParallelGroup` parameter of the 
 corresponding `@Operation` annotations to the same value, e.g. `"consumers"`.
@@ -18,6 +42,7 @@ Here is the resulting test:
 import org.jctools.queues.atomic.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
