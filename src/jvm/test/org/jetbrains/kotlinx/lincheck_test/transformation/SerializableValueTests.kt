@@ -11,12 +11,11 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
-import org.junit.Assert.assertFalse
-import org.junit.Test
-import java.io.Serializable
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck_test.*
+import org.junit.*
+import org.junit.Assert.*
+import java.io.*
 import java.util.concurrent.atomic.*
 
 class SerializableResultTest : AbstractLincheckTest() {
@@ -117,9 +116,7 @@ class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResults
 }
 
 class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<ValueHolder> {
-    override fun generate(): ValueHolder {
-        return listOf(ValueHolder(1), ValueHolder(2)).random()
-    }
+    override fun generate() = listOf(ValueHolder(1), ValueHolder(2)).random()
 }
 
 @Param(name = "key", gen = JavaUtilGen::class)
