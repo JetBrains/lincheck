@@ -43,6 +43,10 @@ class SequentialConsistencyChecker(
     override fun check(execution: Execution): Inconsistency? {
         // do basic preliminary checks
         checkLocks(execution)?.let { return it }
+        // first try to simply replay according to execution order
+        if (canReplayByExecutionOrder(execution)) {
+            return null
+        }
         // calculate writes-before relation if required
         val wbRelation = if (checkReleaseAcquireConsistency) {
             WritesBeforeRelation(execution).apply {
@@ -86,6 +90,11 @@ class SequentialConsistencyChecker(
             }
         }
         return null
+    }
+
+    private fun canReplayByExecutionOrder(execution: Execution): Boolean {
+        val replayer = SequentialConsistencyReplayer(execution.maxThreadId)
+        return (replayer.replay(execution) != null)
     }
 
     private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Inconsistency? {
