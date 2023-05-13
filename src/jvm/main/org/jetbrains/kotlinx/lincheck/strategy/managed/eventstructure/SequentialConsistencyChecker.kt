@@ -143,12 +143,12 @@ private data class SequentialConsistencyReplayer(
             event.label is LockLabel && event.label.isRequest ->
                 this
 
-            event.label is LockLabel && event.label.isResponse ->
+            event.label is LockLabel && event.label.isResponse && !event.label.isWaitLock ->
                 if (this.monitorTracker.canAcquire(event.threadId, event.label.mutex)) {
                     this.copy().apply { monitorTracker.acquire(event.threadId, event.label.mutex).ensure() }
                 } else null
 
-            event.label is UnlockLabel ->
+            event.label is UnlockLabel && !event.label.isWaitUnlock ->
                 this.copy().apply { monitorTracker.release(event.threadId, event.label.mutex) }
 
             event.label is WaitLabel && event.label.isRequest ->
@@ -162,6 +162,12 @@ private data class SequentialConsistencyReplayer(
             event.label is NotifyLabel ->
                 this.copy().apply { monitorTracker.notify(event.threadId, event.label.mutex, event.label.isBroadcast) }
 
+            // auxiliary unlock/lock events inserted before/after wait events
+            event.label is LockLabel && event.label.isWaitLock ->
+                this
+            event.label is UnlockLabel && event.label.isWaitUnlock ->
+                this
+
             event.label is InitializationLabel -> this
             event.label is ThreadEventLabel -> this
             // TODO: do we need to care about parking?
@@ -172,17 +178,16 @@ private data class SequentialConsistencyReplayer(
         }
     }
 
-    fun replay(hyperEvent: HyperEvent): SequentialConsistencyReplayer? {
-        val events: List<Event> = when(hyperEvent) {
-            is UnlockAndWait -> listOf(hyperEvent.waitRequestPart)
-            is WakeUpAndTryLock -> listOf(hyperEvent.waitResponsePart)
-            else -> hyperEvent.events
-        }
+    fun replay(events: Iterable<Event>): SequentialConsistencyReplayer? {
         var replayer = this
         for (event in events) {
             replayer = replayer.replay(event) ?: return null
         }
         return replayer
+    }
+
+    fun replay(hyperEvent: HyperEvent): SequentialConsistencyReplayer? {
+        return replay(hyperEvent.events)
     }
 
     fun copy(): SequentialConsistencyReplayer =

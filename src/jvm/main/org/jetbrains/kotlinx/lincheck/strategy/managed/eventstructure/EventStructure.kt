@@ -659,12 +659,13 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1): Event {
+    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitLock: Boolean = false): Event {
         val label = LockLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
             reentranceDepth = reentranceDepth,
             reentranceCount = reentranceCount,
+            isWaitLock = isWaitLock,
         )
         return addRequestEvent(iThread, label)
     }
@@ -674,11 +675,12 @@ class EventStructure(
         return addResponseEvents(lockRequest).first
     }
 
-    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1): Event {
+    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitUnlock: Boolean = false): Event {
         val label = UnlockLabel(
             mutex_ = mutex,
             reentranceDepth = reentranceDepth,
             reentranceCount = reentranceCount,
+            isWaitUnlock = isWaitUnlock,
         )
         return addSendEvent(iThread, label)
     }

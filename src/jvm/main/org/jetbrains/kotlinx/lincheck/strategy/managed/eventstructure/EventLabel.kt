@@ -879,6 +879,7 @@ data class LockLabel(
     override var mutex_: OpaqueValue,
     val reentranceDepth: Int = 1,
     val reentranceCount: Int = 1,
+    val isWaitLock: Boolean = false,
 ) : MutexLabel(
     kind = kind,
     mutex_ = mutex_,
@@ -940,6 +941,7 @@ data class UnlockLabel(
     override var mutex_: OpaqueValue,
     val reentranceDepth: Int = 1,
     val reentranceCount: Int = 1,
+    val isWaitUnlock: Boolean = false,
 ) : MutexLabel(LabelKind.Send, mutex_) {
 
     init {

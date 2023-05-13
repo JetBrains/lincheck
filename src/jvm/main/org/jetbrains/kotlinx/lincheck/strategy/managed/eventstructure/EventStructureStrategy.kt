@@ -397,7 +397,9 @@ private class EventStructureMonitorTracker(
             val depth = monitorTracker.reentranceDepth(iThread, monitor).ensure { it > 0 }
             monitorTracker.release(iThread, monitor, times = depth)
             unlockEvent = eventStructure.addUnlockEvent(iThread, monitor,
-                reentranceDepth = depth, reentranceCount = depth
+                reentranceDepth = depth,
+                reentranceCount = depth,
+                isWaitUnlock = true,
             )
         }
         if (waitRequestEvent == null) {
@@ -412,7 +414,9 @@ private class EventStructureMonitorTracker(
             val depth = (unlockEvent.label as UnlockLabel).reentranceDepth
             val count = (unlockEvent.label as UnlockLabel).reentranceCount
             lockRequestEvent = eventStructure.addLockRequestEvent(iThread, monitor,
-                reentranceDepth = depth, reentranceCount = count,
+                reentranceDepth = depth,
+                reentranceCount = count,
+                isWaitLock = true,
             )
         }
         val count = (lockRequestEvent.label as LockLabel).reentranceCount
