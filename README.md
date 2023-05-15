@@ -40,7 +40,7 @@ Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](
 
 `$ docker run -it -v ./report/:/report/ lincheck sh`
 
-4) (Optional) The image is built on linux/amd64/v4, so it you are using another architecture, please run the following command.
+4) (Optional) The image is built on linux/amd64/v4, so if you are using another architecture, please run the following command.
 
 `$ docker run --privileged --rm tonistiigi/binfmt --install all`
 
