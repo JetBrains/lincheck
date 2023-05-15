@@ -32,17 +32,17 @@ See how easy it is to write concurrent tests with Lincheck!
 
 Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](https://docs.docker.com/desktop/install/mac-install/), [Windows](https://docs.docker.com/desktop/install/windows-install/).
 
-2) Load the docker image.
+2) (Optional) The image is built on linux/amd64/v4, so if you are using another architecture, please run the following command.
+
+`$ docker run --privileged --rm tonistiigi/binfmt --install all`
+
+3) Load the docker image.
 
 `$ docker load -i lincheck.tar`
 
-3) Run the image and enter it via sh.
+4) Run the image and enter it via sh.
 
 `$ docker run -it -v ./report/:/report/ lincheck sh`
-
-4) (Optional) The image is built on linux/amd64/v4, so if you are using another architecture, please run the following command.
-
-`$ docker run --privileged --rm tonistiigi/binfmt --install all`
 
 ### After running the Docker image or if you don't use it:
 
