@@ -32,7 +32,7 @@ See how easy it is to write concurrent tests with Lincheck!
 
 Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](https://docs.docker.com/desktop/install/mac-install/), [Windows](https://docs.docker.com/desktop/install/windows-install/).
 
-2) (Optional) The image is built for linux/amd64 and linux/arm64/v8, so if you are using another architecture, please run the following command.
+2) (Optional) The image is built for linux/amd64, so if you are using another architecture, please run the following command.
 
 `$ docker run --privileged --rm tonistiigi/binfmt --install all`
 
