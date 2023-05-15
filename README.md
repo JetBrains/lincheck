@@ -36,13 +36,17 @@ Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](
 
 `$ docker load -i lincheck.tar`
 
-3) Run the image and enter it via bash.
+3) Run the image and enter it via sh.
 
 `$ docker run -it -v ./report/:/report/ lincheck sh`
 
+4) (Optional) The image is built on linux/amd64/4, so it you are using another architecture, please run the following command.
+
+`$ docker run --privileged --rm tonistiigi/binfmt --install all`
+
 ### After running the Docker image or if you don't use it:
 
-4) To run the tests, please execute the following command in the main project directory (inside the docker image):
+5) To run the tests, please execute the following command in the main project directory (inside the docker image):
 
 `$ ./gradlew build`
 
@@ -50,7 +54,7 @@ Instructions for [Linux](https://docs.docker.com/engine/install/ubuntu/), [Mac](
 The Lincheck purpose is to find bugs, so some tests detect bugs and fail, "failing" the build as well.
 After executing the command, which takes approximately 30-40 minutes, the report is in `lincheck/build/reports/tests/test/index.html`. 
 
-5) If you use Docker, copy the report outside the container and exit the image.
+6) If you use Docker, copy the report outside the container and exit the image.
 
 `$ cp -r ./build/reports/tests/test/. /report`
 
