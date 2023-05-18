@@ -15,7 +15,11 @@ import junit.framework.Assert.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SpinLockBasedSet
 import org.junit.*
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertThrows
+import kotlin.math.pow
 
 /**
  * This test checks that parameter generators random use different seeds than executions generator.
@@ -154,3 +158,184 @@ class ParamGeneratorResetBetweenScenariosTest {
     fun operation(value: Int) = check(value in -10..10)
 
 }
+
+class EnumParamGeneratorTest {
+
+    private val generationBatchSize = 100
+
+    @Test
+    fun `should generate values increasing range and than re-shuffle enum values without configuration`() {
+        val randomProvider = RandomProvider()
+        val gen = EnumGen(TestEnum::class.java, randomProvider, "")
+
+        val enumCountMapBeforeReset = generateCountMap(gen)
+        assertDistribution(enumCountMapBeforeReset, TestEnum.values().toSet())
+
+        gen.reset()
+
+        val enumCountMapAfterReset = generateCountMap(gen)
+        assertDistribution(enumCountMapAfterReset, TestEnum.values().toSet())
+
+        assertNotEquals(enumCountMapBeforeReset, enumCountMapAfterReset)
+    }
+
+    @Test
+    fun `should generate values increasing range and than re-shuffle enum values with configuration`() {
+        val randomProvider = RandomProvider()
+        val permittedValuesSet = hashSetOf(TestEnum.A, TestEnum.B, TestEnum.C, TestEnum.D)
+        val gen = EnumGen(TestEnum::class.java, randomProvider, "A,B,C,D")
+
+        val enumCountMapBeforeReset = generateCountMap(gen)
+        assertDistribution(enumCountMapBeforeReset, permittedValuesSet)
+
+        gen.reset()
+
+        val enumCountMapAfterReset = generateCountMap(gen)
+        assertDistribution(enumCountMapAfterReset, permittedValuesSet)
+
+        assertNotEquals(enumCountMapBeforeReset, enumCountMapAfterReset)
+    }
+
+    private enum class TestEnum {
+        A, B, C, D, E, F, G, H, X, Y
+    }
+
+    private fun generateCountMap(gen: EnumGen<TestEnum>): Map<TestEnum, Int> {
+        return (0 until generationBatchSize).map { gen.generate() }.groupingBy { it }.eachCount()
+    }
+
+    private fun assertDistribution(enumCounts: Map<TestEnum, Int>, expectedValuesSet: Set<TestEnum>) {
+        val dispersion = dispersion(enumCounts.entries.map { it.value })
+        assertTrue(dispersion > 4.0)
+
+        assertTrue(enumCounts.all { it.key in expectedValuesSet })
+    }
+
+    private fun dispersion(data: List<Int>): Double {
+        val average = data.average()
+        val squaredDifferences = data.map { x -> (x - average).pow(2.0) }
+
+        return squaredDifferences.average()
+    }
+
+}
+
+/**
+ * This test checks enum generation with specified named enum generator
+ */
+@Param(name = "operation_type", gen = EnumGen::class)
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class NamedEnumParamGeneratorTest {
+
+    private val set = SpinLockBasedSet()
+
+    @Operation
+    fun operation(@Param(name = "operation_type") operation: OperationType, @Param(name = "key") key: Int): Boolean {
+        return when (operation) {
+            OperationType.ADD -> set.add(key)
+            OperationType.REMOVE -> set.remove(key)
+            OperationType.CONTAINS -> set.contains(key)
+        }
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun test() = ModelCheckingOptions()
+        .checkObstructionFreedom(true)
+        .minimizeFailedScenario(false)
+        .check(this::class)
+
+    enum class OperationType {
+        ADD,
+        REMOVE,
+        CONTAINS
+    }
+}
+
+/**
+ * This test checks enum generation with in-place configured unnamed enum generator
+ */
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class UnnamedEnumParamGeneratorTest() {
+    private val set = SpinLockBasedSet()
+
+    @Operation
+    fun operation(@Param(gen = EnumGen::class) operation: OperationType, @Param(name = "key") key: Int): Boolean {
+        return when (operation) {
+            OperationType.ADD -> set.add(key)
+            OperationType.REMOVE -> set.remove(key)
+            OperationType.CONTAINS -> set.contains(key)
+        }
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun test() = ModelCheckingOptions()
+        .checkObstructionFreedom(true)
+        .minimizeFailedScenario(false)
+        .check(this::class)
+
+    enum class OperationType {
+        ADD,
+        REMOVE,
+        CONTAINS
+    }
+}
+
+/**
+ * Test checks that enum generator will be used even without [Param] annotation
+ */
+@Param(name = "key", gen = IntGen::class, conf = "1:5")
+class EnumParamWithoutAnnotationGeneratorTest: BaseEnumSetTest() {
+
+    @Operation
+    fun operation(operation: OperationType, @Param(name = "key") key: Int): Boolean {
+        return setOperation(operation, key)
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun test() = ModelCheckingOptions()
+        .checkObstructionFreedom(true)
+        .minimizeFailedScenario(false)
+        .check(this::class)
+}
+
+abstract class BaseEnumSetTest {
+
+    private val set = SpinLockBasedSet()
+    fun setOperation(operation: OperationType,  key: Int): Boolean {
+        return when (operation) {
+            OperationType.ADD -> set.add(key)
+            OperationType.REMOVE -> set.remove(key)
+            OperationType.CONTAINS -> set.contains(key)
+        }
+    }
+    enum class OperationType {
+        ADD,
+        REMOVE,
+        CONTAINS
+    }
+}
+
+/**
+ * Test checks that if one named parameter generator is associated with many types, then exception will be thrown
+ */
+@Param(name = "type", gen = EnumGen::class)
+class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
+
+    @Operation
+    fun operation(@Param(name = "type") first: FirstEnum, @Param(name = "type") secondEnum: SecondEnum) = Unit
+
+    @Test
+    fun test() {
+        val exception = assertThrows(IllegalStateException::class.java) { ModelCheckingOptions().check(this::class) }
+        assertEquals(
+            "Enum param gen with name type can't be associated with two different types: FirstEnum and SecondEnum",
+            exception.message
+        )
+    }
+
+    enum class FirstEnum { A, B }
+
+    enum class SecondEnum { A, B }
+
+}
+
