@@ -38,6 +38,9 @@ internal object DummyParameterGenerator : ParameterGenerator<Any?> {
     override fun generate() = throw UnsupportedOperationException()
 }
 
+/**
+ * @param configuration configuration in format EnumType.ConstantA,EnumType.ConstantB,..,EnumType.ConstantN
+ */
 class EnumGen<T : Enum<T>>(enumClass: Class<out T>, randomProvider: RandomProvider, configuration: String) :
     ParameterGenerator<T> {
 
