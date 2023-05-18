@@ -38,6 +38,41 @@ internal object DummyParameterGenerator : ParameterGenerator<Any?> {
     override fun generate() = throw UnsupportedOperationException()
 }
 
+class EnumGen<T : Enum<T>>(enumClass: Class<out T>, randomProvider: RandomProvider, configuration: String) :
+    ParameterGenerator<T> {
+
+    private val enumValues: MutableList<T>
+    private val intGenerator: ExpandingRangeIntGenerator
+    private val shuffleRandom = randomProvider.createRandom()
+
+    init {
+        val allEnumValues = enumClass.enumConstants.toList()
+
+        enumValues = if (configuration.isEmpty()) allEnumValues else {
+            configuration.replace("\\s", "").split(",").map { enumStr ->
+                allEnumValues.find { it.name == enumStr }
+                    ?: throw IllegalArgumentException(
+                        """
+                           Bad configuration for enum ${enumClass.name}. No enum constant with name $enumStr
+                           Configuration must be permitted enum values split by coma, or empty
+                        """.trimIndent()
+                    )
+            }
+        }.toMutableList()
+
+        require(enumValues.isNotEmpty()) { "Bad configuration for enum ${enumClass.name}. Permitted enum values can't be empty" }
+
+        intGenerator = ExpandingRangeIntGenerator(randomProvider.createRandom(), 0, enumValues.lastIndex)
+    }
+
+    override fun generate(): T = enumValues[intGenerator.nextInt()]
+
+    override fun reset() {
+        intGenerator.resetRange()
+        enumValues.shuffle(shuffleRandom)
+    }
+}
+
 class IntGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Int> {
     private val generator: ExpandingRangeIntGenerator
 
@@ -271,6 +306,7 @@ class ExpandingRangeIntGenerator(
         val firstValue = calculateFirstValue()
         currentStartInclusive = firstValue
         currentEndInclusive = firstValue
+        expansionDirection = UP
     }
 
     /**
