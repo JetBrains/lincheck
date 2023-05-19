@@ -43,8 +43,8 @@ class InternalLincheckBugTest {
 
             Exception stacktrace: 
             java.lang.IllegalStateException: Internal bug
-            	at org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException(InternalLincheckExceptionEmulator.kt:29)
-            	at org.jetbrains.kotlinx.lincheck_test.representation.InternalLincheckBugTest.operation2(InternalLincheckBugTest.kt:43)
+            	at org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException(InternalLincheckExceptionEmulator.kt:19)
+            	at org.jetbrains.kotlinx.lincheck_test.representation.InternalLincheckBugTest.operation2(InternalLincheckBugTest.kt:33)
             	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution207.run(Unknown Source)
             	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable${DOLLAR_CHAR}lambda-4(FixedActiveThreadsExecutor.kt:161)
             	at java.base/java.lang.Thread.run(Thread.java:829)

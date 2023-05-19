@@ -19,35 +19,35 @@ stacktrace in the exceptions section below the interleaving section
 Parallel part trace:
 | operation1(): void                                                                                                             |                                        |
 | operation1()                                                                                                                   |                                        |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:34)  |                                        |
+|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:24)  |                                        |
 |   switch                                                                                                                       |                                        |
 |                                                                                                                                | operation2(): IllegalStateException #1 |
 |                                                                                                                                | operation1(): void                     |
 |                                                                                                                                |   thread is finished                   |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:35) |                                        |
+|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:25) |                                        |
 |   result: void                                                                                                                 |                                        |
 |   thread is finished                                                                                                           |                                        |
 
 Exceptions traces:
 #1: java.lang.IllegalStateException
-	at org.jetbrains.kotlinx.lincheck_test.representation.ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:39)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:29)
 
 Detailed parallel part trace:
 | operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:34)  |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:35) |                                                                                                                                |
+|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:24)  |                                                                                                                                |
+|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:25) |                                                                                                                                |
 |   result: void                                                                                                                 |                                                                                                                                |
 | operation1()                                                                                                                   |                                                                                                                                |
-|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:34)  |                                                                                                                                |
+|   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:24)  |                                                                                                                                |
 |   switch                                                                                                                       |                                                                                                                                |
 |                                                                                                                                | operation2()                                                                                                                   |
-|                                                                                                                                |   canEnterForbiddenSection.READ: true at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:39)   |
+|                                                                                                                                |   canEnterForbiddenSection.READ: true at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:29)   |
 |                                                                                                                                |   result: IllegalStateException #1                                                                                             |
 |                                                                                                                                | operation1()                                                                                                                   |
-|                                                                                                                                |   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:34)  |
-|                                                                                                                                |   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:35) |
+|                                                                                                                                |   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:24)  |
+|                                                                                                                                |   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:25) |
 |                                                                                                                                |   result: void                                                                                                                 |
 |                                                                                                                                |   thread is finished                                                                                                           |
-|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:35) |                                                                                                                                |
+|   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:25) |                                                                                                                                |
 |   result: void                                                                                                                 |                                                                                                                                |
 |   thread is finished                                                                                                           |                                                                                                                                |
