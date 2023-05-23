@@ -4,4 +4,5 @@ WORKDIR /lincheck
 
 COPY . .
 
-RUN ./gradlew build -x test
+RUN cd ./lincheck && ./gradlew publishToMavenLocal
+RUN ./gradlew build testClasses -x test

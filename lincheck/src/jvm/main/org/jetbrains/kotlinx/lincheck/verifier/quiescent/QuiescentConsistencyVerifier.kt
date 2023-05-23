@@ -1,0 +1,129 @@
+/*-
+ * #%L
+ * Lincheck
+ * %%
+ * Copyright (C) 2019 - 2020 JetBrains s.r.o.
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>.
+ * #L%
+ */
+package org.jetbrains.kotlinx.lincheck.verifier.quiescent
+
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+import java.util.*
+import kotlin.collections.ArrayList
+
+/**
+ * This verifier tests for quiescent consistency.
+ * Note that it does not support quiescent points.
+ * Thus, it potentially does not find some bugs.
+ * However, we believe that quiescent points do not occur
+ * in practice while supporting them complicates the implementation.
+ */
+class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier {
+    private val linearizabilityVerifier = LinearizabilityVerifier(sequentialSpecification)
+    private val scenarioMapping: MutableMap<ExecutionScenario, ExecutionScenario> = WeakHashMap()
+
+    override fun checkStateEquivalenceImplementation(): Boolean = linearizabilityVerifier.checkStateEquivalenceImplementation()
+
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
+        val convertedScenario = scenario.converted
+        val convertedResults = results.convert(scenario, convertedScenario.threads)
+        checkScenarioAndResultsAreSimilarlyConverted(convertedScenario, convertedResults)
+        return linearizabilityVerifier.verifyResults(convertedScenario, convertedResults)
+    }
+
+    private val ExecutionScenario.converted: ExecutionScenario get() = scenarioMapping.computeIfAbsent(this) {
+        val parallelExecutionConverted = ArrayList<MutableList<Actor>>()
+        repeat(threads) {
+            parallelExecutionConverted.add(ArrayList())
+        }
+        parallelExecution.forEachIndexed { t, threadActors ->
+            for (a in threadActors) {
+                if (a.isQuiescentConsistent) {
+                    parallelExecutionConverted.add(mutableListOf(a))
+                } else {
+                    parallelExecutionConverted[t].add(a)
+                }
+            }
+        }
+        ExecutionScenario(initExecution, parallelExecutionConverted, postExecution)
+    }
+
+    private fun ExecutionResult.convert(originalScenario: ExecutionScenario, newThreads: Int): ExecutionResult {
+        val parallelResults = ArrayList<MutableList<ResultWithClock>>()
+        repeat(originalScenario.threads) {
+            parallelResults.add(ArrayList())
+        }
+        val clocks = Array(originalScenario.threads) { ArrayList<IntArray>() }
+        val clockMapping = Array(originalScenario.threads) { ArrayList<Int>() }
+        clockMapping.forEach { it.add(-1) }
+        originalScenario.parallelExecution.forEachIndexed { t, threadActors ->
+            threadActors.forEachIndexed { i, a ->
+                val r = parallelResultsWithClock[t][i]
+                if (a.isQuiescentConsistent) {
+                    clockMapping[t].add(clockMapping[t][i])
+                    parallelResults.add(mutableListOf(r.result.withEmptyClock(newThreads)))
+                } else {
+                    clockMapping[t].add(clockMapping[t][i] + 1)
+                    val c = IntArray(newThreads) { 0 }
+                    clocks[t].add(c)
+                    parallelResults[t].add(ResultWithClock(r.result, HBClock(c)))
+                }
+            }
+        }
+        clocks.forEachIndexed { t, threadClocks ->
+            threadClocks.forEachIndexed { i, c ->
+                for (j in 0 until originalScenario.threads) {
+                    val old = parallelResultsWithClock[t][i].clockOnStart[j]
+                    c[j] = if (old == -1) -1 else clockMapping[j][old]
+                }
+            }
+        }
+        return ExecutionResult(initResults, parallelResults, postResults)
+    }
+
+    private fun checkScenarioAndResultsAreSimilarlyConverted(scenario: ExecutionScenario, results: ExecutionResult) {
+        check(scenario.initExecution.size == results.initResults.size) {
+            "Transformed scenario and results have different number of operations in init parts"
+        }
+        check(scenario.postExecution.size == results.postResults.size) {
+            "Transformed scenario and results have different number of operations in post parts"
+        }
+        check(scenario.parallelExecution.size == results.parallelResultsWithClock.size) {
+            "Transformed scenario and results have different number of parallel threads"
+        }
+        for (t in 0 until scenario.threads) {
+            check(scenario.parallelExecution[t].size == results.parallelResultsWithClock[t].size) {
+                "Transformed scenario and resutls have different number of operations in thread $t"
+            }
+        }
+    }
+ }
+
+private val Actor.isQuiescentConsistent: Boolean get() = method.isAnnotationPresent(QuiescentConsistent::class.java)
+
+/**
+ * This annotation indicates that the method it is presented on
+ * is quiescent consistent.
+ *
+ * @see QuiescentConsistencyVerifier
+ */
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
+annotation class QuiescentConsistent

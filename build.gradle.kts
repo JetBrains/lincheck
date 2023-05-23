@@ -11,6 +11,7 @@ plugins {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -22,7 +23,7 @@ dependencies {
     implementation("com.googlecode.concurrent-trees:concurrent-trees:2.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     implementation("junit:junit:4.13.2")
-    implementation("org.jetbrains.kotlinx:lincheck-jvm:2.16")
+    implementation("org.jetbrains.kotlinx:lincheck:2.17.5")
 }
 
 kotlin {
