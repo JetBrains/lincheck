@@ -8,7 +8,7 @@ import org.junit.Test
  * Note that this test requires custom Lincheck branch, which is included in the CAV submission.
  */
 
-class JavaUtilSemaphoreTest {
+class AbstractQueueSynchronizerTest {
     private val semaphore = java.util.concurrent.Semaphore(1, true)
 
     @Operation(cancellableOnSuspension = true)
@@ -26,7 +26,7 @@ class JavaUtilSemaphoreTest {
         ModelCheckingOptions().apply {
             fastConfiguration()
             customize() // for test-specific features
-            check(this@JavaUtilSemaphoreTest::class)
+            check(this@AbstractQueueSynchronizerTest::class)
         }
     }
 
@@ -35,7 +35,7 @@ class JavaUtilSemaphoreTest {
         ModelCheckingOptions().apply {
             longConfiguration()
             customize() // for test-specific features
-            check(this@JavaUtilSemaphoreTest::class)
+            check(this@AbstractQueueSynchronizerTest::class)
         }
     }
 
