@@ -371,9 +371,19 @@ class EventStructure(
                 //     it.label is WriteAccessLabel && it.label.location == event.label.location
                 // } ?: root
                 // candidates.filter { !causalityOrder.lessThan(it, threadLastWrite) }
-                val writes = calculateRacyWrites(event.label.location, event.causalityClock)
-                    // calculateMemoryLocationView(event.label.location, event.causalityClock)
-                candidates.filter { !writes.any { write -> causalityOrder.lessThan(it, write) }}
+                val threadReads = currentExecution[event.threadId]!!.filter {
+                    it.label is ReadAccessLabel && it.label.isResponse && it.label.location == event.label.location
+                }
+                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
+                val staleWrites = threadReads
+                    .map { it.readsFrom }
+                    .filter { it != lastSeenWrite }
+                    .distinct()
+                val racyWrites = calculateRacyWrites(event.label.location, event.causalityClock)
+                candidates.filter {
+                    !racyWrites.any { write -> causalityOrder.lessThan(it, write) } &&
+                    !staleWrites.any { write -> causalityOrder.lessOrEqual(it, write) }
+                }
             }
             // re-entry lock-request synchronizes only with the initial event
             event.label is LockLabel && event.label.isRequest && event.label.isReentry -> {
@@ -762,8 +772,8 @@ class EventStructure(
     fun calculateRacyWrites(location: MemoryLocation, observation: VectorClock<Int, Event>): List<Event> {
         val view = calculateMemoryLocationView(location, observation)
         return view.clock.values.filter { write ->
-            view.clock.values.all { other ->
-                !causalityOrder.lessThan(write, other)
+            !view.clock.values.any { other ->
+                causalityOrder.lessThan(write, other)
             }
         }
     }
