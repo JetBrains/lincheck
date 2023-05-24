@@ -19,11 +19,11 @@ To provide a sequential specification of the algorithm for verification:
 For example, here is the test to check correctness of `j.u.c.ConcurrentLinkedQueue` from the Java standard library.
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck_custom.*
+import org.jetbrains.kotlinx.lincheck_custom.annotations.*
+import org.jetbrains.kotlinx.lincheck_custom.annotations.Operation
+import org.jetbrains.kotlinx.lincheck_custom.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck_custom.verifier.*
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*

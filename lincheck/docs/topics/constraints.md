@@ -19,9 +19,9 @@ Here is the resulting test:
 
 ```kotlin
 import org.jctools.queues.atomic.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck_custom.annotations.*
+import org.jetbrains.kotlinx.lincheck_custom.check
+import org.jetbrains.kotlinx.lincheck_custom.strategy.stress.*
 import org.junit.*
 
 // Declare a group of operations that should not be executed in parallel:

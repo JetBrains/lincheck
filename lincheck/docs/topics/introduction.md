@@ -67,9 +67,9 @@ When creating a project, use the Gradle build system.
 1. In the `src/test/kotlin` directory, create a `BasicCounterTest.kt` file and add the following code:
 
    ```kotlin
-   import org.jetbrains.kotlinx.lincheck.annotations.*
-   import org.jetbrains.kotlinx.lincheck.*
-   import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+   import org.jetbrains.kotlinx.lincheck_custom.annotations.*
+   import org.jetbrains.kotlinx.lincheck_custom.*
+   import org.jetbrains.kotlinx.lincheck_custom.strategy.stress.*
    import org.junit.*
    
    class Counter {
@@ -121,10 +121,10 @@ which examines numerous executions with a bounded number of context switches.
 The updated `BasicCounterTest` class will look like this:
 
    ```kotlin
-   import org.jetbrains.kotlinx.lincheck.annotations.*
-   import org.jetbrains.kotlinx.lincheck.check
-   import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-   import org.jetbrains.kotlinx.lincheck.verifier.*
+   import org.jetbrains.kotlinx.lincheck_custom.annotations.*
+   import org.jetbrains.kotlinx.lincheck_custom.check
+   import org.jetbrains.kotlinx.lincheck_custom.strategy.managed.modelchecking.*
+   import org.jetbrains.kotlinx.lincheck_custom.verifier.*
    import org.junit.*
    
    class Counter {
@@ -186,9 +186,9 @@ Let's now find a bug in the standard Java's `ConcurrentLinkedDeque` class.
 The Lincheck test below finds a race between removing and adding an element to the head of the deque:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck_custom.*
+import org.jetbrains.kotlinx.lincheck_custom.annotations.*
+import org.jetbrains.kotlinx.lincheck_custom.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.*
 

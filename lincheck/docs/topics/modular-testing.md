@@ -35,11 +35,11 @@ You can specify this guarantee with the `addGuarantee` option in the `ModelCheck
 
 ```kotlin
 import java.util.concurrent.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck_custom.annotations.*
+import org.jetbrains.kotlinx.lincheck_custom.check
+import org.jetbrains.kotlinx.lincheck_custom.paramgen.*
+import org.jetbrains.kotlinx.lincheck_custom.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck_custom.strategy.managed.modelchecking.*
 import org.junit.*
 
 class MultiMap<K,V> {
