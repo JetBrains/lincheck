@@ -2,7 +2,7 @@ import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 
-class SemaphoreTest : AbstractLincheckTest() {
+class KotlinSemaphoreTest : AbstractLincheckTest() {
     private val semaphore = Semaphore(1)
 
     @Operation
