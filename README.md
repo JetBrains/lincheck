@@ -22,9 +22,9 @@ In the `src` directory inside the docker image,
 you can find implementation of the data structures from the academic literature, in which Lincheck has discovered previously unknown bugs. 
 
 The `test` directory inside the docker image contains the main part of this artifact — the tests listed in Table 2 in the paper. 
-See how easy it is to write concurrent tests with Lincheck!
+See how easy it is to write concurrent tests with Lincheck.
 
-The framework source code is available in `lincheck` directory.
+The framework source code is available in `lincheck` directory or online in the [official repository](https://github.com/JetBrains/lincheck).
 
 ## How to run the tests
 
