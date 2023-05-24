@@ -180,16 +180,19 @@ class EventStructureStrategy(
     private val SCHEDULER_THREAD_STEPS_NUM: Int = 3
     private var thread_steps = 0
 
-    override fun shouldSwitch(iThread: Int): Boolean {
+    override fun shouldSwitch(iThread: Int): ThreadSwitchDecision {
         // If strategy is in replay phase we first need to execute replaying threads
         if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
-            return true
+            return ThreadSwitchDecision.MAY
         }
         // If strategy is in replay mode for given thread
         // we should wait until replaying the next event become possible
         // (i.e. when all the dependencies will be replayed too)
         if (eventStructure.inReplayPhase(iThread)) {
-            return !eventStructure.canReplayNextEvent(iThread)
+            return if (eventStructure.canReplayNextEvent(iThread))
+                ThreadSwitchDecision.NOT
+            else
+                ThreadSwitchDecision.MUST
         }
 
         /* For event structure strategy enforcing context switches is not necessary,
@@ -214,7 +217,7 @@ class EventStructureStrategy(
         // if (++thread_steps <= SCHEDULER_THREAD_STEPS_NUM)
         //     return false
         // thread_steps = 0
-        return true
+        return ThreadSwitchDecision.NOT
     }
 
     override fun chooseThread(iThread: Int): Int {

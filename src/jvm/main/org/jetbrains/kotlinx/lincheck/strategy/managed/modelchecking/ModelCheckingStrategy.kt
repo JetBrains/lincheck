@@ -98,12 +98,15 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    override fun shouldSwitch(iThread: Int): Boolean {
+    override fun shouldSwitch(iThread: Int): ThreadSwitchDecision {
         // Crete a new current position in the same place as where the check is,
         // because the position check and the position increment are dual operations.
         check(iThread == currentThread)
         currentInterleaving.newExecutionPosition(iThread)
-        return currentInterleaving.isSwitchPosition()
+        return if (currentInterleaving.isSwitchPosition())
+            ThreadSwitchDecision.MAY
+        else
+            ThreadSwitchDecision.NOT
     }
 
     override fun chooseThread(iThread: Int): Int = currentInterleaving.chooseThread(iThread)

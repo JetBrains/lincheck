@@ -166,11 +166,13 @@ abstract class ManagedStrategy(
      */
     protected open fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {}
 
+    enum class ThreadSwitchDecision { NOT, MAY, MUST }
+
     /**
      * Returns whether thread should switch at the switch point.
      * @param iThread the current thread
      */
-    protected abstract fun shouldSwitch(iThread: Int): Boolean
+    protected abstract fun shouldSwitch(iThread: Int): ThreadSwitchDecision
 
     /**
      * Choose a thread to switch from thread [iThread].
@@ -395,10 +397,10 @@ abstract class ManagedStrategy(
             checkLiveLockHappened(loopDetector.totalOperations)
             isLoop = true
         }
-        val shouldSwitch = shouldSwitch(iThread) or isLoop
-        if (shouldSwitch) {
+        val switchDecision = shouldSwitch(iThread)
+        if (switchDecision != ThreadSwitchDecision.NOT || isLoop) {
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
-            switchCurrentThread(iThread, reason)
+            switchCurrentThread(iThread, reason, mustSwitch = (switchDecision == ThreadSwitchDecision.MUST))
         }
         traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
