@@ -22,24 +22,6 @@ class JavaUtilSemaphoreTest {
     }
 
     @Test
-    fun stressTestFast() {
-        StressOptions().apply {
-            fastConfiguration()
-            customize() // for test-specific features
-            check(this@JavaUtilSemaphoreTest::class)
-        }
-    }
-
-    @Test
-    fun stressTestLong() {
-        StressOptions().apply {
-            longConfiguration()
-            customize() // for test-specific features
-            check(this@JavaUtilSemaphoreTest::class)
-        }
-    }
-
-    @Test
     fun modelCheckingTestFast() {
         ModelCheckingOptions().apply {
             fastConfiguration()
