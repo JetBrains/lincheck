@@ -73,7 +73,7 @@ The following tests check correct data structures for evaluating Lincheck's perf
 * `ConcurrentHashMapTest` (concurrent hash table implementation in the standard Java library)
 * `ConcurrentLinkedQueueTest` (Michael-Scott queue implementation in the standard Java library)
 * `LockFreeTaskQueueTest` (quiescent consistent queue from Kotlin Coroutines internals)
-* `SemaphoreTest` (semaphore implementation for Kotlin Coroutines)
+* `KotlinSemaphoreTest` (semaphore implementation for Kotlin Coroutines)
 
 Other tests should fail; check the build report in `./build/reports/tests/test/index.html`.
 For your convenience, you can also access these reports without running the tests in [REPORTS.md](REPORTS.md) file.
@@ -135,7 +135,7 @@ The error lies in an incorrect assumption during `firstKey`/`lastKey` searches. 
 
 ### 7. `LogicalOrderingAVL` by Drachsler et al. 
 **Source:** [authors' implementation](https://github.com/gramoli/synchrobench/blob/master/java/src/trees/lockbased/LogicalOrderingAVL.java).    
-D. Drachsler, M. Vechev and E. Yahav. Practical concurrent binary search trees via logical ordering. In PPoPP, 2014.
+D. Drachsler, M. Vechev and E. Yahav. Practical concurrent binary search trees via logical ordering. In PPoPP, 2014.  
 **Test:** [LogicalOrderingAVLTest](test/LogicalOrderingAVLTest.kt)
 
 We believe that the flaw in Drachsler et al. deadlock-freedom argument was originally found by Trevor Brown. The argument was based on the invariant that parents are locked before children. However, during rebalancing, due to rotations this order can change. 

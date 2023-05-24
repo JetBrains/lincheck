@@ -43,6 +43,7 @@ tasks {
         exclude("**/AbstractConcurrentMapTest.class")
         exclude("**/AbstractLincheckTest.class")
         exclude("**/IntIntAbstractConcurrentMapTest.class")
+        exclude("**/SemaphoreSequential.class")
         maxHeapSize = "3g"
     }
 }
@@ -53,4 +54,5 @@ sourceSets.main {
 
 sourceSets.test {
     java.srcDir("test")
+    kotlin.srcDir("test")
 }
