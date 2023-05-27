@@ -21,8 +21,16 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import  org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.utils.IntMap
+import org.jetbrains.kotlinx.lincheck.utils.MutableIntMap
 
 typealias EventID = Int
+
+typealias ThreadID = Int
+
+typealias ThreadMap<T> = IntMap<T>
+
+typealias MutableThreadMap<T> = MutableIntMap<T>
 
 class Event private constructor(
     val id: EventID,
@@ -66,8 +74,6 @@ class Event private constructor(
 
     var visited: Boolean = false
         private set
-
-    private val jumps = Array<Event?>(N_JUMPS) { null }
 
     // should only be called from EventStructure
     // TODO: enforce this invariant!
@@ -123,6 +129,11 @@ class Event private constructor(
 
     }
 
+    fun predNth(n: Int): Event? {
+        return predNthOptimized(n)
+            // .also { check(it == predNthNaive(n)) }
+    }
+
     // naive implementation with O(N) complexity, just for testing and debugging
     private fun predNthNaive(n : Int): Event? {
         var e = this
@@ -135,6 +146,8 @@ class Event private constructor(
             e = e.parent ?: return null
         return e
     }
+
+    private val jumps = Array<Event?>(N_JUMPS) { null }
 
     // binary lifting search with O(lgN) complexity
     // https://cp-algorithms.com/graph/lca_binary_lifting.html;
@@ -155,13 +168,38 @@ class Event private constructor(
         return e
     }
 
-    fun predNth(n: Int): Event? {
-        return predNthOptimized(n)
-            // .also { check(it == predNthNaive(n)) }
+    fun pred(inclusive: Boolean = false, predicate: (Event) -> Boolean): Event? {
+        if (inclusive && predicate(this))
+            return this
+        var event: Event? = parent
+        while (event != null && !predicate(event)) {
+            event = event.parent
+        }
+        return event
     }
 
     val threadRoot: Event
         get() = predNth(threadPosition)!!
+
+    fun threadPrefix(inclusive: Boolean = false, reversed: Boolean = false): List<Event> {
+        val events = arrayListOf<Event>()
+        if (inclusive) {
+            events.add(this)
+        }
+        // obtain a list of predecessors of given event
+        var event: Event? = parent
+        while (event != null) {
+            events.add(event)
+            event = event.parent
+        }
+        // since we iterate from child to parent, the list by default is in reverse order;
+        // if the callee passed `reversed=true` leave it as is, otherwise reverse
+        // to get the list in the order from ancestors to descendants
+        if (!reversed) {
+            events.reverse()
+        }
+        return events
+    }
 
     val syncFrom: Event by lazy {
         require(label.isResponse && label.isBinarySynchronizing)
