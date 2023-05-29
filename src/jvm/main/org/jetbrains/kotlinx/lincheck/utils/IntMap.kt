@@ -56,6 +56,9 @@ fun<T> IntMap<T>.forEach(action: (Int, T) -> Unit) {
     }
 }
 
+fun<T, R> IntMap<T>.mapNotNull(transform: (Int, T) -> R?) =
+    keys.mapNotNull { transform(it, get(it)!!) }
+
 inline fun<T> MutableIntMap<T>.getOrPut(key: Int, defaultValue: () -> T): T {
     get(key)?.let { return it }
     return defaultValue().also { put(key, it) }

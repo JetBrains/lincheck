@@ -20,48 +20,127 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-class VectorClock<P, T>(val partialOrder: PartialOrder<T>, clock: Map<P, T> = mapOf()) {
+import org.jetbrains.kotlinx.lincheck.ensure
+import kotlin.math.max
 
-    private val _clock: MutableMap<P, T> = clock.toMutableMap()
+interface VectorClock {
+    fun isEmpty(): Boolean
 
-    // TODO: this pattern is covered by explicit backing fields KEEP
-    //   https://github.com/Kotlin/KEEP/issues/278
-    val clock: Map<P, T>
-        get() = _clock
+    operator fun get(tid: ThreadID): Int
+}
 
-    fun copy(): VectorClock<P, T> =
-        VectorClock(partialOrder, this.clock)
+interface MutableVectorClock : VectorClock {
+    fun put(tid: ThreadID, timestamp: Int): Int
 
-    operator fun get(part: P): T? =
-        clock[part]
+    fun merge(other: VectorClock)
 
-    fun observes(part: P, timestamp: T): Boolean =
-        clock[part]?.let { partialOrder.lessOrEqual(timestamp, it) } ?: false
+    fun clear()
+}
 
-    fun outdated(part: P, timestamp: T): Boolean =
-        clock[part]?.let { partialOrder.lessThan(timestamp, it) } ?: false
+fun VectorClock.observes(tid: ThreadID, timestamp: Int): Boolean =
+    timestamp <= get(tid)
 
-    operator fun set(part: P, timestamp: T) {
-        _clock[part] = timestamp
-    }
+operator fun MutableVectorClock.set(tid: ThreadID, timestamp: Int) {
+    put(tid, timestamp)
+}
 
-    fun update(part: P, timestamp: T) {
-        _clock.update(part, default = timestamp) { oldTimestamp ->
-            require(partialOrder.lessOrEqual(oldTimestamp, timestamp)) {
-                "Attempt to update vector clock to older timestamp: old=$oldTimestamp, new=$timestamp."
-            }
-            timestamp
+fun MutableVectorClock.update(tid: ThreadID, timestamp: Int) {
+    put(tid, timestamp).ensure { it < timestamp }
+}
+
+// TODO: use sealed interfaces to make when exhaustive
+operator fun VectorClock.plus(other: VectorClock): MutableVectorClock =
+    copy().apply { merge(other) }
+
+fun VectorClock.copy(): MutableVectorClock {
+    check(this is IntArrayClock)
+    return copy()
+}
+
+fun VectorClock(nThreads: Int): VectorClock =
+    MutableVectorClock(nThreads)
+
+fun MutableVectorClock(nThreads: Int): MutableVectorClock =
+    IntArrayClock(nThreads)
+
+private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
+    val clock = IntArray(nThreads) { 0 }
+
+    override fun isEmpty(): Boolean =
+        clock.all { it == 0 }
+
+    override fun get(tid: ThreadID): Int =
+        clock[tid]
+
+    override fun put(tid: ThreadID, timestamp: Int): Int =
+        clock[tid].also { clock[tid] = timestamp }
+
+    override fun merge(other: VectorClock) {
+        for (i in 0 until nThreads) {
+            clock[i] = max(clock[i], other[i])
         }
     }
 
-    operator fun plus(other: VectorClock<P, T>) =
-        copy().apply { merge(other) }
-
-    infix fun merge(other: VectorClock<P, T>) {
-        require(partialOrder == other.partialOrder) {
-            "Attempt to merge vector clocks ordered by differed partial orders."
-        }
-        _clock.mergeReduce(other.clock, partialOrder::max)
+    override fun clear() {
+        clock.fill(0)
     }
+
+    fun copy() = IntArrayClock(nThreads).also {
+        for (i in 0 until nThreads) {
+            it.clock[i] = clock[i]
+        }
+    }
+
+    override fun equals(other: Any?): Boolean =
+        (other is IntArrayClock) && (clock.contentEquals(other.clock))
+
+    override fun hashCode(): Int =
+        clock.contentHashCode()
 
 }
+
+// class VectorClock<P, T>(val partialOrder: PartialOrder<T>, clock: Map<P, T> = mapOf()) {
+//
+//     private val _clock: MutableMap<P, T> = clock.toMutableMap()
+//
+//     // TODO: this pattern is covered by explicit backing fields KEEP
+//     //   https://github.com/Kotlin/KEEP/issues/278
+//     val clock: Map<P, T>
+//         get() = _clock
+//
+//     fun copy(): VectorClock<P, T> =
+//         VectorClock(partialOrder, this.clock)
+//
+//     operator fun get(part: P): T? =
+//         clock[part]
+//
+//     fun observes(part: P, timestamp: T): Boolean =
+//         clock[part]?.let { partialOrder.lessOrEqual(timestamp, it) } ?: false
+//
+//     fun outdated(part: P, timestamp: T): Boolean =
+//         clock[part]?.let { partialOrder.lessThan(timestamp, it) } ?: false
+//
+//     operator fun set(part: P, timestamp: T) {
+//         _clock[part] = timestamp
+//     }
+//
+//     fun update(part: P, timestamp: T) {
+//         _clock.update(part, default = timestamp) { oldTimestamp ->
+//             require(partialOrder.lessOrEqual(oldTimestamp, timestamp)) {
+//                 "Attempt to update vector clock to older timestamp: old=$oldTimestamp, new=$timestamp."
+//             }
+//             timestamp
+//         }
+//     }
+//
+//     operator fun plus(other: VectorClock<P, T>) =
+//         copy().apply { merge(other) }
+//
+//     infix fun merge(other: VectorClock<P, T>) {
+//         require(partialOrder == other.partialOrder) {
+//             "Attempt to merge vector clocks ordered by differed partial orders."
+//         }
+//         _clock.mergeReduce(other.clock, partialOrder::max)
+//     }
+//
+// }

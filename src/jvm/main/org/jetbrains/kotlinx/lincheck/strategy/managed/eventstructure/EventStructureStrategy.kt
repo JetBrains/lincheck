@@ -326,7 +326,7 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
             }
         }
         for (location in locations) {
-            val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier().toVectorClock())
+            val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier())
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
             if (write.label is InitializationLabel)

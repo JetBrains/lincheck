@@ -59,7 +59,7 @@ class Event private constructor(
     /**
      * Vector clock to track causality relation.
      */
-    val causalityClock: VectorClock<Int, Event>,
+    val causalityClock: VectorClock,
     /**
      * State of the execution frontier at the point when event is created.
      */
@@ -86,19 +86,17 @@ class Event private constructor(
 
         fun create(
             threadId: Int,
+            threadPosition: Int,
             label: EventLabel,
             parent: Event?,
             dependencies: List<Event>,
+            causalityClock: VectorClock,
             // TODO: make read-only here
             frontier: MutableExecutionFrontier,
             // TODO: make read-only here
             pinnedEvents: MutableExecutionFrontier,
         ): Event {
             val id = nextId++
-            val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
-            val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
-                clock + event.causalityClock
-            }
             return Event(
                 id,
                 threadId = threadId,
@@ -109,12 +107,10 @@ class Event private constructor(
                 causalityClock = causalityClock,
                 frontier = frontier,
                 pinnedEvents = pinnedEvents,
-                // isInitialization = isInitialization
             ).apply {
                 calculateJumps(this)
-                causalityClock.update(threadId, this)
+                // TODO: try not to include this event into frontier
                 frontier[threadId] = this
-                pinnedEvents.merge(causalityClock.toFrontier())
             }
         }
 
@@ -305,11 +301,9 @@ val programOrder: PartialOrder<Event> = PartialOrder.ofLessThan { x, y ->
 }
 
 val causalityOrder: PartialOrder<Event> = PartialOrder.ofLessOrEqual { x, y ->
-    y.causalityClock.observes(x.threadId, x)
+    y.causalityClock.observes(x.threadId, x.threadPosition)
 }
 
 val externalCausalityCovering: Covering<Event> = Covering { y ->
     y.dependencies
 }
-
-fun emptyClock() = VectorClock<Int, Event>(programOrder)

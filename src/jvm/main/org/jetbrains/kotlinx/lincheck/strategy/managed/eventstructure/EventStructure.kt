@@ -255,6 +255,16 @@ class EventStructure(
         } else null
     }
 
+    private fun emptyClock(): MutableVectorClock =
+        MutableVectorClock(nThreads)
+
+    private fun VectorClock.toMutableFrontier(): MutableExecutionFrontier =
+        (0 until nThreads).mapNotNull { tid ->
+            currentExecution[tid, this[tid]]?.let { tid to it }
+        }.let {
+            mutableExecutionFrontierOf(*it.toTypedArray())
+        }
+
     private fun createEvent(iThread: Int, label: EventLabel, parent: Event?,
                             dependencies: List<Event>, conflicts: List<Event>): Event? {
         var causalityViolation = false
@@ -268,20 +278,29 @@ class EventStructure(
         causalityViolation = causalityViolation || conflicts.any { conflict -> dependencies.any { dependency ->
                 causalityOrder.lessOrEqual(conflict, dependency)
         }}
-        return if (!causalityViolation)
-            Event.create(
-                threadId = iThread,
-                label = label,
-                parent = parent,
-                // TODO: rename to external dependencies?
-                dependencies = dependencies.filter { it != parent },
-                frontier = currentExecution.toMutableFrontier().apply { cut(conflicts) },
-                pinnedEvents = pinnedEvents.copy().apply { cut(conflicts) },
-            )
-        else null
+        if (causalityViolation)
+            return null
+        val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
+        val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
+            clock + event.causalityClock
+        }.apply { set(iThread, threadPosition) }
+        return Event.create(
+            threadId = iThread,
+            threadPosition = threadPosition,
+            label = label,
+            parent = parent,
+            dependencies = dependencies,
+            causalityClock = causalityClock,
+            frontier = currentExecution.toMutableFrontier().apply { cut(conflicts) },
+            pinnedEvents = pinnedEvents.copy().apply {
+                merge(causalityClock.toMutableFrontier())
+                cut(conflicts)
+            },
+        )
     }
 
     private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event? {
+        require(parent !in dependencies)
         val conflicts = conflictingEvents(iThread, parent?.let { it.threadPosition + 1 } ?: 0, label, dependencies)
         return createEvent(iThread, label, parent, dependencies, conflicts)?.also { event ->
             _events.add(event)
@@ -382,7 +401,7 @@ class EventStructure(
                     .map { it.readsFrom }
                     .filter { it != lastSeenWrite }
                     .distinct()
-                val racyWrites = calculateRacyWrites(event.label.location, event.causalityClock)
+                val racyWrites = calculateRacyWrites(event.label.location, event.frontier)
                 candidates.filter {
                     !racyWrites.any { write -> causalityOrder.lessThan(it, write) } &&
                     !staleWrites.any { write -> causalityOrder.lessOrEqual(it, write) }
@@ -748,8 +767,8 @@ class EventStructure(
      *
      * TODO: move to Execution?
      */
-    fun calculateMemoryLocationView(location: MemoryLocation, observation: VectorClock<Int, Event>): VectorClock<Int, Event> =
-        VectorClock(programOrder, observation.clock.mapNotNull { (threadId, event) ->
+    fun calculateMemoryLocationView(location: MemoryLocation, observation: ExecutionFrontier): ExecutionFrontier =
+        observation.threadMap.mapNotNull { tid, event ->
             check(event in currentExecution)
             var lastWrite = event
             while (
@@ -758,8 +777,10 @@ class EventStructure(
             ) {
                 lastWrite = lastWrite.parent ?: return@mapNotNull null
             }
-            (threadId to lastWrite)
-        }.toMap())
+            (tid to lastWrite)
+        }.let {
+            executionFrontierOf(*it.toTypedArray())
+        }
 
     /**
      * Calculates a list of all racy writes to specific memory location observed at the given point of execution
@@ -772,10 +793,10 @@ class EventStructure(
      *
      * TODO: move to Execution?
      */
-    fun calculateRacyWrites(location: MemoryLocation, observation: VectorClock<Int, Event>): List<Event> {
-        val view = calculateMemoryLocationView(location, observation)
-        return view.clock.values.filter { write ->
-            !view.clock.values.any { other ->
+    fun calculateRacyWrites(location: MemoryLocation, observation: ExecutionFrontier): List<Event> {
+        val frontier = calculateMemoryLocationView(location, observation)
+        return frontier.threadMap.values.filter { write ->
+            !frontier.threadMap.values.any { other ->
                 causalityOrder.lessThan(write, other)
             }
         }

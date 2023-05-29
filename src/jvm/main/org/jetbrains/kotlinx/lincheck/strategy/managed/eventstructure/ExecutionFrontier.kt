@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.utils.*
 
+// TODO: implement VectorClock interface??
 interface ExecutionFrontier {
     val threadMap: ThreadMap<Event>
 }
@@ -73,7 +74,7 @@ fun MutableExecutionFrontier.cut(cutEvents: List<Event>) {
         // TODO: optimize --- transform cutEvents into vector clock
         // TODO: optimize using binary search
         val pred = event.pred { !cutEvents.any { cutEvent ->
-            it.causalityClock.observes(cutEvent.threadId, cutEvent)
+            it.causalityClock.observes(cutEvent.threadId, cutEvent.threadPosition)
         }}
         set(tid, pred)
     }
