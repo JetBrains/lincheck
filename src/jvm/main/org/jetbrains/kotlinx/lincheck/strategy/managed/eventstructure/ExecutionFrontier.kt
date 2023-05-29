@@ -78,6 +78,18 @@ fun MutableExecutionFrontier.cut(cutEvents: List<Event>) {
     }
 }
 
+fun ExecutionFrontier(nThreads: Int): ExecutionFrontier =
+    ExecutionFrontierImpl(nThreads)
+
+fun MutableExecutionFrontier(nThreads: Int): MutableExecutionFrontier =
+    ExecutionFrontierImpl(nThreads)
+
+fun executionFrontierOf(vararg pairs: Pair<ThreadID, Event>): ExecutionFrontier =
+    ExecutionFrontierImpl(*pairs)
+
+fun mutableExecutionFrontierOf(vararg pairs: Pair<ThreadID, Event>): MutableExecutionFrontier =
+    ExecutionFrontierImpl(*pairs)
+
 fun ExecutionFrontier.copy(): MutableExecutionFrontier {
     check(this is ExecutionFrontierImpl)
     return ExecutionFrontierImpl(nThreads).also {
@@ -87,16 +99,29 @@ fun ExecutionFrontier.copy(): MutableExecutionFrontier {
     }
 }
 
-fun ExecutionFrontier.toExecution(): MutableExecution =
+private class ExecutionFrontierImpl(val nThreads: Int): MutableExecutionFrontier {
+    override val threadMap = ArrayMap<Event>(nThreads)
+
+    constructor(vararg pairs: Pair<ThreadID, Event>)
+            : this(pairs.maxOfOrNull { (tid, _) -> tid } ?: 0) {
+        require(pairs.all { (tid, _) -> tid >= 0 })
+        if (nThreads == 0)
+            return
+        pairs.forEach { (tid, event) ->
+            threadMap[tid] = event
+        }
+    }
+}
+
+fun ExecutionFrontier.toExecution(): Execution =
+    toMutableExecution()
+
+fun ExecutionFrontier.toMutableExecution(): MutableExecution =
     threadIDs.map { tid ->
         tid to get(tid)!!.threadPrefix(inclusive = true)
     }.let {
         mutableExecutionOf(*it.toTypedArray())
     }
-
-private class ExecutionFrontierImpl(val nThreads: Int): MutableExecutionFrontier {
-    override val threadMap = ArrayMap<Event>(nThreads)
-}
 
 /**
  * ExecutionFrontier represents a frontier of an execution,
@@ -109,40 +134,6 @@ private class ExecutionFrontierImpl(val nThreads: Int): MutableExecutionFrontier
 //
 //     val mapping: Map<Int, Event>
 //         get() = frontier.clock
-//
-//     operator fun get(iThread: Int): Event? =
-//         frontier[iThread]
-//
-//     operator fun set(iThread: Int, event: Event) {
-//         check(iThread == event.threadId)
-//         // TODO: properly document this precondition
-//         //  (i.e. we expect frontier to be updated to some offspring of frontier's execution)
-//         // check(programOrder.nullOrLessOrEqual(event.parent, frontier[iThread]))
-//         frontier[iThread] = event
-//     }
-//
-//     fun merge(other: ExecutionFrontier) {
-//         frontier.merge(other.frontier)
-//     }
-//
-//     fun copy(): ExecutionFrontier =
-//         ExecutionFrontier(mapping)
-//
-//     fun cut(cutEvents: List<Event>): ExecutionFrontier {
-//         return if (cutEvents.isEmpty())
-//             copy()
-//         else ExecutionFrontier(frontier.clock.mapNotNull { (threadId, frontEvent) ->
-//             var event: Event = frontEvent
-//             // TODO: optimize --- transform cutEvents into vector clock
-//             cutEvents.forEach { cutEvent ->
-//                 // TODO: optimize using binary search
-//                 while (event.causalityClock.observes(cutEvent.threadId, cutEvent)) {
-//                     event = event.parent ?: return@mapNotNull null
-//                 }
-//             }
-//             threadId to event
-//         }.toMap())
-//     }
 //
 //     fun toVectorClock(): VectorClock<Int, Event> =
 //         frontier.copy()

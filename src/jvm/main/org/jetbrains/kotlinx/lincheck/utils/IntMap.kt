@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.utils
 
 import kotlin.math.max
 
-interface IntMap<T> {
+interface IntMap<out T> {
 
     val keys: Set<Int>
 
@@ -34,7 +34,7 @@ interface IntMap<T> {
 
     fun containsKey(key: Int): Boolean
 
-    fun containsValue(value: T): Boolean
+    fun containsValue(value: @UnsafeVariance T): Boolean
 
     operator fun get(key: Int): T?
 

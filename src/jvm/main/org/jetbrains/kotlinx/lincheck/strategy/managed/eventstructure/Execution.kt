@@ -20,208 +20,181 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.unreachable
+import org.jetbrains.kotlinx.lincheck.utils.*
 import org.jetbrains.kotlinx.lincheck.ensure
+
 
 /**
  * Execution represents a set of events belonging to single program's execution.
  */
-open class Execution(
-    threadEvents: Map<Int, List<Event>> = emptyMap(),
-) : Collection<Event> {
-    /**
-     * Execution is encoded as a mapping `ThreadID -> List<Event>`
-     * from thread id to a list of events belonging to this thread ordered by program-order.
-     * We also assume that program order is compatible with execution order,
-     * and thus events within the same thread are also ordered by execution order.
-     *
-     * TODO: use array instead of map?
-     */
-    protected val threadsEvents: MutableMap<Int, SortedArrayList<Event>> =
-        threadEvents.map { (threadId, events) -> threadId to SortedArrayList(events) }.toMap().toMutableMap()
+interface Execution : Collection<Event> {
+    val threadMap: ThreadMap<SortedList<Event>>
 
-    val threads: Set<Int>
-        get() = threadsEvents.keys
+    operator fun get(tid: Int): SortedList<Event>? =
+        threadMap[tid]
 
-    override val size: Int
-        get() = threadsEvents.values.sumOf { it.size }
-
-    val maxThreadId: Int
-        get() = threads.maxOrNull()?.let { 1 + it } ?: 0
-
-    val rootEvent: Event by lazy {
-        this.first { it.label is InitializationLabel }
-    }
-
-    override fun isEmpty(): Boolean =
-        threadsEvents.isEmpty()
-
-    fun getThreadSize(iThread: Int): Int =
-        threadsEvents[iThread]?.size ?: 0
-
-    fun lastPosition(iThread: Int): Int =
-        getThreadSize(iThread) - 1
-
-    fun firstEvent(iThread: Int): Event? =
-        threadsEvents[iThread]?.firstOrNull()
-
-    fun lastEvent(iThread: Int): Event? =
-        threadsEvents[iThread]?.lastOrNull()
-
-    operator fun get(iThread: Int): SortedArrayList<Event>? =
-        threadsEvents[iThread]
-
-    operator fun get(iThread: Int, Position: Int): Event? =
-        threadsEvents[iThread]?.getOrNull(Position)
-
-    fun nextEvent(event: Event): Event? =
-        threadsEvents[event.threadId]?.let { events ->
-            require(events[event.threadPosition] == event)
-            events.getOrNull(event.threadPosition + 1)
-        }
-
-    fun toFrontier(): ExecutionFrontier = ExecutionFrontier(
-        threadsEvents.mapValues { (_, events) -> events.last() }
-    )
-
-    override operator fun contains(element: Event): Boolean =
-        threadsEvents[element.threadId]
-            ?.let { events -> events[element.threadPosition] == element }
-            ?: false
+    override fun contains(element: Event): Boolean =
+        get(element.threadId)?.let { events ->
+            events[element.threadPosition] == element
+        } ?: false
 
     override fun containsAll(elements: Collection<Event>): Boolean =
         elements.all { contains(it) }
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is Execution) return false
-        return threadsEvents == other.threadsEvents
+    override fun iterator(): Iterator<Event> =
+        threadIDs.map { get(it)!! }.asSequence().flatten().iterator()
+
+    fun executionOrderSortedList(): List<Event> =
+        this.sorted()
+
+}
+
+interface MutableExecution : Execution {
+    override val threadMap: ThreadMap<MutableSortedList<Event>>
+
+    fun addEvent(event: Event)
+    fun removeLastEvent(event: Event)
+}
+
+val Execution.threadIDs: Set<ThreadID>
+    get() = threadMap.keys
+
+val Execution.maxThreadID: ThreadID
+    get() = -1
+
+fun Execution.getThreadSize(tid: ThreadID): Int =
+    get(tid)?.size ?: 0
+
+fun Execution.lastPosition(tid: ThreadID): Int =
+    getThreadSize(tid) - 1
+
+fun Execution.firstEvent(tid: ThreadID): Event? =
+    get(tid)?.firstOrNull()
+
+fun Execution.lastEvent(tid: ThreadID): Event? =
+    get(tid)?.lastOrNull()
+
+operator fun Execution.get(tid: ThreadID, pos: Int): Event? =
+    get(tid)?.getOrNull(pos)
+
+fun Execution.nextEvent(event: Event): Event? =
+    get(event.threadId)?.let { events ->
+        require(events[event.threadPosition] == event)
+        events.getOrNull(event.threadPosition + 1)
     }
 
+fun Execution(nThreads: Int): Execution =
+    ExecutionImpl(nThreads)
+
+fun MutableExecution(nThreads: Int): MutableExecution =
+    ExecutionImpl(nThreads)
+
+fun executionOf(vararg pairs: Pair<ThreadID, List<Event>>): Execution =
+    ExecutionImpl(*pairs)
+
+fun mutableExecutionOf(vararg pairs: Pair<ThreadID, List<Event>>): MutableExecution =
+    ExecutionImpl(*pairs)
+
+private class ExecutionImpl(val nThreads: Int) : MutableExecution {
+
+    override var size: Int = 0
+        private set
+
+    override val threadMap = ArrayMap<MutableSortedList<Event>>(nThreads) {
+        sortedArrayListOf<Event>()
+    }
+
+    constructor(vararg pairs: Pair<ThreadID, List<Event>>)
+            : this(pairs.maxOfOrNull { (tid, _) -> tid } ?: 0) {
+        require(pairs.all { (tid, _) -> tid >= 0 })
+        if (nThreads == 0)
+            return
+        pairs.forEach { (tid, threadEvents) ->
+            size += threadEvents.size
+            threadMap[tid] = SortedArrayList(threadEvents)
+        }
+    }
+
+    override fun isEmpty(): Boolean =
+        (size > 0)
+
+    override fun addEvent(event: Event) {
+        ++size
+        threadMap[event.threadId]!!
+            .ensure { event.parent == it.lastOrNull() }
+            .also { it.add(event) }
+    }
+
+    override fun removeLastEvent(event: Event) {
+        --size
+        threadMap[event.threadId]!!
+            .ensure { event == it.lastOrNull() }
+            .removeLast()
+    }
+
+    override fun equals(other: Any?): Boolean =
+        (other is ExecutionImpl) && (size == other.size) && (threadMap == other.threadMap)
+
     override fun hashCode(): Int =
-        threadsEvents.hashCode()
+       threadMap.hashCode()
 
     override fun toString(): String = buildString {
         appendLine("<======== Execution Graph @${hashCode()} ========>")
-        threads.toList().sorted().forEach { tid ->
-            val events = threadsEvents[tid] ?: return@forEach
+        threadIDs.toList().sorted().forEach { tid ->
+            val events = threadMap[tid] ?: return@forEach
             appendLine("[-------- Thread #${tid} --------]")
             for (event in events) {
-                append("$event")
+                appendLine("$event")
                 if (event.dependencies.isNotEmpty()) {
-                    appendLine()
-                    append("    dependencies: ${event.dependencies.joinToString { 
-                        "#${it.id}: [${it.threadId}, ${it.threadPosition}]" 
+                    appendLine("    dependencies: ${event.dependencies.joinToString {
+                        "#${it.id}: [${it.threadId}, ${it.threadPosition}]"
                     }}")
                 }
-                appendLine()
             }
         }
-    }
-
-    infix fun equivalent(other: Execution): Boolean =
-        this.all { it equivalent (other[it.threadId, it.threadPosition] ?: return false) }
-
-    private infix fun Event.equivalent(other: Event): Boolean =
-        threadId == other.threadId &&
-        threadPosition == other.threadPosition &&
-        // TODO: check for label up to replaying
-        dependencies.size == other.dependencies.size &&
-        dependencies.all { e1 -> other.dependencies.any { e2 ->
-            e1 equivalent e2
-        }}
-
-    override fun iterator() = object : Iterator<Event> {
-
-        private val counter = ExecutionCounter(maxThreadId) { 0 }
-        private var nextEvent: Event? = null
-
-        init {
-            setNextEvent()
-        }
-
-        override fun hasNext(): Boolean =
-            nextEvent != null
-
-        override fun next(): Event =
-            nextEvent!!.also { setNextEvent() }
-
-        private fun setNextEvent() {
-            if (nextEvent != null) {
-                counter[nextEvent!!.threadId]++
-            }
-            nextEvent = null
-            for (thread in counter.indices) {
-                val pos = counter[thread]
-                if (pos >= (this@Execution[thread]?.size ?: 0))
-                    continue
-                val event = this@Execution[thread, pos]!!
-                if (nextEvent == null || event.id < nextEvent!!.id)
-                    nextEvent = event
-            }
-        }
-
-    }
-
-    fun buildIndexer() = object : Indexer<Event> {
-
-        private val threadOffsets: IntArray =
-            IntArray(maxThreadId).apply {
-                var offset = 0
-                for (i in indices) {
-                    this[i] = offset
-                    offset += getThreadSize(i)
-                }
-            }
-
-        private val events: Array<Event> =
-            Array(size) { i ->
-                for (threadId in threadOffsets.indices) {
-                    if (i < threadOffsets[threadId] + getThreadSize(threadId))
-                        return@Array this@Execution[threadId, i - threadOffsets[threadId]]!!
-                }
-                unreachable()
-            }
-
-        override fun index(x: Event): Int {
-            // require(x in this@Execution)
-            return threadOffsets[x.threadId] + x.threadPosition
-        }
-
-        override fun get(i: Int): Event {
-            require(i < events.size)
-            return events[i]
-        }
-
     }
 
 }
 
-class MutableExecution(
-    threadEvents: Map<Int, List<Event>> = emptyMap(),
-) : Execution(threadEvents) {
+fun Execution.toFrontier(): ExecutionFrontier =
+    toMutableFrontier()
 
-    fun addEvent(event: Event) {
-        val threadEvents = threadsEvents.getOrPut(event.threadId) { sortedArrayListOf() }
-        check(event.parent == threadEvents.lastOrNull())
-        threadEvents.add(event)
+fun Execution.toMutableFrontier(): MutableExecutionFrontier =
+    threadIDs.map { tid ->
+        tid to get(tid)!!.last()
+    }.let {
+        mutableExecutionFrontierOf(*it.toTypedArray())
     }
 
-    fun removeLastEvent(event: Event) {
-        val threadEvents = threadsEvents[event.threadId]
-        check(event == threadEvents?.lastOrNull())
-        threadEvents?.removeLast()
-    }
+fun Execution.buildIndexer() = object : Indexer<Event> {
 
-    fun removeDanglingRequestEvents() {
-        for (threadId in threads) {
-            val lastEvent = get(threadId)?.lastOrNull() ?: continue
-            if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
-                lastEvent.parent?.label?.ensure { !it.isRequest }
-                removeLastEvent(lastEvent)
-            }
+    private val events = executionOrderSortedList()
+
+    private val eventIndices = ArrayMap(1 + maxThreadID) { tid ->
+        val threadEvents = threadMap[tid] ?: listOf()
+        List(threadEvents.size) { pos ->
+            events.indexOf(threadEvents[pos]).ensure { it >= 0 }
         }
     }
 
+    override fun get(i: Int): Event {
+        return events[i]
+    }
+
+    override fun index(x: Event): Int {
+        return eventIndices[x.threadId]!![x.threadPosition]
+    }
+
+}
+
+fun MutableExecution.removeDanglingRequestEvents() {
+    for (threadId in threadIDs) {
+        val lastEvent = get(threadId)?.lastOrNull() ?: continue
+        if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
+            lastEvent.parent?.label?.ensure { !it.isRequest }
+            removeLastEvent(lastEvent)
+        }
+    }
 }
 
 typealias ExecutionCounter = IntArray
@@ -243,13 +216,14 @@ abstract class ExecutionRelation(
 
         val covering: List<List<Event>> = execution.indices.map { index ->
             val event = indexer[index]
-            val counter = IntArray(execution.maxThreadId) { -1 }
+            val nThreads = 1 + execution.maxThreadID
+            val counter = IntArray(nThreads) { -1 }
             for (other in execution) {
                 if (relation(other, event) && other.threadPosition > counter[other.threadId]) {
                     counter[other.threadId] = other.threadPosition
                 }
             }
-            (0 until execution.maxThreadId).mapNotNull { threadId ->
+            (0 until nThreads).mapNotNull { threadId ->
                 if (threadId != event.threadId && counter[threadId] != -1)
                     execution[threadId, counter[threadId]]
                 else null

@@ -52,7 +52,7 @@ class EventStructure(
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
-    private var _currentExecution: MutableExecution = MutableExecution()
+    private var _currentExecution: MutableExecution = MutableExecution(maxThreadId + 1)
 
     val currentExecution: Execution
         get() = _currentExecution
@@ -108,7 +108,7 @@ class EventStructure(
         // _currentExecution = playedFrontier.toExecution()
         // println("played frontier: ${playedFrontier.mapping}")
         // TODO: bugfix --- cut threads absent in playedFrontier.mapping.values to 0 !!!
-        for (threadId in currentExecution.threads) {
+        for (threadId in currentExecution.threadIDs) {
             val lastEvent = playedFrontier[threadId]
             if (lastEvent == null) {
                 _currentExecution[threadId]!!.cutTo(0)
