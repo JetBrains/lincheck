@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.utils.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 // TODO: what information can we store about the reason of violation?

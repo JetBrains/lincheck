@@ -26,3 +26,7 @@ fun<T> MutableList<T>.expand(size: Int, defaultValue: T) {
     }
 }
 
+fun<T> MutableList<T>.cut(index: Int) {
+    require(index <= size)
+    subList(index, size).clear()
+}

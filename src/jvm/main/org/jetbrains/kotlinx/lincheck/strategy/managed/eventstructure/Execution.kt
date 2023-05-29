@@ -20,8 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.utils.*
 import org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.utils.*
 
 
 /**
@@ -30,7 +30,7 @@ import org.jetbrains.kotlinx.lincheck.ensure
 interface Execution : Collection<Event> {
     val threadMap: ThreadMap<SortedList<Event>>
 
-    operator fun get(tid: Int): SortedList<Event>? =
+    operator fun get(tid: ThreadID): SortedList<Event>? =
         threadMap[tid]
 
     override fun contains(element: Event): Boolean =
@@ -50,10 +50,9 @@ interface Execution : Collection<Event> {
 }
 
 interface MutableExecution : Execution {
-    override val threadMap: ThreadMap<MutableSortedList<Event>>
-
     fun addEvent(event: Event)
     fun removeLastEvent(event: Event)
+    fun cut(tid: ThreadID, pos: Int)
 }
 
 val Execution.threadIDs: Set<ThreadID>
@@ -83,6 +82,12 @@ fun Execution.nextEvent(event: Event): Event? =
         events.getOrNull(event.threadPosition + 1)
     }
 
+fun MutableExecution.cut(event: Event) =
+    cut(event.threadId, event.threadPosition)
+
+fun MutableExecution.cutNext(event: Event) =
+    cut(event.threadId, 1 + event.threadPosition)
+
 fun Execution(nThreads: Int): Execution =
     ExecutionImpl(nThreads)
 
@@ -100,8 +105,8 @@ private class ExecutionImpl(val nThreads: Int) : MutableExecution {
     override var size: Int = 0
         private set
 
-    override val threadMap = ArrayMap<MutableSortedList<Event>>(nThreads) {
-        sortedArrayListOf<Event>()
+    override val threadMap = ArrayMap<SortedMutableList<Event>>(nThreads) {
+        sortedArrayListOf()
     }
 
     constructor(vararg pairs: Pair<ThreadID, List<Event>>)
@@ -118,6 +123,9 @@ private class ExecutionImpl(val nThreads: Int) : MutableExecution {
     override fun isEmpty(): Boolean =
         (size > 0)
 
+    override fun get(tid: ThreadID): SortedMutableList<Event>? =
+        threadMap[tid]
+
     override fun addEvent(event: Event) {
         ++size
         threadMap[event.threadId]!!
@@ -130,6 +138,12 @@ private class ExecutionImpl(val nThreads: Int) : MutableExecution {
         threadMap[event.threadId]!!
             .ensure { event == it.lastOrNull() }
             .removeLast()
+    }
+
+    override fun cut(tid: ThreadID, pos: Int) {
+        val threadEvents = get(tid) ?: return
+        size -= (threadEvents.size - pos)
+        threadEvents.cut(pos)
     }
 
     override fun equals(other: Any?): Boolean =

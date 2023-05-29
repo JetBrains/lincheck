@@ -22,25 +22,27 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.utils.*
 import kotlin.reflect.KClass
 
 class EventStructure(
-    nThreads: Int,
+    nParallelThreads: Int,
     val checker: ConsistencyChecker = idleConsistencyChecker,
     val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
     val memoryInitializer: MemoryInitializer,
     val lockAwareScheduling: Boolean = true,
 ) {
-    val mainThreadId = nThreads
-    val initThreadId = nThreads + 1
+    val mainThreadId = nParallelThreads
+    val initThreadId = nParallelThreads + 1
 
     private val maxThreadId = initThreadId
+    private val nThreads = maxThreadId + 1
 
     val root: Event
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
-    private val _events: SortedArrayList<Event> = sortedArrayListOf()
+    private val _events = sortedMutableListOf<Event>()
 
     /**
      * List of events of the event structure.
@@ -52,14 +54,14 @@ class EventStructure(
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
-    private var _currentExecution: MutableExecution = MutableExecution(maxThreadId + 1)
+    private var _currentExecution = MutableExecution(this.nThreads)
 
     val currentExecution: Execution
         get() = _currentExecution
 
-    private var playedFrontier: ExecutionFrontier = ExecutionFrontier()
+    private var playedFrontier = MutableExecutionFrontier(this.nThreads)
 
-    private var pinnedEvents: ExecutionFrontier = ExecutionFrontier()
+    private var pinnedEvents = ExecutionFrontier(this.nThreads)
 
     private val currentRemapping: Remapping = Remapping()
 
@@ -100,7 +102,7 @@ class EventStructure(
     }
 
     fun initializeExploration() {
-        playedFrontier = ExecutionFrontier()
+        playedFrontier = MutableExecutionFrontier(nThreads)
         playedFrontier[initThreadId] = currentExecution[initThreadId]!!.last()
     }
 
@@ -111,7 +113,7 @@ class EventStructure(
         for (threadId in currentExecution.threadIDs) {
             val lastEvent = playedFrontier[threadId]
             if (lastEvent == null) {
-                _currentExecution[threadId]!!.cutTo(0)
+                _currentExecution.cut(threadId, 0)
                 continue
             }
             when {
@@ -121,17 +123,18 @@ class EventStructure(
                 // TODO: too complicated, try to simplify
                 lastEvent.label.isRequest && lastEvent.label.isBlocking -> {
                     val responseEvent = _currentExecution[lastEvent.threadId, lastEvent.threadPosition + 1]
-                    if (responseEvent == null || responseEvent.dependencies.any { it !in playedFrontier }) {
-                        _currentExecution[lastEvent.threadId]!!.cutTo(lastEvent.threadPosition)
+                        ?: continue
+                    if (responseEvent.dependencies.any { it !in playedFrontier }) {
+                        _currentExecution.cut(responseEvent)
                         continue
                     }
                     check(responseEvent.label.isResponse)
                     responseEvent.label.remap(currentRemapping)
-                    _currentExecution[threadId]!!.cutTo(responseEvent.threadPosition)
+                    _currentExecution.cutNext(responseEvent)
                 }
                 // otherwise just cut last replayed event
                 else -> {
-                    _currentExecution[threadId]!!.cutTo(lastEvent.threadPosition)
+                    _currentExecution.cutNext(lastEvent)
                 }
             }
         }
@@ -146,11 +149,11 @@ class EventStructure(
     private fun resetExploration(event: Event) {
         currentExplorationRoot = event
         // TODO: filter unused initialization events
-        _currentExecution = event.frontier.toExecution().apply {
+        _currentExecution = event.frontier.toMutableExecution().apply {
             removeDanglingRequestEvents()
         }
         pinnedEvents = event.pinnedEvents.copy().ensure {
-            it.mapping.values.all { pinned -> pinned in currentExecution }
+            it.threadMap.values.all { pinned -> pinned in currentExecution }
         }
         currentRemapping.reset()
         danglingEvents.clear()
@@ -190,7 +193,7 @@ class EventStructure(
         // in order to give it more lightweight incremental checker
         // an opportunity to find inconsistency earlier.
         if (isReplayedEvent) {
-            val replayedExecution = currentExplorationRoot.frontier.toExecution().apply {
+            val replayedExecution = currentExplorationRoot.frontier.toMutableExecution().apply {
                 // remove dangling request events, similarly as we do in `resetExploration`
                 removeDanglingRequestEvents()
                 // temporarily remove new event in order to reset incremental checker
@@ -272,8 +275,8 @@ class EventStructure(
                 parent = parent,
                 // TODO: rename to external dependencies?
                 dependencies = dependencies.filter { it != parent },
-                frontier = currentExecution.toFrontier().cut(conflicts),
-                pinnedEvents = pinnedEvents.cut(conflicts),
+                frontier = currentExecution.toMutableFrontier().apply { cut(conflicts) },
+                pinnedEvents = pinnedEvents.copy().apply { cut(conflicts) },
             )
         else null
     }

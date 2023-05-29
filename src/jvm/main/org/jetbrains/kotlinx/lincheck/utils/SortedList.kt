@@ -33,6 +33,12 @@ fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: (T,
 fun <T : Comparable<T>> List<T>.isSorted(fromIndex : Int = 0, toIndex : Int = size): Boolean =
     isChain(fromIndex, toIndex) { x, y -> x <= y }
 
+fun<T : Comparable<T>> sortedListOf(vararg elements: T): SortedList<T> =
+    sortedMutableListOf(*elements)
+
+fun<T : Comparable<T>> sortedMutableListOf(vararg elements: T): SortedMutableList<T> =
+    sortedArrayListOf(*elements)
+
 fun<T : Comparable<T>> sortedArrayListOf(vararg elements: T): SortedArrayList<T> =
     SortedArrayList(elements.asList())
 
@@ -66,9 +72,9 @@ interface SortedList<out T : Comparable<@UnsafeVariance T>> : List<T> {
 
 }
 
-interface MutableSortedList<T : Comparable<T>> : MutableList<T>, SortedList<T>
+interface SortedMutableList<T : Comparable<T>> : MutableList<T>, SortedList<T>
 
-class SortedArrayList<T : Comparable<T>> : ArrayList<T>, MutableSortedList<T> {
+class SortedArrayList<T : Comparable<T>> : ArrayList<T>, SortedMutableList<T> {
 
     constructor() : super()
 
@@ -114,15 +120,15 @@ class SortedArrayList<T : Comparable<T>> : ArrayList<T>, MutableSortedList<T> {
     }
 
     override fun contains(element: T): Boolean =
-        super<MutableSortedList>.contains(element)
+        super<SortedMutableList>.contains(element)
 
     override fun containsAll(elements: Collection<T>): Boolean =
-        super<MutableSortedList>.containsAll(elements)
+        super<SortedMutableList>.containsAll(elements)
 
     override fun indexOf(element: T): Int =
-        super<MutableSortedList>.indexOf(element)
+        super<SortedMutableList>.indexOf(element)
 
     override fun lastIndexOf(element: T): Int =
-        super<MutableSortedList>.lastIndexOf(element)
+        super<SortedMutableList>.lastIndexOf(element)
 
 }

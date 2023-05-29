@@ -65,6 +65,7 @@ fun MutableExecutionFrontier.merge(other: ExecutionFrontier) {
     threadMap.mergeReduce(other.threadMap, programOrder::max)
 }
 
+// TODO: unify semantics with MutableExecution.cut()
 fun MutableExecutionFrontier.cut(cutEvents: List<Event>) {
     if (cutEvents.isEmpty())
         return

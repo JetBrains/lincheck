@@ -421,7 +421,3 @@ inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
     return this
 }
 
-fun<T> MutableList<T>.cutTo(index: Int) {
-    require(index < size)
-    subList(index + 1, size).clear()
-}

@@ -89,8 +89,10 @@ class Event private constructor(
             label: EventLabel,
             parent: Event?,
             dependencies: List<Event>,
-            frontier: ExecutionFrontier,
-            pinnedEvents: ExecutionFrontier,
+            // TODO: make read-only here
+            frontier: MutableExecutionFrontier,
+            // TODO: make read-only here
+            pinnedEvents: MutableExecutionFrontier,
         ): Event {
             val id = nextId++
             val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
