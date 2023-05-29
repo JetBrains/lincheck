@@ -59,7 +59,7 @@ val Execution.threadIDs: Set<ThreadID>
     get() = threadMap.keys
 
 val Execution.maxThreadID: ThreadID
-    get() = -1
+    get() = threadIDs.maxOrNull() ?: -1
 
 fun Execution.getThreadSize(tid: ThreadID): Int =
     get(tid)?.size ?: 0

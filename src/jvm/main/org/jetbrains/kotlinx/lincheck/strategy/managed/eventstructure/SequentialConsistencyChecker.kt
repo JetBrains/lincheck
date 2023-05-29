@@ -83,7 +83,7 @@ class SequentialConsistencyChecker(
                 continue
             if (event.label is WaitLabel && (event.notifiedBy.label as NotifyLabel).isBroadcast)
                 continue
-            val key: Any = if (event.syncFrom != execution.rootEvent) event.syncFrom else event.label.mutex
+            val key: Any = if (event.syncFrom.label !is InitializationLabel) event.syncFrom else event.label.mutex
             if (mapping.put(key, event) != null) {
                 return SequentialConsistencyViolation(
                     phase = SequentialConsistencyCheckPhase.PRELIMINARY
@@ -94,7 +94,7 @@ class SequentialConsistencyChecker(
     }
 
     private fun canReplayByExecutionOrder(execution: Execution): Boolean {
-        val replayer = SequentialConsistencyReplayer(execution.maxThreadId)
+        val replayer = SequentialConsistencyReplayer(execution.maxThreadID)
         return (replayer.replay(execution) != null)
     }
 
@@ -215,8 +215,8 @@ private data class State(
 ) {
     companion object {
         fun initial(execution: Execution) = State(
-            counter = IntArray(execution.maxThreadId),
-            replayer = SequentialConsistencyReplayer(execution.maxThreadId),
+            counter = IntArray(execution.maxThreadID),
+            replayer = SequentialConsistencyReplayer(execution.maxThreadID),
         )
     }
 
