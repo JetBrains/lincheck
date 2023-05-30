@@ -152,8 +152,12 @@ class EventStructure(
         _currentExecution = event.frontier.toMutableExecution().apply {
             removeDanglingRequestEvents()
         }
-        pinnedEvents = event.pinnedEvents.copy().ensure {
-            it.threadMap.values.all { pinned -> pinned in currentExecution }
+        pinnedEvents = event.pinnedEvents.copy().apply {
+            cutDanglingRequestEvents()
+        }.ensure {
+            it.threadMap.values.all { pinned ->
+                pinned in currentExecution
+            }
         }
         currentRemapping.reset()
         danglingEvents.clear()
@@ -284,6 +288,9 @@ class EventStructure(
         val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
             clock + event.causalityClock
         }
+        val frontier = currentExecution.toMutableFrontier().apply {
+            cut(conflicts)
+        }
         val pinnedEvents = pinnedEvents.copy().apply {
             cut(conflicts)
             merge(causalityClock.toMutableFrontier())
@@ -294,8 +301,10 @@ class EventStructure(
             label = label,
             parent = parent,
             dependencies = dependencies,
-            causalityClock = causalityClock.apply { set(iThread, threadPosition) },
-            frontier = currentExecution.toMutableFrontier().apply { cut(conflicts) },
+            causalityClock = causalityClock.apply {
+                set(iThread, threadPosition)
+            },
+            frontier = frontier,
             pinnedEvents = pinnedEvents,
         )
     }

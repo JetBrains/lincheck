@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: implement VectorClock interface??
@@ -124,6 +125,16 @@ fun ExecutionFrontier.toMutableExecution(): MutableExecution =
     }.let {
         mutableExecutionOf(*it.toTypedArray())
     }
+
+fun MutableExecutionFrontier.cutDanglingRequestEvents() {
+    for (threadId in threadIDs) {
+        val lastEvent = get(threadId) ?: continue
+        if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
+            lastEvent.parent?.label?.ensure { !it.isRequest }
+            set(threadId, lastEvent.parent)
+        }
+    }
+}
 
 /**
  * ExecutionFrontier represents a frontier of an execution,
