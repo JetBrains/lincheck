@@ -283,16 +283,20 @@ class EventStructure(
         val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
         val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
             clock + event.causalityClock
-        }.apply { set(iThread, threadPosition) }
+        }
+        val pinnedEvents = pinnedEvents.copy().apply {
+            cut(conflicts)
+            merge(causalityClock.toMutableFrontier())
+        }
         return Event.create(
             threadId = iThread,
             threadPosition = threadPosition,
             label = label,
             parent = parent,
             dependencies = dependencies,
-            causalityClock = causalityClock,
+            causalityClock = causalityClock.apply { set(iThread, threadPosition) },
             frontier = currentExecution.toMutableFrontier().apply { cut(conflicts) },
-            pinnedEvents = pinnedEvents.copy().apply { cut(conflicts) },
+            pinnedEvents = pinnedEvents,
         )
     }
 

@@ -34,9 +34,7 @@ interface Execution : Collection<Event> {
         threadMap[tid]
 
     override fun contains(element: Event): Boolean =
-        get(element.threadId)?.let { events ->
-            events[element.threadPosition] == element
-        } ?: false
+        get(element.threadId, element.threadPosition) == element
 
     override fun containsAll(elements: Collection<Event>): Boolean =
         elements.all { contains(it) }
