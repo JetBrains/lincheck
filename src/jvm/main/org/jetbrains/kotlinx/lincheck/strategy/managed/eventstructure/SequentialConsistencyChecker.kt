@@ -324,7 +324,16 @@ private class WritesBeforeRelation(
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<Event>> = mutableMapOf()
 
+    private val rmwChains:  MutableMap<Event, List<Event>> = mutableMapOf()
+
+    private var inconsistent = false
+
     init {
+        initializeWritesBeforeOrder()
+        initializeReadModifyWriteChains()
+    }
+
+    private fun initializeWritesBeforeOrder() {
         var initEvent: Event? = null
         // TODO: refactor once per-kind indexing of events will be implemented
         for (event in execution) {
@@ -351,17 +360,67 @@ private class WritesBeforeRelation(
         }
     }
 
+    private fun initializeReadModifyWriteChains() {
+        val chainsMap = mutableMapOf<Event, MutableList<Event>>()
+        for (event in execution.executionOrderSortedList()) {
+            if (event.label !is WriteAccessLabel || !event.label.isExclusive)
+                continue
+            val readFrom = event.exclusiveReadPart.readsFrom
+            val chain = chainsMap.computeIfAbsent(readFrom) {
+                check(!readFrom.label.asMemoryAccessLabel(event.label.location)!!.isExclusive)
+                mutableListOf(readFrom)
+            }
+            // TODO: this should be detected earlier
+            // check(readFrom == chain.last())
+            if (readFrom != chain.last()) {
+                inconsistent = true
+                return
+            }
+            chain.add(event)
+            chainsMap.put(event, chain).ensureNull()
+        }
+        for (chain in chainsMap.values) {
+            check(chain.size >= 2)
+            val location = (chain.last().label as WriteAccessLabel).location
+            val relation = relations[location]!!
+            for (i in 0 until chain.size - 1) {
+                relation[chain[i], chain[i + 1]] = true
+            }
+            relation.transitiveClosure()
+        }
+        rmwChains.putAll(chainsMap)
+    }
+
+    private fun<T> RelationMatrix<T>.updateIrrefl(x: T, y: T): Boolean {
+        return if ((x != y) && !this[x, y]) {
+            this[x, y] = true
+            true
+        } else false
+    }
+
     fun saturate(): ReleaseAcquireConsistencyViolation? {
+        if (inconsistent || !isIrreflexive()) {
+            return ReleaseAcquireConsistencyViolation()
+        }
         for ((memId, relation) in relations) {
             val reads = readsMap[memId] ?: continue
             val writes = writesMap[memId] ?: continue
             var changed = false
             readLoop@ for (read in reads) {
                 val readFrom = read.readsFrom
+                val readFromChain = rmwChains[readFrom]
                 writeLoop@ for (write in writes) {
-                    if (write != readFrom && causalityOrder.lessThan(write, read) && !relation[write, readFrom]) {
-                        relation[write, readFrom] = true
-                        changed = true
+                    val writeChain = rmwChains[write]
+                    if (causalityOrder.lessThan(write, read)) {
+                        relation.updateIrrefl(write, readFrom).also {
+                            changed = changed || it
+                        }
+                        if ((writeChain != null || readFromChain != null) &&
+                            (writeChain !== readFromChain)) {
+                            relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.last() ?: readFrom).also {
+                                changed = changed || it
+                            }
+                        }
                     }
                 }
             }
