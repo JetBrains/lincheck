@@ -786,10 +786,7 @@ class EventStructure(
         observation.threadMap.mapNotNull { tid, event ->
             check(event in currentExecution)
             var lastWrite = event
-            while (
-                lastWrite.label !is InitializationLabel &&
-                !(lastWrite.label is WriteAccessLabel && (lastWrite.label as WriteAccessLabel).location == location)
-            ) {
+            while (lastWrite.label.asMemoryAccessLabel(location)?.takeIf { it.isWrite } == null) {
                 lastWrite = lastWrite.parent ?: return@mapNotNull null
             }
             (tid to lastWrite)

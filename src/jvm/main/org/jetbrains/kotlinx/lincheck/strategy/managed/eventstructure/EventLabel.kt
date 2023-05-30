@@ -559,7 +559,7 @@ sealed class MemoryAccessLabel(
     kind: LabelKind,
     protected open var location_: MemoryLocation,
     protected open var value_: OpaqueValue?,
-    open val kClass: KClass<*>,
+    open val kClass: KClass<*>?,
     open val isExclusive: Boolean = false
 ): EventLabel(kind, SynchronizationType.Binary) {
 
@@ -682,7 +682,7 @@ data class ReadAccessLabel(
     override val kind: LabelKind,
     override var location_: MemoryLocation,
     override var value_: OpaqueValue?,
-    override val kClass: KClass<*>,
+    override val kClass: KClass<*>?,
     override val isExclusive: Boolean = false
 ): MemoryAccessLabel(kind, location_, value_, kClass, isExclusive) {
 
@@ -756,7 +756,7 @@ data class ReadAccessLabel(
 data class WriteAccessLabel(
     override var location_: MemoryLocation,
     override var value_: OpaqueValue?,
-    override val kClass: KClass<*> = value_!!.unwrap()::class,
+    override val kClass: KClass<*>? = value_?.unwrap()?.javaClass?.kotlin,
     override val isExclusive: Boolean = false
 ): MemoryAccessLabel(LabelKind.Send, location_, value_, kClass, isExclusive) {
 
@@ -767,6 +767,12 @@ data class WriteAccessLabel(
 
     override fun toString(): String = super.toString()
 
+}
+
+fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel? = when (this) {
+    is MemoryAccessLabel -> this.takeIf { it.location == location }
+    is InitializationLabel -> asWriteLabel(location)
+    else -> null
 }
 
 /**

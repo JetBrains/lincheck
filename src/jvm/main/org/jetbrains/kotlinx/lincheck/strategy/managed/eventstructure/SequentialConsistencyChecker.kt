@@ -326,6 +326,7 @@ private class WritesBeforeRelation(
 
     init {
         var initEvent: Event? = null
+        // TODO: refactor once per-kind indexing of events will be implemented
         for (event in execution) {
             if (event.label is InitializationLabel)
                 initEvent = event
