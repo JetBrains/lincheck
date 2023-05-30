@@ -199,6 +199,17 @@ fun Execution.buildIndexer() = object : Indexer<Event> {
 
 }
 
+fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): VectorClock {
+    check(this is ExecutionImpl)
+    val clock = MutableVectorClock(nThreads)
+    for (i in 0 until nThreads) {
+        val threadEvents = get(i) ?: continue
+        clock[i] = (threadEvents.binarySearch { !relation(it, event) } - 1)
+            .coerceAtLeast(-1)
+    }
+    return clock
+}
+
 fun MutableExecution.removeDanglingRequestEvents() {
     for (threadId in threadIDs) {
         val lastEvent = get(threadId)?.lastOrNull() ?: continue
@@ -230,15 +241,10 @@ abstract class ExecutionRelation(
 
         val covering: List<List<Event>> = execution.indices.map { index ->
             val event = indexer[index]
-            val counter = IntArray(nThreads) { -1 }
-            for (other in execution) {
-                if (relation(other, event) && other.threadPosition > counter[other.threadId]) {
-                    counter[other.threadId] = other.threadPosition
-                }
-            }
-            (0 until nThreads).mapNotNull { threadId ->
-                if (threadId != event.threadId && counter[threadId] != -1)
-                    execution[threadId, counter[threadId]]
+            val clock = execution.computeVectorClock(event, relation)
+            (0 until nThreads).mapNotNull { tid ->
+                if (tid != event.threadId && clock[tid] != -1)
+                    execution[tid, clock[tid]]
                 else null
             }
         }
