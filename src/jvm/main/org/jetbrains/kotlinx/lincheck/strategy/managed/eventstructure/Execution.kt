@@ -226,9 +226,10 @@ abstract class ExecutionRelation(
 
         val relation = this@ExecutionRelation
 
+        private val nThreads = 1 + execution.maxThreadID
+
         val covering: List<List<Event>> = execution.indices.map { index ->
             val event = indexer[index]
-            val nThreads = 1 + execution.maxThreadID
             val counter = IntArray(nThreads) { -1 }
             for (other in execution) {
                 if (relation(other, event) && other.threadPosition > counter[other.threadId]) {
