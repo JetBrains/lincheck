@@ -64,10 +64,10 @@ fun MutableVectorClock(nThreads: Int): MutableVectorClock =
     IntArrayClock(nThreads)
 
 private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
-    val clock = IntArray(nThreads) { 0 }
+    val clock = IntArray(nThreads) { -1 }
 
     override fun isEmpty(): Boolean =
-        clock.all { it == 0 }
+        clock.all { it == -1 }
 
     override fun get(tid: ThreadID): Int =
         clock[tid]
@@ -82,7 +82,7 @@ private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
     }
 
     override fun clear() {
-        clock.fill(0)
+        clock.fill(-1)
     }
 
     fun copy() = IntArrayClock(nThreads).also {

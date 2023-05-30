@@ -111,6 +111,7 @@ class Event private constructor(
                 calculateJumps(this)
                 // TODO: try not to include this event into frontier
                 frontier[threadId] = this
+                pinnedEvents.merge(frontier)
             }
         }
 

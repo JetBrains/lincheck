@@ -94,7 +94,7 @@ class SequentialConsistencyChecker(
     }
 
     private fun canReplayByExecutionOrder(execution: Execution): Boolean {
-        val replayer = SequentialConsistencyReplayer(execution.maxThreadID)
+        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
         return (replayer.replay(execution) != null)
     }
 
@@ -215,8 +215,8 @@ private data class State(
 ) {
     companion object {
         fun initial(execution: Execution) = State(
-            counter = IntArray(execution.maxThreadID),
-            replayer = SequentialConsistencyReplayer(execution.maxThreadID),
+            counter = IntArray(1 + execution.maxThreadID),
+            replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID),
         )
     }
 

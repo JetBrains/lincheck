@@ -81,16 +81,13 @@ fun <T> MutableIntMap<T>.mergeReduce(other: IntMap<T>, reduce: (T, T) -> T) {
 
 class ArrayMap<T : Any>(capacity: Int) : MutableIntMap<T> {
 
-    var capacity: Int = capacity
-        private set
-
     override var size: Int = 0
         private set
 
     private val array = MutableList<T?>(capacity) { null }
 
     override val keys: Set<Int>
-        get() = (0 until capacity).filter { containsKey(it) }.toSet()
+        get() = array.indices.filter { containsKey(it) }.toSet()
 
     override val values: Collection<T>
         get() = array.filterNotNull()

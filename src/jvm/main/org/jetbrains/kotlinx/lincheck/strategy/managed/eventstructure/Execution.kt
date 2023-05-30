@@ -110,7 +110,7 @@ private class ExecutionImpl(val nThreads: Int) : MutableExecution {
     }
 
     constructor(vararg pairs: Pair<ThreadID, List<Event>>)
-            : this(pairs.maxOfOrNull { (tid, _) -> tid } ?: 0) {
+            : this(1 + (pairs.maxOfOrNull { (tid, _) -> tid } ?: -1)) {
         require(pairs.all { (tid, _) -> tid >= 0 })
         if (nThreads == 0)
             return
@@ -174,8 +174,8 @@ fun Execution.toFrontier(): ExecutionFrontier =
     toMutableFrontier()
 
 fun Execution.toMutableFrontier(): MutableExecutionFrontier =
-    threadIDs.map { tid ->
-        tid to get(tid)!!.last()
+    threadIDs.mapNotNull { tid ->
+        get(tid)?.lastOrNull()?.let { tid to it }
     }.let {
         mutableExecutionFrontierOf(*it.toTypedArray())
     }

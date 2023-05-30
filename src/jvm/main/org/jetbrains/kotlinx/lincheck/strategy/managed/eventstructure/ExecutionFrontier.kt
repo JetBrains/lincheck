@@ -73,7 +73,7 @@ fun MutableExecutionFrontier.cut(cutEvents: List<Event>) {
     threadMap.forEach { tid, event ->
         // TODO: optimize --- transform cutEvents into vector clock
         // TODO: optimize using binary search
-        val pred = event.pred { !cutEvents.any { cutEvent ->
+        val pred = event.pred(inclusive = true) { !cutEvents.any { cutEvent ->
             it.causalityClock.observes(cutEvent.threadId, cutEvent.threadPosition)
         }}
         set(tid, pred)
@@ -105,7 +105,7 @@ private class ExecutionFrontierImpl(val nThreads: Int): MutableExecutionFrontier
     override val threadMap = ArrayMap<Event>(nThreads)
 
     constructor(vararg pairs: Pair<ThreadID, Event>)
-            : this(pairs.maxOfOrNull { (tid, _) -> tid } ?: 0) {
+            : this(1 + (pairs.maxOfOrNull { (tid, _) -> tid } ?: -1)) {
         require(pairs.all { (tid, _) -> tid >= 0 })
         if (nThreads == 0)
             return

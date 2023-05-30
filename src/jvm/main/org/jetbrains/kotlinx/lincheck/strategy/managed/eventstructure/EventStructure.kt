@@ -292,10 +292,7 @@ class EventStructure(
             dependencies = dependencies,
             causalityClock = causalityClock,
             frontier = currentExecution.toMutableFrontier().apply { cut(conflicts) },
-            pinnedEvents = pinnedEvents.copy().apply {
-                merge(causalityClock.toMutableFrontier())
-                cut(conflicts)
-            },
+            pinnedEvents = pinnedEvents.copy().apply { cut(conflicts) },
         )
     }
 
@@ -392,7 +389,6 @@ class EventStructure(
                 // val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
                 //     it.label is WriteAccessLabel && it.label.location == event.label.location
                 // } ?: root
-                // candidates.filter { !causalityOrder.lessThan(it, threadLastWrite) }
                 val threadReads = currentExecution[event.threadId]!!.filter {
                     it.label is ReadAccessLabel && it.label.isResponse && it.label.location == event.label.location
                 }
@@ -401,8 +397,9 @@ class EventStructure(
                     .map { it.readsFrom }
                     .filter { it != lastSeenWrite }
                     .distinct()
-                val racyWrites = calculateRacyWrites(event.label.location, event.frontier)
+                val racyWrites = calculateRacyWrites(event.label.location, event.causalityClock.toMutableFrontier())
                 candidates.filter {
+                    // !causalityOrder.lessThan(it, threadLastWrite) &&
                     !racyWrites.any { write -> causalityOrder.lessThan(it, write) } &&
                     !staleWrites.any { write -> causalityOrder.lessOrEqual(it, write) }
                 }
