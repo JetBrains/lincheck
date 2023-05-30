@@ -462,16 +462,21 @@ class EventStructure(
     private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
         require(event.label.isBinarySynchronizing)
         // TODO: sort resulting events according to some strategy?
-        return candidateEvents.mapNotNull { other ->
-            val syncLab = event.label.synchronize(other.label) ?: return@mapNotNull null
-            val (parent, dependency) = when {
-                event.label.isRequest -> event to other
-                other.label.isRequest -> other to event
-                else -> unreachable()
+        return candidateEvents
+            .mapNotNull { other ->
+                val syncLab = event.label.synchronize(other.label) ?: return@mapNotNull null
+                val (parent, dependency) = when {
+                    event.label.isRequest -> event to other
+                    other.label.isRequest -> other to event
+                    else -> unreachable()
+                }
+                check(parent.label.isRequest && dependency.label.isSend && syncLab.isResponse)
+                Triple(syncLab, parent, dependency)
+            }.sortedBy { (_, _, dependency) ->
+                dependency
+            }.mapNotNull { (syncLab, parent, dependency) ->
+                addEvent(parent.threadId, syncLab, parent, dependencies = listOf(dependency))
             }
-            check(parent.label.isRequest && dependency.label.isSend && syncLab.isResponse)
-            addEvent(parent.threadId, syncLab, parent, dependencies = listOf(dependency))
-        }
     }
 
     private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
