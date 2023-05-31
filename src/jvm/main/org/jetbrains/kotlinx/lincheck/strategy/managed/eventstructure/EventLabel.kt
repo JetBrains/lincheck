@@ -333,7 +333,7 @@ class InitializationLabel(
 
     fun asWriteLabel(location: MemoryLocation) = WriteAccessLabel(
         location_ = location,
-        value_ = initialValues[location],
+        value_ = initialValues[location]?.takeIf { it != NULL },
         isExclusive = false,
     )
 
