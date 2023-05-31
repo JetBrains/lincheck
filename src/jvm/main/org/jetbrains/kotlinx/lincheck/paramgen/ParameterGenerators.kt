@@ -8,10 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.kotlinx.lincheck.paramgen
 
-import org.jetbrains.kotlinx.lincheck.ExpandingRangeIntGenerator.NextExpansionDirection.*
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator.NextExpansionDirection.*
 import java.util.*
 
 /**
