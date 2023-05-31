@@ -366,10 +366,12 @@ private class WritesBeforeRelation(
             if (event.label !is WriteAccessLabel || !event.label.isExclusive)
                 continue
             val readFrom = event.exclusiveReadPart.readsFrom
-            val chain = chainsMap.computeIfAbsent(readFrom) {
-                check(!readFrom.label.asMemoryAccessLabel(event.label.location)!!.isExclusive)
-                mutableListOf(readFrom)
-            }
+            val chain = if (readFrom.label !is InitializationLabel)
+                    chainsMap.computeIfAbsent(readFrom) {
+                        check(!(readFrom.label as WriteAccessLabel).isExclusive)
+                        mutableListOf(readFrom)
+                    }
+                else mutableListOf(readFrom)
             // TODO: this should be detected earlier
             // check(readFrom == chain.last())
             if (readFrom != chain.last()) {
@@ -388,6 +390,7 @@ private class WritesBeforeRelation(
             }
             relation.transitiveClosure()
         }
+        check(chainsMap.keys.all { it.label is WriteAccessLabel })
         rmwChains.putAll(chainsMap)
     }
 
@@ -417,7 +420,7 @@ private class WritesBeforeRelation(
                         }
                         if ((writeChain != null || readFromChain != null) &&
                             (writeChain !== readFromChain)) {
-                            relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.last() ?: readFrom).also {
+                            relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.first() ?: readFrom).also {
                                 changed = changed || it
                             }
                         }
