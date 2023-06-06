@@ -168,7 +168,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     appendLine("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
     appendLine()
-    for ((t, stackTrace) in failure.threadDump) {
+    for ((t, stackTrace) in failure.threadDump.entries.sortedBy { it.key.id }) {
         val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
         stackTrace.map {

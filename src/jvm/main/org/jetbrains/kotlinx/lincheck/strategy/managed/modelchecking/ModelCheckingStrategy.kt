@@ -216,7 +216,8 @@ internal class ModelCheckingStrategy(
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
-            currentThread = nextThreadToSwitch.next() // choose initial executing thread
+            val nextThreadId = nextThreadToSwitch.next() // choose initial executing thread
+            initializeCurrentThread(nextThreadId)
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.

@@ -20,6 +20,7 @@ import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.set
 
 /**
@@ -52,6 +53,10 @@ abstract class ManagedStrategy(
     // Which thread is allowed to perform operations?
     @Volatile
     protected var currentThread: Int = 0
+    // We keep the setter private to be sure thread switch will occur only after we will make
+    // all necessary modifications and them will be visible to the next thread.
+    // (loopDetector operations, for example)
+        private set
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
     // Which threads are suspended?
@@ -61,7 +66,8 @@ abstract class ManagedStrategy(
     // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // Detector of loops or hangs (i.e. active locks).
-    private lateinit var loopDetector: LoopDetector
+    private val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
+
     // Tracker of acquisitions and releases of monitors.
     private lateinit var monitorTracker: MonitorTracker
 
@@ -153,7 +159,6 @@ abstract class ManagedStrategy(
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
-        loopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
         monitorTracker = MonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
@@ -203,6 +208,9 @@ abstract class ManagedStrategy(
         runner = createRunner()
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
         runner.initialize()
+        if (failingResult is DeadlockInvocationResult) {
+            loopDetector.enableDeadlockReplayMode()
+        }
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
         val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
@@ -225,7 +233,7 @@ abstract class ManagedStrategy(
         initializeInvocation()
         val result = runner.run()
         // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let { return it  }
+        suddenInvocationResult?.let { return it }
         return result
     }
 
@@ -242,17 +250,21 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && !finished[iThread])
-                        scenario.parallelExecution[iThread][actorId]
-                    else null
-                }.filterNotNull().any { it.causesBlocking }
+            if (iThread != currentThread && !finished[iThread])
+                scenario.parallelExecution[iThread][actorId]
+            else null
+        }.filterNotNull().any { it.causesBlocking }
 
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
-            suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
-            // Forcibly finish the current execution by throwing an exception.
-            throw ForcibleExecutionFinishException
+            failDueToDeadlock()
         }
+    }
+
+    private fun failDueToDeadlock(): Nothing {
+        suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
+        // Forcibly finish the current execution by throwing an exception.
+        throw ForcibleExecutionFinishException
     }
 
     override fun close() {
@@ -306,7 +318,8 @@ abstract class ManagedStrategy(
         awaitTurn(iThread)
         finished[iThread] = true
         traceCollector?.finishThread(iThread)
-        doSwitchCurrentThread(iThread, true)
+        loopDetector.onThreadFinish(iThread)
+        doSwitchCurrentThread(iThread = iThread, mustSwitch = true)
     }
 
     /**
@@ -319,14 +332,14 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
+        suddenInvocationResult =
+            UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
     }
 
     override fun onActorStart(iThread: Int) {
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
-        loopDetector.reset(iThread)
     }
 
     /**
@@ -374,12 +387,22 @@ abstract class ManagedStrategy(
                     // forcibly finish execution by throwing an exception.
                     throw ForcibleExecutionFinishException
                 }
-                currentThread = nextThread
+                setCurrentThread(nextThread)
             }
             return // ignore switch, because there is no one to switch to
         }
         val nextThreadId = chooseThread(iThread)
-        currentThread = nextThreadId
+        setCurrentThread(nextThreadId)
+    }
+
+    protected fun initializeCurrentThread(nextThread: Int) {
+        loopDetector.initialize(nextThread)
+        currentThread = nextThread
+    }
+
+    private fun setCurrentThread(nextThread: Int) {
+        loopDetector.onThreadSwitch(nextThread)
+        currentThread = nextThread
     }
 
     /**
@@ -707,8 +730,128 @@ abstract class ManagedStrategy(
             // use call stack trace of the previous trace point
             val callStackTrace = _trace.last().callStackTrace.toList()
             _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace)
+
         }
     }
+
+    /**
+     * Detects loops, active locks and live locks when the same code location is visited too often.
+     * Its important that it's lifecycle is bounded by a certain scenario as it caches information about loops,
+     * based on the number of executions in threads and thread switches, which is reusable only in one scenario.
+     */
+    private inner class LoopDetector(private val hangingDetectionThreshold: Int) {
+        private var lastIThread = -1// no last thread
+        private val operationCounts = mutableMapOf<Int, Int>()
+
+        // Is used to find a cycle period inside exact thread execution if it has hung
+        private val codeLocationsHistory = mutableListOf<Int>()
+        // Threads switches and executions history to store sequences lead to loops
+        private val interleavingHistory = ArrayList<InterleavingHistoryNode>()
+        // Set of interleaving event sequences lead to loops
+        private val interleavingSequenceSet = InterleavingSequenceTrackableSet()
+        // Interleaving execution tracker
+        private val loopTrackingCursor = interleavingSequenceSet.cursor
+
+        private var replayModeEnabled = false
+        private var replayModeContextSwitchesBeforeHalt = 0
+
+        fun enableDeadlockReplayMode() {
+            replayModeEnabled = true
+            val cycleInHistory = findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence(interleavingHistory)
+            replayModeContextSwitchesBeforeHalt = interleavingHistory.size - cycleInHistory
+            check(replayModeContextSwitchesBeforeHalt > 0)
+        }
+
+        var totalOperations = 0
+            private set
+
+        /**
+         * Returns `true` if a loop or a hang is detected,
+         * `false` otherwise.
+         */
+        fun visitCodeLocation(iThread: Int, codeLocation: Int): Boolean {
+            // Increase the total number of happened operations for live-lock detection
+            totalOperations++
+            // Have the thread changed? Reset the counters in this case.
+            check(lastIThread == iThread) { "reset expected!" }
+            // Ignore coroutine suspension code locations.
+            if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false
+            // Increment the number of times the specified code location is visited.
+            val count = operationCounts.getOrDefault(codeLocation, 0) + 1
+            operationCounts[codeLocation] = count
+            codeLocationsHistory += codeLocation
+            executionNode(codeLocation)
+            //
+            val detectedEarly = loopTrackingCursor.isInCycle
+            // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
+            val detectedFirstTime = count > hangingDetectionThreshold
+            if (detectedFirstTime && !detectedEarly) {
+                val elementsToCutOffFromHistory =
+                     findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence(codeLocationsHistory)
+                registerCycle(elementsToCutOffFromHistory)
+            }
+            if (!detectedFirstTime && detectedEarly) {
+                totalOperations += hangingDetectionThreshold
+            }
+            return detectedFirstTime || detectedEarly
+        }
+
+        fun onThreadSwitch(iThread: Int) {
+            lastIThread = iThread
+            operationCounts.clear()
+            codeLocationsHistory.clear()
+            addSwitchNode(iThread)
+        }
+
+        fun onThreadFinish(iThread: Int) {
+            check(iThread == lastIThread)
+            executionNode(executionIdentity = -iThread)
+        }
+
+        /**
+         * Is called before each interleaving processing
+         */
+        fun initialize(iThread: Int) {
+            lastIThread = iThread // certain last thread
+            operationCounts.clear()
+            codeLocationsHistory.clear()
+            totalOperations = 0
+
+            loopTrackingCursor.reset(iThread)
+            interleavingHistory.clear()
+            interleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
+        }
+
+        private fun addSwitchNode(nextThread: Int) {
+            if (interleavingHistory.isNotEmpty() && interleavingHistory.last().threadId == nextThread) {
+                return
+            }
+            interleavingHistory.add(InterleavingHistoryNode(nextThread))
+            loopTrackingCursor.onNextSwitchPoint(nextThread)
+            failIfDeadlockReplayModeLimitReached()
+        }
+
+        private fun failIfDeadlockReplayModeLimitReached() {
+            if (replayModeEnabled && interleavingHistory.size >= replayModeContextSwitchesBeforeHalt) {
+                failDueToDeadlock()
+            }
+        }
+
+        private fun executionNode(executionIdentity: Int) {
+            interleavingHistory.last().addExecution(executionIdentity)
+            loopTrackingCursor.onNextExecutionPoint()
+        }
+
+        private fun registerCycle(elementsToCutOffFromHistory: Int) {
+            val chainCopy = interleavingHistory.map { it.copy() }.toMutableList()
+            val cycleStateLastNode = chainCopy.last().asNodeCorrespondingToCycle(elementsToCutOffFromHistory)
+
+            interleavingHistory[interleavingHistory.lastIndex] = cycleStateLastNode
+            chainCopy[chainCopy.lastIndex] = cycleStateLastNode.copy()
+            interleavingSequenceSet.addBranch(chainCopy)
+        }
+    }
+
 }
 
 /**
@@ -778,41 +921,6 @@ private class ManagedStrategyRunner(
     }
 }
 
-/**
- * Detects loops, active locks and live locks when the same code location is visited too often.
- */
-private class LoopDetector(private val hangingDetectionThreshold: Int) {
-    private var lastIThread = -1 // no last thread
-    private val operationCounts = mutableMapOf<Int, Int>()
-    var totalOperations = 0
-        private set
-
-    /**
-     * Returns `true` if a loop or a hang is detected,
-     * `false` otherwise.
-     */
-    fun visitCodeLocation(iThread: Int, codeLocation: Int): Boolean {
-        // Increase the total number of happened operations for live-lock detection
-        totalOperations++
-        // Have the thread changed? Reset the counters in this case.
-        if (lastIThread != iThread) reset(iThread)
-        // Ignore coroutine suspension code locations.
-        if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false
-        // Increment the number of times the specified code location is visited.
-        val count = operationCounts.getOrDefault(codeLocation, 0) + 1
-        operationCounts[codeLocation] = count
-        // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
-        return count > hangingDetectionThreshold
-    }
-
-    /**
-     * Resets the counters for the specified thread.
-     */
-    fun reset(iThread: Int) {
-        operationCounts.clear()
-        lastIThread = iThread
-    }
-}
 
 /**
  * Tracks synchronization operations with monitors (acquire/release, wait/notify) to maintain a set of active threads.
