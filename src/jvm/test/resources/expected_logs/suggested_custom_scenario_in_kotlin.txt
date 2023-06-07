@@ -8,7 +8,7 @@ Post part:
 [operation2(1, -2.0401094641E9, -2.04010944E9, true, 0): void, operationNoArguments(): void]
 
 ---
-values in "[..]" brackets indicate the number of completed operations 
+values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
 ---
 
@@ -72,3 +72,4 @@ Detailed parallel part trace:
 		actor(::operationNoArguments)
 	}
 }
+.withReproduceSettings("eyJpdGVyYXRpb25zIjozMCwiaW52b2NhdGlvbnNQZXJJdGVyYXRpb24iOjEwMDAwfQ==")

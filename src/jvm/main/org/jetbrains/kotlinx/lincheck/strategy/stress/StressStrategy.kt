@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
 class StressStrategy(
-    testCfg: StressCTestConfiguration,
+    private val testCfg: StressCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
@@ -50,12 +50,17 @@ class StressStrategy(
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results))
-                            return IncorrectResultsFailure(scenario, ir.results)
+                            return IncorrectResultsFailure(scenario, ir.results, getRunProperties())
                     }
-                    else -> return ir.toLincheckFailure(scenario)
+                    else -> return ir.toLincheckFailure(scenario, getRunProperties())
                 }
             }
             return null
         }
     }
+
+    private fun getRunProperties() = RunProperties(
+        iterations = testCfg.iterations,
+        invocationsPerIteration = testCfg.invocationsPerIteration
+    )
 }

@@ -14,6 +14,7 @@ apply(plugin = "kotlinx-atomicfu")
 plugins {
     java
     kotlin("multiplatform")
+    kotlin("plugin.serialization") version "1.6.0"
     id("maven-publish")
     id("kotlinx.team.infra") version "0.3.0-dev-64"
 }
@@ -44,6 +45,7 @@ kotlin {
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
             val reflectionsVersion: String by project
+            val kotlinxSerialisationJsonVersion: String by project
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -52,6 +54,7 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+                api("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerialisationJsonVersion")
             }
         }
 

@@ -15,12 +15,10 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
-import java.io.File
 import java.lang.reflect.Method
 import java.util.function.Consumer
 

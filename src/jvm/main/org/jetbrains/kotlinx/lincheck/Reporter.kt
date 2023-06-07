@@ -10,12 +10,16 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
+import java.util.Base64
 
 class Reporter constructor(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -158,6 +162,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         appendLine()
         appendLine("= You can add this scenario as a custom test. Insert this code in your testing options configuration =")
         append(generateAddCustomScenarioBlock(failure.scenario, testLanguage))
+        append(".withReproduceSettings(\"${ConfigurationStringEncoder.encodeToConfigurationString(failure.runProperties)}\")")
     }
 
     return this
@@ -233,4 +238,19 @@ private fun StringBuilder.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
+}
+
+internal object ConfigurationStringEncoder {
+
+    private val base64Encoder = Base64.getEncoder()
+    private val base64Decoder = Base64.getDecoder()
+
+    fun encodeToConfigurationString(runProperties: RunProperties): String {
+        return base64Encoder.encodeToString(Json.encodeToString(runProperties).toByteArray())
+    }
+
+    fun decodeRunToProperties(configuration: String): RunProperties {
+        return Json.decodeFromString(base64Decoder.decode(configuration).decodeToString())
+    }
+
 }

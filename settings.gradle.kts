@@ -3,6 +3,7 @@ pluginManagement {
     plugins {
         java
         kotlin("multiplatform") version kotlinVersion
+        kotlin("plugin.serialization") version kotlinVersion
     }
 
     repositories {
