@@ -211,7 +211,7 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
         appendln("STATE: ${failure.results.afterPostStateRepresentation}")
     }
     if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
-        appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
+        appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations\n" +
             "in each of the parallel threads seen at the beginning of the current operation\n---")
     return this
 }

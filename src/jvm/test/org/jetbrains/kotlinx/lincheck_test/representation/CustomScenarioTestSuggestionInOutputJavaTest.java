@@ -26,6 +26,7 @@ public class CustomScenarioTestSuggestionInOutputJavaTest {
     private boolean canEnterForbiddenSection = false;
 
     @Operation
+    @SuppressWarnings("UnusedAssignment")
     public int operation1(byte byteValue, String stringValue, short shortValue) {
         canEnterForbiddenSection = true;
         canEnterForbiddenSection = false;

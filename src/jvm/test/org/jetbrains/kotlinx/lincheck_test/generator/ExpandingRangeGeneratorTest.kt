@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.generator
 
-import org.jetbrains.kotlinx.lincheck.ExpandingRangeIntGenerator
+import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Random
