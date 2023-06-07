@@ -17,8 +17,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.jetbrains.kotlinx.lincheck.DummyParameterGenerator;
-import org.jetbrains.kotlinx.lincheck.ParameterGenerator;
+import org.jetbrains.kotlinx.lincheck.paramgen.DummyParameterGenerator;
+import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator;
 
 /**
  * Use this annotation to specify parameter generators.
