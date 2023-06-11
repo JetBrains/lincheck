@@ -752,14 +752,15 @@ abstract class ManagedStrategy(
         // Interleaving execution tracker
         private val loopTrackingCursor = interleavingSequenceSet.cursor
 
-        private var replayModeEnabled = false
-        private var replayModeContextSwitchesBeforeHalt = 0
+        private var earlyHaltHelper: EarlyHaltHelper? = null
 
         fun enableDeadlockReplayMode() {
-            replayModeEnabled = true
-            val cycleInHistory = findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence(interleavingHistory)
-            replayModeContextSwitchesBeforeHalt = interleavingHistory.size - cycleInHistory
-            check(replayModeContextSwitchesBeforeHalt > 0)
+            val contextSwitchesBeforeHalt = findMaxPrefixLengthWithNoCycleOnSuffix(interleavingHistory)
+            earlyHaltHelper = if (interleavingHistory.last().executions > hangingDetectionThreshold) {
+                FirstCycleAfterSwitchesLimitEarlyHaltHelper(contextSwitchesBeforeHalt, loopTrackingCursor)
+            } else {
+                SwitchesLimitEarlyHaltHelper(contextSwitchesBeforeHalt)
+            }
         }
 
         var totalOperations = 0
@@ -786,9 +787,8 @@ abstract class ManagedStrategy(
             // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
             val detectedFirstTime = count > hangingDetectionThreshold
             if (detectedFirstTime && !detectedEarly) {
-                val elementsToCutOffFromHistory =
-                     findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence(codeLocationsHistory)
-                registerCycle(elementsToCutOffFromHistory)
+                val elementsToTakeFromHistory = findMaxPrefixLengthWithNoCycleOnSuffix(codeLocationsHistory)
+                registerCycle(elementsToTakeFromHistory)
             }
             if (!detectedFirstTime && detectedEarly) {
                 totalOperations += hangingDetectionThreshold
@@ -820,6 +820,7 @@ abstract class ManagedStrategy(
             loopTrackingCursor.reset(iThread)
             interleavingHistory.clear()
             interleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
+            earlyHaltHelper?.onNextSwitch()
         }
 
         private fun addSwitchNode(nextThread: Int) {
@@ -828,29 +829,71 @@ abstract class ManagedStrategy(
             }
             interleavingHistory.add(InterleavingHistoryNode(nextThread))
             loopTrackingCursor.onNextSwitchPoint(nextThread)
-            failIfDeadlockReplayModeLimitReached()
-        }
-
-        private fun failIfDeadlockReplayModeLimitReached() {
-            if (replayModeEnabled && interleavingHistory.size >= replayModeContextSwitchesBeforeHalt) {
-                failDueToDeadlock()
-            }
+            earlyHaltHelper?.onNextSwitch()
         }
 
         private fun executionNode(executionIdentity: Int) {
             interleavingHistory.last().addExecution(executionIdentity)
             loopTrackingCursor.onNextExecutionPoint()
+            earlyHaltHelper?.onNextExecution()
         }
 
-        private fun registerCycle(elementsToCutOffFromHistory: Int) {
+        private fun registerCycle(elementsToTakeFromHistory: Int) {
             val chainCopy = interleavingHistory.map { it.copy() }.toMutableList()
-            val cycleStateLastNode = chainCopy.last().asNodeCorrespondingToCycle(elementsToCutOffFromHistory)
+            val executionLocationsBeforeCycle = codeLocationsHistory.take(elementsToTakeFromHistory)
+            val cycleStateLastNode = chainCopy.last().asNodeCorrespondingToCycle(
+                elementsToTakeFromHistory = elementsToTakeFromHistory,
+                executionLocationsBeforeCycle = executionLocationsBeforeCycle
+            )
 
             interleavingHistory[interleavingHistory.lastIndex] = cycleStateLastNode
             chainCopy[chainCopy.lastIndex] = cycleStateLastNode.copy()
             interleavingSequenceSet.addBranch(chainCopy)
         }
     }
+
+    /**
+     * Helper class to halt execution on replay (trace collection phase)
+     */
+    private sealed interface EarlyHaltHelper {
+        fun onNextSwitch()
+        fun onNextExecution() {
+        }
+    }
+
+    /**
+     * Halts execution after exact thread switches
+     */
+    private inner class SwitchesLimitEarlyHaltHelper(private val switchCountLimit: Int) : EarlyHaltHelper {
+        private var switchCount: Int = 0
+        override fun onNextSwitch() {
+            switchCount++
+            if (switchCount > switchCountLimit) failDueToDeadlock()
+        }
+    }
+
+    /**
+     * Halts execution after exact thread switches and after the first active lock detection.
+     * Useful when execution hangs in only one thread to show cycle part in that thread.
+     */
+    private inner class FirstCycleAfterSwitchesLimitEarlyHaltHelper(
+        private val switchCountLimit: Int,
+        private val cursor: InterleavingSequenceTrackableSet.Cursor
+    ) : EarlyHaltHelper {
+        private var switchCount: Int = 0
+        private var haltIfCursorIndicatesCycle: Boolean = false
+        override fun onNextSwitch() {
+            switchCount++
+            if (switchCount == switchCountLimit) {
+                haltIfCursorIndicatesCycle = true
+            }
+        }
+
+        override fun onNextExecution() {
+            if (haltIfCursorIndicatesCycle && cursor.isInCycle) failDueToDeadlock()
+        }
+    }
+
 
 }
 

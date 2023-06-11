@@ -11,66 +11,86 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 /**
- * Find the shortest cycle length from the end of the list
+ * Helps find max prefix length without cycle on suffix
+ *
+ * For example, for input data [1, 2, 4, 3, 4, 3, 4] will return 4, as suffix cycle is [3, 4],
+ *  so the maximum prefix we can get not to overlap the cycle repetitions is the prefix of size 4: [1, 2, 4, 3].
+ *
+ * For spin-cycles detection, it's important to get the maximum size suffix cycle,
+ * which doesn't consist of another, shorter suffix cycle.
+ *
+ * For example, if we hung in the loop with a history (code locations): [3, 5, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1],
+ *  we will want to cut 9 last events to show these executions: [3, 5, 2, 1, 1] (prefix and the first cycle occurrence).
+ *
+ * @param elements list of elements, where cycle is excepted on the suffix
+ *
+ * @return elements count from the beginning of the list
  */
-internal fun <T> findSuffixCycleLength(elements: List<T>): Int {
+internal fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): Int {
     if (elements.isEmpty() || elements.size == 1) return 0
     val lastIndex = elements.lastIndex
+    var targetCycleLength = elements.size
+    var minLastPositionNotRelatedToCycle = elements.lastIndex
 
     for (i in lastIndex - 1 downTo elements.size / 2 - 1) {
         var j = 0
+        // trying to find the second cycle segment occurrence
         while (i - j >= 0 && elements[i - j] == elements[lastIndex - j] && lastIndex - j > i) {
             j++
         }
-
-        if (lastIndex - j == i) {
-            return elements.size - (i + 1)
+        if (lastIndex - j != i) continue // cycle not found
+        val cycleLength = elements.size - (i + 1)
+        val lastPositionNotRelatedToCycle = if (i - j >= 0) {
+            findLastIndexNotRelatedToCycle(elements = elements, cycleLength = cycleLength, startPosition = i - j)
+        } else -1
+        if (minLastPositionNotRelatedToCycle > lastPositionNotRelatedToCycle) {
+            minLastPositionNotRelatedToCycle = lastPositionNotRelatedToCycle
+            targetCycleLength = cycleLength
         }
     }
 
-    return 0
+    return if (targetCycleLength == elements.size) {
+        elements.size // cycle not found
+    } else minLastPositionNotRelatedToCycle + targetCycleLength + 1 // number of prefix elements with first cycle
 }
 
 /**
- * @param elements list of elements, where cycle is excepted on the suffix
- *
- * @return elements count needed to cut from the end to get prefix and the first cycle occurrence
+ * @return the last index of the element doesn't belong to any suffix cycle iteration, or -1, if all elements belong to the cycle
  */
-internal fun <T> findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence(elements: List<T>): Int {
-    if (elements.isEmpty()) return 0
-    val cycleLength = findSuffixCycleLength(elements)
-    if (cycleLength == 0) return 0
+private fun <T> findLastIndexNotRelatedToCycle(elements: List<T>, cycleLength: Int, startPosition: Int): Int {
+    var position = startPosition
 
-    var startPosition = elements.lastIndex
-    var cycleRepetitions = 0
-
-    while (startPosition >= 0) {
-        for (i in 0 until cycleLength) {
-            val elementPosition = startPosition - i
-            if (elementPosition < 0 || elements[elementPosition] != elements[elements.lastIndex - i]) {
-                return cycleLength * (cycleRepetitions - 1) + i
-            }
+    while (position >= 0) {
+        val elementFromCycle = elements[elements.lastIndex - ((elements.lastIndex - position) % cycleLength)]
+        val elementToMatch = elements[position]
+        if (elementFromCycle != elementToMatch) {
+            return position
         }
 
-        cycleRepetitions++
-        startPosition -= cycleLength
+        position--
     }
 
-    return cycleLength * (cycleRepetitions - 1)
+    return -1
 }
 
 /**
- * Nodes
+ * This class holds information about executions in exact thread and serves to find spin-cycles
  */
 internal data class InterleavingHistoryNode(
     val threadId: Int,
     var executions: Int = 0,
     var cycleOccurred: Boolean = false,
-    /**
-     * Hash code of execution ids of this switch, which is be used to find cycles in interleaving sequences.
+    /*
+     * Hash code calculated by execution ids of this switch,
+     * which is being used to find cycles in interleaving sequences.
      * It is required as we want to distinguish two execution sequences of the same count in the same thread,
      * but started from different locations.
-     * In return, it allows us to avoid cutting execution sequences, which are not part of the spin cycle.
+     * In return, it allows us to avoid (in most cases, in practice) cutting execution sequences,
+     * which are not part of the spin cycle.
+     * For example, suppose we had 3 executions in thread with id 1, then 3 executions with id 2, and after that we ran into a spin cycle
+     * with period 3. When we will be making a decision on how many context switches (in the trace collection phase) allow before halt,
+     * we would like to keep the first two sequences of execution, because they are not parts of the cycle.
+     * So, this field will give us such ability to separate executions.
      */
     var executionLocationsHash: Int = 0 // no execution is performed in this thread for now
 ) {
@@ -84,15 +104,21 @@ internal data class InterleavingHistoryNode(
      */
     fun addExecution(executionIdentity: Int) {
         executions++
-        executionLocationsHash += 31 * executionIdentity
+        executionLocationsHash = executionLocationsHash xor executionIdentity
     }
 
-    fun asNodeCorrespondingToCycle(elementsToCutOffFromHistory: Int) = InterleavingHistoryNode(
-        threadId = threadId,
-        executionLocationsHash = executionLocationsHash,
-        executions = executions - elementsToCutOffFromHistory,
-        cycleOccurred = true
-    )
+    fun asNodeCorrespondingToCycle(
+        elementsToTakeFromHistory: Int, executionLocationsBeforeCycle: List<Int>
+    ): InterleavingHistoryNode {
+        check(executions >= elementsToTakeFromHistory)
+
+        return InterleavingHistoryNode(
+            threadId = threadId,
+            executionLocationsHash = executionLocationsBeforeCycle.reduceRight { a, b -> a xor b },
+            executions = elementsToTakeFromHistory,
+            cycleOccurred = true
+        )
+    }
 
     fun copy() = InterleavingHistoryNode(
         threadId = threadId,

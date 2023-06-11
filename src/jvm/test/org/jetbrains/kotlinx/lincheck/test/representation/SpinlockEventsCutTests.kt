@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReferenceArray
 
 class ObstructionFreedomViolationEventsCutTest {
     private val q = MSQueueBlocking()
@@ -68,6 +69,34 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
             sharedStateAny.set(!x)
         }
     }
+}
+
+class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
+
+    private val data = AtomicReferenceArray<Int>(7)
+    override val outputFileName: String get() = "long_spin_cycle_events_cut.txt"
+    override fun meaninglessActions() {
+        data[0] = 0
+        data[1] = 0
+        data[2] = 0
+        data[3] = 0
+        data[4] = 0
+        data[5] = 0
+        data[6] = 0
+    }
+
+}
+
+class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
+
+    private val data = AtomicReferenceArray<Int>(10)
+    override val outputFileName: String get() = "inner_loop_spin_cycle_events_cut.txt"
+    override fun meaninglessActions() {
+        for (i in 0 until data.length()) {
+            data[i] = 0
+        }
+    }
+
 }
 
 abstract class AbstractSpinLivelockTest {

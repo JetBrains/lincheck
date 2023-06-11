@@ -11,76 +11,69 @@ Execution scenario (post part):
 [two(), two(), two(), two(), two()]
 Thread-0:
 	java.lang.Thread.yield(Native Method)
-	org.jetbrains.kotlinx.lincheck.test.representation.AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98)
+	org.jetbrains.kotlinx.lincheck.test.representation.AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127)
 	java.lang.Thread.run(Thread.java:829)
 Thread-1:
 	java.lang.Thread.dumpThreads(Native Method)
 	java.lang.Thread.getAllStackTraces(Thread.java:1653)
-	org.jetbrains.kotlinx.lincheck.test.representation.SpinlockEventsCutShortLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:42)
-	org.jetbrains.kotlinx.lincheck.test.representation.AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:85)
+	org.jetbrains.kotlinx.lincheck.test.representation.SpinlockEventsCutShortLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:43)
+	org.jetbrains.kotlinx.lincheck.test.representation.AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:114)
 	java.lang.Thread.run(Thread.java:829)
 
 = The following interleaving leads to the error =
 Parallel part trace:
-|                                                                                                  | two()                                                                                            |
-|                                                                                                  | two()                                                                                            |
-|                                                                                                  | two()                                                                                            |
-|                                                                                                  | one()                                                                                            |
-|                                                                                                  | one()                                                                                            |
-|                                                                                                  |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:81)  |
-|                                                                                                  |   switch                                                                                         |
-| two()                                                                                            |                                                                                                  |
-|   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:95)  |                                                                                                  |
-|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98) |                                                                                                  |
-|   switch (reason: active lock detected)                                                          |                                                                                                  |
-|                                                                                                  |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:84) |
-|                                                                                                  |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:85)             |
-|                                                                                                  |   switch (reason: active lock detected)                                                          |
-|   meaninglessActions() at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:99)             |                                                                                                  |
-|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98) |                                                                                                  |
-|   switch (reason: active lock detected)                                                          |                                                                                                  |
-|                                                                                                  |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:84) |
-|                                                                                                  |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:85)             |
-|                                                                                                  |   switch (reason: active lock detected)                                                          |
+|                                                                                                   | two()                                                                                             |
+|                                                                                                   | two()                                                                                             |
+|                                                                                                   | two()                                                                                             |
+|                                                                                                   | one()                                                                                             |
+|                                                                                                   | one()                                                                                             |
+|                                                                                                   |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:110)  |
+|                                                                                                   |   switch                                                                                          |
+| two()                                                                                             |                                                                                                   |
+|   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:124)  |                                                                                                   |
+|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127) |                                                                                                   |
+|   switch (reason: active lock detected)                                                           |                                                                                                   |
+|                                                                                                   |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:113) |
+|                                                                                                   |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:114)             |
+|                                                                                                   |   switch (reason: active lock detected)                                                           |
+|   meaninglessActions() at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:128)             |                                                                                                   |
+|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127) |                                                                                                   |
+|   switch (reason: active lock detected)                                                           |                                                                                                   |
 
 Detailed parallel part trace:
 |                                                                                                       | two()                                                                                                 |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:95)       |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98)       |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:101)                           |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:102)                           |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:124)      |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127)      |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:130)                           |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:131)                           |
 |                                                                                                       | two()                                                                                                 |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:95)       |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98)       |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:101)                           |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:102)                           |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:124)      |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127)      |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:130)                           |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:131)                           |
 |                                                                                                       | two()                                                                                                 |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:95)       |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98)       |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:101)                           |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:102)                           |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:124)      |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127)      |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:130)                           |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:131)                           |
 |                                                                                                       | one()                                                                                                 |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:81)       |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:84)       |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:87)                            |
-|                                                                                                       |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:88)                            |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:110)      |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:113)      |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:116)                           |
+|                                                                                                       |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:117)                           |
 |                                                                                                       | one()                                                                                                 |
-|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:81)       |
+|                                                                                                       |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:110)      |
 |                                                                                                       |   switch                                                                                              |
 | two()                                                                                                 |                                                                                                       |
-|   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:95)       |                                                                                                       |
-|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98)      |                                                                                                       |
+|   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:124)      |                                                                                                       |
+|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127)     |                                                                                                       |
 |   switch (reason: active lock detected)                                                               |                                                                                                       |
-|                                                                                                       |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:84)      |
-|                                                                                                       |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:85)                  |
-|                                                                                                       |     get(): false at SpinlockEventsCutShortLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:42) |
+|                                                                                                       |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:113)     |
+|                                                                                                       |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:114)                 |
+|                                                                                                       |     get(): false at SpinlockEventsCutShortLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:43) |
 |                                                                                                       |   switch (reason: active lock detected)                                                               |
-|   meaninglessActions() at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:99)                  |                                                                                                       |
-|     get(): false at SpinlockEventsCutShortLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:42) |                                                                                                       |
-|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:98)      |                                                                                                       |
+|   meaninglessActions() at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:128)                 |                                                                                                       |
+|     get(): false at SpinlockEventsCutShortLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:43) |                                                                                                       |
+|   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:127)     |                                                                                                       |
 |   switch (reason: active lock detected)                                                               |                                                                                                       |
-|                                                                                                       |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:84)      |
-|                                                                                                       |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:85)                  |
-|                                                                                                       |     get(): false at SpinlockEventsCutShortLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:42) |
-|                                                                                                       |   switch (reason: active lock detected)                                                               |
 All threads are in deadlock

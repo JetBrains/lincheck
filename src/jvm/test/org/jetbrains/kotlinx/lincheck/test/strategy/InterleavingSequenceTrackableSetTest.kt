@@ -14,8 +14,7 @@ package org.jetbrains.kotlinx.lincheck.test.strategy
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingSequenceTrackableSet
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingHistoryNode
-import org.jetbrains.kotlinx.lincheck.strategy.managed.findSuffixCycleLength
-import org.jetbrains.kotlinx.lincheck.strategy.managed.findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence
+import org.jetbrains.kotlinx.lincheck.strategy.managed.findMaxPrefixLengthWithNoCycleOnSuffix
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -363,77 +362,66 @@ class InterleavingSequenceTrackableSetTest {
 class CycleDetectionTests {
 
     @Test
-    fun `should select single element cycle when all elements are the same`() = assertCycleFound(
-        elements = listOf(1, 1, 1, 1, 1, 1),
-        expectedCycle = listOf(1)
+    fun `should select the longest cycle when all elements are the same`() = assertPrefixAndFistCycleOccurrence(
+        elements = listOf(1, 1, 1, 1, 1, 1, 1),
+        expected = listOf(1)
     )
 
     @Test
-    fun `should find the smallest cycle from the start`() = assertCycleFound(
+    fun `should find the longest cycle from the start`() = assertPrefixAndFistCycleOccurrence(
         elements = listOf(1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3),
-        expectedCycle = listOf(1, 2, 3)
+        expected = listOf(1, 2, 3)
     )
 
     @Test
-    fun `should find the smallest cycle when many of them present`() = assertCycleFound(
-        elements = listOf(1, 2, 3, 4, 5, 3, 4, 5, 3, 4, 5, 3, 4, 5),
-        expectedCycle = listOf(3, 4, 5)
-    )
+    fun `should find the longest cycle when many of them present (even count from the end)`() =
+        assertPrefixAndFistCycleOccurrence(
+            elements = listOf(1, 2, 3, 4, 5, 3, 4, 5, 3, 4, 5, 3, 4, 5),
+            expected = listOf(1, 2, 3, 4, 5)
+        )
 
     @Test
-    fun `should find medium cycle`() = assertCycleFound(
+    fun `should find the longest cycle when many of them present (odd count from the end)`() =
+        assertPrefixAndFistCycleOccurrence(
+            elements = listOf(1, 2, 3, 4, 5, 3, 4, 5, 3, 4, 5, 3, 4, 5, 3, 4, 5),
+            expected = listOf(1, 2, 3, 4, 5)
+        )
+
+    @Test
+    fun `should find medium cycle`() = assertPrefixAndFistCycleOccurrence(
         elements = listOf(1, 2, 3, 4, 5, 3, 4, 5, 3, 4, 5),
-        expectedCycle = listOf(3, 4, 5)
+        expected = listOf(1, 2, 3, 4, 5)
     )
 
     @Test
-    fun `should find small cycle`() = assertCycleFound(
+    fun `should find small cycle`() = assertPrefixAndFistCycleOccurrence(
         elements = listOf(1, 2, 3, 4, 5, 4, 5, 4, 5),
-        expectedCycle = listOf(4, 5)
+        expected = listOf(1, 2, 3, 4, 5)
     )
 
     @Test
-    fun `should not find cycle`() {
-        val data = listOf(1, 2, 1, 4, 5, 3, 6, 5, 3, 4, 5)
-        val cycleLength = findSuffixCycleLength(data)
-
-        assertEquals(0, cycleLength)
-    }
-
-    @Test
-    fun `should find repeated part length`() = assertCycleElementsCut(
-        allElements = listOf(1, 2, 3, 4, 5, 3, 4, 5, 3, 4, 5),
-        elementsToTake = listOf(1, 2, 3, 4, 5)
+    fun `should find the longest cycle`() = assertPrefixAndFistCycleOccurrence(
+        elements = listOf(5, 3, 2, 1, 2, 1, 3, 2, 1, 2, 1),
+        expected = listOf(5, 3, 2, 1, 2, 1)
     )
 
     @Test
-    fun `should drop cycle repetitions 2`() = assertCycleElementsCut(
-        allElements = listOf(16, 17, 12, 16, 17, 12, 16, 17),
-        elementsToTake = listOf(16, 17, 12)
+    fun `should find the larges cycle when many of them present on suffix`() = assertPrefixAndFistCycleOccurrence(
+        elements = listOf(5, 6, 3, 2, 1, 1, 2, 1, 1, 2, 1, 1, 3, 2, 1, 1, 2, 1, 1, 2, 1, 1),
+        expected = listOf(5, 6, 3, 2, 1, 1, 2, 1, 1, 2, 1, 1)
     )
 
     @Test
-    fun `should drop cycle repetitions 3`() = assertCycleElementsCut(
-        allElements = listOf(16, 17, 12, 16, 17, 12, 16),
-        elementsToTake = listOf(16, 17, 12)
+    fun `should return all collection size when there is no cycle`() = assertPrefixAndFistCycleOccurrence(
+        elements = listOf(1, 2, 3, 4, 5),
+        expected = listOf(1, 2, 3, 4, 5)
     )
 
-    @Test
-    fun `should return zero when no cycle is present`() {
-        val actual = findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence(listOf(1, 2, 3, 4, 5, 6))
-        assertEquals(0, actual)
-    }
+    private fun assertPrefixAndFistCycleOccurrence(elements: List<Int>, expected: List<Int>) {
+        val cycleLength = findMaxPrefixLengthWithNoCycleOnSuffix(elements)
+        val actualCycle = elements.take(cycleLength)
 
-    private fun assertCycleFound(elements: List<Int>, expectedCycle: List<Int>) {
-        val cycleLength = findSuffixCycleLength(elements)
-        val actualCycle = elements.takeLast(cycleLength)
-
-        assertEquals(expectedCycle, actualCycle)
-    }
-
-    private fun assertCycleElementsCut(allElements: List<Int>, elementsToTake: List<Int>) {
-        val repeatedPartLength = findNumberOfRepeaterElementsFromSuffixExceptFirstCycleOccurrence(allElements)
-        assertEquals(elementsToTake, allElements.dropLast(repeatedPartLength))
+        assertEquals(expected, actualCycle)
     }
 
 }
