@@ -281,7 +281,6 @@ internal class InterleavingSequenceTrackableSet {
             threadId = first.threadId,
             executions = first.executions - executionsCountedEarlier,
             cycleOccurred = first.cycleOccurred,
-            transitions = mutableMapOf()
         )
         var current = root
 
@@ -291,7 +290,6 @@ internal class InterleavingSequenceTrackableSet {
                 threadId = next.threadId,
                 executions = next.executions,
                 cycleOccurred = next.cycleOccurred,
-                transitions = mutableMapOf()
             )
             current.addTransition(next.threadId, nextNode)
             current = nextNode
