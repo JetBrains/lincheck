@@ -211,11 +211,13 @@ private data class SequentialConsistencyReplayer(
 
 private data class State(
     val counter: ExecutionCounter,
+    val atomicCounter: ExecutionCounter,
     val replayer: SequentialConsistencyReplayer,
 ) {
     companion object {
         fun initial(execution: Execution) = State(
             counter = IntArray(1 + execution.maxThreadID),
+            atomicCounter = IntArray(1 + execution.maxThreadID),
             replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID),
         )
     }
@@ -223,16 +225,32 @@ private data class State(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is State) return false
-        return counter.contentEquals(other.counter) && replayer == other.replayer
+        return counter.contentEquals(other.counter)
+                && atomicCounter.contentEquals(other.atomicCounter)
+                && replayer == other.replayer
     }
 
     override fun hashCode(): Int {
-        return 31 * counter.contentHashCode() + replayer.hashCode()
+        var result = counter.contentHashCode()
+        result = 31 * result + atomicCounter.contentHashCode()
+        result = 31 * result + replayer.hashCode()
+        return result
     }
 
 }
 
 private class Context(val execution: Execution, val covering: Covering<Event>) {
+
+    val hyperExecution = execution.threadMap.map { _, events ->
+        var pos = 0
+        val atomicEvents = mutableListOf<HyperEvent>()
+        while (pos < events.size) {
+            val atomicEvent = events.nextAtomicEvent(pos)!!
+            atomicEvents.add(atomicEvent)
+            pos += atomicEvent.events.size
+        }
+        atomicEvents
+    }
 
     fun State.covered(event: Event): Boolean =
         event.threadPosition < counter[event.threadId]
@@ -246,8 +264,8 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
         }
 
     fun State.transition(threadId: Int): State? {
-        val position = counter[threadId]
-        val atomicEvent = execution.nextAtomicEvent(threadId, position)
+        val position = atomicCounter[threadId]
+        val atomicEvent = hyperExecution[threadId]?.getOrNull(position)
             ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it) } }
             ?: return null
         val view = replayer.replay(atomicEvent) ?: return null
@@ -256,6 +274,9 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
             counter = this.counter.copyOf().also {
                 it[threadId] += atomicEvent.events.size
             },
+            atomicCounter = this.atomicCounter.copyOf().also {
+                it[threadId] += 1
+            }
         )
     }
 

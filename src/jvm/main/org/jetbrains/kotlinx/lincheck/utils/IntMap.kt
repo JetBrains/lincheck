@@ -56,6 +56,9 @@ fun<T> IntMap<T>.forEach(action: (Int, T) -> Unit) {
     }
 }
 
+fun<T, R> IntMap<T>.map(transform: (Int, T) -> R?) =
+    keys.map { transform(it, get(it)!!) }
+
 fun<T, R> IntMap<T>.mapNotNull(transform: (Int, T) -> R?) =
     keys.mapNotNull { transform(it, get(it)!!) }
 
