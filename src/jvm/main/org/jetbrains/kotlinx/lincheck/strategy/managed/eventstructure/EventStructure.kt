@@ -30,7 +30,6 @@ class EventStructure(
     val checker: ConsistencyChecker = idleConsistencyChecker,
     val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
     val memoryInitializer: MemoryInitializer,
-    val lockAwareScheduling: Boolean = true,
 ) {
     val mainThreadId = nParallelThreads
     val initThreadId = nParallelThreads + 1
