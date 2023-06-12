@@ -839,16 +839,19 @@ abstract class ManagedStrategy(
         }
 
         private fun registerCycle(elementsToTakeFromHistory: Int) {
-            val chainCopy = interleavingHistory.map { it.copy() }.toMutableList()
-            val executionLocationsBeforeCycle = codeLocationsHistory.take(elementsToTakeFromHistory)
-            val cycleStateLastNode = chainCopy.last().asNodeCorrespondingToCycle(
-                elementsToTakeFromHistory = elementsToTakeFromHistory,
-                executionLocationsBeforeCycle = executionLocationsBeforeCycle
+            // recalculate node hash, taking only non-repeated prefix
+            var prefixExecutionLocationsHash = codeLocationsHistory.first()
+            for (i in 1 until elementsToTakeFromHistory) {
+                prefixExecutionLocationsHash = prefixExecutionLocationsHash xor codeLocationsHistory[i]
+            }
+
+            val cycleStateLastNode = interleavingHistory.last().asNodeCorrespondingToCycle(
+                executionsBeforeCycle = elementsToTakeFromHistory,
+                prefixExecutionLocationsHash = prefixExecutionLocationsHash
             )
 
             interleavingHistory[interleavingHistory.lastIndex] = cycleStateLastNode
-            chainCopy[chainCopy.lastIndex] = cycleStateLastNode.copy()
-            interleavingSequenceSet.addBranch(chainCopy)
+            interleavingSequenceSet.addBranch(interleavingHistory)
         }
     }
 

@@ -107,15 +107,18 @@ internal data class InterleavingHistoryNode(
         executionLocationsHash = executionLocationsHash xor executionIdentity
     }
 
+    /**
+     * @param prefixExecutionLocationsHash hash of locations before cycle
+     */
     fun asNodeCorrespondingToCycle(
-        elementsToTakeFromHistory: Int, executionLocationsBeforeCycle: List<Int>
+        executionsBeforeCycle: Int, prefixExecutionLocationsHash: Int
     ): InterleavingHistoryNode {
-        check(executions >= elementsToTakeFromHistory)
+        check(executions >= executionsBeforeCycle)
 
         return InterleavingHistoryNode(
             threadId = threadId,
-            executionLocationsHash = executionLocationsBeforeCycle.reduceRight { a, b -> a xor b },
-            executions = elementsToTakeFromHistory,
+            executionLocationsHash = prefixExecutionLocationsHash,
+            executions = executionsBeforeCycle,
             cycleOccurred = true
         )
     }
@@ -154,7 +157,7 @@ internal class InterleavingSequenceTrackableSet {
     /**
      * Thread id to node map
      */
-    private val rootTransitions: MutableMap<Int, ChainNode> = mutableMapOf()
+    private val rootTransitions: MutableMap<Int, InterleavingSequenceSetNode> = mutableMapOf()
 
     val cursor = Cursor()
 
@@ -168,7 +171,7 @@ internal class InterleavingSequenceTrackableSet {
         val firstElement = chain.first().threadId
         // If we already have a chain with that threadId - merge it
         rootTransitions[firstElement]?.let {
-            it.addBranch(chain, startIndex = 0)
+            it.mergeBranch(chain, startIndex = 0, executionsCountedEarlier = 0)
             return
         }
         // Otherwise, create a new chain and transition from the root
@@ -179,96 +182,118 @@ internal class InterleavingSequenceTrackableSet {
         cursor.setTo(leaf)
     }
 
-    /**
-     * Wrapper of [InterleavingHistoryNode] to add a transition map to from current node
-     */
-    internal inner class ChainNode(
-        val node: InterleavingHistoryNode,
-        var transitions: MutableMap<Int, ChainNode>
+    internal inner class InterleavingSequenceSetNode(
+        val threadId: Int,
+        var executions: Int = 0,
+        var cycleOccurred: Boolean = false,
+        private var transitions: MutableMap<Int, InterleavingSequenceSetNode>? = null
     ) {
+
+        fun transition(threadId: Int): InterleavingSequenceSetNode? = transitions?.get(threadId)
+
+        fun addTransition(threadId: Int, node: InterleavingSequenceSetNode) {
+            transitions?.let {
+                it[threadId] = node
+                return
+            }
+            transitions = mutableMapOf(threadId to node)
+        }
 
         /**
          * Merges a new chain starting from the current node from specified index
+         *
+         * @param startIndex index to merge this new chain from
+         * @param executionsCountedEarlier count of executions which was taken into account on the previous node, with the same threadId
          */
-        fun addBranch(newChain: List<InterleavingHistoryNode>, startIndex: Int) {
+        fun mergeBranch(newChain: List<InterleavingHistoryNode>, startIndex: Int, executionsCountedEarlier: Int) {
             if (startIndex > newChain.lastIndex) return
-            val firstNew = newChain[startIndex]
-            check(firstNew.threadId == node.threadId)
+            val firstNewNode = newChain[startIndex]
+            val firstNewNodeExecutions = firstNewNode.executions - executionsCountedEarlier
+            check(firstNewNode.threadId == threadId)
 
-            val threadId = node.threadId
             when {
-                node.executions == firstNew.executions -> mergeFurtherOrAddNewBranch(newChain, startIndex + 1)
+                executions == firstNewNodeExecutions -> mergeFurtherOrAddNewBranch(newChain, startIndex + 1, 0)
 
-                node.executions < firstNew.executions -> {
-                    firstNew.executions -= node.executions
-                    mergeFurtherOrAddNewBranch(newChain, startIndex)
-                }
+                executions < firstNewNodeExecutions -> mergeFurtherOrAddNewBranch(
+                    newChain = newChain,
+                    startIndex = startIndex,
+                    executionsCountedEarlier = executionsCountedEarlier + executions
+                )
 
                 else -> { // node.operations > first.operations
                     if (startIndex == newChain.lastIndex) return
 
-                    val delta = node.executions - firstNew.executions
-                    val nextNode = ChainNode(
-                        node = InterleavingHistoryNode(
-                            threadId = threadId,
-                            executions = delta,
-                            cycleOccurred = node.cycleOccurred,
-                            executionLocationsHash = node.executionLocationsHash,
-                        ),
+                    val deltaExecutions = executions - firstNewNodeExecutions
+                    val nextNode = InterleavingSequenceSetNode(
+                        threadId = threadId,
+                        executions = deltaExecutions,
+                        cycleOccurred = cycleOccurred,
                         transitions = transitions
                     )
-                    node.executions = firstNew.executions
-                    node.cycleOccurred = firstNew.cycleOccurred
-                    node.executionLocationsHash = firstNew.executionLocationsHash
+                    executions = firstNewNodeExecutions
+                    cycleOccurred = firstNewNode.cycleOccurred
 
                     val (newChainRoot, newChainLeaf) = wrapChain(newChain, startIndex + 1)
                     transitions = mutableMapOf(
                         threadId to nextNode,
-                        newChainRoot.node.threadId to newChainRoot
+                        newChainRoot.threadId to newChainRoot
                     )
                     cursor.setTo(newChainLeaf)
                 }
             }
         }
 
-        private fun mergeFurtherOrAddNewBranch(newChain: List<InterleavingHistoryNode>, startIndex: Int) {
-            val first = if (startIndex <= newChain.lastIndex) newChain[startIndex] else return
+        private fun mergeFurtherOrAddNewBranch(
+            newChain: List<InterleavingHistoryNode>,
+            startIndex: Int,
+            executionsCountedEarlier: Int
+        ) {
+            val newChainFirstNode = if (startIndex <= newChain.lastIndex) newChain[startIndex] else return
+            val transition = transition(newChainFirstNode.threadId)
 
-            val transition = transitions[first.threadId]
             if (transition == null) {
-                val (wrappedChainRoot, leaf) = wrapChain(newChain, startIndex)
-                transitions[first.threadId] = wrappedChainRoot
+                val (wrappedChainRoot, leaf) = wrapChain(newChain, startIndex, executionsCountedEarlier)
+                addTransition(newChainFirstNode.threadId, wrappedChainRoot)
                 cursor.setTo(leaf)
             } else {
-                transition.addBranch(newChain, startIndex)
+                transition.mergeBranch(newChain, startIndex, executionsCountedEarlier)
             }
-        }
-
-        override fun toString(): String {
-            val suffix = if (node.cycleOccurred) " [!]" else ""
-
-            return node.let { "${it.threadId} : ${it.executions} (${it.executionLocationsHash})$suffix" }
         }
     }
 
 
     /**
-     * Wraps a new chain from [InterleavingHistoryNode] to [ChainNode]  starting from the specified start index
+     * Transforms a new chain
+     * from [InterleavingHistoryNode] to [InterleavingSequenceSetNode] starting from the specified start index
      *
      * @return the first and the last nodes of the wrapped chain
      */
-    private fun wrapChain(chain: List<InterleavingHistoryNode>, startIndex: Int = 0): Pair<ChainNode, ChainNode> {
+    private fun wrapChain(
+        chain: List<InterleavingHistoryNode>,
+        startIndex: Int = 0,
+        executionsCountedEarlier: Int = 0
+    ): Pair<InterleavingSequenceSetNode, InterleavingSequenceSetNode> {
         require(startIndex <= chain.lastIndex)
 
         val first = chain[startIndex]
 
-        val root = ChainNode(first, mutableMapOf())
+        val root = InterleavingSequenceSetNode(
+            threadId = first.threadId,
+            executions = first.executions - executionsCountedEarlier,
+            cycleOccurred = first.cycleOccurred,
+            transitions = mutableMapOf()
+        )
         var current = root
 
         for (i in startIndex + 1 until chain.size) {
             val next = chain[i]
-            val nextNode = ChainNode(next, mutableMapOf())
-            current.transitions[next.threadId] = nextNode
+            val nextNode = InterleavingSequenceSetNode(
+                threadId = next.threadId,
+                executions = next.executions,
+                cycleOccurred = next.cycleOccurred,
+                transitions = mutableMapOf()
+            )
+            current.addTransition(next.threadId, nextNode)
             current = nextNode
         }
 
@@ -336,7 +361,7 @@ internal class InterleavingSequenceTrackableSet {
         /**
          *  Chain node where the cursor is currently located
          */
-        private var currentChainNode: ChainNode? = null
+        private var currentNode: InterleavingSequenceSetNode? = null
 
         /**
          * Number of executions in the current thread
@@ -347,16 +372,16 @@ internal class InterleavingSequenceTrackableSet {
          * Check if a current sequence corresponds to any cycle is present inside the set or not.
          */
         val isInCycle: Boolean
-            get() = currentChainNode?.node?.let {
+            get() = currentNode?.let {
                 it.cycleOccurred && executionsCount == it.executions
             } ?: false
 
         /**
          * Resets cursor to the leaf of the new added cycle
          */
-        fun setTo(chainNode: ChainNode) {
-            this.currentChainNode = chainNode
-            executionsCount = chainNode.node.executions
+        fun setTo(interleavingSequenceSetNode: InterleavingSequenceSetNode) {
+            this.currentNode = interleavingSequenceSetNode
+            executionsCount = interleavingSequenceSetNode.executions
         }
 
         /**
@@ -364,26 +389,25 @@ internal class InterleavingSequenceTrackableSet {
          * Its worth noting that any new executions occurred when the cursor is in the cycle node will be ignored,
          * because after we ran into the cycle, it doesn't matter how many actions we will do - we will anyway stay in that cycle
          */
-        fun onNextExecutionPoint(): Unit = ifValid { currentNode ->
-            val node = currentNode.node
-            // Ignore executions after we ran in the cycle
+        fun onNextExecutionPoint(): Unit = ifValid { node ->
+            // If we get into a cycle than no matter how many executions we will perform in the current thread -
+            // we still will be in a cycle
             if (node.cycleOccurred && executionsCount == node.executions) {
                 return
             }
 
-            // If we
             if (executionsCount < node.executions) {
                 executionsCount++
                 return
             }
 
             executionsCount = 0
-            val nextChainNode = currentNode.transitions[node.threadId]
+            val nextChainNode = node.transition(node.threadId)
             if (nextChainNode == null) {
                 invalidate()
                 return
             }
-            currentChainNode = nextChainNode
+            currentNode = nextChainNode
             onNextExecutionPoint()
         }
 
@@ -392,22 +416,20 @@ internal class InterleavingSequenceTrackableSet {
          *
          * @param threadId next thread id
          */
-        fun onNextSwitchPoint(threadId: Int) = ifValid { bigNode ->
-            val smallNode = bigNode.node
-
-            if (executionsCount != smallNode.executions) {
+        fun onNextSwitchPoint(threadId: Int) = ifValid { node ->
+            if (executionsCount != node.executions) {
                 invalidate()
                 return
             }
 
             executionsCount = 0
 
-            val nextNode = bigNode.transitions[threadId]
+            val nextNode = node.transition(threadId)
             if (nextNode == null) {
                 invalidate()
                 return
             }
-            currentChainNode = nextNode
+            currentNode = nextNode
         }
 
         /**
@@ -416,16 +438,16 @@ internal class InterleavingSequenceTrackableSet {
          * @param threadId id of the start thread
          */
         fun reset(threadId: Int) {
-            currentChainNode = rootTransitions[threadId]
+            currentNode = rootTransitions[threadId]
             executionsCount = 0
         }
 
-        private inline fun ifValid(action: (ChainNode) -> Unit) {
-            action(currentChainNode ?: return)
+        private inline fun ifValid(action: (InterleavingSequenceSetNode) -> Unit) {
+            action(currentNode ?: return)
         }
 
         private fun invalidate() {
-            currentChainNode = null
+            currentNode = null
         }
     }
 
