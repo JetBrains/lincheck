@@ -37,6 +37,9 @@ class EventStructure(
     private val maxThreadId = initThreadId
     private val nThreads = maxThreadId + 1
 
+    val syncAlgebra: SynchronizationAlgebra =
+        AtomicSynchronizationAlgebra()
+
     val root: Event
 
     // TODO: this pattern is covered by explicit backing fields KEEP
@@ -374,6 +377,12 @@ class EventStructure(
         }
     }
 
+    private val EventLabel.syncType
+        get() = syncAlgebra.syncType(this)
+
+    private fun EventLabel.synchronize(other: EventLabel) =
+        syncAlgebra.synchronize(this, other)
+
     private fun synchronizationCandidates(event: Event): List<Event> {
         // consider all candidates in current execution and apply some general filters
         val candidates = currentExecution.asSequence()
@@ -435,9 +444,10 @@ class EventStructure(
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
         val candidateEvents = synchronizationCandidates(event)
-        val syncEvents = when(event.label.syncType) {
+        val syncEvents = when (event.label.syncType) {
             SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidateEvents)
             SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidateEvents)
+            else -> unreachable()
         }
         // if there are responses to blocked dangling requests, then set the response of one of these requests
         for (syncEvent in syncEvents) {
@@ -453,7 +463,7 @@ class EventStructure(
     }
 
     private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
-        require(event.label.isBinarySynchronizing)
+        require(event.label.syncType == SynchronizationType.Binary)
         // TODO: sort resulting events according to some strategy?
         return candidateEvents
             .mapNotNull { other ->
@@ -473,7 +483,7 @@ class EventStructure(
     }
 
     private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
-        require(event.label.isBarrierSynchronizing)
+        require(event.label.syncType == SynchronizationType.Barrier)
         val (syncLab, dependencies) =
             candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
                 candidateEvent.label.synchronize(lab)?.let {

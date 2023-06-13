@@ -199,11 +199,9 @@ class Event private constructor(
     }
 
     val syncFrom: Event by lazy {
-        require(label.isResponse && label.isBinarySynchronizing)
+        require(label.isResponse)
         check(dependencies.size == 1)
-        dependencies.first().ensure {
-            it.label.synchronizesInto(label)
-        }
+        dependencies.first()
     }
 
     val readsFrom: Event
@@ -215,11 +213,10 @@ class Event private constructor(
     val exclusiveReadPart: Event by lazy {
         require(label is WriteAccessLabel && label.isExclusive)
         check(parent != null)
-        parent.also {
-            check(it.label is ReadAccessLabel && it.label.isResponse
+        parent.ensure {
+            it.label is ReadAccessLabel && it.label.isResponse
                 && it.label.location == label.location
                 && it.label.isExclusive
-            )
         }
     }
 
@@ -246,8 +243,7 @@ class Event private constructor(
      * @see EventLabel.synchronizesInto
      */
     fun isValidResponse(request: Event) =
-        request.label.isRequest && label.isResponse && parent == request &&
-        request.label.synchronizesInto(label)
+        request.label.isRequest && label.isResponse && parent == request
 
     /**
      * Checks whether this event is valid response to its parent request event.
