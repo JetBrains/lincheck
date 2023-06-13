@@ -51,6 +51,7 @@ class SwitchAsFirstMethodEventTest {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6MTUwNDY1MTM2Mjk4MjI2NzY1fQ==")
         requireStateEquivalenceImplCheck(false)
     }
 }

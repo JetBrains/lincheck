@@ -34,6 +34,9 @@ Detailed parallel part trace:
 |                                                                                                                      |   result: 4                                                                                                          |
 |                                                                                                                      |   thread is finished                                                                                                 |
 
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6MTUwNDY1MTM2Mjk4MjI2NzY1fQ==")
+
 = You can add this scenario as a custom test. Insert this code in your testing options configuration =
 .addCustomScenario {
 	parallel {
@@ -45,4 +48,3 @@ Detailed parallel part trace:
 		}
 	}
 }
-.withReproduceSettings("eyJpdGVyYXRpb25zIjoxMDAsImludm9jYXRpb25zUGVySXRlcmF0aW9uIjoxMDAwMH0=")

@@ -36,7 +36,8 @@ abstract class ManagedStrategy(
     private val verifier: Verifier,
     private val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    private val testCfg: ManagedCTestConfiguration,
+    private val reproduceSettingsFactory: ReproduceSettingsFactory
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.parallelExecution.size
@@ -194,10 +195,10 @@ abstract class ManagedStrategy(
     protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
         is CompletedInvocationResult -> {
             if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, getRunProperties(), collectTrace(result))
+            else IncorrectResultsFailure(scenario, result.results, reproduceSettingsFactory.createReproduceSettings(), collectTrace(result))
         }
 
-        else -> result.toLincheckFailure(scenario, getRunProperties(), collectTrace(result))
+        else -> result.toLincheckFailure(scenario, reproduceSettingsFactory.createReproduceSettings(), collectTrace(result))
     }
 
     /**
@@ -233,9 +234,9 @@ abstract class ManagedStrategy(
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendln("== Reporting the first execution without execution trace ==")
-                appendln(failingResult.toLincheckFailure(scenario, getRunProperties(),null))
+                appendln(failingResult.toLincheckFailure(scenario, reproduceSettingsFactory.createReproduceSettings(), null))
                 appendln("== Reporting the second execution ==")
-                appendln(loggedResults.toLincheckFailure(scenario, getRunProperties(), Trace(traceCollector!!.trace)).toString())
+                appendln(loggedResults.toLincheckFailure(scenario, reproduceSettingsFactory.createReproduceSettings(), Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
         return Trace(traceCollector!!.trace)
@@ -769,12 +770,6 @@ abstract class ManagedStrategy(
             )
         }
     }
-
-    private fun getRunProperties() = RunProperties(
-        iterations = testCfg.iterations,
-        invocationsPerIteration = testCfg.invocationsPerIteration
-    )
-
 }
 
 /**

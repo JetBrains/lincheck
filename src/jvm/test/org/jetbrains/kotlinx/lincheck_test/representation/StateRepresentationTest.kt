@@ -46,6 +46,7 @@ open class ModelCheckingStateReportingTest {
         actorsBefore(0)
         actorsAfter(0)
         requireStateEquivalenceImplCheck(false)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6MjYyMDE3Mzg4NDM1MTI3ODY5OH0=")
     }
 }
 

@@ -112,6 +112,7 @@ class CaughtExceptionMethodReportingTest : VerifierState() {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTUwMTkzMjIwNDM3NDUzMzc2NTl9")
     }
 
 }

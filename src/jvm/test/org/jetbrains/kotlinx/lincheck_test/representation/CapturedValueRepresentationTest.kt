@@ -46,6 +46,7 @@ class CapturedValueRepresentationTest : VerifierState() {
         actorsAfter(0)
         actorsBefore(0)
         actorsPerThread(1)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6NDM2MzU4MDQxNzc4Nzk1NDc4Mn0=")
     }
     override fun extractState(): Any = counter
 

@@ -82,6 +82,7 @@ class ObstructionFreedomSynchronizedRepresentationTest : VerifierState() {
         actorsAfter(0)
         threads(2)
         checkObstructionFreedom(true)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6ODE3Mzg5NTQ1ODYzOTg5ODU5fQ==")
     }
 
 }

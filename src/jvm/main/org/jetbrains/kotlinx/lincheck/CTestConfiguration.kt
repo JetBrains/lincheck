@@ -39,7 +39,7 @@ abstract class CTestConfiguration(
 ) {
     abstract fun createStrategy(
         testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
-        stateRepresentationMethod: Method?, verifier: Verifier
+        stateRepresentationMethod: Method?, verifier: Verifier, reproduceSettingsFactory: ReproduceSettingsFactory
     ): Strategy
 
     companion object {

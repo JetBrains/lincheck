@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
-import kotlinx.serialization.Serializable
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -18,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
     val trace: Trace?,
-    val runProperties: RunProperties
+    val reproduceSettings: ReproduceSettings
 ) {
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
@@ -26,50 +25,44 @@ sealed class LincheckFailure(
 internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     val results: ExecutionResult,
-    runProperties: RunProperties,
+    reproduceSettings: ReproduceSettings,
     trace: Trace? = null,
-) : LincheckFailure(scenario, trace, runProperties)
+) : LincheckFailure(scenario, trace, reproduceSettings)
 
 internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
     val threadDump: Map<Thread, Array<StackTraceElement>>,
-    runProperties: RunProperties,
+    reproduceSettings: ReproduceSettings,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace, runProperties)
+) : LincheckFailure(scenario, trace, reproduceSettings)
 
 internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     val exception: Throwable,
-    runProperties: RunProperties,
+    reproduceSettings: ReproduceSettings,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace, runProperties)
+) : LincheckFailure(scenario, trace, reproduceSettings)
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
     val functionName: String,
     val exception: Throwable,
-    runProperties: RunProperties,
+    reproduceSettings: ReproduceSettings,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace, runProperties)
+) : LincheckFailure(scenario, trace, reproduceSettings)
 
 internal class ObstructionFreedomViolationFailure(
     scenario: ExecutionScenario,
     val reason: String,
-    runProperties: RunProperties,
+    reproduceSettings: ReproduceSettings,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace, runProperties)
+) : LincheckFailure(scenario, trace, reproduceSettings)
 
-internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, runProperties: RunProperties, trace: Trace? = null) = when (this) {
-    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, runProperties, trace)
-    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, runProperties, trace)
-    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, runProperties, trace)
-    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason,runProperties,  trace)
-    is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, runProperties, trace)
+internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, reproduceSettings: ReproduceSettings, trace: Trace? = null) = when (this) {
+    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, reproduceSettings, trace)
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, reproduceSettings, trace)
+    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, reproduceSettings, trace)
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason,reproduceSettings,  trace)
+    is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, reproduceSettings, trace)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }
-
-@Serializable
-data class RunProperties(
-    val iterations: Int,
-    val invocationsPerIteration: Int
-)

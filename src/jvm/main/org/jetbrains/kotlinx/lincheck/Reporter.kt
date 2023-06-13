@@ -157,12 +157,15 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
             append("All threads are in deadlock")
         }
     }
+    appendLine()
+    appendLine()
+    appendLine("= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =")
+    append(".withReproduceSettings(\"${ConfigurationStringEncoder.encodeToConfigurationString(failure.reproduceSettings)}\")")
     determineTestLanguage(Thread.currentThread().stackTrace)?.let { testLanguage ->
         appendLine()
         appendLine()
         appendLine("= You can add this scenario as a custom test. Insert this code in your testing options configuration =")
         append(generateAddCustomScenarioBlock(failure.scenario, testLanguage))
-        append(".withReproduceSettings(\"${ConfigurationStringEncoder.encodeToConfigurationString(failure.runProperties)}\")")
     }
 
     return this
@@ -245,11 +248,11 @@ internal object ConfigurationStringEncoder {
     private val base64Encoder = Base64.getEncoder()
     private val base64Decoder = Base64.getDecoder()
 
-    fun encodeToConfigurationString(runProperties: RunProperties): String {
-        return base64Encoder.encodeToString(Json.encodeToString(runProperties).toByteArray())
+    fun encodeToConfigurationString(reproduceSettings: ReproduceSettings): String {
+        return base64Encoder.encodeToString(Json.encodeToString(reproduceSettings).toByteArray())
     }
 
-    fun decodeRunToProperties(configuration: String): RunProperties {
+    fun decodeReproduceSettings(configuration: String): ReproduceSettings {
         return Json.decodeFromString(base64Decoder.decode(configuration).decodeToString())
     }
 

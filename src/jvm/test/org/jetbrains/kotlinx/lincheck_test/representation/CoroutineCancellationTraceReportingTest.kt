@@ -40,6 +40,7 @@ class CoroutineCancellationTraceReportingTest : VerifierState() {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTI2MTc5MjU5NjkyODUwMjc3MDF9")
     }
 
 }

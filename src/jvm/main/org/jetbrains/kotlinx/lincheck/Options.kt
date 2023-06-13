@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.RunProperties
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -20,9 +19,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal var logLevel = DEFAULT_LOG_LEVEL
     protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
-        get() = runProperties?.iterations ?: field
-        private set
-
     protected var threads = CTestConfiguration.DEFAULT_THREADS
     protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
     protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
@@ -33,7 +29,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
-    protected var runProperties: RunProperties? = null
+    var reproduceSettings: ReproduceSettings? = null
+        private set
 
     /**
      * Number of different test scenarios to be executed
@@ -161,7 +158,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Used to fixate run options to reproduce certain scenario results
      */
     fun withReproduceSettings(configuration: String) {
-        runProperties = ConfigurationStringEncoder.decodeRunToProperties(configuration)
+        reproduceSettings = ConfigurationStringEncoder.decodeReproduceSettings(configuration)
     }
 
     /**

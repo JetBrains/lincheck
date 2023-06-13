@@ -54,6 +54,7 @@ public class CustomScenarioTestSuggestionInOutputJavaTest {
         options.threads(3);
         options.actorsPerThread(2);
         options.actorsAfter(2);
+        options.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTE2ODUyMTM1MzIxNDc4NzE3MzR9");
         options.minimizeFailedScenario(false);
 
         String actualOutput = null;

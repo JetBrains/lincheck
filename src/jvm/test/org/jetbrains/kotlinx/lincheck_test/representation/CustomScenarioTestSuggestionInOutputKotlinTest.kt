@@ -53,6 +53,7 @@ class CustomScenarioTestSuggestionInOutputKotlinTest {
         actorsPerThread(2)
         actorsAfter(2)
         minimizeFailedScenario(false)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6ODU4NzkxOTgzNjI3OTU3Nzk1NH0=")
     }
 
 }

@@ -17,6 +17,9 @@ Detailed parallel part trace:
 | operation()                                                                                                              |                                                                                                                          |
 |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:74) |                                                                                                                          |
 
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6ODE3Mzg5NTQ1ODYzOTg5ODU5fQ==")
+
 = You can add this scenario as a custom test. Insert this code in your testing options configuration =
 .addCustomScenario {
 	parallel {
@@ -28,4 +31,3 @@ Detailed parallel part trace:
 		}
 	}
 }
-.withReproduceSettings("eyJpdGVyYXRpb25zIjoxMDAsImludm9jYXRpb25zUGVySXRlcmF0aW9uIjoxMDAwMH0=")

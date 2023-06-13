@@ -23,8 +23,6 @@ import java.util.*
  */
 abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
     protected var invocationsPerIteration = DEFAULT_INVOCATIONS
-        get() = runProperties?.invocationsPerIteration ?: field
-
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
