@@ -25,15 +25,18 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: implement VectorClock interface??
 interface ExecutionFrontier {
-    val threadMap: ThreadMap<Event>
+    val threadMap: ThreadMap<Event?>
 }
 
 interface MutableExecutionFrontier : ExecutionFrontier {
-    override val threadMap: MutableThreadMap<Event>
+    override val threadMap: MutableThreadMap<Event?>
 }
 
 val ExecutionFrontier.threadIDs: Set<ThreadID>
     get() = threadMap.keys
+
+val ExecutionFrontier.events: List<Event>
+    get() = threadMap.values.filterNotNull()
 
 operator fun ExecutionFrontier.get(tid: ThreadID): Event? =
     threadMap[tid]
@@ -50,11 +53,7 @@ operator fun ExecutionFrontier.contains(event: Event): Boolean {
 }
 
 operator fun MutableExecutionFrontier.set(tid: ThreadID, event: Event?) {
-    if (event == null) {
-        threadMap.remove(tid)
-        return
-    }
-    require(tid == event.threadId)
+    require(tid == (event?.threadId ?: tid))
     threadMap[tid] = event
 }
 
@@ -64,17 +63,22 @@ fun MutableExecutionFrontier.update(event: Event) {
 }
 
 fun MutableExecutionFrontier.merge(other: ExecutionFrontier) {
-    threadMap.mergeReduce(other.threadMap, programOrder::max)
+    threadMap.mergeReduce(other.threadMap) { x, y -> when {
+        x == null -> y
+        y == null -> x
+        else -> programOrder.max(x, y)
+    }}
 }
 
 // TODO: unify semantics with MutableExecution.cut()
+// TODO: rename?
 fun MutableExecutionFrontier.cut(cutEvents: List<Event>) {
     if (cutEvents.isEmpty())
         return
-    threadMap.forEach { tid, event ->
+    threadMap.forEach { (tid, event) ->
         // TODO: optimize --- transform cutEvents into vector clock
         // TODO: optimize using binary search
-        val pred = event.pred(inclusive = true) { !cutEvents.any { cutEvent ->
+        val pred = event?.pred(inclusive = true) { !cutEvents.any { cutEvent ->
             it.causalityClock.observes(cutEvent.threadId, cutEvent.threadPosition)
         }}
         set(tid, pred)
@@ -82,46 +86,30 @@ fun MutableExecutionFrontier.cut(cutEvents: List<Event>) {
 }
 
 fun ExecutionFrontier(nThreads: Int): ExecutionFrontier =
-    ExecutionFrontierImpl(nThreads)
+    MutableExecutionFrontier(nThreads)
 
 fun MutableExecutionFrontier(nThreads: Int): MutableExecutionFrontier =
-    ExecutionFrontierImpl(nThreads)
+    ExecutionFrontierImpl(ArrayMap(nThreads))
 
-fun executionFrontierOf(vararg pairs: Pair<ThreadID, Event>): ExecutionFrontier =
-    ExecutionFrontierImpl(*pairs)
+fun executionFrontierOf(vararg pairs: Pair<ThreadID, Event?>): ExecutionFrontier =
+    mutableExecutionFrontierOf(*pairs)
 
-fun mutableExecutionFrontierOf(vararg pairs: Pair<ThreadID, Event>): MutableExecutionFrontier =
-    ExecutionFrontierImpl(*pairs)
+fun mutableExecutionFrontierOf(vararg pairs: Pair<ThreadID, Event?>): MutableExecutionFrontier =
+    ExecutionFrontierImpl(ArrayMap(*pairs))
 
 fun ExecutionFrontier.copy(): MutableExecutionFrontier {
     check(this is ExecutionFrontierImpl)
-    return ExecutionFrontierImpl(nThreads).also {
-        for (i in 0 until nThreads) {
-            it[i] = this[i] ?: continue
-        }
-    }
+    return ExecutionFrontierImpl(threadMap.copy())
 }
 
-private class ExecutionFrontierImpl(val nThreads: Int): MutableExecutionFrontier {
-    override val threadMap = ArrayMap<Event>(nThreads)
-
-    constructor(vararg pairs: Pair<ThreadID, Event>)
-            : this(1 + (pairs.maxOfOrNull { (tid, _) -> tid } ?: -1)) {
-        require(pairs.all { (tid, _) -> tid >= 0 })
-        if (nThreads == 0)
-            return
-        pairs.forEach { (tid, event) ->
-            threadMap[tid] = event
-        }
-    }
-}
+private class ExecutionFrontierImpl(override val threadMap: ArrayMap<Event?>): MutableExecutionFrontier
 
 fun ExecutionFrontier.toExecution(): Execution =
     toMutableExecution()
 
 fun ExecutionFrontier.toMutableExecution(): MutableExecution =
     threadIDs.map { tid ->
-        tid to get(tid)!!.threadPrefix(inclusive = true)
+        tid to (get(tid)?.threadPrefix(inclusive = true) ?: listOf())
     }.let {
         mutableExecutionOf(*it.toTypedArray())
     }
@@ -135,24 +123,3 @@ fun MutableExecutionFrontier.cutDanglingRequestEvents() {
         }
     }
 }
-
-/**
- * ExecutionFrontier represents a frontier of an execution,
- * that is the set of program-order maximal events of the execution.
- */
-// class ExecutionFrontier(frontier: Map<Int, Event> = emptyMap()) {
-//
-//     private val frontier: VectorClock<Int, Event> =
-//         VectorClock(programOrder, frontier)
-//
-//     val mapping: Map<Int, Event>
-//         get() = frontier.clock
-//
-//     fun toVectorClock(): VectorClock<Int, Event> =
-//         frontier.copy()
-//
-// }
-//
-// // TODO: ensure that vector clock is indexed by thread ids: VectorClock<ThreadID, Event>
-// fun VectorClock<Int, Event>.toFrontier(): ExecutionFrontier =
-//     ExecutionFrontier(this.clock)

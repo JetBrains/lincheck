@@ -49,7 +49,6 @@ interface Execution : Collection<Event> {
 
 interface MutableExecution : Execution {
     fun addEvent(event: Event)
-    fun removeLastEvent(event: Event)
     fun cut(tid: ThreadID, pos: Int)
 }
 
@@ -87,36 +86,29 @@ fun MutableExecution.cutNext(event: Event) =
     cut(event.threadId, 1 + event.threadPosition)
 
 fun Execution(nThreads: Int): Execution =
-    ExecutionImpl(nThreads)
+    MutableExecution(nThreads)
 
 fun MutableExecution(nThreads: Int): MutableExecution =
-    ExecutionImpl(nThreads)
+    ExecutionImpl(ArrayMap(*(0 until nThreads)
+        .map { (it to sortedArrayListOf<Event>()) }
+        .toTypedArray()
+    ))
 
 fun executionOf(vararg pairs: Pair<ThreadID, List<Event>>): Execution =
-    ExecutionImpl(*pairs)
+    mutableExecutionOf(*pairs)
 
 fun mutableExecutionOf(vararg pairs: Pair<ThreadID, List<Event>>): MutableExecution =
-    ExecutionImpl(*pairs)
+    ExecutionImpl(ArrayMap(*pairs
+        .map { (tid, events) -> (tid to SortedArrayList(events)) }
+        .toTypedArray()
+    ))
 
-private class ExecutionImpl(val nThreads: Int) : MutableExecution {
+private class ExecutionImpl(
+    override val threadMap: ArrayMap<SortedMutableList<Event>>
+) : MutableExecution {
 
-    override var size: Int = 0
+    override var size: Int = threadMap.values.sumOf { it.size }
         private set
-
-    override val threadMap = ArrayMap<SortedMutableList<Event>>(nThreads) {
-        sortedArrayListOf()
-    }
-
-    constructor(vararg pairs: Pair<ThreadID, List<Event>>)
-            : this(1 + (pairs.maxOfOrNull { (tid, _) -> tid } ?: -1)) {
-        require(pairs.all { (tid, _) -> tid >= 0 })
-        if (nThreads == 0)
-            return
-        pairs.forEach { (tid, threadEvents) ->
-            size += threadEvents.size
-            threadMap[tid] = SortedArrayList(threadEvents)
-        }
-    }
 
     override fun isEmpty(): Boolean =
         (size > 0)
@@ -129,13 +121,6 @@ private class ExecutionImpl(val nThreads: Int) : MutableExecution {
         threadMap[event.threadId]!!
             .ensure { event.parent == it.lastOrNull() }
             .also { it.add(event) }
-    }
-
-    override fun removeLastEvent(event: Event) {
-        --size
-        threadMap[event.threadId]!!
-            .ensure { event == it.lastOrNull() }
-            .removeLast()
     }
 
     override fun cut(tid: ThreadID, pos: Int) {
@@ -172,8 +157,8 @@ fun Execution.toFrontier(): ExecutionFrontier =
     toMutableFrontier()
 
 fun Execution.toMutableFrontier(): MutableExecutionFrontier =
-    threadIDs.mapNotNull { tid ->
-        get(tid)?.lastOrNull()?.let { tid to it }
+    threadIDs.map { tid ->
+        tid to get(tid)?.lastOrNull()
     }.let {
         mutableExecutionFrontierOf(*it.toTypedArray())
     }
@@ -182,8 +167,7 @@ fun Execution.buildIndexer() = object : Indexer<Event> {
 
     private val events = executionOrderSortedList()
 
-    private val eventIndices = ArrayMap(1 + maxThreadID) { tid ->
-        val threadEvents = threadMap[tid] ?: listOf()
+    private val eventIndices = threadMap.mapValues { (_, threadEvents) ->
         List(threadEvents.size) { pos ->
             events.indexOf(threadEvents[pos]).ensure { it >= 0 }
         }
@@ -201,23 +185,13 @@ fun Execution.buildIndexer() = object : Indexer<Event> {
 
 fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): VectorClock {
     check(this is ExecutionImpl)
-    val clock = MutableVectorClock(nThreads)
-    for (i in 0 until nThreads) {
+    val clock = MutableVectorClock(threadMap.capacity)
+    for (i in 0 until threadMap.capacity) {
         val threadEvents = get(i) ?: continue
         clock[i] = (threadEvents.binarySearch { !relation(it, event) } - 1)
             .coerceAtLeast(-1)
     }
     return clock
-}
-
-fun MutableExecution.removeDanglingRequestEvents() {
-    for (threadId in threadIDs) {
-        val lastEvent = get(threadId)?.lastOrNull() ?: continue
-        if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
-            lastEvent.parent?.label?.ensure { !it.isRequest }
-            removeLastEvent(lastEvent)
-        }
-    }
 }
 
 typealias ExecutionCounter = IntArray

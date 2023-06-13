@@ -149,14 +149,10 @@ class EventStructure(
         currentExplorationRoot = event
         // TODO: filter unused initialization events
         _currentExecution = event.frontier.toMutableExecution().apply {
-            removeDanglingRequestEvents()
+            addEvent(event)
         }
-        pinnedEvents = event.pinnedEvents.copy().apply {
-            cutDanglingRequestEvents()
-        }.ensure {
-            it.threadMap.values.all { pinned ->
-                pinned in currentExecution
-            }
+        pinnedEvents = event.pinnedEvents.copy().ensure {
+            currentExecution.containsAll(it.events)
         }
         currentRemapping.reset()
         danglingEvents.clear()
@@ -196,12 +192,7 @@ class EventStructure(
         // in order to give it more lightweight incremental checker
         // an opportunity to find inconsistency earlier.
         if (isReplayedEvent) {
-            val replayedExecution = currentExplorationRoot.frontier.toMutableExecution().apply {
-                // remove dangling request events, similarly as we do in `resetExploration`
-                removeDanglingRequestEvents()
-                // temporarily remove new event in order to reset incremental checker
-                removeLastEvent(currentExplorationRoot)
-            }
+            val replayedExecution = currentExplorationRoot.frontier.toMutableExecution()
             // reset internal state of incremental checker
             incrementalChecker.reset(replayedExecution)
             // copy delayed events from the buffer and reset it
@@ -262,8 +253,8 @@ class EventStructure(
         MutableVectorClock(nThreads)
 
     private fun VectorClock.toMutableFrontier(): MutableExecutionFrontier =
-        (0 until nThreads).mapNotNull { tid ->
-            currentExecution[tid, this[tid]]?.let { tid to it }
+        (0 until nThreads).map { tid ->
+            tid to currentExecution[tid, this[tid]]
         }.let {
             mutableExecutionFrontierOf(*it.toTypedArray())
         }
@@ -289,10 +280,13 @@ class EventStructure(
         }
         val frontier = currentExecution.toMutableFrontier().apply {
             cut(conflicts)
+            cutDanglingRequestEvents()
+            set(iThread, parent)
         }
         val pinnedEvents = pinnedEvents.copy().apply {
             cut(conflicts)
             merge(causalityClock.toMutableFrontier())
+            cutDanglingRequestEvents()
         }
         return Event.create(
             threadId = iThread,
@@ -782,12 +776,12 @@ class EventStructure(
      * TODO: move to Execution?
      */
     fun calculateMemoryLocationView(location: MemoryLocation, observation: ExecutionFrontier): ExecutionFrontier =
-        observation.threadMap.mapNotNull { tid, event ->
-            check(event in currentExecution)
-            var lastWrite = event
-            while (lastWrite.label.asMemoryAccessLabel(location)?.takeIf { it.isWrite } == null) {
-                lastWrite = lastWrite.parent ?: return@mapNotNull null
-            }
+        observation.threadMap.map { (tid, event) ->
+            val lastWrite = event
+                ?.ensure { it in currentExecution }
+                ?.pred(inclusive = true) {
+                    it.label.asMemoryAccessLabel(location)?.takeIf { label -> label.isWrite } != null
+                }
             (tid to lastWrite)
         }.let {
             executionFrontierOf(*it.toTypedArray())
@@ -805,9 +799,9 @@ class EventStructure(
      * TODO: move to Execution?
      */
     fun calculateRacyWrites(location: MemoryLocation, observation: ExecutionFrontier): List<Event> {
-        val frontier = calculateMemoryLocationView(location, observation)
-        return frontier.threadMap.values.filter { write ->
-            !frontier.threadMap.values.any { other ->
+        val writes = calculateMemoryLocationView(location, observation).events
+        return writes.filter { write ->
+            !writes.any { other ->
                 causalityOrder.lessThan(write, other)
             }
         }

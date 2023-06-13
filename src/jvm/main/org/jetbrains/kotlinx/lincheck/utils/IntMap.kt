@@ -24,9 +24,13 @@ import kotlin.math.max
 
 interface IntMap<out T> {
 
+    data class Entry<out T>(val key: Int, val value: T)
+
     val keys: Set<Int>
 
     val values: Collection<T>
+
+    val entries: Set<Entry<T>>
 
     val size: Int
 
@@ -50,17 +54,25 @@ interface MutableIntMap<T>: IntMap<T> {
 
 }
 
-fun<T> IntMap<T>.forEach(action: (Int, T) -> Unit) {
-    for (key in keys) {
-        action(key, get(key) ?: continue)
-    }
-}
+fun<T> intMapOf(vararg pairs: Pair<Int, T>) : IntMap<T> =
+    mutableIntMapOf(*pairs)
 
-fun<T, R> IntMap<T>.map(transform: (Int, T) -> R?) =
-    keys.map { transform(it, get(it)!!) }
+fun<T> mutableIntMapOf(vararg pairs: Pair<Int, T>) : MutableIntMap<T> =
+    ArrayMap(*pairs)
 
-fun<T, R> IntMap<T>.mapNotNull(transform: (Int, T) -> R?) =
-    keys.mapNotNull { transform(it, get(it)!!) }
+fun<T> IntMap<T>.forEach(action: (IntMap.Entry<T>) -> Unit) =
+    entries.forEach(action)
+
+fun<T, R> IntMap<T>.map(transform: (IntMap.Entry<T>) -> R) =
+    entries.map(transform)
+
+fun<T, R> IntMap<T>.mapNotNull(transform: (IntMap.Entry<T>) -> R?) =
+    entries.mapNotNull(transform)
+
+fun <T, R> IntMap<T>.mapValues(transform: (IntMap.Entry<T>) -> R?) =
+    entries
+        .map { entry -> entry.key to transform(entry) }
+        .let { intMapOf(*it.toTypedArray()) }
 
 inline fun<T> MutableIntMap<T>.getOrPut(key: Int, defaultValue: () -> T): T {
     get(key)?.let { return it }
@@ -77,27 +89,46 @@ fun <T> MutableIntMap<T>.update(key: Int, default: T, transform: (T) -> T) {
 }
 
 fun <T> MutableIntMap<T>.mergeReduce(other: IntMap<T>, reduce: (T, T) -> T) {
-    other.forEach { key, value ->
+    other.forEach { (key, value) ->
         update(key, default = value) { reduce(it, value) }
     }
 }
 
-class ArrayMap<T : Any>(capacity: Int) : MutableIntMap<T> {
+class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
 
     override var size: Int = 0
         private set
 
     private val array = MutableList<T?>(capacity) { null }
 
+    // we keep a separate bitmap identifying mapped keys
+    // to distinguish user-provided `null` value from `null` as not-yet-mapped value
+    private var bitmap = BooleanArray(capacity) { false }
+
+    val capacity: Int
+        get() = array.size
+
     override val keys: Set<Int>
         get() = array.indices.filter { containsKey(it) }.toSet()
 
     override val values: Collection<T>
-        get() = array.filterNotNull()
+        get() = array.filterIndexed { i, _ -> bitmap[i] } as Collection<T>
 
-    constructor(capacity: Int, init: (Int) -> T?) : this(capacity) {
-        for (i in 0 until capacity) {
-            array[i] = init(i)
+    override val entries: Set<IntMap.Entry<T>>
+        get() = array.indices.mapNotNull { i ->
+            if (containsKey(i))
+                IntMap.Entry(i, array[i] as T)
+            else null
+        }.toSet()
+
+    constructor(vararg pairs: Pair<Int, T>)
+        : this(1 + (pairs.maxOfOrNull { (i, _) -> i } ?: -1)) {
+        require(pairs.all { (i, _) -> i >= 0 })
+        if (capacity == 0)
+            return
+        pairs.forEach { (key, value) ->
+            array[key] = value
+            bitmap[key] = true
         }
     }
 
@@ -105,10 +136,15 @@ class ArrayMap<T : Any>(capacity: Int) : MutableIntMap<T> {
         size == 0
 
     override fun containsKey(key: Int): Boolean =
-        array[key] != null
+        bitmap[key]
 
-    override fun containsValue(value: T): Boolean =
-        array.any { it == value }
+    override fun containsValue(value: T): Boolean {
+        for (i in array.indices) {
+            if (bitmap[i] && value == array[i])
+                return true
+        }
+        return false
+    }
 
     override fun get(key: Int): T? =
         array.getOrNull(key)
@@ -116,28 +152,41 @@ class ArrayMap<T : Any>(capacity: Int) : MutableIntMap<T> {
     override fun put(key: Int, value: T): T? {
         val oldValue = get(key)
         if (key > array.size) {
-            array.expand(key + 1, null)
+            val capacity = key + 1
+            array.expand(capacity, null)
+            bitmap = BooleanArray(capacity) { false }
         }
         size++
         array[key] = value
+        bitmap[key] = true
         return oldValue
     }
 
     override fun remove(key: Int) {
         size--
         array[key] = null
+        bitmap[key] = false
     }
 
     override fun clear() {
         size = 0
         array.clear()
+        bitmap.fill(false)
+    }
+
+    fun copy() = ArrayMap<T>(capacity).also {
+        for (i in 0 until capacity) {
+            if (!bitmap[i])
+                continue
+            it[i] = this[i] as T
+        }
     }
 
     override fun equals(other: Any?): Boolean {
         if (other !is ArrayMap<*>)
             return false
         for (i in 0 until max(array.size, other.array.size)) {
-            if (this[i] != other[i])
+            if (this[i] != other[i] || bitmap[i] != other.bitmap[i])
                 return false
         }
         return true
@@ -146,12 +195,14 @@ class ArrayMap<T : Any>(capacity: Int) : MutableIntMap<T> {
     override fun hashCode(): Int {
         var hashCode = 1
         for (i in array.indices) {
+            if (!bitmap[i])
+                continue
             hashCode = 31 * hashCode + (this[i]?.hashCode() ?: 0)
         }
         return hashCode
     }
 
     override fun toString(): String =
-        array.mapIndexedNotNull { key, value -> value?.let { (key to it) } }.toString()
+        keys.map { key -> key to get(key) }.toString()
 
 }

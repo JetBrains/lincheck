@@ -241,7 +241,7 @@ private data class State(
 
 private class Context(val execution: Execution, val covering: Covering<Event>) {
 
-    val hyperExecution = execution.threadMap.map { _, events ->
+    val hyperExecution = execution.threadMap.map { (_, events) ->
         var pos = 0
         val atomicEvents = mutableListOf<HyperEvent>()
         while (pos < events.size) {
