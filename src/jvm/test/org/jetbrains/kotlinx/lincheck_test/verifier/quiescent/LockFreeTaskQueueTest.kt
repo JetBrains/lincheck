@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.quiescent
 import kotlinx.coroutines.internal.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
 

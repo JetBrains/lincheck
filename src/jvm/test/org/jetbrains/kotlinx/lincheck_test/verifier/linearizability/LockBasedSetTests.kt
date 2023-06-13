@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.IntGen
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.*
