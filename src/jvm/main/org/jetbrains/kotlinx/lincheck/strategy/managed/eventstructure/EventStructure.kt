@@ -149,7 +149,7 @@ class EventStructure(
         currentExplorationRoot = event
         // TODO: filter unused initialization events
         _currentExecution = event.frontier.toMutableExecution().apply {
-            addEvent(event)
+            add(event)
         }
         pinnedEvents = event.pinnedEvents.copy().ensure {
             currentExecution.containsAll(it.events)
@@ -200,7 +200,7 @@ class EventStructure(
             delayedConsistencyCheckBuffer.clear()
             // run incremental checker on delayed events
             for (delayedEvent in delayedEvents) {
-                replayedExecution.addEvent(delayedEvent)
+                replayedExecution.add(delayedEvent)
                 // TODO: refactor this check!!!
                 if (delayedEvent.label.isSend) {
                     addSynchronizedEvents(delayedEvent)
@@ -352,7 +352,7 @@ class EventStructure(
         }
         val isReplayedEvent = inReplayPhase(event.threadId)
         if (!isReplayedEvent) {
-            _currentExecution.addEvent(event)
+            _currentExecution.add(event)
         }
         playedFrontier.update(event)
         // mark last replayed blocking event as dangling

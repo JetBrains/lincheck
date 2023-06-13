@@ -48,7 +48,7 @@ interface Execution : Collection<Event> {
 }
 
 interface MutableExecution : Execution {
-    fun addEvent(event: Event)
+    fun add(event: Event)
     fun cut(tid: ThreadID, pos: Int)
 }
 
@@ -116,7 +116,7 @@ private class ExecutionImpl(
     override fun get(tid: ThreadID): SortedMutableList<Event>? =
         threadMap[tid]
 
-    override fun addEvent(event: Event) {
+    override fun add(event: Event) {
         ++size
         threadMap[event.threadId]!!
             .ensure { event.parent == it.lastOrNull() }
