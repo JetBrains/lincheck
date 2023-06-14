@@ -30,9 +30,13 @@ abstract class Runner protected constructor(
 ) : Closeable {
     protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     protected lateinit var testClass: Class<*> // not available before `initialize` call
+
     @Suppress("LeakingThis")
-    val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
-                                            else ExecutionClassLoader()
+    val classLoader: ExecutionClassLoader =
+        if (needsTransformation() || strategy.needsTransformation())
+            TransformationClassLoader(strategy, this)
+        else ExecutionClassLoader()
+
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 
     /**
